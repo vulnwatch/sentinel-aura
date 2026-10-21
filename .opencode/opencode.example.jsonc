@@ -1,0 +1,25 @@
+// Example local model selection for the Sentinel Aura OpenCode agents.
+//
+// Copy this file to .opencode/opencode.jsonc (ignored by Git) and adjust the
+// models and variants to the providers available in your client. OpenCode
+// merges it over your global and the project configuration, so the values
+// below win over any per-agent model in ~/.config/opencode/opencode.json.
+// Restart OpenCode after editing it. See .opencode/README.md (Model Tiering).
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    // Primary agents
+    "plan": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
+    "spec": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
+    "code": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
+
+    // Reviewers
+    "cicd-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
+    "docs-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
+    "spec-conformance-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" }
+
+    // Optional: built-in subagents otherwise inherit the invoking agent's model.
+    // "general": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
+    // "explore": { "model": "anthropic/claude-haiku-4-5" }
+  }
+}
