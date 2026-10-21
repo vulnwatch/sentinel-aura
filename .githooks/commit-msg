@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# commit-msg hook: validate the first line of a commit message against
+# docs/conventions.md (Commit Messages).
+#
+# Accepted: type[(scope)]: description, with the types feat, fix, docs,
+# refactor, test, chore, and ci; only feat and fix may carry the breaking
+# marker (feat!: or fix(scope)!:). The first line stays under 72 characters,
+# like the pull request title that scripts/check-pr-metadata.sh validates.
+# Messages that Git generates (Merge, Revert, fixup!, squash!) are skipped.
+#
+# Usage: Git runs the hook with the path of the message file. Activation:
+# docs/deployment.md (Local Git Hooks).
+set -euo pipefail
+
+readonly ORDINARY_PATTERN='^(feat|fix|docs|refactor|test|chore|ci)(\([a-z0-9 _-]+\))?: .+$'
+readonly BREAKING_PATTERN='^(feat|fix)(\([a-z0-9 _-]+\))?!: .+$'
+readonly GENERATED_PATTERN='^(Merge|Revert|fixup!|squash!)'
+readonly MAX_SUBJECT_LENGTH=71
+
+main() {
+    local subject
+    subject=$(head -n 1 "$1")
+
+    if [[ "${subject}" =~ ${GENERATED_PATTERN} ]]; then
+        return 0
+    fi
+
+    if ! [[ "${subject}" =~ ${ORDINARY_PATTERN} || "${subject}" =~ ${BREAKING_PATTERN} ]]; then
+        {
+            echo "Error: commit message does not follow the Conventional Commits format."
+            echo ""
+            echo "  Expected: type[(scope)]: description"
+            echo "  Breaking: feat[(scope)]!: description or fix[(scope)]!: description"
+            echo "  Types:    feat, fix, docs, refactor, test, chore, ci"
+            echo "  Example:  feat: add CVE severity filtering to the ticket list"
+            echo "  Example:  fix(session): show the expiration notice after a 401 response"
+            echo ""
+            echo "  Got: ${subject}"
+        } >&2
+        return 1
+    fi
+
+    if [[ ${#subject} -gt ${MAX_SUBJECT_LENGTH} ]]; then
+        echo "Error: the first line of the commit message is ${#subject} characters; the maximum is ${MAX_SUBJECT_LENGTH}." >&2
+        echo "  Got: ${subject}" >&2
+        return 1
+    fi
+}
+
+main "$@"

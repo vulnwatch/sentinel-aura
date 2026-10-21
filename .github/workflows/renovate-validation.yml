@@ -1,0 +1,62 @@
+name: Renovate Validation
+
+# Read-only, advisory validation of renovate.jsonc and of Renovate's
+# dependency lookups: a failure shows a red status but is not a required
+# check. The Mend Renovate App remains the only component that creates
+# Renovate pull requests. See docs/deployment.md (Dependency Updates).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: renovate-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  RENOVATE_IMAGE: renovate/renovate:44.171.1@sha256:6fffb26e606488bf674f2d9400fc3fc6b2a0243a0c22a4a4d22e422ee44934c5
+
+jobs:
+  validate:
+    name: Validate Renovate configuration and lookups
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pull pinned Renovate image
+        run: docker pull "${RENOVATE_IMAGE}"
+
+      - name: Validate Renovate configuration
+        run: >-
+          docker run --rm --pull=never
+          -v "${GITHUB_WORKSPACE}:/workspace:ro"
+          -w /workspace
+          "${RENOVATE_IMAGE}"
+          renovate-config-validator --strict --no-global renovate.jsonc
+
+      - name: Run read-only Renovate lookup
+        env:
+          RENOVATE_GITHUB_COM_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          log_file="${RUNNER_TEMP}/renovate.ndjson"
+          docker run --rm --pull=never \
+            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            -w /workspace \
+            -e LOG_FORMAT=json \
+            -e LOG_LEVEL=debug \
+            -e RENOVATE_GITHUB_COM_TOKEN \
+            "${RENOVATE_IMAGE}" \
+            --platform=local \
+            --dry-run=lookup \
+            --require-config=required \
+            --onboarding=false \
+            --enabled=true 2>&1 | tee "${log_file}"
+          scripts/check-renovate-log.sh "${log_file}"

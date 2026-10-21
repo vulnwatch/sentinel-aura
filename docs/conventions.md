@@ -157,10 +157,23 @@ script from the workflow.
 ### File Placement
 
 - `scripts/` — repository-level orchestration and developer or CI tooling
-- `.githooks/` — Git hooks
+- `.githooks/` — Git hooks (activation covered in `docs/deployment.md`, Local
+  Git Hooks)
 
 See the placement table in `AGENTS.md` (Stop conditions before retained work)
 for the authoritative mapping.
+
+### Enforcement
+
+- **CI**: the `Shell Lint` job of `.github/workflows/ci.yml` is the
+  authoritative gate. It discovers every tracked `*.sh` file and every file
+  under `.githooks/` with `git ls-files`, so new scripts and hooks are covered
+  automatically, runs `shellcheck` and `shfmt -i 4 -ci -d` on them, and runs
+  `actionlint` on the workflows. The workflow pins the tool versions
+  (`docs/deployment.md`, Workflow Conventions)
+- **Pre-commit hook**: `.githooks/pre-commit` runs the same checks on the
+  staged files as a fast local safety net, and warns instead of failing when a
+  tool is not installed (`docs/deployment.md`, Local Git Hooks)
 
 ## Git Conventions
 
@@ -197,10 +210,11 @@ change; it is a concrete work item and not a phase/initiative/parent issue;
 it has no active linked branch or pull request; and its direct blockers are
 resolved. Otherwise create a new issue with the sections Outcome or problem,
 Owning specifications, Scope, Acceptance criteria, Verification, and Direct
-blockers — no separate approval is needed merely to create the tracking
-object. The acceptance criteria of a UI feature are agreed with the
-repository owner before implementation starts; they replace a separate
-specification pull request (Specification Writing, Screen Documents).
+blockers, which the Work item issue form provides — no separate approval is
+needed merely to create the tracking object. The acceptance criteria of a UI
+feature are agreed with the repository owner before implementation starts;
+they replace a separate specification pull request (Specification Writing,
+Screen Documents).
 
 A capability that the UI needs and Sentinel's API lacks is never tracked as
 implementation work here: it becomes an issue in `vulnwatch/sentinel`
@@ -251,12 +265,15 @@ branch — unless the combined-PR exception in `AGENTS.md` (GitHub and release
 workflow) applies.
 
 **No direct pushes to `master`**: all changes arrive via squash merge
-of a reviewed PR. Server-side, the `master` branch protection requires a
-pull request and applies to administrators as well.
+of a reviewed PR. The pre-push hook enforces this locally; server-side, the
+`master` branch protection requires a pull request with passing required
+status checks (`docs/deployment.md`, Workflow Inventory) and applies to
+administrators as well.
 
 **No force pushes**: never rewrite published branch history.
 
-**No manual tags**: tags are created exclusively by release-please.
+**No manual tags**: tags are created exclusively by release-please. The
+pre-push hook blocks tag pushes locally.
 
 **Squash merge**: the only allowed merge method. The PR title becomes
 the commit message on `master`.
@@ -265,16 +282,21 @@ the commit message on `master`.
 
 ### Pull Request Requirements
 
-- **Title**: Conventional Commits format, under 72 characters.
+- **Title**: Conventional Commits format (Commit Messages), under 72
+  characters.
 - **Description**: at minimum: issue linkage, owning documents (foundation
   and screen documents of this repository and the Sentinel specifications
   relied on), scope summary, test evidence, screenshots when required,
-  delegated decisions, reviewer results, manual verification notes.
+  delegated decisions, reviewer results, manual verification notes. The pull
+  request template provides these sections.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
   reason>` for an exempt human-authored PR under "Issues and work units"
   in Workflow. Use an `- Issue linkage:` field, or a standalone
   `Closes #<issue>` line anywhere in the body. Approved automated PRs
   (Renovate, release-please) are exempt from this field.
+- **PR Metadata check**: the required `PR Metadata` check validates the title
+  and the issue linkage as defined above (`docs/deployment.md`, Workflow
+  Inventory).
 - **Screenshots**: a PR that changes what the UI shows includes screenshots
   of the affected screens, taken with fictional data (Example Data in
   Documentation), and updates the affected screen document with what was
@@ -334,6 +356,8 @@ The 72-character hard-wrapping convention remains scoped to:
   `feat!: description`, `fix(scope)!: description`
 - Keep the first line under 72 characters
 - Use imperative mood: "add feature" not "added feature"
+- The `commit-msg` hook validates the type, the breaking marker, and the
+  length of the first line (`docs/deployment.md`, Local Git Hooks)
 - Examples:
   - `feat: add CVE severity filtering to the ticket list`
   - `fix: show the session expiration notice after a 401 response`

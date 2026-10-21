@@ -24,16 +24,16 @@ limited to documentation, project policy, and repository tooling.
 2. Report a bug of the backend or of the API in
    [Sentinel](https://github.com/vulnwatch/sentinel/issues) instead, and a
    vulnerability as described in [SECURITY.md](SECURITY.md)
-3. Open a new issue with steps to reproduce, expected behavior, and actual
-   behavior
+3. Open a new issue with the Bug Report form: steps to reproduce, expected
+   behavior, and actual behavior
 4. Add the Sentinel Aura and Sentinel versions, and your browser and its
    version
 
 ### Suggesting Features
 
 1. Check the [existing issues](https://github.com/vulnwatch/sentinel-aura/issues) to see if it has been discussed
-2. Open a new issue that describes the problem you are trying to solve and the
-   proposed solution
+2. Open a new issue with the Feature Request form, describing the problem you
+   are trying to solve and the proposed solution
 3. A feature that needs data or operations the Sentinel API does not offer
    starts as an issue in [Sentinel](https://github.com/vulnwatch/sentinel/issues)
    (see [Specification Workflow](#specification-workflow))
@@ -41,11 +41,32 @@ limited to documentation, project policy, and repository tooling.
 ### Submitting Changes
 
 1. **Fork** the repository and create a topic branch from `master`
-2. Name the branch and write commit messages as the
+2. [Enable the Git hooks](#git-hooks)
+3. Name the branch and write commit messages as the
    [Git Conventions](docs/conventions.md#git-conventions) require
-3. Make your changes following the [conventions](#conventions)
-4. Add or update tests for every code change
-5. Open a **pull request** against `master`
+4. Make your changes following the [conventions](#conventions)
+5. Add or update tests for every code change
+6. Open a **pull request** against `master`
+
+## Git Hooks
+
+The repository ships Git hooks in `.githooks/` that check your commits before
+CI does. Activate them once in your clone:
+
+```bash
+git config --local core.hooksPath .githooks
+```
+
+| Hook | Checks |
+|------|--------|
+| `commit-msg` | Conventional Commits format and length of the first line of the message |
+| `pre-commit` | `shellcheck` and `shfmt` on staged shell scripts and hooks, `actionlint` on staged workflows, and `gitleaks` on the staged changes |
+| `pre-push` | Blocks pushes to `master` and pushes of tags |
+
+The tools of `pre-commit` are optional: a missing one produces a warning and
+does not block the commit. CI remains the authoritative gate. See
+[Local Git Hooks](docs/deployment.md#local-git-hooks) for the tool versions and
+how to deactivate the hooks.
 
 ## Conventions
 
@@ -64,11 +85,12 @@ points are:
 
 ## Pull Request Process
 
-1. Describe the pull request as
+1. Fill in the pull request template as
    [Pull Request Requirements](docs/conventions.md#pull-request-requirements)
    defines, including screenshots when the change affects what the UI shows
 2. Link the PR to a tracking issue using `Closes #<issue>` in the description
-3. Ensure CI passes on your branch
+3. Ensure CI passes on your branch, including the `PR Metadata` check of the
+   title and the issue linkage
 4. Request review from a maintainer
 5. PRs are **squash-merged** — the PR title becomes the commit message on
    `master` — and only after the repository owner explicitly authorizes the

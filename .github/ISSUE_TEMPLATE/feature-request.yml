@@ -1,0 +1,54 @@
+name: Feature Request
+description: Suggest a new feature or improvement of the web interface.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thank you for suggesting a feature. Please fill in the details
+        below so we can evaluate the request. A feature that needs data or
+        operations that the Sentinel API does not offer starts as an issue in
+        the [Sentinel issue tracker](https://github.com/vulnwatch/sentinel/issues).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: >-
+        Describe the problem you are trying to solve, or the gap in
+        current functionality. A clear problem statement helps us
+        understand the context.
+      placeholder: "I'm always frustrated when ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: >-
+        Describe your proposed solution or feature. Be as specific as
+        possible about the expected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: >-
+        Describe any alternative solutions or features you have
+        considered, and why the proposed solution is preferred.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: >-
+        Any additional context, screenshots with fictional data, or
+        references that support the request, such as the screen documents
+        under docs/ or the Sentinel issue that the feature depends on.
+    validations:
+      required: false

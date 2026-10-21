@@ -1,0 +1,49 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "schedule:earlyMondays",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 0,
+  // Every Renovate pull request is merged like any other pull request, after
+  // the repository owner authorizes it — see docs/deployment.md (Dependency
+  // Updates).
+  "automerge": false,
+  // Fix PRs raised from GitHub vulnerability (Dependabot) alerts. They bypass
+  // the weekly schedule by design. Requires Dependabot alerts and read access
+  // to them for the Mend Renovate App. fix(deps): makes a merged security fix
+  // a release signal (patch) for release-please, whereas routine ci(deps):
+  // updates never cut a release on their own. Renovate appends alert rules
+  // after packageRules, so this prefix overrides the ci(deps): prefixes below.
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "commitMessagePrefix": "fix(deps):"
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Renovate validation container used by the advisory pull-request workflow",
+      "managerFilePatterns": ["/^\\.github/workflows/renovate-validation\\.yml$/"],
+      "matchStrings": [
+        "RENOVATE_IMAGE:\\s+renovate/renovate:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "renovate/renovate"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "GitHub Actions updates: the commit SHA and its version comment",
+      "matchManagers": ["github-actions"],
+      "commitMessagePrefix": "ci(deps):"
+    },
+    {
+      "description": "Renovate validation container, used only by CI",
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["renovate/renovate"],
+      "commitMessagePrefix": "ci(deps):"
+    }
+  ]
+}
