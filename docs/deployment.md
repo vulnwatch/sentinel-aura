@@ -64,7 +64,8 @@ maintainer can move a tag to different content, but not a commit SHA.
 **Pinned tools.** A tool that a workflow installs itself — downloaded
 directly, run as a container image, or requested through an action's
 `version:` input — MUST be pinned to an explicit version and never resolve to
-the latest release. A container image is pinned by version and digest.
+the latest release. A container image is pinned by version and digest. Every
+pinned version is tracked by Renovate (Dependency Updates).
 
 **Checkout credentials.** Every `actions/checkout` step sets
 `persist-credentials: false`: no workflow pushes to the repository, so the
@@ -105,12 +106,18 @@ root and opens the dependency-update pull requests; no workflow of this
 repository runs the bot or creates its pull requests. It tracks:
 
 - the SHA-pinned actions, through the `github-actions` manager, which updates
-  the SHA and its version comment together; and
+  the SHA and its version comment together;
 - the Renovate image of `renovate-validation.yml`, by version and digest,
-  through a custom regex manager.
-
-The versions of the tools that `ci.yml` downloads (`shellcheck`, `shfmt`, and
-`actionlint`) are not tracked and are updated manually.
+  through a custom regex manager; and
+- the versions of the tools that a workflow downloads (`shellcheck`, `shfmt`,
+  and `actionlint` in `ci.yml`), through a custom regex manager that reads a
+  `# renovate: datasource=<datasource> depName=<name>` hint comment placed
+  directly above each `<NAME>_VERSION: "<version>"` line of the workflow's
+  `env:` block, for example
+  `# renovate: datasource=github-releases depName=rhysd/actionlint`. The value
+  holds the version without the `v` prefix of the release tag. A new tool that
+  a workflow downloads follows the same pattern, so that Renovate tracks it
+  from the start.
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, which carries no release signal
@@ -174,6 +181,9 @@ tool produces a warning and the commit proceeds.
 | [shfmt](https://github.com/mvdan/sh) | The version that `ci.yml` pins, to avoid formatting drift | `pre-commit` |
 | [actionlint](https://github.com/rhysd/actionlint) | The version that `ci.yml` pins | `pre-commit` |
 | [gitleaks](https://github.com/gitleaks/gitleaks) | 8.19.0 or later, which provides the `git` command | `pre-commit` |
+
+Renovate updates the versions that `ci.yml` pins (Dependency Updates); after
+such an update is merged, update the local tools to match.
 
 **Secret scanning.** `gitleaks git --staged` scans the staged changes with
 `.gitleaks.toml`, which extends gitleaks' default rule set. It is local only:

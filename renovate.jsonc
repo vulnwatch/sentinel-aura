@@ -31,6 +31,17 @@
       ],
       "datasourceTemplate": "docker",
       "depNameTemplate": "renovate/renovate"
+    },
+    {
+      "customType": "regex",
+      "description": "Tool versions that a workflow downloads (e.g. shellcheck, shfmt, and actionlint in ci.yml), each marked by a '# renovate: datasource=<datasource> depName=<name>' hint comment directly above its <NAME>_VERSION: \"<version>\" line",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>\\S+)\\s+[A-Z0-9_]+_VERSION:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      // Release tags carry a 'v' prefix (v1.7.12) that the workflow values
+      // omit; tags that are not versions (such as 'latest') are ignored.
+      "extractVersionTemplate": "^v?(?<version>\\d.*)$"
     }
   ],
   "packageRules": [
@@ -40,9 +51,9 @@
       "commitMessagePrefix": "ci(deps):"
     },
     {
-      "description": "Renovate validation container, used only by CI",
+      "description": "Images and tools that the workflows pin, used only by CI",
       "matchManagers": ["custom.regex"],
-      "matchPackageNames": ["renovate/renovate"],
+      "matchFileNames": [".github/workflows/**"],
       "commitMessagePrefix": "ci(deps):"
     }
   ]
