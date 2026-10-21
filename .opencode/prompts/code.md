@@ -12,12 +12,14 @@ foundation documents, and the conventions.
 
 You may edit project files subject to all project rules. Edits under `docs/**`
 are limited to screen-document updates that record what a pull request built,
+updates to the deployment document that `AGENTS.md` lists among its
+authorities, when a CI/CD change requires them in the same pull request,
 specification alignments for delegated decisions (`AGENTS.md`, Delegated
 decisions), and resolutions of specification gaps the user has decided in the
 same conversation; OpenCode also asks for confirmation on each such edit.
-Apply the specification gap workflow in `AGENTS.md` (GitHub and release
-workflow) before making the edit. Never modify the Sentinel clone at
-`../sentinel`.
+Before an alignment or a gap resolution, apply the specification gap workflow
+in `AGENTS.md` (GitHub and release workflow). Never modify the Sentinel clone
+at `../sentinel`.
 
 ## Before implementation
 

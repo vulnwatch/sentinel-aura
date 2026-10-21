@@ -23,6 +23,9 @@ but does not replace these authorities:
   as built and approved.
 - `docs/conventions.md` owns technical, documentation, and Git conventions,
   including the format of foundation and screen documents.
+- The **deployment document**, at the location that the placement table below
+  assigns, owns the CI pipeline, the workflow conventions, and the release
+  process.
 - `.opencode/README.md` catalogs the OpenCode agents and their configuration.
 
 When authorities conflict, stop and report the conflict rather than choosing
@@ -192,7 +195,7 @@ gaps. Delegation covers:
   in its plan, and the implementing agent records them); and
 - **refinements of an existing contract of this repository** — resolving an
   ambiguity, inconsistency, or missing detail inside a contract that a
-  foundation or screen document already states; align the document in the same
+  document under `docs/` already states; align the document in the same
   PR under the combined-PR exception, and disclose each alignment in the plan
   or, when found during implementation, in the pre-PR report.
 

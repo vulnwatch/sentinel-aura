@@ -228,7 +228,7 @@ against closing an issue while an open blocker remains.
 
 When uncertain, create an issue.
 
-**Single active domain branch**: develop one dependent work unit at a time.
+**Single active branch**: develop one dependent work unit at a time.
 Multiple branches may exist for genuinely independent concerns (for example,
 a dependency update and a UI feature), but dependent work is not stacked
 across unmerged branches.

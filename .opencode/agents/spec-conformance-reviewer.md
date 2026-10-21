@@ -147,9 +147,10 @@ complexity without presenting it to the user for a decision.
 
 - **The tracking issue**: Outcome, Owning specifications, Scope, Acceptance
   criteria, and later scope decisions in its comments.
-- **Foundation and screen documents** of this repository, and the governance
-  documents `AGENTS.md` and `docs/conventions.md` (`AGENTS.md`, authority
-  list).
+- **Foundation and screen documents** of this repository, the deployment
+  document for the CI pipeline, workflow conventions, and release process, and
+  the governance documents `AGENTS.md` and `docs/conventions.md` (`AGENTS.md`,
+  authority list).
 - **Sentinel's contract**: its specifications in `../sentinel/docs/` and, when
   this repository keeps one, the pinned OpenAPI document (`AGENTS.md`, Sentinel
   as an External Authority). Sentinel's contract is authoritative for backend
@@ -255,8 +256,10 @@ touches both runs both directions.
 1. **Establish the declared scope.** Read the tracking issue body and comments:
    `Outcome`, `Owning specifications`, `Scope`, `Acceptance criteria`, and
    later scope or deferral decisions. Read the governing foundation documents,
-   the affected screen documents, and, in Sentinel, the complete governing
-   contract of every operation and client obligation the diff consumes.
+   the affected screen documents, the governing sections of the deployment
+   document when the diff touches CI/CD or release artifacts, and, in Sentinel,
+   the complete governing contract of every operation and client obligation
+   the diff consumes.
 
    The issue's `Verification` section is not a class B anchor: it describes
    evidence that belongs in the pull request body, which is not yet due while
@@ -270,9 +273,9 @@ touches both runs both directions.
    from the diff — never from an exhaustive reading of the authorities.
 
 3. **Locate each element's contract** in the issue, the foundation and screen
-   documents, or Sentinel's contract. When the issue declares `Owning
-   specifications: N/A` with a reason, the issue itself and the governance
-   documents it names are the contract. Classify each element:
+   documents, the deployment document, or Sentinel's contract. When the issue
+   declares `Owning specifications: N/A` with a reason, the issue itself and
+   the governance documents it names are the contract. Classify each element:
 
    | Classification | Meaning |
    |---|---|

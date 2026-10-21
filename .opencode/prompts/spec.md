@@ -29,7 +29,8 @@ for:
 - the Git and GitHub workflow required by `AGENTS.md` (Git and irreversible
   operations);
 - read-only inspection of files, directories, processes, and command
-  availability, including read-only Git commands in `../sentinel`; and
+  availability, including read-only Git commands in `../sentinel` and the
+  fetch that `AGENTS.md` (Sentinel as an External Authority) permits; and
 - repository verification and test suites that do not generate implementation
   artifacts or alter external or infrastructure state.
 
