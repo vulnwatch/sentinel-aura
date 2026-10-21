@@ -1,0 +1,46 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [],
+  "references": {
+    "sentinel": {
+      "path": "../sentinel",
+      "description": "Read-only local clone of vulnwatch/sentinel: the backend, its domain and API contract specifications, and client obligations. Read it as AGENTS.md (Sentinel as an External Authority) requires; never modify it."
+    }
+  },
+  "agent": {
+    "build": {
+      "disable": true
+    },
+    "spec": {
+      "description": "Writes and maintains UI specifications, project policy, and OpenCode configuration. Cannot modify implementation code.",
+      "mode": "primary",
+      "color": "warning",
+      "prompt": "{file:./.opencode/prompts/spec.md}",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "docs/**": "allow",
+          "AGENTS.md": "allow",
+          ".opencode/**": "allow",
+          "opencode.json": "allow",
+          "../sentinel/**": "deny"
+        },
+        "bash": "allow"
+      }
+    },
+    "code": {
+      "description": "Implements the UI from its issue, foundation documents, and Sentinel's contract. Signals unresolved behavioral or contract gaps while choosing compliant internal technical mechanisms.",
+      "mode": "primary",
+      "color": "error",
+      "prompt": "{file:./.opencode/prompts/code.md}",
+      "permission": {
+        "edit": {
+          "*": "allow",
+          "docs/**": "ask",
+          "../sentinel/**": "deny"
+        },
+        "bash": "allow"
+      }
+    }
+  }
+}
