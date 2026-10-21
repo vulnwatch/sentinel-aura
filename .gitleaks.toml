@@ -1,0 +1,14 @@
+# Gitleaks configuration for Sentinel Aura.
+#
+# Used by the local pre-commit hook only (.githooks/pre-commit); no workflow
+# scans for secrets. See docs/deployment.md (Local Git Hooks).
+#
+# This file extends gitleaks' built-in default rule set (it does not replace
+# it). Each confirmed false positive of a non-secret value gets a
+# pattern-based (never path-based) [[allowlists]] table, with a comment that
+# explains why the value is not a secret; see
+# https://github.com/gitleaks/gitleaks#configuration for the format.
+title = "Sentinel Aura gitleaks config"
+
+[extend]
+useDefault = true

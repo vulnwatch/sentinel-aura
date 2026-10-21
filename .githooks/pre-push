@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# pre-push hook: block pushes to master and pushes of tags.
+#
+# master changes only through squash-merged pull requests, and only
+# release-please creates tags (docs/conventions.md, Git Conventions). The
+# branch protection of master remains the authoritative gate. See
+# docs/deployment.md (Local Git Hooks).
+#
+# Usage: Git runs the hook with one line per pushed ref on stdin:
+# <local-ref> <local-sha> <remote-ref> <remote-sha>
+set -euo pipefail
+
+main() {
+    local _local_ref _local_sha remote_ref _remote_sha
+    while IFS=' ' read -r _local_ref _local_sha remote_ref _remote_sha; do
+        if [[ "${remote_ref}" == "refs/heads/master" ]]; then
+            echo "Error: direct push to master is not allowed. Use a pull request." >&2
+            return 1
+        fi
+        if [[ "${remote_ref}" == refs/tags/* ]]; then
+            echo "Error: tag push is not allowed. Tags are created by release-please." >&2
+            return 1
+        fi
+    done
+}
+
+main "$@"

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# pre-commit hook: fast local checks on the staged files.
+#
+# - shellcheck and shfmt on staged shell scripts and Git hooks, selected like
+#   the Shell Lint job of .github/workflows/ci.yml
+# - actionlint on staged workflows
+# - gitleaks on the staged changes
+#
+# A missing tool produces a warning and does not block the commit. CI is the
+# authoritative gate for the shell and workflow checks; no workflow scans for
+# secrets. See docs/deployment.md (Local Git Hooks).
+set -euo pipefail
+
+# Run a check when its tool is installed; warn and skip it otherwise.
+# Arguments: a note on the remaining enforcement, then the command.
+run_check() {
+    local note="$1"
+    shift
+    echo "  $1..."
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "Warning: $1 is not installed; skipping (${note})." >&2
+        return 0
+    fi
+    "$@"
+}
+
+staged_files_matching() {
+    git diff --cached --name-only --diff-filter=ACMR | grep -E "$1" || true
+}
+
+main() {
+    local -a shell_files workflow_files
+    mapfile -t shell_files < <(staged_files_matching '(\.sh$|^\.githooks/)')
+    mapfile -t workflow_files < <(staged_files_matching '^\.github/workflows/[^/]+\.ya?ml$')
+
+    echo "Running pre-commit checks..."
+    if [[ ${#shell_files[@]} -gt 0 ]]; then
+        run_check "CI enforces it" shellcheck "${shell_files[@]}"
+        run_check "CI enforces it" shfmt -i 4 -ci -d "${shell_files[@]}"
+    fi
+    if [[ ${#workflow_files[@]} -gt 0 ]]; then
+        run_check "CI enforces it" actionlint "${workflow_files[@]}"
+    fi
+    run_check "local-only check" gitleaks git --staged
+}
+
+main "$@"

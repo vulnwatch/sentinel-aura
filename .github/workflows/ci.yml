@@ -1,0 +1,82 @@
+name: CI
+
+# Required quality gates. See docs/deployment.md (CI Pipeline) for this
+# workflow's place in the pipeline and for the required status checks.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  shell-lint:
+    name: Shell Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SHELLCHECK_VERSION: "0.11.0"
+      SHFMT_VERSION: "3.14.1"
+      ACTIONLINT_VERSION: "1.7.12"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned shell tooling
+        run: |
+          set -euo pipefail
+          tools_dir="${RUNNER_TEMP}/shell-tools"
+          mkdir -p "${tools_dir}"
+
+          # Install shellcheck (tar.xz; binary at shellcheck-v<version>/shellcheck)
+          curl -fsSL -o "${tools_dir}/shellcheck.tar.xz" \
+            "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
+          tar -xJf "${tools_dir}/shellcheck.tar.xz" -C "${tools_dir}"
+          mv "${tools_dir}/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" "${tools_dir}/shellcheck"
+
+          # Install shfmt (single static binary)
+          curl -fsSL -o "${tools_dir}/shfmt" \
+            "https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64"
+
+          # Install actionlint (tar.gz containing the actionlint binary)
+          curl -fsSL -o "${tools_dir}/actionlint.tar.gz" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          tar -xzf "${tools_dir}/actionlint.tar.gz" -C "${tools_dir}" actionlint
+
+          chmod +x "${tools_dir}/shellcheck" "${tools_dir}/shfmt" "${tools_dir}/actionlint"
+          echo "${tools_dir}" >>"${GITHUB_PATH}"
+      - name: Verify pinned tool versions
+        run: |
+          set -euo pipefail
+          shellcheck --version
+          shfmt --version
+          actionlint --version
+      - name: Run shellcheck and shfmt on shell scripts and hooks
+        run: |
+          set -euo pipefail
+          # Discover tracked shell files so that new scripts and hooks are
+          # covered without a list to maintain: every '*.sh' file and every
+          # extension-less hook under .githooks/ (docs/conventions.md, Shell
+          # Scripting). The same selection as .githooks/pre-commit.
+          mapfile -d '' -t shell_files < <(
+            git ls-files -z '*.sh' '.githooks/*' | sort -z -u
+          )
+          if [[ ${#shell_files[@]} -eq 0 ]]; then
+            echo "No tracked shell files found; nothing to lint."
+            exit 0
+          fi
+          printf 'Linting %d shell file(s):\n' "${#shell_files[@]}"
+          printf '  %s\n' "${shell_files[@]}"
+          shellcheck "${shell_files[@]}"
+          shfmt -i 4 -ci -d "${shell_files[@]}"
+      - name: Run actionlint on workflows
+        # actionlint also runs the pinned shellcheck on every run: block.
+        run: actionlint
