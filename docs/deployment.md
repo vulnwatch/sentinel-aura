@@ -1,10 +1,10 @@
 # Deployment
 
-This document owns Sentinel Aura's CI pipeline, the conventions that every
-workflow follows, the automated dependency updates, and the local Git hooks
-that complement the pipeline. The rules for shell code in workflows, scripts,
-and hooks belong to `docs/conventions.md` (Shell Scripting); the rules for
-branches, commits, and pull requests belong to `docs/conventions.md` (Git
+This document owns Sentinel Aura's CI pipeline, including the conventions that
+every workflow follows, the automated dependency updates, and the local Git
+hooks that complement the pipeline. The rules for shell code in workflows,
+scripts, and hooks belong to `docs/conventions.md` (Shell Scripting); the rules
+for branches, commits, and pull requests belong to `docs/conventions.md` (Git
 Conventions).
 
 ## Contents
@@ -13,13 +13,14 @@ Conventions).
   - [Workflow Inventory](#workflow-inventory)
   - [Workflow Conventions](#workflow-conventions)
   - [Dependency Updates](#dependency-updates)
-- [Local Git Hooks](#local-git-hooks)
+  - [Local Git Hooks](#local-git-hooks)
 
 ## CI Pipeline
 
 Continuous integration runs entirely on GitHub Actions. This section is the
 authoritative reference for the workflows that exist, the checks that block a
-merge, and the conventions that every workflow follows.
+merge, the conventions that every workflow follows, and the local Git hooks
+that run a subset of the checks before a change reaches CI.
 
 ### Workflow Inventory
 
@@ -138,7 +139,7 @@ the lookup reports a warning for any dependency. The workflow cannot create
 branches or pull requests and is not a required check: a failure is visible as
 a red status without blocking the merge.
 
-## Local Git Hooks
+### Local Git Hooks
 
 The repository ships Git hooks in `.githooks/` that give fast feedback before a
 commit or a push reaches CI. Activate them once in each clone:
@@ -162,16 +163,17 @@ git config --local --unset core.hooksPath
 | `pre-push` | Blocks pushes to `master` and pushes of tags (`docs/conventions.md`, Git Conventions) |
 
 The hooks are a supplementary safety net: they can be bypassed, while CI and
-the branch protection of `master` cannot. `pre-commit` checks the working-tree
-content of the staged files. Its tools are optional: a missing tool produces a
-warning and the commit proceeds.
+the branch protection of `master` cannot. The shell and workflow checks of
+`pre-commit` read the working-tree content of the staged files; `gitleaks`
+scans the staged content. The tools of `pre-commit` are optional: a missing
+tool produces a warning and the commit proceeds.
 
 | Tool | Version | Used by |
 |------|---------|---------|
 | [shellcheck](https://www.shellcheck.net/) | The version that `ci.yml` pins | `pre-commit`; `actionlint` also runs it on workflow `run:` blocks |
 | [shfmt](https://github.com/mvdan/sh) | The version that `ci.yml` pins, to avoid formatting drift | `pre-commit` |
 | [actionlint](https://github.com/rhysd/actionlint) | The version that `ci.yml` pins | `pre-commit` |
-| [gitleaks](https://github.com/gitleaks/gitleaks) | Any recent release | `pre-commit` |
+| [gitleaks](https://github.com/gitleaks/gitleaks) | 8.19.0 or later, which provides the `git` command | `pre-commit` |
 
 **Secret scanning.** `gitleaks git --staged` scans the staged changes with
 `.gitleaks.toml`, which extends gitleaks' default rule set. It is local only:

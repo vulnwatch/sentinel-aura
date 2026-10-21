@@ -292,8 +292,9 @@ the commit message on `master`.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
   reason>` for an exempt human-authored PR under "Issues and work units"
   in Workflow. Use an `- Issue linkage:` field, or a standalone
-  `Closes #<issue>` line anywhere in the body. Approved automated PRs
-  (Renovate, release-please) are exempt from this field.
+  `Closes #<issue>` line anywhere in the body; when the body contains the
+  field, the field holds the linkage. Approved automated PRs (Renovate,
+  release-please) are exempt from this field.
 - **PR Metadata check**: the required `PR Metadata` check validates the title
   and the issue linkage as defined above (`docs/deployment.md`, Workflow
   Inventory).

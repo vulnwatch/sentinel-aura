@@ -64,7 +64,8 @@ git config --local core.hooksPath .githooks
 | `pre-push` | Blocks pushes to `master` and pushes of tags |
 
 The tools of `pre-commit` are optional: a missing one produces a warning and
-does not block the commit. CI remains the authoritative gate. See
+does not block the commit. CI remains the authoritative gate for the shell and
+workflow checks. See
 [Local Git Hooks](docs/deployment.md#local-git-hooks) for the tool versions and
 how to deactivate the hooks.
 
@@ -88,7 +89,8 @@ points are:
 1. Fill in the pull request template as
    [Pull Request Requirements](docs/conventions.md#pull-request-requirements)
    defines, including screenshots when the change affects what the UI shows
-2. Link the PR to a tracking issue using `Closes #<issue>` in the description
+2. Link the PR to a tracking issue with `Closes #<issue>` in the template's
+   `Issue linkage` field
 3. Ensure CI passes on your branch, including the `PR Metadata` check of the
    title and the issue linkage
 4. Request review from a maintainer

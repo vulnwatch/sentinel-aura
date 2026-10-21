@@ -58,7 +58,7 @@ The following are in scope for security reports:
 
 The repository currently has the following measures enabled:
 
-- **Secret detection**: GitHub secret scanning with push protection, and gitleaks in the pre-commit hook
+- **Secret detection**: GitHub secret scanning with push protection, and an optional gitleaks scan in the local pre-commit hook
 - **Dependency alerts**: GitHub Dependabot alerts, with Renovate raising fix pull requests
 - **Code scanning**: GitHub CodeQL default setup
 - **CI hardening**: workflows pin every action by commit SHA and run with least-privilege permissions; see [Workflow Conventions](docs/deployment.md#workflow-conventions)
