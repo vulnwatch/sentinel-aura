@@ -184,9 +184,10 @@ the minimum release age; until then `UI Checks` fails, and the pull request is
 not merged.
 
 Renovate updates the lockfile with the npm line of the tooling image
-(`constraints.npm` in `renovate.jsonc`, which changes with the Node.js line)
-and with its own copy of the settings of `.npmrc` (`npmrc` in
-`renovate.jsonc`), kept in sync with it. The copy differs in one setting,
+(`constraints.npm` in `renovate.jsonc`, which Renovate does not update either:
+it changes by hand with the Node.js line) and with its own copy of the
+settings of `.npmrc` (`npmrc` in `renovate.jsonc`), kept in sync with it. The
+copy differs in one setting,
 `allow-remote=all`: under `allow-remote=none`, the
 `npm install --package-lock-only` command that updates the lockfile refuses
 the registry tarball of a package that declares `bundleDependencies`, such as

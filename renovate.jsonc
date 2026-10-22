@@ -135,6 +135,12 @@
       "enabled": false
     },
     {
+      "description": "The npm line of constraints.npm above follows the tooling image and changes by hand, with the Node.js line",
+      "matchManagers": ["renovate-config"],
+      "matchDepNames": ["npm"],
+      "enabled": false
+    },
+    {
       // Last, so that it overrides the groups above and the playwright
       // monorepo group of config:recommended. The image has no release
       // timestamp, so Renovate raises its update at once and adds
