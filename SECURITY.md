@@ -59,7 +59,7 @@ The following are in scope for security reports:
 The repository currently has the following measures enabled:
 
 - **Secret detection**: GitHub secret scanning with push protection, and an optional gitleaks scan in the local pre-commit hook
-- **Dependency alerts**: GitHub Dependabot alerts, with Renovate raising fix pull requests
+- **Dependency alerts**: GitHub Dependabot alerts, with Renovate raising fix pull requests for direct dependencies and lock file maintenance covering transitive ones; see [Dependency Updates](docs/deployment.md#dependency-updates)
 - **Dependency audit**: `npm audit signatures`, which verifies the registry signatures and provenance attestations of the installed packages, and `npm audit`, which reports their known vulnerabilities, run in CI on every change to the dependencies and block it on any finding; see [Workflow Inventory](docs/deployment.md#workflow-inventory)
 - **Code scanning**: GitHub CodeQL default setup, for the JavaScript and TypeScript of the UI and for the workflows
 - **CI hardening**: workflows pin every action by commit SHA and run with least-privilege permissions; see [Workflow Conventions](docs/deployment.md#workflow-conventions)

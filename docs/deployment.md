@@ -214,9 +214,11 @@ Known vulnerabilities are handled by these complementary mechanisms:
   `fix(deps):` prefix, so that a merged security fix is a patch release
   signal. This requires the Mend Renovate App to have read access to
   Dependabot alerts. Renovate raises them only for the dependencies that
-  `package.json` declares: a vulnerable transitive dependency gets its fix
-  from the next lock file maintenance pull request, once the fixed version
-  reaches the minimum release age, or earlier by hand (below). A lock file
+  `package.json` declares. A vulnerable transitive dependency whose fixed
+  version lies within the ranges that its dependents allow gets its fix from
+  the next lock file maintenance pull request, once the fixed version reaches
+  the minimum release age, or earlier by hand (below); a fix outside those
+  ranges needs an update of the dependency that requires it. A lock file
   maintenance pull request that delivers a security fix is merged with a
   `fix(deps):` title, so that it is a patch release signal too.
 - **A fix younger than the minimum release age** cannot be resolved by npm,
@@ -243,8 +245,9 @@ Known vulnerabilities are handled by these complementary mechanisms:
   open, every dependency pull request fails, a fix pull request for another
   advisory included. A maintainer then combines the pending fixes in one
   branch with the commands above and merges it with a `fix(deps):` title. An
-  advisory without a fixed version holds every dependency change back until a
-  fix is published.
+  advisory without a fix that the dependency ranges allow holds every
+  dependency change and every release-please pull request back until one is
+  available.
 
 `renovate-validation.yml` is an advisory check. It runs on every pull request
 rather than on a list of Renovate-managed paths, validates `renovate.jsonc` in
