@@ -209,6 +209,11 @@ decisions presents them in a **Decisions** section listing the options
 considered, their impact, and the choice. Reviewer triggers for an aligned
 document still apply.
 
+Delegation does not cover a new direct dependency either. Before adding one,
+present the justification that `docs/conventions.md` (Dependency Admission)
+requires and wait for the user's explicit decision; the same applies to the
+package manager exceptions that section names.
+
 Before writing any file, verify its placement against the actual repository and
 the authoritative conventions. Core locations are:
 
@@ -357,6 +362,10 @@ confidently.
   location given by the placement table when that document exists, before
   proceeding. Inspect interacting workflows as one pipeline and update affected
   workflows in the same PR.
+- **New direct dependency or package manager exception:** read Dependency
+  Admission in `docs/conventions.md` and the Technology Stack section of
+  `docs/architecture.md`, including Approved Dependencies, before proposing
+  or adding it.
 
 ### Specifications, policy, and OpenCode
 

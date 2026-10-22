@@ -147,7 +147,8 @@ artifacts. Foundation documents are not required for internal operational
 changes, but use the Gap Protocol when a missing decision would establish or
 change an operational contract, a security requirement, or an architectural
 boundary. Equivalent internal technical choices remain implementation
-decisions.
+decisions. A new direct dependency is not one of them: follow
+`docs/conventions.md` (Dependency Admission) and wait for the user's decision.
 
 ## Git and workflow
 

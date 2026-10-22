@@ -63,4 +63,4 @@ The repository currently has the following measures enabled:
 - **Code scanning**: GitHub CodeQL default setup
 - **CI hardening**: workflows pin every action by commit SHA and run with least-privilege permissions; see [Workflow Conventions](docs/deployment.md#workflow-conventions)
 
-Further measures for the UI stack, such as static analysis, dependency auditing, security headers, and release supply-chain artifacts, are added once the stack is chosen.
+Further measures for the UI stack, such as static analysis, dependency auditing, security headers, and release supply-chain artifacts, are added as the tooling of the chosen stack ([docs/architecture.md](docs/architecture.md#technology-stack)) is built.

@@ -6,6 +6,7 @@
 - [General Principles](#general-principles)
 - [Cross-Cutting Rules](#cross-cutting-rules)
   - [Example Data in Documentation](#example-data-in-documentation)
+  - [Dependency Admission](#dependency-admission)
 - [Shell Scripting](#shell-scripting)
 - [Git Conventions](#git-conventions)
   - [Workflow](#workflow)
@@ -74,6 +75,38 @@ When documenting an API response, first sanitize it by replacing all real
 identifiers with fictional equivalents before inserting it into a document.
 Capture screenshots from an environment that contains only fictional data;
 never attach a screenshot that shows real personal identifiers.
+
+### Dependency Admission
+
+The approved dependencies are those that `docs/architecture.md` (Approved
+Dependencies) lists. A new direct dependency is added only after the
+repository owner's explicit decision. A direct dependency is a package that
+`package.json` declares, at run time or for development, including another
+package of a family already in use, and a container image that the tooling,
+the tests, or the released image use. The packages that a direct dependency
+brings are part of its footprint, not separate admissions. Updates, version
+changes, and removals of approved dependencies are not admissions; Renovate
+and the normal review process handle them (`docs/deployment.md`, Dependency
+Updates).
+
+The request for the decision states:
+
+- the current requirement that the dependency serves, not an anticipated one;
+- why the web platform, the language, or an approved dependency does not
+  suffice;
+- whether it reaches the browser or serves only the tooling;
+- its maintenance: release activity, maintainers and governance, and whether
+  its releases carry provenance attestations;
+- its transitive footprint: the packages that it adds, and whether any of them
+  has install scripts; and
+- its license, which must be compatible with the Apache License 2.0.
+
+The pull request that adds the dependency records the decision and adds the
+dependency to Approved Dependencies. Two exceptions to the package manager
+settings (`docs/architecture.md`, Build Tool, Package Manager, and Node.js)
+require the same decision and justification: allowing the install scripts of
+a dependency, and installing a version younger than the minimum release age
+other than through a vulnerability-fix update.
 
 ## Shell Scripting
 
