@@ -15,10 +15,10 @@ but does not replace these authorities:
   behavior and the API contract, including the obligations that the contract
   places on clients (see Sentinel as an External Authority).
 - The **foundation documents** of this repository own the UI as a whole: the
-  documents under `docs/` that define its architecture and its UI foundations
-  (screen map and navigation, what each role sees, cross-cutting behaviors such
-  as session, errors, loading, dates, accessibility, and wording, and the
-  design system).
+  documents under `docs/` that define its architecture (`docs/architecture.md`)
+  and its UI foundations (screen map and navigation, what each role sees,
+  cross-cutting behaviors such as session, errors, loading, dates,
+  accessibility, and wording, and the design system).
 - The **screen documents** under `docs/` record what each screen or area does,
   as built and approved.
 - `docs/conventions.md` owns technical, documentation, and Git conventions,
@@ -53,8 +53,9 @@ Each Sentinel release publishes its OpenAPI document as the release asset
 `sentinel-<version>.openapi.json` (`../sentinel/docs/deployment.md`, API
 Documentation Publication). This repository declares the exact Sentinel version
 it supports and keeps a copy of that version's OpenAPI document: that copy is
-the **pinned OpenAPI document**. Moving to another Sentinel version is always an
-explicit pull request whose diff shows the API changes.
+the **pinned OpenAPI document** (`docs/architecture.md`, Backend Contract).
+Moving to another Sentinel version is always an explicit pull request whose
+diff shows the API changes.
 
 **Which version to read.** Read Sentinel's specifications at the release that
 this repository declares as supported, through its tag `v<version>`. While no
@@ -332,12 +333,21 @@ confidently.
   Frontend session behavior, Cross-Origin Request Protection) and
   `../sentinel/docs/api-spec.md` (Cross-Origin Request Protection) before
   proceeding.
+- **Architecture-affecting work:** before work that changes or depends on the
+  UI's scope or system boundary, its link to Sentinel's contract, how it is
+  built, packaged, served, or hosted, how it reaches the API (URLs, proxies,
+  origins, and the session cookie), its technology stack, or another decision
+  that `docs/architecture.md` records or leaves open, read complete
+  `docs/architecture.md` and the Sentinel sections it cites for the affected
+  constraints.
 - **Repository boundary or ownership between the two repositories:** read
-  `README.md` (Specification Boundary) and `../sentinel/docs/architecture.md`
-  (System Boundary) before recommending a placement.
+  `README.md` (Specification Boundary), `docs/architecture.md` (Authority
+  Between the Repositories), and `../sentinel/docs/architecture.md` (System
+  Boundary) before recommending a placement.
 - **Supported Sentinel version change:** read Sentinel as an External
-  Authority; the pull request diff shows the API changes, and every screen
-  that consumes a changed operation is rechecked against the new contract.
+  Authority and `docs/architecture.md` (Backend Contract); the pull request
+  diff shows the API changes, and every screen that consumes a changed
+  operation is rechecked against the new contract.
 
 ### Repository tooling
 
