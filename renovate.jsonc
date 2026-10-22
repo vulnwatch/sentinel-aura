@@ -24,6 +24,16 @@
   "customManagers": [
     {
       "customType": "regex",
+      "description": "Tooling image of scripts/tooling.sh, by version and digest",
+      "managerFilePatterns": ["/^scripts/tooling\\.sh$/"],
+      "matchStrings": [
+        "TOOLING_IMAGE=\"mcr\\.microsoft\\.com/playwright:(?<currentValue>[^@\"]+)@(?<currentDigest>sha256:[a-f0-9]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "mcr.microsoft.com/playwright"
+    },
+    {
+      "customType": "regex",
       "description": "Renovate validation container used by the advisory pull-request workflow",
       "managerFilePatterns": ["/^\\.github/workflows/renovate-validation\\.yml$/"],
       "matchStrings": [
@@ -46,6 +56,14 @@
   ],
   "packageRules": [
     {
+      // Disabled until their update rules exist: the minimum release age of
+      // docs/architecture.md (Build Tool, Package Manager, and Node.js) and
+      // the grouping of @playwright/test with the tooling image.
+      "description": "npm dependencies: no update pull requests",
+      "matchManagers": ["npm"],
+      "enabled": false
+    },
+    {
       "description": "GitHub Actions updates: the commit SHA and its version comment",
       "matchManagers": ["github-actions"],
       "commitMessagePrefix": "ci(deps):"
@@ -55,6 +73,12 @@
       "matchManagers": ["custom.regex"],
       "matchFileNames": [".github/workflows/**"],
       "commitMessagePrefix": "ci(deps):"
+    },
+    {
+      "description": "Tooling image, used locally and in CI",
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["scripts/tooling.sh"],
+      "commitMessagePrefix": "chore(deps):"
     }
   ]
 }

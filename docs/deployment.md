@@ -26,15 +26,15 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment), then a check that `node_modules/` holds no file in the working tree | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 
 **Blocking** means that the job is a required status check of the `master`
-branch protection: a pull request cannot merge until `Shell Lint` and
-`PR Metadata` pass on its latest commit, and its branch must be up to date with
-`master`. A non-blocking workflow shows a red status when it fails, but never
-prevents a merge.
+branch protection: a pull request cannot merge until `Shell Lint`,
+`UI Checks`, and `PR Metadata` pass on its latest commit, and its branch must
+be up to date with `master`. A non-blocking workflow shows a red status when
+it fails, but never prevents a merge.
 
 `scripts/check-pr-metadata.sh` reads the pull request fields from environment
 variables, so it also runs locally:
@@ -108,7 +108,9 @@ repository runs the bot or creates its pull requests. It tracks:
 - the SHA-pinned actions, through the `github-actions` manager, which updates
   the SHA and its version comment together;
 - the Renovate image of `renovate-validation.yml`, by version and digest,
-  through a custom regex manager; and
+  through a custom regex manager;
+- the tooling image of `scripts/tooling.sh`, by version and digest, through a
+  custom regex manager; and
 - the versions of the tools that a workflow downloads (`shellcheck`, `shfmt`,
   and `actionlint` in `ci.yml`), through a custom regex manager that reads a
   `# renovate: datasource=<datasource> depName=<name>` hint comment placed
@@ -119,8 +121,15 @@ repository runs the bot or creates its pull requests. It tracks:
   a workflow downloads follows the same pattern, so that Renovate tracks it
   from the start.
 
+Renovate opens no pull request for the npm dependencies of `package.json`: a
+package rule disables them, because `renovate.jsonc` does not configure the
+minimum release age that their updates require (`docs/architecture.md`,
+Build Tool, Package Manager, and Node.js). They change only through pull
+requests that run `scripts/tooling.sh npm`.
+
 Routine updates follow the `schedule:earlyMondays` schedule and use the
-`ci(deps):` title prefix, which carries no release signal
+`ci(deps):` title prefix, or `chore(deps):` for the tooling image, which is
+not used only by CI; neither carries a release signal
 (`docs/conventions.md`, Versioning). Renovate never merges its own pull
 requests: `automerge` is disabled, and each one is merged like any other pull
 request, after the repository owner authorizes the merge.

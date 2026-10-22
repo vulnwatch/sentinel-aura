@@ -83,3 +83,32 @@ jobs:
       - name: Run actionlint on workflows
         # actionlint also runs the pinned shellcheck on every run: block.
         run: actionlint
+
+  ui-checks:
+    name: UI Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Every Node.js command runs through scripts/tooling.sh, in the tooling
+      # image with rootless Podman (docs/architecture.md, Development
+      # Environment).
+      - name: Install dependencies
+        run: scripts/tooling.sh install
+      - name: Type check
+        run: scripts/tooling.sh run typecheck
+      - name: Lint
+        run: scripts/tooling.sh run lint
+      - name: Format check
+        run: scripts/tooling.sh run format:check
+      - name: Unit and component tests
+        run: scripts/tooling.sh run test
+      - name: Verify that no dependency reached the working tree
+        run: |
+          set -euo pipefail
+          if [[ -n "$(find node_modules -mindepth 1 -print -quit)" ]]; then
+            echo "::error::node_modules/ holds files; dependencies must stay in the volume."
+            exit 1
+          fi

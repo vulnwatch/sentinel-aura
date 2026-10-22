@@ -12,9 +12,10 @@ Please report unacceptable behavior to security@suse.com.
 
 ## Project Status
 
-The repository contains no application code and no build or test tooling yet;
-see [README.md](README.md#project-status). Until then, contributions are
-limited to documentation, project policy, and repository tooling.
+The repository contains the application skeleton and its build and test
+tooling, but no screens yet; see [README.md](README.md#project-status). Until
+the UI foundations exist, contributions are limited to documentation, project
+policy, and repository tooling.
 
 ## How to Contribute
 
@@ -41,12 +42,47 @@ limited to documentation, project policy, and repository tooling.
 ### Submitting Changes
 
 1. **Fork** the repository and create a topic branch from `master`
-2. [Enable the Git hooks](#git-hooks)
+2. [Enable the Git hooks](#git-hooks) and
+   [set up the tooling](#development-setup)
 3. Name the branch and write commit messages as the
    [Git Conventions](docs/conventions.md#git-conventions) require
 4. Make your changes following the [conventions](#conventions)
-5. Add or update tests for every code change
+5. Add or update tests for every code change, and run
+   `scripts/tooling.sh run check`
 6. Open a **pull request** against `master`
+
+## Development Setup
+
+Every Node.js command runs in a disposable container of the official
+Playwright image, started by `scripts/tooling.sh` through rootless Podman,
+never on your host
+([Development Environment](docs/architecture.md#development-environment)).
+The container sees the repository and nothing else: no home directory and no
+credentials. The host needs only Linux, Git, and
+[Podman](https://podman.io/) running rootless, as a regular user; it needs no
+Node.js.
+
+| Command | Purpose |
+|---------|---------|
+| `scripts/tooling.sh install` | Install the dependencies (`npm ci`) |
+| `scripts/tooling.sh run <script> [args]` | Run a `package.json` script without network access, for example `run check` for the type check, lint, format check, and tests, or `run test -- src/router.test.tsx` |
+| `scripts/tooling.sh format` | Format the sources with Prettier |
+| `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
+| `scripts/tooling.sh dev` | Start the development server on <http://localhost:5173>, published on the loopback interface only |
+| `scripts/tooling.sh clean` | Remove the dependency volume of the clone |
+
+- The repository is mounted read-only. A command writes only the outputs,
+  `dist/`, `coverage/`, and `test-results/`, and the files that it changes by
+  design: the formatted sources for `format`, `package.json` and the lockfile
+  for `npm`.
+- The dependencies live in a Podman volume of each clone, mounted on
+  `node_modules/`, which stays empty on your host. Every command installs
+  them first when the volume is new or when the tooling image,
+  `package.json`, the lockfile, or `.npmrc` changed, so `install` is needed
+  only to force a clean installation.
+- The first command downloads the tooling image, about 2.5 GB.
+- A new dependency needs the decision that
+  [Dependency Admission](docs/conventions.md#dependency-admission) defines.
 
 ## Git Hooks
 
@@ -81,6 +117,7 @@ points are:
 - Commit messages and pull request titles use
   [Conventional Commits](https://www.conventionalcommits.org/), under 72
   characters ([Commit Messages](docs/conventions.md#commit-messages))
+- UI code follows [Code Conventions](docs/conventions.md#code-conventions)
 - Shell scripts and Git hooks follow
   [Shell Scripting](docs/conventions.md#shell-scripting)
 
@@ -134,7 +171,9 @@ workflow — but it provides a streamlined experience for this repository.
   - read the foundation documents and Sentinel's contract before changing UI
     behavior, and stop instead of inventing backend behavior;
   - invoke the applicable reviewer subagents based on the type of change;
-  - enforce the project's Git and commit conventions.
+  - enforce the project's Git and commit conventions;
+  - run Node.js commands only through `scripts/tooling.sh`: OpenCode denies
+    `npm`, `npx`, and `node` on the host to every agent.
 
 ### Sentinel clone
 
