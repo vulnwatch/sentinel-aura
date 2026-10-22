@@ -136,11 +136,12 @@ environment unless it names one.
 
 - The UI is served from the same origin as the API. In staging and in
   production, one host in each, the Sentinel host, serves both: its reverse
-  proxy or ingress routes `/api` and every path under `/api/` to Sentinel's API, and
-  every other path to the UI's image (Packaging and Serving). It matches the
-  prefix by whole path segment, so `/apidocs` goes to the UI, and forwards the
-  path unchanged (Sentinel `docs/deployment.md`, Sentinel Host; Kubernetes
-  Workloads). The UI's own URLs are therefore never `/api` or under `/api/`.
+  proxy or ingress routes `/api` and every path under `/api/` to Sentinel's
+  API, and every other path to the UI's image (Packaging and Serving). It
+  matches the prefix by whole path segment, so `/apidocs` goes to the UI, and
+  forwards the path unchanged (Sentinel `docs/deployment.md`, Sentinel Host;
+  Kubernetes Workloads). The UI's own URLs are therefore never `/api` or under
+  `/api/`.
 - Every path that the API serves is under `/api/`, its OpenAPI document at
   `/api/openapi.json` and its interactive documentation at `/api/docs`
   included, except the probes `/health` and `/ready` (Sentinel
