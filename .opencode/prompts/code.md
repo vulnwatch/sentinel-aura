@@ -16,9 +16,10 @@ updates to the deployment document that `AGENTS.md` lists among its
 authorities, when a CI/CD change requires them in the same pull request,
 specification alignments for delegated decisions (`AGENTS.md`, Delegated
 decisions), the Approved Dependencies entry in `docs/architecture.md` of a
-dependency that the user has admitted (`docs/conventions.md`, Dependency
-Admission), and resolutions of specification gaps the user has decided in the
-same conversation; OpenCode also asks for confirmation on each such edit.
+dependency that the user has admitted or that the pull request removes
+(`docs/conventions.md`, Dependency Admission), and resolutions of
+specification gaps the user has decided in the same conversation; OpenCode
+also asks for confirmation on each such edit.
 Before an alignment or a gap resolution, apply the specification gap workflow
 in `AGENTS.md` (GitHub and release workflow). Never modify the Sentinel clone
 at `../sentinel`.
