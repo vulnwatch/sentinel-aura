@@ -17,7 +17,10 @@
   // a release signal (patch) for release-please, whereas routine ci(deps):
   // updates never cut a release on their own. Renovate appends alert rules
   // after packageRules, so this prefix overrides the ci(deps): prefixes below.
+  // enabled: true keeps the fix PRs of the dependencies that a package rule
+  // disables, such as the npm dependencies below.
   "vulnerabilityAlerts": {
+    "enabled": true,
     "labels": ["dependencies", "security"],
     "commitMessagePrefix": "fix(deps):"
   },
@@ -59,7 +62,8 @@
       // Disabled until their update rules exist: the minimum release age of
       // docs/architecture.md (Build Tool, Package Manager, and Node.js) and
       // the grouping of @playwright/test with the tooling image.
-      "description": "npm dependencies: no update pull requests",
+      // Vulnerability-fix pull requests still open (vulnerabilityAlerts).
+      "description": "npm dependencies: no routine update pull requests",
       "matchManagers": ["npm"],
       "enabled": false
     },

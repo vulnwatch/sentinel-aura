@@ -74,7 +74,7 @@ Plan and Code take the delegated decisions defined in `AGENTS.md` (Delegated
 decisions): Plan presents them in its plan, while Code records them and ships
 any document alignment in the same PR.
 
-### Host Node.js commands
+### Host Node.js Commands
 
 Every Node.js command runs through `scripts/tooling.sh`, in a container, never
 on the host (`AGENTS.md`, Repository tooling). `opencode.json` denies `npm`,

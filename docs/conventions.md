@@ -150,6 +150,7 @@ enforce part of these rules; review enforces the rest.
 |---|---|
 | `src/main.tsx` | The entry point: global configuration, then the mounting of the application |
 | `src/zod.ts` | Zod's global configuration, which `src/main.tsx` imports first |
+| `src/styles.css` | The stylesheet: the Tailwind CSS entry point |
 | `src/app.tsx` | The providers that every screen shares |
 | `src/router.ts` | The route tree and the router |
 | `src/routes/` | One module per route: its definition and its page component |
@@ -209,7 +210,7 @@ that needs it; content of another kind needs a new row first.
 
 ### Error Codes and Messages
 
-- Code decides on an error only by its `code`, never by `detail`, which may
+- Code decides on an error by its `code`, never by `detail`, which may
   change without notice (Sentinel `docs/api-spec.md`, Response Format). An
   error without `code`, such as a response produced before the request
   reaches Sentinel, is treated like an error with an unknown code.

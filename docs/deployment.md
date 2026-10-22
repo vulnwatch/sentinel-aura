@@ -121,11 +121,13 @@ repository runs the bot or creates its pull requests. It tracks:
   a workflow downloads follows the same pattern, so that Renovate tracks it
   from the start.
 
-Renovate opens no pull request for the npm dependencies of `package.json`: a
-package rule disables them, because `renovate.jsonc` does not configure the
-minimum release age that their updates require (`docs/architecture.md`,
-Build Tool, Package Manager, and Node.js). They change only through pull
-requests that run `scripts/tooling.sh npm`.
+Renovate opens no routine update pull request for the npm dependencies of
+`package.json`: a package rule disables them, because `renovate.jsonc` does
+not configure the minimum release age that their routine updates require
+(`docs/architecture.md`, Build Tool, Package Manager, and Node.js). Their
+vulnerability-fix pull requests still open, because `vulnerabilityAlerts`
+enables them, and any other change runs `scripts/tooling.sh npm` in a pull
+request.
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, or `chore(deps):` for the tooling image, which is

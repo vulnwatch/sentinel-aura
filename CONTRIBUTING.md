@@ -80,7 +80,7 @@ Node.js.
   them first when the volume is new or when the tooling image,
   `package.json`, the lockfile, or `.npmrc` changed, so `install` is needed
   only to force a clean installation.
-- The first command downloads the tooling image, about 2.5 GB.
+- The first command downloads the tooling image, about 2 GB.
 - A new dependency needs the decision that
   [Dependency Admission](docs/conventions.md#dependency-admission) defines.
 
