@@ -122,9 +122,9 @@ jobs:
       - name: Unit and component tests
         run: scripts/tooling.sh run test
       # Handed to the Coverage Upload job, so that CODECOV_TOKEN never reaches
-      # the job that runs the code of the dependencies.
+      # the job that runs the code of the dependencies. Vitest writes no
+      # report when a test fails, so only a successful run has one.
       - name: Retain coverage report
-        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ui-coverage
@@ -139,15 +139,14 @@ jobs:
             exit 1
           fi
 
-  # Uploads the coverage report of UI Checks. The resulting codecov/patch
-  # status is a required check but informational (codecov.yml). On a pull
-  # request a failed upload fails this job, which can be re-run alone; on
-  # other events it never fails the run. See docs/deployment.md (Workflow
-  # Inventory, Coverage reporting).
+  # Uploads the coverage report of a successful UI Checks job. The resulting
+  # codecov/patch status is a required check but informational (codecov.yml).
+  # On a pull request a failed upload fails this job, which can be re-run
+  # alone; on other events it does not fail the run. See docs/deployment.md
+  # (Workflow Inventory, Coverage reporting).
   coverage-upload:
     name: Coverage Upload
     needs: ui-checks
-    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

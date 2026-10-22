@@ -298,11 +298,11 @@ npm is configured as follows:
   Renovate applies the same minimum release age to its updates. The malicious
   versions published through hijacked maintainer accounts and release
   pipelines in 2025 and 2026 were mostly detected and removed within hours or
-  a few days. Vulnerability-fix updates are exempt: Renovate raises them at
-  once, and when a fixed version is younger than the minimum age, its lockfile
-  is resolved with only the fixed packages excluded from it, because npm still
-  applies the age (`docs/deployment.md`, Dependency Updates). npm installs a
-  version that the lockfile records whatever its age.
+  a few days. Vulnerability-fix updates are exempt: Renovate does not hold
+  them back, but npm still applies the age to their lockfile, so a maintainer
+  delivers a fix younger than the age with only the fixed packages excluded
+  from it (`docs/deployment.md`, Dependency Updates). npm installs a version
+  that the lockfile records whatever its age.
 - Dependencies fetched from Git or from a URL are refused, and `package.json`
   records exact versions, so every update is a visible change.
 - The Node.js line is an active or maintenance LTS line, never a Current or

@@ -51,14 +51,16 @@ The script validates the title of a Renovate pull request (author
 `docs/conventions.md` (Issues and work units) allows.
 
 **Coverage reporting.** The tests of `UI Checks` measure coverage with
-Istanbul (`docs/architecture.md`, Static Checks and Tests), and the job
-retains the Clover report as a seven-day workflow artifact; it never receives
-`CODECOV_TOKEN`, because it runs the code of the dependencies. The separate
-`Coverage Upload` job uploads only that report to Codecov, with a pinned
-Codecov CLI version (Dependency Updates). On a pull request, a failed upload
-fails the job, which can be re-run on its own while the artifact is retained;
-on a push to `master` or a manual run it does not fail the run, so that a
-Codecov outage does not mark `master` red after a merge. The repository
+Istanbul (`docs/architecture.md`, Static Checks and Tests), and when they pass
+the job retains the Clover report as a seven-day workflow artifact; it never
+receives `CODECOV_TOKEN`, because it runs the code of the dependencies. The
+separate `Coverage Upload` job, which runs after a successful `UI Checks`,
+uploads only that report to Codecov, with a pinned Codecov CLI version
+(Dependency Updates) and the `CODECOV_TOKEN` repository secret, the upload
+token that Codecov issues for the repository. On a pull request, a failed
+upload fails the job, which can be re-run on its own while the artifact is
+retained; on a push to `master` or a manual run it does not fail the run, so
+that a Codecov outage does not mark `master` red after a merge. The repository
 `codecov.yml` makes the resulting `codecov/patch` status informational, so it
 always passes and no coverage threshold gates a merge, and has Codecov publish
 it as soon as the upload is processed rather than waiting for, or failing
@@ -79,9 +81,9 @@ change or ship the locked dependency set: a pull request or push that changes
 request, a manual run, or a run whose changed files cannot be determined.
 `scripts/dependency-audit-scope.sh` takes that decision. Other changes skip
 the audit, so a vulnerability disclosed against an unchanged lockfile reaches
-the repository as a Dependabot alert and a Renovate fix pull request
-(Dependency Updates) rather than as a failure of unrelated work, while a
-dependency change cannot merge with a known vulnerability.
+the repository as a Dependabot alert and a fix (Dependency Updates) rather
+than as a failure of unrelated work, while a dependency change cannot merge
+with a known vulnerability.
 
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
 repository-level default setup, not through a workflow of this repository. It
@@ -118,9 +120,9 @@ hours.
 
 **Concurrency.** A workflow that only validates uses a concurrency group with
 `cancel-in-progress: true`, so that a newer run of the same pull request or
-ref supersedes an older one. A workflow that creates a release or publishes an
-artifact MUST NOT cancel a run in progress, because an interrupted release or
-publication leaves an indeterminate state.
+ref supersedes an older one. A workflow that creates a release or publishes a
+release artifact MUST NOT cancel a run in progress, because an interrupted
+release or publication leaves an indeterminate state.
 
 **No secrets in workflow files.** Credentials MUST be supplied through GitHub
 Secrets and referenced through `${{ secrets.* }}`, never written as literals.
@@ -211,7 +213,12 @@ Known vulnerabilities are handled by these complementary mechanisms:
   without Renovate's minimum release age, labeled `security`, with the
   `fix(deps):` prefix, so that a merged security fix is a patch release
   signal. This requires the Mend Renovate App to have read access to
-  Dependabot alerts.
+  Dependabot alerts. Renovate raises them only for the dependencies that
+  `package.json` declares: a vulnerable transitive dependency gets its fix
+  from the next lock file maintenance pull request, once the fixed version
+  reaches the minimum release age, or earlier by hand (below). A lock file
+  maintenance pull request that delivers a security fix is merged with a
+  `fix(deps):` title, so that it is a patch release signal too.
 - **A fix younger than the minimum release age** cannot be resolved by npm,
   which applies the age when Renovate updates the lockfile: Renovate then
   reports an artifact update problem on the pull request, or opens none until
@@ -229,9 +236,15 @@ Known vulnerabilities are handled by these complementary mechanisms:
   ```bash
   scripts/tooling.sh npm update --min-release-age-exclude=<package> <package>
   ```
+
 - **The dependency audit** of `UI Checks` (Workflow Inventory, Dependency
-  audit) blocks a dependency change, a fix pull request included, that leaves
-  a known vulnerability in the locked dependency set.
+  audit) blocks a dependency change that leaves a known vulnerability in the
+  locked dependency set. It audits the whole set, so while any advisory is
+  open, every dependency pull request fails, a fix pull request for another
+  advisory included. A maintainer then combines the pending fixes in one
+  branch with the commands above and merges it with a `fix(deps):` title. An
+  advisory without a fixed version holds every dependency change back until a
+  fix is published.
 
 `renovate-validation.yml` is an advisory check. It runs on every pull request
 rather than on a list of Renovate-managed paths, validates `renovate.jsonc` in

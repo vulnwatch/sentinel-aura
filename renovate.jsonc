@@ -17,10 +17,13 @@
   // App. fix(deps): makes a merged security fix a release signal (patch) for
   // release-please, whereas routine ci(deps): and chore(deps): updates never
   // cut a release on their own. Renovate appends alert rules after
-  // packageRules, so this prefix overrides the prefixes below.
+  // packageRules, so this prefix overrides the prefixes below. The topic
+  // drops the word "dependency", so that the title with its [SECURITY] suffix
+  // stays within the length that the PR Metadata check allows.
   "vulnerabilityAlerts": {
     "labels": ["dependencies", "security"],
-    "commitMessagePrefix": "fix(deps):"
+    "commitMessagePrefix": "fix(deps):",
+    "commitMessageTopic": "{{depName}}"
   },
   // Weekly regeneration of package-lock.json, which keeps the transitive npm
   // dependencies current. Runs on the default "before 4am on monday"
