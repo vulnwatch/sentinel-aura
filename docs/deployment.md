@@ -26,15 +26,16 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment), then a check that `node_modules/` holds no file in the working tree | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment), then a check that `node_modules/` holds no file in the working tree. `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 
-**Blocking** means that the job is a required status check of the `master`
-branch protection: a pull request cannot merge until `Shell Lint`,
-`UI Checks`, and `PR Metadata` pass on its latest commit, and its branch must
-be up to date with `master`. A non-blocking workflow shows a red status when
-it fails, but never prevents a merge.
+**Blocking** means that the workflow yields a required status check of the
+`master` branch protection: a pull request cannot merge until `Shell Lint`,
+`UI Checks`, `PR Metadata`, and the `codecov/patch` status that Codecov
+publishes for the upload of `Coverage Upload` (Coverage reporting) pass on its
+latest commit, and its branch must be up to date with `master`. A non-blocking
+workflow shows a red status when it fails, but never prevents a merge.
 
 `scripts/check-pr-metadata.sh` reads the pull request fields from environment
 variables, so it also runs locally:
@@ -49,8 +50,43 @@ The script validates the title of a Renovate pull request (author
 (branch `release-please--*`), but exempts both from the issue linkage, as
 `docs/conventions.md` (Issues and work units) allows.
 
+**Coverage reporting.** The tests of `UI Checks` measure coverage with
+Istanbul (`docs/architecture.md`, Static Checks and Tests), and the job
+retains the Clover report as a seven-day workflow artifact; it never receives
+`CODECOV_TOKEN`, because it runs the code of the dependencies. The separate
+`Coverage Upload` job uploads only that report to Codecov, with a pinned
+Codecov CLI version (Dependency Updates). On a pull request, a failed upload
+fails the job, which can be re-run on its own while the artifact is retained;
+on a push to `master` or a manual run it does not fail the run, so that a
+Codecov outage does not mark `master` red after a merge. The repository
+`codecov.yml` makes the resulting `codecov/patch` status informational, so it
+always passes and no coverage threshold gates a merge, and has Codecov publish
+it as soon as the upload is processed rather than waiting for, or failing
+because of, the other checks. `codecov/patch` is a required check, so a pull
+request cannot merge before its coverage report is visible; while Codecov
+cannot process uploads, merges wait until it recovers. `codecov.yml` disables
+the `codecov/project` status, which the organization's Codecov plan does not
+publish, and maps the paths of the report, which the tooling container writes
+under `/work/`, to the repository's.
+
+**Dependency audit.** `scripts/tooling.sh audit` runs `npm audit signatures`,
+which verifies the registry signatures and the provenance attestations of the
+installed packages, and `npm audit`, which reports the known vulnerabilities
+of the locked dependency set, development dependencies included; each fails on
+any finding. `UI Checks` runs it, as a blocking step, only when the run can
+change or ship the locked dependency set: a pull request or push that changes
+`package.json`, `package-lock.json`, or `.npmrc`, a release-please pull
+request, a manual run, or a run whose changed files cannot be determined.
+`scripts/dependency-audit-scope.sh` takes that decision. Other changes skip
+the audit, so a vulnerability disclosed against an unchanged lockfile reaches
+the repository as a Dependabot alert and a Renovate fix pull request
+(Dependency Updates) rather than as a failure of unrelated work, while a
+dependency change cannot merge with a known vulnerability.
+
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
-repository-level default setup, not through a workflow of this repository.
+repository-level default setup, not through a workflow of this repository. It
+analyzes the JavaScript and TypeScript of the UI and the workflows, on every
+pull request and push to `master` and weekly.
 
 ### Workflow Conventions
 
@@ -110,7 +146,7 @@ repository runs the bot or creates its pull requests. It tracks:
 - the Renovate image of `renovate-validation.yml`, by version and digest,
   through a custom regex manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a
-  custom regex manager; and
+  custom regex manager;
 - the versions of the tools that a workflow downloads (`shellcheck`, `shfmt`,
   and `actionlint` in `ci.yml`), through a custom regex manager that reads a
   `# renovate: datasource=<datasource> depName=<name>` hint comment placed
@@ -119,34 +155,83 @@ repository runs the bot or creates its pull requests. It tracks:
   `# renovate: datasource=github-releases depName=rhysd/actionlint`. The value
   holds the version without the `v` prefix of the release tag. A new tool that
   a workflow downloads follows the same pattern, so that Renovate tracks it
-  from the start.
+  from the start;
+- the `version:` inputs of actions that the `github-actions` manager does not
+  track (the Codecov CLI of `codecov/codecov-action` in `ci.yml`), through a
+  custom regex manager that reads the same hint comment placed directly above
+  the input; the value is the release tag; and
+- the npm dependencies of `package.json` and the lockfile, through the `npm`
+  manager.
 
-Renovate opens no routine update pull request for the npm dependencies of
-`package.json`: a package rule disables them, because `renovate.jsonc` does
-not configure the minimum release age that their routine updates require
-(`docs/architecture.md`, Build Tool, Package Manager, and Node.js). Their
-vulnerability-fix pull requests still open, because `vulnerabilityAlerts`
-enables them, and any other change runs `scripts/tooling.sh npm` in a pull
-request.
+**npm dependencies.** Their routine updates wait for the minimum release age
+of `docs/architecture.md` (Build Tool, Package Manager, and Node.js), and
+Renovate opens none before it. Minor and patch updates are grouped into one
+pull request, and each major update gets its own, or one per monorepo when the
+`config:recommended` preset groups the packages of one project. A weekly lock
+file maintenance pull request regenerates `package-lock.json`, which keeps the
+transitive dependencies current, within npm's own minimum release age.
+Renovate does not update the Node.js line of `package.json`, which follows the
+tooling image (`docs/architecture.md`, Build Tool, Package Manager, and
+Node.js).
+
+The tooling image and `@playwright/test` are updated in one `Playwright` pull
+request, because the browsers of the image must be the ones that the package
+expects. The image has no release timestamp, so Renovate raises its update at
+once and adds the package to the same pull request when the package reaches
+the minimum release age; until then `UI Checks` fails, and the pull request is
+not merged.
+
+Renovate updates the lockfile with the npm line of the tooling image
+(`constraints.npm` in `renovate.jsonc`, which changes with the Node.js line)
+and with its own copy of the settings of `.npmrc` (`npmrc` in
+`renovate.jsonc`), kept in sync with it. The copy differs in one setting,
+`allow-remote=all`: under `allow-remote=none`, the
+`npm install --package-lock-only` command that updates the lockfile refuses
+the registry tarball of a package that declares `bundleDependencies`, such as
+a platform package of Tailwind CSS (npm/cli#9800). Installs still use
+`.npmrc`, so `UI Checks` refuses a lockfile that records a dependency fetched
+from a URL. The copy is removed once an npm release of that line fixes the
+bug.
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
-`ci(deps):` title prefix, or `chore(deps):` for the tooling image, which is
-not used only by CI; neither carries a release signal
+`ci(deps):` title prefix, or `chore(deps):` for the tooling image and the npm
+dependencies, which are not used only by CI; neither carries a release signal
 (`docs/conventions.md`, Versioning). Renovate never merges its own pull
 requests: `automerge` is disabled, and each one is merged like any other pull
 request, after the repository owner authorizes the merge.
 
-Known vulnerabilities are handled by two complementary mechanisms:
+Known vulnerabilities are handled by these complementary mechanisms:
 
 - **GitHub Dependabot alerts** (with the Dependency graph) monitor the
   dependencies as advisories are published. Dependabot security updates stay
   disabled, so that Renovate remains the only component that creates
   dependency pull requests.
 - **Renovate vulnerability-fix pull requests** (`vulnerabilityAlerts`) are
-  raised from those alerts immediately, outside the weekly schedule, labeled
-  `security`, with the `fix(deps):` prefix, so that a merged security fix is a
-  patch release signal. This requires the Mend Renovate App to have read access
-  to Dependabot alerts.
+  raised from those alerts immediately, outside the weekly schedule and
+  without Renovate's minimum release age, labeled `security`, with the
+  `fix(deps):` prefix, so that a merged security fix is a patch release
+  signal. This requires the Mend Renovate App to have read access to
+  Dependabot alerts.
+- **A fix younger than the minimum release age** cannot be resolved by npm,
+  which applies the age when Renovate updates the lockfile: Renovate then
+  reports an artifact update problem on the pull request, or opens none until
+  the fixed version reaches the age. A maintainer delivers it earlier from a
+  branch, excluding only the fixed package from the age
+  (`docs/architecture.md`, Build Tool, Package Manager, and Node.js), and
+  merges the pull request with a `fix(deps):` title. For a direct dependency:
+
+  ```bash
+  scripts/tooling.sh npm install --min-release-age-exclude=<package> <package>@<version>
+  ```
+
+  For a transitive dependency, within the ranges that its dependents allow:
+
+  ```bash
+  scripts/tooling.sh npm update --min-release-age-exclude=<package> <package>
+  ```
+- **The dependency audit** of `UI Checks` (Workflow Inventory, Dependency
+  audit) blocks a dependency change, a fix pull request included, that leaves
+  a known vulnerability in the locked dependency set.
 
 `renovate-validation.yml` is an advisory check. It runs on every pull request
 rather than on a list of Renovate-managed paths, validates `renovate.jsonc` in

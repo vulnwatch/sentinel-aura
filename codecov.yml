@@ -1,0 +1,32 @@
+# Codecov repository configuration. See docs/deployment.md (Workflow
+# Inventory, Coverage reporting).
+#
+# The codecov/patch status is a required check of master, so that a pull
+# request cannot merge before its coverage report is visible. It is
+# informational: it always passes, and no coverage threshold gates a merge.
+codecov:
+  # Publish the status as soon as the upload is processed, instead of waiting
+  # for, or failing because of, the other checks. With the defaults, a failing
+  # advisory workflow (renovate-validation.yml) would turn the required
+  # Codecov status into an error.
+  require_ci_to_pass: false
+  notify:
+    wait_for_ci: false
+    # Replace the pull request comment with an explicit error when an upload
+    # fails to process, instead of staying silent.
+    notify_error: true
+
+coverage:
+  status:
+    # Disabled: the organization's Codecov plan does not publish project
+    # coverage. Omitting the key would select Codecov's default project
+    # status, which is not informational.
+    project: false
+    patch:
+      default:
+        informational: true
+
+# The tests run in the tooling container, where the repository is /work, so
+# the report holds absolute paths such as /work/src/app.tsx.
+fixes:
+  - "/work/::"

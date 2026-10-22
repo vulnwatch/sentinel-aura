@@ -18,6 +18,10 @@
 #   scripts/tooling.sh format                Format the sources with Prettier
 #   scripts/tooling.sh npm <args>            Run npm, with write access to
 #                                            package.json and package-lock.json
+#   scripts/tooling.sh audit                 Audit the installed dependencies:
+#                                            their registry signatures and
+#                                            attestations, and their known
+#                                            vulnerabilities
 #   scripts/tooling.sh dev                   Start the development server on
 #                                            http://localhost:5173
 #   scripts/tooling.sh clean                 Remove the dependency volume
@@ -58,6 +62,9 @@ Commands:
   format                Format the sources with Prettier
   npm <args>            Run npm, with write access to package.json and
                         package-lock.json
+  audit                 Audit the installed dependencies: their registry
+                        signatures and attestations, and their known
+                        vulnerabilities
   dev                   Start the development server on http://localhost:5173
   clean                 Remove the dependency volume of this clone
 EOF
@@ -191,6 +198,14 @@ cmd_npm() {
         bash "${STAMP_FILE}" "$@"
 }
 
+cmd_audit() {
+    [[ $# -eq 0 ]] || die "audit: takes no arguments"
+    ensure_installed
+    # Both commands query the registry, so the container keeps the network;
+    # the repository stays read-only. Each fails on any finding.
+    run_container -- bash -c 'npm audit signatures && npm audit'
+}
+
 cmd_dev() {
     [[ $# -eq 0 ]] || die "dev: takes no arguments"
     ensure_installed
@@ -225,6 +240,7 @@ main() {
         run) cmd_run "$@" ;;
         format) cmd_format "$@" ;;
         npm) cmd_npm "$@" ;;
+        audit) cmd_audit "$@" ;;
         dev) cmd_dev "$@" ;;
         clean) cmd_clean "$@" ;;
         -h | --help | help) usage ;;

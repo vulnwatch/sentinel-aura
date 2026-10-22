@@ -68,6 +68,7 @@ Node.js.
 | `scripts/tooling.sh run <script> [args]` | Run a `package.json` script without network access, for example `run check` for the type check, lint, format check, and tests, or `run test -- src/router.test.tsx` |
 | `scripts/tooling.sh format` | Format the sources with Prettier |
 | `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
+| `scripts/tooling.sh audit` | Audit the installed dependencies: their registry signatures and attestations (`npm audit signatures`) and their known vulnerabilities (`npm audit`), as CI does when the dependencies change |
 | `scripts/tooling.sh dev` | Start the development server on <http://localhost:5173>, published on the loopback interface only |
 | `scripts/tooling.sh clean` | Remove the dependency volume of the clone |
 
