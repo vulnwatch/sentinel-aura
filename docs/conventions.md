@@ -78,35 +78,45 @@ never attach a screenshot that shows real personal identifiers.
 
 ### Dependency Admission
 
-The approved dependencies are those that `docs/architecture.md` (Approved
-Dependencies) lists. A new direct dependency is added only after the
-repository owner's explicit decision. A direct dependency is a package that
-`package.json` declares, at run time or for development, including another
-package of a family already in use, and a container image that the tooling,
-the tests, or the released image use. The packages that a direct dependency
-brings are part of its footprint, not separate admissions. Updates, version
-changes, and removals of approved dependencies are not admissions; Renovate
-and the normal review process handle them (`docs/deployment.md`, Dependency
-Updates).
+A new dependency is added only after the repository owner's explicit
+decision. A new dependency is a third-party component that a change would
+declare, pin, install, or load for the first time: for example an npm
+package, at run time or for development, including another package of a
+family already in use; a container image; a GitHub Action; a tool that CI, a
+Git hook, or a script runs; or an asset that the UI would load from a third
+party. The packages that a dependency brings with it are part of its
+footprint, not separate admissions. The same decision is needed before a
+document under `docs/` prescribes a new dependency; naming one in a tracking
+issue is not that decision.
+
+No further decision is needed for the dependencies of the UI stack that
+`docs/architecture.md` (Approved Dependencies) lists, for any other
+dependency that a merged document under `docs/` prescribes, or for a
+component that the repository already declares or pins. Updates, version
+changes, and removals of declared dependencies are outside this rule;
+Renovate and the normal review process handle them (`docs/deployment.md`,
+Dependency Updates).
 
 The request for the decision states:
 
 - the current requirement that the dependency serves, not an anticipated one;
-- why the web platform, the language, or an approved dependency does not
-  suffice;
-- whether it reaches the browser or serves only the tooling;
+- why the web platform, the language, or an already declared dependency does
+  not suffice;
+- where it runs or ships: the browser, the released image, CI, or the tooling
+  only;
 - its maintenance: release activity, maintainers and governance, and whether
   its releases carry provenance attestations;
 - its transitive footprint: the packages that it adds, and whether any of them
   has install scripts; and
 - its license, which must be compatible with the Apache License 2.0.
 
-The pull request that adds the dependency records the decision and adds the
-dependency to Approved Dependencies. Two exceptions to the package manager
-settings (`docs/architecture.md`, Build Tool, Package Manager, and Node.js)
-require the same decision and justification: allowing the install scripts of
-a dependency, and installing a version younger than the minimum release age
-other than through a vulnerability-fix update.
+The pull request that adds the dependency records the justification and the
+decision, and adds a dependency of the UI stack to Approved Dependencies. Two
+exceptions to the package manager settings (`docs/architecture.md`, Build
+Tool, Package Manager, and Node.js) require the same decision and
+justification: allowing the install scripts of a dependency, and installing a
+version younger than the minimum release age other than through a
+vulnerability-fix update.
 
 ## Shell Scripting
 
@@ -437,6 +447,9 @@ UI documents are of two kinds:
 Both describe observable behavior and its constraints, not implementation:
 they name no component, file, library API, or internal state unless that name
 is itself part of the contract (for example, a URL that users can bookmark).
+An architecture decision is such a contract for what it chooses: it names the
+technologies, tools, and mechanisms that it selects and the files that carry
+them.
 
 ### Foundation Documents
 

@@ -196,11 +196,10 @@ environment unless it names one.
   development server (Sentinel `docs/deployment.md`, IdP Client Registration
   (id.suse.com)).
 - The browser accepts the `Secure`, `__Host-` session cookie only from a
-  secure context (Sentinel `docs/features/identity/authentication.md`, Session
-  cookie). The development origin `http://localhost:{port}` is one only in a
-  browser that treats `localhost` as a secure context. Chromium-based
-  browsers and Firefox do, and accept the session cookie there; Safari does
-  not (Supported Browsers). An HTTPS development origin would not match the
+  secure origin (Sentinel `docs/features/identity/authentication.md`, Session
+  cookie). The development origin `http://localhost:{port}` qualifies only in
+  a browser that accepts `Secure` cookies from `localhost`; Supported Browsers
+  states which browsers do. An HTTPS development origin would not match the
   local redirect URI that Sentinel registers, so it requires a change in
   Sentinel first.
 
@@ -278,7 +277,7 @@ support (LTS) line of the tooling image (Development Environment).
 
 | Option | Impact |
 |---|---|
-| **npm** (chosen) | Ships with Node.js, so no other tool needs installing, pinning, or updating. It blocks the install scripts of dependencies by default and can refuse versions younger than a minimum age and dependencies fetched from Git or a URL; Renovate supports it. Its default layout lets code import a package that it does not declare |
+| **npm** (chosen) | Ships with Node.js, so no other tool needs installing, pinning, or updating. It blocks the install scripts of dependencies by default and can refuse versions younger than a minimum age and dependencies fetched from Git or a URL; Renovate supports it. Its default layout lets code import a package that it does not declare, which its linked layout prevents |
 | pnpm | Stricter by default: a minimum release age, blocked exotic sub-dependencies, and a layout that rejects undeclared imports. One more tool to install, pin, and update, and its current major version is a rewrite |
 | Yarn, Bun | One more tool, with compatibility costs (Yarn's Plug'n'Play) or a shorter track record as a package manager (Bun) |
 
@@ -293,21 +292,25 @@ npm is configured as follows:
 - The lockfile is committed, and CI installs exactly what it records.
 - The install scripts of dependencies stay blocked; allowing one is an
   admission decision (`docs/conventions.md`, Dependency Admission).
+- npm uses its linked layout, so code can import only the packages that
+  `package.json` declares, and the type check fails on any other import.
 - npm resolves only versions published at least seven days earlier, and
   Renovate applies the same minimum release age to its updates. The malicious
   versions published through hijacked maintainer accounts and release
   pipelines in 2025 and 2026 were mostly detected and removed within hours or
-  a few days. Vulnerability-fix updates bypass the minimum age, as Renovate
-  does by default, and npm installs a version that the lockfile records
-  whatever its age, so an accepted fix applies at once.
+  a few days. Vulnerability-fix updates are exempt: Renovate raises them at
+  once, and their lockfile is resolved with only the fixed packages excluded
+  from the minimum age. npm installs a version that the lockfile records
+  whatever its age.
 - Dependencies fetched from Git or from a URL are refused, and `package.json`
   records exact versions, so every update is a visible change.
 - The Node.js line is an active or maintenance LTS line, never a Current or
-  end-of-life one, and `package.json` declares it.
+  end-of-life one; `package.json` declares it, and npm refuses to install on
+  another line.
 
-**Rationale:** npm's current defaults close the main install-time attack
-paths without adding a tool. Its remaining difference from pnpm, undeclared
-imports, matters little in an application with few direct dependencies.
+**Rationale:** with these settings, npm closes the main install-time attack
+paths and, through its linked layout, matches pnpm's strictness on undeclared
+imports, without adding a tool.
 
 #### Development Environment
 
@@ -315,9 +318,10 @@ imports, matters little in an application with few direct dependencies.
 tooling image, never directly on the host: dependency installation, the
 development server, the build, API client generation, static checks, and
 tests. Rootless Podman starts the containers, through a script of this
-repository. The tooling image is the official Playwright image, which provides
-Node.js, npm, and the test browsers, pinned by version and digest; CI runs the
-same image. The containers follow these rules:
+repository that CI runs as well, so every command runs the same way locally
+and in CI. The tooling image is the official Playwright image, which provides
+Node.js, npm, and the test browsers, pinned by version and digest. The
+containers follow these rules:
 
 - A container receives the repository and nothing else from the host: no home
   directory, credentials, keys, or tokens.
@@ -368,7 +372,7 @@ form components and validated with Zod, without a form library.
 
 | Option | Impact |
 |---|---|
-| **React Aria form components and Zod** (chosen) | Labels, descriptions, and error messages are accessible by construction. The API's changes are single-purpose `PATCH` or `POST` operations with small bodies (Sentinel `docs/api-spec.md`, Mutation Patterns), which need no form state library. Zod also validates the search parameters and has no dependencies |
+| **React Aria form components and Zod** (chosen) | Labels, descriptions, and error messages are accessible by construction. The API changes a resource through field updates that send only the changed fields, or through actions on one identified resource (Sentinel `docs/api-spec.md`, Mutation Patterns and Partial Update Semantics), which need no form state library. Zod also validates the search parameters and has no dependencies |
 | React Hook Form | Widely used; one maintainer, and releases without provenance attestations |
 | TanStack Form | Stable since 2025, from the maintainers of the router |
 
@@ -408,10 +412,11 @@ its shared scale counters drift between screens.
 request function for each operation, and the TanStack Query hooks. The
 generated code is committed; CI regenerates it and fails when the result
 differs, so a change of the contract appears in the pull request diff (Backend
-Contract). The requests use origin-relative URLs under `/api/v1/` and the
-browser's default same-origin credentials, through one shared request function
-that turns every error response into an error carrying Sentinel's `code`
-(Sentinel `docs/api-spec.md`, Response Format).
+Contract). The requests use origin-relative URLs under `/api/v1/` (Same
+Origin) and the browser's default same-origin credentials, through one shared
+request function that turns every error response into an error, carrying
+Sentinel's `code` when the response provides one (Sentinel `docs/api-spec.md`,
+Response Format).
 
 | Option | Impact |
 |---|---|
@@ -464,14 +469,18 @@ accessibility requirements of the UI foundations cover the rest
 | **Playwright** (chosen) | Chromium and Firefox in one runner, an official container image with the browsers, isolated browser contexts, and screenshots |
 | Cypress | Runs inside the browser, without several tabs or origins in one test, and with a heavier runner |
 
+| Option | Impact |
+|---|---|
+| **axe-core** (chosen) | The most widely used accessibility rule engine, maintained by Deque, with an official Playwright integration of one package |
+| Pa11y, Lighthouse | Run axe-core or a similar engine through a separate runner, with more packages and no integration into the end-to-end tests |
+
 **Rationale:** the chosen tools run on the native compiler, add the fewest
 packages, and test in real browsers, which accessibility testing needs.
 
 #### Approved Dependencies
 
-These are the direct dependencies that the stack approves. A new one requires
-the decision that `docs/conventions.md` (Dependency Admission) defines; the
-packages that a direct dependency brings are part of its footprint. The
+These are the direct dependencies that the stack approves; a new one requires
+the decision that `docs/conventions.md` (Dependency Admission) defines. The
 dependencies that reach the browser bring about 30 packages in total.
 
 | Dependency | Purpose | In the browser |
@@ -502,11 +511,12 @@ nginx, its configuration, and the static files. On the Sentinel host, the
 reverse proxy or ingress routes `/api` to Sentinel and the UI's paths to this
 image (Open Decisions). The image:
 
-- answers every path that is not a file of the build, `/auth/callback`
-  included, with the application's entry document, so that the application
-  resolves the path;
-- serves the content-hashed files of the build with long-lived caching, and
-  the entry document without caching;
+- answers every path outside the build's asset directory that is not a file
+  of the build, `/auth/callback` included, with the application's entry
+  document, so that the application resolves the path;
+- serves the content-hashed files of the asset directory with long-lived
+  caching, answers a missing one with `404`, and serves the entry document
+  without caching;
 - sets the security headers of its responses (Security Headers); and
 - writes nginx's default access log, which does not include the `Cookie`
   header (Same Origin).
@@ -545,7 +555,8 @@ a library update that breaks the policy is caught before release.
 
 `Strict-Transport-Security` belongs to the component that terminates TLS for
 the Sentinel host, because it applies to the whole host, the API included,
-and only over HTTPS; Sentinel's specifications state it (Open Decisions).
+and only over HTTPS; Sentinel's specifications are to state it (Open
+Decisions).
 
 | Option | Impact |
 |---|---|
@@ -565,8 +576,8 @@ development and the tests use Chromium and Firefox.
 
 | Option | Impact |
 |---|---|
-| **Chrome, Edge, and Firefox** (chosen) | Chromium-based browsers and Firefox treat `http://localhost` as a secure context and accept Sentinel's session cookie there (Local Development). The Extended Support Release covers enterprise Linux desktops, which ship it. The tests cover both engines |
-| Also Safari | WebKit rejects a `Secure` cookie on `http://localhost` (WebKit bug 232088), so Safari cannot serve local development, and every test run would add a third engine |
+| **Chrome, Edge, and Firefox** (chosen) | Chromium-based browsers and Firefox accept `Secure` cookies from `http://localhost`, and with them Sentinel's session cookie on the development origin (Local Development). The Extended Support Release covers enterprise Linux desktops, which ship it. The tests cover both engines |
+| Also Safari | WebKit rejects a `Secure` cookie from `http://localhost` (WebKit bug 232088), so Safari cannot serve local development, and every test run would add a third engine |
 
 Vite's default build target, the browsers of Baseline Widely Available, is
 older than these versions, so the build needs no other target.
@@ -584,4 +595,4 @@ Decisions.
 |---|---|---|
 | Serving the UI on the Sentinel host: the reverse proxy or ingress of the host routes the UI's paths to the UI's image (Packaging and Serving), and the component that terminates TLS sets `Strict-Transport-Security` for the host (Security Headers) | Sentinel, through an issue in `vulnwatch/sentinel`, because the routing and the TLS termination of the host belong to Sentinel's deployment (Sentinel `docs/deployment.md`, Pre-Production Checklist) | Before the UI is first packaged for deployment |
 | Fictional data for local development and the end-to-end tests: how a Sentinel backend at the supported version is loaded with fictional data only (`docs/conventions.md`, Example Data in Documentation) | Sentinel, through an issue in `vulnwatch/sentinel`, because loading data into the backend belongs to Sentinel | Before the local development environment and the end-to-end tests are built |
-| Public exposure of Sentinel's root paths. Sentinel's API serves its OpenAPI document at `/openapi.json` (Sentinel `docs/deployment.md`, API Documentation Publication) and its interactive documentation at `/docs` and `/redoc`, all at the site root outside `/api`, so a host that routes only `/api` to the backend does not expose them | Sentinel, through an issue in `vulnwatch/sentinel`, because these paths and their routing belong to Sentinel's API and deployment | Before the UI is first packaged for deployment |
+| Public exposure of Sentinel's root paths. Sentinel's API serves its OpenAPI document at `/openapi.json` and its interactive documentation at `/docs`, both at the site root outside `/api` (Sentinel `docs/api-spec.md`, OpenAPI Document and Interactive Documentation), so a host that routes only `/api` to the backend does not expose them | Sentinel, through an issue in `vulnwatch/sentinel`, because these paths and their routing belong to Sentinel's API and deployment | Before the UI is first packaged for deployment |
