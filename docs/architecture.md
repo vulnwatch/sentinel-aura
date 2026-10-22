@@ -122,8 +122,7 @@ version ranges (Sentinel `docs/deployment.md`, Pre-1.0 Policy).
   (Sentinel `docs/deployment.md`, Sentinel Host). Each release of the UI
   therefore states the Sentinel version that it supports, and every change of
   the supported version carries a release signal (`docs/conventions.md`,
-  Versioning), so that a UI release supports each Sentinel version that the
-  UI moves to.
+  Versioning), so that the next UI release supports the new version.
 - Agents read Sentinel's specifications from a read-only local clone, at the
   revision that `AGENTS.md` (Sentinel as an External Authority) selects.
 
@@ -203,10 +202,10 @@ environment unless it names one.
   default, lists only browser clients served from another origin (Sentinel
   `docs/configuration.md`, Application; Sentinel
   `docs/features/identity/authentication.md`, Cross-Origin Request
-  Protection). The UI never needs an entry, and Sentinel's staging and
-  production configuration leaves `CORS_ORIGINS` empty unless a browser
-  client served from another origin needs one (Sentinel `docs/deployment.md`,
-  Staging Deployment; Pre-Production Checklist).
+  Protection). The UI never needs an entry. Sentinel's staging configuration
+  leaves `CORS_ORIGINS` empty, and its Pre-Production Checklist keeps it empty
+  unless a browser client is served from another origin (Sentinel
+  `docs/deployment.md`, Staging Deployment; Pre-Production Checklist).
 - Sentinel rejects every unsafe request, with any method other than `GET`,
   `HEAD`, and `OPTIONS`, that a browser sends for a page of another origin not
   listed in `CORS_ORIGINS`, with `403 AUTH_CROSS_ORIGIN_REJECTED` (Sentinel
@@ -578,8 +577,8 @@ or under `/api/` (Same Origin). The image:
 
 **Rationale:** an image keeps everything that the UI's correctness and security
 depend on under this repository's tests, and needs from Sentinel's deployment
-only the routing of the host and the pass-through of its response headers,
-which Sentinel requires (Same Origin; Security Headers).
+only the routing of the host and the pass-through of the image's response
+headers, which Sentinel requires (Same Origin; Security Headers).
 
 ### Security Headers
 
