@@ -62,5 +62,8 @@ The repository currently has the following measures enabled:
 - **Dependency alerts**: GitHub Dependabot alerts, with Renovate raising fix pull requests
 - **Code scanning**: GitHub CodeQL default setup
 - **CI hardening**: workflows pin every action by commit SHA and run with least-privilege permissions; see [Workflow Conventions](docs/deployment.md#workflow-conventions)
+- **Isolated tooling**: every Node.js command, locally and in CI, runs in a disposable rootless Podman container that receives only the repository, mounted read-only except the outputs and the files that the command changes by design, with no home directory or credentials; see [Development Environment](docs/architecture.md#development-environment). The checks and tests also run without network access; see [Development Setup](CONTRIBUTING.md#development-setup)
+- **npm hardening**: a committed lockfile with exact versions, blocked install scripts, a seven-day minimum release age, no dependencies from Git or URLs, and a layout that rejects undeclared imports; see [Build Tool, Package Manager, and Node.js](docs/architecture.md#build-tool-package-manager-and-nodejs)
+- **Static analysis of the UI code**: Oxlint with type-aware, React, and accessibility rules, which rejects `dangerouslySetInnerHTML` and evaluated code; see [Code Conventions](docs/conventions.md#code-conventions)
 
-Further measures for the UI stack, such as static analysis, dependency auditing, security headers, and release supply-chain artifacts, are added as the tooling of the chosen stack ([docs/architecture.md](docs/architecture.md#technology-stack)) is built.
+Further measures for the UI stack, such as dependency auditing, security headers, and release supply-chain artifacts, are added as the tooling of the chosen stack ([docs/architecture.md](docs/architecture.md#technology-stack)) is built.

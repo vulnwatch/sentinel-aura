@@ -8,8 +8,10 @@ provides the browser interface built on that API.
 ## Project Status
 
 This repository is being bootstrapped and is **not usable yet**: it contains
-no application code. The technology stack is recorded in
-[docs/architecture.md](docs/architecture.md#technology-stack).
+the application skeleton and its tooling, but no screens. The technology stack
+is recorded in [docs/architecture.md](docs/architecture.md#technology-stack),
+and [CONTRIBUTING.md](CONTRIBUTING.md#development-setup) describes the
+development setup.
 
 The bootstrap and the roadmap are tracked in
 [#7](https://github.com/vulnwatch/sentinel-aura/issues/7).

@@ -228,6 +228,8 @@ the authoritative conventions. Core locations are:
 | GitHub workflows, issue forms, and pull request template | `.github/` |
 | Git hooks | `.githooks/` |
 | Repository orchestration and developer or CI scripts | `scripts/` |
+| UI source code and its unit and component tests | `src/` (`docs/conventions.md`, Code Conventions) |
+| npm manifest, lockfile, and settings, the entry document, and the configuration of the build, type check, lint, format, and test tools | Repository root |
 
 A location in this table may not exist yet; the first change that needs it
 creates it. Backend behavior, the API contract, and client obligations are
@@ -331,6 +333,8 @@ confidently.
   conventions in `../sentinel/docs/api-spec.md` that apply to them, and the
   pinned OpenAPI document when one exists. Recheck them during conformance
   review.
+- **UI code:** before writing or reviewing code or tests under `src/`, read
+  complete Code Conventions in `docs/conventions.md`.
 - **Need for an API capability:** search Sentinel's specifications and the
   pinned OpenAPI document before concluding that the capability is absent; if
   it is absent, apply the backend-gap rule in Sentinel as an External
@@ -368,6 +372,12 @@ confidently.
   in `docs/conventions.md` and the Technology Stack section of
   `docs/architecture.md`, including Approved Dependencies, before proposing
   or adding it.
+- **Node.js command:** run every `npm`, `npx`, or `node` command, and every
+  tool that they start, such as the build, the checks, and the tests, through
+  `scripts/tooling.sh`, never on the host (`docs/architecture.md`, Development
+  Environment); its header lists its commands. OpenCode denies `npm`, `npx`,
+  and `node` on the host; never work around the denial, for example through
+  an absolute path, another shell, or a container of your own.
 
 ### Specifications, policy, and OpenCode
 

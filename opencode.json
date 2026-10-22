@@ -7,6 +7,16 @@
       "description": "Read-only local clone of vulnwatch/sentinel: the backend, its domain and API contract specifications, and client obligations. Read it as AGENTS.md (Sentinel as an External Authority) requires; never modify it."
     }
   },
+  "permission": {
+    "bash": {
+      "npm": "deny",
+      "npm *": "deny",
+      "npx": "deny",
+      "npx *": "deny",
+      "node": "deny",
+      "node *": "deny"
+    }
+  },
   "agent": {
     "build": {
       "disable": true
@@ -25,7 +35,15 @@
           "opencode.json": "allow",
           "../sentinel/**": "deny"
         },
-        "bash": "allow"
+        "bash": {
+          "*": "allow",
+          "npm": "deny",
+          "npm *": "deny",
+          "npx": "deny",
+          "npx *": "deny",
+          "node": "deny",
+          "node *": "deny"
+        }
       }
     },
     "code": {
@@ -39,7 +57,15 @@
           "docs/**": "ask",
           "../sentinel/**": "deny"
         },
-        "bash": "allow"
+        "bash": {
+          "*": "allow",
+          "npm": "deny",
+          "npm *": "deny",
+          "npx": "deny",
+          "npx *": "deny",
+          "node": "deny",
+          "node *": "deny"
+        }
       }
     }
   }

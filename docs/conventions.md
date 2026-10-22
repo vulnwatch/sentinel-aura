@@ -7,6 +7,16 @@
 - [Cross-Cutting Rules](#cross-cutting-rules)
   - [Example Data in Documentation](#example-data-in-documentation)
   - [Dependency Admission](#dependency-admission)
+- [Code Conventions](#code-conventions)
+  - [Directory Structure and Naming](#directory-structure-and-naming)
+  - [Routes](#routes)
+  - [API Access](#api-access)
+  - [Data Read from the API](#data-read-from-the-api)
+  - [Error Codes and Messages](#error-codes-and-messages)
+  - [Components and Styling](#components-and-styling)
+  - [No Raw HTML Injection](#no-raw-html-injection)
+  - [Tests](#tests)
+  - [Checks](#checks)
 - [Shell Scripting](#shell-scripting)
 - [Git Conventions](#git-conventions)
   - [Workflow](#workflow)
@@ -125,6 +135,150 @@ Tool, Package Manager, and Node.js) require the same decision and
 justification: allowing the install scripts of a dependency, and installing a
 version younger than the minimum release age other than through a
 vulnerability-fix update.
+
+## Code Conventions
+
+This section governs the UI's source code and its unit and component tests,
+under `src/`. The technologies come from `docs/architecture.md` (Technology
+Stack); what the UI does comes from the foundation and screen documents, and
+what the API does from Sentinel's contract. The tools that Checks lists
+enforce part of these rules; review enforces the rest.
+
+### Directory Structure and Naming
+
+| Path | Contents |
+|---|---|
+| `src/main.tsx` | The entry point: global configuration, then the mounting of the application |
+| `src/zod.ts` | Zod's global configuration, which `src/main.tsx` imports first |
+| `src/styles.css` | The stylesheet: the Tailwind CSS entry point |
+| `src/app.tsx` | The providers that every screen shares |
+| `src/router.ts` | The route tree and the router |
+| `src/routes/` | One module per route: its definition and its page component |
+| `src/components/` | The components that several routes share |
+| `src/api/` | The API client generated from the pinned OpenAPI document, the shared request function, and the mapping of error codes to messages |
+
+A path of this table that does not exist yet is created by the first change
+that needs it; content of another kind needs a new row first.
+
+- File and directory names are kebab-case, such as `ticket-list.tsx`. A
+  module that contains JSX ends in `.tsx`, any other in `.ts`.
+- Components are named in PascalCase, hooks start with `use`, and other
+  functions and variables are named in camelCase.
+- Modules use named exports. A tool configuration file that requires a
+  default export, such as `vite.config.ts`, is the only exception.
+
+### Routes
+
+- Routes are defined in code with TanStack Router's route functions, without
+  a route generator (`docs/architecture.md`, Routing, Server State, and
+  Forms). Each route module exports its route, and `src/router.ts` assembles
+  the route tree.
+- The state that a screen keeps in its URL, such as filters, sorting, and
+  pagination, lives in the route's path and search parameters. A Zod schema
+  in the route definition validates the search parameters, and the screen
+  reads them through the router's typed hooks.
+- Links use the router's typed paths. React Aria's links, and the components
+  that contain links, navigate through the router, which the root route
+  connects to React Aria.
+
+### API Access
+
+- The UI calls Sentinel's API only through the client that Orval generates
+  from the pinned OpenAPI document: its request functions and TanStack Query
+  hooks (`docs/architecture.md`, Backend Contract and API Client Generation).
+  No other module calls `fetch` or `XMLHttpRequest` or builds an API URL.
+- The generated code is never edited by hand, and its types are the API
+  types: no module declares an API type itself. A change comes from the
+  pinned OpenAPI document or from the generator's configuration.
+- Every generated request goes through one shared request function. It uses
+  origin-relative URLs under `/api/v1/` and the browser's default same-origin
+  credentials, and it turns every error response into an error that carries
+  the HTTP status and, when the response provides one, Sentinel's `code`
+  (`docs/architecture.md`, API Client Generation; Sentinel
+  `docs/api-spec.md`, Response Format).
+
+### Data Read from the API
+
+- Data read from the API lives only in TanStack Query's cache, read through
+  the generated hooks. Components do not copy it into their state, a context,
+  a module variable, or browser storage.
+- After a successful change, the code invalidates the queries whose data the
+  change affects, so that they are read again from the API, instead of
+  editing the cached data.
+- Form input lives in React state until it is submitted
+  (`docs/architecture.md`, Routing, Server State, and Forms).
+
+### Error Codes and Messages
+
+- Code decides on an error by its `code`, never by `detail`, which may
+  change without notice (Sentinel `docs/api-spec.md`, Response Format). An
+  error without `code`, such as a response produced before the request
+  reaches Sentinel, is treated like an error with an unknown code.
+- One module in `src/api/` maps error codes to the messages that the UI
+  shows. A screen handles specifically only the codes that its screen
+  document lists (Specification Writing, Screen Documents); every other code
+  gets the default of the error presentation of the UI foundations, which
+  also own the wording of the messages and where they appear.
+- The field errors of a `VALIDATION_ERROR` response are matched to the form
+  fields by their `loc` (Sentinel `docs/api-spec.md`, Response Format).
+- A behavior that Sentinel's contract attaches to a response of any
+  operation, such as the session expiration handling after a `401` (Sentinel
+  `docs/features/identity/authentication.md`, Frontend session behavior), is
+  implemented once, for every request, never by each screen.
+
+### Components and Styling
+
+- Components are functions. Interactive elements, such as buttons, links,
+  form fields, menus, dialogs, and tables, are built from React Aria
+  Components (`docs/architecture.md`, Components and Styling), never from
+  native elements with hand-written behavior or ARIA attributes.
+- `src/components/` holds the components that several routes share. A React
+  Aria component is styled once, in the shared component that wraps it, and
+  routes use that component.
+- Styling uses Tailwind CSS utility classes, on the scale that the design
+  system of the UI foundations defines. `src/styles.css` is the only
+  stylesheet.
+- A component declares the type of its props in its own module.
+
+### No Raw HTML Injection
+
+- Text from the API, including what Sentinel takes from external sources,
+  such as CVE descriptions, is rendered as React text, which React escapes.
+- No code inserts HTML: no `dangerouslySetInnerHTML`, and no `innerHTML`,
+  `outerHTML`, `insertAdjacentHTML`, or `document.write`. No code evaluates a
+  string: no `eval`, `new Function`, or string passed to `setTimeout` or
+  `setInterval`.
+- Lint rejects `dangerouslySetInnerHTML` and evaluated code, and in
+  production the Content Security Policy with Trusted Types blocks the
+  injection of HTML into the page (`docs/architecture.md`, Security Headers).
+  Neither replaces this rule.
+
+### Tests
+
+- A unit or component test sits next to the module that it tests, as
+  `<module>.test.ts` or `<module>.test.tsx`, and runs in Vitest's browser
+  mode in Chromium and Firefox (`docs/architecture.md`, Static Checks and
+  Tests).
+- Tests find elements as users do: by role and accessible name, or by
+  visible text, never by CSS class or document structure.
+- Component tests replace the shared request function with prepared
+  responses and make no network request.
+- Test data is fictional (Example Data in Documentation).
+
+### Checks
+
+- Every change passes the type check (the TypeScript compiler in strict mode,
+  `tsconfig.json`), the lint (Oxlint, `.oxlintrc.json`), the format check
+  (Prettier, on the paths that `.prettierignore` leaves in scope), and the
+  unit and component tests. CI runs them as required checks
+  (`docs/deployment.md`, Workflow Inventory).
+- Like every Node.js command, they run through `scripts/tooling.sh`
+  (`docs/architecture.md`, Development Environment), never on the host:
+  `scripts/tooling.sh run check` runs all four, and
+  `scripts/tooling.sh format` formats the files in Prettier's scope.
+- Code uses no `any`. A lint rule is disabled only inline, for the smallest
+  span, with a comment that explains why the finding is a false positive or
+  an accepted trade-off.
 
 ## Shell Scripting
 

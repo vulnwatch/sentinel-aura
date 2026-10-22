@@ -23,6 +23,13 @@ Thumbs.db
 id_rsa
 id_ed25519
 
+# Node.js tooling (scripts/tooling.sh): the mount point of the dependency
+# volume, which stays empty on the host, and the outputs
+/node_modules/
+/dist/
+/coverage/
+/test-results/
+
 # OpenCode local agent models
 .opencode/opencode.json
 .opencode/opencode.jsonc

@@ -1,0 +1,9 @@
+# Prettier formats only the UI sources and the configuration of their tools.
+# Keep the paths below in sync with FORMAT_PATHS in scripts/tooling.sh, which
+# makes them writable for its format command.
+/*
+!/src/
+!/index.html
+!/vite.config.ts
+!/tsconfig.json
+!/.oxlintrc.json

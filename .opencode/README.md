@@ -53,8 +53,8 @@ They are configured in `opencode.json`. The built-in Build agent is disabled.
 | Agent | Scope | Permissions |
 |-------|-------|-------------|
 | **Plan** | Analysis and planning | Read-only (built-in) |
-| **Spec** | UI specifications, project policy, and OpenCode configuration | Edit: `docs/**`, `AGENTS.md`, `.opencode/**`, `opencode.json`; shell: Git/GitHub workflow, read-only inspection, tests |
-| **Code** | Implementation, tests, CI/CD, and repository tooling | Edit: all files (`docs/**` requires confirmation) |
+| **Spec** | UI specifications, project policy, and OpenCode configuration | Edit: `docs/**`, `AGENTS.md`, `.opencode/**`, `opencode.json`; shell: Git/GitHub workflow, read-only inspection, tests; no `npm`, `npx`, or `node` on the host |
+| **Code** | Implementation, tests, CI/CD, and repository tooling | Edit: all files (`docs/**` requires confirmation); shell: every command except `npm`, `npx`, or `node` on the host |
 
 - **Plan** — read-only mode for analysis, planning, and discussion without
   making changes. Uses the OpenCode built-in Plan agent.
@@ -73,6 +73,20 @@ They are configured in `opencode.json`. The built-in Build agent is disabled.
 Plan and Code take the delegated decisions defined in `AGENTS.md` (Delegated
 decisions): Plan presents them in its plan, while Code records them and ships
 any document alignment in the same PR.
+
+### Host Node.js Commands
+
+Every Node.js command runs through `scripts/tooling.sh`, in a container, never
+on the host (`AGENTS.md`, Repository tooling). `opencode.json` denies `npm`,
+`npx`, and `node` on the host to every agent: its top-level `permission` block
+holds the denies, which OpenCode applies after the rules of the built-in
+agents (Plan, `general`, and `explore`) and before those of the project's
+agents. The Spec and Code agents allow every shell command, so that a
+contributor's global configuration cannot make them ask, and repeat the denies
+after that rule; the reviewers allow no rule that overrides them. A pattern
+such as `npm *` also matches the bare command. Like the reviewers' denies,
+these are defense in depth, not a sandbox: an absolute path or another shell
+bypasses them, and `AGENTS.md` forbids that.
 
 ## Subagents
 
