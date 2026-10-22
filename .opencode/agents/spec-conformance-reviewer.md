@@ -473,7 +473,11 @@ report findings in their territory:
 
 | Territory | Owner |
 |---|---|
-| Documentation completeness and cross-document coherence | `@docs-reviewer` |
+| Design quality, justified complexity | `@design-reviewer` |
+| Contradictions between documents, and between a document and Sentinel's contract | `@spec-coherence-reviewer` |
+| Gaps within a single document | `@spec-gap-analyzer` |
+| Placement of rules across documents | `@docs-placement-reviewer` |
+| Documentation completeness and accuracy | `@docs-reviewer` |
 | CI/CD artifacts and pipeline coherence | `@cicd-reviewer` |
 
 **Deliberate overlap.** An obligation that an authority states for an element
