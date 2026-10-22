@@ -200,7 +200,10 @@ to the changed design. Expand when impact cannot be bounded confidently.
   server of its own, Sentinel's API as the only backend, the same origin as
   the API, a session token that the UI never handles, and authorization
   decided by the API? A design that depends on departing from one of them is
-  a finding unless the change records a new architecture decision
+  a finding. A constraint that Sentinel's contract fixes changes only in
+  Sentinel first (`AGENTS.md`, Sentinel as an External Authority); a decision
+  of this repository changes only through a new architecture decision that
+  the change records
 - Is each responsibility placed where the architecture puts it? A rule that
   Sentinel decides, such as authorization or a value the API derives,
   recomputed in the UI is a duplication that can drift from the contract
@@ -234,6 +237,10 @@ to the changed design. Expand when impact cannot be bounded confidently.
   If so, recommend the smaller design and explain what can be removed
 
 ### Edge cases and risks
+
+Report a scenario here only when the structure of the design causes it or
+makes it hard to handle. Behavior that the document merely leaves unspecified
+belongs to `@spec-gap-analyzer`.
 
 - Does the design behave predictably when the API is slow or unavailable, for
   example a screen composed from several requests when one of them fails?
@@ -273,8 +280,7 @@ to the changed design. Expand when impact cannot be bounded confidently.
   before another works, but nothing enforces this) that could break as the
   UI evolves?
 - Will a new contributor or agent understand this design without extensive
-  context? Are the concepts and names intuitive and consistent with
-  Sentinel's domain terms?
+  context? Are its concepts intuitive?
 
 ## What NOT to check
 
@@ -306,8 +312,8 @@ Provide a structured summary with these sections:
      problematic area
    - A concrete scenario demonstrating the issue
    - At least one alternative with explicit trade-offs
-3. **Risks**: edge cases, failure modes, or scenarios not covered by the
-   design that could cause problems, each with a realistic example
+3. **Risks**: edge cases or failure modes that the structure of the design
+   causes or makes hard to handle, each with a realistic example
 4. **API gaps**: when a weakness exists only because Sentinel's API lacks a
    capability, the missing capability and the Sentinel specification that
    would own it; omit this section when there is none

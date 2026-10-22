@@ -165,10 +165,10 @@ complexity without presenting it to the user for a decision.
    operations they consume and the general conventions in `docs/api-spec.md`
    that apply to them; `docs/features/identity/rbac.md` when a document states
    what roles see or do; and the owning feature specifications, together with
-   `docs/conventions.md` (Terminology), when a document names domain
-   concepts. Read them in `../sentinel` at the revision the invoking agent states
-   it verified (`AGENTS.md`, Sentinel as an External Authority); record a
-   missing revision as a limitation. The clone's checkout may be a different
+   Sentinel `docs/conventions.md` (Terminology), when a document names domain
+   concepts. Read them in `../sentinel` at the revision the invoking agent
+   states it verified (`AGENTS.md`, Sentinel as an External Authority); record
+   a missing revision as a limitation. The clone's checkout may be a different
    revision: read with `git show <ref>:<path>`, running Git with `../sentinel`
    as the working directory of the shell command, because your permissions
    allow the read-only Git forms only without `-C`. Never change the clone
