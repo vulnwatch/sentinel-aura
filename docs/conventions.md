@@ -95,7 +95,8 @@ dependency that a merged document under `docs/` prescribes, or for a
 component that the repository already declares or pins. Updates, version
 changes, and removals of declared dependencies are outside this rule;
 Renovate and the normal review process handle them (`docs/deployment.md`,
-Dependency Updates).
+Dependency Updates). A pull request that removes a dependency of the UI stack
+also removes its Approved Dependencies entry.
 
 The request for the decision states:
 
@@ -108,10 +109,14 @@ The request for the decision states:
   its releases carry provenance attestations;
 - its transitive footprint: the packages that it adds, and whether any of them
   has install scripts; and
-- its license, which must be compatible with the Apache License 2.0.
+- its license, which must allow that use, and must be compatible with the
+  Apache License 2.0 when the dependency reaches the browser or the released
+  image.
 
 The pull request that adds the dependency records the justification and the
-decision, and adds a dependency of the UI stack to Approved Dependencies. Two
+decision, and adds a dependency of the UI stack to Approved Dependencies;
+that entry records an admission already decided, so it needs no separate
+documentation pull request (Specification Ownership). Two
 exceptions to the package manager settings (`docs/architecture.md`, Build
 Tool, Package Manager, and Node.js) require the same decision and
 justification: allowing the install scripts of a dependency, and installing a
@@ -330,8 +335,8 @@ the commit message on `master`.
 - **Description**: at minimum: issue linkage, owning documents (foundation
   and screen documents of this repository and the Sentinel specifications
   relied on), scope summary, test evidence, screenshots when required,
-  delegated decisions, reviewer results, manual verification notes. The pull
-  request template provides these sections.
+  delegated decisions, new dependencies, reviewer results, manual
+  verification notes. The pull request template provides these sections.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
   reason>` for an exempt human-authored PR under "Issues and work units"
   in Workflow. Use an `- Issue linkage:` field, or a standalone
@@ -349,6 +354,8 @@ the commit message on `master`.
 - **Delegated decisions**: record the interface details and other decisions
   taken under delegation (`AGENTS.md`, Delegated decisions), with the options
   considered and the choice.
+- **New dependencies**: record each new dependency with its justification and
+  the repository owner's decision (Dependency Admission).
 - **Sentinel version**: a PR that changes the supported Sentinel version
   shows the resulting API changes in its diff and states which screens they
   affect.

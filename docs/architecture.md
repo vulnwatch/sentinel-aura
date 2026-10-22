@@ -242,7 +242,7 @@ TypeScript compiler (TypeScript 7 or later).
 
 | Option | Impact |
 |---|---|
-| **React** (chosen) | The most widely used UI framework and the one that LLM agents generate most reliably. Governed by the React Foundation of the Linux Foundation since February 2026. The widest choice of accessible component libraries (Components and Styling). Escapes rendered text by default and supports Trusted Types. Its server components, the subject of critical vulnerabilities in December 2025, are not part of a static single-page application. It imposes little structure, so the code conventions provide it |
+| **React** (chosen) | The most widely used UI framework and the one that LLM agents generate most reliably. Governed by the React Foundation of the Linux Foundation since February 2026. The widest choice of accessible component libraries (Components and Styling). Escapes rendered text by default and supports Trusted Types. Its server components, the subject of critical vulnerabilities in December 2025, are not part of a static single-page application. It imposes little structure, so `docs/conventions.md` provides it |
 | Angular | One vendor, Google, with a support window of 24 months per major version, a complete built-in toolset, and the strongest built-in protections against injection. Its ongoing move to signals and zoneless change detection leaves agents mixing old and new patterns, and a 2025 benchmark of front-end code generation (DesignBench) measured fewer compiling results for Angular than for React or Vue. Its accessible headless components date from 2025. Its build tooling adds about 285 packages, and its packages carry no provenance attestations |
 | Vue | Mature, small, and well known to agents, with fewer accessible component libraries of the depth of React Aria |
 | Svelte | Small output from a compiler, but its syntax changed with Svelte 5 and agents still mix the two; a smaller ecosystem |
@@ -250,9 +250,9 @@ TypeScript compiler (TypeScript 7 or later).
 
 **Rationale:** React combines the most reliable agent output with the
 strongest accessibility ecosystem and neutral, foundation-based governance.
-Angular's built-in structure would help consistency, but the conventions and
-the reviewers provide it, while weaker agent output and heavier tooling would
-cost on every change.
+Angular's built-in structure would help consistency, but `docs/conventions.md`
+and the reviewers provide it, while weaker agent output and heavier tooling
+would cost on every change.
 
 TypeScript lets the API types be generated from the pinned OpenAPI document
 (Backend Contract). The native compiler, stable since July 2026, type-checks
@@ -299,9 +299,9 @@ npm is configured as follows:
   versions published through hijacked maintainer accounts and release
   pipelines in 2025 and 2026 were mostly detected and removed within hours or
   a few days. Vulnerability-fix updates are exempt: Renovate raises them at
-  once, and their lockfile is resolved with only the fixed packages excluded
-  from the minimum age. npm installs a version that the lockfile records
-  whatever its age.
+  once (`docs/deployment.md`, Dependency Updates), and their lockfile is
+  resolved with only the fixed packages excluded from the minimum age. npm
+  installs a version that the lockfile records whatever its age.
 - Dependencies fetched from Git or from a URL are refused, and `package.json`
   records exact versions, so every update is a visible change.
 - The Node.js line is an active or maintenance LTS line, never a Current or
@@ -335,9 +335,13 @@ containers follow these rules:
 
 For local development and the end-to-end tests, the Sentinel backend runs from
 Sentinel's published image at the supported version, with the PostgreSQL and
-Redis that it requires, in containers of the same engine; Sentinel's image
-does not depend on a specific runtime (Sentinel `docs/architecture.md`,
-Design Constraints). That backend holds fictional data only (Open Decisions).
+Redis that it requires (Sentinel `docs/deployment.md`, Software
+Requirements), in containers of the same engine; Sentinel's image does not
+depend on a specific runtime (Sentinel `docs/architecture.md`, Design
+Constraints). That backend holds fictional data only (Open Decisions), so
+signing in there uses Sentinel's local authentication: SSO matches real
+identity provider accounts (Sentinel
+`docs/features/identity/sso-authentication.md`, Identity Mapping).
 
 | Option | Impact |
 |---|---|
@@ -372,7 +376,7 @@ form components and validated with Zod, without a form library.
 
 | Option | Impact |
 |---|---|
-| **React Aria form components and Zod** (chosen) | Labels, descriptions, and error messages are accessible by construction. The API changes a resource through field updates that send only the changed fields, or through actions on one identified resource (Sentinel `docs/api-spec.md`, Mutation Patterns and Partial Update Semantics), which need no form state library. Zod also validates the search parameters and has no dependencies |
+| **React Aria form components and Zod** (chosen) | Labels, descriptions, and error messages are accessible by construction, and form state stays in React's own state. Zod also validates the search parameters and has no dependencies |
 | React Hook Form | Widely used; one maintainer, and releases without provenance attestations |
 | TanStack Form | Stable since 2025, from the maintainers of the router |
 
@@ -500,7 +504,7 @@ dependencies that reach the browser bring about 30 packages in total.
 | `@playwright/test`, `@axe-core/playwright` | End-to-end and accessibility tests | No |
 | Container image `mcr.microsoft.com/playwright` | Tooling image (Development Environment) | No |
 | Container image `nginxinc/nginx-unprivileged` | Base of the released image (Packaging and Serving) | No |
-| Container images of Sentinel at the supported version, PostgreSQL, and Redis | Backend for local development and end-to-end tests | No |
+| Container images `ghcr.io/vulnwatch/sentinel` at the supported version, and the official `postgres` and `redis` images at the versions that Sentinel requires | Backend for local development and end-to-end tests | No |
 
 ### Packaging and Serving
 
