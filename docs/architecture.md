@@ -52,8 +52,8 @@ UI needs is added to the API for every consumer.
 **What the UI does not do:**
 
 - Use a backend other than Sentinel. Sentinel's API is the only backend: the
-  UI calls no other service and has no data store and no server-side logic of
-  its own. A browser navigation that Sentinel's contract prescribes, such as
+  UI calls no other service and has no server-side data store or logic of its
+  own. A browser navigation that Sentinel's contract prescribes, such as
   the redirect to the identity provider in the SSO login flow (Sentinel
   `docs/features/identity/sso-authentication.md`, Frontend flow), is not a
   backend call
@@ -91,11 +91,11 @@ stable before version 1.0.0, and its consumers pin exact versions rather than
 version ranges (Sentinel `docs/deployment.md`, Pre-1.0 Policy).
 
 - The repository keeps a copy of the OpenAPI document of the supported
-  version, the pinned OpenAPI document (`AGENTS.md`, Sentinel as an External
-  Authority). The copy is the release asset `sentinel-<version>.openapi.json`
-  of that version's published GitHub Release, the only source of a version's
-  contract (Sentinel `docs/deployment.md`, API Documentation Publication). A
-  release that does not publish this asset cannot be the supported version.
+  version: the pinned OpenAPI document. The copy is the release asset
+  `sentinel-<version>.openapi.json` of that version's published GitHub
+  Release, the only source of a version's contract (Sentinel
+  `docs/deployment.md`, API Documentation Publication). A release that does
+  not publish this asset cannot be the supported version.
 - The copy is identical to the release asset, and an automated check of the CI
   pipeline verifies it.
 - The API types that the UI uses are generated from the copy, not written by
@@ -125,9 +125,8 @@ environment unless it names one.
   which the identity provider returns the browser after SSO authentication,
   in local development on the port of the UI development server (Sentinel
   `docs/deployment.md`, IdP Client Registration (id.suse.com); Sentinel
-  `docs/features/identity/sso-authentication.md`, Configuration, a
-  specification that Sentinel marks as deferred). That URL is part of the
-  contract: the host answers it with the UI.
+  `docs/features/identity/sso-authentication.md`, Configuration). That URL is
+  part of the contract: the host answers it with the UI.
 - No component that serves the UI on the Sentinel host logs the `Cookie`
   request header, which carries the session token on every path of the host,
   the UI's paths included (Sentinel `docs/deployment.md`, Pre-Production
@@ -164,8 +163,8 @@ environment unless it names one.
   `docs/features/identity/authentication.md`, Cross-Origin Request
   Protection). The UI never needs an entry.
 - Sentinel rejects every unsafe request, with any method other than `GET`,
-  `HEAD`, and `OPTIONS`, that a browser sends for a page of another origin,
-  with `403 AUTH_CROSS_ORIGIN_REJECTED` (Sentinel
+  `HEAD`, and `OPTIONS`, that a browser sends for a page of another origin not
+  listed in `CORS_ORIGINS`, with `403 AUTH_CROSS_ORIGIN_REJECTED` (Sentinel
   `docs/features/identity/authentication.md`, Cross-Origin Request
   Protection; Sentinel `docs/api-spec.md`, Cross-Origin Request Protection).
   Its decision reads the `Host`, `Origin`, and `Sec-Fetch-Site` request
@@ -184,16 +183,18 @@ environment unless it names one.
   `http://localhost:{port}/auth/callback`, where `{port}` is the port of the UI
   development server (Sentinel `docs/deployment.md`, IdP Client Registration
   (id.suse.com)).
-- The development origin is one from which the browser accepts the `Secure`,
-  `__Host-` session cookie: a secure context, such as `http://localhost` in a
-  browser that treats it as one, or an HTTPS origin (Sentinel
-  `docs/features/identity/authentication.md`, Session cookie). The choice of
-  the supported browsers verifies this condition for each of them (Open
-  Decisions).
+- The browser accepts the `Secure`, `__Host-` session cookie only from a
+  secure context (Sentinel `docs/features/identity/authentication.md`, Session
+  cookie). The development origin `http://localhost:{port}` is one only in a
+  browser that treats `localhost` as a secure context, and the choice of the
+  supported browsers verifies this for each of them (Open Decisions). An HTTPS
+  development origin would not match the local redirect URI that Sentinel
+  registers, so it requires a change in Sentinel first.
 
 ## Architecture Decisions
 
-Each entry states the choice and its rationale.
+Each entry states the choice and its rationale. An entry that comes from Open
+Decisions also states the options considered and their impact.
 
 ### Static Single-Page Application
 
@@ -213,11 +214,11 @@ the `Cookie` header, without adding any capability.
 
 These decisions are not taken yet. Every design that depends on one of them
 waits for it. When a decision is taken, its entry moves to Architecture
-Decisions with the options considered, their impact, and the choice.
+Decisions.
 
 | Decision | Decided by | When |
 |---|---|---|
 | Technology stack: framework and language, libraries, build and test tooling, and supported browsers. The stack satisfies every constraint of this document, and for each supported browser the decision verifies the session cookie condition of Local Development | The repository owner, who approves the decision recorded in this document | Before any application code is written |
-| Packaging and serving: how the static files are packaged and served on the Sentinel host | The repository owner, together with the technology stack | Before any application code is written |
+| Packaging and serving: how the static files are packaged and served on the Sentinel host | The repository owner, together with the technology stack. When serving the UI requires a change to a component of Sentinel's deployment, such as the routing of its reverse proxy or ingress, Sentinel's specifications state the requirement | With the technology stack; in Sentinel, before the UI is first packaged for deployment |
 | Where the security headers of the UI's responses are set, such as the Content Security Policy, HSTS, `frame-ancestors`, and the Referrer Policy | The repository owner, together with the technology stack. When the chosen place is a component of Sentinel's deployment, such as its reverse proxy or ingress, Sentinel's specifications state the requirement | With the technology stack; in Sentinel, before the UI is first packaged for deployment |
 | Public exposure of Sentinel's root paths. Sentinel's API serves its OpenAPI document at `/openapi.json` (Sentinel `docs/deployment.md`, API Documentation Publication) and its interactive documentation at `/docs` and `/redoc`, all at the site root outside `/api`, so a host that routes only `/api` to the backend does not expose them | Sentinel, through an issue in `vulnwatch/sentinel`, because these paths and their routing belong to Sentinel's API and deployment | Before the UI is first packaged for deployment |
