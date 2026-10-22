@@ -120,7 +120,10 @@ version ranges (Sentinel `docs/deployment.md`, Pre-1.0 Policy).
 - The UI release deployed on a Sentinel host is the one that supports the
   Sentinel version deployed there, so an upgrade of Sentinel moves both
   (Sentinel `docs/deployment.md`, Sentinel Host). Each release of the UI
-  therefore states the Sentinel version that it supports.
+  therefore states the Sentinel version that it supports, and every change of
+  the supported version carries a release signal (`docs/conventions.md`,
+  Versioning), so that a UI release supports each Sentinel version that the
+  UI moves to.
 - Agents read Sentinel's specifications from a read-only local clone, at the
   revision that `AGENTS.md` (Sentinel as an External Authority) selects.
 
@@ -132,8 +135,8 @@ environment unless it names one.
 ### Same Origin
 
 - The UI is served from the same origin as the API. In staging and in
-  production, one host, the Sentinel host, serves both: its reverse proxy or
-  ingress routes `/api` and every path under `/api/` to Sentinel's API, and
+  production, one host in each, the Sentinel host, serves both: its reverse
+  proxy or ingress routes `/api` and every path under `/api/` to Sentinel's API, and
   every other path to the UI's image (Packaging and Serving). It matches the
   prefix by whole path segment, so `/apidocs` goes to the UI, and forwards the
   path unchanged (Sentinel `docs/deployment.md`, Sentinel Host; Kubernetes
@@ -200,8 +203,9 @@ environment unless it names one.
   `docs/configuration.md`, Application; Sentinel
   `docs/features/identity/authentication.md`, Cross-Origin Request
   Protection). The UI never needs an entry, and Sentinel's staging and
-  production configuration leaves `CORS_ORIGINS` empty (Sentinel
-  `docs/deployment.md`, Staging Deployment; Pre-Production Checklist).
+  production configuration leaves `CORS_ORIGINS` empty unless a browser
+  client served from another origin needs one (Sentinel `docs/deployment.md`,
+  Staging Deployment; Pre-Production Checklist).
 - Sentinel rejects every unsafe request, with any method other than `GET`,
   `HEAD`, and `OPTIONS`, that a browser sends for a page of another origin not
   listed in `CORS_ORIGINS`, with `403 AUTH_CROSS_ORIGIN_REJECTED` (Sentinel
@@ -546,8 +550,7 @@ with nginx. The image is built on the official unprivileged nginx image,
 pinned by version and digest, runs as a non-root user, and contains only
 nginx, its configuration, and the static files. On the Sentinel host, the
 reverse proxy or ingress routes to this image every path that is not `/api`
-or under `/api/`, and leaves the headers of its responses unchanged (Same
-Origin; Sentinel `docs/deployment.md`, Sentinel Host). The image:
+or under `/api/` (Same Origin). The image:
 
 - answers every path outside the build's asset directory that is not a file
   of the build, `/auth/callback` included, with the application's entry
@@ -574,7 +577,8 @@ Origin; Sentinel `docs/deployment.md`, Sentinel Host). The image:
 
 **Rationale:** an image keeps everything that the UI's correctness and security
 depend on under this repository's tests, and needs from Sentinel's deployment
-only a routing rule.
+only the routing of the host and the pass-through of its response headers,
+which Sentinel requires (Same Origin; Security Headers).
 
 ### Security Headers
 
@@ -596,12 +600,12 @@ code, and no inserted style except the hashed one, once Zod's run-time code
 generation is disabled. The end-to-end tests fail on any policy violation, so
 a library update that breaks the policy is caught before release.
 
-The image does not set `Strict-Transport-Security`. The component that
-terminates TLS for the Sentinel host sets it on every HTTPS response of the
-host, the API's and the UI's alike, with a `max-age` of at least one year and
-without `preload`, because it applies to the whole host and only over HTTPS.
-The reverse proxy neither removes nor changes the headers that the image sets
-(Sentinel `docs/deployment.md`, Sentinel Host).
+The image does not set `Strict-Transport-Security`, because the header
+applies to the whole host and only over HTTPS. The component that terminates
+TLS for the Sentinel host sets it on every HTTPS response of the host, the
+API's and the UI's alike, with a `max-age` of at least one year and without
+`preload`. The reverse proxy neither removes nor changes the headers that the
+image sets (Sentinel `docs/deployment.md`, Sentinel Host).
 
 | Option | Impact |
 |---|---|
