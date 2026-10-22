@@ -574,20 +574,23 @@ the common forms of script injection that an escaping mistake would allow.
 
 ### Supported Browsers
 
-**Choice:** the two latest major versions of Chrome, Edge, and Firefox, and
-the current Firefox Extended Support Release. Safari is not supported. Local
-development and the tests use Chromium and Firefox.
+**Choice:** the two latest major versions of Chrome and Firefox, and the
+current Firefox Extended Support Release. Edge and Safari are not supported.
+Local development and the tests use Chromium and Firefox.
 
 | Option | Impact |
 |---|---|
-| **Chrome, Edge, and Firefox** (chosen) | Chromium-based browsers and Firefox accept `Secure` cookies from `http://localhost`, and with them Sentinel's session cookie on the development origin (Local Development). The Extended Support Release covers enterprise Linux desktops, which ship it. The tests cover both engines |
+| **Chrome and Firefox** (chosen) | Both accept `Secure` cookies from `http://localhost`, and with them Sentinel's session cookie on the development origin (Local Development). The Extended Support Release covers enterprise Linux desktops, which ship it. The tests cover both engines |
+| Also Edge | Shares Chrome's engine, so it would add no test, but the UI's users do not use it, and supporting it would commit the project to fixing the problems specific to it |
 | Also Safari | WebKit rejects a `Secure` cookie from `http://localhost` (WebKit bug 232088), so Safari cannot serve local development, and every test run would add a third engine |
 
 Vite's default build target, the browsers of Baseline Widely Available, is
 older than these versions, so the build needs no other target.
 
-**Rationale:** the repository owner chose not to support Safari. Chromium and
-Firefox are also the two engines that local development can use.
+**Rationale:** the UI is for internal use only (Scope and System Boundary),
+and its users, SUSE employees, do not use Edge. The repository owner chose not
+to support Edge or Safari. Chromium and Firefox are also the two engines that
+local development can use.
 
 ## Open Decisions
 
