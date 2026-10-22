@@ -117,6 +117,12 @@ version ranges (Sentinel `docs/deployment.md`, Pre-1.0 Policy).
   diff shows the API changes and that states which screens they affect;
   automation may propose such a pull request (`docs/conventions.md`, Pull
   Request Requirements).
+- The UI release deployed on a Sentinel host is the one that supports the
+  Sentinel version deployed there, so an upgrade of Sentinel moves both
+  (Sentinel `docs/deployment.md`, Sentinel Host). Each release of the UI
+  therefore states the Sentinel version that it supports, and every change of
+  the supported version carries a release signal (`docs/conventions.md`,
+  Versioning), so that the next UI release supports the new version.
 - Agents read Sentinel's specifications from a read-only local clone, at the
   revision that `AGENTS.md` (Sentinel as an External Authority) selects.
 
@@ -127,10 +133,21 @@ environment unless it names one.
 
 ### Same Origin
 
-- The UI is served from the same origin as the API: one host serves both, and
-  its reverse proxy or ingress routes `/api` to Sentinel's backend (Sentinel
-  `docs/deployment.md`, Pre-Production Checklist). The UI's own URLs therefore
-  never start with `/api`.
+- The UI is served from the same origin as the API. In staging and in
+  production, one host in each, the Sentinel host, serves both: its reverse
+  proxy or ingress routes `/api` and every path under `/api/` to Sentinel's
+  API, and every other path to the UI's image (Packaging and Serving). It
+  matches the prefix by whole path segment, so `/apidocs` goes to the UI, and
+  forwards the path unchanged (Sentinel `docs/deployment.md`, Sentinel Host;
+  Kubernetes Workloads). The UI's own URLs are therefore never `/api` or under
+  `/api/`.
+- Every path that the API serves is under `/api/`, its OpenAPI document at
+  `/api/openapi.json` and its interactive documentation at `/api/docs`
+  included, except the probes `/health` and `/ready` (Sentinel
+  `docs/api-spec.md`, Base URL; OpenAPI Document and Interactive
+  Documentation). The host does not route the probes to the API: there they
+  belong to the UI, and a check of the API through the host requests a path
+  under `/api/` (Sentinel `docs/deployment.md`, Sentinel Host).
 - The UI addresses the API through origin-relative URLs under `/api/v1/`
   (Sentinel `docs/api-spec.md`, Base URL), never through a host name.
 - Sentinel registers `/auth/callback` on the UI's origin as the address to
@@ -138,12 +155,23 @@ environment unless it names one.
   in local development on the port of the UI development server (Sentinel
   `docs/deployment.md`, IdP Client Registration (id.suse.com); Sentinel
   `docs/features/identity/sso-authentication.md`, Configuration). That URL is
-  part of the contract: the host answers it with the UI.
+  part of the contract: the host answers it with the UI (Sentinel
+  `docs/deployment.md`, Sentinel Host).
 - No component that serves the UI on the Sentinel host logs the `Cookie`
   request header, which carries the session token on every path of the host,
-  the UI's paths included (Sentinel `docs/deployment.md`, Pre-Production
-  Checklist; Sentinel `docs/features/identity/authentication.md`, Session
-  cookie).
+  the UI's paths included (Sentinel `docs/deployment.md`, Sentinel Host;
+  Sentinel `docs/features/identity/authentication.md`, Session cookie).
+- Sentinel's interactive documentation page, `/api/docs`, runs in this
+  origin, and every script that it loads acts with the access of the user who
+  opens it (Sentinel `docs/api-spec.md`, OpenAPI Document and Interactive
+  Documentation). Such a script can also read and change the origin's browser
+  storage. The UI therefore keeps no API data there (`docs/conventions.md`,
+  Data Read from the API), treats every value that it reads from that storage
+  as untrusted input, such as the return URL that the post-login redirect
+  keeps in `sessionStorage` (Sentinel
+  `docs/features/identity/authentication.md`, Frontend session behavior), and
+  registers no service worker, whose cache such a script could fill with
+  responses of its own.
 
 ### Session Cookie
 
@@ -161,10 +189,11 @@ environment unless it names one.
   triggers the session expiration handling (Sentinel
   `docs/features/identity/authentication.md`, Frontend session behavior).
 - A browser accepts the cookie only from a secure origin (Sentinel
-  `docs/features/identity/authentication.md`, Session cookie). Production
-  serves the UI over HTTPS (Sentinel `docs/deployment.md`, Pre-Production
-  Checklist); Local Development states the condition for the development
-  origin.
+  `docs/features/identity/authentication.md`, Session cookie). The Sentinel
+  host is served over HTTPS only, in staging as in production: it answers a
+  plain HTTP request only with a redirect to the same URL over HTTPS (Sentinel
+  `docs/deployment.md`, Sentinel Host). Local Development states the
+  condition for the development origin.
 
 ### Cross-Origin Requests
 
@@ -173,24 +202,31 @@ environment unless it names one.
   default, lists only browser clients served from another origin (Sentinel
   `docs/configuration.md`, Application; Sentinel
   `docs/features/identity/authentication.md`, Cross-Origin Request
-  Protection). The UI never needs an entry.
+  Protection). The UI never needs an entry. Sentinel's staging configuration
+  leaves `CORS_ORIGINS` empty, and its Pre-Production Checklist keeps it empty
+  unless a browser client is served from another origin (Sentinel
+  `docs/deployment.md`, Staging Deployment; Pre-Production Checklist).
 - Sentinel rejects every unsafe request, with any method other than `GET`,
   `HEAD`, and `OPTIONS`, that a browser sends for a page of another origin not
   listed in `CORS_ORIGINS`, with `403 AUTH_CROSS_ORIGIN_REJECTED` (Sentinel
   `docs/features/identity/authentication.md`, Cross-Origin Request
   Protection; Sentinel `docs/api-spec.md`, Cross-Origin Request Protection).
   Its decision reads the `Host`, `Origin`, and `Sec-Fetch-Site` request
-  headers, so every reverse proxy in front of the API, in production and in
-  local development, forwards them unchanged (Sentinel
+  headers, so every reverse proxy in front of the API, on the Sentinel host
+  and in local development, forwards them unchanged (Sentinel
   `docs/features/identity/authentication.md`, Cross-Origin Request
-  Protection, Deployment Requirement).
+  Protection, Deployment Requirement; Sentinel `docs/deployment.md`, Sentinel
+  Host).
 
 ### Local Development
 
-- A development server on `localhost` serves the UI and proxies `/api` to a
-  Sentinel backend at the supported version, so that the browser sees one
-  origin, as in production. Its proxy follows Cross-Origin Requests: no CORS,
-  and the `Host`, `Origin`, and `Sec-Fetch-Site` headers forwarded unchanged.
+- A development server on `localhost` serves the UI and proxies `/api` and
+  every path under `/api/` to a Sentinel backend at the supported version, so
+  that the browser sees one origin, as on the Sentinel host. Its proxy routes
+  as the host does (Same Origin): it matches the prefix by whole path segment
+  and forwards the path unchanged. It also follows Cross-Origin Requests: no
+  CORS, and the `Host`, `Origin`, and `Sec-Fetch-Site` headers forwarded
+  unchanged.
 - Sentinel's SSO configuration for local development returns the browser to
   `http://localhost:{port}/auth/callback`, where `{port}` is the port of the UI
   development server (Sentinel `docs/deployment.md`, IdP Client Registration
@@ -513,8 +549,8 @@ dependencies that reach the browser bring about 30 packages in total.
 with nginx. The image is built on the official unprivileged nginx image,
 pinned by version and digest, runs as a non-root user, and contains only
 nginx, its configuration, and the static files. On the Sentinel host, the
-reverse proxy or ingress routes `/api` to Sentinel and the UI's paths to this
-image (Open Decisions). The image:
+reverse proxy or ingress routes to this image every path that is not `/api`
+or under `/api/` (Same Origin). The image:
 
 - answers every path outside the build's asset directory that is not a file
   of the build, `/auth/callback` included, with the application's entry
@@ -522,7 +558,12 @@ image (Open Decisions). The image:
 - serves the content-hashed files of the asset directory with long-lived
   caching, answers a missing one with `404`, and serves the entry document
   without caching;
-- sets the security headers of its responses (Security Headers); and
+- sets the security headers of its responses (Security Headers);
+- answers no request with a redirect, so that its responses depend on
+  neither the scheme nor the `Host` header with which a request reaches it:
+  TLS ends at another component of the host, and Sentinel's requirement that
+  request headers arrive unchanged covers only the API (Sentinel
+  `docs/deployment.md`, Sentinel Host); and
 - writes nginx's default access log, which does not include the `Cookie`
   header (Same Origin).
 
@@ -536,7 +577,8 @@ image (Open Decisions). The image:
 
 **Rationale:** an image keeps everything that the UI's correctness and security
 depend on under this repository's tests, and needs from Sentinel's deployment
-only a routing rule.
+only the routing of the host and the pass-through of the image's response
+headers, which Sentinel requires (Same Origin; Security Headers).
 
 ### Security Headers
 
@@ -558,10 +600,12 @@ code, and no inserted style except the hashed one, once Zod's run-time code
 generation is disabled. The end-to-end tests fail on any policy violation, so
 a library update that breaks the policy is caught before release.
 
-`Strict-Transport-Security` belongs to the component that terminates TLS for
-the Sentinel host, because it applies to the whole host, the API included,
-and only over HTTPS; Sentinel's specifications are to state it (Open
-Decisions).
+The image does not set `Strict-Transport-Security`, because the header
+applies to the whole host and only over HTTPS. The component that terminates
+TLS for the Sentinel host sets it on every HTTPS response of the host, the
+API's and the UI's alike, with a `max-age` of at least one year and without
+`preload`. The reverse proxy neither removes nor changes the headers that the
+image sets (Sentinel `docs/deployment.md`, Sentinel Host).
 
 | Option | Impact |
 |---|---|
@@ -596,11 +640,10 @@ local development can use.
 ## Open Decisions
 
 These decisions are not taken yet. Every design that depends on one of them
-waits for it. When a decision is taken, its entry moves to Architecture
-Decisions.
+waits for it. When this repository takes a decision, its entry moves to
+Architecture Decisions; when Sentinel takes one, its entry is removed, and the
+sections that depend on it state the outcome and cite Sentinel's section.
 
 | Decision | Decided by | When |
 |---|---|---|
-| Serving the UI on the Sentinel host: the reverse proxy or ingress of the host routes the UI's paths to the UI's image (Packaging and Serving), and the component that terminates TLS sets `Strict-Transport-Security` for the host (Security Headers) | Sentinel, through an issue in `vulnwatch/sentinel`, because the routing and the TLS termination of the host belong to Sentinel's deployment (Sentinel `docs/deployment.md`, Pre-Production Checklist) | Before the UI is first packaged for deployment |
 | Fictional data for local development and the end-to-end tests: how a Sentinel backend at the supported version is loaded with fictional data only (`docs/conventions.md`, Example Data in Documentation) | Sentinel, through an issue in `vulnwatch/sentinel`, because loading data into the backend belongs to Sentinel | Before the local development environment and the end-to-end tests are built |
-| Public exposure of Sentinel's root paths. Sentinel's API serves its OpenAPI document at `/openapi.json` and its interactive documentation at `/docs`, both at the site root outside `/api` (Sentinel `docs/api-spec.md`, OpenAPI Document and Interactive Documentation), so a host that routes only `/api` to the backend does not expose them | Sentinel, through an issue in `vulnwatch/sentinel`, because these paths and their routing belong to Sentinel's API and deployment | Before the UI is first packaged for deployment |
