@@ -414,8 +414,14 @@ unless the reviewer definition says otherwise.
 | Every PR, before opening and again before marking a substantively changed draft ready | `@spec-conformance-reviewer` |
 | Workflow, hook, CI-consumed script, or release-please configuration | `@cicd-reviewer` |
 | Significant change to documented behavior, a foundation or screen document, agent policy or OpenCode documentation, or multiple documents | `@docs-reviewer` |
+| New foundation or screen document, substantive change to the rules, flows, or terminology of one, or change of the supported Sentinel version | `@spec-coherence-reviewer`; skip an isolated change with no impact on related documents or on what the document relies on in Sentinel's contract |
+| New or substantially changed foundation or screen document, including an architecture decision | `@design-reviewer` |
+| New or substantially changed foundation or screen document that specifies UI behavior | `@spec-gap-analyzer`; skip `docs/architecture.md`, which specifies no screen behavior. High gaps block the work that depends on the document, Medium gaps are resolved in the same PR, and Low gaps may be deferred; an API gap follows the backend-gap rule in Sentinel as an External Authority |
+| Foundation or screen document that adds potentially shared rules or content related to several documents | `@docs-placement-reviewer` |
 
-Follow each reviewer definition's scope and output contract.
+For a repository-wide coherence or gap analysis, invoke the relevant reviewer
+once per document in independent sessions. Follow each reviewer definition's
+scope and output contract.
 
 ## Completion and Pull Requests
 

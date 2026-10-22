@@ -120,8 +120,12 @@ preserving scope, limitations, evidence, and verdicts.
 | Agent | Type | Trigger | Purpose |
 |-------|------|---------|---------|
 | `@cicd-reviewer` | Reviewer | Workflow, hook, CI-consumed script, or release configuration change | Reviews CI/CD artifacts for convention conformity and pipeline coherence |
+| `@design-reviewer` | Reviewer | New or substantially changed foundation or screen document, including an architecture decision | Applies a simplicity-first review to UI designs and architecture decisions |
+| `@docs-placement-reviewer` | Reviewer | Foundation or screen document that adds potentially shared rules | Verifies that rules sit in their owning document of this repository, or in Sentinel's contract, without duplication or premature generalization |
 | `@docs-reviewer` | Reviewer | Significant documentation, policy, or multi-document change | Reviews documentation completeness, accuracy, and coherence with the implementation and with Sentinel's contract |
+| `@spec-coherence-reviewer` | Reviewer | New or substantively changed foundation or screen document with impact on related documents or on Sentinel's contract, or a supported Sentinel version change | Detects contradictions, incompatible flows, and inconsistent terminology among this repository's documents and against Sentinel's contract |
 | `@spec-conformance-reviewer` | Reviewer | Pre-PR (unconditional) | Verifies a pull request implements what its issue, the foundation documents, and Sentinel's contract require, and introduces no unauthorized behavior |
+| `@spec-gap-analyzer` | Reviewer | New or substantially changed foundation or screen document that specifies UI behavior | Identifies unspecified UI scenarios and states, and the API capabilities a document relies on that Sentinel's contract lacks |
 
 The triggers above summarize the `AGENTS.md` Reviewer Trigger Matrix, which is
 authoritative. `@spec-conformance-reviewer` is the only subagent whose trigger
@@ -143,12 +147,16 @@ copy it into every worktree that should use it.
 
 `opencode.example.jsonc` is the project's recommended starting point. Copy it to
 `.opencode/opencode.jsonc` and adjust the values. It groups the agents into
-two tiers:
+three tiers:
 
 | Tier | Agents | Example model |
 |------|--------|---------------|
 | Primary | `plan`, `spec`, `code` | `anthropic/claude-opus-5-5`, `high` |
-| Reviewers | `@cicd-reviewer`, `@docs-reviewer`, `@spec-conformance-reviewer` | `anthropic/claude-sonnet-5-5`, `high` |
+| Tier 1 | `@spec-coherence-reviewer`, `@spec-gap-analyzer` | `anthropic/claude-opus-5-5`, `high` |
+| Tier 2 | All other reviewer subagents | `anthropic/claude-sonnet-5-5`, `high` |
+
+Tier 1 reviewers rely most on adversarial reasoning and long cross-document
+synthesis, so they benefit most from a stronger model.
 
 Without a local file, primary agents use the user's default model and every
 subagent inherits the model of the agent that invokes it. A reviewer listed

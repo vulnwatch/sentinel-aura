@@ -13,8 +13,14 @@
     "spec": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
     "code": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
 
-    // Reviewers
+    // Tier 1 reviewers: adversarial reasoning and cross-document synthesis
+    "spec-coherence-reviewer": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
+    "spec-gap-analyzer": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
+
+    // Tier 2 reviewers
     "cicd-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
+    "design-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
+    "docs-placement-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
     "docs-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
     "spec-conformance-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" }
 
