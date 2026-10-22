@@ -6,6 +6,7 @@
 - [General Principles](#general-principles)
 - [Cross-Cutting Rules](#cross-cutting-rules)
   - [Example Data in Documentation](#example-data-in-documentation)
+  - [Dependency Admission](#dependency-admission)
 - [Shell Scripting](#shell-scripting)
 - [Git Conventions](#git-conventions)
   - [Workflow](#workflow)
@@ -74,6 +75,56 @@ When documenting an API response, first sanitize it by replacing all real
 identifiers with fictional equivalents before inserting it into a document.
 Capture screenshots from an environment that contains only fictional data;
 never attach a screenshot that shows real personal identifiers.
+
+### Dependency Admission
+
+A new dependency is added only after the repository owner's explicit
+decision. A new dependency is a third-party component that a change would
+declare, pin, install, or load for the first time: for example an npm
+package, at run time or for development, including another package of a
+family already in use; a container image; a GitHub Action; a tool that CI, a
+Git hook, or a script runs; or an asset that the UI would load from a third
+party. The packages that a dependency brings with it are part of its
+footprint, not separate admissions. The same decision is needed before a
+document under `docs/` prescribes a new dependency; naming one in a tracking
+issue is not that decision.
+
+No further decision is needed for the dependencies of the UI stack that
+`docs/architecture.md` (Approved Dependencies) lists, for any other
+dependency that a merged document under `docs/` prescribes, or for a
+component that the repository already declares or pins. Updates, version
+changes, and removals of declared dependencies are outside this rule;
+Renovate and the normal review process handle them (`docs/deployment.md`,
+Dependency Updates).
+
+The request for the decision states:
+
+- the current requirement that the dependency serves, not an anticipated one;
+- why the web platform, the language, or an already declared dependency does
+  not suffice;
+- where it runs or ships: the browser, the released image, CI, or the tooling
+  only;
+- its maintenance: release activity, maintainers and governance, and whether
+  its releases carry provenance attestations;
+- its transitive footprint: the packages that it adds, and whether any of them
+  has install scripts; and
+- its license, and whether it allows that use, including redistribution when
+  the dependency ships in the browser or the released image.
+
+The pull request that adds the dependency records the justification and the
+decision. The pull request that adds or removes a dependency of the UI stack
+also adds or removes its Approved Dependencies entry; the entry only records
+the admission, so it needs no separate documentation pull request
+(Specification Ownership). When a dependency would change a choice that
+`docs/architecture.md` records, such as using no form library, that choice
+changes first, through a documentation pull request, and the dependency then
+needs no further decision.
+
+Two exceptions to the package manager settings (`docs/architecture.md`, Build
+Tool, Package Manager, and Node.js) require the same decision and
+justification: allowing the install scripts of a dependency, and installing a
+version younger than the minimum release age other than through a
+vulnerability-fix update.
 
 ## Shell Scripting
 
@@ -287,8 +338,8 @@ the commit message on `master`.
 - **Description**: at minimum: issue linkage, owning documents (foundation
   and screen documents of this repository and the Sentinel specifications
   relied on), scope summary, test evidence, screenshots when required,
-  delegated decisions, reviewer results, manual verification notes. The pull
-  request template provides these sections.
+  delegated decisions, new dependencies, reviewer results, manual
+  verification notes. The pull request template provides these sections.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
   reason>` for an exempt human-authored PR under "Issues and work units"
   in Workflow. Use an `- Issue linkage:` field, or a standalone
@@ -306,6 +357,8 @@ the commit message on `master`.
 - **Delegated decisions**: record the interface details and other decisions
   taken under delegation (`AGENTS.md`, Delegated decisions), with the options
   considered and the choice.
+- **New dependencies**: record each new dependency with its justification and
+  the repository owner's decision (Dependency Admission).
 - **Sentinel version**: a PR that changes the supported Sentinel version
   shows the resulting API changes in its diff and states which screens they
   affect.
@@ -404,6 +457,9 @@ UI documents are of two kinds:
 Both describe observable behavior and its constraints, not implementation:
 they name no component, file, library API, or internal state unless that name
 is itself part of the contract (for example, a URL that users can bookmark).
+An architecture decision is such a contract for what it chooses: it names the
+technologies, tools, and mechanisms that it selects and the files that carry
+them.
 
 ### Foundation Documents
 

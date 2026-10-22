@@ -81,7 +81,8 @@ subagent is a **read-only reviewer**: it analyzes code or documents and
 reports findings without modifying files. All writing is owned by the primary
 agents; the built-in `general` task writes only on the Code agent's behalf,
 within a brief that excludes Git workflow, GitHub mutations, `docs/**` edits,
-changes to `../sentinel`, reviewer invocation, and gap or delegated decisions.
+changes to `../sentinel`, reviewer invocation, new dependencies the user has
+not admitted, and gap or delegated decisions.
 
 All reviewer agents apply the finding rules in `AGENTS.md` (Quality and
 findings) before reporting findings. Speculative, unnecessary,

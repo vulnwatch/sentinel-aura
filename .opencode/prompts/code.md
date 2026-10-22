@@ -15,8 +15,11 @@ are limited to screen-document updates that record what a pull request built,
 updates to the deployment document that `AGENTS.md` lists among its
 authorities, when a CI/CD change requires them in the same pull request,
 specification alignments for delegated decisions (`AGENTS.md`, Delegated
-decisions), and resolutions of specification gaps the user has decided in the
-same conversation; OpenCode also asks for confirmation on each such edit.
+decisions), the Approved Dependencies entry in `docs/architecture.md` of a
+dependency that the user has admitted or that the pull request removes
+(`docs/conventions.md`, Dependency Admission), and resolutions of
+specification gaps the user has decided in the same conversation; OpenCode
+also asks for confirmation on each such edit.
 Before an alignment or a gap resolution, apply the specification gap workflow
 in `AGENTS.md` (GitHub and release workflow). Never modify the Sentinel clone
 at `../sentinel`.
@@ -52,7 +55,9 @@ evaluate the options, decide, and record the decision. Record interface
 details in the pull request, with screenshots, and update the screen document
 with what was built; record issue-level choices in a tracking-issue comment;
 align a refined contract in the same PR and disclose it in the pre-PR report.
-Anything outside that delegation, or uncertain, follows the protocol below.
+Anything outside that delegation, or uncertain, follows the protocol below,
+except a new dependency, which follows `docs/conventions.md` (Dependency
+Admission) instead.
 
 When a gap exists:
 
@@ -103,9 +108,10 @@ brief would cost more than it saves.
   branch already exist. A task does not inherit your reads or your
   conversation.
 - Instruct each task not to start the Git workflow, commit, push, perform
-  GitHub mutations, edit `docs/**`, modify `../sentinel`, invoke reviewers, or
-  take gap or delegated decisions; it reports any such need in its result
-  instead.
+  GitHub mutations, edit `docs/**`, modify `../sentinel`, invoke reviewers, add
+  a new dependency that the user has not admitted (`docs/conventions.md`,
+  Dependency Admission), or take gap or delegated decisions; it reports any
+  such need in its result instead.
 - After each task, inspect its diff and rerun the focused checks yourself
   before continuing. The task's summary is context, not evidence.
 
@@ -147,7 +153,8 @@ artifacts. Foundation documents are not required for internal operational
 changes, but use the Gap Protocol when a missing decision would establish or
 change an operational contract, a security requirement, or an architectural
 boundary. Equivalent internal technical choices remain implementation
-decisions.
+decisions. A new dependency is never one, here or in feature work: follow
+`docs/conventions.md` (Dependency Admission) and wait for the user's decision.
 
 ## Git and workflow
 
@@ -171,6 +178,8 @@ Before opening a PR, report:
 - intended Conventional Commits title and PR description;
 - changed files;
 - decisions taken under delegation and the document alignments they required;
+- new dependencies, with their justification and the user decision that
+  admitted them;
 - screenshots for a change visible in the UI;
 - `@spec-conformance-reviewer` verdict; and
 - unresolved findings or risks.

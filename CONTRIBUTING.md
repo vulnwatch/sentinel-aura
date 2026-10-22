@@ -108,7 +108,8 @@ and its specifications; it never defines backend behavior (see
 | Change type | What is required |
 |-------------|------------------|
 | Bug fix that corrects a deviation from documented behavior | Fix directly |
-| Infrastructure, CI, dependencies, or cosmetic change | No specification |
+| Infrastructure, CI, or cosmetic change, or an update of a declared dependency | No specification |
+| New dependency, such as an npm package, a container image, a GitHub Action, or a CI tool | The repository owner's explicit decision, requested with the justification that [Dependency Admission](docs/conventions.md#dependency-admission) defines |
 | New feature or change to a screen | An issue with acceptance criteria agreed with the maintainers; the PR shows screenshots and updates the screen document with what was built |
 | Change to a behavior shared by the whole UI (the foundation documents) | A documentation PR first, then the implementation |
 | New backend capability or API change | An issue in [Sentinel](https://github.com/vulnwatch/sentinel/issues) first, where its specification-first process applies |

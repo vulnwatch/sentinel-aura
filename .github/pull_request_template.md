@@ -26,7 +26,7 @@ N/A
 
 ## Decisions
 
-<!-- Interface details and other decisions taken under delegation: the options considered and the choice. Write "None" if not applicable. -->
+<!-- Interface details and other decisions taken under delegation: the options considered and the choice. New dependencies: the justification that docs/conventions.md (Dependency Admission) requires and the owner's decision. Write "None" if not applicable. -->
 
 None
 
