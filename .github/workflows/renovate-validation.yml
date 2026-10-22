@@ -57,6 +57,5 @@ jobs:
             --platform=local \
             --dry-run=lookup \
             --require-config=required \
-            --onboarding=false \
-            --enabled=true 2>&1 | tee "${log_file}"
+            --onboarding=false 2>&1 | tee "${log_file}"
           scripts/check-renovate-log.sh "${log_file}"

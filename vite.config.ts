@@ -22,6 +22,8 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       include: ["src/**/*.{ts,tsx}"],
+      // clover.xml is the report that CI uploads to Codecov.
+      reporter: ["text", "html", "clover"],
       // A subdirectory, because Vitest removes and recreates the reports
       // directory, and coverage/ is a mount point in the tooling container.
       reportsDirectory: "coverage/unit",
