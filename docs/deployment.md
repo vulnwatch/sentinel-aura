@@ -236,7 +236,9 @@ file maintenance pull request regenerates `package-lock.json`, which keeps the
 transitive dependencies current, within npm's own minimum release age.
 Renovate does not update the Node.js line of `package.json`, which follows the
 tooling image (`docs/architecture.md`, Build Tool, Package Manager, and
-Node.js).
+Node.js). Vite implements the development proxy, which no CI job exercises, so
+before a pull request that updates `vite` is merged, a maintainer runs
+`scripts/dev-env.sh test` on its branch (`CONTRIBUTING.md`, Local Backend).
 
 The tooling image and `@playwright/test` are updated in one `Playwright` pull
 request, because the browsers of the image must be the ones that the package
@@ -281,7 +283,7 @@ maintainer completes it on its branch:
    version (`AGENTS.md`, Sentinel as an External Authority);
 4. `scripts/dev-env.sh test` passes against a backend of the new version: the
    development proxy routes and forwards requests as before, and a dataset
-   user signs in through it (`CONTRIBUTING.md`, Development Setup); and
+   user signs in through it (`CONTRIBUTING.md`, Local Backend); and
 5. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
 
@@ -299,8 +301,7 @@ Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, or `chore(deps):` for the tooling image, the npm
 dependencies, the base image of the `Containerfile`, and the images of
 `compose.yaml`, which are not used only by CI; neither carries a release
-signal
-(`docs/conventions.md`, Versioning). Renovate never merges its own pull
+signal (`docs/conventions.md`, Versioning). Renovate never merges its own pull
 requests: `automerge` is disabled, and each one is merged like any other pull
 request, after the repository owner authorizes the merge.
 

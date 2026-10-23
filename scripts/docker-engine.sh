@@ -4,7 +4,7 @@
 # as root on this host, reached through its default socket
 # (docs/architecture.md, Development Environment). scripts/tooling.sh and
 # scripts/image.sh run the check before they start a container, locally and in
-# CI.
+# CI, and scripts/dev-env.sh before it starts the local backend.
 #
 # Usage:
 #   scripts/docker-engine.sh check   Exit with a message unless the engine is

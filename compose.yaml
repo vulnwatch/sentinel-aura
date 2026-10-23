@@ -31,8 +31,10 @@ x-sentinel-image: &sentinel-image
     DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
     REDIS_URL: redis://redis:6379/0
     CELERY_BROKER_URL: redis://redis:6379/1
-    # The IBS RabbitMQ consumer does not run on a dataset backend (Sentinel
-    # docs/features/platform/example-dataset.md, Operating a Dataset Backend).
+    # The IBS RabbitMQ consumer is not needed on a dataset backend (Sentinel
+    # docs/features/platform/example-dataset.md, Operating a Dataset Backend)
+    # and does not run, so the API reports it as disabled (Sentinel
+    # docs/configuration.md, IBS RabbitMQ Consumer).
     IBS_RABBITMQ_ENABLED: "false"
 
 services:

@@ -255,8 +255,11 @@ cmd_dev() {
     if ! [[ "${port}" =~ ^[0-9]{1,5}$ ]] || ((10#${port} > 65535)); then
         die "dev: invalid port '${port}'"
     fi
-    docker network inspect "${network}" >/dev/null 2>&1 ||
-        die "dev: no network ${network}; start the backend with 'scripts/dev-env.sh start'"
+    # A bridge network, as Compose creates: on the host network, Docker would
+    # ignore the published port and the server would listen on every
+    # interface of the host.
+    [[ "$(docker network inspect --format '{{.Driver}}' "${network}" 2>/dev/null)" == bridge ]] ||
+        die "dev: no bridge network ${network}; start the backend with 'scripts/dev-env.sh start'"
     ensure_installed
     # The server listens on every interface of the container, which is
     # reachable from the host only through the port published on its

@@ -147,16 +147,17 @@ The script runs on your host with Docker Engine, its Compose plugin, and
 | `scripts/dev-env.sh start` | Start the backend, or reuse the running one, then the development server on <http://localhost:5173>; Ctrl+C stops only the development server |
 | `scripts/dev-env.sh stop` | Stop the development server and remove the backend with its data |
 | `scripts/dev-env.sh logs [args]` | Show the logs of the backend; the arguments go to `docker compose logs`, for example `logs --follow sentinel` |
-| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. Run it after changing `vite.config.ts`, `compose.yaml`, or the supported version |
+| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. Run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, the version of `vite`, or the supported version |
 
-- Sign in with local authentication as a user of the dataset, with its
-  published password `example-dataset-password`: for example `jdoe`
-  (`admin`), `asmith` (`vulnerability_analyst`), `cwhite`
-  (`restricted_analyst`), or `dbrown` (no role); Sentinel
-  `docs/features/platform/example-dataset.md` (Users) lists them all. Until
-  the UI has a sign-in screen, use Sentinel's API documentation on the same
-  origin, <http://localhost:5173/api/docs>: `POST /api/v1/auth/login` sets the
-  session cookie, and `GET /api/v1/users/me` then returns your user.
+- Sign in with local authentication as a user of the dataset, for example
+  `jdoe` (`admin`), `asmith` (`vulnerability_analyst`), `cwhite`
+  (`restricted_analyst`), or `dbrown` (no role), with the dataset's published
+  password `example-dataset-password` (Sentinel
+  `docs/features/platform/example-dataset.md`, Credentials; Users, which lists
+  every user). Until the UI has a sign-in screen, use Sentinel's API
+  documentation on the same origin, <http://localhost:5173/api/docs>:
+  `POST /api/v1/auth/login` sets the session cookie, and
+  `GET /api/v1/users/me` then returns your user.
 - Use Chrome or Firefox: Safari does not accept the session cookie from
   `http://localhost`
   ([Supported Browsers](docs/architecture.md#supported-browsers)).
@@ -164,9 +165,12 @@ The script runs on your host with Docker Engine, its Compose plugin, and
   `compose.yaml` or of the supported version: the next `start` creates a new
   backend and loads the dataset again. The first start downloads the images.
 - Only the development server's port is published, on the loopback interface;
-  the backend publishes none. Every fetcher of the backend is disabled, so an
-  operation that needs an external source, such as adding a package, does not
-  complete there.
+  the backend publishes none.
+- The backend runs Sentinel's API only, without its Celery worker and Beat, so
+  an operation that publishes a background task waits for a worker that does
+  not run. Every fetcher is disabled, and an operation that needs an external
+  source, such as adding a package, does not complete there (Sentinel
+  `docs/features/platform/example-dataset.md`, Operating a Dataset Backend).
 
 ## Git Hooks
 
