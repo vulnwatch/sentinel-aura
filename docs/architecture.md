@@ -378,10 +378,32 @@ Sentinel's published image at the supported version, with the PostgreSQL and
 Redis that it requires (Sentinel `docs/deployment.md`, Software
 Requirements), in containers of the same engine; Sentinel's image does not
 depend on a specific runtime (Sentinel `docs/architecture.md`, Design
-Constraints). That backend holds fictional data only (Open Decisions), so
-signing in there uses Sentinel's local authentication: SSO matches real
-identity provider accounts (Sentinel
-`docs/features/identity/sso-authentication.md`, Identity Mapping).
+Constraints). That backend holds fictional data only: it is loaded with
+Sentinel's example dataset, which the image of the supported version provides
+(Sentinel `docs/features/platform/example-dataset.md`, Purpose):
+
+- The dataset is loaded into a newly created, migrated database before any
+  other Sentinel process starts. The backend is recreated, never migrated, to
+  restore the dataset or to move to another supported version (Sentinel
+  `docs/deployment.md`, Loading the Example Dataset).
+- Signing in there uses Sentinel's local authentication, with the dataset's
+  users and its published password. SSO is not available there: it matches
+  only external users, and every dataset user is a local user (Sentinel
+  `docs/features/platform/example-dataset.md`, Credentials; Sentinel
+  `docs/features/identity/sso-authentication.md`, Identity Mapping).
+- Because that password is public, the backend is reachable only from the
+  developer's host or from inside its test environment: every published port
+  through which it can be reached, its own or that of a proxy in front of it,
+  is bound to the loopback interface only (Sentinel
+  `docs/features/platform/example-dataset.md`, Security Considerations).
+- Every fetcher is disabled after the load and is never enabled on that
+  backend, and an operation that needs an external source, such as adding a
+  package through the API, does not complete there (Sentinel
+  `docs/features/platform/example-dataset.md`, Operating a Dataset Backend).
+- A capability that the UI needs and the dataset lacks is requested as a
+  change of Sentinel's dataset specification (Sentinel
+  `docs/features/platform/example-dataset.md`, Drift Protection; `AGENTS.md`,
+  Sentinel as an External Authority).
 
 | Option | Impact |
 |---|---|
@@ -645,11 +667,8 @@ local development can use.
 
 ## Open Decisions
 
-These decisions are not taken yet. Every design that depends on one of them
-waits for it. When this repository takes a decision, its entry moves to
+No architecture decision is open. A decision that is not taken yet is listed
+here, with who decides it and when, and every design that depends on it waits
+for it. When this repository takes a decision, its entry moves to
 Architecture Decisions; when Sentinel takes one, its entry is removed, and the
 sections that depend on it state the outcome and cite Sentinel's section.
-
-| Decision | Decided by | When |
-|---|---|---|
-| Fictional data for local development and the end-to-end tests: how a Sentinel backend at the supported version is loaded with fictional data only (`docs/conventions.md`, Example Data in Documentation) | Sentinel, through an issue in `vulnwatch/sentinel`, because loading data into the backend belongs to Sentinel | Before the local development environment and the end-to-end tests are built |
