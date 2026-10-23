@@ -1,6 +1,6 @@
 # The image that serves the UI in production: nginx and the production build
 # (docs/architecture.md, Packaging and Serving). scripts/image.sh builds it
-# from the repository root after the production build; .containerignore keeps
+# from the repository root after the production build; .dockerignore keeps
 # everything but dist/ and nginx/ out of the build context.
 
 # The official unprivileged nginx image, pinned by version and digest and

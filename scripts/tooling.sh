@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Run the repository's Node.js commands in disposable containers of the tooling
-# image, through rootless Podman (docs/architecture.md, Development
+# image, through Docker Engine (docs/architecture.md, Development
 # Environment). Every Node.js command runs through this script, locally and in
 # CI; npm, npx, and node never run on the host.
 #
-# A container receives the repository and nothing else from the host. The
-# repository is mounted read-only, except the output directories and, for the
-# commands that change them by design, the formatted sources, the generated
-# API client, or the npm manifest and lockfile. The dependencies live in a
-# Podman volume of this clone, mounted on node_modules/, which stays empty on
-# the host. Every command first installs them with `npm ci` when the volume is
-# new or when the tooling image, package.json, package-lock.json, or .npmrc
-# changed.
+# A container runs with the user and group IDs of the invoking user, without
+# capabilities, and receives from the host the repository and the directory of
+# its dependencies, nothing else. The repository is mounted read-only, except
+# the output directories and, for the commands that change them by design, the
+# formatted sources, the generated API client, or the npm manifest and
+# lockfile. The dependencies live in a directory of this clone in the user's
+# cache directory, mounted on node_modules/, which stays empty on the host.
+# Every command first installs them with `npm ci` when the directory is new or
+# when the tooling image, package.json, package-lock.json, or .npmrc changed;
+# a file beside the directory, which no container can reach, records the
+# installation.
 #
 # Usage:
 #   scripts/tooling.sh install               Install the dependencies (npm ci)
@@ -27,7 +30,7 @@
 #                                            vulnerabilities
 #   scripts/tooling.sh dev                   Start the development server on
 #                                            http://localhost:5173
-#   scripts/tooling.sh clean                 Remove the dependency volume
+#   scripts/tooling.sh clean                 Remove the dependency directory
 #
 # Examples:
 #   scripts/tooling.sh run check
@@ -43,6 +46,15 @@ readonly TOOLING_IMAGE="mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 readonly REPO_ROOT
 
+# The dependencies of this clone, in a directory named after the path of the
+# clone, under the user's cache directory, and the file that records the
+# installation that it holds.
+CACHE_HOME="${XDG_CACHE_HOME:-}"
+[[ "${CACHE_HOME}" == /* ]] || CACHE_HOME="${HOME:?HOME is not set}/.cache"
+DEPS_DIR="${CACHE_HOME}/sentinel-aura/node-modules-$(printf '%s' "${REPO_ROOT}" | sha256sum | cut -c1-12)"
+readonly DEPS_DIR
+readonly STAMP_FILE="${DEPS_DIR}.stamp"
+
 # Directories that every command may write; Git ignores them.
 readonly OUTPUT_DIRS=(dist coverage test-results)
 # Paths that Prettier formats: keep in sync with .prettierignore.
@@ -53,8 +65,6 @@ readonly GENERATED_DIR="src/api/generated"
 readonly NPM_FILES=(package.json package-lock.json)
 # Files whose change requires a new installation.
 readonly INSTALL_INPUTS=(package.json package-lock.json .npmrc)
-# Records, inside the volume, the installation that it holds.
-readonly STAMP_FILE=".tooling-install-stamp"
 readonly DEV_PORT=5173
 
 usage() {
@@ -73,20 +83,13 @@ Commands:
                         signatures and attestations, and their known
                         vulnerabilities
   dev                   Start the development server on http://localhost:5173
-  clean                 Remove the dependency volume of this clone
+  clean                 Remove the dependency directory of this clone
 EOF
 }
 
 die() {
     echo "tooling.sh: $*" >&2
     exit 1
-}
-
-# One volume for each clone, named after the path of the clone.
-volume_name() {
-    local hash
-    hash="$(printf '%s' "${REPO_ROOT}" | sha256sum | cut -c1-12)"
-    printf 'sentinel-aura-node-modules-%s\n' "${hash}"
 }
 
 # Identifies an installation: the tooling image and the install inputs.
@@ -97,18 +100,19 @@ install_stamp() {
     } | sha256sum | cut -d ' ' -f 1
 }
 
-# Prints the stamp of the installation in the volume, or nothing.
+# Prints the stamp of the installation in the dependency directory, or
+# nothing.
 installed_stamp() {
-    local volume mountpoint
-    volume="$(volume_name)"
-    podman volume exists "${volume}" || return 0
-    mountpoint="$(podman volume inspect --format '{{.Mountpoint}}' "${volume}")"
-    cat "${mountpoint}/${STAMP_FILE}" 2>/dev/null || true
+    [[ -d "${DEPS_DIR}" ]] || return 0
+    cat "${STAMP_FILE}" 2>/dev/null || true
 }
 
 # Appends to the array named by $1 a writable mount for each further argument,
 # a path relative to the repository root. A missing output directory is
-# created; any other path must exist.
+# created; any other path must exist. A path that is or lies under a symbolic
+# link is refused: the code of a dependency can plant one wherever an earlier
+# command could write, such as src/api/generated during `format`, and the
+# mount would then make its target writable.
 add_writable_mounts() {
     local -n mounts_ref="$1"
     shift
@@ -119,12 +123,17 @@ add_writable_mounts() {
                 die "missing ${path}"
             mkdir -p "${REPO_ROOT}/${path}"
         fi
+        [[ "$(realpath -e -- "${REPO_ROOT}/${path}")" == "${REPO_ROOT}/${path}" ]] ||
+            die "${path} is or lies under a symbolic link; it is not mounted writable"
         mounts_ref+=("--volume=${REPO_ROOT}/${path}:/work/${path}:rw,z")
     done
 }
 
-# Runs a command in a disposable container. Arguments: further podman options,
-# then "--", then the command and its arguments.
+# Runs a command in a disposable container, with the user and group IDs of the
+# invoking user, so that the files that it writes belong to that user. HOME
+# points to a writable directory, because the image may have no account for
+# those IDs. Arguments: further docker options, then "--", then the command
+# and its arguments.
 run_container() {
     local -a options=() tty=()
     while [[ $# -gt 0 && "$1" != "--" ]]; do
@@ -136,27 +145,34 @@ run_container() {
     if [[ -t 0 && -t 1 ]]; then
         tty=(--interactive --tty)
     fi
-    # The volume needs a mount point inside the read-only repository.
-    mkdir -p "${REPO_ROOT}/node_modules"
-    podman run --rm "${tty[@]}" \
+    # Docker would create a missing directory to mount as root, and the
+    # dependency directory needs a mount point inside the read-only
+    # repository.
+    mkdir -p "${DEPS_DIR}" "${REPO_ROOT}/node_modules"
+    docker run --rm "${tty[@]}" \
+        --user="$(id -u):$(id -g)" \
+        --cap-drop=ALL \
         --security-opt=no-new-privileges \
         --shm-size=1g \
+        --env=HOME=/tmp \
         --env=NPM_CONFIG_UPDATE_NOTIFIER=false \
         --volume="${REPO_ROOT}:/work:ro,z" \
-        --volume="$(volume_name):/work/node_modules" \
+        --volume="${DEPS_DIR}:/work/node_modules:rw,z" \
         --workdir=/work \
         "${options[@]}" \
         "${TOOLING_IMAGE}" "$@"
 }
 
+# The stamp is written on the host, after `npm ci` succeeds, so neither a
+# failed installation nor the code of a dependency can mark the directory as
+# installed.
 install_dependencies() {
     local stamp
     stamp="$(install_stamp)"
-    echo "tooling.sh: installing the dependencies in volume $(volume_name)" >&2
-    # shellcheck disable=SC2016  # $1 and $2 expand in the container's shell
-    run_container -- bash -c \
-        'rm -f "node_modules/$1" && npm ci && printf "%s\n" "$2" >"node_modules/$1"' \
-        bash "${STAMP_FILE}" "${stamp}"
+    echo "tooling.sh: installing the dependencies in ${DEPS_DIR}" >&2
+    rm -f "${STAMP_FILE}"
+    run_container -- npm ci
+    printf '%s\n' "${stamp}" >"${STAMP_FILE}"
 }
 
 ensure_installed() {
@@ -207,12 +223,10 @@ cmd_npm() {
     ensure_installed
     local -a mounts=()
     add_writable_mounts mounts "${NPM_FILES[@]}"
-    # The command may change the installation, so it removes the stamp first:
-    # the next command reinstalls exactly what the lockfile records.
-    # shellcheck disable=SC2016  # $1 expands in the container's shell
-    run_container "${mounts[@]}" -- bash -c \
-        'rm -f "node_modules/$1" && shift && npm "$@"' \
-        bash "${STAMP_FILE}" "$@"
+    # The command may change the installation, so the stamp goes first: the
+    # next command reinstalls exactly what the lockfile records.
+    rm -f "${STAMP_FILE}"
+    run_container "${mounts[@]}" -- npm "$@"
 }
 
 cmd_audit() {
@@ -232,20 +246,17 @@ cmd_dev() {
         npm run dev -- --host 0.0.0.0
 }
 
+# Needs no container, so it works without Docker too.
 cmd_clean() {
     [[ $# -eq 0 ]] || die "clean: takes no arguments"
-    local volume
-    volume="$(volume_name)"
-    if podman volume exists "${volume}"; then
-        podman volume rm "${volume}" >/dev/null
-        echo "tooling.sh: removed volume ${volume}" >&2
+    if [[ -e "${DEPS_DIR}" || -e "${STAMP_FILE}" ]]; then
+        rm -rf -- "${DEPS_DIR}" "${STAMP_FILE}"
+        echo "tooling.sh: removed ${DEPS_DIR}" >&2
     fi
+    rmdir -- "$(dirname "${DEPS_DIR}")" 2>/dev/null || true
 }
 
 main() {
-    [[ ${EUID} -ne 0 ]] || die "run as a regular user: the containers must be rootless"
-    command -v podman >/dev/null 2>&1 ||
-        die "Podman is required; see CONTRIBUTING.md (Development Setup)"
     if [[ $# -eq 0 ]]; then
         usage
         exit 2
@@ -253,13 +264,10 @@ main() {
     local command="$1"
     shift
     case "${command}" in
-        install) cmd_install "$@" ;;
-        run) cmd_run "$@" ;;
-        format) cmd_format "$@" ;;
-        generate) cmd_generate "$@" ;;
-        npm) cmd_npm "$@" ;;
-        audit) cmd_audit "$@" ;;
-        dev) cmd_dev "$@" ;;
+        install | run | format | generate | npm | audit | dev)
+            "${REPO_ROOT}/scripts/docker-engine.sh" check
+            "cmd_${command}" "$@"
+            ;;
         clean) cmd_clean "$@" ;;
         -h | --help | help) usage ;;
         *)
