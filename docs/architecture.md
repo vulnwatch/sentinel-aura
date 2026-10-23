@@ -394,15 +394,14 @@ is not needed. Version 28.0.0 stops other hosts of the network from reaching
 the ports published on the loopback interface (moby/moby#49325); versions
 28.2.0 to 28.3.2 lose that protection after a reload of firewalld
 (CVE-2025-54388). The scripts refuse every other setup with a message: an
-older version, any other endpoint, such as a remote daemon or one in a
-virtual machine, as with Docker Desktop, Podman's Docker API, Docker's
-rootless mode and user namespace remapping, and running them as root. In
-rootless mode only the root
-user of a container maps to the user who starts it, and Docker has no option
-that maps the user's own IDs into the container, as Podman's `keep-id` does:
-a container that runs with those IDs writes files that belong to other IDs of
-the host, and one that runs as its root runs dependency code as root. User
-namespace remapping has the same effect.
+older version; any other endpoint (a remote daemon, or one in a virtual
+machine, as with Docker Desktop); Podman's Docker API; Docker's rootless mode
+and user namespace remapping; and running them as root. In rootless mode only
+the root user of a container maps to the user who starts it, and Docker has
+no option that maps the user's own IDs into the container, as Podman's
+`keep-id` does: a container that runs with those IDs writes files that belong
+to other IDs of the host, and one that runs as its root runs dependency code
+as root. User namespace remapping has the same effect.
 
 The Docker daemon runs as root, and a user who can use it, such as a member of
 the `docker` group, is equivalent to root on the host: whatever reaches the
@@ -457,7 +456,7 @@ install and run dependencies constantly. A container limits that code to the
 repository at a small cost, and the read-only mount keeps it from writing the
 files that the host executes. Rootless Podman was chosen first, because it
 needs no daemon that runs as root; Docker Engine replaced it once Sentinel's
-local development required Docker, so that one engine serves both
+local development required Docker, so that one engine can serve both
 repositories and CI. Running the containers with the user's IDs keeps
 dependency code unprivileged on the host, as rootless Podman did, and also
 inside the container.

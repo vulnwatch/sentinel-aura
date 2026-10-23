@@ -72,10 +72,10 @@ no Node.js.
   [Docker daemon attack surface](https://docs.docker.com/engine/security/#docker-daemon-attack-surface);
   the containers never receive the daemon's socket.
 - The scripts check the engine first and stop with a message on any other
-  setup: an older version, another endpoint, such as a remote daemon or
-  Docker Desktop, Podman's Docker API, and Docker's rootless mode or user
-  namespace remapping, under which the files that the containers write would
-  not belong to you.
+  setup: an older version; another endpoint (a remote daemon, or Docker
+  Desktop); Podman's Docker API; and Docker's rootless mode or user namespace
+  remapping, under which the files that the containers write would not
+  belong to you.
 
 | Command | Purpose |
 |---------|---------|
