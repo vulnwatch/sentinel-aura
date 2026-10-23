@@ -350,9 +350,16 @@ rather than on a list of Renovate-managed paths, validates `renovate.jsonc` in
 strict mode, and performs a read-only lookup with the official Renovate
 container, pinned by version and digest, authenticated by the workflow's
 read-only `GITHUB_TOKEN`. `scripts/check-renovate-log.sh` fails the job when
-the lookup reports a warning for any dependency. The workflow cannot create
-branches or pull requests and is not a required check: a failure is visible as
-a red status without blocking the merge.
+the lookup reports a warning for any dependency, with one exception. The
+`aquasecurity` organization admits authenticated requests only from the IP
+addresses of its allow list, which GitHub applies to the token of a workflow
+of an organization repository, so the lookups of `aquasecurity/trivy-action`
+and `aquasecurity/trivy` fail on GitHub-hosted runners. The script tolerates
+the `no-result` warning of these two packages only when the same log records
+that refusal for the same package, and lists the tolerated warnings in its
+output; once the organization lifts the allow list, no warning is tolerated.
+The workflow cannot create branches or pull requests and is not a required
+check: a failure is visible as a red status without blocking the merge.
 
 ### Local Git Hooks
 
