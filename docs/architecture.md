@@ -393,8 +393,11 @@ default socket, `/var/run/docker.sock`, as on GitHub's runners; Docker Desktop
 is not needed. Version 28.0.0 stops other hosts of the network from reaching
 the ports published on the loopback interface (moby/moby#49325); versions
 28.2.0 to 28.3.2 lose that protection after a reload of firewalld
-(CVE-2025-54388). The scripts refuse every other setup with a message: an
-older version; any other endpoint (a remote daemon, or one in a virtual
+(CVE-2025-54388). The backend of local development (below) also needs Docker
+Engine's Compose plugin, 2.32.2 or later, the minimum of Sentinel's local
+development (Sentinel `docs/deployment.md`, Software Requirements). The
+scripts refuse every other setup with a message: an older version; any other
+endpoint (a remote daemon, or one in a virtual
 machine, as with Docker Desktop); Podman's Docker API; Docker's rootless mode
 and user namespace remapping; and running them as root. In rootless mode only
 the root user of a container maps to the user who starts it, and Docker has
@@ -414,14 +417,24 @@ Sentinel's published image at the supported version, with the PostgreSQL and
 Redis that it requires (Sentinel `docs/deployment.md`, Software
 Requirements), in containers of the same engine; Sentinel's image does not
 depend on a specific runtime (Sentinel `docs/architecture.md`, Design
-Constraints). That backend holds fictional data only: it is loaded with
-Sentinel's example dataset, which the image of the supported version provides
-(Sentinel `docs/features/platform/example-dataset.md`, Purpose):
+Constraints). Docker Compose starts them from `compose.yaml`, through
+`scripts/dev-env.sh` (Backend orchestration, below). That backend holds
+fictional data only: it is loaded with Sentinel's example dataset, which the
+image of the supported version provides (Sentinel
+`docs/features/platform/example-dataset.md`, Purpose):
 
 - The dataset is loaded into a newly created, migrated database before any
   other Sentinel process starts. The backend is recreated, never migrated, to
   restore the dataset or to move to another supported version (Sentinel
-  `docs/deployment.md`, Loading the Example Dataset).
+  `docs/deployment.md`, Loading the Example Dataset). Its data lives only as
+  long as its containers: the script reuses a running backend only while its
+  configuration and the supported version are unchanged, removes the data
+  with the containers when it stops the backend, and loads the dataset into a
+  new database for every new backend.
+- The backend's containers receive nothing from the host and run as the
+  non-root users of their images, without capabilities and unable to gain
+  privileges. They publish no port: the development server joins the
+  backend's network, where its proxy reaches the API (Local Development).
 - Signing in there uses Sentinel's local authentication, with the dataset's
   users and its published password. SSO is not available there: it matches
   only external users, and every dataset user is a local user (Sentinel
@@ -444,7 +457,7 @@ Sentinel's example dataset, which the image of the supported version provides
 | Option | Impact |
 |---|---|
 | Tooling on the host | The simplest setup. Every dependency's code runs with access to the user's home directory, the target of the credential-stealing npm worms of 2025 and 2026, and caches and browsers accumulate there. The Node.js version drifts with the host |
-| **Docker Engine** (chosen) | Dependency code sees only the repository and its dependencies, and runs with the user's IDs, without capabilities. The engine of GitHub's runners and one that Sentinel's local development supports, so a developer of both repositories can use one engine. Its daemon runs as root, so access to it amounts to root on the host. The host needs Docker Engine with its Buildx plugin, Git, and `curl`; the dependencies live in the user's cache directory and the images in Docker's storage, each removable at once. Costs about half a second per command and a tooling image of about 2 GB |
+| **Docker Engine** (chosen) | Dependency code sees only the repository and its dependencies, and runs with the user's IDs, without capabilities. The engine of GitHub's runners and one that Sentinel's local development supports, so a developer of both repositories can use one engine. Its daemon runs as root, so access to it amounts to root on the host. The host needs Docker Engine with its Buildx and Compose plugins, Git, and `curl`; the dependencies live in the user's cache directory and the images in Docker's storage, each removable at once. Costs about half a second per command and a tooling image of about 2 GB |
 | Rootless Podman | The same isolation, without a daemon that runs as root. A developer of both repositories needs a second engine, which Sentinel's local development does not support, and the scripts diverge from Sentinel's development and test tooling, which supports only Docker (Sentinel `docs/deployment.md`, Local Development) |
 | Docker in rootless mode | No daemon that runs as root, but the files that the containers write in the repository belong to other IDs of the host unless dependency code runs as root in the container, and CI does not run it |
 | Docker Desktop | Docker Engine in a virtual machine, which Linux does not need, behind a socket of the user. Bind mounts and published ports cross the virtual machine's file sharing and port forwarding, which CI does not run, and its license requires a paid subscription in larger organizations |
@@ -460,6 +473,25 @@ local development required Docker, so that one engine can serve both
 repositories and CI. Running the containers with the user's IDs keeps
 dependency code unprivileged on the host, as rootless Podman did, and also
 inside the container.
+
+**Backend orchestration:** `compose.yaml` declares the backend's containers,
+the order of their start, and their health checks, and Docker Compose runs
+them. `scripts/dev-env.sh` adds what Compose cannot decide: it reads the
+supported version from `contract/sentinel-version`, reuses or recreates the
+backend under the rules above, and starts the development server through
+`scripts/tooling.sh`, which keeps the rules of the tooling containers in one
+place.
+
+| Option | Impact |
+|---|---|
+| **Docker Compose** (chosen) | Starts the containers in order, waits until each one is healthy or has completed, and removes them with their data. Separate projects run several backends side by side, as the end-to-end tests need. Renovate updates the images of `compose.yaml`. One plugin of Docker's CLI, which Sentinel's local development requires too |
+| A script of `docker run` commands | No other tool, but the script implements the order, the waits, the separation of several backends, and the cleanup itself |
+| Sentinel's own Compose files | They serve Sentinel's development from source and the tests of its image, start no example dataset, and are not part of Sentinel's contract |
+
+**Rationale:** the backend is a group of containers that depend on one
+another, and the end-to-end tests add more of them; Compose describes such a
+group in one file, and the script stays limited to the decisions that depend
+on this repository.
 
 #### Routing, Server State, and Forms
 

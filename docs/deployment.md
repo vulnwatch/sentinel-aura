@@ -199,6 +199,11 @@ repository runs the bot or creates its pull requests. It tracks:
   `image-scan.yml` pins;
 - the base image of the `Containerfile`, by version and digest, through the
   `dockerfile` manager;
+- the PostgreSQL and Redis images of `compose.yaml`, the backend of local
+  development (`docs/architecture.md`, Development Environment), by version
+  and digest, through the `docker-compose` manager. It skips Sentinel's image,
+  whose version `scripts/dev-env.sh` takes from `contract/sentinel-version`
+  (Sentinel version);
 - the Renovate image of `renovate-validation.yml`, by version and digest,
   through a custom regex manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a
@@ -273,8 +278,11 @@ maintainer completes it on its branch:
 3. the code and the documents of this repository follow what changed between
    the two versions: the operations of the pinned OpenAPI document, and the
    Sentinel sections that the documents cite, read at the tag of the new
-   version (`AGENTS.md`, Sentinel as an External Authority); and
-4. the pull request states which screens the API changes affect
+   version (`AGENTS.md`, Sentinel as an External Authority);
+4. `scripts/dev-env.sh test` passes against a backend of the new version: the
+   development proxy routes and forwards requests as before, and a dataset
+   user signs in through it (`CONTRIBUTING.md`, Development Setup); and
+5. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
 
 Steps 1 and 2, like the regeneration of an Orval update, only regenerate files
@@ -289,8 +297,9 @@ Contract).
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, or `chore(deps):` for the tooling image, the npm
-dependencies, and the base image of the `Containerfile`, which are not used
-only by CI; neither carries a release signal
+dependencies, the base image of the `Containerfile`, and the images of
+`compose.yaml`, which are not used only by CI; neither carries a release
+signal
 (`docs/conventions.md`, Versioning). Renovate never merges its own pull
 requests: `automerge` is disabled, and each one is merged like any other pull
 request, after the repository owner authorizes the merge.

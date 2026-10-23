@@ -1,0 +1,112 @@
+# The Sentinel backend of local development (docs/architecture.md,
+# Development Environment): Sentinel's published image at the supported
+# version, with the PostgreSQL and Redis that it requires, loaded with
+# Sentinel's example dataset in the order that Sentinel docs/deployment.md
+# (Loading the Example Dataset) prescribes. Run it through scripts/dev-env.sh,
+# which reads the supported version from contract/sentinel-version, recreates
+# the backend instead of reusing a database, and starts the development server
+# in the network of the backend.
+#
+# No service publishes a port: the development server reaches the API at
+# http://sentinel:8000 through that network, and only its own port is
+# published, on the loopback interface. Every container runs as the non-root
+# user of its image, without capabilities, and receives nothing from the host.
+# The data lives in anonymous volumes, which scripts/dev-env.sh removes with
+# the containers, so every backend loads the dataset into a new database.
+
+x-hardening: &hardening
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+# Every role of Sentinel's image: the one-shot migration and dataset load, and
+# the API.
+x-sentinel-image: &sentinel-image
+  <<: *hardening
+  image: ghcr.io/vulnwatch/sentinel:${SENTINEL_VERSION:?start the backend with scripts/dev-env.sh}
+  environment:
+    # A fixed, fictional value, not a secret: the backend holds only the
+    # example dataset, whose users have a published password, and is reachable
+    # only from this host.
+    JWT_SECRET_KEY: example-dataset-backend-jwt-signing-key
+    DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+    # The IBS RabbitMQ consumer does not run on a dataset backend (Sentinel
+    # docs/features/platform/example-dataset.md, Operating a Dataset Backend).
+    IBS_RABBITMQ_ENABLED: "false"
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+    user: postgres
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+    healthcheck:
+      # Over TCP: while the image initializes the database, its temporary
+      # server listens only on a Unix socket.
+      test: [CMD, pg_isready, --host=127.0.0.1, --username=sentinel, --dbname=sentinel]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 1s
+
+  redis:
+    <<: *hardening
+    image: redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901
+    user: redis
+    # Without persistence, as Sentinel runs Redis (Sentinel docs/deployment.md,
+    # Redis Durability, Memory, and Persistence).
+    command: [redis-server, --save, "", --appendonly, "no"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 1s
+
+  migrate:
+    <<: *sentinel-image
+    command: [alembic, upgrade, head]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Runs only after the migration and before the API, into the new database
+  # (Sentinel docs/features/platform/example-dataset.md, Command).
+  dataset:
+    <<: *sentinel-image
+    command: [sentinel, example-data, load]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # The API, under the image's default command.
+  sentinel:
+    <<: *sentinel-image
+    labels:
+      # Identifies the configuration of the backend, so that
+      # scripts/dev-env.sh reuses a running backend only while it is current.
+      sentinel-aura.backend: ${SENTINEL_AURA_BACKEND:?start the backend with scripts/dev-env.sh}
+    depends_on:
+      dataset:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # The image has no curl. /ready checks PostgreSQL and Redis (Sentinel
+      # docs/features/platform/health-endpoints.md).
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=4)
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 1s
