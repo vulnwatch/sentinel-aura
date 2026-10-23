@@ -54,13 +54,26 @@ policy, and repository tooling.
 ## Development Setup
 
 Every Node.js command runs in a disposable container of the official
-Playwright image, started by `scripts/tooling.sh` through rootless Podman,
-never on your host
+Playwright image, started by `scripts/tooling.sh` through Docker Engine, never
+on your host
 ([Development Environment](docs/architecture.md#development-environment)).
-The container sees the repository and nothing else: no home directory and no
-credentials. The host needs only Linux, Git, `curl`, and
-[Podman](https://podman.io/) running rootless, as a regular user; it needs no
-Node.js.
+The container sees the repository and the directory of its dependencies, and
+nothing else: no other part of your home directory and no credentials. It
+runs with your user and group IDs, without capabilities, so the files that it
+writes belong to you. The host needs Linux, Git, `curl`, and
+[Docker Engine](https://docs.docker.com/engine/install/) 28.0.0 or later with
+its Buildx plugin, the engine that Sentinel's local development uses too; it
+needs no Node.js.
+
+- Use Docker Engine with its default daemon, as a regular user who may use
+  it, for example as a member of the `docker` group. That access is
+  equivalent to root on your host, which Docker's documentation explains in
+  [Docker daemon attack surface](https://docs.docker.com/engine/security/#docker-daemon-attack-surface);
+  the containers never receive the daemon's socket.
+- The scripts check the engine first and stop with a message on any other
+  setup: an older version, a remote endpoint, Docker Desktop, Podman's Docker
+  API, and Docker's rootless mode or user namespace remapping, under which the
+  files that the containers write would not belong to you.
 
 | Command | Purpose |
 |---------|---------|
@@ -71,18 +84,31 @@ Node.js.
 | `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
 | `scripts/tooling.sh audit` | Audit the installed dependencies: their registry signatures and attestations (`npm audit signatures`) and their known vulnerabilities (`npm audit`), as CI does when the dependencies change |
 | `scripts/tooling.sh dev` | Start the development server on <http://localhost:5173>, published on the loopback interface only |
-| `scripts/tooling.sh clean` | Remove the dependency volume of the clone |
+| `scripts/tooling.sh clean` | Remove the dependency directory of the clone |
 
 - The repository is mounted read-only. A command writes only the outputs,
   `dist/`, `coverage/`, and `test-results/`, and the files that it changes by
   design: the formatted sources for `format`, the generated API client for
   `generate`, `package.json` and the lockfile for `npm`.
-- The dependencies live in a Podman volume of each clone, mounted on
-  `node_modules/`, which stays empty on your host. Every command installs
-  them first when the volume is new or when the tooling image,
-  `package.json`, the lockfile, or `.npmrc` changed, so `install` is needed
-  only to force a clean installation.
+- The dependencies live in a directory of each clone under
+  `~/.cache/sentinel-aura/`, or `$XDG_CACHE_HOME/sentinel-aura/` when that
+  variable is set, mounted on `node_modules/`, which stays empty on your
+  host. Every command installs them first when the directory is new or when
+  the tooling image, `package.json`, the lockfile, or `.npmrc` changed, so
+  `install` is needed only to force a clean installation.
 - The first command downloads the tooling image, about 2 GB.
+- If you used this repository with Podman before, its dependency volume and
+  its image are no longer used; remove them once:
+
+  ```bash
+  podman volume ls --quiet --filter name=sentinel-aura-node-modules- |
+      xargs --no-run-if-empty podman volume rm
+  podman image rm localhost/sentinel-aura:local
+  ```
+
+  Podman's copy of the `mcr.microsoft.com/playwright` image can go too, with
+  `podman image rm`, unless another project uses it.
+
 - A new dependency needs the decision that
   [Dependency Admission](docs/conventions.md#dependency-admission) defines.
 
@@ -103,8 +129,8 @@ change of the supported version is completed.
 
 The image that serves the UI in production
 ([Packaging and Serving](docs/architecture.md#packaging-and-serving)) is built
-and tested by `scripts/image.sh`, which runs on your host with Podman and
-`curl`:
+and tested by `scripts/image.sh`, which runs on your host with Docker Engine,
+its Buildx plugin, and `curl`:
 
 | Command | Purpose |
 |---------|---------|

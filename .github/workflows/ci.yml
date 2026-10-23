@@ -100,8 +100,8 @@ jobs:
       - name: Verify the pinned OpenAPI document
         run: scripts/sentinel-contract.sh verify
       # Every Node.js command runs through scripts/tooling.sh, in the tooling
-      # image with rootless Podman (docs/architecture.md, Development
-      # Environment).
+      # image with the runner's Docker Engine (docs/architecture.md,
+      # Development Environment).
       - name: Install dependencies
         run: scripts/tooling.sh install
       # The audit blocks only the runs that can change the dependencies; see
@@ -161,7 +161,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -n "$(find node_modules -mindepth 1 -print -quit)" ]]; then
-            echo "::error::node_modules/ holds files; dependencies must stay in the volume."
+            echo "::error::node_modules/ holds files; dependencies must stay in their directory outside the working tree."
             exit 1
           fi
 

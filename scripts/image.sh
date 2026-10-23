@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Build, test, and serve the image that serves the UI in production: nginx and
 # the production build (docs/architecture.md, Packaging and Serving; Security
-# Headers). The script runs on the host with rootless Podman and curl, locally
-# and in CI; the production build runs through scripts/tooling.sh, like every
-# Node.js command.
+# Headers). The script runs on the host with Docker Engine, its Buildx plugin,
+# and curl, locally and in CI; the production build runs through
+# scripts/tooling.sh, like every Node.js command.
 #
 # Usage:
 #   scripts/image.sh build          Build the production build, then the image
@@ -72,7 +72,7 @@ die() {
 }
 
 require_image() {
-    podman image exists "${IMAGE}" ||
+    docker image inspect "${IMAGE}" >/dev/null 2>&1 ||
         die "missing image ${IMAGE}; run 'scripts/image.sh build' first"
 }
 
@@ -104,6 +104,15 @@ lacks() {
 # A numeric user that is not root, such as 101 or 101:101.
 numeric_non_root() {
     [[ "$1" =~ ^[0-9]+(:[0-9]+)?$ ]] && ((10#${1%%:*} != 0))
+}
+
+# One numeric user ID per line, at least one, none of them root.
+non_root_uids() {
+    local uid
+    [[ -n "$1" ]] || return 1
+    while IFS= read -r uid; do
+        numeric_non_root "${uid}" || return 1
+    done <<<"$1"
 }
 
 # A Permissions-Policy header that only disables features: one header whose
@@ -196,15 +205,17 @@ check_missing_asset() {
     check_common_headers "${label}"
 }
 
-# Runs a shell command in a container of the image as root, which can read
-# every file of the image.
+# Runs a shell command in a container of the image as root, whose only
+# capability lets it read every file of the image.
 image_shell() {
-    podman run --rm --network=none --user=0 --entrypoint=sh "${IMAGE}" -c "$1"
+    docker run --rm --network=none --user=0 --entrypoint=sh \
+        --cap-drop=ALL --cap-add=DAC_READ_SEARCH --security-opt=no-new-privileges \
+        "${IMAGE}" -c "$1"
 }
 
 check_image_content() {
     local user image_files build_files found
-    user="$(podman image inspect --format '{{.Config.User}}' "${IMAGE}")"
+    user="$(docker image inspect --format '{{.Config.User}}' "${IMAGE}")"
     check "the image user, ${user}, is numeric and not root" numeric_non_root "${user}"
     found="$(image_shell 'find / -xdev \( -name node -o -name nodejs -o -name npm -o -name npx -o -name node_modules \) -print')"
     check "the image contains no Node.js" equals "${found}" ""
@@ -219,7 +230,7 @@ check_image_content() {
 
 remove_test_state() {
     if [[ -n "${CONTAINER}" ]]; then
-        podman rm --force --ignore --time 0 "${CONTAINER}" >/dev/null || true
+        docker rm --force "${CONTAINER}" >/dev/null 2>&1 || true
     fi
     if [[ -n "${WORK_DIR}" ]]; then
         rm -rf -- "${WORK_DIR}"
@@ -230,10 +241,10 @@ remove_test_state() {
 # profile, published on a free port of the loopback interface.
 start_container() {
     CONTAINER="sentinel-aura-image-test-$$"
-    podman run --detach --name "${CONTAINER}" \
+    docker run --detach --name "${CONTAINER}" \
         --cap-drop=ALL --security-opt=no-new-privileges \
         --publish "127.0.0.1::${CONTAINER_PORT}" "${IMAGE}" >/dev/null
-    BASE_URL="http://$(podman port "${CONTAINER}" "${CONTAINER_PORT}/tcp")"
+    BASE_URL="http://$(docker port "${CONTAINER}" "${CONTAINER_PORT}/tcp")"
     local _
     for _ in $(seq 1 50); do
         if curl --silent --output /dev/null --max-time 2 "${BASE_URL}/"; then
@@ -241,7 +252,7 @@ start_container() {
         fi
         sleep 0.2
     done
-    podman logs "${CONTAINER}" >&2 || true
+    docker logs "${CONTAINER}" >&2 || true
     die "the container does not answer on ${BASE_URL}"
 }
 
@@ -252,7 +263,7 @@ check_access_log() {
     local logs="" _
     request "${path}" --header "Cookie: ${cookie}"
     for _ in $(seq 1 25); do
-        logs="$(podman logs "${CONTAINER}" 2>&1)"
+        logs="$(docker logs "${CONTAINER}" 2>&1)"
         if contains "${logs}" "${path}"; then
             break
         fi
@@ -264,10 +275,13 @@ check_access_log() {
 
 cmd_build() {
     [[ $# -eq 0 ]] || die "build: takes no arguments"
+    docker buildx version >/dev/null 2>&1 ||
+        die "the Docker Buildx plugin is required; see CONTRIBUTING.md (Development Setup)"
     "${REPO_ROOT}/scripts/tooling.sh" run build
     [[ -f "${REPO_ROOT}/dist/index.html" ]] ||
         die "the production build wrote no dist/index.html"
-    podman build --file "${REPO_ROOT}/Containerfile" --tag "${IMAGE}" "${REPO_ROOT}"
+    docker buildx build --load --file "${REPO_ROOT}/Containerfile" --tag "${IMAGE}" \
+        "${REPO_ROOT}"
 }
 
 cmd_test() {
@@ -289,7 +303,7 @@ cmd_test() {
     check_image_content
     start_container
     check "no process of the container runs as root" \
-        lacks "$(podman top "${CONTAINER}" user | tail -n +2)" root
+        non_root_uids "$(docker top "${CONTAINER}" -o pid,uid | awk 'NR > 1 { print $2 }')"
 
     # Paths outside the asset directory, the asset directory itself without a
     # trailing slash included, which nginx would otherwise redirect to an
@@ -324,20 +338,17 @@ cmd_serve() {
     [[ $# -eq 0 ]] || die "serve: takes no arguments"
     require_image
     echo "image.sh: serving ${IMAGE} on http://127.0.0.1:${SERVE_PORT}; stop with Ctrl+C" >&2
-    podman run --rm --cap-drop=ALL --security-opt=no-new-privileges \
+    docker run --rm --cap-drop=ALL --security-opt=no-new-privileges \
         --publish "127.0.0.1:${SERVE_PORT}:${CONTAINER_PORT}" "${IMAGE}"
 }
 
 cmd_save() {
     [[ $# -eq 1 ]] || die "save: takes the path of the archive"
     require_image
-    podman save --quiet --output "$1" "${IMAGE}"
+    docker save --output "$1" "${IMAGE}"
 }
 
 main() {
-    [[ ${EUID} -ne 0 ]] || die "run as a regular user: the containers must be rootless"
-    command -v podman >/dev/null 2>&1 ||
-        die "Podman is required; see CONTRIBUTING.md (Development Setup)"
     if [[ $# -eq 0 ]]; then
         usage
         exit 2
@@ -345,10 +356,10 @@ main() {
     local command="$1"
     shift
     case "${command}" in
-        build) cmd_build "$@" ;;
-        test) cmd_test "$@" ;;
-        serve) cmd_serve "$@" ;;
-        save) cmd_save "$@" ;;
+        build | test | serve | save)
+            "${REPO_ROOT}/scripts/docker-engine.sh" check
+            "cmd_${command}" "$@"
+            ;;
         -h | --help | help) usage ;;
         *)
             usage
