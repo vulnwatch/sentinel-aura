@@ -1,10 +1,9 @@
 name: Image Scan
 
 # Weekly, non-blocking scan of the UI's image for known vulnerabilities of its
-# operating system packages, nginx included. A scan finding is data for the
-# tracking issue, never a failure; only a scan that does not complete fails
-# the run. See docs/deployment.md (Workflow Inventory, Image vulnerability
-# scan).
+# operating system packages. A scan finding is data for the tracking issue,
+# never a failure; only a scan that does not complete fails the run. See
+# docs/deployment.md (Workflow Inventory, Image vulnerability scan).
 
 on:
   schedule:
@@ -78,9 +77,12 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # The issue tracks the image of master: a manual run on another branch
+  # scans that branch and keeps its reports, but leaves the issue alone.
   tracking-issue:
     name: Scan Tracking Issue
     needs: image-scan
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

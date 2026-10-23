@@ -29,7 +29,7 @@ that run a subset of the checks before a change reaches CI.
 | `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
-| `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from `master` and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
+| `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
 
 **Blocking** means that the workflow yields a required status check of the
 `master` branch protection: a pull request cannot merge until `Shell Lint`,
@@ -114,19 +114,25 @@ unless:
 **Image vulnerability scan.** `image-scan.yml` builds the image from `master`
 every Monday and on demand, and scans it with Trivy, through
 `aquasecurity/trivy-action`, for known vulnerabilities of its operating
-system packages, nginx included; the npm dependencies have the dependency
-audit. The scan is advisory: a finding never fails the run, and only a scan
-that does not complete does. The `Image Scan` job, which runs the scanner,
-only reads the repository; it hands the report of the fixable HIGH and
-CRITICAL vulnerabilities to the `Scan Tracking Issue` job, the only one that
-can write issues, where `scripts/image-scan-issue.sh` opens an issue labeled
-`security` that lists them, or updates the open one, and closes it once a
-scan finds none. The run retains the complete report, with every severity and
-the vulnerabilities without a fix, as a 90-day workflow artifact. A fix
+system packages; the npm dependencies have the dependency audit. The scan is
+advisory: a finding never fails the run, and only a scan that does not
+complete does. The `Image Scan` job, which runs the scanner, only reads the
+repository; it hands the report of the fixable HIGH and CRITICAL
+vulnerabilities to the `Scan Tracking Issue` job, the only one that can write
+issues, where `scripts/image-scan-issue.sh` opens an issue labeled `security`
+that lists them, or updates the open one, and closes it once a scan finds
+none. The issue tracks the image of `master`: a manual run on another branch,
+such as the branch of a Renovate pull request, scans the image of that branch
+but skips the `Scan Tracking Issue` job. Every run retains the complete
+report, with every severity and the vulnerabilities without a fix, as a
+90-day workflow artifact. A fix
 usually arrives as a Renovate pull request that updates the base image of the
 `Containerfile` (Dependency Updates), which a maintainer merges with a
 `fix(deps):` title, so that it is a patch release signal; until the base image
-contains the fix, the issue stays open.
+contains the fix, the issue stays open. nginx itself comes from nginx.org's
+package repository, not from Alpine's, so the scan does not match nginx's own
+advisories: a security release of nginx arrives as a Renovate update of the
+base image, which a maintainer merges with a `fix(deps):` title as well.
 
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
 repository-level default setup, not through a workflow of this repository. It

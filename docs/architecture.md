@@ -588,7 +588,8 @@ Origin). The image:
   document, so that the application resolves the path;
 - serves the content-hashed files of the asset directory with long-lived
   caching, answers a missing one with `404`, and serves the entry document
-  without caching;
+  with `Cache-Control: no-cache`, so that the browser revalidates it on every
+  load and a new release takes effect at once;
 - sets the security headers of its responses (Security Headers);
 - answers no request with a redirect, so that its responses depend on
   neither the scheme nor the `Host` header with which a request reaches it:

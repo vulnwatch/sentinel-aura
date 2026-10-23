@@ -8,8 +8,8 @@
 FROM docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
 
 # The base image's default site and server give way to the build and to the
-# server of nginx/default.conf. The files belong to root, so the runtime user
-# can read them but not change them.
+# server of nginx/default.conf. The build belongs to root, so the runtime user
+# can read it but not change it.
 USER root
 RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/*
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
