@@ -399,12 +399,12 @@ Compose plugin, 2.32.2 or later, the minimum of Sentinel's local development
 every other setup with a message: an older version; any other endpoint (a
 remote daemon, or one in a virtual machine, as with Docker Desktop); Podman's
 Docker API; Docker's rootless mode and user namespace remapping; and running
-them as root. In rootless mode only
-the root user of a container maps to the user who starts it, and Docker has
-no option that maps the user's own IDs into the container, as Podman's
-`keep-id` does: a container that runs with those IDs writes files that belong
-to other IDs of the host, and one that runs as its root runs dependency code
-as root. User namespace remapping has the same effect.
+them as root. In rootless mode only the root user of a container maps to the
+user who starts it, and Docker has no option that maps the user's own IDs
+into the container, as Podman's `keep-id` does: a container that runs with
+those IDs writes files that belong to other IDs of the host, and one that
+runs as its root runs dependency code as root. User namespace remapping has
+the same effect.
 
 The Docker daemon runs as root, and a user who can use it, such as a member of
 the `docker` group, is equivalent to root on the host: whatever reaches the

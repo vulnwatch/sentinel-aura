@@ -236,9 +236,7 @@ file maintenance pull request regenerates `package-lock.json`, which keeps the
 transitive dependencies current, within npm's own minimum release age.
 Renovate does not update the Node.js line of `package.json`, which follows the
 tooling image (`docs/architecture.md`, Build Tool, Package Manager, and
-Node.js). Vite implements the development proxy, which no CI job exercises, so
-before a pull request that updates `vite` is merged, a maintainer runs
-`scripts/dev-env.sh test` on its branch (`CONTRIBUTING.md`, Local Backend).
+Node.js).
 
 The tooling image and `@playwright/test` are updated in one `Playwright` pull
 request, because the browsers of the image must be the ones that the package
@@ -266,6 +264,11 @@ and the Mend Renovate App cannot run the generator on its branches. A
 maintainer runs `scripts/tooling.sh generate` on the branch of the pull
 request and commits the result; until then `UI Checks` fails if the generated
 client changes (Workflow Inventory).
+
+**Local backend.** No CI job runs the backend of local development or the
+development proxy in front of it. Before a pull request that updates `vite`,
+the tooling image, or an image of `compose.yaml` is merged, a maintainer runs
+`scripts/dev-env.sh test` on its branch (`CONTRIBUTING.md`, Local Backend).
 
 **Sentinel version.** Renovate proposes a new supported Sentinel version once
 its GitHub Release is published, outside the weekly schedule, because the UI
