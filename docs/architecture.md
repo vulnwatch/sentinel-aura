@@ -392,9 +392,9 @@ Sentinel's example dataset, which the image of the supported version provides
   `docs/features/platform/example-dataset.md`, Credentials; Sentinel
   `docs/features/identity/sso-authentication.md`, Identity Mapping).
 - Because that password is public, the backend is reachable only from the
-  developer's host or from inside its test environment: every port through
-  which it can be reached, its own or that of a proxy in front of it, is
-  bound to the loopback interface only (Sentinel
+  developer's host or from inside its test environment: every published port
+  through which it can be reached, its own or that of a proxy in front of it,
+  is bound to the loopback interface only (Sentinel
   `docs/features/platform/example-dataset.md`, Security Considerations).
 - Every fetcher is disabled after the load and is never enabled on that
   backend, and an operation that needs an external source, such as adding a
