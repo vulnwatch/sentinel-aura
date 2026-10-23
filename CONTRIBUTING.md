@@ -58,7 +58,7 @@ Playwright image, started by `scripts/tooling.sh` through rootless Podman,
 never on your host
 ([Development Environment](docs/architecture.md#development-environment)).
 The container sees the repository and nothing else: no home directory and no
-credentials. The host needs only Linux, Git, and
+credentials. The host needs only Linux, Git, `curl`, and
 [Podman](https://podman.io/) running rootless, as a regular user; it needs no
 Node.js.
 
@@ -67,6 +67,7 @@ Node.js.
 | `scripts/tooling.sh install` | Install the dependencies (`npm ci`) |
 | `scripts/tooling.sh run <script> [args]` | Run a `package.json` script without network access, for example `run check` for the type check, lint, format check, and tests, or `run test -- src/router.test.tsx` |
 | `scripts/tooling.sh format` | Format the sources with Prettier |
+| `scripts/tooling.sh generate` | Generate the API client in `src/api/generated/` from the pinned OpenAPI document, without network access ([API Client Generation](docs/architecture.md#api-client-generation)) |
 | `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
 | `scripts/tooling.sh audit` | Audit the installed dependencies: their registry signatures and attestations (`npm audit signatures`) and their known vulnerabilities (`npm audit`), as CI does when the dependencies change |
 | `scripts/tooling.sh dev` | Start the development server on <http://localhost:5173>, published on the loopback interface only |
@@ -74,8 +75,8 @@ Node.js.
 
 - The repository is mounted read-only. A command writes only the outputs,
   `dist/`, `coverage/`, and `test-results/`, and the files that it changes by
-  design: the formatted sources for `format`, `package.json` and the lockfile
-  for `npm`.
+  design: the formatted sources for `format`, the generated API client for
+  `generate`, `package.json` and the lockfile for `npm`.
 - The dependencies live in a Podman volume of each clone, mounted on
   `node_modules/`, which stays empty on your host. Every command installs
   them first when the volume is new or when the tooling image,
@@ -84,6 +85,21 @@ Node.js.
 - The first command downloads the tooling image, about 2 GB.
 - A new dependency needs the decision that
   [Dependency Admission](docs/conventions.md#dependency-admission) defines.
+
+The supported Sentinel version is declared in `contract/sentinel-version`, and
+`contract/sentinel.openapi.json` is the pinned OpenAPI document, the copy of
+that release's OpenAPI document
+([Backend Contract](docs/architecture.md#backend-contract)).
+`scripts/sentinel-contract.sh` runs on your host and downloads the release
+asset with `curl`:
+
+| Command | Purpose |
+|---------|---------|
+| `scripts/sentinel-contract.sh verify` | Check that the pinned OpenAPI document is identical to the release asset, as CI does |
+| `scripts/sentinel-contract.sh update` | Replace the pinned OpenAPI document with the release asset of the declared version; then run `scripts/tooling.sh generate` |
+
+[Dependency Updates](docs/deployment.md#dependency-updates) describes how a
+change of the supported version is completed.
 
 ## Git Hooks
 

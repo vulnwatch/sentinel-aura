@@ -98,18 +98,21 @@ needs a capability that the API lacks.
 ## Backend Contract
 
 The UI is built against one exact Sentinel version, which this repository
-declares: the supported Sentinel version. Sentinel's API is not considered
-stable before version 1.0.0, and its consumers pin exact versions rather than
-version ranges (Sentinel `docs/deployment.md`, Pre-1.0 Policy).
+declares in `contract/sentinel-version`: the supported Sentinel version.
+Sentinel's API is not considered stable before version 1.0.0, and its
+consumers pin exact versions rather than version ranges (Sentinel
+`docs/deployment.md`, Pre-1.0 Policy).
 
 - The repository keeps a copy of the OpenAPI document of the supported
-  version: the pinned OpenAPI document. The copy is the release asset
-  `sentinel-<version>.openapi.json` of that version's published GitHub
-  Release, the only source of a version's contract (Sentinel
-  `docs/deployment.md`, API Documentation Publication). A release that does
-  not publish this asset cannot be the supported version.
+  version, `contract/sentinel.openapi.json`: the pinned OpenAPI document. The
+  copy is the release asset `sentinel-<version>.openapi.json` of that
+  version's published GitHub Release, the only source of a version's contract
+  (Sentinel `docs/deployment.md`, API Documentation Publication). A release
+  that does not publish this asset cannot be the supported version. The copy
+  keeps its name from one version to the next, so that the diff of a change
+  of the supported version shows the changes of the document.
 - The copy is identical to the release asset, and an automated check of the CI
-  pipeline verifies it.
+  pipeline verifies it (`docs/deployment.md`, Workflow Inventory).
 - The API types that the UI uses are generated from the copy, not written by
   hand, so that a change of the contract becomes a visible change of the
   generated types.
@@ -383,7 +386,7 @@ identity provider accounts (Sentinel
 | Option | Impact |
 |---|---|
 | Tooling on the host | The simplest setup. Every dependency's code runs with access to the user's home directory, the target of the credential-stealing npm worms of 2025 and 2026, and caches and browsers accumulate there. The Node.js version drifts with the host |
-| **Rootless Podman** (chosen) | Dependency code sees only the repository. The host needs only Podman and Git, and every artifact lives in the repository or in Podman's storage, removable at once. Costs about a second per command and a tooling image of about 2 GB |
+| **Rootless Podman** (chosen) | Dependency code sees only the repository. The host needs only Podman, Git, and `curl`, and every artifact lives in the repository or in Podman's storage, removable at once. Costs about a second per command and a tooling image of about 2 GB |
 | Docker | The same isolation, through a daemon that runs as root by default |
 | Development containers or a virtual machine | More setup, and coupling to an editor or a hypervisor |
 
@@ -450,14 +453,17 @@ its shared scale counters drift between screens.
 #### API Client Generation
 
 **Choice:** Orval generates, from the pinned OpenAPI document, the API types, a
-request function for each operation, and the TanStack Query hooks. The
-generated code is committed; CI regenerates it and fails when the result
+request function for each operation, and the TanStack Query hooks.
+`orval.config.ts` configures the generation, and the generated code is
+committed in `src/api/generated/`; CI regenerates it and fails when the result
 differs, so a change of the contract appears in the pull request diff (Backend
-Contract). The requests use origin-relative URLs under `/api/v1/` (Same
-Origin) and the browser's default same-origin credentials, through one shared
-request function that turns every error response into an error, carrying
-Sentinel's `code` when the response provides one (Sentinel `docs/api-spec.md`,
-Response Format).
+Contract). The client covers only the operations under `/api/v1/`: the
+document also describes the probes `/health` and `/ready`, which the Sentinel
+host does not route to the API (Same Origin). The requests use origin-relative
+URLs under `/api/v1/` (Same Origin) and the browser's default same-origin
+credentials, through one shared request function, in `src/api/request.ts`,
+that turns every error response into an error, carrying Sentinel's `code` when
+the response provides one (Sentinel `docs/api-spec.md`, Response Format).
 
 | Option | Impact |
 |---|---|

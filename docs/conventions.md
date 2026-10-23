@@ -155,7 +155,8 @@ enforce part of these rules; review enforces the rest.
 | `src/router.ts` | The route tree and the router |
 | `src/routes/` | One module per route: its definition and its page component |
 | `src/components/` | The components that several routes share |
-| `src/api/` | The API client generated from the pinned OpenAPI document, the shared request function, and the mapping of error codes to messages |
+| `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages |
+| `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
 
 A path of this table that does not exist yet is created by the first change
 that needs it; content of another kind needs a new row first.
@@ -189,7 +190,10 @@ that needs it; content of another kind needs a new row first.
   No other module calls `fetch` or `XMLHttpRequest` or builds an API URL.
 - The generated code is never edited by hand, and its types are the API
   types: no module declares an API type itself. A change comes from the
-  pinned OpenAPI document or from the generator's configuration.
+  pinned OpenAPI document, from the generator's configuration,
+  `orval.config.ts`, or from the generator's version, after which
+  `scripts/tooling.sh generate` regenerates the client; CI fails when the
+  committed client differs (`docs/deployment.md`, Workflow Inventory).
 - Every generated request goes through one shared request function. It uses
   origin-relative URLs under `/api/v1/` and the browser's default same-origin
   credentials, and it turns every error response into an error that carries
@@ -278,7 +282,9 @@ that needs it; content of another kind needs a new row first.
   `scripts/tooling.sh format` formats the files in Prettier's scope.
 - Code uses no `any`. A lint rule is disabled only inline, for the smallest
   span, with a comment that explains why the finding is a false positive or
-  an accepted trade-off.
+  an accepted trade-off. The generated API client is the only exception: it
+  cannot carry such comments, so `.oxlintrc.json` disables for it, with a
+  comment, only the rules that report patterns of its generator.
 
 ## Shell Scripting
 
@@ -438,7 +444,9 @@ against closing an issue while an open blocker remains.
 
 - a pull request generated and maintained exclusively by Renovate or
   release-please (human-directed scope added to such a PR removes the
-  exemption);
+  exemption; a maintainer's commit that only regenerates files from the
+  updated dependency, as `docs/deployment.md` (Dependency Updates)
+  prescribes, adds none);
 - pure exploration that creates no retained branch, commit, PR, or
   tracked-file change; or
 - a genuinely cosmetic change limited to spelling, punctuation,

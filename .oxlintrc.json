@@ -14,5 +14,18 @@
     "no-script-url": "error",
     "typescript/no-explicit-any": "error",
     "typescript/no-misused-promises": "error"
-  }
+  },
+  "overrides": [
+    {
+      // The generated API client is never edited by hand, so it cannot carry
+      // inline disable comments: these rules report only patterns of its
+      // generator (docs/conventions.md, Checks).
+      "files": ["src/api/generated/**"],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unnecessary-type-conversion": "off",
+        "unicorn/consistent-function-scoping": "off"
+      }
+    }
+  ]
 }

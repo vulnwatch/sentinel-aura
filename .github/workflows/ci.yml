@@ -95,6 +95,10 @@ jobs:
           # Two commits, so that the audit scope can compare a pull request's
           # merge commit with its first parent, the tip of the base branch.
           fetch-depth: 2
+      # The pinned OpenAPI document is identical to the release asset of the
+      # supported Sentinel version (docs/architecture.md, Backend Contract).
+      - name: Verify the pinned OpenAPI document
+        run: scripts/sentinel-contract.sh verify
       # Every Node.js command runs through scripts/tooling.sh, in the tooling
       # image with rootless Podman (docs/architecture.md, Development
       # Environment).
@@ -113,6 +117,20 @@ jobs:
       - name: Audit dependencies
         if: steps.audit-scope.outputs.required == 'true'
         run: scripts/tooling.sh audit
+      # The committed API client is the one that the pinned OpenAPI document
+      # and orval.config.ts generate (docs/architecture.md, API Client
+      # Generation): regenerate it and fail on any difference.
+      - name: Generate the API client
+        run: scripts/tooling.sh generate
+      - name: Verify that the committed API client is current
+        run: |
+          set -euo pipefail
+          changes="$(git status --porcelain --untracked-files=all -- src/api/generated)"
+          if [[ -n "${changes}" ]]; then
+            printf '%s\n' "${changes}"
+            echo "::error::src/api/generated/ is not the client that the pinned OpenAPI document generates; run scripts/tooling.sh generate and commit the result."
+            exit 1
+          fi
       - name: Type check
         run: scripts/tooling.sh run typecheck
       - name: Lint

@@ -58,9 +58,8 @@ Moving to another Sentinel version is always an explicit pull request whose
 diff shows the API changes.
 
 **Which version to read.** Read Sentinel's specifications at the release that
-this repository declares as supported, through its tag `v<version>`. While no
-supported version is declared, read Sentinel's `master` through
-`origin/master`. Before relying on the clone, verify with read-only Git
+this repository declares as supported in `contract/sentinel-version`, through
+its tag `v<version>`. Before relying on the clone, verify with read-only Git
 commands that this revision is present and current; `git -C ../sentinel fetch`
 is permitted for that purpose. The user may be working in the clone, so its
 checkout is not the revision to read: read the files directly only when the
@@ -229,7 +228,8 @@ the authoritative conventions. Core locations are:
 | Git hooks | `.githooks/` |
 | Repository orchestration and developer or CI scripts | `scripts/` |
 | UI source code and its unit and component tests | `src/` (`docs/conventions.md`, Code Conventions) |
-| npm manifest, lockfile, and settings, the entry document, and the configuration of the build, type check, lint, format, and test tools | Repository root |
+| Supported Sentinel version and pinned OpenAPI document | `contract/` (`docs/architecture.md`, Backend Contract) |
+| npm manifest, lockfile, and settings, the entry document, and the configuration of the build, type check, lint, format, test, and API client generation tools | Repository root |
 
 A location in this table may not exist yet; the first change that needs it
 creates it. Backend behavior, the API contract, and client obligations are
@@ -356,9 +356,12 @@ confidently.
   Between the Repositories), and `../sentinel/docs/architecture.md` (System
   Boundary) before recommending a placement.
 - **Supported Sentinel version change:** read Sentinel as an External
-  Authority and `docs/architecture.md` (Backend Contract); the pull request
-  diff shows the API changes, and every screen that consumes a changed
-  operation is rechecked against the new contract.
+  Authority, `docs/architecture.md` (Backend Contract), and the steps in
+  `docs/deployment.md` (Dependency Updates, Sentinel version); the pull
+  request diff shows the API changes, every screen that consumes a changed
+  operation is rechecked against the new contract, and every document that
+  cites a Sentinel section changed between the two tags is rechecked against
+  it.
 
 ### Repository tooling
 
