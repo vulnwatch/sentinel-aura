@@ -444,7 +444,9 @@ against closing an issue while an open blocker remains.
 
 - a pull request generated and maintained exclusively by Renovate or
   release-please (human-directed scope added to such a PR removes the
-  exemption);
+  exemption; a maintainer's commit that only regenerates files from the
+  updated dependency, as `docs/deployment.md` (Dependency Updates)
+  prescribes, adds none);
 - pure exploration that creates no retained branch, commit, PR, or
   tracked-file change; or
 - a genuinely cosmetic change limited to spelling, punctuation,

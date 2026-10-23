@@ -48,7 +48,9 @@ PR_TITLE='docs: describe the empty state of the CVE list' \
 The script validates the title of a Renovate pull request (author
 `renovate[bot]`, branch `renovate/*`) and of a release-please pull request
 (branch `release-please--*`), but exempts both from the issue linkage, as
-`docs/conventions.md` (Issues and work units) allows.
+`docs/conventions.md` (Issues and work units) allows. When such a pull request
+gains human-directed scope, its `Closes #<issue>` line is checked in review,
+not by the script.
 
 **Coverage reporting.** The tests of `UI Checks` measure coverage with
 Istanbul (`docs/architecture.md`, Static Checks and Tests), and when they pass
@@ -223,11 +225,11 @@ maintainer completes it on its branch:
 4. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
 
-Steps 1 and 2, like the regeneration of an Orval update, only apply the
-contract and the generator, so the pull request stays exempt from an issue.
-When step 3 changes code or documents, that work is human-directed scope: it
-gets a tracking issue, which the pull request closes (`docs/conventions.md`,
-Issues and work units).
+Steps 1 and 2, like the regeneration of an Orval update, only regenerate files
+from the updated dependency, so the pull request stays exempt from an issue
+(`docs/conventions.md`, Issues and work units). When step 3 changes code or
+documents, that work is human-directed scope: it gets a tracking issue, which
+the pull request closes.
 
 Its title uses the `feat(deps):` prefix, a minor release signal, because every
 change of the supported version carries one (`docs/architecture.md`, Backend
