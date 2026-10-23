@@ -576,16 +576,20 @@ dependencies that reach the browser bring about 30 packages in total.
 **Choice:** a release publishes an OCI image that serves the production build
 with nginx. The image is built on the official unprivileged nginx image,
 pinned by version and digest, runs as a non-root user, and contains only
-nginx, its configuration, and the static files. On the Sentinel host, the
-reverse proxy or ingress routes to this image every path that is not `/api`
-or under `/api/` (Same Origin). The image:
+nginx, its configuration, and the static files. The `Containerfile` builds it
+from the production build, and `nginx/default.conf` configures its server,
+which listens on port 8080; the image declares the base image's user
+numerically, as `101:101`. On the Sentinel host, the reverse proxy or ingress
+routes to this image every path that is not `/api` or under `/api/` (Same
+Origin). The image:
 
 - answers every path outside the build's asset directory that is not a file
   of the build, `/auth/callback` included, with the application's entry
   document, so that the application resolves the path;
 - serves the content-hashed files of the asset directory with long-lived
   caching, answers a missing one with `404`, and serves the entry document
-  without caching;
+  with `Cache-Control: no-cache`, so that the browser revalidates it on every
+  load and a new release takes effect at once;
 - sets the security headers of its responses (Security Headers);
 - answers no request with a redirect, so that its responses depend on
   neither the scheme nor the `Host` header with which a request reaches it:
@@ -620,6 +624,12 @@ headers, which Sentinel requires (Same Origin; Security Headers).
 | `Cross-Origin-Opener-Policy` | `same-origin` |
 | `Cross-Origin-Resource-Policy` | `same-origin` |
 | `Permissions-Policy` | Every browser feature that the UI does not use, disabled |
+
+`Permissions-Policy` leaves one feature enabled although the UI does not use
+it yet: `aria-notify`, through which an accessibility library can make
+assistive technologies announce changes. It gives a script no access to data
+or devices, and disabling it would silence such announcements without an
+error once a library adopts it.
 
 `<hash>` is the hash of the one fixed stylesheet that React Aria inserts at run
 time. A production build of the stack runs under this policy without

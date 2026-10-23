@@ -149,6 +149,14 @@ jobs:
           path: coverage/unit/clover.xml
           if-no-files-found: error
           retention-days: 7
+      # The image that serves the UI in production, built from the
+      # production build and tested as it runs (docs/architecture.md,
+      # Packaging and Serving; docs/deployment.md, Workflow Inventory, Image
+      # test).
+      - name: Build the image
+        run: scripts/image.sh build
+      - name: Test the image
+        run: scripts/image.sh test
       - name: Verify that no dependency reached the working tree
         run: |
           set -euo pipefail
