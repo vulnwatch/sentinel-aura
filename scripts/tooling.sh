@@ -109,7 +109,10 @@ installed_stamp() {
 
 # Appends to the array named by $1 a writable mount for each further argument,
 # a path relative to the repository root. A missing output directory is
-# created; any other path must exist.
+# created; any other path must exist. A path that is or lies under a symbolic
+# link is refused: the code of a dependency can plant one wherever an earlier
+# command could write, such as src/api/generated during `format`, and the
+# mount would then make its target writable.
 add_writable_mounts() {
     local -n mounts_ref="$1"
     shift
@@ -120,6 +123,8 @@ add_writable_mounts() {
                 die "missing ${path}"
             mkdir -p "${REPO_ROOT}/${path}"
         fi
+        [[ "$(realpath -e -- "${REPO_ROOT}/${path}")" == "${REPO_ROOT}/${path}" ]] ||
+            die "${path} is or lies under a symbolic link; it is not mounted writable"
         mounts_ref+=("--volume=${REPO_ROOT}/${path}:/work/${path}:rw,z")
     done
 }

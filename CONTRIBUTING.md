@@ -62,18 +62,20 @@ nothing else: no other part of your home directory and no credentials. It
 runs with your user and group IDs, without capabilities, so the files that it
 writes belong to you. The host needs Linux, Git, `curl`, and
 [Docker Engine](https://docs.docker.com/engine/install/) 28.0.0 or later with
-its Buildx plugin, the engine that Sentinel's local development uses too; it
-needs no Node.js.
+its Buildx plugin, which Sentinel's local development supports too; it needs
+no Node.js.
 
-- Use Docker Engine with its default daemon, as a regular user who may use
-  it, for example as a member of the `docker` group. That access is
-  equivalent to root on your host, which Docker's documentation explains in
+- Use Docker Engine with its default daemon, through its default socket
+  `/var/run/docker.sock`, as a regular user who may use it, for example as a
+  member of the `docker` group. That access is equivalent to root on your
+  host, which Docker's documentation explains in
   [Docker daemon attack surface](https://docs.docker.com/engine/security/#docker-daemon-attack-surface);
   the containers never receive the daemon's socket.
 - The scripts check the engine first and stop with a message on any other
-  setup: an older version, a remote endpoint, Docker Desktop, Podman's Docker
-  API, and Docker's rootless mode or user namespace remapping, under which the
-  files that the containers write would not belong to you.
+  setup: an older version, another endpoint, such as a remote daemon or
+  Docker Desktop, Podman's Docker API, and Docker's rootless mode or user
+  namespace remapping, under which the files that the containers write would
+  not belong to you.
 
 | Command | Purpose |
 |---------|---------|

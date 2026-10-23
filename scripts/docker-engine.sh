@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Check that the container engine is the one that the repository supports:
 # Docker Engine 28.0.0 or later on Linux, with its default daemon, which runs
-# as root, reached through a local socket (docs/architecture.md, Development
-# Environment). scripts/tooling.sh and scripts/image.sh run the check before
-# they start a container, locally and in CI.
+# as root on this host, reached through its default socket
+# (docs/architecture.md, Development Environment). scripts/tooling.sh and
+# scripts/image.sh run the check before they start a container, locally and in
+# CI.
 #
 # Usage:
 #   scripts/docker-engine.sh check   Exit with a message unless the engine is
@@ -13,6 +14,11 @@ set -euo pipefail
 # Docker Engine 28.0.0 stops other hosts of the network from reaching ports
 # published on the loopback interface (moby/moby#49325).
 readonly MINIMUM_MAJOR=28
+# The default socket of the daemon, also reachable through /run. A daemon
+# behind any other endpoint runs elsewhere, as in a virtual machine or on
+# another host, or as the user, as in rootless mode, and the containers mount
+# paths of this host and rely on the daemon running as root on it.
+readonly DEFAULT_SOCKETS=(unix:///var/run/docker.sock unix:///run/docker.sock)
 readonly SETUP="see CONTRIBUTING.md (Development Setup)"
 
 usage() {
@@ -20,7 +26,7 @@ usage() {
 Usage: scripts/docker-engine.sh check
 
 Exits with a message unless the container engine is Docker Engine 28.0.0 or
-later on Linux, with its default daemon, reached through a local socket.
+later on Linux, with its default daemon, reached through its default socket.
 EOF
 }
 
@@ -36,16 +42,15 @@ cmd_check() {
     [[ "$(uname -s)" == Linux ]] || die "the host must run Linux; ${SETUP}"
     command -v docker >/dev/null 2>&1 || die "Docker Engine is required; ${SETUP}"
 
-    # The containers mount paths of this host, so the daemon must run on it.
     local endpoint
     endpoint="$(docker context inspect --format '{{.Endpoints.docker.Host}}')" ||
         die "cannot read the endpoint of the current Docker context"
-    [[ "${endpoint}" == unix://* ]] ||
-        die "the Docker endpoint ${endpoint} is not a local socket; ${SETUP}"
+    [[ " ${DEFAULT_SOCKETS[*]} " == *" ${endpoint} "* ]] ||
+        die "the Docker endpoint ${endpoint} is not the default socket of Docker Engine, ${DEFAULT_SOCKETS[0]}; ${SETUP}"
 
     # Docker Engine names its first component "Engine", and Docker Desktop
-    # names its platform; Podman's Docker API names its component "Podman
-    # Engine".
+    # names its platform; Podman's Docker API, which can also listen on the
+    # default socket, names its component "Podman Engine".
     local server platform component version os
     server="$(docker version --format \
         '{{.Server.Platform.Name}}|{{(index .Server.Components 0).Name}}|{{.Server.Version}}|{{.Server.Os}}')" ||

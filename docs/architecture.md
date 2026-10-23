@@ -359,12 +359,13 @@ tooling image, never directly on the host: dependency installation, the
 development server, the build, API client generation, static checks, and
 tests. Docker Engine starts the containers, through a script of this
 repository that CI runs as well, so every command runs the same way locally
-and in CI. It is the engine of GitHub's runners and the one that Sentinel's
-local development requires (Sentinel `docs/deployment.md`, Software
-Requirements; Local Development), so one engine serves both repositories. The
-tooling image is the official Playwright image, which provides Node.js, npm,
-and the test browsers, pinned by version and digest. The containers follow
-these rules:
+and in CI. It is the engine of GitHub's runners, and Sentinel's local
+development supports it, as well as Docker Desktop, but not Podman (Sentinel
+`docs/deployment.md`, Software Requirements; Local Development), so a
+developer of both repositories who uses it needs one engine. The tooling
+image is the official Playwright image, which provides Node.js, npm, and the
+test browsers, pinned by version and digest. The containers follow these
+rules:
 
 - A container receives from the host the repository and the directory of its
   dependencies, and nothing else: no other part of the home directory, and no
@@ -381,20 +382,22 @@ these rules:
 - A container runs with the user and group IDs of the user who starts it, so
   that the files that it writes belong to that user, without capabilities and
   unable to gain privileges: dependency code never runs as root.
-- The commands that need no network, such as the checks, the tests, and API
-  client generation, run without it.
+- The commands that need no network, such as the static checks, the unit and
+  component tests, and API client generation, run without it.
 - Every port that a container publishes, such as the development server's, is
   bound to the loopback interface only.
 
 The supported setup is Docker Engine 28.0.0 or later on Linux, with its
-default daemon, which runs as root, reached through its local socket, as on
-GitHub's runners; Docker Desktop is not needed. Version 28.0.0 stops other
-hosts of the network from reaching the ports published on the loopback
-interface (moby/moby#49325); versions 28.2.0 to 28.3.2 lose that protection
-after a reload of firewalld (CVE-2025-54388). The scripts refuse every other
-setup with a message: an older version, an endpoint other than a local
-socket, Docker Desktop, Podman's Docker API, Docker's rootless mode and user
-namespace remapping, and running them as root. In rootless mode only the root
+default daemon, which runs as root on the same host, reached through its
+default socket, `/var/run/docker.sock`, as on GitHub's runners; Docker Desktop
+is not needed. Version 28.0.0 stops other hosts of the network from reaching
+the ports published on the loopback interface (moby/moby#49325); versions
+28.2.0 to 28.3.2 lose that protection after a reload of firewalld
+(CVE-2025-54388). The scripts refuse every other setup with a message: an
+older version, any other endpoint, such as a remote daemon or one in a
+virtual machine, as with Docker Desktop, Podman's Docker API, Docker's
+rootless mode and user namespace remapping, and running them as root. In
+rootless mode only the root
 user of a container maps to the user who starts it, and Docker has no option
 that maps the user's own IDs into the container, as Podman's `keep-id` does:
 a container that runs with those IDs writes files that belong to other IDs of
@@ -405,8 +408,7 @@ The Docker daemon runs as root, and a user who can use it, such as a member of
 the `docker` group, is equivalent to root on the host: whatever reaches the
 daemon's socket can start a privileged container. The containers do not
 receive the socket, so dependency code cannot use it. A developer of Sentinel
-has this access already, because Sentinel's local development requires the
-daemon.
+who uses Docker Engine's default daemon has this access already.
 
 For local development and the end-to-end tests, the Sentinel backend runs from
 Sentinel's published image at the supported version, with the PostgreSQL and
@@ -443,10 +445,10 @@ Sentinel's example dataset, which the image of the supported version provides
 | Option | Impact |
 |---|---|
 | Tooling on the host | The simplest setup. Every dependency's code runs with access to the user's home directory, the target of the credential-stealing npm worms of 2025 and 2026, and caches and browsers accumulate there. The Node.js version drifts with the host |
-| **Docker Engine** (chosen) | Dependency code sees only the repository and its dependencies, and runs with the user's IDs, without capabilities. The engine of GitHub's runners and of Sentinel's local development, so a developer of both repositories needs one engine. Its daemon runs as root, so access to it amounts to root on the host. The host needs Docker Engine with its Buildx plugin, Git, and `curl`; the dependencies live in the user's cache directory and the images in Docker's storage, each removable at once. Costs about half a second per command and a tooling image of about 2 GB |
+| **Docker Engine** (chosen) | Dependency code sees only the repository and its dependencies, and runs with the user's IDs, without capabilities. The engine of GitHub's runners and one that Sentinel's local development supports, so a developer of both repositories can use one engine. Its daemon runs as root, so access to it amounts to root on the host. The host needs Docker Engine with its Buildx plugin, Git, and `curl`; the dependencies live in the user's cache directory and the images in Docker's storage, each removable at once. Costs about half a second per command and a tooling image of about 2 GB |
 | Rootless Podman | The same isolation, without a daemon that runs as root. A developer of both repositories needs a second engine, which Sentinel's local development does not support, and the scripts diverge from Sentinel's development and test tooling, which supports only Docker (Sentinel `docs/deployment.md`, Local Development) |
 | Docker in rootless mode | No daemon that runs as root, but the files that the containers write in the repository belong to other IDs of the host unless dependency code runs as root in the container, and CI does not run it |
-| Docker Desktop | Docker Engine in a virtual machine, which Linux does not need; its license requires a paid subscription in larger organizations |
+| Docker Desktop | Docker Engine in a virtual machine, which Linux does not need, behind a socket of the user. Bind mounts and published ports cross the virtual machine's file sharing and port forwarding, which CI does not run, and its license requires a paid subscription in larger organizations |
 | Development containers or a virtual machine | More setup, and coupling to an editor or a hypervisor |
 
 **Rationale:** the main threat to developers who use npm is dependency code
