@@ -173,9 +173,11 @@ complexity without presenting it to the user for a decision.
    as the working directory of the shell command, because your permissions
    allow the read-only Git forms only without `-C`. Never change the clone
 6. For a change of the supported Sentinel version, read the differences
-   between the previous and the new pinned OpenAPI document, and the screen
-   documents that consume a changed operation (`AGENTS.md`, Cumulative
-   Authority Routing, Supported Sentinel version change)
+   between the previous and the new pinned OpenAPI document and between
+   Sentinel's specifications at the two tags, the screen documents that
+   consume a changed operation, and the documents that cite a changed
+   Sentinel section (`AGENTS.md`, Cumulative Authority Routing, Supported
+   Sentinel version change)
 
 Do NOT load every document of this repository or every Sentinel
 specification. Only load the contracts directly needed by or closely related
@@ -210,7 +212,8 @@ to the changed obligations. Expand when impact cannot be bounded confidently.
   authoritative in Sentinel until a change moves it to this repository
   (`README.md`, Specification Boundary)
 - After a supported Sentinel version change: does a screen document still
-  agree with the operations it consumes as the new contract defines them?
+  agree with the operations it consumes as the new contract defines them,
+  and does every document still agree with the Sentinel sections it cites?
 
 ### Incompatible flows
 

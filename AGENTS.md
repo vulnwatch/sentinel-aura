@@ -358,8 +358,10 @@ confidently.
 - **Supported Sentinel version change:** read Sentinel as an External
   Authority, `docs/architecture.md` (Backend Contract), and the steps in
   `docs/deployment.md` (Dependency Updates, Sentinel version); the pull
-  request diff shows the API changes, and every screen that consumes a
-  changed operation is rechecked against the new contract.
+  request diff shows the API changes, every screen that consumes a changed
+  operation is rechecked against the new contract, and every document that
+  cites a Sentinel section changed between the two tags is rechecked against
+  it.
 
 ### Repository tooling
 

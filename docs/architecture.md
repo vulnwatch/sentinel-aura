@@ -386,7 +386,7 @@ identity provider accounts (Sentinel
 | Option | Impact |
 |---|---|
 | Tooling on the host | The simplest setup. Every dependency's code runs with access to the user's home directory, the target of the credential-stealing npm worms of 2025 and 2026, and caches and browsers accumulate there. The Node.js version drifts with the host |
-| **Rootless Podman** (chosen) | Dependency code sees only the repository. The host needs only Podman and Git, and every artifact lives in the repository or in Podman's storage, removable at once. Costs about a second per command and a tooling image of about 2 GB |
+| **Rootless Podman** (chosen) | Dependency code sees only the repository. The host needs only Podman, Git, and `curl`, and every artifact lives in the repository or in Podman's storage, removable at once. Costs about a second per command and a tooling image of about 2 GB |
 | Docker | The same isolation, through a daemon that runs as root by default |
 | Development containers or a virtual machine | More setup, and coupling to an editor or a hypervisor |
 

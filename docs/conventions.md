@@ -190,10 +190,10 @@ that needs it; content of another kind needs a new row first.
   No other module calls `fetch` or `XMLHttpRequest` or builds an API URL.
 - The generated code is never edited by hand, and its types are the API
   types: no module declares an API type itself. A change comes from the
-  pinned OpenAPI document or from the generator's configuration,
-  `orval.config.ts`, after which `scripts/tooling.sh generate` regenerates
-  the client; CI fails when the committed client differs
-  (`docs/deployment.md`, Workflow Inventory).
+  pinned OpenAPI document, from the generator's configuration,
+  `orval.config.ts`, or from the generator's version, after which
+  `scripts/tooling.sh generate` regenerates the client; CI fails when the
+  committed client differs (`docs/deployment.md`, Workflow Inventory).
 - Every generated request goes through one shared request function. It uses
   origin-relative URLs under `/api/v1/` and the browser's default same-origin
   credentials, and it turns every error response into an error that carries

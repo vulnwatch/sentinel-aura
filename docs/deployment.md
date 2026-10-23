@@ -216,11 +216,18 @@ maintainer completes it on its branch:
 1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
    with the release asset of the new version;
 2. `scripts/tooling.sh generate` regenerates the API client;
-3. the code and the screen documents follow the changed operations, read in
-   Sentinel's specifications at the tag of the new version (`AGENTS.md`,
-   Sentinel as an External Authority); and
+3. the code and the documents of this repository follow what changed between
+   the two versions: the operations of the pinned OpenAPI document, and the
+   Sentinel sections that the documents cite, read at the tag of the new
+   version (`AGENTS.md`, Sentinel as an External Authority); and
 4. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
+
+Steps 1 and 2, like the regeneration of an Orval update, only apply the
+contract and the generator, so the pull request stays exempt from an issue.
+When step 3 changes code or documents, that work is human-directed scope: it
+gets a tracking issue, which the pull request closes (`docs/conventions.md`,
+Issues and work units).
 
 Its title uses the `feat(deps):` prefix, a minor release signal, because every
 change of the supported version carries one (`docs/architecture.md`, Backend
