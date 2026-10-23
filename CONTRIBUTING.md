@@ -71,11 +71,10 @@ no Node.js.
   host, which Docker's documentation explains in
   [Docker daemon attack surface](https://docs.docker.com/engine/security/#docker-daemon-attack-surface);
   the containers never receive the daemon's socket.
-- The scripts check the engine first and stop with a message on any other
-  setup: an older version; another endpoint (a remote daemon, or Docker
-  Desktop); Podman's Docker API; and Docker's rootless mode or user namespace
-  remapping, under which the files that the containers write would not
-  belong to you.
+- The scripts check the engine first and stop with a message that explains
+  what is not supported
+  ([Development Environment](docs/architecture.md#development-environment)
+  lists the refused setups).
 
 | Command | Purpose |
 |---------|---------|
@@ -99,18 +98,6 @@ no Node.js.
   the tooling image, `package.json`, the lockfile, or `.npmrc` changed, so
   `install` is needed only to force a clean installation.
 - The first command downloads the tooling image, about 2 GB.
-- If you used this repository with Podman before, its dependency volume and
-  its image are no longer used; remove them once:
-
-  ```bash
-  podman volume ls --quiet --filter name=sentinel-aura-node-modules- |
-      xargs --no-run-if-empty podman volume rm
-  podman image rm localhost/sentinel-aura:local
-  ```
-
-  Podman's copy of the `mcr.microsoft.com/playwright` image can go too, with
-  `podman image rm`, unless another project uses it.
-
 - A new dependency needs the decision that
   [Dependency Admission](docs/conventions.md#dependency-admission) defines.
 
