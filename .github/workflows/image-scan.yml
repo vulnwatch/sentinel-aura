@@ -1,0 +1,101 @@
+name: Image Scan
+
+# Weekly, non-blocking scan of the UI's image for known vulnerabilities of its
+# operating system packages, nginx included. A scan finding is data for the
+# tracking issue, never a failure; only a scan that does not complete fails
+# the run. See docs/deployment.md (Workflow Inventory, Image vulnerability
+# scan).
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC, after Renovate's early-Monday updates.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+# A run that is writing the tracking issue finishes before the next starts.
+concurrency:
+  group: image-scan
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  image-scan:
+    name: Image Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: scripts/image.sh build
+      - name: Export the image
+        run: scripts/image.sh save "${RUNNER_TEMP}/image.tar"
+      # The npm dependencies are audited separately (Workflow Inventory,
+      # Dependency audit), so the scan covers the operating system packages.
+      - name: Scan for fixable HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          input: ${{ runner.temp }}/image.tar
+          format: json
+          output: trivy-fixable.json
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          version: "v0.76.1"
+      - name: Generate the complete report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          input: ${{ runner.temp }}/image.tar
+          format: table
+          output: trivy-full.txt
+          exit-code: "0"
+          ignore-unfixed: false
+          vuln-type: os
+          scanners: vuln
+          skip-setup-trivy: true
+      - name: Retain the complete report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trivy-full
+          path: trivy-full.txt
+          if-no-files-found: error
+          retention-days: 90
+      # Handed to the Scan Tracking Issue job, so that the write access to
+      # issues never reaches the job that runs the scanner.
+      - name: Retain the report of fixable vulnerabilities
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trivy-fixable
+          path: trivy-fixable.json
+          if-no-files-found: error
+          retention-days: 1
+
+  tracking-issue:
+    name: Scan Tracking Issue
+    needs: image-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: trivy-fixable
+          path: ${{ runner.temp }}/trivy
+      - name: Open, update, or close the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/image-scan-issue.sh "${RUNNER_TEMP}/trivy/trivy-fixable.json"

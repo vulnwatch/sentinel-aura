@@ -1,0 +1,4 @@
+# The build context of the Containerfile: only what the image contains.
+*
+!dist/
+!nginx/

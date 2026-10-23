@@ -26,9 +26,10 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment), then a check that `node_modules/` holds no file in the working tree. `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
+| `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from `master` and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
 
 **Blocking** means that the workflow yields a required status check of the
 `master` branch protection: a pull request cannot merge until `Shell Lint`,
@@ -87,6 +88,46 @@ the repository as a Dependabot alert and a fix (Dependency Updates) rather
 than as a failure of unrelated work, while a dependency change cannot merge
 with a known vulnerability.
 
+**Image test.** `scripts/image.sh build` runs the production build through
+`scripts/tooling.sh`, then builds the image of `docs/architecture.md`
+(Packaging and Serving) from the `Containerfile`, so Node.js never enters the
+image. `scripts/image.sh test` runs that image with the settings of the Pod
+Security `restricted` profile, published on the loopback interface, and fails
+unless:
+
+- the image declares a numeric non-root user, no process of the container
+  runs as root, and the image holds no Node.js;
+- the web root holds exactly the production build, and nginx has no server
+  but the one of `nginx/default.conf`;
+- every path outside the asset directory, `/auth/callback`, `/health`,
+  `/ready`, and the asset directory without its trailing slash included, gets
+  the entry document with `Cache-Control: no-cache`, also when the request
+  names another host;
+- a file of the asset directory gets its content, its type, and a year of
+  immutable caching, and a missing file and the directory itself get a `404`;
+- every response carries each security header of `docs/architecture.md`
+  (Security Headers) exactly once, with the documented Content Security
+  Policy, a `Permissions-Policy` that only disables features, no
+  `Strict-Transport-Security`, and no `Location`; and
+- the access log records a request but not the value of its `Cookie` header.
+
+**Image vulnerability scan.** `image-scan.yml` builds the image from `master`
+every Monday and on demand, and scans it with Trivy, through
+`aquasecurity/trivy-action`, for known vulnerabilities of its operating
+system packages, nginx included; the npm dependencies have the dependency
+audit. The scan is advisory: a finding never fails the run, and only a scan
+that does not complete does. The `Image Scan` job, which runs the scanner,
+only reads the repository; it hands the report of the fixable HIGH and
+CRITICAL vulnerabilities to the `Scan Tracking Issue` job, the only one that
+can write issues, where `scripts/image-scan-issue.sh` opens an issue labeled
+`security` that lists them, or updates the open one, and closes it once a
+scan finds none. The run retains the complete report, with every severity and
+the vulnerabilities without a fix, as a 90-day workflow artifact. A fix
+usually arrives as a Renovate pull request that updates the base image of the
+`Containerfile` (Dependency Updates), which a maintainer merges with a
+`fix(deps):` title, so that it is a patch release signal; until the base image
+contains the fix, the issue stays open.
+
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
 repository-level default setup, not through a workflow of this repository. It
 analyzes the JavaScript and TypeScript of the UI and the workflows, on every
@@ -124,7 +165,8 @@ hours.
 `cancel-in-progress: true`, so that a newer run of the same pull request or
 ref supersedes an older one. A workflow that creates a release or publishes a
 release artifact MUST NOT cancel a run in progress, because an interrupted
-release or publication leaves an indeterminate state.
+release or publication leaves an indeterminate state. Nor does the image
+scan, so that a run that is writing its tracking issue finishes first.
 
 **No secrets in workflow files.** Credentials MUST be supplied through GitHub
 Secrets and referenced through `${{ secrets.* }}`, never written as literals.
@@ -146,7 +188,11 @@ root and opens the dependency-update pull requests; no workflow of this
 repository runs the bot or creates its pull requests. It tracks:
 
 - the SHA-pinned actions, through the `github-actions` manager, which updates
-  the SHA and its version comment together;
+  the SHA and its version comment together, and also tracks the Trivy version
+  that the `version:` input of `aquasecurity/trivy-action` in
+  `image-scan.yml` pins;
+- the base image of the `Containerfile`, by version and digest, through the
+  `dockerfile` manager;
 - the Renovate image of `renovate-validation.yml`, by version and digest,
   through a custom regex manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a
@@ -236,8 +282,9 @@ change of the supported version carries one (`docs/architecture.md`, Backend
 Contract).
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
-`ci(deps):` title prefix, or `chore(deps):` for the tooling image and the npm
-dependencies, which are not used only by CI; neither carries a release signal
+`ci(deps):` title prefix, or `chore(deps):` for the tooling image, the npm
+dependencies, and the base image of the `Containerfile`, which are not used
+only by CI; neither carries a release signal
 (`docs/conventions.md`, Versioning). Renovate never merges its own pull
 requests: `automerge` is disabled, and each one is merged like any other pull
 request, after the repository owner authorizes the merge.
@@ -288,6 +335,9 @@ Known vulnerabilities are handled by these complementary mechanisms:
   advisory without a fix that the dependency ranges allow holds every
   dependency change and every release-please pull request back until one is
   available.
+- **The image vulnerability scan** (Workflow Inventory, Image vulnerability
+  scan) covers the operating system packages of the image, which none of the
+  mechanisms above sees.
 
 `renovate-validation.yml` is an advisory check. It runs on every pull request
 rather than on a list of Renovate-managed paths, validates `renovate.jsonc` in

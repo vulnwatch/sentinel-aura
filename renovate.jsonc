@@ -117,6 +117,14 @@
       "commitMessagePrefix": "chore(deps):"
     },
     {
+      // A base image update that fixes a vulnerability that the image scan
+      // reports is merged with a fix(deps): title instead — see
+      // docs/deployment.md (Workflow Inventory, Image vulnerability scan).
+      "description": "Base image of the Containerfile, which ships in the UI's image",
+      "matchManagers": ["dockerfile"],
+      "commitMessagePrefix": "chore(deps):"
+    },
+    {
       "description": "npm dependencies, which reach the browser or run in the tooling",
       "matchManagers": ["npm"],
       "commitMessagePrefix": "chore(deps):"

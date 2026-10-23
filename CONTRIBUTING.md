@@ -101,6 +101,18 @@ asset with `curl`:
 [Dependency Updates](docs/deployment.md#dependency-updates) describes how a
 change of the supported version is completed.
 
+The image that serves the UI in production
+([Packaging and Serving](docs/architecture.md#packaging-and-serving)) is built
+and tested by `scripts/image.sh`, which runs on your host with Podman and
+`curl`:
+
+| Command | Purpose |
+|---------|---------|
+| `scripts/image.sh build` | Run the production build through `scripts/tooling.sh`, then build the image `localhost/sentinel-aura:local` |
+| `scripts/image.sh test` | Run the image and check it as CI does: its user and content, the entry document fallback, caching, the security headers, and the access log ([Workflow Inventory](docs/deployment.md#workflow-inventory)) |
+| `scripts/image.sh serve` | Serve the image on <http://127.0.0.1:4173>, published on the loopback interface only |
+| `scripts/image.sh save <file>` | Write the image to a tar archive, as the image scan does |
+
 ## Git Hooks
 
 The repository ships Git hooks in `.githooks/` that check your commits before
