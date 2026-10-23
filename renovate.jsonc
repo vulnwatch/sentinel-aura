@@ -50,6 +50,16 @@
   "customManagers": [
     {
       "customType": "regex",
+      "description": "Supported Sentinel version of contract/sentinel-version, from Sentinel's GitHub Releases",
+      "managerFilePatterns": ["/^contract/sentinel-version$/"],
+      "matchStrings": ["^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s*$"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "vulnwatch/sentinel",
+      // Release tags carry a 'v' prefix (v0.11.0) that the file omits.
+      "extractVersionTemplate": "^v(?<version>\\d.*)$"
+    },
+    {
+      "customType": "regex",
       "description": "Tooling image of scripts/tooling.sh, by version and digest",
       "managerFilePatterns": ["/^scripts/tooling\\.sh$/"],
       "matchStrings": [
@@ -127,6 +137,29 @@
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "npm minor and patch dependencies"
+    },
+    {
+      // After the group above, which it overrides. Its pull request needs the
+      // API client regenerated on its branch, which the Mend Renovate App
+      // cannot do, so it holds back no other update — see
+      // docs/deployment.md (Dependency Updates).
+      "description": "Orval in its own pull request",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["orval"],
+      "groupName": "Orval"
+    },
+    {
+      // A change of the supported Sentinel version carries a release signal,
+      // so that the next UI release supports the new version, and it is
+      // raised at once, because a Sentinel host deploys the two together —
+      // see docs/architecture.md (Backend Contract) and docs/deployment.md
+      // (Dependency Updates).
+      "description": "Supported Sentinel version: feat(deps):, outside the weekly schedule",
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["contract/sentinel-version"],
+      "commitMessagePrefix": "feat(deps):",
+      "commitMessageTopic": "Sentinel",
+      "schedule": ["at any time"]
     },
     {
       "description": "The Node.js line follows the tooling image (docs/architecture.md, Build Tool, Package Manager, and Node.js) and changes by hand",

@@ -22,6 +22,9 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       include: ["src/**/*.{ts,tsx}"],
+      // The generated API client: its requests are tested through the shared
+      // request function, and its other code belongs to its generator.
+      exclude: ["src/api/generated/**"],
       // clover.xml is the report that CI uploads to Codecov.
       reporter: ["text", "html", "clover"],
       // A subdirectory, because Vitest removes and recreates the reports

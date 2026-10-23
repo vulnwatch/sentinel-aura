@@ -5,5 +5,6 @@
 !/src/
 !/index.html
 !/vite.config.ts
+!/orval.config.ts
 !/tsconfig.json
 !/.oxlintrc.json

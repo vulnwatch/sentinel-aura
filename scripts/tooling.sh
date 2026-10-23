@@ -6,16 +6,19 @@
 #
 # A container receives the repository and nothing else from the host. The
 # repository is mounted read-only, except the output directories and, for the
-# commands that change them by design, the formatted sources or the npm
-# manifest and lockfile. The dependencies live in a Podman volume of this
-# clone, mounted on node_modules/, which stays empty on the host. Every command
-# first installs them with `npm ci` when the volume is new or when the tooling
-# image, package.json, package-lock.json, or .npmrc changed.
+# commands that change them by design, the formatted sources, the generated
+# API client, or the npm manifest and lockfile. The dependencies live in a
+# Podman volume of this clone, mounted on node_modules/, which stays empty on
+# the host. Every command first installs them with `npm ci` when the volume is
+# new or when the tooling image, package.json, package-lock.json, or .npmrc
+# changed.
 #
 # Usage:
 #   scripts/tooling.sh install               Install the dependencies (npm ci)
 #   scripts/tooling.sh run <script> [args]   Run a package.json script, offline
 #   scripts/tooling.sh format                Format the sources with Prettier
+#   scripts/tooling.sh generate              Generate the API client from the
+#                                            pinned OpenAPI document, offline
 #   scripts/tooling.sh npm <args>            Run npm, with write access to
 #                                            package.json and package-lock.json
 #   scripts/tooling.sh audit                 Audit the installed dependencies:
@@ -43,7 +46,9 @@ readonly REPO_ROOT
 # Directories that every command may write; Git ignores them.
 readonly OUTPUT_DIRS=(dist coverage test-results)
 # Paths that Prettier formats: keep in sync with .prettierignore.
-readonly FORMAT_PATHS=(src index.html vite.config.ts tsconfig.json .oxlintrc.json)
+readonly FORMAT_PATHS=(src index.html vite.config.ts orval.config.ts tsconfig.json .oxlintrc.json)
+# The directory of the generated API client: keep in sync with orval.config.ts.
+readonly GENERATED_DIR="src/api/generated"
 # Tracked files that npm changes when a dependency changes.
 readonly NPM_FILES=(package.json package-lock.json)
 # Files whose change requires a new installation.
@@ -60,6 +65,8 @@ Commands:
   install               Install the dependencies (npm ci)
   run <script> [args]   Run a package.json script, offline
   format                Format the sources with Prettier
+  generate              Generate the API client from the pinned OpenAPI
+                        document
   npm <args>            Run npm, with write access to package.json and
                         package-lock.json
   audit                 Audit the installed dependencies: their registry
@@ -169,6 +176,7 @@ cmd_run() {
     [[ $# -ge 1 ]] || die "run: missing the name of a package.json script"
     case "$1" in
         format) die "run format: use 'scripts/tooling.sh format', which can write the sources" ;;
+        generate) die "run generate: use 'scripts/tooling.sh generate', which can write the generated client" ;;
         dev) die "run dev: use 'scripts/tooling.sh dev', which publishes the port" ;;
     esac
     ensure_installed
@@ -183,6 +191,15 @@ cmd_format() {
     local -a mounts=()
     add_writable_mounts mounts "${FORMAT_PATHS[@]}"
     run_container --network=none "${mounts[@]}" -- npm run format
+}
+
+cmd_generate() {
+    [[ $# -eq 0 ]] || die "generate: takes no arguments"
+    ensure_installed
+    mkdir -p "${REPO_ROOT}/${GENERATED_DIR}"
+    local -a mounts=()
+    add_writable_mounts mounts "${GENERATED_DIR}"
+    run_container --network=none "${mounts[@]}" -- npm run generate
 }
 
 cmd_npm() {
@@ -239,6 +256,7 @@ main() {
         install) cmd_install "$@" ;;
         run) cmd_run "$@" ;;
         format) cmd_format "$@" ;;
+        generate) cmd_generate "$@" ;;
         npm) cmd_npm "$@" ;;
         audit) cmd_audit "$@" ;;
         dev) cmd_dev "$@" ;;

@@ -26,7 +26,7 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment), then a check that `node_modules/` holds no file in the working tree. `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment), then a check that `node_modules/` holds no file in the working tree. `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 
@@ -161,9 +161,12 @@ repository runs the bot or creates its pull requests. It tracks:
 - the `version:` inputs of actions that the `github-actions` manager does not
   track (the Codecov CLI of `codecov/codecov-action` in `ci.yml`), through a
   custom regex manager that reads the same hint comment placed directly above
-  the input; the value is the release tag; and
+  the input; the value is the release tag;
 - the npm dependencies of `package.json` and the lockfile, through the `npm`
-  manager.
+  manager; and
+- the supported Sentinel version of `contract/sentinel-version`, from
+  Sentinel's GitHub Releases, through a custom regex manager (Sentinel
+  version).
 
 **npm dependencies.** Their routine updates wait for the minimum release age
 of `docs/architecture.md` (Build Tool, Package Manager, and Node.js), and
@@ -195,6 +198,33 @@ a platform package of Tailwind CSS (npm/cli#9800). Installs still use
 `.npmrc`, so `UI Checks` refuses a lockfile that records a dependency fetched
 from a URL. The copy is removed once an npm release of that line fixes the
 bug.
+
+**Orval.** Its updates get their own pull request, outside the group of minor
+and patch updates, because a new version can generate a different API client
+and the Mend Renovate App cannot run the generator on its branches. A
+maintainer runs `scripts/tooling.sh generate` on the branch of the pull
+request and commits the result; until then `UI Checks` fails if the generated
+client changes (Workflow Inventory).
+
+**Sentinel version.** Renovate proposes a new supported Sentinel version once
+its GitHub Release is published, outside the weekly schedule, because the UI
+release deployed on a Sentinel host must support the Sentinel version
+deployed there (`docs/architecture.md`, Backend Contract). Its pull request
+changes only `contract/sentinel-version`, so `UI Checks` fails until a
+maintainer completes it on its branch:
+
+1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
+   with the release asset of the new version;
+2. `scripts/tooling.sh generate` regenerates the API client;
+3. the code and the screen documents follow the changed operations, read in
+   Sentinel's specifications at the tag of the new version (`AGENTS.md`,
+   Sentinel as an External Authority); and
+4. the pull request states which screens the API changes affect
+   (`docs/conventions.md`, Pull Request Requirements).
+
+Its title uses the `feat(deps):` prefix, a minor release signal, because every
+change of the supported version carries one (`docs/architecture.md`, Backend
+Contract).
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, or `chore(deps):` for the tooling image and the npm
