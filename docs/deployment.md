@@ -111,13 +111,13 @@ unless:
   `Strict-Transport-Security`, and no `Location`; and
 - the access log records a request but not the value of its `Cookie` header.
 
-**Image vulnerability scan.** `image-scan.yml` builds the image from `master`
-every Monday and on demand, and scans it with Trivy, through
-`aquasecurity/trivy-action`, for known vulnerabilities of its operating
-system packages; the npm dependencies have the dependency audit. The scan is
-advisory: a finding never fails the run, and only a scan that does not
-complete does. The `Image Scan` job, which runs the scanner, only reads the
-repository; it hands the report of the fixable HIGH and CRITICAL
+**Image vulnerability scan.** `image-scan.yml` builds the image every Monday
+from `master`, and on demand from the branch of the run, and scans it with
+Trivy, through `aquasecurity/trivy-action`, for known vulnerabilities of its
+operating system packages; the npm dependencies have the dependency audit.
+The scan is advisory: a finding never fails the run, and only a scan that does
+not complete does. The `Image Scan` job, which runs the scanner, only reads
+the repository; it hands the report of the fixable HIGH and CRITICAL
 vulnerabilities to the `Scan Tracking Issue` job, the only one that can write
 issues, where `scripts/image-scan-issue.sh` opens an issue labeled `security`
 that lists them, or updates the open one, and closes it once a scan finds
@@ -125,14 +125,14 @@ none. The issue tracks the image of `master`: a manual run on another branch,
 such as the branch of a Renovate pull request, scans the image of that branch
 but skips the `Scan Tracking Issue` job. Every run retains the complete
 report, with every severity and the vulnerabilities without a fix, as a
-90-day workflow artifact. A fix
-usually arrives as a Renovate pull request that updates the base image of the
-`Containerfile` (Dependency Updates), which a maintainer merges with a
-`fix(deps):` title, so that it is a patch release signal; until the base image
-contains the fix, the issue stays open. nginx itself comes from nginx.org's
-package repository, not from Alpine's, so the scan does not match nginx's own
-advisories: a security release of nginx arrives as a Renovate update of the
-base image, which a maintainer merges with a `fix(deps):` title as well.
+90-day workflow artifact. A fix usually arrives as a Renovate pull request
+that updates the base image of the `Containerfile` (Dependency Updates), which
+a maintainer merges with a `fix(deps):` title, so that it is a patch release
+signal; until the base image contains the fix, the issue stays open. nginx
+itself comes from nginx.org's package repository, not from Alpine's, so the
+scan does not match nginx's own advisories: a security release of nginx
+arrives as a Renovate update of the base image, which a maintainer merges with
+a `fix(deps):` title as well.
 
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
 repository-level default setup, not through a workflow of this repository. It
