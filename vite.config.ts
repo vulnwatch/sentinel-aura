@@ -5,9 +5,26 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // The development server of docs/architecture.md (Local Development): one
+  // origin for the UI and the API, as on the Sentinel host.
   server: {
     port: 5173,
     strictPort: true,
+    // No CORS: Vite's CORS middleware runs before the proxy, so it would
+    // answer preflight requests and add CORS headers to the API's responses.
+    cors: false,
+    proxy: {
+      // /api and every path under it, matched by whole path segment: Vite
+      // tests the expression against the request URL, query included, so
+      // /apidocs and /api-keys stay with the UI. The path is forwarded
+      // unchanged to the API of the backend that scripts/dev-env.sh starts.
+      "^/api(/|\\?|$)": {
+        target: "http://sentinel:8000",
+        // Forward the Host header unchanged, with Origin and Sec-Fetch-Site,
+        // which Sentinel's cross-origin request protection reads.
+        changeOrigin: false,
+      },
+    },
   },
   test: {
     include: ["src/**/*.test.{ts,tsx}"],

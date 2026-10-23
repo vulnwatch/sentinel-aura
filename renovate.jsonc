@@ -125,6 +125,15 @@
       "commitMessagePrefix": "chore(deps):"
     },
     {
+      // Sentinel's image names its version through a variable, so the manager
+      // skips it: the supported version changes in contract/sentinel-version
+      // (below), which scripts/dev-env.sh reads — see docs/deployment.md
+      // (Dependency Updates).
+      "description": "PostgreSQL and Redis images of compose.yaml, the backend of local development",
+      "matchManagers": ["docker-compose"],
+      "commitMessagePrefix": "chore(deps):"
+    },
+    {
       "description": "npm dependencies, which reach the browser or run in the tooling",
       "matchManagers": ["npm"],
       "commitMessagePrefix": "chore(deps):"

@@ -61,9 +61,10 @@ The container sees the repository and the directory of its dependencies, and
 nothing else: no other part of your home directory and no credentials. It
 runs with your user and group IDs, without capabilities, so the files that it
 writes belong to you. The host needs Linux, Git, `curl`, and
-[Docker Engine](https://docs.docker.com/engine/install/) 28.0.0 or later with
-its Buildx plugin, which Sentinel's local development supports too; it needs
-no Node.js.
+[Docker Engine](https://docs.docker.com/engine/install/) 28.0.0 or later,
+which Sentinel's local development supports too, with its Buildx plugin and,
+for the [local backend](#local-backend), its Compose plugin 2.32.2 or later;
+it needs no Node.js.
 
 - Use Docker Engine with its default daemon, through its default socket
   `/var/run/docker.sock`, as a regular user who may use it, for example as a
@@ -84,7 +85,7 @@ no Node.js.
 | `scripts/tooling.sh generate` | Generate the API client in `src/api/generated/` from the pinned OpenAPI document, without network access ([API Client Generation](docs/architecture.md#api-client-generation)) |
 | `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
 | `scripts/tooling.sh audit` | Audit the installed dependencies: their registry signatures and attestations (`npm audit signatures`) and their known vulnerabilities (`npm audit`), as CI does when the dependencies change |
-| `scripts/tooling.sh dev` | Start the development server on <http://localhost:5173>, published on the loopback interface only |
+| `scripts/tooling.sh dev <network> [<port>]` | Start the development server in the network of a [local backend](#local-backend), published on the loopback interface only; `scripts/dev-env.sh start` runs it for you |
 | `scripts/tooling.sh clean` | Remove the dependency directory of the clone |
 
 - The repository is mounted read-only. A command writes only the outputs,
@@ -127,6 +128,49 @@ its Buildx plugin, and `curl`:
 | `scripts/image.sh test` | Run the image and check it as CI does: its user and content, the entry document fallback, caching, the security headers, and the access log ([Workflow Inventory](docs/deployment.md#workflow-inventory)) |
 | `scripts/image.sh serve` | Serve the image on <http://127.0.0.1:4173>, published on the loopback interface only |
 | `scripts/image.sh save <file>` | Write the image to a tar archive, as the image scan does |
+
+### Local Backend
+
+`scripts/dev-env.sh` runs the UI against Sentinel on one origin, as on a
+Sentinel host
+([Local Development](docs/architecture.md#local-development)). Docker Compose
+starts, from `compose.yaml`, a backend from Sentinel's published image at the
+supported version, with PostgreSQL and Redis, loaded with Sentinel's
+fictional example dataset; the development server runs in front of it and
+sends `/api` and every path under it to the backend's API
+([Development Environment](docs/architecture.md#development-environment)).
+The script runs on your host with Docker Engine, its Compose plugin, and
+`curl`:
+
+| Command | Purpose |
+|---------|---------|
+| `scripts/dev-env.sh start` | Start the backend, or reuse the running one, then the development server on <http://localhost:5173>; Ctrl+C stops only the development server |
+| `scripts/dev-env.sh stop` | Stop the development server and remove the backend with its data |
+| `scripts/dev-env.sh logs [args]` | Show the logs of the backend; the arguments go to `docker compose logs`, for example `logs --follow sentinel` |
+| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. Run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, the version of `vite`, or the supported version |
+
+- Sign in with local authentication as a user of the dataset, for example
+  `jdoe` (`admin`), `asmith` (`vulnerability_analyst`), `cwhite`
+  (`restricted_analyst`), or `dbrown` (no role), with the dataset's published
+  password `example-dataset-password` (Sentinel
+  `docs/features/platform/example-dataset.md`, Credentials; Users, which lists
+  every user). Until the UI has a sign-in screen, use Sentinel's API
+  documentation on the same origin, <http://localhost:5173/api/docs>:
+  `POST /api/v1/auth/login` sets the session cookie, and
+  `GET /api/v1/users/me` then returns your user.
+- Use Chrome or Firefox: Safari does not accept the session cookie from
+  `http://localhost`
+  ([Supported Browsers](docs/architecture.md#supported-browsers)).
+- The data does not survive `stop`, a restart of Docker, or a change of
+  `compose.yaml` or of the supported version: the next `start` creates a new
+  backend and loads the dataset again. The first start downloads the images.
+- Only the development server's port is published, on the loopback interface;
+  the backend publishes none.
+- The backend runs Sentinel's API only, without its Celery worker and Beat, so
+  an operation that publishes a background task waits for a worker that does
+  not run. Every fetcher is disabled, and an operation that needs an external
+  source, such as adding a package, does not complete there (Sentinel
+  `docs/features/platform/example-dataset.md`, Operating a Dataset Backend).
 
 ## Git Hooks
 

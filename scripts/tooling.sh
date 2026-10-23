@@ -28,8 +28,12 @@
 #                                            their registry signatures and
 #                                            attestations, and their known
 #                                            vulnerabilities
-#   scripts/tooling.sh dev                   Start the development server on
-#                                            http://localhost:5173
+#   scripts/tooling.sh dev <network> [<port>]
+#                                            Start the development server in
+#                                            the network of a local backend,
+#                                            on http://localhost:5173 or on
+#                                            <port>, 0 for a free one;
+#                                            scripts/dev-env.sh starts both
 #   scripts/tooling.sh clean                 Remove the dependency directory
 #
 # Examples:
@@ -82,7 +86,10 @@ Commands:
   audit                 Audit the installed dependencies: their registry
                         signatures and attestations, and their known
                         vulnerabilities
-  dev                   Start the development server on http://localhost:5173
+  dev <network> [<port>]
+                        Start the development server in the network of a
+                        local backend, on http://localhost:5173 or on <port>,
+                        0 for a free one; scripts/dev-env.sh starts both
   clean                 Remove the dependency directory of this clone
 EOF
 }
@@ -193,7 +200,7 @@ cmd_run() {
     case "$1" in
         format) die "run format: use 'scripts/tooling.sh format', which can write the sources" ;;
         generate) die "run generate: use 'scripts/tooling.sh generate', which can write the generated client" ;;
-        dev) die "run dev: use 'scripts/tooling.sh dev', which publishes the port" ;;
+        dev) die "run dev: use 'scripts/dev-env.sh start', which starts the backend and the development server" ;;
     esac
     ensure_installed
     local -a mounts=()
@@ -237,13 +244,32 @@ cmd_audit() {
     run_container -- bash -c 'npm audit signatures && npm audit'
 }
 
+# The server joins the network of the backend, where its proxy reaches the API
+# (vite.config.ts). The container is named after the network, so that a
+# backend has one development server, which scripts/dev-env.sh finds by that
+# name.
 cmd_dev() {
-    [[ $# -eq 0 ]] || die "dev: takes no arguments"
+    [[ $# -ge 1 && $# -le 2 ]] ||
+        die "dev: takes the network of a local backend and an optional port; use 'scripts/dev-env.sh start'"
+    local network="$1" port="${2:-${DEV_PORT}}" publish
+    if ! [[ "${port}" =~ ^[0-9]{1,5}$ ]] || ((10#${port} > 65535)); then
+        die "dev: invalid port '${port}'"
+    fi
+    # A bridge network, as Compose creates: on the host network, Docker would
+    # ignore the published port and the server would listen on every
+    # interface of the host.
+    [[ "$(docker network inspect --format '{{.Driver}}' "${network}" 2>/dev/null)" == bridge ]] ||
+        die "dev: no bridge network ${network}; start the backend with 'scripts/dev-env.sh start'"
     ensure_installed
     # The server listens on every interface of the container, which is
-    # reachable only through the port published on the host's loopback.
-    run_container --publish="127.0.0.1:${DEV_PORT}:${DEV_PORT}" -- \
-        npm run dev -- --host 0.0.0.0
+    # reachable from the host only through the port published on its
+    # loopback interface; port 0 lets Docker choose a free one.
+    publish="127.0.0.1:${port}:${DEV_PORT}"
+    if ((10#${port} == 0)); then
+        publish="127.0.0.1::${DEV_PORT}"
+    fi
+    run_container --name="${network}-dev-server" --network="${network}" \
+        --publish="${publish}" -- npm run dev -- --host 0.0.0.0
 }
 
 # Needs no container, so it works without Docker too.
