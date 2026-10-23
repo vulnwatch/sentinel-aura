@@ -378,29 +378,30 @@ Sentinel's published image at the supported version, with the PostgreSQL and
 Redis that it requires (Sentinel `docs/deployment.md`, Software
 Requirements), in containers of the same engine; Sentinel's image does not
 depend on a specific runtime (Sentinel `docs/architecture.md`, Design
-Constraints). That backend holds only Sentinel's example dataset, the
-fictional data that the image of the supported version loads (Sentinel
-`docs/features/platform/example-dataset.md`, Purpose):
+Constraints). That backend holds fictional data only: it is loaded with
+Sentinel's example dataset, which the image of the supported version provides
+(Sentinel `docs/features/platform/example-dataset.md`, Purpose):
 
 - The dataset is loaded into a newly created, migrated database before any
   other Sentinel process starts. The backend is recreated, never migrated, to
   restore the dataset or to move to another supported version (Sentinel
   `docs/deployment.md`, Loading the Example Dataset).
 - Signing in there uses Sentinel's local authentication, with the dataset's
-  users and its published password: SSO matches real identity provider
-  accounts (Sentinel `docs/features/platform/example-dataset.md`,
-  Credentials; Sentinel `docs/features/identity/sso-authentication.md`,
-  Identity Mapping).
+  users and its published password. SSO is not available there: it matches
+  only external users, and every dataset user is a local user (Sentinel
+  `docs/features/platform/example-dataset.md`, Credentials; Sentinel
+  `docs/features/identity/sso-authentication.md`, Identity Mapping).
 - Because that password is public, the backend is reachable only from the
-  developer's host or from inside its test environment: a port that it
-  publishes is bound to the loopback interface only (Sentinel
+  developer's host or from inside its test environment: every port through
+  which it can be reached, its own or that of a proxy in front of it, is
+  bound to the loopback interface only (Sentinel
   `docs/features/platform/example-dataset.md`, Security Considerations).
-- Every fetcher is disabled after the load, and an operation that needs an
-  external source, such as adding a package through the API, does not
-  complete there (Sentinel `docs/features/platform/example-dataset.md`,
-  Operating a Dataset Backend).
-- Data that the UI needs and the dataset lacks is requested as a change of
-  Sentinel's dataset specification (Sentinel
+- Every fetcher is disabled after the load and is never enabled on that
+  backend, and an operation that needs an external source, such as adding a
+  package through the API, does not complete there (Sentinel
+  `docs/features/platform/example-dataset.md`, Operating a Dataset Backend).
+- A capability that the UI needs and the dataset lacks is requested as a
+  change of Sentinel's dataset specification (Sentinel
   `docs/features/platform/example-dataset.md`, Drift Protection; `AGENTS.md`,
   Sentinel as an External Authority).
 
