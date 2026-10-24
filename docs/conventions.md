@@ -163,7 +163,7 @@ rules; review enforces the rest.
 | `src/components/` | The components that several routes share |
 | `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
-| `src/no-node-types.ts` | The check that the UI's program has no types of Node.js, which nothing imports (Checks) |
+| `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
 | `test/e2e/screenshots/` | The reference screenshots of the end-to-end tests (End-to-End Tests) |
 
@@ -359,9 +359,9 @@ that needs it; content of another kind needs a new row first.
   Node.js, the end-to-end tests and the configuration of the tools
   (`tsconfig.node.json`). Only the latter has the types of Node.js, so the
   type check rejects a global or a module of Node.js, such as `process`,
-  `Buffer`, or `node:fs`, in the UI. `src/no-node-types.ts` expects these
-  errors, so the type check also fails when a dependency brings the types of
-  Node.js into the UI's program.
+  `Buffer`, or `node:fs`, in the UI. `src/no-node-types.ts` expects the
+  errors of `process` and `Buffer`, so the type check also fails when a
+  dependency brings the types of Node.js into the UI's program.
 - Like every Node.js command, they run through `scripts/tooling.sh`
   (`docs/architecture.md`, Development Environment), never on the host:
   `scripts/tooling.sh run check` runs all four, and
