@@ -150,14 +150,14 @@ network namespace the tests share (`docs/architecture.md`, Development
 Environment). It runs the tests of `test/e2e/` except those of the UI's
 image alone, `image.spec.ts`; the tests compare the reference screenshots in
 Chromium (`docs/conventions.md`, End-to-End Tests). It then removes the
-environment. `scripts/dev-env.sh test` then checks the development proxy
+environment. Next, `scripts/dev-env.sh test` checks the development proxy
 against a backend of its own: that no container of the backend publishes a
 port, and that the development server publishes its port on the loopback
 interface only; then, with the `dev-server` project of the end-to-end tests,
 in the network namespace of the development server, the same-origin checks
 that the browsers run against the reverse proxy (`docs/conventions.md`,
-End-to-End Tests). The job needs no
-permission beyond reading the repository, and no secret:
+End-to-End Tests). The job needs no permission beyond reading the
+repository, and no secret:
 
 - when a check fails, it retains `test-results/e2e/` — the report of each
   Playwright project, in `test-results/e2e/<project>/report/`, with the
