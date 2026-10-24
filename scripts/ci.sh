@@ -2,8 +2,8 @@
 # Run the checks of CI's jobs, locally and in CI (docs/deployment.md, Workflow
 # Inventory, Local run). The UI Checks and End-to-End Tests jobs of
 # .github/workflows/ci.yml run their checks through this script, so that the
-# list of checks exists once. A job stops at its first failed check; in CI,
-# each check is a log group.
+# list of checks exists once. A job stops at its first failed check, which the
+# output names; in CI, each check is a log group.
 #
 # The workflow keeps what needs the run: the dependency audit scope, which
 # reads the event of the run, and the audit; the artifact uploads; and the
@@ -26,8 +26,9 @@
 #                             development proxy
 #   scripts/ci.sh all         scripts/lint-shell.sh, as the Shell Lint job runs
 #                             it, then ui-checks, then e2e, each even when an
-#                             earlier one failed; fails when one of them
-#                             failed. The check to run before pushing
+#                             earlier one failed; fails, with the list of the
+#                             jobs that failed, when one of them failed. The
+#                             check to run before pushing
 set -euo pipefail
 
 # shellcheck source=scripts/lib/common.sh

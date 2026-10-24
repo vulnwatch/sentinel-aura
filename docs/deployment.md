@@ -2,10 +2,10 @@
 
 This document owns Sentinel Aura's CI pipeline, including the conventions that
 every workflow follows, the automated dependency updates, and the local Git
-hooks that complement the pipeline. The rules for shell code in workflows,
-scripts, and hooks belong to `docs/conventions.md` (Shell Scripting); the rules
-for branches, commits, and pull requests belong to `docs/conventions.md` (Git
-Conventions).
+hooks that complement the pipeline. The structure of the tooling and the rules
+for shell code in workflows, scripts, and hooks belong to `docs/conventions.md`
+(Shell Scripting); the rules for branches, commits, and pull requests belong
+to `docs/conventions.md` (Git Conventions).
 
 ## Contents
 
@@ -40,13 +40,11 @@ reporting) pass on its latest commit, and its branch must be up to date with
 prevents a merge.
 
 **Local run.** The `UI Checks` and `End-to-End Tests` jobs run their checks
-through `scripts/ci.sh` (Workflow Conventions, Checks in a script), which runs
-them locally too: `scripts/ci.sh ui-checks` and `scripts/ci.sh e2e` run the
-checks of one job and stop at its first failed check; in CI each check is a
-log group. `scripts/ci.sh all`, the check to run before pushing
-(`docs/conventions.md`, Checks), runs `scripts/lint-shell.sh` as `Shell Lint`
-does, then the checks of `UI Checks`, then those of `End-to-End Tests`, each
-job even when an earlier one failed, and fails when one of them failed.
+through `scripts/ci.sh` (Workflow Conventions, Checks in a script), which also
+runs them locally, for one job or for all of them. `scripts/ci.sh all`, the
+check to run before pushing (`docs/conventions.md`, Checks), runs the checks
+of the three jobs, `scripts/lint-shell.sh` as `Shell Lint` runs it included,
+and fails when any of them fails.
 
 The checks read the working tree, so the command runs before a commit;
 `scripts/lint-shell.sh` lints the files that Git tracks, so a new script or
@@ -61,15 +59,8 @@ audit). `scripts/ci.sh` does not run what needs a CI run: `PR Metadata`, which
 needs the pull request; `renovate-validation.yml`; the image scan; and the
 upload of `Coverage Upload`.
 
-`scripts/check-pr-metadata.sh` reads the pull request fields from environment
-variables, so it also runs locally, on its own:
-
-```bash
-PR_TITLE='docs: describe the empty state of the CVE list' \
-    PR_BODY='Closes #42' scripts/check-pr-metadata.sh
-```
-
-The script validates the title of a Renovate pull request (author
+`scripts/check-pr-metadata.sh` also runs locally, on its own, outside a pull
+request. It validates the title of a Renovate pull request (author
 `renovate[bot]`, branch `renovate/*`) and of a release-please pull request
 (branch `release-please--*`), but exempts both from the issue linkage, as
 `docs/conventions.md` (Issues and work units) allows. When such a pull request
@@ -514,7 +505,7 @@ git config --local --unset core.hooksPath
 | Hook | Checks |
 |------|--------|
 | `commit-msg` | The first line of the message follows the Conventional Commits format and the breaking-marker rule and stays under 72 characters (`docs/conventions.md`, Commit Messages). Messages that Git generates (`Merge`, `Revert`, `fixup!`, `squash!`) are skipped |
-| `pre-commit` | `scripts/lint-shell.sh --staged`, which runs `shellcheck` and `shfmt` on the staged shell scripts and hooks and `actionlint` on the staged workflows, selected as the `Shell Lint` job selects the tracked ones, then `gitleaks` on the staged changes |
+| `pre-commit` | `scripts/lint-shell.sh` on the staged files: `shellcheck` and `shfmt` on the staged shell scripts and hooks and `actionlint` on the staged workflows, selected as the `Shell Lint` job selects the tracked ones; then `gitleaks` on the staged changes |
 | `pre-push` | Blocks pushes to `master` and pushes of tags (`docs/conventions.md`, Git Conventions) |
 
 The hooks are a supplementary safety net: they can be bypassed, while CI and

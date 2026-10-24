@@ -134,7 +134,7 @@ preserving scope, limitations, evidence, and verdicts.
 
 | Agent | Type | Trigger | Purpose |
 |-------|------|---------|---------|
-| `@cicd-reviewer` | Reviewer | Workflow, hook, CI-consumed script, or release configuration change | Reviews CI/CD artifacts for convention conformity and pipeline coherence |
+| `@cicd-reviewer` | Reviewer | Workflow, hook, CI-consumed script, or release configuration change | Reviews CI/CD artifacts for convention conformity, tooling structure, and pipeline coherence |
 | `@design-reviewer` | Reviewer | New or substantially changed foundation or screen document, including an architecture decision | Applies a simplicity-first review to UI designs and architecture decisions |
 | `@docs-placement-reviewer` | Reviewer | Foundation or screen document that adds potentially shared rules | Verifies that rules sit in their owning document of this repository, or in Sentinel's contract, without duplication or premature generalization |
 | `@docs-reviewer` | Reviewer | Significant documentation, policy, or multi-document change | Reviews documentation completeness, accuracy, and coherence with the implementation and with Sentinel's contract |

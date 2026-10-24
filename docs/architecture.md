@@ -31,6 +31,7 @@ source is a conflict to report, never a choice (`AGENTS.md`).
     - [Framework and Language](#framework-and-language)
     - [Build Tool, Package Manager, and Node.js](#build-tool-package-manager-and-nodejs)
     - [Development Environment](#development-environment)
+    - [Tooling Language](#tooling-language)
     - [Routing, Server State, and Forms](#routing-server-state-and-forms)
     - [Components and Styling](#components-and-styling)
     - [API Client Generation](#api-client-generation)
@@ -569,6 +570,38 @@ outside the project is previewed in a separate browser profile
 **Rationale:** the owner approves a change by looking at the result, which
 the preview shows as it will be released, while the pull request's code
 stays in the browser and the dataset backend on the developer's host.
+
+#### Tooling Language
+
+**Choice:** the scripts and Git hooks that run on the host are written in
+bash, and the tooling logic that needs neither the Docker daemon nor
+credentials is written in TypeScript, as Playwright tests that run in the
+tooling container. `docs/conventions.md` (Shell Scripting, Tooling Structure)
+states the rules that apply this choice.
+
+Most of the code that runs on the host runs host tools: Docker Engine and its
+plugins, the GitHub CLI, Git, and `curl`. The tooling container cannot run
+them, because it receives neither the Docker daemon's socket nor credentials
+(Development Environment). The rest of that code processes what those tools
+return, such as JSON, and validates values with regular expressions. The
+checks of HTTP responses need neither, and run as Playwright tests in the
+container (`docs/conventions.md`, End-to-End Tests).
+
+| Option | Impact |
+|---|---|
+| **Bash on the host, TypeScript in the tooling container** (chosen) | No new dependency. TypeScript is the language of the UI, with its type check, lint, format check, and tests, and the container confines the code of the dependencies that it runs. Bash suits the scripts that run host tools, which the container cannot run; shellcheck and shfmt check them (`docs/conventions.md`, Shell Scripting) |
+| Python, with its standard library only | Better than bash at JSON, HTTP, and the cleanup of what a script started. A third language, whose checks would need further tools, such as Ruff and a type checker, and a CI job; a minimum Python version on every host; and a rewrite of working scripts, in which the code that runs host tools gets longer: Sentinel's Python check of a Renovate lookup log is about twice as long as `scripts/check-renovate-log.sh` |
+| Python with uv and third-party packages | Third-party code on the host, which Development Environment excludes for npm, against a threat that applies to PyPI as well |
+| Deno or Bun | A new runtime on every host. Deno's permissions cannot confine a script that runs Docker, whose access is equivalent to root on the host (Development Environment) |
+| A Makefile, as Sentinel has | One entry point for every command, but a layer over the scripts and one more place that describes the commands |
+
+**Rationale:** the code that must run on the host mostly orchestrates host
+tools, which bash expresses directly, while the logic that bash handles
+poorly, such as the checks of HTTP responses, needs no host access, so it
+runs as typed and linted TypeScript in the container, where the code of its
+dependencies is confined. The decision is revisited when the logic that must
+run on the host, not only the logic that needs the Docker daemon or
+credentials, grows too complex for bash.
 
 #### Routing, Server State, and Forms
 

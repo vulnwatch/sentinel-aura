@@ -25,15 +25,17 @@
 #   scripts/dev-env.sh stop          Stop the development server and remove
 #                                    the backend with its data
 #   scripts/dev-env.sh logs [args]   Show the logs of the backend; the
-#                                    arguments go to `docker compose logs`
-#   scripts/dev-env.sh test          Check, with a separate backend and
-#                                    development server, that only the
-#                                    development server publishes a port, on
-#                                    the loopback interface; then run the
-#                                    same-origin checks of the end-to-end
-#                                    tests against it: the routing of the
-#                                    proxy, the request headers that it
-#                                    forwards, and a sign-in through it
+#                                    arguments go to `docker compose logs`,
+#                                    for example --follow sentinel
+#   scripts/dev-env.sh test          Check, with a separate backend and a
+#                                    development server on a free port,
+#                                    that only the development server
+#                                    publishes a port, on the loopback
+#                                    interface; then run the same-origin
+#                                    checks of the end-to-end tests against
+#                                    it: the routing of the proxy, the
+#                                    request headers that it forwards, and a
+#                                    sign-in through it
 #   scripts/dev-env.sh e2e [<browser>]
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and
@@ -46,8 +48,17 @@
 #                                    or differ
 #   scripts/dev-env.sh preview <pr>  Run the production build that the CI of
 #                                    the latest commit of pull request <pr>
-#                                    tested, against a new backend, on
-#                                    http://localhost:4173; Ctrl+C removes it
+#                                    tested, against a new backend at the
+#                                    Sentinel version that the pull request
+#                                    declares, on http://localhost:4173;
+#                                    Ctrl+C removes it. Needs a completed CI
+#                                    run of that commit with a successful
+#                                    End-to-End Tests job, whose build is
+#                                    kept for seven days. Lists the files of
+#                                    the pull request that the preview takes
+#                                    from this checkout instead. One preview
+#                                    runs for each clone; a new one replaces
+#                                    it
 set -euo pipefail
 
 # shellcheck source=scripts/lib/common.sh

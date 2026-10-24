@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # pre-commit hook: fast local checks on the staged files.
 #
-# - scripts/lint-shell.sh --staged: shellcheck and shfmt on the staged shell
-#   scripts and Git hooks, and actionlint on the staged workflows, selected
-#   like the Shell Lint job of .github/workflows/ci.yml selects the tracked
-#   ones
+# - scripts/lint-shell.sh on the staged files: shellcheck and shfmt on the
+#   staged shell scripts and Git hooks, and actionlint on the staged
+#   workflows, selected like the Shell Lint job of .github/workflows/ci.yml
+#   selects the tracked ones
 # - gitleaks on the staged changes
 #
 # A missing tool produces a warning and does not block the commit. CI is the
