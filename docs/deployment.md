@@ -349,10 +349,9 @@ Known vulnerabilities are handled by these complementary mechanisms:
 
 - **An override** (`overrides` in `package.json`) delivers a fix outside the
   ranges that the dependents of the vulnerable package allow, when no version
-  of the dependencies that require it allows a fixed one, or when the
-  repository owner decides not to wait for one. It is an exception that
-  requires the owner's decision (`docs/conventions.md`, Dependency
-  Admission). It forces the smallest version that fixes the open advisories,
+  of the dependencies that require it allows a fixed one. It is an exception
+  that requires the repository owner's decision (`docs/conventions.md`,
+  Dependency Admission). It forces the smallest version that fixes the open advisories,
   as an exact version, only under the dependent that pins the vulnerable
   version, and only for the versions of that dependent that pin one, so that
   it stops applying by itself once the dependencies move to a later version
@@ -372,7 +371,7 @@ Known vulnerabilities are handled by these complementary mechanisms:
   condition for its removal; it is merged with a `fix(deps):` title, and
   `git blame` on the key of the override leads to it. Renovate tracks the
   forced version and proposes its minor and patch updates, but no major
-  update, which the dependent does not accept (`renovate.jsonc`). Once the
+  update, which could break the dependent (`renovate.jsonc`). Once the
   dependencies allow a version of the dependent that requires a fixed
   version, for example after an update of the dependency that requires the
   dependent, a pull request removes the override and updates the lockfile.

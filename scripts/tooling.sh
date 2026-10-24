@@ -231,8 +231,9 @@ cmd_npm() {
     # No `npm ci` first: after a change of package.json by hand, such as an
     # override, the lockfile no longer matches it, `npm ci` would refuse to
     # install, and the `npm install` that updates the lockfile could never
-    # run. npm itself installs what its command needs. The command may change
-    # the installation, so the stamp goes first: the next command reinstalls
+    # run. npm install and npm update install what they change; other npm
+    # commands see the installation as it is. The command may change the
+    # installation, so the stamp goes first: the next command reinstalls
     # exactly what the lockfile records.
     local -a mounts=()
     add_writable_mounts mounts "${NPM_FILES[@]}"
