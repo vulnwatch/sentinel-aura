@@ -163,7 +163,8 @@ rules; review enforces the rest.
 | `src/components/` | The components that several routes share |
 | `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
-| `test/e2e/` | The end-to-end tests and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
+| `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
+| `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
 | `test/e2e/screenshots/` | The reference screenshots of the end-to-end tests (End-to-End Tests) |
 
 A path of this table that does not exist yet is created by the first change
@@ -286,6 +287,19 @@ that needs it; content of another kind needs a new row first.
   Environment). `scripts/dev-env.sh e2e` runs them. A test module is
   `test/e2e/<subject>.spec.ts`, named after the screen or area that it
   covers.
+- Two modules check how the UI is served (`docs/architecture.md`, Hosting
+  Constraints; Packaging and Serving; Security Headers):
+  `same-origin.spec.ts`, the same origin of the UI and the API, and
+  `image.spec.ts`, the responses of the UI's image. The projects named after
+  the browsers run every module but `image.spec.ts` against the end-to-end
+  environment, and two more projects run these modules in Chromium:
+  `dev-server` runs `same-origin.spec.ts` against the development server and
+  a backend of its own (`scripts/dev-env.sh test`), and `image` runs
+  `image.spec.ts` against a container of the UI's image alone
+  (`scripts/image.sh test`). Those scripts check themselves what only Docker
+  shows, such as the published ports, the user and the content of the
+  image, its processes, and its access log (`docs/deployment.md`, Workflow
+  Inventory).
 - Every test imports `test` and `expect` from `test/e2e/fixtures.ts`, whose
   fixture fails it on any Content Security Policy violation, on any uncaught
   exception of a page, and on any violation of the WCAG 2.2 A and AA rules of
@@ -339,6 +353,15 @@ that needs it; content of another kind needs a new row first.
   (Prettier, on the paths that `.prettierignore` leaves in scope), and the
   unit and component tests. CI runs them as required checks
   (`docs/deployment.md`, Workflow Inventory).
+- The type check covers the two programs that `tsconfig.json` references
+  and whose settings it holds: the UI and its unit and component tests,
+  which run in the browser (`tsconfig.app.json`), and the code that runs in
+  Node.js, the end-to-end tests and the configuration of the tools
+  (`tsconfig.node.json`). Only the latter has the types of Node.js, so the
+  type check rejects a global or a module of Node.js, such as `process`,
+  `Buffer`, or `node:fs`, in the UI. `src/no-node-types.ts` expects the
+  errors of `process` and `Buffer`, so the type check also fails when a
+  dependency brings the types of Node.js into the UI's program.
 - Like every Node.js command, they run through `scripts/tooling.sh`
   (`docs/architecture.md`, Development Environment), never on the host:
   `scripts/tooling.sh run check` runs all four, and

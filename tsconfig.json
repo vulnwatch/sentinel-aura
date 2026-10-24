@@ -1,11 +1,14 @@
 {
+  // The settings of the two TypeScript programs, which extend this file: the
+  // UI, which runs in the browser (tsconfig.app.json), and the code that runs
+  // in Node.js (tsconfig.node.json). Editors and the lint find the program of
+  // a file through the references; the type check checks both
+  // (docs/conventions.md, Checks).
   "compilerOptions": {
     "target": "es2023",
     "lib": ["es2023", "dom", "dom.iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
-    "types": ["vite/client"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -17,11 +20,9 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": [
-    "src",
-    "test",
-    "vite.config.ts",
-    "orval.config.ts",
-    "playwright.config.ts"
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
   ]
 }

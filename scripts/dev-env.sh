@@ -7,8 +7,8 @@
 # the network of the backend and proxies /api to the API. The end-to-end tests
 # and the local preview run the UI's production image instead, behind a
 # reverse proxy that routes as the Sentinel host does. The script runs on the
-# host with Docker Engine, its Buildx and Compose plugins, and curl, and the
-# preview also with the GitHub CLI, gh.
+# host with Docker Engine and its Buildx and Compose plugins, and the preview
+# also with the GitHub CLI, gh.
 #
 # A backend is never migrated or loaded twice (Sentinel docs/deployment.md,
 # Loading the Example Dataset). start reuses a running backend only while it
@@ -27,7 +27,11 @@
 #   scripts/dev-env.sh logs [args]   Show the logs of the backend; the
 #                                    arguments go to `docker compose logs`
 #   scripts/dev-env.sh test          Check, with a separate backend and
-#                                    development server, the routing of the
+#                                    development server, that only the
+#                                    development server publishes a port, on
+#                                    the loopback interface; then run the
+#                                    same-origin checks of the end-to-end
+#                                    tests against it: the routing of the
 #                                    proxy, the request headers that it
 #                                    forwards, and a sign-in through it
 #   scripts/dev-env.sh e2e [<browser>]
@@ -90,19 +94,12 @@ readonly PREVIEW_PROJECT="sentinel-aura-preview-${CLONE_ID}"
 # docs/features/platform/example-dataset.md, Credentials; Users).
 readonly DATASET_USER="jdoe"
 readonly DATASET_PASSWORD="example-dataset-password"
-readonly SESSION_COOKIE="__Host-sentinel_session"
 
 # The state of a run, removed on exit: its directory, and the project of the
 # end-to-end environment or the preview that it created.
 WORK_DIR=""
 RUN_PROJECT=""
 DEV_SERVER_PID=""
-BASE_URL=""
-ORIGIN=""
-FAILURES=0
-RESPONSE_STATUS=""
-RESPONSE_BODY=""
-RESPONSE_HEADERS=""
 
 # Fails unless the Compose plugin is at least COMPOSE_MINIMUM. The standalone
 # docker-compose is not used.
@@ -216,65 +213,6 @@ cmd_logs() {
     compose "${PROJECT}" logs "$@"
 }
 
-# Records the outcome of one check: the description, then the command whose
-# status decides it.
-check() {
-    local description="$1"
-    shift
-    if "$@"; then
-        printf 'ok   %s\n' "${description}"
-    else
-        printf 'FAIL %s\n' "${description}" >&2
-        FAILURES=$((FAILURES + 1))
-    fi
-}
-
-equals() {
-    [[ "$1" == "$2" ]]
-}
-
-contains() {
-    [[ "$1" == *"$2"* ]]
-}
-
-lacks() {
-    [[ "$1" != *"$2"* ]]
-}
-
-matches() {
-    [[ "$1" =~ $2 ]]
-}
-
-# Prints the values of the header named $1 in the last response, one per line.
-header_values() {
-    awk -v name="$1" '
-        BEGIN { name = tolower(name) }
-        {
-            sub(/\r$/, "")
-            colon = index($0, ":")
-            if (colon > 1 && tolower(substr($0, 1, colon - 1)) == name) {
-                value = substr($0, colon + 1)
-                sub(/^[ \t]+/, "", value)
-                print value
-            }
-        }' "${RESPONSE_HEADERS}"
-}
-
-response_body() {
-    cat "${RESPONSE_BODY}"
-}
-
-# Sends the request $1 for the path $2 to the development server, with any
-# further curl arguments, and never follows a redirect.
-request() {
-    local method="$1" path="$2"
-    shift 2
-    RESPONSE_STATUS="$(curl --silent --show-error --globoff --max-time 10 \
-        --request "${method}" --output "${RESPONSE_BODY}" \
-        --dump-header "${RESPONSE_HEADERS}" --write-out '%{http_code}' \
-        "$@" "${BASE_URL}${path}")"
-}
-
 remove_test_state() {
     docker rm --force "$(dev_server_name "${TEST_PROJECT}")" >/dev/null 2>&1 || true
     if [[ -n "${DEV_SERVER_PID}" ]]; then
@@ -287,142 +225,54 @@ remove_test_state() {
 }
 
 # Starts the development server of the test backend on a free port of the
-# loopback interface, in the background, and waits until it answers.
+# loopback interface, in the background, and waits until it listens in its
+# container, where the tests reach it.
 start_test_server() {
-    local name address _
+    local name address="" _
     name="$(dev_server_name "${TEST_PROJECT}")"
     "${REPO_ROOT}/scripts/tooling.sh" dev "$(network_name "${TEST_PROJECT}")" 0 \
         >"${WORK_DIR}/dev-server.log" 2>&1 &
     DEV_SERVER_PID=$!
     # The first start may install the dependencies.
     for _ in $(seq 1 900); do
-        if address="$(docker port "${name}" "${DEV_PORT}/tcp" 2>/dev/null)"; then
-            check "the development server is published on the loopback interface only" \
-                matches "${address}" '^127\.0\.0\.1:[0-9]+$'
-            BASE_URL="http://localhost:${address##*:}"
-            ORIGIN="${BASE_URL}"
-            break
-        fi
+        address="$(docker port "${name}" "${DEV_PORT}/tcp" 2>/dev/null)" && break
+        address=""
         kill -0 "${DEV_SERVER_PID}" 2>/dev/null || break
         sleep 0.2
     done
-    for _ in $(seq 1 300); do
-        if [[ -n "${BASE_URL}" ]] && curl --silent --output /dev/null --max-time 2 "${BASE_URL}/"; then
-            return 0
-        fi
-        kill -0 "${DEV_SERVER_PID}" 2>/dev/null || break
-        sleep 0.2
-    done
+    if [[ -n "${address}" ]]; then
+        [[ "${address}" =~ ^127\.0\.0\.1:[0-9]+$ ]] ||
+            die "the development server is published on ${address//$'\n'/, }, not on the loopback interface only"
+        for _ in $(seq 1 300); do
+            if docker exec "${name}" bash -c ": </dev/tcp/127.0.0.1/${DEV_PORT}" 2>/dev/null; then
+                return 0
+            fi
+            kill -0 "${DEV_SERVER_PID}" 2>/dev/null || break
+            sleep 0.2
+        done
+    fi
     cat "${WORK_DIR}/dev-server.log" >&2
-    die "the development server of the test does not answer"
+    die "the development server of the test does not listen"
 }
 
-check_backend() {
+# Only the development server publishes a port: no container of the backend
+# does (docs/architecture.md, Development Environment).
+check_backend_ports() {
     local id bindings=""
     for id in $(compose "${TEST_PROJECT}" ps --quiet); do
         bindings+="$(docker inspect --format '{{len .HostConfig.PortBindings}}' "${id}")"
     done
-    check "no container of the backend publishes a port" matches "${bindings}" '^0+$'
-    request GET /api/openapi.json
-    check "GET /api/openapi.json: 200" equals "${RESPONSE_STATUS}" 200
-    check "the backend serves the OpenAPI document of Sentinel ${SENTINEL_VERSION}" \
-        matches "$(response_body)" "\"info\":\\{[^{}]*\"version\":\"${SENTINEL_VERSION//./\\.}\""
+    [[ "${bindings}" =~ ^0+$ ]] || die "a container of the backend publishes a port"
 }
 
-# /api and the paths under it reach the API with their path unchanged, which
-# answers a path of no endpoint with its routing response; every other path
-# stays with the development server, which answers it with the entry document.
-check_routing() {
-    local path
-    for path in /api '/api?probe=1' /api/v1/no-such-endpoint; do
-        request GET "${path}"
-        check "GET ${path} reaches the API" \
-            contains "${RESPONSE_STATUS} $(response_body)" '404 {"code":"ROUTE_NOT_FOUND"'
-    done
-    for path in / /apidocs /api-keys /health /ready /auth/callback; do
-        request GET "${path}" --header 'Accept: text/html'
-        check "GET ${path} stays with the development server" \
-            contains "${RESPONSE_STATUS} $(response_body)" '/@vite/client'
-    done
-}
-
-# The development server adds no CORS headers and answers no preflight
-# request itself: the API, which marks every response with X-Request-ID
-# (Sentinel docs/api-spec.md, Request Tracing), answers it, and without
-# CORS_ORIGINS it allows no other origin (Sentinel docs/configuration.md,
-# Application).
-check_no_cors() {
-    local other="http://localhost:3000"
-    request OPTIONS /api/v1/auth/login --header "Origin: ${other}" \
-        --header 'Access-Control-Request-Method: POST'
-    check "a preflight request reaches the API" \
-        matches "$(header_values X-Request-ID)" '^[^[:space:]]+$'
-    check "a preflight request gets no Access-Control-Allow-Origin" \
-        equals "$(header_values Access-Control-Allow-Origin)" ""
-    request GET / --header "Origin: ${other}"
-    check "the development server sends no Access-Control-Allow-Origin" \
-        equals "$(header_values Access-Control-Allow-Origin)" ""
-}
-
-# Logout without a credential changes nothing: the API answers 401 when its
-# cross-origin request protection accepts the request, and 403 when it
-# rejects it, which shows how the headers reached it (Sentinel
-# docs/features/identity/authentication.md, Cross-Origin Request Protection).
-check_cross_origin() {
-    request POST /api/v1/auth/logout --header "Origin: ${ORIGIN}" --header 'Sec-Fetch-Site: same-origin'
-    check "an unsafe request of the UI's origin passes the cross-origin protection" \
-        contains "${RESPONSE_STATUS} $(response_body)" '401 {"code":"AUTH_NOT_AUTHENTICATED"'
-    request POST /api/v1/auth/logout --header "Origin: ${ORIGIN}"
-    check "Host reaches the API unchanged: it matches Origin" \
-        contains "${RESPONSE_STATUS} $(response_body)" '401 {"code":"AUTH_NOT_AUTHENTICATED"'
-    request POST /api/v1/auth/logout --header "Origin: ${ORIGIN}" --header 'Sec-Fetch-Site: cross-site'
-    check "Sec-Fetch-Site reaches the API unchanged" \
-        contains "${RESPONSE_STATUS} $(response_body)" '403 {"code":"AUTH_CROSS_ORIGIN_REJECTED"'
-    request POST /api/v1/auth/logout --header 'Origin: http://ui.example.com'
-    check "Origin reaches the API unchanged" \
-        contains "${RESPONSE_STATUS} $(response_body)" '403 {"code":"AUTH_CROSS_ORIGIN_REJECTED"'
-}
-
-# A sign-in of a dataset user through the proxy, with the headers that a
-# browser sends for a page of the UI's origin: the session cookie arrives with
-# its attributes (Sentinel docs/features/identity/authentication.md, Session
-# cookie), carries the session, and is cleared by the logout.
-check_sign_in() {
-    local -a browser=(--header "Origin: ${ORIGIN}" --header 'Sec-Fetch-Site: same-origin')
-    local set_cookie cookie
-    request POST /api/v1/auth/login "${browser[@]}" --header 'Content-Type: application/json' \
-        --data "{\"username\":\"${DATASET_USER}\",\"password\":\"${DATASET_PASSWORD}\"}"
-    check "POST /api/v1/auth/login as ${DATASET_USER}: 200" equals "${RESPONSE_STATUS}" 200
-    set_cookie="$(header_values Set-Cookie | grep "^${SESSION_COOKIE}=" || true)"
-    check "the login sets ${SESSION_COOKIE}" contains "${set_cookie}" "${SESSION_COOKIE}="
-    local attribute
-    for attribute in '; httponly' '; secure' '; samesite=strict' '; path=/'; do
-        check "the session cookie has the attribute${attribute#;}" \
-            contains "${set_cookie,,}" "${attribute}"
-    done
-    check "the session cookie has no Domain attribute" lacks "${set_cookie,,}" 'domain='
-    cookie="${set_cookie%%;*}"
-
-    request GET /api/v1/users/me "${browser[@]}" --header "Cookie: ${cookie}"
-    check "GET /api/v1/users/me with the session cookie: ${DATASET_USER}" \
-        contains "${RESPONSE_STATUS} $(response_body)" "\"username\":\"${DATASET_USER}\""
-    check "GET /api/v1/users/me with the session cookie: 200" equals "${RESPONSE_STATUS}" 200
-    request POST /api/v1/auth/logout "${browser[@]}" --header "Cookie: ${cookie}"
-    check "POST /api/v1/auth/logout with the session cookie: 204" equals "${RESPONSE_STATUS}" 204
-    check "the logout clears the session cookie" \
-        matches "$(header_values Set-Cookie)" "^${SESSION_COOKIE}=;"
-    request GET /api/v1/users/me "${browser[@]}" --header "Cookie: ${cookie}"
-    check "GET /api/v1/users/me after the logout: 401" equals "${RESPONSE_STATUS}" 401
-}
-
+# The checks that need Docker run here; the dev-server project of the
+# end-to-end tests runs the same-origin checks in the network namespace of
+# the development server (docs/conventions.md, End-to-End Tests).
 cmd_test() {
     [[ $# -eq 0 ]] || die "test: takes no arguments"
-    command -v curl >/dev/null 2>&1 || die "curl is required"
     prepare
     WORK_DIR="$(mktemp -d)"
     trap remove_test_state EXIT
-    RESPONSE_BODY="${WORK_DIR}/body"
-    RESPONSE_HEADERS="${WORK_DIR}/headers"
 
     # A backend that an interrupted run left behind.
     remove_backend "${TEST_PROJECT}" >/dev/null 2>&1
@@ -430,16 +280,12 @@ cmd_test() {
         compose "${TEST_PROJECT}" logs --no-color --tail=50 migrate dataset sentinel >&2 || true
         die "the backend of the test did not start"
     fi
+    check_backend_ports
     start_test_server
-
-    check_backend
-    check_routing
-    check_no_cors
-    check_cross_origin
-    check_sign_in
-
-    if ((FAILURES > 0)); then
-        die "${FAILURES} check(s) failed"
+    if ! "${REPO_ROOT}/scripts/tooling.sh" e2e "$(dev_server_name "${TEST_PROJECT}")" dev-server; then
+        compose "${TEST_PROJECT}" logs --no-color --tail=50 sentinel >&2 || true
+        tail -n 50 "${WORK_DIR}/dev-server.log" >&2
+        die "the same-origin checks of the development server failed; test-results/e2e/dev-server/report holds the report"
     fi
     echo "dev-env.sh: every check passed" >&2
 }
@@ -480,9 +326,10 @@ run_e2e() {
     return "${status}"
 }
 
-# The results of an earlier run, so that only those of this one remain.
+# The results of the browsers in an earlier run, so that only those of this
+# one remain; those of the other projects stay.
 remove_e2e_results() {
-    rm -rf -- "${REPO_ROOT}/test-results/e2e"
+    rm -rf -- "${REPO_ROOT}/test-results/e2e/chromium" "${REPO_ROOT}/test-results/e2e/firefox"
 }
 
 cmd_e2e() {

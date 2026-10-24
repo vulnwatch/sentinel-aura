@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 # Build and test the image that serves the UI in production: nginx and the
 # production build (docs/architecture.md, Packaging and Serving; Security
-# Headers). The script runs on the host with Docker Engine, its Buildx plugin,
-# and curl, locally and in CI; the production build runs through
-# scripts/tooling.sh, like every Node.js command.
+# Headers). The script runs on the host with Docker Engine and its Buildx
+# plugin, locally and in CI; the production build and the tests of the
+# image's responses run through scripts/tooling.sh, like every Node.js
+# command.
 #
 # Usage:
 #   scripts/image.sh build          Build the production build, then the image
 #   scripts/image.sh test           Run the built image and check it: its user,
-#                                   its content, the entry document fallback,
-#                                   caching, the 404 of a missing asset, the
-#                                   security headers, the absence of redirects,
-#                                   and an access log without the Cookie header
+#                                   its content, and its processes; then its
+#                                   responses, with the image project of the
+#                                   end-to-end tests: the entry document
+#                                   fallback, caching, the 404 of a missing
+#                                   asset, the security headers, and the
+#                                   absence of redirects; then an access log
+#                                   without the Cookie header
 #   scripts/image.sh save <file>    Write the built image to a tar archive
 #   scripts/image.sh package <dist> <tag>
 #                                   Build the image <tag> from a production
@@ -30,58 +34,14 @@ readonly CONTAINER_PORT=8080
 # Keep in sync with the Containerfile.
 readonly WEB_ROOT="/usr/share/nginx/html"
 
-# The headers of docs/architecture.md (Security Headers), which every response
-# carries exactly once with these values. The style-src hash is the one of
-# nginx/default.conf, which explains it.
-readonly CSP="default-src 'none'; script-src 'self'; style-src 'self' 'sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o='; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'"
-readonly SECURITY_HEADERS=(
-    "Content-Security-Policy: ${CSP}"
-    "X-Content-Type-Options: nosniff"
-    "Referrer-Policy: no-referrer"
-    "Cross-Origin-Opener-Policy: same-origin"
-    "Cross-Origin-Resource-Policy: same-origin"
-)
-readonly ENTRY_CACHE_CONTROL="no-cache"
-readonly ASSET_CACHE_CONTROL="public, max-age=31536000, immutable"
-
-# The state of a test run, the container and the directory of the responses,
-# and the build context of package, removed on exit.
+# The state of a test run, its container, and the build context of package,
+# removed on exit.
 CONTAINER=""
 WORK_DIR=""
-BASE_URL=""
-FAILURES=0
-RESPONSE_STATUS=""
-RESPONSE_BODY=""
-RESPONSE_HEADERS=""
 
 require_image() {
     docker image inspect "${UI_IMAGE}" >/dev/null 2>&1 ||
         die "missing image ${UI_IMAGE}; run 'scripts/image.sh build' first"
-}
-
-# Records the outcome of one check: the description, then the command whose
-# status decides it.
-check() {
-    local description="$1"
-    shift
-    if "$@"; then
-        printf 'ok   %s\n' "${description}"
-    else
-        printf 'FAIL %s\n' "${description}" >&2
-        FAILURES=$((FAILURES + 1))
-    fi
-}
-
-equals() {
-    [[ "$1" == "$2" ]]
-}
-
-contains() {
-    [[ "$1" == *"$2"* ]]
-}
-
-lacks() {
-    [[ "$1" != *"$2"* ]]
 }
 
 # A numeric user that is not root, such as 101 or 101:101.
@@ -98,96 +58,6 @@ non_root_uids() {
     done <<<"$1"
 }
 
-# A Permissions-Policy header that only disables features: one header whose
-# entries all have the form feature=().
-disables_features_only() {
-    local policy="$1" entry
-    local -a entries
-    [[ -n "${policy}" && "${policy}" != *$'\n'* ]] || return 1
-    IFS=',' read -r -a entries <<<"${policy}"
-    for entry in "${entries[@]}"; do
-        entry="${entry#"${entry%%[! ]*}"}"
-        [[ "${entry}" =~ ^[a-z][a-z0-9-]*=\(\)$ ]] || return 1
-    done
-}
-
-# Prints the values of the header named $1 in the last response, one per line.
-header_values() {
-    awk -v name="$1" '
-        BEGIN { name = tolower(name) }
-        {
-            sub(/\r$/, "")
-            colon = index($0, ":")
-            if (colon > 1 && tolower(substr($0, 1, colon - 1)) == name) {
-                value = substr($0, colon + 1)
-                sub(/^[ \t]+/, "", value)
-                print value
-            }
-        }' "${RESPONSE_HEADERS}"
-}
-
-# Requests the path $1 from the container, with any further curl arguments,
-# and never follows a redirect.
-request() {
-    local path="$1"
-    shift
-    RESPONSE_STATUS="$(curl --silent --show-error --globoff --max-time 10 \
-        --output "${RESPONSE_BODY}" --dump-header "${RESPONSE_HEADERS}" \
-        --write-out '%{http_code}' "$@" "${BASE_URL}${path}")"
-}
-
-# The headers of every response: the security headers, no
-# Strict-Transport-Security, and no redirect.
-check_common_headers() {
-    local label="$1" expected name
-    for expected in "${SECURITY_HEADERS[@]}"; do
-        name="${expected%%: *}"
-        check "${label}: ${name}" equals "$(header_values "${name}")" "${expected#*: }"
-    done
-    check "${label}: Permissions-Policy disables features only" \
-        disables_features_only "$(header_values Permissions-Policy)"
-    check "${label}: no Strict-Transport-Security" \
-        equals "$(header_values Strict-Transport-Security)" ""
-    check "${label}: no Location" equals "$(header_values Location)" ""
-}
-
-# A path that the application resolves: the entry document, never cached
-# without revalidation. Further arguments go to curl.
-check_entry_document() {
-    local label="$1" path="$2"
-    shift 2
-    request "${path}" "$@"
-    check "${label}: 200" equals "${RESPONSE_STATUS}" 200
-    check "${label}: the entry document" \
-        cmp -s "${RESPONSE_BODY}" "${REPO_ROOT}/dist/index.html"
-    check "${label}: Cache-Control: ${ENTRY_CACHE_CONTROL}" \
-        equals "$(header_values Cache-Control)" "${ENTRY_CACHE_CONTROL}"
-    check_common_headers "${label}"
-}
-
-# A content-hashed file of the build, cached for a year, with the type $2.
-check_asset() {
-    local path="$1" type="$2" label="GET $1"
-    request "${path}"
-    check "${label}: 200" equals "${RESPONSE_STATUS}" 200
-    check "${label}: the file of the build" \
-        cmp -s "${RESPONSE_BODY}" "${REPO_ROOT}/dist${path}"
-    check "${label}: Cache-Control: ${ASSET_CACHE_CONTROL}" \
-        equals "$(header_values Cache-Control)" "${ASSET_CACHE_CONTROL}"
-    check "${label}: Content-Type: ${type}" \
-        equals "$(header_values Content-Type)" "${type}"
-    check_common_headers "${label}"
-}
-
-# A path of the asset directory that is no file of the build.
-check_missing_asset() {
-    local path="$1" label="GET $1"
-    request "${path}"
-    check "${label}: 404" equals "${RESPONSE_STATUS}" 404
-    check "${label}: not cached" equals "$(header_values Cache-Control)" ""
-    check_common_headers "${label}"
-}
-
 # Runs a shell command in a container of the image as root, whose only
 # capability lets it read every file of the image.
 image_shell() {
@@ -196,19 +66,23 @@ image_shell() {
         "${UI_IMAGE}" -c "$1"
 }
 
+# The image declares a numeric user that is not root, holds no Node.js, and
+# serves the production build, and nothing else, with the one server of
+# nginx/default.conf.
 check_image_content() {
-    local user image_files build_files found
+    local user found image_files build_files servers expected_servers
     user="$(docker image inspect --format '{{.Config.User}}' "${UI_IMAGE}")"
-    check "the image user, ${user}, is numeric and not root" numeric_non_root "${user}"
+    numeric_non_root "${user}" || die "the image user, '${user}', is not a numeric user other than root"
     found="$(image_shell 'find / -xdev \( -name node -o -name nodejs -o -name npm -o -name npx -o -name node_modules \) -print')"
-    check "the image contains no Node.js" equals "${found}" ""
+    [[ -z "${found}" ]] || die "the image contains Node.js: ${found//$'\n'/, }"
     image_files="$(image_shell "cd ${WEB_ROOT} && find . -type f -exec sha256sum {} + | sort -k 2")"
     build_files="$(cd "${REPO_ROOT}/dist" && find . -type f -exec sha256sum {} + | LC_ALL=C sort -k 2)"
-    check "the web root holds the production build and nothing else" \
-        equals "${image_files}" "${build_files}"
-    check "nginx has one server, the one of nginx/default.conf" \
-        equals "$(image_shell 'ls -A /etc/nginx/conf.d && cat /etc/nginx/conf.d/default.conf')" \
-        "$(printf 'default.conf\n' && cat "${REPO_ROOT}/nginx/default.conf")"
+    [[ "${image_files}" == "${build_files}" ]] ||
+        die "the web root holds other files than the production build"
+    servers="$(image_shell 'ls -A /etc/nginx/conf.d && cat /etc/nginx/conf.d/default.conf')"
+    expected_servers="$(printf 'default.conf\n' && cat "${REPO_ROOT}/nginx/default.conf")"
+    [[ "${servers}" == "${expected_servers}" ]] ||
+        die "nginx has another server than the one of nginx/default.conf"
 }
 
 remove_test_state() {
@@ -220,40 +94,56 @@ remove_test_state() {
     fi
 }
 
+# Requests the path $1 from nginx inside the container, with any further
+# arguments of BusyBox's wget, which the image provides and with which
+# compose.yaml checks its health.
+request_inside() {
+    local path="$1"
+    shift
+    docker exec "${CONTAINER}" wget --quiet --output-document=/dev/null "$@" \
+        "http://127.0.0.1:${CONTAINER_PORT}${path}"
+}
+
 # Starts the container with the settings of the Pod Security restricted
-# profile, published on a free port of the loopback interface.
+# profile, without a network: the tests run in its network namespace, where
+# they reach nginx on the loopback interface.
 start_container() {
     CONTAINER="sentinel-aura-image-test-$$"
-    docker run --detach --name "${CONTAINER}" \
-        --cap-drop=ALL --security-opt=no-new-privileges \
-        --publish "127.0.0.1::${CONTAINER_PORT}" "${UI_IMAGE}" >/dev/null
-    BASE_URL="http://$(docker port "${CONTAINER}" "${CONTAINER_PORT}/tcp")"
+    docker run --detach --name "${CONTAINER}" --network=none \
+        --cap-drop=ALL --security-opt=no-new-privileges "${UI_IMAGE}" >/dev/null
     local _
     for _ in $(seq 1 50); do
-        if curl --silent --output /dev/null --max-time 2 "${BASE_URL}/"; then
+        if request_inside / 2>/dev/null; then
             return 0
         fi
         sleep 0.2
     done
     docker logs "${CONTAINER}" >&2 || true
-    die "the container does not answer on ${BASE_URL}"
+    die "nginx does not answer in the container"
+}
+
+check_processes() {
+    local uids
+    uids="$(docker top "${CONTAINER}" -o pid,uid | awk 'NR > 1 { print $2 }')"
+    non_root_uids "${uids}" || die "a process of the container runs as root"
 }
 
 # The access log records requests, but never the value of the Cookie header.
 check_access_log() {
     local path="/access-log-check-${RANDOM}${RANDOM}"
-    local cookie="__Host-sentinel_session=cookie-value-${RANDOM}${RANDOM}"
+    local value="cookie-value-${RANDOM}${RANDOM}"
     local logs="" _
-    request "${path}" --header "Cookie: ${cookie}"
+    request_inside "${path}" --header "Cookie: __Host-sentinel_session=${value}" ||
+        die "cannot request ${path} in the container"
     for _ in $(seq 1 25); do
         logs="$(docker logs "${CONTAINER}" 2>&1)"
-        if contains "${logs}" "${path}"; then
+        if [[ "${logs}" == *"${path}"* ]]; then
             break
         fi
         sleep 0.2
     done
-    check "the access log records the request of ${path}" contains "${logs}" "${path}"
-    check "the access log omits the Cookie header" lacks "${logs}" "${cookie#*=}"
+    [[ "${logs}" == *"${path}"* ]] || die "the access log does not record the request of ${path}"
+    [[ "${logs}" != *"${value}"* ]] || die "the access log records the value of the Cookie header"
 }
 
 cmd_build() {
@@ -266,53 +156,22 @@ cmd_build() {
         "${REPO_ROOT}"
 }
 
+# The checks that need Docker run here; the image project of the end-to-end
+# tests checks the responses, which it compares with the production build
+# (docs/conventions.md, End-to-End Tests).
 cmd_test() {
     [[ $# -eq 0 ]] || die "test: takes no arguments"
-    command -v curl >/dev/null 2>&1 || die "curl is required"
     require_image
     [[ -f "${REPO_ROOT}/dist/index.html" ]] ||
         die "missing dist/index.html; run 'scripts/image.sh build' first"
-    local script asset_dir
-    script="$(grep -o '/assets/[^"]*\.js' "${REPO_ROOT}/dist/index.html" | head -n 1)"
-    [[ -n "${script}" ]] || die "dist/index.html references no script under /assets/"
-    asset_dir="$(dirname "${script}")"
-
-    WORK_DIR="$(mktemp -d)"
     trap remove_test_state EXIT
-    RESPONSE_BODY="${WORK_DIR}/body"
-    RESPONSE_HEADERS="${WORK_DIR}/headers"
 
     check_image_content
     start_container
-    check "no process of the container runs as root" \
-        non_root_uids "$(docker top "${CONTAINER}" -o pid,uid | awk 'NR > 1 { print $2 }')"
-
-    # Paths outside the asset directory, the asset directory itself without a
-    # trailing slash included, which nginx would otherwise redirect to an
-    # absolute URL built from the Host header.
-    local path
-    for path in / /index.html /tickets/SNTL-1/audit \
-        '/auth/callback?code=example-code&state=example-state' \
-        /health /ready "${asset_dir}"; do
-        check_entry_document "GET ${path}" "${path}"
-    done
-    check_entry_document "GET ${asset_dir} through another host" "${asset_dir}" \
-        --header 'Host: sentinel.example.com' --header 'X-Forwarded-Proto: https'
-
-    check_asset "${script}" "application/javascript"
-    local stylesheet
-    stylesheet="$(grep -o '/assets/[^"]*\.css' "${REPO_ROOT}/dist/index.html" | head -n 1)"
-    if [[ -n "${stylesheet}" ]]; then
-        check_asset "${stylesheet}" "text/css"
-    fi
-    check_missing_asset "${asset_dir}/missing.js"
-    check_missing_asset "${asset_dir}/"
-
+    check_processes
+    "${REPO_ROOT}/scripts/tooling.sh" e2e "${CONTAINER}" image ||
+        die "the responses of the image failed their checks; test-results/e2e/image/report holds the report"
     check_access_log
-
-    if ((FAILURES > 0)); then
-        die "${FAILURES} check(s) failed"
-    fi
     echo "image.sh: every check passed" >&2
 }
 

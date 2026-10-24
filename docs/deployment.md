@@ -116,8 +116,7 @@ dependency change cannot merge with a known vulnerability.
 `scripts/tooling.sh`, then builds the image of `docs/architecture.md`
 (Packaging and Serving) from the `Containerfile`, so Node.js never enters the
 image. `scripts/image.sh test` runs that image with the settings of the Pod
-Security `restricted` profile, published on the loopback interface, and fails
-unless:
+Security `restricted` profile, without a network, and fails unless:
 
 - the image declares a numeric non-root user, no process of the container
   runs as root, and the image holds no Node.js;
@@ -135,6 +134,12 @@ unless:
   `Strict-Transport-Security`, and no `Location`; and
 - the access log records a request but not the value of its `Cookie` header.
 
+The script checks the user, the content, the processes, and the access log
+through Docker; the `image` project of the end-to-end tests checks the
+responses, in the network namespace of the container, where
+`scripts/tooling.sh e2e` runs it and reaches nginx on the loopback interface
+(`docs/conventions.md`, End-to-End Tests).
+
 **End-to-end tests.** The `End-to-End Tests` job runs beside `UI Checks`,
 through `scripts/ci.sh e2e` (Local run). `scripts/dev-env.sh e2e` builds the
 image as `scripts/image.sh build` does, then, for Chromium and then Firefox,
@@ -142,17 +147,24 @@ creates an end-to-end environment with Docker Compose: a new backend from
 Sentinel's image at the supported version and pinned digest, loaded with the
 example dataset, the UI's image, and the reverse proxy in front of them, whose
 network namespace the tests share (`docs/architecture.md`, Development
-Environment). It runs the tests of `test/e2e/`, which compare the reference
-screenshots in Chromium (`docs/conventions.md`, End-to-End Tests), and
-removes the environment. `scripts/dev-env.sh test` then checks the
-development proxy against a backend of its own. The job needs no permission
-beyond reading the repository, and no secret:
+Environment). It runs the tests of `test/e2e/` except those of the UI's
+image alone, `image.spec.ts`; the tests compare the reference screenshots in
+Chromium (`docs/conventions.md`, End-to-End Tests). It then removes the
+environment. Next, `scripts/dev-env.sh test` checks the development proxy
+against a backend of its own: that no container of the backend publishes a
+port, and that the development server publishes its port on the loopback
+interface only; then, with the `dev-server` project of the end-to-end tests,
+in the network namespace of the development server, the same-origin checks
+that the browsers run against the reverse proxy (`docs/conventions.md`,
+End-to-End Tests). The job needs no permission beyond reading the
+repository, and no secret:
 
 - when a check fails, it retains `test-results/e2e/` — the report of each
-  browser, in `test-results/e2e/<browser>/report/`, with the screenshots
-  that differ from their references and the traces of the failed tests — as
-  the seven-day workflow artifact `e2e-results`. The traces hold the session
-  cookies of the run's dataset backends, which no longer exist; and
+  Playwright project, in `test-results/e2e/<project>/report/`, with the
+  screenshots that differ from their references and the traces of the
+  failed tests — as the seven-day workflow artifact `e2e-results`. The
+  traces hold the session cookies of the run's dataset backends, which no
+  longer exist; and
 - on a pull request whose tests pass, it retains the production build, with
   `contract/sentinel-version` and `contract/sentinel-image-digest`, as the
   seven-day workflow artifact `ui-preview`, which `scripts/dev-env.sh
@@ -300,7 +312,8 @@ file maintenance pull request regenerates `package-lock.json`, which keeps the
 transitive dependencies current, within npm's own minimum release age.
 Renovate does not update the Node.js line of `package.json`, which follows the
 tooling image (`docs/architecture.md`, Build Tool, Package Manager, and
-Node.js).
+Node.js), nor the major version of `@types/node`, the types of the Node.js of
+that line: both change by hand, together.
 
 The tooling image and `@playwright/test` are updated in one `Playwright` pull
 request, because the browsers of the image must be the ones that the package

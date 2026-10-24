@@ -87,7 +87,7 @@ needs the [GitHub CLI](https://cli.github.com/), `gh`, signed in.
 | `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
 | `scripts/tooling.sh audit` | Audit the installed dependencies: their registry signatures and attestations (`npm audit signatures`) and their known vulnerabilities (`npm audit`), as CI does when the dependencies change |
 | `scripts/tooling.sh dev <network> [<port>]` | Start the development server in the network of a [local backend](#local-backend), published on the loopback interface only; `scripts/dev-env.sh start` runs it for you |
-| `scripts/tooling.sh e2e [--update] <container> <browser> [args]` | Run the end-to-end tests in `<browser>` in the network namespace of the reverse proxy of an end-to-end environment; `scripts/dev-env.sh e2e` runs it for you ([End-to-End Tests](#end-to-end-tests)) |
+| `scripts/tooling.sh e2e [--update] <container> <project> [args]` | Run the end-to-end tests of the Playwright project `<project>` in the network namespace of a container: the reverse proxy of an end-to-end environment, the development server of a [local backend](#local-backend), or a container of the UI's image; `scripts/dev-env.sh e2e` and `test` and `scripts/image.sh test` run it for you ([End-to-End Tests](#end-to-end-tests)) |
 | `scripts/tooling.sh clean` | Remove the dependency directory of the clone |
 
 - The repository is mounted read-only. A command writes only the outputs,
@@ -128,13 +128,13 @@ change of the supported version is completed.
 
 The image that serves the UI in production
 ([Packaging and Serving](docs/architecture.md#packaging-and-serving)) is built
-and tested by `scripts/image.sh`, which runs on your host with Docker Engine,
-its Buildx plugin, and `curl`:
+and tested by `scripts/image.sh`, which runs on your host with Docker Engine
+and its Buildx plugin:
 
 | Command | Purpose |
 |---------|---------|
 | `scripts/image.sh build` | Run the production build through `scripts/tooling.sh`, then build the image `localhost/sentinel-aura:local` |
-| `scripts/image.sh test` | Run the image and check it as CI does: its user and content, the entry document fallback, caching, the security headers, and the access log ([Workflow Inventory](docs/deployment.md#workflow-inventory)) |
+| `scripts/image.sh test` | Run the image and check it as CI does: its user, content, and processes, then its responses with the `image` project of the end-to-end tests — the entry document fallback, caching, and the security headers — then the access log ([Workflow Inventory](docs/deployment.md#workflow-inventory)) |
 | `scripts/image.sh save <file>` | Write the image to a tar archive, as the image scan does |
 | `scripts/image.sh package <dist> <tag>` | Build an image from a production build that another run produced, with this checkout's `Containerfile` and nginx configuration; `scripts/dev-env.sh preview` runs it for you |
 
@@ -148,15 +148,15 @@ supported version, with PostgreSQL and Redis, loaded with Sentinel's
 fictional example dataset; the development server runs in front of it and
 sends `/api` and every path under it to the backend's API
 ([Development Environment](docs/architecture.md#development-environment)).
-The script runs on your host with Docker Engine, its Buildx and Compose
-plugins, and `curl`:
+The script runs on your host with Docker Engine and its Buildx and Compose
+plugins:
 
 | Command | Purpose |
 |---------|---------|
 | `scripts/dev-env.sh start` | Start the backend, or reuse the running one, then the development server on <http://localhost:5173>; Ctrl+C stops only the development server |
 | `scripts/dev-env.sh stop` | Stop the development server and remove the backend with its data |
 | `scripts/dev-env.sh logs [args]` | Show the logs of the backend; the arguments go to `docker compose logs`, for example `logs --follow sentinel` |
-| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. CI runs it on every pull request; run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the supported version |
+| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port and check that only the development server publishes a port, on the loopback interface; then run the same-origin checks of the end-to-end tests against it, with the `dev-server` project: the routing of the proxy, the request headers that reach the API, and a sign-in through it. CI runs it on every pull request; run it after changing `vite.config.ts`, `compose.yaml`, `test/e2e/same-origin.spec.ts`, `playwright.config.ts`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the supported version |
 | `scripts/dev-env.sh e2e [<browser>]` | Build the UI's image, then run the [end-to-end tests](#end-to-end-tests) in Chromium and Firefox, or in `chromium` or `firefox` only, each against a new backend |
 | `scripts/dev-env.sh update-screenshots` | Build the UI's image, then run the end-to-end tests in Chromium and write the reference screenshots that are new or differ |
 | `scripts/dev-env.sh preview <pr>` | Run the build of pull request `<pr>` that CI tested on <http://localhost:4173> ([Trying a pull request](#trying-a-pull-request)) |
@@ -203,10 +203,16 @@ them on every pull request.
   remove those that no test takes any more, and commit them: the pull request
   diff shows them, before and after
   ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).
-- After a failure, `test-results/e2e/<browser>/report/index.html` holds the
-  report of each browser, with the expected, actual, and differing
-  screenshots and a trace of each failed test. In CI, the `e2e-results`
-  artifact of the run holds them.
+- After a failure, `test-results/e2e/<project>/report/index.html` holds the
+  report of each Playwright project, with the expected, actual, and
+  differing screenshots and a trace of each failed test. In CI, the
+  `e2e-results` artifact of the `End-to-End Tests` job holds those of its
+  projects, and the log of `UI Checks` shows the failures of the `image`
+  project.
+- Two projects besides the browsers check how the UI is served: `dev-server`,
+  which `scripts/dev-env.sh test` runs against the development server, and
+  `image`, which `scripts/image.sh test` runs against the UI's image
+  ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).
 
 ### Checks of CI
 

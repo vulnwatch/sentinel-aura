@@ -735,6 +735,7 @@ dependencies that reach the browser bring about 30 packages in total.
 | `react-aria-components` | Accessible components | Yes |
 | `zod` | Validation of search parameters and form input | Yes |
 | `typescript`, `@types/react`, `@types/react-dom` | Language and type check | No |
+| `@types/node` | Type check of the code that runs in Node.js, the end-to-end tests and the configuration of the tools, at the major version of the Node.js line | No |
 | `vite`, `@vitejs/plugin-react` | Build and development server | No |
 | `tailwindcss`, `@tailwindcss/vite` | Styling | No |
 | `orval` | API client generation | No |
