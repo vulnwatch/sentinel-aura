@@ -1,0 +1,14 @@
+{
+  // The code that runs in Node.js: the end-to-end tests, whose page functions
+  // run in the browser, and the configuration of the tools.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": [
+    "test",
+    "vite.config.ts",
+    "orval.config.ts",
+    "playwright.config.ts"
+  ]
+}

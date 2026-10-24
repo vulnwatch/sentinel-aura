@@ -1,0 +1,10 @@
+{
+  // The UI and its unit and component tests, which run in the browser, so
+  // without the types of Node.js.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

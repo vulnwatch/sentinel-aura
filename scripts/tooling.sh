@@ -34,15 +34,20 @@
 #                                            on http://localhost:5173 or on
 #                                            <port>, 0 for a free one;
 #                                            scripts/dev-env.sh starts both
-#   scripts/tooling.sh e2e [--update] <container> <browser> [args]
-#                                            Run the end-to-end tests in
-#                                            <browser> in the network
-#                                            namespace of <container>, the
-#                                            reverse proxy of an end-to-end
-#                                            environment; --update also writes
+#   scripts/tooling.sh e2e [--update] <container> <project> [args]
+#                                            Run the end-to-end tests of the
+#                                            Playwright project <project> in
+#                                            the network namespace of
+#                                            <container>: the reverse proxy of
+#                                            an end-to-end environment, the
+#                                            development server of a local
+#                                            backend, or a container of the
+#                                            UI's image; --update also writes
 #                                            the reference screenshots that
 #                                            are new or differ;
-#                                            scripts/dev-env.sh e2e starts both
+#                                            scripts/dev-env.sh e2e and test
+#                                            and scripts/image.sh test start
+#                                            both
 #   scripts/tooling.sh clean                 Remove the dependency directory
 #
 # Examples:
@@ -71,7 +76,7 @@ readonly STAMP_FILE="${DEPS_DIR}.stamp"
 # Directories that every command may write; Git ignores them.
 readonly OUTPUT_DIRS=(dist coverage test-results)
 # Paths that Prettier formats: keep in sync with .prettierignore.
-readonly FORMAT_PATHS=(src test index.html vite.config.ts orval.config.ts playwright.config.ts tsconfig.json .oxlintrc.json)
+readonly FORMAT_PATHS=(src test index.html vite.config.ts orval.config.ts playwright.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json .oxlintrc.json)
 # The reference screenshots of the end-to-end tests: keep in sync with
 # playwright.config.ts.
 readonly SCREENSHOTS_DIR="test/e2e/screenshots"
@@ -257,13 +262,13 @@ cmd_dev() {
         --publish="${publish}" -- npm run dev -- --host 0.0.0.0
 }
 
-# The tests share the network namespace of the reverse proxy, where the UI is
-# http://localhost:8080 (playwright.config.ts): a secure origin, from which
-# the browsers accept the session cookie (docs/architecture.md, Local
-# Development). Each browser keeps its results in test-results/e2e/<browser>/,
-# its report included. The tests write only their results, and with --update
-# the reference screenshots, which Playwright writes only when they are new
-# or differ.
+# The tests share the network namespace of the container, where the UI is
+# on http://localhost and the port of the project (playwright.config.ts): a
+# secure origin, from which the browsers accept the session cookie
+# (docs/architecture.md, Local Development). Each project keeps its results
+# in test-results/e2e/<project>/, its report included. The tests write only
+# their results, and with --update the reference screenshots, which
+# Playwright writes only when they are new or differ.
 cmd_e2e() {
     local update=false
     if [[ "${1:-}" == --update ]]; then
@@ -271,14 +276,14 @@ cmd_e2e() {
         shift
     fi
     [[ $# -ge 2 ]] ||
-        die "e2e: takes the container of an end-to-end environment's proxy and a browser; use 'scripts/dev-env.sh e2e'"
-    local container="$1" browser="$2"
+        die "e2e: takes a container and a Playwright project; use 'scripts/dev-env.sh e2e'"
+    local container="$1" project="$2"
     shift 2
-    [[ "${browser}" =~ ^[a-z][a-z0-9-]*$ ]] || die "e2e: invalid browser '${browser}'"
+    [[ "${project}" =~ ^[a-z][a-z0-9-]*$ ]] || die "e2e: invalid project '${project}'"
     [[ "$(docker container inspect --format '{{.State.Running}}' "${container}" 2>/dev/null)" == true ]] ||
         die "e2e: no running container ${container}; use 'scripts/dev-env.sh e2e'"
     ensure_installed
-    local -a mounts=() args=(--project="${browser}")
+    local -a mounts=() args=(--project="${project}")
     add_writable_mounts mounts "${OUTPUT_DIRS[@]}"
     if [[ "${update}" == true ]]; then
         mkdir -p "${REPO_ROOT}/${SCREENSHOTS_DIR}"
@@ -286,7 +291,7 @@ cmd_e2e() {
         args+=(--update-snapshots=changed)
     fi
     run_container --network="container:${container}" "${mounts[@]}" \
-        --env=PLAYWRIGHT_HTML_OUTPUT_DIR="test-results/e2e/${browser}/report" -- \
+        --env=PLAYWRIGHT_HTML_OUTPUT_DIR="test-results/e2e/${project}/report" -- \
         npm run e2e -- "${args[@]}" "$@"
 }
 

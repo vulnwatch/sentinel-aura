@@ -210,6 +210,16 @@
       "enabled": false
     },
     {
+      // Its minor and patch updates join the group of the npm minor and
+      // patch dependencies above — see docs/deployment.md (Dependency
+      // Updates).
+      "description": "The major version of @types/node, the types of the Node.js line, changes by hand, with that line",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["@types/node"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       // Last, so that it overrides the groups above and the playwright
       // monorepo group of config:recommended. The image has no release
       // timestamp, so Renovate raises its update at once and adds

@@ -128,9 +128,9 @@ jobs:
       # The checks of the job, each in a log group.
       - name: End-to-end and development proxy tests
         run: scripts/ci.sh e2e
-      # The report of each browser, with the screenshots that differ and the
-      # traces of the failed tests. The traces hold the session cookies of the
-      # run's backends, which no longer exist.
+      # The report of each Playwright project, with the screenshots that
+      # differ and the traces of the failed tests. The traces hold the session
+      # cookies of the run's backends, which no longer exist.
       - name: Retain the test results
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
