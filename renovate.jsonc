@@ -179,6 +179,16 @@
       "schedule": ["at any time"]
     },
     {
+      // An override forces a fixed version on a dependent that does not allow
+      // it, so a new major version could break that dependent — see
+      // docs/deployment.md (Dependency Updates).
+      "description": "npm overrides: no major update, which could break the dependent of the overridden version",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["overrides"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       "description": "The Node.js line follows the tooling image (docs/architecture.md, Build Tool, Package Manager, and Node.js) and changes by hand",
       "matchManagers": ["npm"],
       "matchDepTypes": ["engines"],

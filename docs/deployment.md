@@ -221,7 +221,8 @@ repository runs the bot or creates its pull requests. It tracks:
   track (the Codecov CLI of `codecov/codecov-action` in `ci.yml`), through a
   custom regex manager that reads the same hint comment placed directly above
   the input; the value is the release tag;
-- the npm dependencies of `package.json` and the lockfile, through the `npm`
+- the npm dependencies of `package.json` and the lockfile, and the versions
+  that the overrides of `package.json` force (below), through the `npm`
   manager; and
 - the supported Sentinel version of `contract/sentinel-version`, from
   Sentinel's GitHub Releases, through a custom regex manager (Sentinel
@@ -324,9 +325,10 @@ Known vulnerabilities are handled by these complementary mechanisms:
   version lies within the ranges that its dependents allow gets its fix from
   the next lock file maintenance pull request, once the fixed version reaches
   the minimum release age, or earlier by hand (below); a fix outside those
-  ranges needs an update of the dependency that requires it. A lock file
-  maintenance pull request that delivers a security fix is merged with a
-  `fix(deps):` title, so that it is a patch release signal too.
+  ranges needs an update of the dependency that requires it, or an override
+  (below). A lock file maintenance pull request that delivers a security fix
+  is merged with a `fix(deps):` title, so that it is a patch release signal
+  too.
 - **A fix younger than the minimum release age** cannot be resolved by npm,
   which applies the age when Renovate updates the lockfile: Renovate then
   reports an artifact update problem on the pull request, or opens none until
@@ -345,6 +347,34 @@ Known vulnerabilities are handled by these complementary mechanisms:
   scripts/tooling.sh npm update --min-release-age-exclude=<package> <package>
   ```
 
+- **An override** (`overrides` in `package.json`) delivers a fix outside the
+  ranges that the dependents of the vulnerable package allow, when no version
+  of the dependencies that require it allows a fixed one. It is an exception
+  that requires the repository owner's decision (`docs/conventions.md`,
+  Dependency Admission). It forces the smallest version that fixes the open
+  advisories, as an exact version, only under the dependent that pins the
+  vulnerable version, and only for the versions of that dependent that pin
+  one, so that it stops applying by itself once the dependencies move to a
+  later version of the dependent:
+
+  ```json
+  "overrides": {
+    "<dependent>@<range>": { "<package>": "<version>" }
+  }
+  ```
+
+  After the change of `package.json`, `scripts/tooling.sh npm install`
+  updates the lockfile, with `--min-release-age-exclude=<package>` when the
+  version is younger than the minimum release age. `package.json` cannot hold
+  comments, so the pull request that adds the override records the
+  advisories that it fixes, the justification, the owner's decision, and the
+  condition for its removal; it is merged with a `fix(deps):` title, and
+  `git blame` on the key of the override leads to it. Renovate tracks the
+  forced version and proposes its minor and patch updates, but no major
+  update, which could break the dependent (`renovate.jsonc`). Once the
+  dependencies allow a version of the dependent that requires a fixed
+  version, for example after an update of the dependency that requires the
+  dependent, a pull request removes the override and updates the lockfile.
 - **The dependency audit** of `UI Checks` (Workflow Inventory, Dependency
   audit) blocks a dependency change that leaves a known vulnerability in the
   locked dependency set. It audits the whole set, so while any advisory is
@@ -352,8 +382,8 @@ Known vulnerabilities are handled by these complementary mechanisms:
   advisory included. A maintainer then combines the pending fixes in one
   branch with the commands above and merges it with a `fix(deps):` title. An
   advisory without a fix that the dependency ranges allow holds every
-  dependency change and every release-please pull request back until one is
-  available.
+  dependency change and every release-please pull request back until a fix is
+  available within those ranges or the owner decides on an override.
 - **The image vulnerability scan** (Workflow Inventory, Image vulnerability
   scan) covers the operating system packages of the image, which none of the
   mechanisms above sees.

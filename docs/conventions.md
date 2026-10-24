@@ -130,11 +130,15 @@ the admission, so it needs no separate documentation pull request
 changes first, through a documentation pull request, and the dependency then
 needs no further decision.
 
-Two exceptions to the package manager settings (`docs/architecture.md`, Build
-Tool, Package Manager, and Node.js) require the same decision and
-justification: allowing the install scripts of a dependency, and installing a
+Three package manager exceptions require the same decision and
+justification: allowing the install scripts of a dependency and installing a
 version younger than the minimum release age other than through a
-vulnerability-fix update.
+vulnerability-fix update, both exceptions to the package manager settings
+(`docs/architecture.md`, Build Tool, Package Manager, and Node.js), and
+overriding the version of a package that a dependency requires, which
+`docs/deployment.md` (Dependency Updates) admits only for a vulnerability fix
+outside the ranges that its dependents allow. The justification of an
+override names the advisories that it fixes.
 
 ## Code Conventions
 
