@@ -134,7 +134,10 @@ Two exceptions to the package manager settings (`docs/architecture.md`, Build
 Tool, Package Manager, and Node.js) require the same decision and
 justification: allowing the install scripts of a dependency, and installing a
 version younger than the minimum release age other than through a
-vulnerability-fix update.
+vulnerability-fix update. So does an override of the version of a package
+that a dependency requires, which `docs/deployment.md` (Dependency Updates)
+admits only for a vulnerability fix outside the ranges that its dependents
+allow; its justification names the advisories that it fixes.
 
 ## Code Conventions
 

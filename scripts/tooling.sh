@@ -11,10 +11,10 @@
 # formatted sources, the generated API client, or the npm manifest and
 # lockfile. The dependencies live in a directory of this clone in the user's
 # cache directory, mounted on node_modules/, which stays empty on the host.
-# Every command first installs them with `npm ci` when the directory is new or
-# when the tooling image, package.json, package-lock.json, or .npmrc changed;
-# a file beside the directory, which no container can reach, records the
-# installation.
+# Every command but `npm` first installs them with `npm ci` when the directory
+# is new or when the tooling image, package.json, package-lock.json, or .npmrc
+# changed; a file beside the directory, which no container can reach, records
+# the installation.
 #
 # Usage:
 #   scripts/tooling.sh install               Install the dependencies (npm ci)
@@ -227,11 +227,15 @@ cmd_generate() {
 
 cmd_npm() {
     [[ $# -ge 1 ]] || die "npm: missing the npm command"
-    ensure_installed
+    [[ -f "${REPO_ROOT}/package-lock.json" ]] || die "missing package-lock.json"
+    # No `npm ci` first: after a change of package.json by hand, such as an
+    # override, the lockfile no longer matches it, `npm ci` would refuse to
+    # install, and the `npm install` that updates the lockfile could never
+    # run. npm itself installs what its command needs. The command may change
+    # the installation, so the stamp goes first: the next command reinstalls
+    # exactly what the lockfile records.
     local -a mounts=()
     add_writable_mounts mounts "${NPM_FILES[@]}"
-    # The command may change the installation, so the stamp goes first: the
-    # next command reinstalls exactly what the lockfile records.
     rm -f "${STAMP_FILE}"
     run_container "${mounts[@]}" -- npm "$@"
 }

@@ -97,7 +97,10 @@ it needs no Node.js.
   variable is set, mounted on `node_modules/`, which stays empty on your
   host. Every command installs them first when the directory is new or when
   the tooling image, `package.json`, the lockfile, or `.npmrc` changed, so
-  `install` is needed only to force a clean installation.
+  `install` is needed only to force a clean installation. The `npm` command
+  is the exception: it runs on the installation as it is, so that
+  `npm install` can update a lockfile that no longer matches a `package.json`
+  changed by hand, and the next command installs again.
 - The first command downloads the tooling image, about 2 GB.
 - A new dependency needs the decision that
   [Dependency Admission](docs/conventions.md#dependency-admission) defines.
