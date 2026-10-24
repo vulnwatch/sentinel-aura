@@ -301,8 +301,9 @@ that needs it; content of another kind needs a new row first.
   A test relies only on the dataset as loaded and on the data that it
   creates itself, which it finds by what it created, not by a count or a
   position that another test could change. A test that changes data changes
-  only data that no test that runs after it relies on; a failed sign-in
-  counts toward the lockout of its user (Sentinel
+  only data that no other test of its Playwright project relies on (the
+  tests that take references run in an earlier project, below); a failed
+  sign-in counts toward the lockout of its user (Sentinel
   `docs/features/identity/local-authentication.md`, Account lockout), so it
   uses a user that no other test signs in as.
 - A test may send requests to the API itself, for example to check the

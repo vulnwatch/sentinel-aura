@@ -434,8 +434,8 @@ version, by its pinned digest (Backend Contract), with the PostgreSQL and
 Redis that it requires (Sentinel `docs/deployment.md`, Software
 Requirements), in containers of the same engine; Sentinel's image does not
 depend on a specific runtime (Sentinel `docs/architecture.md`, Design
-Constraints). Docker Compose starts them from
-`compose.yaml`, through `scripts/dev-env.sh` (Backend orchestration, below).
+Constraints). Docker Compose starts them from `compose.yaml`, through
+`scripts/dev-env.sh` (Backend orchestration, below).
 That backend holds fictional data only: it is loaded with Sentinel's example
 dataset, which the image of the supported version provides (Sentinel
 `docs/features/platform/example-dataset.md`, Purpose):
@@ -544,9 +544,9 @@ reverse proxy of the end-to-end environment against a new dataset backend,
 at the supported version and image digest that the pull request declares:
 the checkout's pinned digest for the checkout's supported version, and for
 another version only a published Sentinel release whose tag names that
-digest (Backend Contract). The proxy is published on the
-loopback interface only, on `http://localhost:4173`. The preview also needs
-the GitHub CLI on the host, which downloads the build.
+digest (Backend Contract). The proxy is published on the loopback interface
+only, on `http://localhost:4173`. The preview also needs the GitHub CLI on
+the host, which downloads the build.
 
 The pull request's input is that build and the version and digest that it
 declares; the files of the local checkout that the preview uses instead,

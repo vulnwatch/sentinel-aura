@@ -231,12 +231,12 @@ preview and removes it with its data.
 - The pull request contributes only its production build, static files that
   nginx serves to your browser, and the Sentinel version and image digest
   that it declares, which the command accepts only as your checkout's pinned
-  digest of the same version, or as a published Sentinel release whose tag
-  names that digest: nothing of it runs on your host. The
-  `Containerfile`, the nginx and reverse proxy configuration, `compose.yaml`,
-  and the scripts come from your checkout, so run the command from an
-  up-to-date `master`. When the pull request changes one of these files, the
-  command lists it, and the preview does not show that change.
+  digest of the same version, or, for another version, as a published
+  Sentinel release whose tag names that digest: nothing of it runs on your
+  host. The `Containerfile`, the nginx and reverse proxy configuration,
+  `compose.yaml`, and the scripts come from your checkout, so run the command
+  from an up-to-date `master`. When the pull request changes one of these
+  files, the command lists it, and the preview does not show that change.
 - The pull request's JavaScript runs in your browser, which shares the cookies
   of `localhost` among all ports. For a pull request from outside the project,
   use a separate browser profile. For the same reason, signing in to the
