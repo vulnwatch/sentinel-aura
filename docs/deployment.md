@@ -26,7 +26,7 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (Dependency Updates, Local backend). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 | `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
@@ -125,11 +125,11 @@ reverse proxy in front of them, whose network namespace the tests share
 backend of its own. The job needs no permission beyond reading the
 repository, and no secret:
 
-- when a step fails, it retains `test-results/e2e/` — the report, the
-  screenshots that differ from their references, and the traces of the
-  failed tests — as the seven-day workflow artifact `e2e-results`. The
-  traces hold the session cookies of the run's dataset backend, which no
-  longer exists; and
+- when a step fails, it retains `test-results/e2e/` — the report of each
+  browser, in `test-results/e2e/<browser>/report/`, with the screenshots
+  that differ from their references and the traces of the failed tests — as
+  the seven-day workflow artifact `e2e-results`. The traces hold the session
+  cookies of the run's dataset backends, which no longer exist; and
 - on a pull request whose tests pass, it retains the production build, with
   `contract/sentinel-version` and `contract/sentinel-image-digest`, as the
   seven-day workflow artifact `ui-preview`, which `scripts/dev-env.sh
@@ -225,10 +225,10 @@ repository runs the bot or creates its pull requests. It tracks:
   `image-scan.yml` pins;
 - the base image of the `Containerfile`, by version and digest, through the
   `dockerfile` manager;
-- the PostgreSQL, Redis, and nginx images of `compose.yaml`, the backend of
-  local development and of the end-to-end tests (`docs/architecture.md`,
-  Development Environment), by version and digest, through the
-  `docker-compose` manager. It skips Sentinel's image, whose version and
+- the PostgreSQL, Redis, and nginx images of `compose.yaml`, which runs the
+  backend of local development, the end-to-end tests, and the local preview
+  (`docs/architecture.md`, Development Environment), by version and digest,
+  through the `docker-compose` manager. It skips Sentinel's image, whose version and
   digest `scripts/dev-env.sh` takes from `contract/` (Sentinel version), and
   the UI's image, which is built locally. The nginx image of `compose.yaml` is
   the base image of the `Containerfile`, and both are updated in one `nginx`

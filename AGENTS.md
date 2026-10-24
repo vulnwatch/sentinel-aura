@@ -228,7 +228,7 @@ the authoritative conventions. Core locations are:
 | Git hooks | `.githooks/` |
 | Repository orchestration and developer or CI scripts | `scripts/` |
 | UI source code and its unit and component tests | `src/` (`docs/conventions.md`, Code Conventions) |
-| End-to-end tests, their reference screenshots, and their reverse proxy configuration | `test/e2e/` (`docs/conventions.md`, End-to-End Tests) |
+| End-to-end tests, their reference screenshots, and their reverse proxy configuration | `test/e2e/` (`docs/conventions.md`, Code Conventions) |
 | Supported Sentinel version, pinned OpenAPI document, and pinned image digest | `contract/` (`docs/architecture.md`, Backend Contract) |
 | npm manifest, lockfile, and settings, the entry document, and the configuration of the build, type check, lint, format, test, and API client generation tools | Repository root |
 

@@ -16,7 +16,9 @@ export default defineConfig({
   // A missing or different reference fails the test; scripts/dev-env.sh
   // update-screenshots writes them.
   updateSnapshots: "none",
-  outputDir: "test-results/e2e/output",
+  // Each browser runs separately and keeps its own results: Playwright clears
+  // the output directory of a project when it runs it, and
+  // scripts/tooling.sh e2e names the report directory of each browser.
   reporter: [
     ["list"],
     ["html", { outputFolder: "test-results/e2e/report", open: "never" }],
@@ -35,11 +37,13 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      outputDir: "test-results/e2e/chromium/output",
       use: { ...devices["Desktop Chrome"], viewport: VIEWPORT },
     },
     {
       // The references are Chromium's: Firefox renders text differently.
       name: "firefox",
+      outputDir: "test-results/e2e/firefox/output",
       use: { ...devices["Desktop Firefox"], viewport: VIEWPORT },
       ignoreSnapshots: true,
     },

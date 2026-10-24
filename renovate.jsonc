@@ -130,7 +130,7 @@
       // supported version changes in contract/sentinel-version (below), and
       // scripts/sentinel-contract.sh pins its digest — see docs/deployment.md
       // (Dependency Updates).
-      "description": "PostgreSQL, Redis, and nginx images of compose.yaml, the backend of local development and the end-to-end tests",
+      "description": "PostgreSQL, Redis, and nginx images of compose.yaml, which runs the backend of local development, the end-to-end tests, and the local preview",
       "matchManagers": ["docker-compose"],
       "commitMessagePrefix": "chore(deps):"
     },

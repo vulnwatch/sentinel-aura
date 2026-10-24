@@ -38,7 +38,8 @@
 #   scripts/dev-env.sh update-screenshots
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and write
-#                                    the reference screenshots that differ
+#                                    the reference screenshots that are new
+#                                    or differ
 #   scripts/dev-env.sh preview <pr>  Run the production build that the CI of
 #                                    the latest commit of pull request <pr>
 #                                    tested, against a new backend, on
@@ -127,7 +128,8 @@ Commands:
                 backend
   update-screenshots
                 Build the UI's image, then run the end-to-end tests in
-                Chromium and write the reference screenshots that differ
+                Chromium and write the reference screenshots that are new or
+                differ
   preview <pr>  Run the production build that the CI of the latest commit of
                 pull request <pr> tested, against a new backend, on
                 http://localhost:4173; Ctrl+C removes it
@@ -531,13 +533,18 @@ run_e2e() {
         return 1
     fi
     proxy="$(COMPOSE_PROFILES=e2e compose "${RUN_PROJECT}" ps --quiet proxy)"
-    "${REPO_ROOT}/scripts/tooling.sh" e2e "$@" "${proxy}" --project="${target}" || status=$?
+    "${REPO_ROOT}/scripts/tooling.sh" e2e "$@" "${proxy}" "${target}" || status=$?
     if ((status != 0)); then
         COMPOSE_PROFILES=e2e compose "${RUN_PROJECT}" logs --no-color --tail=50 sentinel ui proxy >&2 || true
     fi
     remove_backend "${RUN_PROJECT}" >/dev/null 2>&1 || true
     RUN_PROJECT=""
     return "${status}"
+}
+
+# The results of an earlier run, so that only those of this one remain.
+remove_e2e_results() {
+    rm -rf -- "${REPO_ROOT}/test-results/e2e"
 }
 
 cmd_e2e() {
@@ -550,12 +557,13 @@ cmd_e2e() {
     prepare
     trap remove_run_state EXIT
     "${REPO_ROOT}/scripts/image.sh" build
+    remove_e2e_results
     local target
     for target in "${browsers[@]}"; do
         run_e2e "${target}" || failed+=("${target}")
     done
     if ((${#failed[@]} > 0)); then
-        die "the end-to-end tests failed in ${failed[*]}; test-results/e2e/report holds the report"
+        die "the end-to-end tests failed in ${failed[*]}; test-results/e2e/<browser>/report holds the report of each browser"
     fi
     echo "dev-env.sh: the end-to-end tests passed in ${browsers[*]}" >&2
 }
@@ -566,9 +574,10 @@ cmd_update_screenshots() {
     prepare
     trap remove_run_state EXIT
     "${REPO_ROOT}/scripts/image.sh" build
+    remove_e2e_results
     run_e2e chromium --update ||
-        die "the end-to-end tests failed in chromium; test-results/e2e/report holds the report"
-    echo "dev-env.sh: test/e2e/screenshots holds the current references; remove those that no test uses" >&2
+        die "the end-to-end tests failed in chromium; test-results/e2e/chromium/report holds the report"
+    echo "dev-env.sh: test/e2e/screenshots holds the current references; remove those that no test takes any more" >&2
 }
 
 # Prints the identifier of the CI run of the commit $1, a pull request event,
@@ -624,6 +633,10 @@ cmd_preview() {
         die "cannot download the build of CI run ${run}, which is kept for seven days; run 'gh run rerun ${run} --repo ${REPOSITORY}', then preview again"
     SENTINEL_VERSION="$(version_in "${WORK_DIR}/build/${VERSION_FILE}")"
     SENTINEL_DIGEST="$(digest_in "${WORK_DIR}/build/${DIGEST_FILE}")"
+    # Only a published release is used (Sentinel docs/deployment.md, Release
+    # Publication and Immutability), by the digest that its tag names.
+    "${REPO_ROOT}/scripts/sentinel-contract.sh" verify-release \
+        "${SENTINEL_VERSION}" "${SENTINEL_DIGEST}"
     SENTINEL_AURA_UI_IMAGE="${PREVIEW_IMAGE}"
     "${REPO_ROOT}/scripts/image.sh" package "${WORK_DIR}/build/dist" "${PREVIEW_IMAGE}"
 

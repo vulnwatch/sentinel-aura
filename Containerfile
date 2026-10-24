@@ -1,7 +1,9 @@
 # The image that serves the UI in production: nginx and the production build
 # (docs/architecture.md, Packaging and Serving). scripts/image.sh builds it
 # from the repository root after the production build; .dockerignore keeps
-# everything but dist/ and nginx/ out of the build context.
+# everything but dist/ and nginx/ out of the build context. For a local
+# preview, scripts/image.sh package builds it from a context that holds only
+# a production build of a pull request and nginx/ of this checkout.
 
 # The official unprivileged nginx image, pinned by version and digest and
 # updated by Renovate.

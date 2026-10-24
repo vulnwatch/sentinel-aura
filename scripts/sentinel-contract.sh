@@ -21,6 +21,13 @@
 #   scripts/sentinel-contract.sh update   Replace the copy with the release
 #                                         asset of the declared version, and
 #                                         the digest with the one of its tag
+#   scripts/sentinel-contract.sh verify-release <version> <digest>
+#                                         Fail unless <version> is a published
+#                                         Sentinel release whose image tag
+#                                         names <digest>, such as the version
+#                                         and digest that a pull request
+#                                         declares (scripts/dev-env.sh
+#                                         preview)
 set -euo pipefail
 
 readonly RELEASES_URL="https://github.com/vulnwatch/sentinel/releases/download"
@@ -45,6 +52,9 @@ Commands:
            digest is the one of its version tag
   update   Replace the pinned OpenAPI document with that release asset, and
            the pinned image digest with the one of the version tag
+  verify-release <version> <digest>
+           Fail unless <version> is a published Sentinel release whose image
+           tag names <digest>
 EOF
 }
 
@@ -97,6 +107,15 @@ resolve_digest() {
     printf '%s\n' "${digest}"
 }
 
+# The message for a pinned digest that the tag of version $1 no longer names.
+# A new supported version needs its digest; for the same version, the tag
+# moved, which Sentinel's release process never does after publication
+# (Sentinel docs/deployment.md, Release Publication and Immutability), so the
+# pin is kept and the move reported.
+moved_tag_message() {
+    printf '%s' "the tag ${IMAGE_NAME}:$1 names $2, not the pinned digest: after a change of the supported version, run 'scripts/sentinel-contract.sh update'; otherwise the published tag moved, which Sentinel's release process never does, so keep the pin and report it to Sentinel"
+}
+
 cmd_verify() {
     local version digest
     version="$(declared_version)"
@@ -111,9 +130,21 @@ cmd_verify() {
     echo "${DOCUMENT_FILE} is identical to sentinel-${version}.openapi.json of Sentinel v${version}"
     digest="$(resolve_digest "${version}")"
     if [[ "$(<"${REPO_ROOT}/${DIGEST_FILE}")" != "${digest}" ]]; then
-        die "${DIGEST_FILE} is not ${digest}, the digest of ${IMAGE_NAME}:${version}; run 'scripts/sentinel-contract.sh update'"
+        die "$(moved_tag_message "${version}" "${digest}")"
     fi
     echo "${DIGEST_FILE} is the digest of ${IMAGE_NAME}:${version}"
+}
+
+# The release asset exists only for a published release (download_asset).
+cmd_verify_release() {
+    [[ $# -eq 2 ]] || die "verify-release: takes a version and a digest"
+    local version="$1" digest="$2"
+    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "verify-release: invalid version '${version}'"
+    [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || die "verify-release: invalid digest '${digest}'"
+    download_asset "${version}"
+    [[ "$(resolve_digest "${version}")" == "${digest}" ]] ||
+        die "${digest} is not the digest that ${IMAGE_NAME}:${version} names"
+    echo "Sentinel v${version} is a published release, and its image tag names ${digest}" >&2
 }
 
 cmd_update() {
@@ -128,17 +159,24 @@ cmd_update() {
 }
 
 main() {
-    if [[ $# -ne 1 ]]; then
+    if [[ $# -eq 0 ]]; then
         usage
         exit 2
     fi
-    case "$1" in
+    local command="$1"
+    shift
+    if [[ "${command}" != verify-release && $# -ne 0 ]]; then
+        usage
+        exit 2
+    fi
+    case "${command}" in
         verify) cmd_verify ;;
         update) cmd_update ;;
+        verify-release) cmd_verify_release "$@" ;;
         -h | --help | help) usage ;;
         *)
             usage
-            die "unknown command: $1"
+            die "unknown command: ${command}"
             ;;
     esac
 }

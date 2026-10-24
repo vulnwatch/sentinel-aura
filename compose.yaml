@@ -144,11 +144,12 @@ services:
       start_interval: 1s
 
   # The UI's production image (docs/architecture.md, Packaging and Serving),
-  # which scripts/image.sh builds and Compose never pulls.
+  # which scripts/image.sh builds and Compose never pulls. A variable without
+  # a default, which Renovate does not look up.
   ui:
     <<: *hardening
     profiles: [e2e, preview]
-    image: ${SENTINEL_AURA_UI_IMAGE:-localhost/sentinel-aura:local}
+    image: ${SENTINEL_AURA_UI_IMAGE:?start the end-to-end environment with scripts/dev-env.sh}
     pull_policy: never
     healthcheck: *nginx-healthcheck
 

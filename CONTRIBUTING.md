@@ -149,8 +149,8 @@ supported version, with PostgreSQL and Redis, loaded with Sentinel's
 fictional example dataset; the development server runs in front of it and
 sends `/api` and every path under it to the backend's API
 ([Development Environment](docs/architecture.md#development-environment)).
-The script runs on your host with Docker Engine, its Compose plugin, and
-`curl`:
+The script runs on your host with Docker Engine, its Buildx and Compose
+plugins, and `curl`:
 
 | Command | Purpose |
 |---------|---------|
@@ -159,7 +159,7 @@ The script runs on your host with Docker Engine, its Compose plugin, and
 | `scripts/dev-env.sh logs [args]` | Show the logs of the backend; the arguments go to `docker compose logs`, for example `logs --follow sentinel` |
 | `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. CI runs it on every pull request; run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, the version of `vite`, or the supported version |
 | `scripts/dev-env.sh e2e [<browser>]` | Build the UI's image, then run the [end-to-end tests](#end-to-end-tests) in Chromium and Firefox, or in `chromium` or `firefox` only, each against a new backend |
-| `scripts/dev-env.sh update-screenshots` | Build the UI's image, then run the end-to-end tests in Chromium and write the reference screenshots that differ |
+| `scripts/dev-env.sh update-screenshots` | Build the UI's image, then run the end-to-end tests in Chromium and write the reference screenshots that are new or differ |
 | `scripts/dev-env.sh preview <pr>` | Run the build of pull request `<pr>` that CI tested on <http://localhost:4173> ([Trying a pull request](#trying-a-pull-request)) |
 
 - Sign in with local authentication as a user of the dataset, for example
@@ -201,10 +201,13 @@ them on every pull request.
 - The reference screenshots in `test/e2e/screenshots/` are Chromium's. After
   a change that alters what a screen shows, run
   `scripts/dev-env.sh update-screenshots`, look at the images that changed,
-  and commit them: the pull request diff shows them, before and after.
-- After a failure, `test-results/e2e/report/index.html` holds the report, with
-  the expected, actual, and differing screenshots and a trace of each failed
-  test. In CI, the `e2e-results` artifact of the run holds it.
+  remove those that no test takes any more, and commit them: the pull request
+  diff shows them, before and after
+  ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).
+- After a failure, `test-results/e2e/<browser>/report/index.html` holds the
+  report of each browser, with the expected, actual, and differing
+  screenshots and a trace of each failed test. In CI, the `e2e-results`
+  artifact of the run holds them.
 
 ### Trying a Pull Request
 
@@ -226,14 +229,18 @@ preview and removes it with its data.
   rerun the job (`gh run rerun <run> --repo vulnwatch/sentinel-aura`, as the
   command suggests) and preview again.
 - The pull request contributes only its production build, static files that
-  nginx serves to your browser: nothing of it runs on your host. The
+  nginx serves to your browser, and the Sentinel version and image digest
+  that it declares, which the command accepts only for a published Sentinel
+  release whose tag names that digest: nothing of it runs on your host. The
   `Containerfile`, the nginx and reverse proxy configuration, `compose.yaml`,
   and the scripts come from your checkout, so run the command from an
   up-to-date `master`. When the pull request changes one of these files, the
   command lists it, and the preview does not show that change.
 - The pull request's JavaScript runs in your browser, which shares the cookies
   of `localhost` among all ports. For a pull request from outside the project,
-  use a separate browser profile.
+  use a separate browser profile. For the same reason, signing in to the
+  preview signs you out of the development server of `scripts/dev-env.sh
+  start`, and the other way round.
 - One preview runs at a time; a new one replaces it. To try your own branch,
   open a draft pull request, or use `scripts/dev-env.sh start`.
 

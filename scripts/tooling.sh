@@ -34,13 +34,14 @@
 #                                            on http://localhost:5173 or on
 #                                            <port>, 0 for a free one;
 #                                            scripts/dev-env.sh starts both
-#   scripts/tooling.sh e2e [--update] <container> [args]
-#                                            Run the end-to-end tests in the
-#                                            network namespace of <container>,
-#                                            the reverse proxy of an
-#                                            end-to-end environment; --update
-#                                            also writes the reference
-#                                            screenshots that differ;
+#   scripts/tooling.sh e2e [--update] <container> <browser> [args]
+#                                            Run the end-to-end tests in
+#                                            <browser> in the network
+#                                            namespace of <container>, the
+#                                            reverse proxy of an end-to-end
+#                                            environment; --update also writes
+#                                            the reference screenshots that
+#                                            are new or differ;
 #                                            scripts/dev-env.sh e2e starts both
 #   scripts/tooling.sh clean                 Remove the dependency directory
 #
@@ -101,12 +102,12 @@ Commands:
                         Start the development server in the network of a
                         local backend, on http://localhost:5173 or on <port>,
                         0 for a free one; scripts/dev-env.sh starts both
-  e2e [--update] <container> [args]
-                        Run the end-to-end tests in the network namespace of
-                        <container>, the reverse proxy of an end-to-end
-                        environment; --update also writes the reference
-                        screenshots that differ; scripts/dev-env.sh e2e starts
-                        both
+  e2e [--update] <container> <browser> [args]
+                        Run the end-to-end tests in <browser> in the network
+                        namespace of <container>, the reverse proxy of an
+                        end-to-end environment; --update also writes the
+                        reference screenshots that are new or differ;
+                        scripts/dev-env.sh e2e starts both
   clean                 Remove the dependency directory of this clone
 EOF
 }
@@ -298,29 +299,33 @@ cmd_dev() {
 # The tests share the network namespace of the reverse proxy, where the UI is
 # http://localhost:8080 (playwright.config.ts): a secure origin, from which
 # the browsers accept the session cookie (docs/architecture.md, Local
-# Development). They write only their results, and with --update the
-# reference screenshots, which Playwright writes only when they differ.
+# Development). Each browser keeps its results in test-results/e2e/<browser>/,
+# its report included. The tests write only their results, and with --update
+# the reference screenshots, which Playwright writes only when they are new
+# or differ.
 cmd_e2e() {
     local update=false
     if [[ "${1:-}" == --update ]]; then
         update=true
         shift
     fi
-    [[ $# -ge 1 ]] ||
-        die "e2e: takes the container of an end-to-end environment's proxy; use 'scripts/dev-env.sh e2e'"
-    local container="$1"
-    shift
+    [[ $# -ge 2 ]] ||
+        die "e2e: takes the container of an end-to-end environment's proxy and a browser; use 'scripts/dev-env.sh e2e'"
+    local container="$1" browser="$2"
+    shift 2
+    [[ "${browser}" =~ ^[a-z][a-z0-9-]*$ ]] || die "e2e: invalid browser '${browser}'"
     [[ "$(docker container inspect --format '{{.State.Running}}' "${container}" 2>/dev/null)" == true ]] ||
         die "e2e: no running container ${container}; use 'scripts/dev-env.sh e2e'"
     ensure_installed
-    local -a mounts=() args=()
+    local -a mounts=() args=(--project="${browser}")
     add_writable_mounts mounts "${OUTPUT_DIRS[@]}"
     if [[ "${update}" == true ]]; then
         mkdir -p "${REPO_ROOT}/${SCREENSHOTS_DIR}"
         add_writable_mounts mounts "${SCREENSHOTS_DIR}"
         args+=(--update-snapshots=changed)
     fi
-    run_container --network="container:${container}" "${mounts[@]}" -- \
+    run_container --network="container:${container}" "${mounts[@]}" \
+        --env=PLAYWRIGHT_HTML_OUTPUT_DIR="test-results/e2e/${browser}/report" -- \
         npm run e2e -- "${args[@]}" "$@"
 }
 

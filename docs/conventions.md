@@ -145,10 +145,10 @@ override names the advisories that it fixes.
 
 This section governs the UI's source code and its unit and component tests,
 under `src/`, and its end-to-end tests, under `test/e2e/`. The technologies
-come from `docs/architecture.md` (Technology
-Stack); what the UI does comes from the foundation and screen documents, and
-what the API does from Sentinel's contract. The tools that Checks lists
-enforce part of these rules; review enforces the rest.
+come from `docs/architecture.md` (Technology Stack); what the UI does comes
+from the foundation and screen documents, and what the API does from
+Sentinel's contract. The tools that Checks lists enforce part of these
+rules; review enforces the rest.
 
 ### Directory Structure and Naming
 
@@ -163,7 +163,7 @@ enforce part of these rules; review enforces the rest.
 | `src/components/` | The components that several routes share |
 | `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
-| `test/e2e/` | The end-to-end tests, their shared fixture, `fixtures.ts`, and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (End-to-End Tests) |
+| `test/e2e/` | The end-to-end tests and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
 | `test/e2e/screenshots/` | The reference screenshots of the end-to-end tests (End-to-End Tests) |
 
 A path of this table that does not exist yet is created by the first change
@@ -296,24 +296,31 @@ that needs it; content of another kind needs a new row first.
   dataset, with its published password (Sentinel
   `docs/features/platform/example-dataset.md`, Credentials).
 - Each browser runs the tests one at a time against its own backend, newly
-  loaded with the dataset. A test relies only on the dataset as loaded and on
-  the data that it creates itself, which it finds by what it created, not by
-  a count or a position that another test could change. A test that changes
-  data changes only data that no other test reads; a failed sign-in counts
-  toward the lockout of its user (Sentinel
-  `docs/features/identity/local-authentication.md`, Account lockout), so it uses
-  a user that no other test signs in as.
+  loaded with the dataset (`docs/architecture.md`, Development Environment).
+  A test relies only on the dataset as loaded and on the data that it
+  creates itself, which it finds by what it created, not by a count or a
+  position that another test could change. A test that changes data changes
+  only data that no other test reads; a failed sign-in counts toward the
+  lockout of its user (Sentinel
+  `docs/features/identity/local-authentication.md`, Account lockout), so it
+  uses a user that no other test signs in as.
 - A screenshot is a reference in `test/e2e/screenshots/`, taken in Chromium,
   named after the screen and the state that it shows, never after the test:
   `<screen>.png` for the main state of a screen and `<screen>-<state>.png`
-  for each other state that its screen document lists, such as
-  `ticket-list-empty.png`. Transient states, such as loading, have none. A
-  region that changes from one run to the next, such as a date that the
-  dataset computes from the instant of its load (Sentinel
-  `docs/features/platform/example-dataset.md`, Time Base), is masked.
+  for each other state that it shows, such as `ticket-list-empty.png`.
+  Transient states, such as loading, have none. A region that changes from
+  one run to the next, such as a date that the dataset computes from the
+  instant of its load (Sentinel `docs/features/platform/example-dataset.md`,
+  Time Base), is masked.
+- A test that takes a reference changes no data, and runs before every test
+  of its browser that changes data that a screen shows, so that every
+  reference shows the dataset as loaded, whatever other tests do. Playwright
+  orders them through a project of each browser for the tests that change
+  such data, which depends on the project of the other tests.
 - A change that alters what a screen shows regenerates its references with
-  `scripts/dev-env.sh update-screenshots`, which writes those that differ,
-  and removes in the same change the references that no test takes any more.
+  `scripts/dev-env.sh update-screenshots`, which writes those that are new or
+  differ, and removes in the same change the references that no test takes
+  any more.
 
 ### Checks
 
@@ -548,7 +555,8 @@ the commit message on `master`.
   characters.
 - **Description**: at minimum: issue linkage, owning documents (foundation
   and screen documents of this repository and the Sentinel specifications
-  relied on), scope summary, test evidence, screenshots when required,
+  relied on), scope summary, test evidence, the reference screenshots that
+  it changes when required,
   delegated decisions, new dependencies, reviewer results, manual
   verification notes. The pull request template provides these sections.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
@@ -564,10 +572,11 @@ the commit message on `master`.
   reference screenshots of the affected screens (End-to-End Tests), which its
   diff shows, taken with the fictional example dataset (Example Data in
   Documentation), and updates the affected screen document with what was
-  built. The repository owner approves such a change by looking at the
-  result, in the diff and, when useful, in a local preview of the PR
-  (`scripts/dev-env.sh preview`; `docs/architecture.md`, Development
-  Environment).
+  built; a change that only a transient state shows, which has no reference,
+  is described in the PR instead. The repository owner approves such a
+  change by looking at the result, in the diff and, when useful, in a local
+  preview of the PR (`scripts/dev-env.sh preview`; `docs/architecture.md`,
+  Development Environment).
 - **Delegated decisions**: record the interface details and other decisions
   taken under delegation (`AGENTS.md`, Delegated decisions), with the options
   considered and the choice.
