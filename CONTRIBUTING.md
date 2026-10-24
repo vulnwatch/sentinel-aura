@@ -48,7 +48,8 @@ policy, and repository tooling.
    [Git Conventions](docs/conventions.md#git-conventions) require
 4. Make your changes following the [conventions](#conventions)
 5. Add or update tests for every code change, and run
-   `scripts/tooling.sh run check`
+   `scripts/tooling.sh run check` and the
+   [end-to-end tests](#end-to-end-tests)
 6. Open a **pull request** against `master`
 
 ## Development Setup
@@ -64,7 +65,8 @@ writes belong to you. The host needs Linux, Git, `curl`, and
 [Docker Engine](https://docs.docker.com/engine/install/) 28.0.0 or later,
 which Sentinel's local development supports too, with its Buildx plugin and,
 for the [local backend](#local-backend), its Compose plugin 2.32.2 or later;
-it needs no Node.js.
+it needs no Node.js. [Trying a pull request](#trying-a-pull-request) also
+needs the [GitHub CLI](https://cli.github.com/), `gh`, signed in.
 
 - Use Docker Engine with its default daemon, through its default socket
   `/var/run/docker.sock`, as a regular user who may use it, for example as a
@@ -86,12 +88,14 @@ it needs no Node.js.
 | `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
 | `scripts/tooling.sh audit` | Audit the installed dependencies: their registry signatures and attestations (`npm audit signatures`) and their known vulnerabilities (`npm audit`), as CI does when the dependencies change |
 | `scripts/tooling.sh dev <network> [<port>]` | Start the development server in the network of a [local backend](#local-backend), published on the loopback interface only; `scripts/dev-env.sh start` runs it for you |
+| `scripts/tooling.sh e2e [--update] <container> [args]` | Run the end-to-end tests in the network namespace of the reverse proxy of an end-to-end environment; `scripts/dev-env.sh e2e` runs it for you ([End-to-End Tests](#end-to-end-tests)) |
 | `scripts/tooling.sh clean` | Remove the dependency directory of the clone |
 
 - The repository is mounted read-only. A command writes only the outputs,
   `dist/`, `coverage/`, and `test-results/`, and the files that it changes by
   design: the formatted sources for `format`, the generated API client for
-  `generate`, `package.json` and the lockfile for `npm`.
+  `generate`, `package.json` and the lockfile for `npm`, and the reference
+  screenshots for `e2e --update`.
 - The dependencies live in a directory of each clone under
   `~/.cache/sentinel-aura/`, or `$XDG_CACHE_HOME/sentinel-aura/` when that
   variable is set, mounted on `node_modules/`, which stays empty on your
@@ -105,17 +109,19 @@ it needs no Node.js.
 - A new dependency needs the decision that
   [Dependency Admission](docs/conventions.md#dependency-admission) defines.
 
-The supported Sentinel version is declared in `contract/sentinel-version`, and
+The supported Sentinel version is declared in `contract/sentinel-version`,
 `contract/sentinel.openapi.json` is the pinned OpenAPI document, the copy of
-that release's OpenAPI document
+that release's OpenAPI document, and `contract/sentinel-image-digest` pins the
+digest of that release's image
 ([Backend Contract](docs/architecture.md#backend-contract)).
-`scripts/sentinel-contract.sh` runs on your host and downloads the release
-asset with `curl`:
+`scripts/sentinel-contract.sh` runs on your host, downloads the release asset
+with `curl`, and reads the digest from the registry with Docker's Buildx
+plugin:
 
 | Command | Purpose |
 |---------|---------|
-| `scripts/sentinel-contract.sh verify` | Check that the pinned OpenAPI document is identical to the release asset, as CI does |
-| `scripts/sentinel-contract.sh update` | Replace the pinned OpenAPI document with the release asset of the declared version; then run `scripts/tooling.sh generate` |
+| `scripts/sentinel-contract.sh verify` | Check that the pinned OpenAPI document is identical to the release asset, and that the version's image tag names the pinned digest, as CI does |
+| `scripts/sentinel-contract.sh update` | Replace the pinned OpenAPI document with the release asset of the declared version, and the pinned digest with the one that its tag names; then run `scripts/tooling.sh generate` |
 
 [Dependency Updates](docs/deployment.md#dependency-updates) describes how a
 change of the supported version is completed.
@@ -131,6 +137,7 @@ its Buildx plugin, and `curl`:
 | `scripts/image.sh test` | Run the image and check it as CI does: its user and content, the entry document fallback, caching, the security headers, and the access log ([Workflow Inventory](docs/deployment.md#workflow-inventory)) |
 | `scripts/image.sh serve` | Serve the image on <http://127.0.0.1:4173>, published on the loopback interface only |
 | `scripts/image.sh save <file>` | Write the image to a tar archive, as the image scan does |
+| `scripts/image.sh package <dist> <tag>` | Build an image from a production build that another run produced, with this checkout's `Containerfile` and nginx configuration; `scripts/dev-env.sh preview` runs it for you |
 
 ### Local Backend
 
@@ -150,7 +157,10 @@ The script runs on your host with Docker Engine, its Compose plugin, and
 | `scripts/dev-env.sh start` | Start the backend, or reuse the running one, then the development server on <http://localhost:5173>; Ctrl+C stops only the development server |
 | `scripts/dev-env.sh stop` | Stop the development server and remove the backend with its data |
 | `scripts/dev-env.sh logs [args]` | Show the logs of the backend; the arguments go to `docker compose logs`, for example `logs --follow sentinel` |
-| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. Run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, the version of `vite`, or the supported version |
+| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. CI runs it on every pull request; run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, the version of `vite`, or the supported version |
+| `scripts/dev-env.sh e2e [<browser>]` | Build the UI's image, then run the [end-to-end tests](#end-to-end-tests) in Chromium and Firefox, or in `chromium` or `firefox` only, each against a new backend |
+| `scripts/dev-env.sh update-screenshots` | Build the UI's image, then run the end-to-end tests in Chromium and write the reference screenshots that differ |
+| `scripts/dev-env.sh preview <pr>` | Run the build of pull request `<pr>` that CI tested on <http://localhost:4173> ([Trying a pull request](#trying-a-pull-request)) |
 
 - Sign in with local authentication as a user of the dataset, for example
   `jdoe` (`admin`), `asmith` (`vulnerability_analyst`), `cwhite`
@@ -174,6 +184,58 @@ The script runs on your host with Docker Engine, its Compose plugin, and
   not run. Every fetcher is disabled, and an operation that needs an external
   source, such as adding a package, does not complete there (Sentinel
   `docs/features/platform/example-dataset.md`, Operating a Dataset Backend).
+
+### End-to-End Tests
+
+The end-to-end tests in `test/e2e/` run with Playwright against the UI's
+production image, behind a reverse proxy that routes `/api` as a Sentinel host
+does, and a backend loaded with the example dataset
+([Development Environment](docs/architecture.md#development-environment)).
+`scripts/dev-env.sh e2e` builds the image, then runs them in Chromium and then
+in Firefox, each against a new backend, about a minute per browser; CI runs
+them on every pull request.
+
+- Every test fails on a Content Security Policy violation, an uncaught
+  exception, or a WCAG 2.2 A or AA violation that axe-core finds
+  ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).
+- The reference screenshots in `test/e2e/screenshots/` are Chromium's. After
+  a change that alters what a screen shows, run
+  `scripts/dev-env.sh update-screenshots`, look at the images that changed,
+  and commit them: the pull request diff shows them, before and after.
+- After a failure, `test-results/e2e/report/index.html` holds the report, with
+  the expected, actual, and differing screenshots and a trace of each failed
+  test. In CI, the `e2e-results` artifact of the run holds it.
+
+### Trying a Pull Request
+
+To try a pull request as it will be released before approving its merge:
+
+```bash
+scripts/dev-env.sh preview 42
+```
+
+The command finds the CI run of the pull request's latest commit, downloads
+the production build that its end-to-end tests passed, builds the UI's image
+from it, and runs it on <http://localhost:4173> against a new backend, at the
+Sentinel version that the pull request declares. Sign in as a user of the
+dataset, as with the [local backend](#local-backend). Ctrl+C stops the
+preview and removes it with its data.
+
+- CI must have completed for the latest commit, with a successful
+  `End-to-End Tests` job. The build is kept for seven days; after that,
+  rerun the job (`gh run rerun <run> --repo vulnwatch/sentinel-aura`, as the
+  command suggests) and preview again.
+- The pull request contributes only its production build, static files that
+  nginx serves to your browser: nothing of it runs on your host. The
+  `Containerfile`, the nginx and reverse proxy configuration, `compose.yaml`,
+  and the scripts come from your checkout, so run the command from an
+  up-to-date `master`. When the pull request changes one of these files, the
+  command lists it, and the preview does not show that change.
+- The pull request's JavaScript runs in your browser, which shares the cookies
+  of `localhost` among all ports. For a pull request from outside the project,
+  use a separate browser profile.
+- One preview runs at a time; a new one replaces it. To try your own branch,
+  open a draft pull request, or use `scripts/dev-env.sh start`.
 
 ## Git Hooks
 

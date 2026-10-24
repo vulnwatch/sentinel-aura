@@ -1,18 +1,25 @@
-# The Sentinel backend of local development (docs/architecture.md,
-# Development Environment): Sentinel's published image at the supported
-# version, with the PostgreSQL and Redis that it requires, loaded with
-# Sentinel's example dataset in the order that Sentinel docs/deployment.md
-# (Loading the Example Dataset) prescribes. Run it through scripts/dev-env.sh,
-# which reads the supported version from contract/sentinel-version, recreates
-# the backend instead of reusing a database, and starts the development server
-# in the network of the backend.
+# The Sentinel backend of local development and of the end-to-end tests
+# (docs/architecture.md, Development Environment): Sentinel's published image
+# at the supported version, with the PostgreSQL and Redis that it requires,
+# loaded with Sentinel's example dataset in the order that Sentinel
+# docs/deployment.md (Loading the Example Dataset) prescribes. Run it through
+# scripts/dev-env.sh, which reads the supported version and its image digest
+# from contract/, recreates the backend instead of reusing a database, and
+# starts the development server in the network of the backend.
 #
-# No service publishes a port: the development server reaches the API at
-# http://sentinel:8000 through that network, and only its own port is
-# published, on the loopback interface. Every container runs as the non-root
-# user of its image, without capabilities, and receives nothing from the host.
-# The data lives in anonymous volumes, which scripts/dev-env.sh removes with
-# the containers, so every backend loads the dataset into a new database.
+# The profiles add what the end-to-end tests and the local preview need: the
+# UI's production image and a reverse proxy in front of it and of the API,
+# which routes as the Sentinel host does (test/e2e/proxy.conf). The e2e
+# profile publishes no port: the tests run in the network namespace of its
+# proxy. The preview profile publishes its proxy on the loopback interface.
+#
+# Without a profile, no service publishes a port: the development server
+# reaches the API at http://sentinel:8000 through the network of the backend,
+# and only its own port is published, on the loopback interface. Every
+# container runs as the non-root user of its image, without capabilities, and
+# receives nothing from the host but the proxy's configuration, read-only. The
+# data lives in anonymous volumes, which scripts/dev-env.sh removes with the
+# containers, so every backend loads the dataset into a new database.
 
 x-hardening: &hardening
   cap_drop: [ALL]
@@ -22,7 +29,7 @@ x-hardening: &hardening
 # the API.
 x-sentinel-image: &sentinel-image
   <<: *hardening
-  image: ghcr.io/vulnwatch/sentinel:${SENTINEL_VERSION:?start the backend with scripts/dev-env.sh}
+  image: ghcr.io/vulnwatch/sentinel:${SENTINEL_VERSION:?start the backend with scripts/dev-env.sh}@${SENTINEL_DIGEST:?start the backend with scripts/dev-env.sh}
   environment:
     # A fixed, fictional value, not a secret: the backend holds only the
     # example dataset, whose users have a published password, and is reachable
@@ -36,6 +43,29 @@ x-sentinel-image: &sentinel-image
     # and does not run, so the API reports it as disabled (Sentinel
     # docs/configuration.md, IBS RabbitMQ Consumer).
     IBS_RABBITMQ_ENABLED: "false"
+
+# nginx answers on port 8080 of every image that runs it.
+x-nginx-healthcheck: &nginx-healthcheck
+  test: [CMD, wget, --quiet, --output-document=/dev/null, http://127.0.0.1:8080/]
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  start_period: 30s
+  start_interval: 1s
+
+# The reverse proxy of the Sentinel host (docs/architecture.md, Same Origin):
+# /api and every path under it go to the API, every other path to the UI.
+# The image is the base image of the Containerfile.
+x-proxy: &proxy
+  <<: *hardening
+  volumes:
+    - ./test/e2e/proxy.conf:/etc/nginx/conf.d/default.conf:ro,z
+  depends_on:
+    sentinel:
+      condition: service_healthy
+    ui:
+      condition: service_healthy
+  healthcheck: *nginx-healthcheck
 
 services:
   postgres:
@@ -112,3 +142,30 @@ services:
       retries: 3
       start_period: 60s
       start_interval: 1s
+
+  # The UI's production image (docs/architecture.md, Packaging and Serving),
+  # which scripts/image.sh builds and Compose never pulls.
+  ui:
+    <<: *hardening
+    profiles: [e2e, preview]
+    image: ${SENTINEL_AURA_UI_IMAGE:-localhost/sentinel-aura:local}
+    pull_policy: never
+    healthcheck: *nginx-healthcheck
+
+  # The proxy of the end-to-end tests, which run in its network namespace and
+  # reach the UI on http://localhost:8080, a secure origin for the session
+  # cookie (docs/architecture.md, Local Development).
+  proxy:
+    <<: *proxy
+    profiles: [e2e]
+    image: docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
+
+  # The proxy of the local preview, on http://localhost:4173, published on the
+  # loopback interface only (Sentinel
+  # docs/features/platform/example-dataset.md, Security Considerations).
+  preview:
+    <<: *proxy
+    profiles: [preview]
+    image: docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
+    ports:
+      - 127.0.0.1:4173:8080

@@ -16,6 +16,7 @@
   - [Components and Styling](#components-and-styling)
   - [No Raw HTML Injection](#no-raw-html-injection)
   - [Tests](#tests)
+  - [End-to-End Tests](#end-to-end-tests)
   - [Checks](#checks)
 - [Shell Scripting](#shell-scripting)
 - [Git Conventions](#git-conventions)
@@ -143,7 +144,8 @@ override names the advisories that it fixes.
 ## Code Conventions
 
 This section governs the UI's source code and its unit and component tests,
-under `src/`. The technologies come from `docs/architecture.md` (Technology
+under `src/`, and its end-to-end tests, under `test/e2e/`. The technologies
+come from `docs/architecture.md` (Technology
 Stack); what the UI does comes from the foundation and screen documents, and
 what the API does from Sentinel's contract. The tools that Checks lists
 enforce part of these rules; review enforces the rest.
@@ -161,6 +163,8 @@ enforce part of these rules; review enforces the rest.
 | `src/components/` | The components that several routes share |
 | `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
+| `test/e2e/` | The end-to-end tests, their shared fixture, `fixtures.ts`, and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (End-to-End Tests) |
+| `test/e2e/screenshots/` | The reference screenshots of the end-to-end tests (End-to-End Tests) |
 
 A path of this table that does not exist yet is created by the first change
 that needs it; content of another kind needs a new row first.
@@ -273,6 +277,44 @@ that needs it; content of another kind needs a new row first.
   responses and make no network request.
 - Test data is fictional (Example Data in Documentation).
 
+### End-to-End Tests
+
+- The end-to-end tests run with Playwright, in Chromium and Firefox, against
+  the UI's production image and a Sentinel backend loaded with the example
+  dataset (`docs/architecture.md`, Static Checks and Tests; Development
+  Environment). `scripts/dev-env.sh e2e` runs them. A test module is
+  `test/e2e/<subject>.spec.ts`, named after the screen or area that it
+  covers.
+- Every test imports `test` and `expect` from `test/e2e/fixtures.ts`, whose
+  fixture fails it on any Content Security Policy violation, on any uncaught
+  exception of a page, and on any violation of the WCAG 2.2 A and AA rules of
+  axe-core in its final state. A test checks every further state that it
+  shows, such as an open dialog or a field error, with `expectAccessible`. No
+  test turns a check off, excludes an element or a rule from it, or changes
+  the policy.
+- Tests find elements as users do (Tests), and sign in as a user of the
+  dataset, with its published password (Sentinel
+  `docs/features/platform/example-dataset.md`, Credentials).
+- Each browser runs the tests one at a time against its own backend, newly
+  loaded with the dataset. A test relies only on the dataset as loaded and on
+  the data that it creates itself, which it finds by what it created, not by
+  a count or a position that another test could change. A test that changes
+  data changes only data that no other test reads; a failed sign-in counts
+  toward the lockout of its user (Sentinel
+  `docs/features/identity/local-authentication.md`, Account lockout), so it uses
+  a user that no other test signs in as.
+- A screenshot is a reference in `test/e2e/screenshots/`, taken in Chromium,
+  named after the screen and the state that it shows, never after the test:
+  `<screen>.png` for the main state of a screen and `<screen>-<state>.png`
+  for each other state that its screen document lists, such as
+  `ticket-list-empty.png`. Transient states, such as loading, have none. A
+  region that changes from one run to the next, such as a date that the
+  dataset computes from the instant of its load (Sentinel
+  `docs/features/platform/example-dataset.md`, Time Base), is masked.
+- A change that alters what a screen shows regenerates its references with
+  `scripts/dev-env.sh update-screenshots`, which writes those that differ,
+  and removes in the same change the references that no test takes any more.
+
 ### Checks
 
 - Every change passes the type check (the TypeScript compiler in strict mode,
@@ -284,6 +326,9 @@ that needs it; content of another kind needs a new row first.
   (`docs/architecture.md`, Development Environment), never on the host:
   `scripts/tooling.sh run check` runs all four, and
   `scripts/tooling.sh format` formats the files in Prettier's scope.
+- Every change also passes the end-to-end tests, which CI runs as a required
+  check too (`docs/deployment.md`, Workflow Inventory) and
+  `scripts/dev-env.sh e2e` runs locally.
 - Code uses no `any`. A lint rule is disabled only inline, for the smallest
   span, with a comment that explains why the finding is a false positive or
   an accepted trade-off. The generated API client is the only exception: it
@@ -515,11 +560,14 @@ the commit message on `master`.
 - **PR Metadata check**: the required `PR Metadata` check validates the title
   and the issue linkage as defined above (`docs/deployment.md`, Workflow
   Inventory).
-- **Screenshots**: a PR that changes what the UI shows includes screenshots
-  of the affected screens, taken with fictional data (Example Data in
+- **Screenshots**: a PR that changes what the UI shows adds or updates the
+  reference screenshots of the affected screens (End-to-End Tests), which its
+  diff shows, taken with the fictional example dataset (Example Data in
   Documentation), and updates the affected screen document with what was
   built. The repository owner approves such a change by looking at the
-  result.
+  result, in the diff and, when useful, in a local preview of the PR
+  (`scripts/dev-env.sh preview`; `docs/architecture.md`, Development
+  Environment).
 - **Delegated decisions**: record the interface details and other decisions
   taken under delegation (`AGENTS.md`, Delegated decisions), with the options
   considered and the choice.

@@ -20,7 +20,7 @@
 
 ## Screenshots
 
-<!-- Required when the PR changes what the UI shows: the affected screens, with fictional data only. Write "N/A" otherwise. -->
+<!-- Required when the PR changes what the UI shows: list the reference screenshots under test/e2e/screenshots/ that the PR adds, updates, or removes, which the diff shows (docs/conventions.md, End-to-End Tests). Try the PR with `scripts/dev-env.sh preview <number>`. Write "N/A" otherwise. -->
 
 N/A
 

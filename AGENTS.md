@@ -228,7 +228,8 @@ the authoritative conventions. Core locations are:
 | Git hooks | `.githooks/` |
 | Repository orchestration and developer or CI scripts | `scripts/` |
 | UI source code and its unit and component tests | `src/` (`docs/conventions.md`, Code Conventions) |
-| Supported Sentinel version and pinned OpenAPI document | `contract/` (`docs/architecture.md`, Backend Contract) |
+| End-to-end tests, their reference screenshots, and their reverse proxy configuration | `test/e2e/` (`docs/conventions.md`, End-to-End Tests) |
+| Supported Sentinel version, pinned OpenAPI document, and pinned image digest | `contract/` (`docs/architecture.md`, Backend Contract) |
 | npm manifest, lockfile, and settings, the entry document, and the configuration of the build, type check, lint, format, test, and API client generation tools | Repository root |
 
 A location in this table may not exist yet; the first change that needs it
@@ -333,8 +334,8 @@ confidently.
   conventions in `../sentinel/docs/api-spec.md` that apply to them, and the
   pinned OpenAPI document when one exists. Recheck them during conformance
   review.
-- **UI code:** before writing or reviewing code or tests under `src/`, read
-  complete Code Conventions in `docs/conventions.md`.
+- **UI code:** before writing or reviewing code or tests under `src/` or
+  `test/e2e/`, read complete Code Conventions in `docs/conventions.md`.
 - **Need for an API capability:** search Sentinel's specifications and the
   pinned OpenAPI document before concluding that the capability is absent; if
   it is absent, apply the backend-gap rule in Sentinel as an External

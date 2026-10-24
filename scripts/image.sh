@@ -15,6 +15,12 @@
 #   scripts/image.sh serve          Serve the built image on
 #                                   http://127.0.0.1:4173
 #   scripts/image.sh save <file>    Write the built image to a tar archive
+#   scripts/image.sh package <dist> <tag>
+#                                   Build the image <tag> from a production
+#                                   build that another run produced, such as
+#                                   the one that the CI of a pull request
+#                                   retains, with the Containerfile and the
+#                                   nginx configuration of this checkout
 set -euo pipefail
 
 readonly IMAGE="localhost/sentinel-aura:local"
@@ -44,8 +50,8 @@ readonly ASSET_CACHE_CONTROL="public, max-age=31536000, immutable"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 readonly REPO_ROOT
 
-# The state of a test run: the container and the directory of the responses
-# are removed on exit.
+# The state of a test run, the container and the directory of the responses,
+# and the build context of package, removed on exit.
 CONTAINER=""
 WORK_DIR=""
 BASE_URL=""
@@ -63,6 +69,10 @@ Commands:
   test           Run the built image and check how it serves the build
   serve          Serve the built image on http://127.0.0.1:4173
   save <file>    Write the built image to a tar archive
+  package <dist> <tag>
+                 Build the image <tag> from the production build in <dist>,
+                 with the Containerfile and nginx configuration of this
+                 checkout
 EOF
 }
 
@@ -273,10 +283,14 @@ check_access_log() {
     check "the access log omits the Cookie header" lacks "${logs}" "${cookie#*=}"
 }
 
-cmd_build() {
-    [[ $# -eq 0 ]] || die "build: takes no arguments"
+require_buildx() {
     docker buildx version >/dev/null 2>&1 ||
         die "the Docker Buildx plugin is required; see CONTRIBUTING.md (Development Setup)"
+}
+
+cmd_build() {
+    [[ $# -eq 0 ]] || die "build: takes no arguments"
+    require_buildx
     "${REPO_ROOT}/scripts/tooling.sh" run build
     [[ -f "${REPO_ROOT}/dist/index.html" ]] ||
         die "the production build wrote no dist/index.html"
@@ -348,6 +362,22 @@ cmd_save() {
     docker save --output "$1" "${IMAGE}"
 }
 
+# The build context holds what the Containerfile copies, as .dockerignore
+# leaves it for a build from the repository: the production build, as dist/,
+# and nginx/ of this checkout.
+cmd_package() {
+    [[ $# -eq 2 ]] || die "package: takes the directory of a production build and the tag of the image"
+    local dist="$1" tag="$2"
+    [[ -f "${dist}/index.html" ]] || die "package: ${dist} holds no production build"
+    require_buildx
+    WORK_DIR="$(mktemp -d)"
+    trap remove_test_state EXIT
+    cp -R -- "${dist}" "${WORK_DIR}/dist"
+    cp -R -- "${REPO_ROOT}/nginx" "${WORK_DIR}/nginx"
+    docker buildx build --load --file "${REPO_ROOT}/Containerfile" --tag "${tag}" \
+        "${WORK_DIR}"
+}
+
 main() {
     if [[ $# -eq 0 ]]; then
         usage
@@ -356,7 +386,7 @@ main() {
     local command="$1"
     shift
     case "${command}" in
-        build | test | serve | save)
+        build | test | serve | save | package)
             "${REPO_ROOT}/scripts/docker-engine.sh" check
             "cmd_${command}" "$@"
             ;;

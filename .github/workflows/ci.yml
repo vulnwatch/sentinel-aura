@@ -165,6 +165,50 @@ jobs:
             exit 1
           fi
 
+  # The end-to-end tests, against the UI's production image and a Sentinel
+  # backend at the supported version, then the test of the development proxy
+  # (docs/deployment.md, Workflow Inventory, End-to-end tests).
+  end-to-end-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Builds the image, then runs the tests in Chromium and in Firefox, each
+      # against its own backend, loaded with Sentinel's example dataset.
+      - name: End-to-end tests
+        run: scripts/dev-env.sh e2e
+      - name: Development proxy test
+        run: scripts/dev-env.sh test
+      # The report, the screenshots that differ, and the traces of the failed
+      # tests. The traces hold the session cookies of the run's backend, which
+      # no longer exists.
+      - name: Retain the test results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results
+          path: test-results/e2e
+          if-no-files-found: ignore
+          retention-days: 7
+      # The production build that the tests passed, with the supported version
+      # and image digest of contract/, for scripts/dev-env.sh preview. A rerun
+      # replaces it.
+      - name: Retain the production build for a local preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-preview
+          path: |
+            dist/
+            contract/sentinel-version
+            contract/sentinel-image-digest
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
   # Uploads the coverage report of a successful UI Checks job. The resulting
   # codecov/patch status is a required check but informational (codecov.yml).
   # On a pull request a failed upload fails this job, which can be re-run

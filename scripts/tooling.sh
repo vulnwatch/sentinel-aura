@@ -34,6 +34,14 @@
 #                                            on http://localhost:5173 or on
 #                                            <port>, 0 for a free one;
 #                                            scripts/dev-env.sh starts both
+#   scripts/tooling.sh e2e [--update] <container> [args]
+#                                            Run the end-to-end tests in the
+#                                            network namespace of <container>,
+#                                            the reverse proxy of an
+#                                            end-to-end environment; --update
+#                                            also writes the reference
+#                                            screenshots that differ;
+#                                            scripts/dev-env.sh e2e starts both
 #   scripts/tooling.sh clean                 Remove the dependency directory
 #
 # Examples:
@@ -62,9 +70,12 @@ readonly STAMP_FILE="${DEPS_DIR}.stamp"
 # Directories that every command may write; Git ignores them.
 readonly OUTPUT_DIRS=(dist coverage test-results)
 # Paths that Prettier formats: keep in sync with .prettierignore.
-readonly FORMAT_PATHS=(src index.html vite.config.ts orval.config.ts tsconfig.json .oxlintrc.json)
+readonly FORMAT_PATHS=(src test index.html vite.config.ts orval.config.ts playwright.config.ts tsconfig.json .oxlintrc.json)
 # The directory of the generated API client: keep in sync with orval.config.ts.
 readonly GENERATED_DIR="src/api/generated"
+# The reference screenshots of the end-to-end tests: keep in sync with
+# playwright.config.ts.
+readonly SCREENSHOTS_DIR="test/e2e/screenshots"
 # Tracked files that npm changes when a dependency changes.
 readonly NPM_FILES=(package.json package-lock.json)
 # Files whose change requires a new installation.
@@ -90,6 +101,12 @@ Commands:
                         Start the development server in the network of a
                         local backend, on http://localhost:5173 or on <port>,
                         0 for a free one; scripts/dev-env.sh starts both
+  e2e [--update] <container> [args]
+                        Run the end-to-end tests in the network namespace of
+                        <container>, the reverse proxy of an end-to-end
+                        environment; --update also writes the reference
+                        screenshots that differ; scripts/dev-env.sh e2e starts
+                        both
   clean                 Remove the dependency directory of this clone
 EOF
 }
@@ -201,6 +218,7 @@ cmd_run() {
         format) die "run format: use 'scripts/tooling.sh format', which can write the sources" ;;
         generate) die "run generate: use 'scripts/tooling.sh generate', which can write the generated client" ;;
         dev) die "run dev: use 'scripts/dev-env.sh start', which starts the backend and the development server" ;;
+        e2e) die "run e2e: use 'scripts/dev-env.sh e2e', which starts the end-to-end environment" ;;
     esac
     ensure_installed
     local -a mounts=()
@@ -277,6 +295,35 @@ cmd_dev() {
         --publish="${publish}" -- npm run dev -- --host 0.0.0.0
 }
 
+# The tests share the network namespace of the reverse proxy, where the UI is
+# http://localhost:8080 (playwright.config.ts): a secure origin, from which
+# the browsers accept the session cookie (docs/architecture.md, Local
+# Development). They write only their results, and with --update the
+# reference screenshots, which Playwright writes only when they differ.
+cmd_e2e() {
+    local update=false
+    if [[ "${1:-}" == --update ]]; then
+        update=true
+        shift
+    fi
+    [[ $# -ge 1 ]] ||
+        die "e2e: takes the container of an end-to-end environment's proxy; use 'scripts/dev-env.sh e2e'"
+    local container="$1"
+    shift
+    [[ "$(docker container inspect --format '{{.State.Running}}' "${container}" 2>/dev/null)" == true ]] ||
+        die "e2e: no running container ${container}; use 'scripts/dev-env.sh e2e'"
+    ensure_installed
+    local -a mounts=() args=()
+    add_writable_mounts mounts "${OUTPUT_DIRS[@]}"
+    if [[ "${update}" == true ]]; then
+        mkdir -p "${REPO_ROOT}/${SCREENSHOTS_DIR}"
+        add_writable_mounts mounts "${SCREENSHOTS_DIR}"
+        args+=(--update-snapshots=changed)
+    fi
+    run_container --network="container:${container}" "${mounts[@]}" -- \
+        npm run e2e -- "${args[@]}" "$@"
+}
+
 # Needs no container, so it works without Docker too.
 cmd_clean() {
     [[ $# -eq 0 ]] || die "clean: takes no arguments"
@@ -295,7 +342,7 @@ main() {
     local command="$1"
     shift
     case "${command}" in
-        install | run | format | generate | npm | audit | dev)
+        install | run | format | generate | npm | audit | dev | e2e)
             "${REPO_ROOT}/scripts/docker-engine.sh" check
             "cmd_${command}" "$@"
             ;;
