@@ -351,11 +351,11 @@ Known vulnerabilities are handled by these complementary mechanisms:
   ranges that the dependents of the vulnerable package allow, when no version
   of the dependencies that require it allows a fixed one. It is an exception
   that requires the repository owner's decision (`docs/conventions.md`,
-  Dependency Admission). It forces the smallest version that fixes the open advisories,
-  as an exact version, only under the dependent that pins the vulnerable
-  version, and only for the versions of that dependent that pin one, so that
-  it stops applying by itself once the dependencies move to a later version
-  of the dependent:
+  Dependency Admission). It forces the smallest version that fixes the open
+  advisories, as an exact version, only under the dependent that pins the
+  vulnerable version, and only for the versions of that dependent that pin
+  one, so that it stops applying by itself once the dependencies move to a
+  later version of the dependent:
 
   ```json
   "overrides": {
