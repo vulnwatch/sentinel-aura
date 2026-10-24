@@ -363,7 +363,8 @@ in shell.
 
 These rules apply to:
 
-- Standalone scripts under `scripts/`
+- Standalone scripts under `scripts/`, and the libraries under `scripts/lib/`
+  that they source
 - Git hooks under `.githooks/`
 - Shell embedded in `run:` steps of `.github/workflows/*.yml`
 
@@ -374,7 +375,8 @@ These rules apply to:
 - **Strict mode**: every script MUST start with `set -euo pipefail`
   immediately after the shebang/header comment, so failures, unset
   variables, and broken pipes abort the script instead of propagating
-  silently
+  silently. A library does not set it: it runs under the strict mode of the
+  script that sources it (Naming and Structure)
 - **Quoting**: quote all variable expansions (`"${var}"`). The only
   accepted exception is an intentional word-split of an assembled command
   string, which MUST carry a narrowly-scoped, justified
@@ -406,10 +408,11 @@ All shell scripts MUST pass `shellcheck` with no findings.
 
 ### Formatting — shfmt
 
-All shell scripts MUST be formatted with `shfmt` using the flags
-`-i 4 -ci` (4-space indentation, indented switch cases). Verify with
-`shfmt -i 4 -ci -d <files>` (diff mode) and fix with
-`shfmt -i 4 -ci -w <files>`.
+All shell scripts MUST be formatted with `shfmt`, which takes its settings
+from `.editorconfig`: 4-space indentation and indented switch cases.
+`scripts/lint-shell.sh` verifies it (Enforcement), and `shfmt -w <files>`
+fixes it. shfmt ignores `.editorconfig` when it receives a formatting flag,
+such as `-i`, so it runs without one.
 
 ### Workflow Shell — actionlint
 
@@ -422,18 +425,26 @@ script from the workflow.
 
 ### Naming and Structure
 
-- **Files**: `kebab-case.sh` for standalone scripts. Git hooks use the fixed
-  names Git requires (`pre-commit`, `commit-msg`, `pre-push`) with no
-  extension
+- **Files**: `kebab-case.sh` for standalone scripts and libraries. Git hooks
+  use the fixed names Git requires (`pre-commit`, `commit-msg`, `pre-push`)
+  with no extension
 - **Functions**: `snake_case`; **constants/globals**: `UPPER_SNAKE_CASE`
 - Provide a header comment describing purpose and usage, and route
   subcommand dispatch through a `main` function
+- **Libraries**: a library under `scripts/lib/` holds functions and constants
+  that several scripts and hooks share, which source it after their strict
+  mode. It has the shebang and a header comment that describes its purpose,
+  but no `set` command and no `main`: sourcing it only defines its functions
+  and constants. A script names it in a
+  `# shellcheck source=<path from the repository root>` directive, and
+  shellcheck follows it (`--external-sources`)
 - **English only** (`AGENTS.md`, Stop conditions before retained work) applies
   to all comments and messages
 
 ### File Placement
 
 - `scripts/` — repository-level orchestration and developer or CI tooling
+- `scripts/lib/` — the libraries that the scripts and hooks source
 - `.githooks/` — Git hooks (activation covered in `docs/deployment.md`, Local
   Git Hooks)
 
@@ -443,14 +454,17 @@ for the authoritative mapping.
 ### Enforcement
 
 - **CI**: the `Shell Lint` job of `.github/workflows/ci.yml` is the
-  authoritative gate. It discovers every tracked `*.sh` file and every file
-  under `.githooks/` with `git ls-files`, so new scripts and hooks are covered
-  automatically, runs `shellcheck` and `shfmt -i 4 -ci -d` on them, and runs
-  `actionlint` on the workflows. The workflow pins the tool versions
-  (`docs/deployment.md`, Workflow Conventions)
-- **Pre-commit hook**: `.githooks/pre-commit` runs the same checks on the
-  staged files as a fast local safety net, and warns instead of failing when a
-  tool is not installed (`docs/deployment.md`, Local Git Hooks)
+  authoritative gate. It runs `scripts/lint-shell.sh`, which discovers every
+  tracked `*.sh` file and every file under `.githooks/` with `git ls-files`,
+  so new scripts, libraries, and hooks are covered automatically, runs
+  `shellcheck` and `shfmt` on them, and runs `actionlint` on the workflows.
+  The workflow pins the tool versions (`docs/deployment.md`, Workflow
+  Conventions)
+- **Pre-commit hook**: `.githooks/pre-commit` runs
+  `scripts/lint-shell.sh --staged`, the same checks on the staged files,
+  selected in the same way, as a fast local safety net, which warns instead
+  of failing when a tool is not installed (`docs/deployment.md`, Local Git
+  Hooks)
 
 ## Git Conventions
 

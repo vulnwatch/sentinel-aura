@@ -26,7 +26,7 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 | `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
@@ -319,25 +319,24 @@ maintainer completes it on its branch:
 
 1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
    with the release asset of the new version, and the pinned image digest
-   with the one that its tag names;
-2. `scripts/tooling.sh generate` regenerates the API client;
-3. the code and the documents of this repository follow what changed between
+   with the one that its tag names, then regenerates the API client;
+2. the code and the documents of this repository follow what changed between
    the two versions: the operations of the pinned OpenAPI document, and the
    Sentinel sections that the documents cite, read at the tag of the new
    version (`AGENTS.md`, Sentinel as an External Authority);
-4. `End-to-End Tests` passes against backends of the new version: the
+3. `End-to-End Tests` passes against backends of the new version: the
    end-to-end tests, after `scripts/dev-env.sh update-screenshots` where the
    new version's dataset changes what a screen shows, and the test of the
    development proxy, which routes and forwards requests as before and
    through which a dataset user signs in (`CONTRIBUTING.md`, Local Backend);
    and
-5. the pull request states which screens the API changes affect
+4. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
 
-Steps 1 and 2, like the regeneration of an Orval update, only regenerate files
-from the updated dependency, and so does the regeneration of the reference
-screenshots in step 4, so the pull request stays exempt from an issue
-(`docs/conventions.md`, Issues and work units). When step 3 changes code or
+Step 1, like the regeneration of an Orval update, only regenerates files from
+the updated dependency, and so does the regeneration of the reference
+screenshots in step 3, so the pull request stays exempt from an issue
+(`docs/conventions.md`, Issues and work units). When step 2 changes code or
 documents, that work is human-directed scope: it gets a tracking issue, which
 the pull request closes.
 
@@ -468,7 +467,7 @@ git config --local --unset core.hooksPath
 | Hook | Checks |
 |------|--------|
 | `commit-msg` | The first line of the message follows the Conventional Commits format and the breaking-marker rule and stays under 72 characters (`docs/conventions.md`, Commit Messages). Messages that Git generates (`Merge`, `Revert`, `fixup!`, `squash!`) are skipped |
-| `pre-commit` | `shellcheck` and `shfmt` on the staged shell scripts and hooks, `actionlint` on the staged workflows, and `gitleaks` on the staged changes |
+| `pre-commit` | `scripts/lint-shell.sh --staged`, which runs `shellcheck` and `shfmt` on the staged shell scripts and hooks and `actionlint` on the staged workflows, selected as the `Shell Lint` job selects the tracked ones, then `gitleaks` on the staged changes |
 | `pre-push` | Blocks pushes to `master` and pushes of tags (`docs/conventions.md`, Git Conventions) |
 
 The hooks are a supplementary safety net: they can be bypassed, while CI and

@@ -46,25 +46,19 @@
 #                                    http://localhost:4173; Ctrl+C removes it
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-readonly REPO_ROOT
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 readonly COMPOSE_FILE_PATH="${REPO_ROOT}/compose.yaml"
-readonly VERSION_FILE="contract/sentinel-version"
-readonly DIGEST_FILE="contract/sentinel-image-digest"
 # Sentinel's minimum, so that one Compose serves both repositories (Sentinel
 # docs/deployment.md, Software Requirements).
 readonly COMPOSE_MINIMUM="2.32.2"
 readonly WAIT_TIMEOUT=300
-# The port of the development server in its container: keep in sync with
-# vite.config.ts and scripts/tooling.sh.
-readonly DEV_PORT=5173
 # The port of the preview's proxy: keep in sync with compose.yaml.
 readonly PREVIEW_PORT=4173
-readonly SETUP="see CONTRIBUTING.md (Development Setup)"
 
-# The images of the UI that scripts/image.sh builds: from this checkout, and
-# from the production build of a pull request.
-readonly UI_IMAGE="localhost/sentinel-aura:local"
+# The image of the UI that scripts/image.sh package builds from the production
+# build of a pull request.
 readonly PREVIEW_IMAGE="localhost/sentinel-aura:preview"
 # Every profile of compose.yaml, so that the removal of a backend removes the
 # containers of each.
@@ -85,7 +79,8 @@ readonly PREVIEW_LOCAL_FILES='^(compose\.yaml|Containerfile|\.dockerignore|nginx
 # One backend for each clone and purpose, named after the path of the clone:
 # local development, the test of the development proxy, the end-to-end tests
 # of each browser, and the preview.
-CLONE_ID="$(printf '%s' "${REPO_ROOT}" | sha256sum | cut -c1-12)"
+CLONE_ID="$(clone_id)"
+readonly CLONE_ID
 readonly PROJECT="sentinel-aura-${CLONE_ID}"
 readonly TEST_PROJECT="sentinel-aura-test-${CLONE_ID}"
 readonly E2E_PROJECT_PREFIX="sentinel-aura-e2e"
@@ -108,63 +103,6 @@ FAILURES=0
 RESPONSE_STATUS=""
 RESPONSE_BODY=""
 RESPONSE_HEADERS=""
-
-usage() {
-    cat >&2 <<'EOF'
-Usage: scripts/dev-env.sh <command>
-
-Commands:
-  start         Start the backend, or reuse it, then the development server on
-                http://localhost:5173; Ctrl+C stops the development server only
-  stop          Stop the development server and remove the backend with its
-                data
-  logs [args]   Show the logs of the backend; the arguments go to
-                `docker compose logs`
-  test          Check the proxy and a sign-in through it, with a separate
-                backend and development server
-  e2e [<browser>]
-                Build the UI's image, then run the end-to-end tests in
-                Chromium and Firefox, or in <browser>, each against a new
-                backend
-  update-screenshots
-                Build the UI's image, then run the end-to-end tests in
-                Chromium and write the reference screenshots that are new or
-                differ
-  preview <pr>  Run the production build that the CI of the latest commit of
-                pull request <pr> tested, against a new backend, on
-                http://localhost:4173; Ctrl+C removes it
-EOF
-}
-
-die() {
-    echo "dev-env.sh: $*" >&2
-    exit 1
-}
-
-warn() {
-    echo "dev-env.sh: $*" >&2
-}
-
-# Prints the supported version that the file $1 declares: one exact version,
-# without the tag's "v".
-version_in() {
-    local version
-    [[ -f "$1" ]] || die "missing $1"
-    version="$(<"$1")"
-    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
-        die "$1 must hold one exact version such as 1.2.3 (found '${version}')"
-    printf '%s\n' "${version}"
-}
-
-# Prints the digest of Sentinel's image that the file $1 pins.
-digest_in() {
-    local digest
-    [[ -f "$1" ]] || die "missing $1"
-    digest="$(<"$1")"
-    [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
-        die "$1 must hold one digest such as sha256:<64 hexadecimal digits> (found '${digest}')"
-    printf '%s\n' "${digest}"
-}
 
 # Fails unless the Compose plugin is at least COMPOSE_MINIMUM. The standalone
 # docker-compose is not used.
@@ -190,10 +128,10 @@ check_compose() {
 # configuration, which the API's container carries as a label, and the UI's
 # image of the profiles.
 prepare() {
-    "${REPO_ROOT}/scripts/docker-engine.sh" check
+    check_docker_engine
     check_compose
-    SENTINEL_VERSION="$(version_in "${REPO_ROOT}/${VERSION_FILE}")"
-    SENTINEL_DIGEST="$(digest_in "${REPO_ROOT}/${DIGEST_FILE}")"
+    SENTINEL_VERSION="$(declared_version)"
+    SENTINEL_DIGEST="$(pinned_digest)"
     SENTINEL_AURA_BACKEND="$({
         printf '%s\n' "${SENTINEL_VERSION}" "${SENTINEL_DIGEST}"
         cat "${COMPOSE_FILE_PATH}"
@@ -210,13 +148,13 @@ compose() {
 }
 
 # The network of the project $1, which Compose creates, and the container of
-# its development server, which scripts/tooling.sh names after the network.
+# its development server.
 network_name() {
     printf '%s_default\n' "$1"
 }
 
 dev_server_name() {
-    printf '%s-dev-server\n' "$(network_name "$1")"
+    dev_server_container "$(network_name "$1")"
 }
 
 # Succeeds when the API of the project $1 runs, is healthy, and carries the

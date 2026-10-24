@@ -51,20 +51,20 @@
 #   scripts/tooling.sh npm install --save-dev <package>
 set -euo pipefail
 
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 # The official Playwright image, pinned by version and digest and updated by
 # Renovate. Its version matches @playwright/test in package.json, so that the
 # browsers of the image are the ones that Playwright expects.
 readonly TOOLING_IMAGE="mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf"
-
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-readonly REPO_ROOT
 
 # The dependencies of this clone, in a directory named after the path of the
 # clone, under the user's cache directory, and the file that records the
 # installation that it holds.
 CACHE_HOME="${XDG_CACHE_HOME:-}"
 [[ "${CACHE_HOME}" == /* ]] || CACHE_HOME="${HOME:?HOME is not set}/.cache"
-DEPS_DIR="${CACHE_HOME}/sentinel-aura/node-modules-$(printf '%s' "${REPO_ROOT}" | sha256sum | cut -c1-12)"
+DEPS_DIR="${CACHE_HOME}/sentinel-aura/node-modules-$(clone_id)"
 readonly DEPS_DIR
 readonly STAMP_FILE="${DEPS_DIR}.stamp"
 
@@ -79,49 +79,12 @@ readonly GENERATED_DIR="src/api/generated"
 readonly SCREENSHOTS_DIR="test/e2e/screenshots"
 # Tracked files that npm changes when a dependency changes.
 readonly NPM_FILES=(package.json package-lock.json)
-# Files whose change requires a new installation.
-readonly INSTALL_INPUTS=(package.json package-lock.json .npmrc)
-readonly DEV_PORT=5173
 
-usage() {
-    cat >&2 <<'EOF'
-Usage: scripts/tooling.sh <command> [arguments]
-
-Commands:
-  install               Install the dependencies (npm ci)
-  run <script> [args]   Run a package.json script, offline
-  format                Format the sources with Prettier
-  generate              Generate the API client from the pinned OpenAPI
-                        document
-  npm <args>            Run npm, with write access to package.json and
-                        package-lock.json
-  audit                 Audit the installed dependencies: their registry
-                        signatures and attestations, and their known
-                        vulnerabilities
-  dev <network> [<port>]
-                        Start the development server in the network of a
-                        local backend, on http://localhost:5173 or on <port>,
-                        0 for a free one; scripts/dev-env.sh starts both
-  e2e [--update] <container> <browser> [args]
-                        Run the end-to-end tests in <browser> in the network
-                        namespace of <container>, the reverse proxy of an
-                        end-to-end environment; --update also writes the
-                        reference screenshots that are new or differ;
-                        scripts/dev-env.sh e2e starts both
-  clean                 Remove the dependency directory of this clone
-EOF
-}
-
-die() {
-    echo "tooling.sh: $*" >&2
-    exit 1
-}
-
-# Identifies an installation: the tooling image and the install inputs.
+# Identifies an installation: the tooling image and the dependency files.
 install_stamp() {
     {
         printf '%s\n' "${TOOLING_IMAGE}"
-        (cd "${REPO_ROOT}" && sha256sum "${INSTALL_INPUTS[@]}")
+        (cd "${REPO_ROOT}" && sha256sum "${DEPENDENCY_FILES[@]}")
     } | sha256sum | cut -d ' ' -f 1
 }
 
@@ -292,7 +255,7 @@ cmd_dev() {
     if ((10#${port} == 0)); then
         publish="127.0.0.1::${DEV_PORT}"
     fi
-    run_container --name="${network}-dev-server" --network="${network}" \
+    run_container --name="$(dev_server_container "${network}")" --network="${network}" \
         --publish="${publish}" -- npm run dev -- --host 0.0.0.0
 }
 
@@ -348,7 +311,7 @@ main() {
     shift
     case "${command}" in
         install | run | format | generate | npm | audit | dev | e2e)
-            "${REPO_ROOT}/scripts/docker-engine.sh" check
+            check_docker_engine
             "cmd_${command}" "$@"
             ;;
         clean) cmd_clean "$@" ;;

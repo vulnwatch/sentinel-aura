@@ -13,15 +13,13 @@
 # workflow run, which keeps the complete report.
 set -euo pipefail
 
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 readonly ISSUE_TITLE="Image scan: fixable HIGH or CRITICAL vulnerabilities"
 readonly ISSUE_LABEL="security"
 # The findings that the issue lists; the run's complete report has them all.
 readonly MAX_ROWS=100
-
-die() {
-    echo "image-scan-issue.sh: $*" >&2
-    exit 1
-}
 
 # Prints the number of the open tracking issue, or nothing.
 open_issue() {
@@ -52,7 +50,10 @@ EOF
 }
 
 main() {
-    [[ $# -eq 1 ]] || die "usage: scripts/image-scan-issue.sh <report>"
+    if [[ $# -ne 1 ]]; then
+        usage
+        exit 2
+    fi
     local report="$1" count issue body_file
     [[ -n "${GITHUB_REPOSITORY:-}" && -n "${GITHUB_SHA:-}" && -n "${RUN_URL:-}" ]] ||
         die "GITHUB_REPOSITORY, GITHUB_SHA, and RUN_URL must be set"

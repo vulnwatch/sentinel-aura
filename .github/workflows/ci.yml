@@ -62,27 +62,12 @@ jobs:
           shellcheck --version
           shfmt --version
           actionlint --version
-      - name: Run shellcheck and shfmt on shell scripts and hooks
-        run: |
-          set -euo pipefail
-          # Discover tracked shell files so that new scripts and hooks are
-          # covered without a list to maintain: every '*.sh' file and every
-          # extension-less hook under .githooks/ (docs/conventions.md, Shell
-          # Scripting). The same selection as .githooks/pre-commit.
-          mapfile -d '' -t shell_files < <(
-            git ls-files -z '*.sh' '.githooks/*' | sort -z -u
-          )
-          if [[ ${#shell_files[@]} -eq 0 ]]; then
-            echo "No tracked shell files found; nothing to lint."
-            exit 0
-          fi
-          printf 'Linting %d shell file(s):\n' "${#shell_files[@]}"
-          printf '  %s\n' "${shell_files[@]}"
-          shellcheck "${shell_files[@]}"
-          shfmt -i 4 -ci -d "${shell_files[@]}"
-      - name: Run actionlint on workflows
-        # actionlint also runs the pinned shellcheck on every run: block.
-        run: actionlint
+      # shellcheck and shfmt on every tracked shell script and hook, and
+      # actionlint, which also runs the pinned shellcheck on every run: block,
+      # on every workflow (docs/conventions.md, Shell Scripting). The
+      # pre-commit hook selects the staged files in the same way.
+      - name: Lint shell scripts, hooks, and workflows
+        run: scripts/lint-shell.sh
 
   ui-checks:
     name: UI Checks

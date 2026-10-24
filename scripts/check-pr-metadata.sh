@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Validate the title and the issue linkage of a pull request against
-# docs/conventions.md (Pull Request Requirements and Commit Messages).
+# docs/conventions.md (Pull Request Requirements and Commit Messages). The
+# title follows the rules of scripts/lib/commit-title.sh, which
+# .githooks/commit-msg applies to commit messages.
 #
 # Usage:
 #   PR_TITLE=<title> PR_BODY=<body> PR_AUTHOR=<login> PR_HEAD_REF=<branch> \
@@ -10,10 +12,9 @@
 # as a GitHub Actions error annotation, and the exit code is 1.
 set -euo pipefail
 
-readonly ORDINARY_TITLE_PATTERN='^(feat|fix|docs|refactor|test|chore|ci)(\([a-z0-9 _-]+\))?: .+$'
-readonly BREAKING_TITLE_PATTERN='^(feat|fix)(\([a-z0-9 _-]+\))?!: .+$'
-# The title becomes the squash commit subject, which stays under 72 characters.
-readonly MAX_TITLE_LENGTH=71
+# shellcheck source=scripts/lib/commit-title.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-title.sh"
+
 readonly LINKAGE_FIELD='- Issue linkage:'
 readonly CLOSES_PATTERN='^Closes #[1-9][0-9]*$'
 readonly EXEMPTION_PATTERN='^N/A - .*[[:graph:]]'
@@ -23,14 +24,9 @@ error() {
 }
 
 check_title() {
-    local title="$1"
-    if ! [[ "${title}" =~ ${ORDINARY_TITLE_PATTERN} || "${title}" =~ ${BREAKING_TITLE_PATTERN} ]]; then
-        error "PR title '${title}' does not follow the Conventional Commits format."
-        error "Expected type[(scope)]: description, or feat[(scope)]! / fix[(scope)]! for a breaking change."
-        return 1
-    fi
-    if [[ ${#title} -gt ${MAX_TITLE_LENGTH} ]]; then
-        error "PR title is ${#title} characters; the maximum is ${MAX_TITLE_LENGTH}."
+    local title="$1" problem
+    if ! problem="$(title_problem "${title}")"; then
+        error "PR title '${title}' ${problem}."
         return 1
     fi
 }
