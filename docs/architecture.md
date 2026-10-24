@@ -113,6 +113,22 @@ consumers pin exact versions rather than version ranges (Sentinel
   of the supported version shows the changes of the document.
 - The copy is identical to the release asset, and an automated check of the CI
   pipeline verifies it (`docs/deployment.md`, Workflow Inventory).
+- The repository also pins the digest of Sentinel's image of the supported
+  version, in `contract/sentinel-image-digest`, and the backends of local
+  development, the end-to-end tests, and the local preview run the image by
+  it (Development Environment). The registry does not enforce the
+  immutability of image tags, so a consumer keeps the digest that a version's
+  tag names (Sentinel `docs/deployment.md`, Consumer discovery and
+  verification). The version stays declared in one place,
+  `contract/sentinel-version`, and the digest is pinned when the version
+  changes. The same automated check verifies that the tag still names the
+  pinned digest: Sentinel's release process never moves a published tag
+  (Sentinel `docs/deployment.md`, Release Publication and Immutability), so a
+  tag that moves for the same version is reported to Sentinel, and the pin is
+  kept. The pin does not verify the provenance attestations of the image,
+  which Sentinel's consumer procedure also describes. Not verifying them is
+  an accepted risk: the backends that run the image hold only fictional data
+  and run unprivileged on a developer's host or a CI runner.
 - The API types that the UI uses are generated from the copy, not written by
   hand, so that a change of the contract becomes a visible change of the
   generated types.
@@ -412,13 +428,14 @@ daemon's socket can start a privileged container. The containers do not
 receive the socket, so dependency code cannot use it. A developer of Sentinel
 who uses Docker Engine's default daemon has this access already.
 
-For local development and the end-to-end tests, the Sentinel backend runs from
-Sentinel's published image at the supported version, with the PostgreSQL and
+For local development, the end-to-end tests, and the local preview, the
+Sentinel backend runs from Sentinel's published image at the supported
+version, by its pinned digest (Backend Contract), with the PostgreSQL and
 Redis that it requires (Sentinel `docs/deployment.md`, Software
 Requirements), in containers of the same engine; Sentinel's image does not
 depend on a specific runtime (Sentinel `docs/architecture.md`, Design
-Constraints). Docker Compose starts them from `compose.yaml`; in local
-development, through `scripts/dev-env.sh` (Backend orchestration, below).
+Constraints). Docker Compose starts them from `compose.yaml`, through
+`scripts/dev-env.sh` (Backend orchestration, below).
 That backend holds fictional data only: it is loaded with Sentinel's example
 dataset, which the image of the supported version provides (Sentinel
 `docs/features/platform/example-dataset.md`, Purpose):
@@ -435,7 +452,10 @@ dataset, which the image of the supported version provides (Sentinel
   non-root users of their images, without capabilities and unable to gain
   privileges. They publish no port. In local development, the development
   server joins the backend's network, where its proxy reaches the API (Local
-  Development).
+  Development); in the end-to-end tests and the local preview, the UI's image
+  and a reverse proxy join it, under the same rules, except that the proxy
+  receives its configuration, read-only, and the preview's proxy publishes
+  its port (End-to-end environment and Local preview, below).
 - Signing in there uses Sentinel's local authentication, with the dataset's
   users and its published password. SSO is not available there: it matches
   only external users, and every dataset user is a local user (Sentinel
@@ -477,11 +497,13 @@ inside the container.
 
 **Backend orchestration:** `compose.yaml` declares the backend's containers,
 the order of their start, and their health checks, and Docker Compose runs
-them. `scripts/dev-env.sh` adds what Compose cannot decide: it reads the
-supported version from `contract/sentinel-version`, reuses or recreates the
-backend under the rules above, and starts the development server through
-`scripts/tooling.sh`, which keeps the rules of the tooling containers in one
-place.
+them; two profiles add the containers of the end-to-end environment and of
+the local preview. `scripts/dev-env.sh` adds what Compose cannot decide: it
+reads the supported version and its image digest from `contract/`, reuses or
+recreates the backend under the rules above, creates one for each browser of
+the end-to-end tests and one for the preview, and starts the development
+server and the end-to-end tests through `scripts/tooling.sh`, which keeps the
+rules of the tooling containers in one place.
 
 | Option | Impact |
 |---|---|
@@ -493,6 +515,60 @@ place.
 another, and the end-to-end tests add more of them; Compose describes such a
 group in one file, and the script stays limited to the decisions that depend
 on this repository.
+
+**End-to-end environment:** the end-to-end tests run the UI's production
+image (Packaging and Serving) behind a reverse proxy that stands for the one
+of the Sentinel host: it runs the base image of the UI's image, routes `/api`
+and every path under `/api/` to the API and every other path to the UI's
+image, matched by whole path segment, and forwards the path, the `Host`,
+`Origin`, and `Sec-Fetch-Site` headers, and the response headers unchanged
+(Same Origin; Cross-Origin Requests). `test/e2e/proxy.conf` configures it.
+The tests run in a tooling container that shares the network namespace of
+the proxy, so the browsers reach the UI on `http://localhost:8080`, a secure
+origin for the session cookie (Local Development), and the environment
+publishes no port.
+
+Each browser runs the tests against its own backend, newly loaded with the
+dataset, and its tests share it one at a time. Tests change data, and even a
+sign-in changes the sessions of its user, while the dataset is restored only
+by recreating the backend (Sentinel `docs/deployment.md`, Loading the Example
+Dataset): with one backend for both browsers, the second would find the data
+that the first left, and a screen would show different data in each.
+
+**Local preview:** `scripts/dev-env.sh preview` lets a maintainer try a pull
+request before approving its merge. It downloads the production build that
+the CI of the pull request's latest commit tested (`docs/deployment.md`,
+Workflow Inventory), builds the UI's image from it with the `Containerfile`
+and the nginx configuration of the local checkout, and runs it behind the
+reverse proxy of the end-to-end environment against a new dataset backend,
+at the supported version and image digest that the pull request declares:
+the checkout's pinned digest for the checkout's supported version, and for
+another version only a published Sentinel release whose tag names that
+digest (Backend Contract). The proxy is published on the loopback interface
+only, on `http://localhost:4173`. The preview also needs the GitHub CLI on
+the host, which downloads the build.
+
+The pull request's input is that build and the version and digest that it
+declares; the files of the local checkout that the preview uses instead,
+such as `compose.yaml`, are listed when the pull request changes them.
+Nothing of the pull request runs on the host: its code runs in the
+maintainer's browser, on a `localhost` origin, where the security headers
+and the routing of the checkout confine it. That is why the nginx and proxy
+configuration come from the checkout, not from the pull request. Browsers
+share the cookies of `localhost` among its ports, so a pull request from
+outside the project is previewed in a separate browser profile
+(`CONTRIBUTING.md`, Trying a Pull Request).
+
+| Option | Impact |
+|---|---|
+| **Local preview of the build that CI tested** (chosen) | The build that the tests passed, in an image rebuilt with the checkout's `Containerfile` and nginx configuration, so with the tested headers unless the pull request or the checkout changes them, against a dataset backend that only the developer's host reaches. Needs the GitHub CLI, and a successful CI run of the pull request's latest commit within the seven days that its build is kept |
+| Building a checkout of the pull request locally | Works without CI, but runs the pull request's scripts and dependency installation on the host, and builds an image other than the one that the tests passed |
+| Downloading the image that CI built | The image that the tests passed, but loading an archive that a pull request's workflow produced can replace any image of the host's engine |
+| A preview deployment of each pull request | Needs a backend reachable from a shared network, which a dataset backend must not be (Sentinel `docs/features/platform/example-dataset.md`, Security Considerations), and hosting with write access |
+
+**Rationale:** the owner approves a change by looking at the result, which
+the preview shows as it will be released, while the pull request's code
+stays in the browser and the dataset backend on the developer's host.
 
 #### Routing, Server State, and Forms
 
@@ -585,7 +661,7 @@ by hand for every operation.
 | Lint, including type-aware, React hooks, and accessibility (jsx-a11y) rules | Oxlint |
 | Formatting | Prettier |
 | Unit and component tests | Vitest in browser mode, in Chromium and Firefox through Playwright, with coverage measured by Istanbul |
-| End-to-end tests and screenshots | Playwright, in Chromium and Firefox, against the production build served as in production and a Sentinel backend at the supported version |
+| End-to-end tests and screenshots | Playwright, in Chromium and Firefox, against the production image and a Sentinel backend at the supported version (Development Environment, End-to-end environment); reference screenshots in Chromium |
 | Automated accessibility checks | axe-core, through its Playwright integration, with the WCAG 2.2 A and AA rules, in the end-to-end tests |
 
 Automated accessibility checks find only part of the WCAG failures; the
@@ -622,6 +698,29 @@ accessibility requirements of the UI foundations cover the rest
 **Rationale:** the chosen tools run on the native compiler, add the fewest
 packages, and test in real browsers, which accessibility testing needs.
 
+**Screenshots in pull requests:** the screenshots that a pull request shows
+(`docs/conventions.md`, Pull Request Requirements) are the reference
+screenshots of the end-to-end tests, committed in `test/e2e/screenshots/`,
+with which Playwright compares each screen on every run. A change that alters
+a screen updates its references in the same pull request, whose diff shows
+them before and after; a screen that changes while its reference does not
+fails the tests, so they are also a visual regression test. The references
+are taken in Chromium only, because each engine renders text differently;
+Firefox runs the same tests without them.
+
+| Option | Impact |
+|---|---|
+| **Committed reference screenshots, in Chromium** (chosen) | Visible in the pull request diff without uploads, write permissions, or services, and a visual regression test. Every intended visual change, and every update that changes the rendering, regenerates references, and the repository grows with them |
+| References in Chromium and Firefox | Also catches regressions specific to Firefox, at twice the images and updates |
+| CI posts the screenshots in a comment, or commits them to the branch | Needs write permission and somewhere to host the images, against the read-only workflows (`docs/deployment.md`, Workflow Conventions), and is delicate for pull requests from forks |
+| Workflow artifacts | A download, not visible in the pull request |
+| A preview deployment of each pull request | Needs a backend reachable from a shared network, which a dataset backend must not be (Development Environment) |
+
+**Rationale:** the screenshots reach the pull request through the diff that
+the owner reviews anyway, with no permission or service beyond those of the
+tests, and they keep screens built in separate agent sessions from drifting
+unnoticed.
+
 #### Approved Dependencies
 
 These are the direct dependencies that the stack approves; a new one requires
@@ -644,8 +743,8 @@ dependencies that reach the browser bring about 30 packages in total.
 | `vitest`, `@vitest/browser-playwright`, `vitest-browser-react`, `@vitest/coverage-istanbul` | Unit and component tests | No |
 | `@playwright/test`, `@axe-core/playwright` | End-to-end and accessibility tests | No |
 | Container image `mcr.microsoft.com/playwright` | Tooling image (Development Environment) | No |
-| Container image `nginxinc/nginx-unprivileged` | Base of the released image (Packaging and Serving) | No |
-| Container images `ghcr.io/vulnwatch/sentinel` at the supported version, and the official `postgres` and `redis` images at the versions that Sentinel requires | Backend for local development and end-to-end tests | No |
+| Container image `nginxinc/nginx-unprivileged` | Base of the released image (Packaging and Serving), and the reverse proxy of the end-to-end tests and the local preview (Development Environment) | No |
+| Container images `ghcr.io/vulnwatch/sentinel` at the supported version, and the official `postgres` and `redis` images at the versions that Sentinel requires | Backend for local development, the end-to-end tests, and the local preview | No |
 
 ### Packaging and Serving
 

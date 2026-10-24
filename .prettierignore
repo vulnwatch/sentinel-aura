@@ -3,8 +3,10 @@
 # makes them writable for its format command.
 /*
 !/src/
+!/test/
 !/index.html
 !/vite.config.ts
 !/orval.config.ts
+!/playwright.config.ts
 !/tsconfig.json
 !/.oxlintrc.json

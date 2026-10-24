@@ -125,13 +125,22 @@
       "commitMessagePrefix": "chore(deps):"
     },
     {
-      // Sentinel's image names its version through a variable, so the manager
-      // skips it: the supported version changes in contract/sentinel-version
-      // (below), which scripts/dev-env.sh reads — see docs/deployment.md
+      // Sentinel's image names its version and digest through variables, and
+      // the UI's image is built locally, so the manager skips both: the
+      // supported version changes in contract/sentinel-version (below), and
+      // scripts/sentinel-contract.sh pins its digest — see docs/deployment.md
       // (Dependency Updates).
-      "description": "PostgreSQL and Redis images of compose.yaml, the backend of local development",
+      "description": "PostgreSQL, Redis, and nginx images of compose.yaml, which runs the backend of local development, the end-to-end tests, and the local preview",
       "matchManagers": ["docker-compose"],
       "commitMessagePrefix": "chore(deps):"
+    },
+    {
+      // The reverse proxy of compose.yaml runs the base image of the
+      // Containerfile, so both references change together.
+      "description": "nginx: the base image of the Containerfile and the proxy image of compose.yaml in one pull request",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "matchPackageNames": ["/(^|/)nginxinc/nginx-unprivileged$/"],
+      "groupName": "nginx"
     },
     {
       "description": "npm dependencies, which reach the browser or run in the tooling",

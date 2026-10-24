@@ -26,17 +26,18 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `shellcheck` and `shfmt` on every tracked shell script and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the dependency audit when the run can change the dependencies (Dependency audit); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 | `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
 
 **Blocking** means that the workflow yields a required status check of the
 `master` branch protection: a pull request cannot merge until `Shell Lint`,
-`UI Checks`, `PR Metadata`, and the `codecov/patch` status that Codecov
-publishes for the upload of `Coverage Upload` (Coverage reporting) pass on its
-latest commit, and its branch must be up to date with `master`. A non-blocking
-workflow shows a red status when it fails, but never prevents a merge.
+`UI Checks`, `End-to-End Tests`, `PR Metadata`, and the `codecov/patch`
+status that Codecov publishes for the upload of `Coverage Upload` (Coverage
+reporting) pass on its latest commit, and its branch must be up to date with
+`master`. A non-blocking workflow shows a red status when it fails, but never
+prevents a merge.
 
 `scripts/check-pr-metadata.sh` reads the pull request fields from environment
 variables, so it also runs locally:
@@ -110,6 +111,31 @@ unless:
   Policy, a `Permissions-Policy` that only disables features, no
   `Strict-Transport-Security`, and no `Location`; and
 - the access log records a request but not the value of its `Cookie` header.
+
+**End-to-end tests.** The `End-to-End Tests` job runs beside `UI Checks`.
+`scripts/dev-env.sh e2e` builds the image as `scripts/image.sh build` does,
+then, for Chromium and then Firefox, creates an end-to-end environment with
+Docker Compose: a new backend from Sentinel's image at the supported version
+and pinned digest, loaded with the example dataset, the UI's image, and the
+reverse proxy in front of them, whose network namespace the tests share
+(`docs/architecture.md`, Development Environment). It runs the tests of
+`test/e2e/`, which compare the reference screenshots in Chromium
+(`docs/conventions.md`, End-to-End Tests), and removes the environment.
+`scripts/dev-env.sh test` then checks the development proxy against a
+backend of its own. The job needs no permission beyond reading the
+repository, and no secret:
+
+- when a step fails, it retains `test-results/e2e/` — the report of each
+  browser, in `test-results/e2e/<browser>/report/`, with the screenshots
+  that differ from their references and the traces of the failed tests — as
+  the seven-day workflow artifact `e2e-results`. The traces hold the session
+  cookies of the run's dataset backends, which no longer exist; and
+- on a pull request whose tests pass, it retains the production build, with
+  `contract/sentinel-version` and `contract/sentinel-image-digest`, as the
+  seven-day workflow artifact `ui-preview`, which `scripts/dev-env.sh
+  preview` downloads (`docs/architecture.md`, Development Environment, Local
+  preview). A rerun of the job replaces it, so a maintainer reruns it to
+  preview a pull request whose artifact expired.
 
 **Image vulnerability scan.** `image-scan.yml` builds the image every Monday
 from `master`, and on demand from the branch of the run, and scans it with
@@ -199,11 +225,14 @@ repository runs the bot or creates its pull requests. It tracks:
   `image-scan.yml` pins;
 - the base image of the `Containerfile`, by version and digest, through the
   `dockerfile` manager;
-- the PostgreSQL and Redis images of `compose.yaml`, the backend of local
-  development (`docs/architecture.md`, Development Environment), by version
-  and digest, through the `docker-compose` manager. It skips Sentinel's image,
-  whose version `scripts/dev-env.sh` takes from `contract/sentinel-version`
-  (Sentinel version);
+- the PostgreSQL, Redis, and nginx images of `compose.yaml`, which runs the
+  backend of local development, the end-to-end tests, and the local preview
+  (`docs/architecture.md`, Development Environment), by version and digest,
+  through the `docker-compose` manager. It skips Sentinel's image, whose
+  version and digest `scripts/dev-env.sh` takes from `contract/` (Sentinel
+  version), and the UI's image, which is built locally. The nginx image of
+  `compose.yaml` is the base image of the `Containerfile`, and both are
+  updated in one `nginx` pull request;
 - the Renovate image of `renovate-validation.yml`, by version and digest,
   through a custom regex manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a
@@ -266,10 +295,20 @@ maintainer runs `scripts/tooling.sh generate` on the branch of the pull
 request and commits the result; until then `UI Checks` fails if the generated
 client changes (Workflow Inventory).
 
-**Local backend.** No CI job runs the backend of local development or the
-development proxy in front of it. Before a pull request that updates `vite`,
-the tooling image, or an image of `compose.yaml` is merged, a maintainer runs
-`scripts/dev-env.sh test` on its branch (`CONTRIBUTING.md`, Local Backend).
+**Reference screenshots.** An update that changes how the UI renders, such as
+one of the tooling image and its browsers, Tailwind CSS, or React Aria, fails
+`End-to-End Tests` while a reference screenshot differs (`docs/conventions.md`,
+End-to-End Tests). A maintainer checks the differences in the `e2e-results`
+artifact (Workflow Inventory, End-to-end tests), runs
+`scripts/dev-env.sh update-screenshots` on the branch of the pull request,
+and commits the result, which the pull request diff then shows. Like the
+regeneration of an Orval update, the commit only regenerates files from the
+updated dependency.
+
+**Local backend.** `End-to-End Tests` runs `scripts/dev-env.sh test` on every
+pull request, so an update of `vite`, the tooling image, or an image of
+`compose.yaml` that breaks the development proxy or the backend of local
+development fails it (`CONTRIBUTING.md`, Local Backend).
 
 **Sentinel version.** Renovate proposes a new supported Sentinel version once
 its GitHub Release is published, outside the weekly schedule, because the UI
@@ -279,20 +318,25 @@ changes only `contract/sentinel-version`, so `UI Checks` fails until a
 maintainer completes it on its branch:
 
 1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
-   with the release asset of the new version;
+   with the release asset of the new version, and the pinned image digest
+   with the one that its tag names;
 2. `scripts/tooling.sh generate` regenerates the API client;
 3. the code and the documents of this repository follow what changed between
    the two versions: the operations of the pinned OpenAPI document, and the
    Sentinel sections that the documents cite, read at the tag of the new
    version (`AGENTS.md`, Sentinel as an External Authority);
-4. `scripts/dev-env.sh test` passes against a backend of the new version: the
-   development proxy routes and forwards requests as before, and a dataset
-   user signs in through it (`CONTRIBUTING.md`, Local Backend); and
+4. `End-to-End Tests` passes against backends of the new version: the
+   end-to-end tests, after `scripts/dev-env.sh update-screenshots` where the
+   new version's dataset changes what a screen shows, and the test of the
+   development proxy, which routes and forwards requests as before and
+   through which a dataset user signs in (`CONTRIBUTING.md`, Local Backend);
+   and
 5. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
 
 Steps 1 and 2, like the regeneration of an Orval update, only regenerate files
-from the updated dependency, so the pull request stays exempt from an issue
+from the updated dependency, and so does the regeneration of the reference
+screenshots in step 4, so the pull request stays exempt from an issue
 (`docs/conventions.md`, Issues and work units). When step 3 changes code or
 documents, that work is human-directed scope: it gets a tracking issue, which
 the pull request closes.
