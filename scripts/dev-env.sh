@@ -652,7 +652,9 @@ cmd_preview() {
         --jq '.files[].path' | grep -E "${PREVIEW_LOCAL_FILES}" || true)"
     if [[ -n "${local_files}" ]]; then
         warn "pull request #${pr} changes files that the preview takes from this checkout instead:"
-        printf '  %s\n' "${local_files}" >&2
+        local -a files
+        mapfile -t files <<<"${local_files}"
+        printf '  %s\n' "${files[@]}" >&2
     fi
 
     # One preview for each clone: a new one replaces it.
@@ -670,9 +672,11 @@ dev-env.sh: Ctrl+C stops the preview and removes it with its data. The requests 
 EOF
     trap 'exit 130' INT
     trap 'exit 143' TERM
-    # nginx's access log, which omits the Cookie header, until Ctrl+C.
+    # nginx's access log, which omits the Cookie header, until Ctrl+C, without
+    # the requests of its health check (compose.yaml), which BusyBox's wget
+    # sends.
     COMPOSE_PROFILES=preview compose "${RUN_PROJECT}" logs --follow --no-color \
-        --no-log-prefix --tail=0 preview
+        --no-log-prefix --tail=0 preview | grep --line-buffered -v '"Wget" "-"$'
 }
 
 main() {
