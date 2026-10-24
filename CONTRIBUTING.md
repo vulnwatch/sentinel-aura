@@ -47,9 +47,8 @@ policy, and repository tooling.
 3. Name the branch and write commit messages as the
    [Git Conventions](docs/conventions.md#git-conventions) require
 4. Make your changes following the [conventions](#conventions)
-5. Add or update tests for every code change, and run
-   `scripts/tooling.sh run check` and the
-   [end-to-end tests](#end-to-end-tests)
+5. Add or update tests for every code change, and before pushing run
+   `scripts/ci.sh all`, which runs the [checks of CI](#checks-of-ci)
 6. Open a **pull request** against `master`
 
 ## Development Setup
@@ -209,6 +208,36 @@ them on every pull request.
   screenshots and a trace of each failed test. In CI, the `e2e-results`
   artifact of the run holds them.
 
+### Checks of CI
+
+`scripts/ci.sh` runs the checks of the `Shell Lint`, `UI Checks`, and
+`End-to-End Tests` jobs on your host, as CI runs them: the `UI Checks` and
+`End-to-End Tests` jobs run their checks through it
+([Workflow Inventory](docs/deployment.md#workflow-inventory), Local run). Run
+`scripts/ci.sh all` before pushing:
+
+| Command | Purpose |
+|---------|---------|
+| `scripts/ci.sh all` | Run `scripts/lint-shell.sh`, as `Shell Lint` does, then `ui-checks`, then `e2e`, each even when an earlier one failed; fail when one of them failed |
+| `scripts/ci.sh ui-checks` | Run the checks of `UI Checks`: the pinned Sentinel contract, the generated API client, the type check, lint, format check, and tests, the build and the test of the image, and an empty `node_modules/`; also the dependency audit when `package.json`, `package-lock.json`, or `.npmrc` differ from the merge base with `origin/master` |
+| `scripts/ci.sh e2e` | Run the checks of `End-to-End Tests`: the end-to-end tests, then `scripts/dev-env.sh test` |
+
+- The command needs what the tooling, the image, and the local backend need,
+  network access, and `shellcheck`, `shfmt`, and `actionlint` at the versions
+  of [Local Git Hooks](docs/deployment.md#local-git-hooks). Once the images
+  are downloaded, `all` takes a few minutes.
+- The checks read your working tree, so you can run them before committing;
+  the check of the generated API client leaves the working tree as it was.
+  The shell lint checks the files that Git tracks: `git add` a new script or
+  workflow first.
+- `ui-checks` and `e2e` stop at their first failed check, which the output
+  names (`ci.sh: <check> failed`); `all` ends with the list of the jobs that
+  failed.
+- `scripts/ci.sh` does not run what needs a CI run: the `PR Metadata` check,
+  which needs the pull request; the Renovate validation; the image scan; and
+  the coverage upload. `scripts/check-pr-metadata.sh` checks a title and a
+  body locally ([Workflow Inventory](docs/deployment.md#workflow-inventory)).
+
 ### Trying a Pull Request
 
 To try a pull request as it will be released before approving its merge:
@@ -289,8 +318,9 @@ points are:
    defines, including screenshots when the change affects what the UI shows
 2. Link the PR to a tracking issue with `Closes #<issue>` in the template's
    `Issue linkage` field
-3. Ensure CI passes on your branch, including the `PR Metadata` check of the
-   title and the issue linkage
+3. Run `scripts/ci.sh all` before pushing, and ensure CI passes on your
+   branch, including the `PR Metadata` check of the title and the issue
+   linkage
 4. Request review from a maintainer
 5. PRs are **squash-merged** — the PR title becomes the commit message on
    `master` — and only after the repository owner explicitly authorizes the

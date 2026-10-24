@@ -1,7 +1,11 @@
 name: CI
 
 # Required quality gates. See docs/deployment.md (CI Pipeline) for this
-# workflow's place in the pipeline and for the required status checks.
+# workflow's place in the pipeline and for the required status checks. The UI
+# Checks and End-to-End Tests jobs run their checks through scripts/ci.sh,
+# which also runs them locally, so this file lists none of them but the
+# dependency audit, which depends on the event of the run; it also keeps the
+# artifacts and the Codecov secret.
 
 on:
   push:
@@ -80,19 +84,11 @@ jobs:
           # Two commits, so that the audit scope can compare a pull request's
           # merge commit with its first parent, the tip of the base branch.
           fetch-depth: 2
-      # The pinned OpenAPI document is identical to the release asset of the
-      # supported Sentinel version, and its image tag names the pinned digest
-      # (docs/architecture.md, Backend Contract).
-      - name: Verify the pinned Sentinel contract
-        run: scripts/sentinel-contract.sh verify
-      # Every Node.js command runs through scripts/tooling.sh, in the tooling
-      # image with the runner's Docker Engine (docs/architecture.md,
-      # Development Environment).
-      - name: Install dependencies
-        run: scripts/tooling.sh install
       # The audit blocks only the runs that can change the dependencies; see
       # docs/deployment.md (Workflow Inventory, Dependency audit). A failure
-      # to determine the changed files runs it.
+      # to determine the changed files runs it. It depends on the event of
+      # the run, so it stays here; locally, scripts/ci.sh decides it as for a
+      # pull request.
       - name: Determine dependency audit scope
         id: audit-scope
         env:
@@ -103,31 +99,13 @@ jobs:
       - name: Audit dependencies
         if: steps.audit-scope.outputs.required == 'true'
         run: scripts/tooling.sh audit
-      # The committed API client is the one that the pinned OpenAPI document
-      # and orval.config.ts generate (docs/architecture.md, API Client
-      # Generation): regenerate it and fail on any difference.
-      - name: Generate the API client
-        run: scripts/tooling.sh generate
-      - name: Verify that the committed API client is current
-        run: |
-          set -euo pipefail
-          changes="$(git status --porcelain --untracked-files=all -- src/api/generated)"
-          if [[ -n "${changes}" ]]; then
-            printf '%s\n' "${changes}"
-            echo "::error::src/api/generated/ is not the client that the pinned OpenAPI document generates; run scripts/tooling.sh generate and commit the result."
-            exit 1
-          fi
-      - name: Type check
-        run: scripts/tooling.sh run typecheck
-      - name: Lint
-        run: scripts/tooling.sh run lint
-      - name: Format check
-        run: scripts/tooling.sh run format:check
-      - name: Unit and component tests
-        run: scripts/tooling.sh run test
+      # The other checks of the job, each in a log group (docs/deployment.md,
+      # Workflow Inventory).
+      - name: UI checks
+        run: scripts/ci.sh ui-checks
       # Handed to the Coverage Upload job, so that CODECOV_TOKEN never reaches
-      # the job that runs the code of the dependencies. Vitest writes no
-      # report when a test fails, so only a successful run has one.
+      # the job that runs the code of the dependencies. The unit and component
+      # tests wrote it, and every check of the job passed.
       - name: Retain coverage report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -135,21 +113,6 @@ jobs:
           path: coverage/unit/clover.xml
           if-no-files-found: error
           retention-days: 7
-      # The image that serves the UI in production, built from the
-      # production build and tested as it runs (docs/architecture.md,
-      # Packaging and Serving; docs/deployment.md, Workflow Inventory, Image
-      # test).
-      - name: Build the image
-        run: scripts/image.sh build
-      - name: Test the image
-        run: scripts/image.sh test
-      - name: Verify that no dependency reached the working tree
-        run: |
-          set -euo pipefail
-          if [[ -n "$(find node_modules -mindepth 1 -print -quit)" ]]; then
-            echo "::error::node_modules/ holds files; dependencies must stay in their directory outside the working tree."
-            exit 1
-          fi
 
   # The end-to-end tests, against the UI's production image and a Sentinel
   # backend at the supported version, then the test of the development proxy
@@ -162,12 +125,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # Builds the image, then runs the tests in Chromium and in Firefox, each
-      # against its own backend, loaded with Sentinel's example dataset.
-      - name: End-to-end tests
-        run: scripts/dev-env.sh e2e
-      - name: Development proxy test
-        run: scripts/dev-env.sh test
+      # The checks of the job, each in a log group.
+      - name: End-to-end and development proxy tests
+        run: scripts/ci.sh e2e
       # The report of each browser, with the screenshots that differ and the
       # traces of the failed tests. The traces hold the session cookies of the
       # run's backends, which no longer exist.

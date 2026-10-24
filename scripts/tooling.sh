@@ -72,8 +72,6 @@ readonly STAMP_FILE="${DEPS_DIR}.stamp"
 readonly OUTPUT_DIRS=(dist coverage test-results)
 # Paths that Prettier formats: keep in sync with .prettierignore.
 readonly FORMAT_PATHS=(src test index.html vite.config.ts orval.config.ts playwright.config.ts tsconfig.json .oxlintrc.json)
-# The directory of the generated API client: keep in sync with orval.config.ts.
-readonly GENERATED_DIR="src/api/generated"
 # The reference screenshots of the end-to-end tests: keep in sync with
 # playwright.config.ts.
 readonly SCREENSHOTS_DIR="test/e2e/screenshots"
