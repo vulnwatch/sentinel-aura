@@ -19,6 +19,15 @@ indent_size = 2
 [*.md]
 trim_trailing_whitespace = false
 
+# Shell scripts and Git hooks, whose settings shfmt reads (docs/conventions.md,
+# Shell Scripting). A glob with a slash is relative to this directory, so the
+# hooks have their own section.
 [*.sh]
 indent_style = space
 indent_size = 4
+switch_case_indent = true
+
+[.githooks/*]
+indent_style = space
+indent_size = 4
+switch_case_indent = true

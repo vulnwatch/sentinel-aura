@@ -116,12 +116,13 @@ digest of that release's image
 ([Backend Contract](docs/architecture.md#backend-contract)).
 `scripts/sentinel-contract.sh` runs on your host, downloads the release asset
 with `curl`, and reads the digest from the registry with Docker's Buildx
-plugin:
+plugin; `update` then regenerates the API client through
+`scripts/tooling.sh`:
 
 | Command | Purpose |
 |---------|---------|
 | `scripts/sentinel-contract.sh verify` | Check that the pinned OpenAPI document is identical to the release asset, and that the version's image tag names the pinned digest, as CI does |
-| `scripts/sentinel-contract.sh update` | Replace the pinned OpenAPI document with the release asset of the declared version, and the pinned digest with the one that its tag names; then run `scripts/tooling.sh generate` |
+| `scripts/sentinel-contract.sh update` | Replace the pinned OpenAPI document with the release asset of the declared version, and the pinned digest with the one that its tag names; then regenerate the API client, as `scripts/tooling.sh generate` does |
 
 [Dependency Updates](docs/deployment.md#dependency-updates) describes how a
 change of the supported version is completed.
@@ -135,7 +136,6 @@ its Buildx plugin, and `curl`:
 |---------|---------|
 | `scripts/image.sh build` | Run the production build through `scripts/tooling.sh`, then build the image `localhost/sentinel-aura:local` |
 | `scripts/image.sh test` | Run the image and check it as CI does: its user and content, the entry document fallback, caching, the security headers, and the access log ([Workflow Inventory](docs/deployment.md#workflow-inventory)) |
-| `scripts/image.sh serve` | Serve the image on <http://127.0.0.1:4173>, published on the loopback interface only |
 | `scripts/image.sh save <file>` | Write the image to a tar archive, as the image scan does |
 | `scripts/image.sh package <dist> <tag>` | Build an image from a production build that another run produced, with this checkout's `Containerfile` and nginx configuration; `scripts/dev-env.sh preview` runs it for you |
 
@@ -157,7 +157,7 @@ plugins, and `curl`:
 | `scripts/dev-env.sh start` | Start the backend, or reuse the running one, then the development server on <http://localhost:5173>; Ctrl+C stops only the development server |
 | `scripts/dev-env.sh stop` | Stop the development server and remove the backend with its data |
 | `scripts/dev-env.sh logs [args]` | Show the logs of the backend; the arguments go to `docker compose logs`, for example `logs --follow sentinel` |
-| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. CI runs it on every pull request; run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, the version of `vite`, or the supported version |
+| `scripts/dev-env.sh test` | Start a separate backend and development server on a free port, then check the routing of the proxy, the request headers that reach the API, and a sign-in through it. CI runs it on every pull request; run it after changing `vite.config.ts`, `compose.yaml`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the supported version |
 | `scripts/dev-env.sh e2e [<browser>]` | Build the UI's image, then run the [end-to-end tests](#end-to-end-tests) in Chromium and Firefox, or in `chromium` or `firefox` only, each against a new backend |
 | `scripts/dev-env.sh update-screenshots` | Build the UI's image, then run the end-to-end tests in Chromium and write the reference screenshots that are new or differ |
 | `scripts/dev-env.sh preview <pr>` | Run the build of pull request `<pr>` that CI tested on <http://localhost:4173> ([Trying a pull request](#trying-a-pull-request)) |
@@ -257,7 +257,7 @@ git config --local core.hooksPath .githooks
 | Hook | Checks |
 |------|--------|
 | `commit-msg` | Conventional Commits format and length of the first line of the message |
-| `pre-commit` | `shellcheck` and `shfmt` on staged shell scripts and hooks, `actionlint` on staged workflows, and `gitleaks` on the staged changes |
+| `pre-commit` | `scripts/lint-shell.sh --staged`: `shellcheck` and `shfmt` on staged shell scripts and hooks, and `actionlint` on staged workflows; then `gitleaks` on the staged changes |
 | `pre-push` | Blocks pushes to `master` and pushes of tags |
 
 The tools of `pre-commit` are optional: a missing one produces a warning and

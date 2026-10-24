@@ -12,7 +12,8 @@
 # ghcr.io/vulnwatch/sentinel:<version>, which compose.yaml runs: the registry
 # does not enforce tag immutability, so the backend runs the image by digest
 # (Sentinel docs/deployment.md, Consumer discovery and verification). The
-# script runs on the host with curl and Docker's Buildx plugin.
+# script runs on the host with curl and Docker's Buildx plugin, and update
+# also with Docker Engine, through scripts/tooling.sh.
 #
 # Usage:
 #   scripts/sentinel-contract.sh verify   Fail unless the copy is identical to
@@ -20,7 +21,9 @@
 #                                         the one of the version tag
 #   scripts/sentinel-contract.sh update   Replace the copy with the release
 #                                         asset of the declared version, and
-#                                         the digest with the one of its tag
+#                                         the digest with the one of its tag;
+#                                         then regenerate the API client with
+#                                         scripts/tooling.sh generate
 #   scripts/sentinel-contract.sh verify-release <version> <digest>
 #                                         Fail unless <version> is a published
 #                                         Sentinel release whose image tag
@@ -30,48 +33,15 @@
 #                                         preview)
 set -euo pipefail
 
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 readonly RELEASES_URL="https://github.com/vulnwatch/sentinel/releases/download"
 readonly IMAGE_NAME="ghcr.io/vulnwatch/sentinel"
-readonly VERSION_FILE="contract/sentinel-version"
 readonly DOCUMENT_FILE="contract/sentinel.openapi.json"
-readonly DIGEST_FILE="contract/sentinel-image-digest"
-
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-readonly REPO_ROOT
 
 # The temporary download, removed on exit.
 DOWNLOAD=""
-
-usage() {
-    cat >&2 <<'EOF'
-Usage: scripts/sentinel-contract.sh <command>
-
-Commands:
-  verify   Fail unless the pinned OpenAPI document is identical to the release
-           asset of the supported Sentinel version, and the pinned image
-           digest is the one of its version tag
-  update   Replace the pinned OpenAPI document with that release asset, and
-           the pinned image digest with the one of the version tag
-  verify-release <version> <digest>
-           Fail unless <version> is a published Sentinel release whose image
-           tag names <digest>
-EOF
-}
-
-die() {
-    echo "sentinel-contract.sh: $*" >&2
-    exit 1
-}
-
-# Prints the supported version: one exact version, without the tag's "v".
-declared_version() {
-    local version
-    [[ -f "${REPO_ROOT}/${VERSION_FILE}" ]] || die "missing ${VERSION_FILE}"
-    version="$(<"${REPO_ROOT}/${VERSION_FILE}")"
-    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
-        die "${VERSION_FILE} must hold one exact version such as 1.2.3 (found '${version}')"
-    printf '%s\n' "${version}"
-}
 
 remove_download() {
     if [[ -n "${DOWNLOAD}" ]]; then
@@ -95,16 +65,8 @@ download_asset() {
 # Prints the digest that the tag of version $1 names in the registry, as
 # Sentinel docs/deployment.md (Consumer discovery and verification) resolves
 # it.
-resolve_digest() {
-    local version="$1" digest
-    docker buildx version >/dev/null 2>&1 ||
-        die "Docker's Buildx plugin is required; see CONTRIBUTING.md (Development Setup)"
-    digest="$(docker buildx imagetools inspect "${IMAGE_NAME}:${version}" \
-        --format '{{.Manifest.Digest}}')" ||
-        die "cannot resolve ${IMAGE_NAME}:${version} in the registry"
-    [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
-        die "unexpected digest '${digest}' for ${IMAGE_NAME}:${version}"
-    printf '%s\n' "${digest}"
+tag_digest() {
+    resolve_digest "${IMAGE_NAME}:$1"
 }
 
 # The message for a pinned digest that the tag of version $1 no longer names.
@@ -117,19 +79,20 @@ moved_tag_message() {
 }
 
 cmd_verify() {
-    local version digest
+    local version pinned digest
     version="$(declared_version)"
     [[ -f "${REPO_ROOT}/${DOCUMENT_FILE}" ]] ||
         die "missing ${DOCUMENT_FILE}; run 'scripts/sentinel-contract.sh update'"
     [[ -f "${REPO_ROOT}/${DIGEST_FILE}" ]] ||
         die "missing ${DIGEST_FILE}; run 'scripts/sentinel-contract.sh update'"
+    pinned="$(pinned_digest)"
     download_asset "${version}"
     if ! cmp -s "${DOWNLOAD}" "${REPO_ROOT}/${DOCUMENT_FILE}"; then
         die "${DOCUMENT_FILE} differs from sentinel-${version}.openapi.json of Sentinel v${version}; run 'scripts/sentinel-contract.sh update'"
     fi
     echo "${DOCUMENT_FILE} is identical to sentinel-${version}.openapi.json of Sentinel v${version}"
-    digest="$(resolve_digest "${version}")"
-    if [[ "$(<"${REPO_ROOT}/${DIGEST_FILE}")" != "${digest}" ]]; then
+    digest="$(tag_digest "${version}")"
+    if [[ "${pinned}" != "${digest}" ]]; then
         die "$(moved_tag_message "${version}" "${digest}")"
     fi
     echo "${DIGEST_FILE} is the digest of ${IMAGE_NAME}:${version}"
@@ -138,24 +101,29 @@ cmd_verify() {
 # The release asset exists only for a published release (download_asset).
 cmd_verify_release() {
     [[ $# -eq 2 ]] || die "verify-release: takes a version and a digest"
-    local version="$1" digest="$2"
-    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "verify-release: invalid version '${version}'"
-    [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || die "verify-release: invalid digest '${digest}'"
+    local version="$1" digest="$2" named
+    is_version "${version}" || die "verify-release: invalid version '${version}'"
+    is_digest "${digest}" || die "verify-release: invalid digest '${digest}'"
     download_asset "${version}"
-    [[ "$(resolve_digest "${version}")" == "${digest}" ]] ||
+    named="$(tag_digest "${version}")"
+    [[ "${named}" == "${digest}" ]] ||
         die "${digest} is not the digest that ${IMAGE_NAME}:${version} names"
     echo "Sentinel v${version} is a published release, and its image tag names ${digest}" >&2
 }
 
+# The API client follows the pinned OpenAPI document (docs/architecture.md,
+# API Client Generation).
 cmd_update() {
     local version digest
     version="$(declared_version)"
     download_asset "${version}"
-    digest="$(resolve_digest "${version}")"
+    digest="$(tag_digest "${version}")"
     cp -- "${DOWNLOAD}" "${REPO_ROOT}/${DOCUMENT_FILE}"
     echo "${DOCUMENT_FILE} now holds sentinel-${version}.openapi.json of Sentinel v${version}" >&2
     printf '%s\n' "${digest}" >"${REPO_ROOT}/${DIGEST_FILE}"
     echo "${DIGEST_FILE} now holds ${digest}, the digest of ${IMAGE_NAME}:${version}" >&2
+    "${REPO_ROOT}/scripts/tooling.sh" generate
+    echo "the generated API client now follows ${DOCUMENT_FILE}" >&2
 }
 
 main() {

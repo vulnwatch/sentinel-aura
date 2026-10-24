@@ -3,7 +3,8 @@
 #
 # The audit is required when a run can change or ship the locked dependency
 # set (docs/deployment.md, Workflow Inventory, Dependency audit):
-#   - a pull request or push that changes a dependency file below;
+#   - a pull request or push that changes a file of DEPENDENCY_FILES
+#     (scripts/lib/common.sh);
 #   - a release-please pull request (head branch "release-please--*");
 #   - a manual (workflow_dispatch) run or any other event;
 #   - any run whose changed files cannot be determined.
@@ -17,7 +18,9 @@
 # reason to stdout.
 set -euo pipefail
 
-readonly DEPENDENCY_FILES=(package.json package-lock.json .npmrc)
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 readonly RELEASE_BRANCH_PREFIX="release-please--"
 
 # Prints the files among DEPENDENCY_FILES that differ between $1 and HEAD.
@@ -36,7 +39,7 @@ main() {
 
     local required=true reason base="" changed
 
-    cd "$(git rev-parse --show-toplevel)"
+    cd "${REPO_ROOT}"
 
     case "${EVENT_NAME}" in
         pull_request)

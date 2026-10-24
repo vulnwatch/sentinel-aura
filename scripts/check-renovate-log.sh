@@ -15,6 +15,9 @@
 # organization (docs/deployment.md, Dependency Updates).
 set -euo pipefail
 
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 readonly SUMMARY_MESSAGE='packageFiles with updates'
 
 # The [datasource, package] pairs of an organization whose GitHub IP allow
@@ -56,7 +59,7 @@ readonly WARNINGS_FILTER='
 
 main() {
     if [[ $# -ne 1 ]]; then
-        echo "Usage: $0 <renovate-log.ndjson>" >&2
+        usage
         return 2
     fi
     local log_file="$1"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build, test, and serve the image that serves the UI in production: nginx and
-# the production build (docs/architecture.md, Packaging and Serving; Security
+# Build and test the image that serves the UI in production: nginx and the
+# production build (docs/architecture.md, Packaging and Serving; Security
 # Headers). The script runs on the host with Docker Engine, its Buildx plugin,
 # and curl, locally and in CI; the production build runs through
 # scripts/tooling.sh, like every Node.js command.
@@ -12,8 +12,6 @@
 #                                   caching, the 404 of a missing asset, the
 #                                   security headers, the absence of redirects,
 #                                   and an access log without the Cookie header
-#   scripts/image.sh serve          Serve the built image on
-#                                   http://127.0.0.1:4173
 #   scripts/image.sh save <file>    Write the built image to a tar archive
 #   scripts/image.sh package <dist> <tag>
 #                                   Build the image <tag> from a production
@@ -23,13 +21,12 @@
 #                                   nginx configuration of this checkout
 set -euo pipefail
 
-readonly IMAGE="localhost/sentinel-aura:local"
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 # The port on which nginx listens in the container: keep in sync with
 # nginx/default.conf.
 readonly CONTAINER_PORT=8080
-# Vite's port for a preview of the production build, published on the
-# loopback interface only.
-readonly SERVE_PORT=4173
 # Keep in sync with the Containerfile.
 readonly WEB_ROOT="/usr/share/nginx/html"
 
@@ -47,9 +44,6 @@ readonly SECURITY_HEADERS=(
 readonly ENTRY_CACHE_CONTROL="no-cache"
 readonly ASSET_CACHE_CONTROL="public, max-age=31536000, immutable"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-readonly REPO_ROOT
-
 # The state of a test run, the container and the directory of the responses,
 # and the build context of package, removed on exit.
 CONTAINER=""
@@ -60,30 +54,9 @@ RESPONSE_STATUS=""
 RESPONSE_BODY=""
 RESPONSE_HEADERS=""
 
-usage() {
-    cat >&2 <<'EOF'
-Usage: scripts/image.sh <command>
-
-Commands:
-  build          Build the production build, then the image
-  test           Run the built image and check how it serves the build
-  serve          Serve the built image on http://127.0.0.1:4173
-  save <file>    Write the built image to a tar archive
-  package <dist> <tag>
-                 Build the image <tag> from the production build in <dist>,
-                 with the Containerfile and nginx configuration of this
-                 checkout
-EOF
-}
-
-die() {
-    echo "image.sh: $*" >&2
-    exit 1
-}
-
 require_image() {
-    docker image inspect "${IMAGE}" >/dev/null 2>&1 ||
-        die "missing image ${IMAGE}; run 'scripts/image.sh build' first"
+    docker image inspect "${UI_IMAGE}" >/dev/null 2>&1 ||
+        die "missing image ${UI_IMAGE}; run 'scripts/image.sh build' first"
 }
 
 # Records the outcome of one check: the description, then the command whose
@@ -220,12 +193,12 @@ check_missing_asset() {
 image_shell() {
     docker run --rm --network=none --user=0 --entrypoint=sh \
         --cap-drop=ALL --cap-add=DAC_READ_SEARCH --security-opt=no-new-privileges \
-        "${IMAGE}" -c "$1"
+        "${UI_IMAGE}" -c "$1"
 }
 
 check_image_content() {
     local user image_files build_files found
-    user="$(docker image inspect --format '{{.Config.User}}' "${IMAGE}")"
+    user="$(docker image inspect --format '{{.Config.User}}' "${UI_IMAGE}")"
     check "the image user, ${user}, is numeric and not root" numeric_non_root "${user}"
     found="$(image_shell 'find / -xdev \( -name node -o -name nodejs -o -name npm -o -name npx -o -name node_modules \) -print')"
     check "the image contains no Node.js" equals "${found}" ""
@@ -253,7 +226,7 @@ start_container() {
     CONTAINER="sentinel-aura-image-test-$$"
     docker run --detach --name "${CONTAINER}" \
         --cap-drop=ALL --security-opt=no-new-privileges \
-        --publish "127.0.0.1::${CONTAINER_PORT}" "${IMAGE}" >/dev/null
+        --publish "127.0.0.1::${CONTAINER_PORT}" "${UI_IMAGE}" >/dev/null
     BASE_URL="http://$(docker port "${CONTAINER}" "${CONTAINER_PORT}/tcp")"
     local _
     for _ in $(seq 1 50); do
@@ -283,18 +256,13 @@ check_access_log() {
     check "the access log omits the Cookie header" lacks "${logs}" "${cookie#*=}"
 }
 
-require_buildx() {
-    docker buildx version >/dev/null 2>&1 ||
-        die "the Docker Buildx plugin is required; see CONTRIBUTING.md (Development Setup)"
-}
-
 cmd_build() {
     [[ $# -eq 0 ]] || die "build: takes no arguments"
     require_buildx
     "${REPO_ROOT}/scripts/tooling.sh" run build
     [[ -f "${REPO_ROOT}/dist/index.html" ]] ||
         die "the production build wrote no dist/index.html"
-    docker buildx build --load --file "${REPO_ROOT}/Containerfile" --tag "${IMAGE}" \
+    docker buildx build --load --file "${REPO_ROOT}/Containerfile" --tag "${UI_IMAGE}" \
         "${REPO_ROOT}"
 }
 
@@ -348,18 +316,10 @@ cmd_test() {
     echo "image.sh: every check passed" >&2
 }
 
-cmd_serve() {
-    [[ $# -eq 0 ]] || die "serve: takes no arguments"
-    require_image
-    echo "image.sh: serving ${IMAGE} on http://127.0.0.1:${SERVE_PORT}; stop with Ctrl+C" >&2
-    docker run --rm --cap-drop=ALL --security-opt=no-new-privileges \
-        --publish "127.0.0.1:${SERVE_PORT}:${CONTAINER_PORT}" "${IMAGE}"
-}
-
 cmd_save() {
     [[ $# -eq 1 ]] || die "save: takes the path of the archive"
     require_image
-    docker save --output "$1" "${IMAGE}"
+    docker save --output "$1" "${UI_IMAGE}"
 }
 
 # The build context holds what the Containerfile copies, as .dockerignore
@@ -386,8 +346,8 @@ main() {
     local command="$1"
     shift
     case "${command}" in
-        build | test | serve | save | package)
-            "${REPO_ROOT}/scripts/docker-engine.sh" check
+        build | test | save | package)
+            check_docker_engine
             "cmd_${command}" "$@"
             ;;
         -h | --help | help) usage ;;
