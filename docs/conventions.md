@@ -312,18 +312,21 @@ that needs it; content of another kind needs a new row first.
   named after the screen and the state that it shows, never after the test:
   `<screen>.png` for the main state of a screen and `<screen>-<state>.png`
   for each other state that it shows, such as `ticket-list-empty.png`.
-  Transient states, such as loading, and states that the dataset as loaded
-  cannot show have none. A region that changes from one run to the next,
-  such as a date that the dataset computes from the instant of its load
-  (Sentinel `docs/features/platform/example-dataset.md`, Time Base), is
-  masked.
-- A test that takes a reference changes no data that a screen shows, so that
-  every reference shows the dataset as loaded; its own sign-in, which changes
-  only the sessions and the time of last sign-in of its user, is not such a
-  change. It runs before every test of its browser that changes such data:
-  the project named after the browser, which `scripts/dev-env.sh e2e`
-  selects, holds the tests that change such data and depends on a project of
-  the other tests.
+  Transient states, such as loading, and states that a dataset backend
+  cannot produce, such as one that needs an external source (Sentinel
+  `docs/features/platform/example-dataset.md`, Operating a Dataset Backend),
+  have none. A region that changes from one run to the next, such as a date
+  that the dataset computes from the instant of its load (Sentinel
+  `docs/features/platform/example-dataset.md`, Time Base), is masked.
+- A test that changes no data that a screen shows takes the references of
+  the dataset as loaded; its own sign-in, which changes only the sessions and
+  the time of last sign-in of its user, is not such a change. It runs before
+  every test of its browser that changes such data: the project named after
+  the browser, which `scripts/dev-env.sh e2e` selects, holds the tests that
+  change such data and depends on a project of the other tests. A test that
+  changes such data takes the reference of the state that its own change
+  produces, such as the result of an action, showing only data that no other
+  test of its project changes.
 - A change that alters what a screen shows regenerates its references with
   `scripts/dev-env.sh update-screenshots`, which writes those that are new or
   differ, and removes in the same change the references that no test takes
