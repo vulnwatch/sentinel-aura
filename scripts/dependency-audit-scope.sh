@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Decide whether CI must audit the dependencies (scripts/tooling.sh audit).
+# Locally, scripts/ci.sh decides it as for a pull request.
 #
 # The audit is required when a run can change or ship the locked dependency
 # set (docs/deployment.md, Workflow Inventory, Dependency audit):
@@ -23,14 +24,15 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 readonly RELEASE_BRANCH_PREFIX="release-please--"
 
-# Prints the files among DEPENDENCY_FILES that differ between $1 and HEAD.
-# Fails when the base commit is not available.
-changed_dependency_files() {
+# Prints the files among DEPENDENCY_FILES that differ between $1 and the
+# checkout, which no earlier step of the job changes. Fails when the base
+# commit is not available.
+changed_since() {
     local base="$1"
     git rev-parse --quiet --verify "${base}^{commit}" >/dev/null ||
         git fetch --no-tags --quiet --depth=1 origin "${base}" >/dev/null 2>&1 ||
         return 1
-    git diff --name-only "${base}" HEAD -- "${DEPENDENCY_FILES[@]}"
+    changed_dependency_files "${base}"
 }
 
 main() {
@@ -64,7 +66,7 @@ main() {
     esac
 
     if [[ -n "${base}" ]]; then
-        if changed="$(changed_dependency_files "${base}")"; then
+        if changed="$(changed_since "${base}")"; then
             if [[ -n "${changed}" ]]; then
                 reason="dependency files changed: ${changed//$'\n'/, }"
             else

@@ -3,7 +3,8 @@
 # source after setting their strict mode (docs/conventions.md, Shell
 # Scripting): their diagnostics and usage, the identity of the clone, the
 # development server and the UI's image, the files of the installed
-# dependencies, the supported Sentinel version and image digest of contract/,
+# dependencies and their changes, the directory of the generated API client,
+# the supported Sentinel version and image digest of contract/,
 # the checks of the container engine, and the digest that an image tag names
 # in its registry.
 
@@ -66,9 +67,19 @@ readonly UI_IMAGE="localhost/sentinel-aura:local"
 
 # The files that define the installed dependencies: a change of one needs a
 # new installation (scripts/tooling.sh) and the dependency audit
-# (scripts/dependency-audit-scope.sh).
-# shellcheck disable=SC2034  # used by the scripts that source this file
+# (scripts/dependency-audit-scope.sh in CI, scripts/ci.sh locally).
 readonly DEPENDENCY_FILES=(package.json package-lock.json .npmrc)
+
+# Prints the files of DEPENDENCY_FILES that differ between the commit $1 and
+# the working tree, one per line.
+changed_dependency_files() {
+    git -C "${REPO_ROOT}" diff --name-only "$1" -- "${DEPENDENCY_FILES[@]}"
+}
+
+# The directory of the generated API client: keep in sync with
+# orval.config.ts.
+# shellcheck disable=SC2034  # used by the scripts that source this file
+readonly GENERATED_DIR="src/api/generated"
 
 # The files of contract/ that declare the supported Sentinel version and pin
 # the digest of its image (docs/architecture.md, Backend Contract), relative

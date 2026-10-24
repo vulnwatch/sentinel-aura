@@ -3,8 +3,8 @@
 # Scripting): shellcheck and shfmt on every shell script, library, and Git
 # hook, and actionlint on every workflow, which also runs shellcheck on its
 # run: blocks. shfmt takes its settings from .editorconfig. The Shell Lint job
-# of .github/workflows/ci.yml lints the tracked files, and
-# .githooks/pre-commit the staged ones.
+# of .github/workflows/ci.yml and scripts/ci.sh all lint the tracked files,
+# and .githooks/pre-commit the staged ones.
 #
 # Usage:
 #   scripts/lint-shell.sh            Lint the tracked files

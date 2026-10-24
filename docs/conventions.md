@@ -346,6 +346,9 @@ that needs it; content of another kind needs a new row first.
 - Every change also passes the end-to-end tests, which CI runs as a required
   check too (`docs/deployment.md`, Workflow Inventory) and
   `scripts/dev-env.sh e2e` runs locally.
+- Before pushing, run `scripts/ci.sh all`: it runs locally every check of the
+  required `Shell Lint`, `UI Checks`, and `End-to-End Tests` jobs, as CI runs
+  them (`docs/deployment.md`, Workflow Inventory, Local run).
 - Code uses no `any`. A lint rule is disabled only inline, for the smallest
   span, with a comment that explains why the finding is a false positive or
   an accepted trade-off. The generated API client is the only exception: it
