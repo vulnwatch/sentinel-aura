@@ -275,13 +275,13 @@ cmd_e2e() {
         update=true
         shift
     fi
-    [[ $# -ge 2 ]] ||
-        die "e2e: takes a container and a Playwright project; use 'scripts/dev-env.sh e2e'"
+    local callers="use 'scripts/dev-env.sh e2e' or 'test', or 'scripts/image.sh test'"
+    [[ $# -ge 2 ]] || die "e2e: takes a container and a Playwright project; ${callers}"
     local container="$1" project="$2"
     shift 2
     [[ "${project}" =~ ^[a-z][a-z0-9-]*$ ]] || die "e2e: invalid project '${project}'"
     [[ "$(docker container inspect --format '{{.State.Running}}' "${container}" 2>/dev/null)" == true ]] ||
-        die "e2e: no running container ${container}; use 'scripts/dev-env.sh e2e'"
+        die "e2e: no running container ${container}; ${callers}"
     ensure_installed
     local -a mounts=() args=(--project="${project}")
     add_writable_mounts mounts "${OUTPUT_DIRS[@]}"

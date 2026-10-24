@@ -105,10 +105,11 @@ request_inside() {
 }
 
 # Starts the container with the settings of the Pod Security restricted
-# profile, without a published port: the tests run in its network namespace.
+# profile, without a network: the tests run in its network namespace, where
+# they reach nginx on the loopback interface.
 start_container() {
     CONTAINER="sentinel-aura-image-test-$$"
-    docker run --detach --name "${CONTAINER}" \
+    docker run --detach --name "${CONTAINER}" --network=none \
         --cap-drop=ALL --security-opt=no-new-privileges "${UI_IMAGE}" >/dev/null
     local _
     for _ in $(seq 1 50); do
