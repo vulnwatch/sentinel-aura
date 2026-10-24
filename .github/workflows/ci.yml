@@ -3,8 +3,9 @@ name: CI
 # Required quality gates. See docs/deployment.md (CI Pipeline) for this
 # workflow's place in the pipeline and for the required status checks. The UI
 # Checks and End-to-End Tests jobs run their checks through scripts/ci.sh,
-# which also runs them locally, so this file lists none of them; it keeps
-# what needs the run: the audit scope, artifacts, and the Codecov secret.
+# which also runs them locally, so this file lists none of them but the
+# dependency audit, which depends on the event of the run; it also keeps the
+# artifacts and the Codecov secret.
 
 on:
   push:

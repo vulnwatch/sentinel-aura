@@ -228,13 +228,15 @@ them on every pull request.
   are downloaded, `all` takes a few minutes.
 - The checks read your working tree, so you can run them before committing;
   the check of the generated API client leaves the working tree as it was.
-- A job stops at its first failed check, which the output names
-  (`ci.sh: <check> failed`); `all` ends with the list of the jobs that
+  The shell lint checks the files that Git tracks: `git add` a new script or
+  workflow first.
+- `ui-checks` and `e2e` stop at their first failed check, which the output
+  names (`ci.sh: <check> failed`); `all` ends with the list of the jobs that
   failed.
-- `PR Metadata`, which needs the pull request, the Renovate validation, the
-  image scan, and the coverage upload run only in CI;
-  `scripts/check-pr-metadata.sh` checks a title and a body locally
-  ([Workflow Inventory](docs/deployment.md#workflow-inventory)).
+- `scripts/ci.sh` does not run what needs a CI run: the `PR Metadata` check,
+  which needs the pull request; the Renovate validation; the image scan; and
+  the coverage upload. `scripts/check-pr-metadata.sh` checks a title and a
+  body locally ([Workflow Inventory](docs/deployment.md#workflow-inventory)).
 
 ### Trying a Pull Request
 

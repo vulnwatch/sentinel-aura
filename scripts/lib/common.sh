@@ -4,9 +4,9 @@
 # Scripting): their diagnostics and usage, the identity of the clone, the
 # development server and the UI's image, the files of the installed
 # dependencies and their changes, the directory of the generated API client,
-# the supported Sentinel version and image digest of contract/,
-# the checks of the container engine, and the digest that an image tag names
-# in its registry.
+# the supported Sentinel version and image digest of contract/, the checks of
+# the container engine, and the digest that an image tag names in its
+# registry.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly REPO_ROOT

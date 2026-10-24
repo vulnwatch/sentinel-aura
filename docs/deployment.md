@@ -42,24 +42,27 @@ prevents a merge.
 **Local run.** The `UI Checks` and `End-to-End Tests` jobs run their checks
 through `scripts/ci.sh` (Workflow Conventions, Checks in a script), which runs
 them locally too: `scripts/ci.sh ui-checks` and `scripts/ci.sh e2e` run the
-checks of one job, which stops at its first failed check; in CI each check is
-a log group. `scripts/ci.sh all`, the check to run before pushing
+checks of one job and stop at its first failed check; in CI each check is a
+log group. `scripts/ci.sh all`, the check to run before pushing
 (`docs/conventions.md`, Checks), runs `scripts/lint-shell.sh` as `Shell Lint`
 does, then the checks of `UI Checks`, then those of `End-to-End Tests`, each
-job even when an earlier one failed, and fails when one of them failed. The
-checks read the working tree, so the command runs before a commit, and the
-check of the generated API client compares the client that it generates with
-the one of the working tree, which it leaves unchanged. Locally, `ui-checks`
-also runs the dependency audit, which in CI the workflow decides from the
-event of the run (Dependency audit), in the cases in which a pull request runs
-it: when `package.json`, `package-lock.json`, or `.npmrc` differ between the
-merge base with `origin/master` and the working tree, or when that merge base
-cannot be found. `PR Metadata`, which needs the pull request,
-`renovate-validation.yml`, the image scan, and the upload of `Coverage
-Upload` do not run locally.
+job even when an earlier one failed, and fails when one of them failed.
+
+The checks read the working tree, so the command runs before a commit;
+`scripts/lint-shell.sh` lints the files that Git tracks, so a new script or
+workflow is added to the index first. The check of the generated API client
+compares the client that it generates with the one of the working tree, which
+it leaves unchanged. Locally, `ui-checks` runs the dependency audit in the
+cases in which a pull request runs it: when `package.json`,
+`package-lock.json`, or `.npmrc` differ between the merge base with
+`origin/master` and the working tree, or when that merge base cannot be
+found; in CI, the workflow decides it from the event of the run (Dependency
+audit). `scripts/ci.sh` does not run what needs a CI run: `PR Metadata`, which
+needs the pull request; `renovate-validation.yml`; the image scan; and the
+upload of `Coverage Upload`.
 
 `scripts/check-pr-metadata.sh` reads the pull request fields from environment
-variables, so it also runs locally:
+variables, so it also runs locally, on its own:
 
 ```bash
 PR_TITLE='docs: describe the empty state of the CVE list' \
@@ -239,9 +242,10 @@ checks exists once and a branch that passes them locally does not fail them in
 CI: `Shell Lint` runs `scripts/lint-shell.sh`, and `UI Checks` and `End-to-End
 Tests` run `scripts/ci.sh` (Workflow Inventory, Local run). The workflow keeps
 what the script must not receive or cannot decide: a step that needs a secret
-or a write permission, a condition on the event of the run, such as the
-dependency audit scope, and the steps that use an action, such as the artifact
-uploads. The script receives neither a secret nor a write permission.
+or a write permission, a condition on the event of the run and the check that
+it gates, such as the dependency audit scope and the audit, and the steps that
+use an action, such as the artifact uploads. The script receives neither a
+secret nor a write permission.
 
 ### Dependency Updates
 
