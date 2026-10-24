@@ -613,7 +613,7 @@ remove_preview_state() {
 cmd_preview() {
     [[ $# -eq 1 && "$1" =~ ^[1-9][0-9]{0,8}$ ]] ||
         die "preview: takes the number of a pull request of ${REPOSITORY}"
-    local pr="$1" pull_request state commit run local_files
+    local pr="$1" pull_request state commit run local_files version digest
     command -v gh >/dev/null 2>&1 || die "preview needs the GitHub CLI, gh; ${SETUP}"
     gh auth status >/dev/null 2>&1 || die "gh is not signed in; run 'gh auth login'"
     prepare
@@ -631,12 +631,20 @@ cmd_preview() {
     gh run download "${run}" --repo "${REPOSITORY}" --name "${PREVIEW_ARTIFACT}" \
         --dir "${WORK_DIR}/build" ||
         die "cannot download the build of CI run ${run}, which is kept for seven days; run 'gh run rerun ${run} --repo ${REPOSITORY}', then preview again"
-    SENTINEL_VERSION="$(version_in "${WORK_DIR}/build/${VERSION_FILE}")"
-    SENTINEL_DIGEST="$(digest_in "${WORK_DIR}/build/${DIGEST_FILE}")"
-    # Only a published release is used (Sentinel docs/deployment.md, Release
-    # Publication and Immutability), by the digest that its tag names.
-    "${REPO_ROOT}/scripts/sentinel-contract.sh" verify-release \
-        "${SENTINEL_VERSION}" "${SENTINEL_DIGEST}"
+    # The supported version of this checkout runs by its pinned digest
+    # (docs/architecture.md, Backend Contract). Another version runs only as
+    # a published release (Sentinel docs/deployment.md, Release Publication
+    # and Immutability), by the digest that its tag names.
+    version="$(version_in "${WORK_DIR}/build/${VERSION_FILE}")"
+    digest="$(digest_in "${WORK_DIR}/build/${DIGEST_FILE}")"
+    if [[ "${version}" == "${SENTINEL_VERSION}" ]]; then
+        [[ "${digest}" == "${SENTINEL_DIGEST}" ]] ||
+            die "pull request #${pr} pins ${digest} for Sentinel ${version}, not ${SENTINEL_DIGEST}, the digest that this checkout pins"
+    else
+        "${REPO_ROOT}/scripts/sentinel-contract.sh" verify-release "${version}" "${digest}"
+    fi
+    SENTINEL_VERSION="${version}"
+    SENTINEL_DIGEST="${digest}"
     SENTINEL_AURA_UI_IMAGE="${PREVIEW_IMAGE}"
     "${REPO_ROOT}/scripts/image.sh" package "${WORK_DIR}/build/dist" "${PREVIEW_IMAGE}"
 

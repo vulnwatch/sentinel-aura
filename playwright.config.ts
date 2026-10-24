@@ -34,6 +34,10 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
+  // scripts/dev-env.sh e2e selects the project named after each browser.
+  // Tests that change data that a screen shows belong to it, and it then
+  // depends on a project of the browser's other tests, with the same output
+  // directory (docs/conventions.md, End-to-End Tests).
   projects: [
     {
       name: "chromium",

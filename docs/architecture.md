@@ -126,9 +126,9 @@ consumers pin exact versions rather than version ranges (Sentinel
   (Sentinel `docs/deployment.md`, Release Publication and Immutability), so a
   tag that moves for the same version is reported to Sentinel, and the pin is
   kept. The pin does not verify the provenance attestations of the image,
-  which Sentinel's consumer procedure also describes: the backends that run
-  it hold only fictional data and run unprivileged on a developer's host or
-  a CI runner, which is an accepted risk.
+  which Sentinel's consumer procedure also describes. Not verifying them is
+  an accepted risk: the backends that run the image hold only fictional data
+  and run unprivileged on a developer's host or a CI runner.
 - The API types that the UI uses are generated from the copy, not written by
   hand, so that a change of the contract becomes a visible change of the
   generated types.
@@ -428,12 +428,13 @@ daemon's socket can start a privileged container. The containers do not
 receive the socket, so dependency code cannot use it. A developer of Sentinel
 who uses Docker Engine's default daemon has this access already.
 
-For local development and the end-to-end tests, the Sentinel backend runs from
-Sentinel's published image at the supported version, by its pinned digest
-(Backend Contract), with the PostgreSQL and Redis that it requires (Sentinel
-`docs/deployment.md`, Software Requirements), in containers of the same
-engine; Sentinel's image does not depend on a specific runtime (Sentinel
-`docs/architecture.md`, Design Constraints). Docker Compose starts them from
+For local development, the end-to-end tests, and the local preview, the
+Sentinel backend runs from Sentinel's published image at the supported
+version, by its pinned digest (Backend Contract), with the PostgreSQL and
+Redis that it requires (Sentinel `docs/deployment.md`, Software
+Requirements), in containers of the same engine; Sentinel's image does not
+depend on a specific runtime (Sentinel `docs/architecture.md`, Design
+Constraints). Docker Compose starts them from
 `compose.yaml`, through `scripts/dev-env.sh` (Backend orchestration, below).
 That backend holds fictional data only: it is loaded with Sentinel's example
 dataset, which the image of the supported version provides (Sentinel
@@ -540,9 +541,10 @@ the CI of the pull request's latest commit tested (`docs/deployment.md`,
 Workflow Inventory), builds the UI's image from it with the `Containerfile`
 and the nginx configuration of the local checkout, and runs it behind the
 reverse proxy of the end-to-end environment against a new dataset backend,
-at the supported version and image digest that the pull request declares,
-once it has verified that the version is a published Sentinel release whose
-tag names that digest (Backend Contract). The proxy is published on the
+at the supported version and image digest that the pull request declares:
+the checkout's pinned digest for the checkout's supported version, and for
+another version only a published Sentinel release whose tag names that
+digest (Backend Contract). The proxy is published on the
 loopback interface only, on `http://localhost:4173`. The preview also needs
 the GitHub CLI on the host, which downloads the build.
 

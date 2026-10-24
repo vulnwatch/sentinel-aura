@@ -454,8 +454,9 @@ For every code change, satisfy every test and check that the repository defines
 for the changed artifacts. For documentation, run the checks that the
 repository defines for documentation. After OpenCode tooling changes, verify
 `.opencode/README.md`, resolved agents and configuration, and restart behavior.
-A pull request that changes what the UI shows includes screenshots with
-fictional data and updates the affected screen document with what was built.
+A pull request that changes what the UI shows meets the Screenshots
+requirement of `docs/conventions.md` (Pull Request Requirements) and updates
+the affected screen document with what was built.
 
 Do not call work complete until applicable authorities, tests, checks,
 reviewers, and Sentinel contract verification are satisfied and all accepted

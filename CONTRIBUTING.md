@@ -88,7 +88,7 @@ needs the [GitHub CLI](https://cli.github.com/), `gh`, signed in.
 | `scripts/tooling.sh npm <args>` | Run npm with write access to `package.json` and `package-lock.json`, for example to update a dependency |
 | `scripts/tooling.sh audit` | Audit the installed dependencies: their registry signatures and attestations (`npm audit signatures`) and their known vulnerabilities (`npm audit`), as CI does when the dependencies change |
 | `scripts/tooling.sh dev <network> [<port>]` | Start the development server in the network of a [local backend](#local-backend), published on the loopback interface only; `scripts/dev-env.sh start` runs it for you |
-| `scripts/tooling.sh e2e [--update] <container> [args]` | Run the end-to-end tests in the network namespace of the reverse proxy of an end-to-end environment; `scripts/dev-env.sh e2e` runs it for you ([End-to-End Tests](#end-to-end-tests)) |
+| `scripts/tooling.sh e2e [--update] <container> <browser> [args]` | Run the end-to-end tests in `<browser>` in the network namespace of the reverse proxy of an end-to-end environment; `scripts/dev-env.sh e2e` runs it for you ([End-to-End Tests](#end-to-end-tests)) |
 | `scripts/tooling.sh clean` | Remove the dependency directory of the clone |
 
 - The repository is mounted read-only. A command writes only the outputs,
@@ -230,8 +230,9 @@ preview and removes it with its data.
   command suggests) and preview again.
 - The pull request contributes only its production build, static files that
   nginx serves to your browser, and the Sentinel version and image digest
-  that it declares, which the command accepts only for a published Sentinel
-  release whose tag names that digest: nothing of it runs on your host. The
+  that it declares, which the command accepts only as your checkout's pinned
+  digest of the same version, or as a published Sentinel release whose tag
+  names that digest: nothing of it runs on your host. The
   `Containerfile`, the nginx and reverse proxy configuration, `compose.yaml`,
   and the scripts come from your checkout, so run the command from an
   up-to-date `master`. When the pull request changes one of these files, the

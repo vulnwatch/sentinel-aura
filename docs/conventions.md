@@ -195,7 +195,8 @@ that needs it; content of another kind needs a new row first.
 - The UI calls Sentinel's API only through the client that Orval generates
   from the pinned OpenAPI document: its request functions and TanStack Query
   hooks (`docs/architecture.md`, Backend Contract and API Client Generation).
-  No other module calls `fetch` or `XMLHttpRequest` or builds an API URL.
+  No other module under `src/` calls `fetch` or `XMLHttpRequest` or builds an
+  API URL.
 - The generated code is never edited by hand, and its types are the API
   types: no module declares an API type itself. A change comes from the
   pinned OpenAPI document, from the generator's configuration,
@@ -300,23 +301,28 @@ that needs it; content of another kind needs a new row first.
   A test relies only on the dataset as loaded and on the data that it
   creates itself, which it finds by what it created, not by a count or a
   position that another test could change. A test that changes data changes
-  only data that no other test reads; a failed sign-in counts toward the
-  lockout of its user (Sentinel
+  only data that no test that runs after it relies on; a failed sign-in
+  counts toward the lockout of its user (Sentinel
   `docs/features/identity/local-authentication.md`, Account lockout), so it
   uses a user that no other test signs in as.
+- A test may send requests to the API itself, for example to check the
+  environment or to create the data that it uses.
 - A screenshot is a reference in `test/e2e/screenshots/`, taken in Chromium,
   named after the screen and the state that it shows, never after the test:
   `<screen>.png` for the main state of a screen and `<screen>-<state>.png`
   for each other state that it shows, such as `ticket-list-empty.png`.
-  Transient states, such as loading, have none. A region that changes from
-  one run to the next, such as a date that the dataset computes from the
-  instant of its load (Sentinel `docs/features/platform/example-dataset.md`,
-  Time Base), is masked.
-- A test that takes a reference changes no data, and runs before every test
-  of its browser that changes data that a screen shows, so that every
-  reference shows the dataset as loaded, whatever other tests do. Playwright
-  orders them through a project of each browser for the tests that change
-  such data, which depends on the project of the other tests.
+  Transient states, such as loading, and states that the dataset as loaded
+  cannot show have none. A region that changes from one run to the next,
+  such as a date that the dataset computes from the instant of its load
+  (Sentinel `docs/features/platform/example-dataset.md`, Time Base), is
+  masked.
+- A test that takes a reference changes no data that a screen shows, so that
+  every reference shows the dataset as loaded; its own sign-in, which changes
+  only the sessions and the time of last sign-in of its user, is not such a
+  change. It runs before every test of its browser that changes such data:
+  the project named after the browser, which `scripts/dev-env.sh e2e`
+  selects, holds the tests that change such data and depends on a project of
+  the other tests.
 - A change that alters what a screen shows regenerates its references with
   `scripts/dev-env.sh update-screenshots`, which writes those that are new or
   differ, and removes in the same change the references that no test takes
@@ -556,9 +562,9 @@ the commit message on `master`.
 - **Description**: at minimum: issue linkage, owning documents (foundation
   and screen documents of this repository and the Sentinel specifications
   relied on), scope summary, test evidence, the reference screenshots that
-  it changes when required,
-  delegated decisions, new dependencies, reviewer results, manual
-  verification notes. The pull request template provides these sections.
+  it changes when required, delegated decisions, new dependencies, reviewer
+  results, manual verification notes. The pull request template provides
+  these sections.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
   reason>` for an exempt human-authored PR under "Issues and work units"
   in Workflow. Use an `- Issue linkage:` field, or a standalone
@@ -572,8 +578,8 @@ the commit message on `master`.
   reference screenshots of the affected screens (End-to-End Tests), which its
   diff shows, taken with the fictional example dataset (Example Data in
   Documentation), and updates the affected screen document with what was
-  built; a change that only a transient state shows, which has no reference,
-  is described in the PR instead. The repository owner approves such a
+  built; a change that only a state without a reference shows (End-to-End
+  Tests) is described in the PR instead. The repository owner approves such a
   change by looking at the result, in the diff and, when useful, in a local
   preview of the PR (`scripts/dev-env.sh preview`; `docs/architecture.md`,
   Development Environment).

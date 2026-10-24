@@ -228,11 +228,11 @@ repository runs the bot or creates its pull requests. It tracks:
 - the PostgreSQL, Redis, and nginx images of `compose.yaml`, which runs the
   backend of local development, the end-to-end tests, and the local preview
   (`docs/architecture.md`, Development Environment), by version and digest,
-  through the `docker-compose` manager. It skips Sentinel's image, whose version and
-  digest `scripts/dev-env.sh` takes from `contract/` (Sentinel version), and
-  the UI's image, which is built locally. The nginx image of `compose.yaml` is
-  the base image of the `Containerfile`, and both are updated in one `nginx`
-  pull request;
+  through the `docker-compose` manager. It skips Sentinel's image, whose
+  version and digest `scripts/dev-env.sh` takes from `contract/` (Sentinel
+  version), and the UI's image, which is built locally. The nginx image of
+  `compose.yaml` is the base image of the `Containerfile`, and both are
+  updated in one `nginx` pull request;
 - the Renovate image of `renovate-validation.yml`, by version and digest,
   through a custom regex manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a

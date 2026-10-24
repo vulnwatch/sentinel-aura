@@ -20,7 +20,7 @@
 
 ## Screenshots
 
-<!-- Required when the PR changes what the UI shows: list the reference screenshots under test/e2e/screenshots/ that the PR adds, updates, or removes, which the diff shows (docs/conventions.md, Pull Request Requirements). Try the PR with `scripts/dev-env.sh preview <number>`. Write "N/A" otherwise. -->
+<!-- Required when the PR changes what the UI shows: list the reference screenshots under test/e2e/screenshots/ that the PR adds, updates, or removes, which the diff shows (docs/conventions.md, Pull Request Requirements). Describe a change that only a state without a reference shows. Try the PR with `scripts/dev-env.sh preview <number>`. Write "N/A" otherwise. -->
 
 N/A
 
