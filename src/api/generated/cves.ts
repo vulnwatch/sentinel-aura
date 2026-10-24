@@ -1394,4 +1394,3 @@ export const useRefetchCve = <
 > => {
   return useMutation(getRefetchCveMutationOptions(options), queryClient);
 };
-// break test: hand edit of the generated client
