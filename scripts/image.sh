@@ -99,7 +99,9 @@ expected_labels() {
         --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format=%cd)" ||
         die "cannot read the time of the checkout's commit"
     sentinel="$(declared_version)"
-    # The base image names its own maintainers, and this image states none.
+    # The title, description, and licenses: keep in sync with the name,
+    # description, and license of package.json. The base image names its own
+    # maintainers, and this image states none.
     printf '%s\n' \
         "maintainer=" \
         "org.opencontainers.image.created=${created}" \

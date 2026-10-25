@@ -586,10 +586,9 @@ plugins, the GitHub CLI, Git, and `curl`. The tooling container cannot run
 them, because it receives neither the Docker daemon's socket nor credentials
 (Development Environment). The rest of that code processes what those tools
 return, such as JSON, with `jq`, and validates values with regular
-expressions. The
-checks of the HTTP responses of the UI's image and of the environments need
-nothing of the host, and run as Playwright tests in the container
-(`docs/conventions.md`, End-to-End Tests).
+expressions. The checks of the HTTP responses of the UI's image and of the
+environments need nothing of the host, and run as Playwright tests in the
+container (`docs/conventions.md`, End-to-End Tests).
 
 | Option | Impact |
 |---|---|
@@ -788,17 +787,16 @@ dependencies that reach the browser bring about 30 packages in total.
 
 ### Packaging and Serving
 
-**Choice:** a release publishes an OCI image that serves the production build
-with nginx, `ghcr.io/vulnwatch/sentinel-aura`, with its SBOM and signed
+**Choice:** a release publishes `ghcr.io/vulnwatch/sentinel-aura`, an OCI
+image that serves the production build with nginx, with its SBOM and signed
 attestations (`docs/deployment.md`, Release Process). The image is built on
-the official unprivileged nginx image,
-pinned by version and digest, runs as a non-root user, and contains only
-nginx, its configuration, and the static files. The `Containerfile` builds it
-from the production build, and `nginx/default.conf` configures its server,
-which listens on port 8080; the image declares the base image's user
-numerically, as `101:101`. On the Sentinel host, the reverse proxy or ingress
-routes to this image every path that is not `/api` or under `/api/` (Same
-Origin). The image:
+the official unprivileged nginx image, pinned by version and digest, runs as
+a non-root user, and contains only nginx, its configuration, and the static
+files. The `Containerfile` builds it from the production build, and
+`nginx/default.conf` configures its server, which listens on port 8080; the
+image declares the base image's user numerically, as `101:101`. On the
+Sentinel host, the reverse proxy or ingress routes to this image every path
+that is not `/api` or under `/api/` (Same Origin). The image:
 
 - answers every path outside the build's asset directory that is not a file
   of the build, `/auth/callback` included, with the application's entry

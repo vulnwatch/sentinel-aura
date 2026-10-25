@@ -2,15 +2,17 @@
 # Check and publish the release of a version tag that release-please created
 # (docs/deployment.md, Release Process). The Publish Release job of
 # .github/workflows/release.yml runs it for the tag of its run,
-# GITHUB_REF_NAME, with the GitHub CLI authenticated by GH_TOKEN, a token that
-# may write the contents of the repository and therefore sees draft
-# releases. It needs jq, which the runner provides.
+# GITHUB_REF_NAME, and the commit that the tag names, GITHUB_SHA, with the
+# GitHub CLI authenticated by GH_TOKEN, a token that may write the contents of
+# the repository and therefore sees draft releases. It needs jq, which the
+# runner provides.
 #
 # Usage:
 #   scripts/release.sh check     Fail unless the tag is a version tag, such as
 #                                v1.2.3, whose version package.json declares,
-#                                and names a draft GitHub Release and no
-#                                published one, which is final
+#                                and names a draft GitHub Release of its
+#                                commit, which release-please creates with the
+#                                tag, and no published one, which is final
 #   scripts/release.sh publish <image> <sbom> <sbom-bundle> <provenance-bundle>
 #                                Attach to the draft release of the tag, as
 #                                its assets, the SBOM of the image <image>, a
@@ -41,16 +43,18 @@ remove_work_dir() {
 # Prints the version of the tag GITHUB_REF_NAME, without its "v".
 release_version() {
     local tag="${GITHUB_REF_NAME:-}"
-    [[ "${tag}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]] ||
+    if [[ "${tag}" != v* ]] || ! is_version "${tag#v}"; then
         die "the tag '${tag}' is not a version tag such as v1.2.3"
-    printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+    printf '%s\n' "${tag#v}"
 }
 
-# Prints "draft" or "published" for each GitHub Release of the tag $1, which
-# release_version validated.
+# Prints, for each GitHub Release of the tag $1, which release_version
+# validated, "published", or "draft" and the commit that the draft targets,
+# the commit of release-please's tag.
 release_states() {
     gh api --paginate "repos/${REPOSITORY}/releases?per_page=100" \
-        --jq ".[] | select(.tag_name == \"$1\") | if .draft then \"draft\" else \"published\" end"
+        --jq ".[] | select(.tag_name == \"$1\") | if .draft then \"draft \(.target_commitish)\" else \"published\" end"
 }
 
 # Fails unless the file $1 is a Sigstore bundle.
@@ -83,8 +87,9 @@ EOF
 
 cmd_check() {
     [[ $# -eq 0 ]] || die "check: takes no arguments"
-    local version declared states
+    local version commit="${GITHUB_SHA:-}" declared states
     version="$(release_version)"
+    [[ "${commit}" =~ ^[0-9a-f]{40}$ ]] || die "GITHUB_SHA must name the commit of the tag"
     declared="$(jq -r '.version' "${REPO_ROOT}/package.json")" ||
         die "cannot read the version of package.json"
     [[ "${declared}" == "${version}" ]] ||
@@ -93,9 +98,11 @@ cmd_check() {
         die "cannot list the releases of ${REPOSITORY}"
     [[ "${states}" != *published* ]] ||
         die "release v${version} is already published, so its image and assets are final; ship a change as a new release"
-    [[ "${states}" == *draft* ]] ||
-        die "the tag v${version} has no draft release, which release-please creates with the tag"
-    echo "release.sh: v${version} is a draft release of version ${version}" >&2
+    # A tag that release-please did not create, or that names another commit,
+    # publishes nothing.
+    [[ $'\n'"${states}"$'\n' == *$'\n'"draft ${commit}"$'\n'* ]] ||
+        die "the tag v${version} has no draft release of its commit ${commit:0:7}, which release-please creates with the tag"
+    echo "release.sh: v${version} is a draft release of commit ${commit:0:7}, version ${version}" >&2
 }
 
 cmd_publish() {

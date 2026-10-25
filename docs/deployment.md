@@ -112,8 +112,8 @@ change cannot merge with a known vulnerability.
 
 **Image test.** `scripts/image.sh build` runs the production build through
 `scripts/tooling.sh`, then builds the image of `docs/architecture.md`
-(Packaging and Serving) from the `Containerfile`, so Node.js never enters the
-image, with the labels of Release Process (Image). `scripts/image.sh test`
+(Packaging and Serving), with its labels (Release Process, Image), from the
+`Containerfile`, so Node.js never enters the image. `scripts/image.sh test`
 runs that image with the settings of the Pod Security `restricted` profile,
 without a network, and fails unless:
 
@@ -136,8 +136,8 @@ without a network, and fails unless:
 - the access log records a request but not the value of its `Cookie` header.
 
 The script checks the labels, the user, the content, the processes, and the
-access log through Docker; the `image` project of the end-to-end tests checks the
-responses, in the network namespace of the container, where
+access log through Docker; the `image` project of the end-to-end tests checks
+the responses, in the network namespace of the container, where
 `scripts/tooling.sh e2e` runs it and reaches nginx on the loopback interface
 (`docs/conventions.md`, End-to-End Tests).
 
@@ -651,7 +651,8 @@ between, and a host that upgrades skips them.
    - `Publish Release` runs no code of the dependencies. Before anything
      else, `scripts/release.sh check` verifies that the tag is a version tag
      whose version `package.json` declares, and that it names a draft
-     release and no published one. `scripts/image.sh push` then pushes the
+     release whose commit is the tag's and no published release.
+     `scripts/image.sh push` then pushes the
      image, after checking that it is labeled as the release, and returns
      the digest that the registry names for its tag; `actions/attest`
      attests the image's SBOM and build provenance; and
@@ -659,9 +660,9 @@ between, and a host that upgrades skips them.
      the supported Sentinel version into the notes, and publishes the draft,
      as its last action.
 
-A tag that release-please did not create has no draft release, so its run
-publishes nothing. Neither workflow cancels a run in progress (Workflow
-Conventions, Concurrency).
+A tag that release-please did not create, or that names another commit than
+its draft release, publishes nothing. Neither workflow cancels a run in
+progress (Workflow Conventions, Concurrency).
 
 ### Image
 
@@ -708,8 +709,8 @@ attestations create no storage record (`create-storage-record: false`), which
 would only add the registry to the organization's metadata of linked
 artifacts and need a further permission.
 
-**SBOM scope.** `scripts/image.sh sbom` generates the SBOM with Trivy, from
-the image that the script pins and offline, and checks it. One CycloneDX
+**SBOM scope.** `scripts/image.sh sbom` generates the SBOM with Trivy, run
+offline from the image that the script pins, and checks it. One CycloneDX
 document, whose subject is the image, named `ghcr.io/vulnwatch/sentinel-aura`
 with the image's version, holds two inventories:
 
@@ -755,7 +756,7 @@ immutable.
 | Failure of a `release.yml` run | Repair |
 |---|---|
 | `Build Release Image` fails for a transient cause, such as a download | Re-run failed jobs |
-| `Build Release Image` fails for a cause in the tagged commit | The version cannot be fixed, because its tag never moves: its release stays a draft, and the fix ships in the next release |
+| `Build Release Image` fails for a cause in the tagged commit | The version cannot be fixed, because only release-please creates tags (`docs/conventions.md`, Workflow) and a run publishes only the commit of the draft release: the release stays a draft, and the fix ships in the next release |
 | `Publish Release` fails while the release is a draft | Re-run failed jobs. A rerun can push a new digest; the superseded one was never part of a published release |
 | `Publish Release` fails because release-please created the tag but no draft release | Re-run the `release-please.yml` run that created the tag, which creates the draft, then re-run failed jobs |
 | The seven-day artifact expired while the release is a draft | Re-run all jobs |
@@ -833,6 +834,6 @@ build is reproducible.
 - **Release immutability**, in Settings → General → Releases, is enabled
   (Publication and Immutability).
 - **The `sentinel-aura` package** in the registry is public, so that a
-  deployment pulls and verifies the image without credentials. A new package
-  is private: the repository owner makes it public once, after the first
-  release publishes it; a public package cannot become private again.
+  deployment pulls and verifies the image without registry credentials. A new
+  package is private: the repository owner makes it public once, after the
+  first release publishes it; a public package cannot become private again.
