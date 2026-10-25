@@ -667,9 +667,9 @@ subject when squash-merging instead, in GitHub's merge dialog or with
 `gh pr merge <number> --squash --subject "fix(deps): <description> (#<number>)"`.
 The subject is a valid PR title (Pull Request Requirements) followed by the
 `(#<number>)` suffix that GitHub adds to the default subject. The
-`PR Metadata` check validates only the title, so the maintainer checks the
-subject before confirming the merge. A maintainer's own pull request carries
-`fix(deps):` in its title instead.
+`PR Metadata` check validates the title, not the subject, so the maintainer
+checks the subject before confirming the merge. A maintainer's own pull
+request carries `fix(deps):` in its title instead.
 
 **Branch deletion**: branches are deleted automatically after merge.
 
