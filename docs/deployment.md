@@ -651,14 +651,13 @@ between, and a host that upgrades skips them.
    - `Publish Release` runs no code of the dependencies. Before anything
      else, `scripts/release.sh check` verifies that the tag is a version tag
      whose version `package.json` declares, and that it names a draft
-     release whose commit is the tag's and no published release.
-     `scripts/image.sh push` then pushes the
-     image, after checking that it is labeled as the release, and returns
-     the digest that the registry names for its tag; `actions/attest`
-     attests the image's SBOM and build provenance; and
-     `scripts/release.sh publish` attaches the assets, writes the image and
-     the supported Sentinel version into the notes, and publishes the draft,
-     as its last action.
+     release whose commit is the tag's, and no published release.
+     `scripts/image.sh push` then pushes the image, after checking that it is
+     labeled as the release, and returns the digest that the registry names
+     for its tag; `actions/attest` attests the image's SBOM and build
+     provenance; and `scripts/release.sh publish` attaches the assets, writes
+     the image and the supported Sentinel version into the notes, and
+     publishes the draft, as its last action.
 
 A tag that release-please did not create, or that names another commit than
 its draft release, publishes nothing. Neither workflow cancels a run in
