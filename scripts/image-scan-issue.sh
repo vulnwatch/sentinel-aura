@@ -35,7 +35,7 @@ issue_body() {
     cat <<EOF
 The image scan found ${count} fixable HIGH or CRITICAL vulnerabilities in the image built from \`${GITHUB_SHA}\`. The [workflow run](${RUN_URL}) keeps the complete report.
 
-A fix usually arrives as a Renovate pull request that updates the base image of the \`Containerfile\`; merge it with a \`fix(deps):\` title. See \`docs/deployment.md\` (Workflow Inventory, Image vulnerability scan).
+A fix usually arrives as a Renovate pull request that updates the base image of the \`Containerfile\`. Merge it with a \`fix(deps):\` subject, set when squash-merging rather than by renaming the pull request, whose title Renovate restores: for example \`gh pr merge <number> --squash --subject "fix(deps): <description> (#<number>)"\`. See \`docs/deployment.md\` (Workflow Inventory, Image vulnerability scan) and \`docs/conventions.md\` (Workflow, Squash merge).
 
 | Vulnerability | Severity | Package | Installed | Fixed in |
 |---|---|---|---|---|

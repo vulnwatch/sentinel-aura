@@ -175,12 +175,12 @@ the `Scan Tracking Issue` job. Every run retains the complete report, with
 every severity and the vulnerabilities without a fix, as a 90-day workflow
 artifact. A fix usually arrives as a Renovate pull request that updates the
 base image of the `Containerfile` (Dependency Updates), which a maintainer
-merges with a `fix(deps):` title, so that it is a patch release signal; until
-the base image contains the fix, the issue stays open. nginx itself comes from
-nginx.org's package repository, not from Alpine's, so the scan does not match
-nginx's own advisories: a security release of nginx arrives as a Renovate
-update of the base image, which a maintainer merges with a `fix(deps):` title
-as well.
+merges with a `fix(deps):` subject, so that it is a patch release signal
+(`docs/conventions.md`, Workflow, Squash merge); until the base image
+contains the fix, the issue stays open. nginx itself comes from nginx.org's
+package repository, not from Alpine's, so the scan does not match nginx's own
+advisories: a security release of nginx arrives as a Renovate update of the
+base image, which a maintainer merges with a `fix(deps):` subject as well.
 
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
 repository-level default setup, not through a workflow of this repository. It
@@ -403,8 +403,8 @@ Known vulnerabilities are handled by these complementary mechanisms:
   the minimum release age, or earlier by hand (below); a fix outside those
   ranges needs an update of the dependency that requires it, or an override
   (below). A lock file maintenance pull request that delivers a security fix
-  is merged with a `fix(deps):` title, so that it is a patch release signal
-  too.
+  is merged with a `fix(deps):` subject, so that it is a patch release signal
+  too (`docs/conventions.md`, Workflow, Squash merge).
 - **A fix younger than the minimum release age** cannot be resolved by npm,
   which applies the age when Renovate updates the lockfile: Renovate then
   reports an artifact update problem on the pull request, or opens none until
