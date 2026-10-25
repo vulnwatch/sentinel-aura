@@ -25,6 +25,10 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    env:
+      # Trivy's official image, pinned by version and digest and updated by
+      # Renovate (docs/deployment.md, Dependency Updates).
+      TRIVY_IMAGE: docker.io/aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -33,38 +37,45 @@ jobs:
         run: scripts/image.sh build
       - name: Export the image
         run: scripts/image.sh save "${RUNNER_TEMP}/image.tar"
-      # The npm dependencies are audited separately (Workflow Inventory,
-      # Dependency audit), so the scan covers the operating system packages.
-      - name: Scan for fixable HIGH and CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          scan-type: image
-          input: ${{ runner.temp }}/image.tar
-          format: json
-          output: trivy-fixable.json
-          exit-code: "0"
-          ignore-unfixed: true
-          vuln-type: os
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          version: "v0.76.1"
-      - name: Generate the complete report
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          scan-type: image
-          input: ${{ runner.temp }}/image.tar
-          format: table
-          output: trivy-full.txt
-          exit-code: "0"
-          ignore-unfixed: false
-          vuln-type: os
-          scanners: vuln
-          skip-setup-trivy: true
+      - name: Pull the pinned Trivy image
+        run: docker pull "${TRIVY_IMAGE}"
+      # Trivy runs with the runner's user and group IDs, without capabilities,
+      # on the archive of the image, read-only; it receives neither the Docker
+      # socket nor a token. The npm dependencies are audited separately
+      # (Workflow Inventory, Dependency audit), so the scan covers the
+      # operating system packages. The complete report reuses the
+      # vulnerability database of the first scan.
+      - name: Scan for vulnerabilities
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/trivy" "${RUNNER_TEMP}/trivy-cache"
+          run_trivy() {
+            docker run --rm --pull=never \
+              --user="$(id -u):$(id -g)" \
+              --cap-drop=ALL \
+              --security-opt=no-new-privileges \
+              --volume="${RUNNER_TEMP}/image.tar:/scan/image.tar:ro" \
+              --volume="${RUNNER_TEMP}/trivy-cache:/scan/cache" \
+              --volume="${RUNNER_TEMP}/trivy:/scan/reports" \
+              "${TRIVY_IMAGE}" image \
+              --input=/scan/image.tar \
+              --cache-dir=/scan/cache \
+              --scanners=vuln \
+              --pkg-types=os \
+              --exit-code=0 \
+              --disable-telemetry \
+              --skip-version-check \
+              "$@"
+          }
+          run_trivy --ignore-unfixed --severity=HIGH,CRITICAL \
+            --format=json --output=/scan/reports/trivy-fixable.json
+          run_trivy --skip-db-update \
+            --format=table --output=/scan/reports/trivy-full.txt
       - name: Retain the complete report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: trivy-full
-          path: trivy-full.txt
+          path: ${{ runner.temp }}/trivy/trivy-full.txt
           if-no-files-found: error
           retention-days: 90
       # Handed to the Scan Tracking Issue job, so that the write access to
@@ -73,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: trivy-fixable
-          path: trivy-fixable.json
+          path: ${{ runner.temp }}/trivy/trivy-fixable.json
           if-no-files-found: error
           retention-days: 1
 
