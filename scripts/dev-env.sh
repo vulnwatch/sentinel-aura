@@ -296,7 +296,7 @@ cmd_test() {
     if ! "${REPO_ROOT}/scripts/tooling.sh" e2e "$(dev_server_name "${TEST_PROJECT}")" dev-server; then
         compose "${TEST_PROJECT}" logs --no-color --tail=50 sentinel >&2 || true
         tail -n 50 "${WORK_DIR}/dev-server.log" >&2
-        die "the same-origin checks of the development server failed; test-results/e2e/dev-server/report holds the report"
+        die "the same-origin checks of the development server failed; ${E2E_RESULTS_DIR}/dev-server/report holds the report"
     fi
     echo "dev-env.sh: every check passed" >&2
 }
@@ -340,7 +340,7 @@ run_e2e() {
 # The results of the browsers in an earlier run, so that only those of this
 # one remain; those of the other projects stay.
 remove_e2e_results() {
-    rm -rf -- "${REPO_ROOT}/test-results/e2e/chromium" "${REPO_ROOT}/test-results/e2e/firefox"
+    rm -rf -- "${REPO_ROOT}/${E2E_RESULTS_DIR}/chromium" "${REPO_ROOT}/${E2E_RESULTS_DIR}/firefox"
 }
 
 cmd_e2e() {
@@ -359,7 +359,7 @@ cmd_e2e() {
         run_e2e "${target}" || failed+=("${target}")
     done
     if ((${#failed[@]} > 0)); then
-        die "the end-to-end tests failed in ${failed[*]}; test-results/e2e/<browser>/report holds the report of each browser"
+        die "the end-to-end tests failed in ${failed[*]}; ${E2E_RESULTS_DIR}/<browser>/report holds the report of each browser"
     fi
     echo "dev-env.sh: the end-to-end tests passed in ${browsers[*]}" >&2
 }
@@ -372,7 +372,7 @@ cmd_update_screenshots() {
     "${REPO_ROOT}/scripts/image.sh" build
     remove_e2e_results
     run_e2e chromium --update ||
-        die "the end-to-end tests failed in chromium; test-results/e2e/chromium/report holds the report"
+        die "the end-to-end tests failed in chromium; ${E2E_RESULTS_DIR}/chromium/report holds the report"
     echo "dev-env.sh: test/e2e/screenshots holds the current references; remove those that no test takes any more" >&2
 }
 

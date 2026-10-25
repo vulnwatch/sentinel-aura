@@ -301,7 +301,7 @@ cmd_e2e() {
         args+=(--update-snapshots=changed)
     fi
     run_container --network="container:${container}" "${mounts[@]}" \
-        --env=PLAYWRIGHT_HTML_OUTPUT_DIR="test-results/e2e/${project}/report" -- \
+        --env=PLAYWRIGHT_HTML_OUTPUT_DIR="${E2E_RESULTS_DIR}/${project}/report" -- \
         npm run e2e -- "${args[@]}" "$@"
 }
 

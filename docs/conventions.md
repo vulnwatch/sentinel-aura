@@ -404,12 +404,13 @@ first rule.
 - **Language**: the tooling is written in bash: the scripts and their
   libraries, which run on the host, and the Git hooks, together with the
   processing that their work needs, such as reading JSON or matching regular
-  expressions. The checks of HTTP responses are the one exception: they are
-  written in TypeScript, as Playwright tests in `test/e2e/` (Code
-  Conventions, End-to-End Tests), which the script that starts the checked
-  target runs in the tooling container (`docs/architecture.md`, Development
-  Environment); that script keeps the checks that need Docker. Any other
-  language or runtime is a new dependency (Dependency Admission)
+  expressions. The checks of the HTTP responses of what a script starts, the
+  UI's image and the environments of `scripts/dev-env.sh`, are the one
+  exception: they are written in TypeScript, as Playwright tests in
+  `test/e2e/` (Code Conventions, End-to-End Tests), which that script runs in
+  the tooling container (`docs/architecture.md`, Development Environment);
+  it keeps the checks that need Docker. Any other language or runtime is a
+  new dependency (Dependency Admission)
 - **Owning scripts**: each concern has one owning script under `scripts/`,
   and a new capability of a concern becomes a command of its owner, never a
   new script or a copy:

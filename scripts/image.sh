@@ -171,7 +171,7 @@ cmd_test() {
     start_container
     check_processes
     "${REPO_ROOT}/scripts/tooling.sh" e2e "${CONTAINER}" image ||
-        die "the responses of the image failed their checks; test-results/e2e/image/report holds the report"
+        die "the responses of the image failed their checks; ${E2E_RESULTS_DIR}/image/report holds the report"
     check_access_log
     echo "image.sh: every check passed" >&2
 }
