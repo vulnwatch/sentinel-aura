@@ -37,6 +37,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 readonly RELEASES_URL="https://github.com/vulnwatch/sentinel/releases/download"
+# Sentinel's image, which compose.yaml runs: keep in sync with it.
 readonly IMAGE_NAME="ghcr.io/vulnwatch/sentinel"
 readonly DOCUMENT_FILE="contract/sentinel.openapi.json"
 

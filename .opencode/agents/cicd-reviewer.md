@@ -264,9 +264,7 @@ Provide a structured summary with these sections:
    chain, or create an unprotected publish path
 4. **Documentation drift**: divergence between the changed artifacts and the
    pipeline documentation, `docs/conventions.md`, `CONTRIBUTING.md`, or the
-   script headers, including the syntax of a command stated outside the
-   header of its script, apart from the arguments that a procedure passes on
-   to another tool
+   script headers, including a breach of the Documentation of commands rule
 5. **Verdict**: one of:
    - **Clean** — the change conforms and introduces no pipeline risk
    - **Minor issues** — small deviations that should be fixed but do not

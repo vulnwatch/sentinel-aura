@@ -47,11 +47,10 @@ of the three jobs, including `scripts/lint-shell.sh` as `Shell Lint` runs it,
 and fails when any of them fails.
 
 The checks read the working tree and change no tracked file, so the command
-runs before a commit. Locally, the dependency audit runs in the cases in
-which a pull request runs it; in CI, the workflow decides it from the event
-of the run (Dependency audit). `scripts/ci.sh` does not run what needs a CI
-run: `PR Metadata`, which needs the pull request; `renovate-validation.yml`;
-the image scan; and the upload of `Coverage Upload`.
+runs before a commit. The dependency audit runs locally as for a pull request
+(Dependency audit). `scripts/ci.sh` does not run what needs a CI run:
+`PR Metadata`, which needs the pull request; `renovate-validation.yml`; the
+image scan; and the upload of `Coverage Upload`.
 
 `scripts/check-pr-metadata.sh` also runs locally, on its own, outside a pull
 request. It validates the title of a Renovate pull request (author
@@ -91,11 +90,11 @@ only when the run can change or ship the locked dependency set: a pull request
 or push that changes `package.json`, `package-lock.json`, or `.npmrc`, a
 release-please pull request, a manual run, or a run whose changed files cannot
 be determined. `scripts/dependency-audit-scope.sh` takes that decision;
-locally, `scripts/ci.sh ui-checks` takes it as for a pull request (Local
-run). Other changes skip the audit, so a vulnerability disclosed against an
-unchanged lockfile reaches the repository as a Dependabot alert and a fix
-(Dependency Updates) rather than as a failure of unrelated work, while a
-dependency change cannot merge with a known vulnerability.
+locally, `scripts/ci.sh ui-checks` takes it as for a pull request. Other
+changes skip the audit, so a vulnerability disclosed against an unchanged
+lockfile reaches the repository as a Dependabot alert and a fix (Dependency
+Updates) rather than as a failure of unrelated work, while a dependency
+change cannot merge with a known vulnerability.
 
 **Image test.** `scripts/image.sh build` runs the production build through
 `scripts/tooling.sh`, then builds the image of `docs/architecture.md`
@@ -340,7 +339,7 @@ updated dependency.
 **Local backend.** `End-to-End Tests` runs `scripts/dev-env.sh test` on every
 pull request, so an update of `vite`, the tooling image, or an image of
 `compose.yaml` that breaks the development proxy or the backend of local
-development fails it (`CONTRIBUTING.md`, Local Backend).
+development fails it (Workflow Inventory, End-to-end tests).
 
 **Sentinel version.** Renovate proposes a new supported Sentinel version once
 its GitHub Release is published, outside the weekly schedule, because the UI
