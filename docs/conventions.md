@@ -659,7 +659,17 @@ administrators as well.
 pre-push hook blocks tag pushes locally.
 
 **Squash merge**: the only allowed merge method. The PR title becomes
-the commit message on `master`.
+the commit message on `master`, except where `docs/deployment.md` requires
+a Renovate pull request to land with a `fix(deps):` subject. Renovate
+restores the title that it generates whenever it updates its pull request,
+so a renamed title may not last until the merge: the maintainer sets the
+subject when squash-merging instead, in GitHub's merge dialog or with
+`gh pr merge <number> --squash --subject "fix(deps): <description> (#<number>)"`.
+The subject is a valid PR title (Pull Request Requirements) followed by the
+`(#<number>)` suffix that GitHub adds to the default subject. The
+`PR Metadata` check validates the title, not the subject, so the maintainer
+checks the subject before confirming the merge. A maintainer's own pull
+request carries `fix(deps):` in its title instead.
 
 **Branch deletion**: branches are deleted automatically after merge.
 
@@ -758,8 +768,10 @@ The 72-character hard-wrapping convention remains scoped to:
 
 ### Versioning
 
-PR titles become commit subjects on `master` through squash merge and therefore
-carry the release signal used by release-please, which owns versions and tags:
+The commit subjects on `master` carry the release signal used by
+release-please, which owns versions and tags. Through squash merge they are
+the PR titles, unless the maintainer sets the subject at merge (Workflow,
+Squash merge):
 
 | Commit type | Release signal |
 |-------------|----------------|

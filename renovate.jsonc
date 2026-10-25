@@ -132,8 +132,9 @@
     },
     {
       // A base image update that fixes a vulnerability that the image scan
-      // reports is merged with a fix(deps): title instead — see
-      // docs/deployment.md (Workflow Inventory, Image vulnerability scan).
+      // reports is merged with a fix(deps): subject instead, set when
+      // squash-merging — see docs/deployment.md (Workflow Inventory, Image
+      // vulnerability scan) and docs/conventions.md (Workflow, Squash merge).
       "description": "Base image of the Containerfile, which ships in the UI's image",
       "matchManagers": ["dockerfile"],
       "commitMessagePrefix": "chore(deps):"
