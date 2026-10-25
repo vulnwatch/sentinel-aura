@@ -92,6 +92,19 @@
     },
     {
       "customType": "regex",
+      "description": "Trivy image of the image scan workflow, by version and digest",
+      "managerFilePatterns": ["/^\\.github/workflows/image-scan\\.yml$/"],
+      "matchStrings": [
+        "TRIVY_IMAGE:\\s+docker\\.io/aquasec/trivy:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker",
+      // The package name omits docker.io/, the default registry, so that the
+      // titles of the digest updates stay within the length that the PR
+      // Metadata check allows.
+      "depNameTemplate": "aquasec/trivy"
+    },
+    {
+      "customType": "regex",
       "description": "Action version: inputs that the github-actions manager does not track (e.g. the Codecov CLI of codecov/codecov-action in ci.yml), each marked by a '# renovate: datasource=<datasource> depName=<name>' hint comment directly above it",
       "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
       "matchStrings": [

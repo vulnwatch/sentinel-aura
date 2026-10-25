@@ -158,26 +158,29 @@ repository, and no secret:
 
 **Image vulnerability scan.** `image-scan.yml` builds the image every Monday
 from `master`, and on demand from the branch of the run, and scans it with
-Trivy, through `aquasecurity/trivy-action`, for known vulnerabilities of its
-operating system packages; the npm dependencies have the dependency audit.
-The scan is advisory: a finding never fails the run, and only a scan that does
-not complete does. The `Image Scan` job, which runs the scanner, only reads
-the repository; it hands the report of the fixable HIGH and CRITICAL
-vulnerabilities to the `Scan Tracking Issue` job, the only one that can write
-issues, where `scripts/image-scan-issue.sh` opens an issue labeled `security`
-that lists them, or updates the open one, and closes it once a scan finds
-none. The issue tracks the image of `master`: a manual run on another branch,
-such as the branch of a Renovate pull request, scans the image of that branch
-but skips the `Scan Tracking Issue` job. Every run retains the complete
-report, with every severity and the vulnerabilities without a fix, as a
-90-day workflow artifact. A fix usually arrives as a Renovate pull request
-that updates the base image of the `Containerfile` (Dependency Updates), which
-a maintainer merges with a `fix(deps):` title, so that it is a patch release
-signal; until the base image contains the fix, the issue stays open. nginx
-itself comes from nginx.org's package repository, not from Alpine's, so the
-scan does not match nginx's own advisories: a security release of nginx
-arrives as a Renovate update of the base image, which a maintainer merges with
-a `fix(deps):` title as well.
+Trivy for known vulnerabilities of its operating system packages; the npm
+dependencies have the dependency audit. Trivy runs from its official image,
+pinned by version and digest, in a container with the runner's user and group
+IDs and without capabilities, which reads the archive of the UI's image and
+receives neither the Docker socket nor a token. The scan is advisory: a
+finding never fails the run, and only a scan that does not complete does. The
+`Image Scan` job, which runs the scanner, only reads the repository; it hands
+the report of the fixable HIGH and CRITICAL vulnerabilities to the `Scan
+Tracking Issue` job, the only one that can write issues, where
+`scripts/image-scan-issue.sh` opens an issue labeled `security` that lists
+them, or updates the open one, and closes it once a scan finds none. The issue
+tracks the image of `master`: a manual run on another branch, such as the
+branch of a Renovate pull request, scans the image of that branch but skips
+the `Scan Tracking Issue` job. Every run retains the complete report, with
+every severity and the vulnerabilities without a fix, as a 90-day workflow
+artifact. A fix usually arrives as a Renovate pull request that updates the
+base image of the `Containerfile` (Dependency Updates), which a maintainer
+merges with a `fix(deps):` title, so that it is a patch release signal; until
+the base image contains the fix, the issue stays open. nginx itself comes from
+nginx.org's package repository, not from Alpine's, so the scan does not match
+nginx's own advisories: a security release of nginx arrives as a Renovate
+update of the base image, which a maintainer merges with a `fix(deps):` title
+as well.
 
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
 repository-level default setup, not through a workflow of this repository. It
@@ -251,9 +254,7 @@ root and opens the dependency-update pull requests; no workflow of this
 repository runs the bot or creates its pull requests. It tracks:
 
 - the SHA-pinned actions, through the `github-actions` manager, which updates
-  the SHA and its version comment together, and also tracks the Trivy version
-  that the `version:` input of `aquasecurity/trivy-action` in
-  `image-scan.yml` pins;
+  the SHA and its version comment together;
 - the base image of the `Containerfile`, by version and digest, through the
   `dockerfile` manager;
 - the PostgreSQL, Redis, and nginx images of `compose.yaml`, which runs the
@@ -264,8 +265,9 @@ repository runs the bot or creates its pull requests. It tracks:
   version), and the UI's image, which is built locally. The nginx image of
   `compose.yaml` is the base image of the `Containerfile`, and both are
   updated in one `nginx` pull request;
-- the Renovate image of `renovate-validation.yml`, by version and digest,
-  through a custom regex manager;
+- the Renovate image of `renovate-validation.yml` and the Trivy image of
+  `image-scan.yml`, by version and digest, each through a custom regex
+  manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a
   custom regex manager;
 - the images of `shellcheck`, `shfmt`, and `actionlint` in
@@ -467,16 +469,9 @@ rather than on a list of Renovate-managed paths, validates `renovate.jsonc` in
 strict mode, and performs a read-only lookup with the official Renovate
 container, pinned by version and digest, authenticated by the workflow's
 read-only `GITHUB_TOKEN`. `scripts/check-renovate-log.sh` fails the job when
-the lookup reports a warning for any dependency, with one exception. The
-`aquasecurity` organization admits authenticated requests only from the IP
-addresses of its allow list, which GitHub applies to the token of a workflow
-of an organization repository, so the lookups of `aquasecurity/trivy-action`
-and `aquasecurity/trivy` fail on GitHub-hosted runners. The script tolerates
-the `no-result` warning of these two packages only when the same log records
-that refusal for the same package, and lists the tolerated warnings in its
-output; once the organization lifts the allow list, no warning is tolerated.
-The workflow cannot create branches or pull requests and is not a required
-check: a failure is visible as a red status without blocking the merge.
+the lookup reports a warning for any dependency. The workflow cannot create
+branches or pull requests and is not a required check: a failure is visible as
+a red status without blocking the merge.
 
 ### Local Git Hooks
 
