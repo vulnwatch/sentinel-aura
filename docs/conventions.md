@@ -419,7 +419,8 @@ first rule.
   |---|---|
   | The tooling containers, which run every Node.js command | `scripts/tooling.sh` |
   | The environments: the local backend, the end-to-end environments, and the local preview | `scripts/dev-env.sh` |
-  | The image that serves the UI in production | `scripts/image.sh` |
+  | The image that serves the UI in production: its build, test, SBOM, scan, and push | `scripts/image.sh` |
+  | The publication of a release: its checks and its GitHub Release | `scripts/release.sh` |
   | The Sentinel contract: the pinned OpenAPI document and image digest | `scripts/sentinel-contract.sh` |
   | The checks of the `UI Checks` and `End-to-End Tests` jobs, and the local run of the checks of CI | `scripts/ci.sh` |
   | One task of a workflow or a Git hook that no other concern covers | A single-purpose script, without commands, such as `scripts/lint-shell.sh` or `scripts/check-pr-metadata.sh` |
@@ -781,8 +782,8 @@ Squash merge):
 | `docs`, `chore`, `ci`, `test`, `refactor` | No release on their own; `!` is not permitted |
 
 The complete Semantic Versioning interpretation, changelog policy, and version
-source of truth belong to the release process, at the location that the
-`AGENTS.md` placement table assigns to it.
+source of truth belong to the release process, `docs/deployment.md` (Release
+Process, Versions).
 
 ## Specification Writing
 

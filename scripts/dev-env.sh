@@ -79,11 +79,10 @@ readonly PREVIEW_IMAGE="localhost/sentinel-aura:preview"
 # containers of each.
 readonly ALL_PROFILES="e2e,preview"
 
-# The pull requests of the preview, the CI workflow that tests them, its job
-# that retains their production build, and the artifact that holds it (with
-# the supported version and image digest of their contract/), kept for seven
-# days: keep in sync with .github/workflows/ci.yml.
-readonly REPOSITORY="vulnwatch/sentinel-aura"
+# The CI workflow that tests the pull requests of the preview, of REPOSITORY,
+# its job that retains their production build, and the artifact that holds it
+# (with the supported version and image digest of their contract/), kept for
+# seven days: keep in sync with .github/workflows/ci.yml.
 readonly CI_WORKFLOW="ci.yml"
 readonly E2E_JOB="End-to-End Tests"
 readonly PREVIEW_ARTIFACT="ui-preview"

@@ -13,14 +13,17 @@
 # base cannot be found, as a pull request does. The generated API client is
 # compared with the working tree, which the check leaves unchanged, so the
 # command runs before a commit. Not run here: PR Metadata, which needs the
-# pull request; Renovate Validation; the Image Scan; the coverage upload.
+# pull request; Renovate Validation; the Image Scan; the coverage upload; and
+# the release workflows.
 #
 # Usage:
 #   scripts/ci.sh ui-checks   The checks of the UI Checks job: the pinned
 #                             Sentinel contract, the generated API client, the
 #                             type check, lint, format check, and unit and
 #                             component tests, the build and the test of the
-#                             image, and no dependency in the working tree
+#                             image, its SBOM, which it writes to
+#                             test-results/sbom/, and no dependency in the
+#                             working tree
 #   scripts/ci.sh e2e         The checks of the End-to-End Tests job: the
 #                             end-to-end tests, then the test of the
 #                             development proxy
@@ -37,6 +40,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 readonly SCRIPTS="${REPO_ROOT}/scripts"
 # The branch that pull requests target (docs/conventions.md, Git Conventions).
 readonly BASE_BRANCH="origin/master"
+# The SBOM of the image, which the release of a version publishes
+# (docs/deployment.md, Release Process).
+readonly SBOM_FILE="test-results/sbom/sentinel-aura.sbom.cdx.json"
 
 # The check that runs, which the exit handler reports when the script ends
 # during it; the copy of the generated API client that the handler restores;
@@ -155,6 +161,8 @@ cmd_ui_checks() {
     run_check "Unit and component tests" "${SCRIPTS}/tooling.sh" run test
     run_check "Build the image" "${SCRIPTS}/image.sh" build
     run_check "Test the image" "${SCRIPTS}/image.sh" test
+    run_check "Generate and check the SBOM of the image" "${SCRIPTS}/image.sh" sbom \
+        "${REPO_ROOT}/${SBOM_FILE}"
     run_check "Verify that no dependency reached the working tree" check_no_dependency_files
 }
 

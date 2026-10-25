@@ -142,7 +142,8 @@ consumers pin exact versions rather than version ranges (Sentinel
   (Sentinel `docs/deployment.md`, Sentinel Host). Each release of the UI
   therefore states the Sentinel version that it supports, and every change of
   the supported version carries a release signal (`docs/conventions.md`,
-  Versioning), so that the next UI release supports the new version.
+  Versioning), so that the next UI release supports the new version
+  (`docs/deployment.md`, Supported Sentinel Version).
 - Agents read Sentinel's specifications from a read-only local clone, at the
   revision that `AGENTS.md` (Sentinel as an External Authority) selects.
 
@@ -479,7 +480,7 @@ dataset, which the image of the supported version provides (Sentinel
 | Option | Impact |
 |---|---|
 | Tooling on the host | The simplest setup. Every dependency's code runs with access to the user's home directory, the target of the credential-stealing npm worms of 2025 and 2026, and caches and browsers accumulate there. The Node.js version drifts with the host |
-| **Docker Engine** (chosen) | Dependency code sees only the repository and its dependencies, and runs with the user's IDs, without capabilities. The engine of GitHub's runners and one that Sentinel's local development supports, so a developer of both repositories can use one engine. Its daemon runs as root, so access to it amounts to root on the host. The host needs Docker Engine with its Buildx and Compose plugins, Git, and `curl`; the dependencies live in the user's cache directory and the images in Docker's storage, each removable at once. Costs about half a second per command and a tooling image of about 2 GB |
+| **Docker Engine** (chosen) | Dependency code sees only the repository and its dependencies, and runs with the user's IDs, without capabilities. The engine of GitHub's runners and one that Sentinel's local development supports, so a developer of both repositories can use one engine. Its daemon runs as root, so access to it amounts to root on the host. The host needs Docker Engine with its Buildx and Compose plugins, Git, `curl`, and `jq`; the dependencies live in the user's cache directory and the images in Docker's storage, each removable at once. Costs about half a second per command and a tooling image of about 2 GB |
 | Rootless Podman | The same isolation, without a daemon that runs as root. A developer of both repositories needs a second engine, which Sentinel's local development does not support, and the scripts diverge from Sentinel's development and test tooling, which supports only Docker (Sentinel `docs/deployment.md`, Local Development) |
 | Docker in rootless mode | No daemon that runs as root, but the files that the containers write in the repository belong to other IDs of the host unless dependency code runs as root in the container, and CI does not run it |
 | Docker Desktop | Docker Engine in a virtual machine, which Linux does not need, behind a socket of the user. Bind mounts and published ports cross the virtual machine's file sharing and port forwarding, which CI does not run, and its license requires a paid subscription in larger organizations |
@@ -584,10 +585,10 @@ Most of the code that runs on the host runs host tools: Docker Engine and its
 plugins, the GitHub CLI, Git, and `curl`. The tooling container cannot run
 them, because it receives neither the Docker daemon's socket nor credentials
 (Development Environment). The rest of that code processes what those tools
-return, such as JSON, and validates values with regular expressions. The
-checks of the HTTP responses of the UI's image and of the environments need
-nothing of the host, and run as Playwright tests in the container
-(`docs/conventions.md`, End-to-End Tests).
+return, such as JSON, with `jq`, and validates values with regular
+expressions. The checks of the HTTP responses of the UI's image and of the
+environments need nothing of the host, and run as Playwright tests in the
+container (`docs/conventions.md`, End-to-End Tests).
 
 | Option | Impact |
 |---|---|
@@ -786,15 +787,16 @@ dependencies that reach the browser bring about 30 packages in total.
 
 ### Packaging and Serving
 
-**Choice:** a release publishes an OCI image that serves the production build
-with nginx. The image is built on the official unprivileged nginx image,
-pinned by version and digest, runs as a non-root user, and contains only
-nginx, its configuration, and the static files. The `Containerfile` builds it
-from the production build, and `nginx/default.conf` configures its server,
-which listens on port 8080; the image declares the base image's user
-numerically, as `101:101`. On the Sentinel host, the reverse proxy or ingress
-routes to this image every path that is not `/api` or under `/api/` (Same
-Origin). The image:
+**Choice:** a release publishes `ghcr.io/vulnwatch/sentinel-aura`, an OCI
+image that serves the production build with nginx, with its SBOM and signed
+attestations (`docs/deployment.md`, Release Process). The image is built on
+the official unprivileged nginx image, pinned by version and digest, runs as
+a non-root user, and contains only nginx, its configuration, and the static
+files. The `Containerfile` builds it from the production build, and
+`nginx/default.conf` configures its server, which listens on port 8080; the
+image declares the base image's user numerically, as `101:101`. On the
+Sentinel host, the reverse proxy or ingress routes to this image every path
+that is not `/api` or under `/api/` (Same Origin). The image:
 
 - answers every path outside the build's asset directory that is not a file
   of the build, `/auth/callback` included, with the application's entry

@@ -2,11 +2,12 @@
 # The code that the scripts under scripts/ and the Git hooks share, which they
 # source after setting their strict mode (docs/conventions.md, Shell
 # Scripting): their diagnostics and usage, the identity of the clone, the
-# development server and the UI's image, the results of the end-to-end tests,
-# the files of the installed dependencies and their changes, the directory of
-# the generated API client, the supported Sentinel version and image digest of
-# contract/, the checks of the container engine, the digest that an image tag
-# names in its registry, and the head branch of a release-please pull request.
+# repository on GitHub, the development server, the UI's image and the image
+# of a release, the results of the end-to-end tests, the files of the
+# installed dependencies and their changes, the directory of the generated API
+# client, the supported Sentinel version and image digest of contract/, the
+# checks of the container engine, the digest that an image tag names in its
+# registry, and the head branch of a release-please pull request.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly REPO_ROOT
@@ -36,6 +37,10 @@ clone_id() {
     printf '%s' "${REPO_ROOT}" | sha256sum | cut -c1-12
 }
 
+# The repository on GitHub, whose pull requests scripts/dev-env.sh previews and
+# whose releases scripts/release.sh publishes.
+readonly REPOSITORY="vulnwatch/sentinel-aura"
+
 # The port of the development server in its container: keep in sync with
 # vite.config.ts.
 # shellcheck disable=SC2034  # used by the scripts that source this file
@@ -52,6 +57,11 @@ dev_server_container() {
 # end-to-end environment of compose.yaml runs.
 # shellcheck disable=SC2034  # used by the scripts that source this file
 readonly UI_IMAGE="localhost/sentinel-aura:local"
+# The image of a release in its registry, which scripts/image.sh push
+# publishes under the version of the release (docs/deployment.md, Release
+# Process).
+# shellcheck disable=SC2034  # used by the scripts that source this file
+readonly RELEASE_IMAGE="ghcr.io/${REPOSITORY}"
 
 # The results of the end-to-end tests, with a directory for each Playwright
 # project: keep in sync with playwright.config.ts and .github/workflows/ci.yml.

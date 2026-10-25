@@ -70,8 +70,8 @@
     },
     {
       "customType": "regex",
-      "description": "Images of shellcheck, shfmt, and actionlint in scripts/lint-shell.sh, by version and digest",
-      "managerFilePatterns": ["/^scripts/lint-shell\\.sh$/"],
+      "description": "Images of the tools that the scripts run: shellcheck, shfmt, and actionlint in scripts/lint-shell.sh, and Trivy in scripts/image.sh, by version and digest",
+      "managerFilePatterns": ["/^scripts/(lint-shell|image)\\.sh$/"],
       // The package name omits docker.io/, the default registry, so that the
       // titles of the version updates stay within the length that the PR
       // Metadata check allows.
@@ -89,19 +89,6 @@
       ],
       "datasourceTemplate": "docker",
       "depNameTemplate": "renovate/renovate"
-    },
-    {
-      "customType": "regex",
-      "description": "Trivy image of the image scan workflow, by version and digest",
-      "managerFilePatterns": ["/^\\.github/workflows/image-scan\\.yml$/"],
-      "matchStrings": [
-        "TRIVY_IMAGE:\\s+docker\\.io/aquasec/trivy:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
-      ],
-      "datasourceTemplate": "docker",
-      // The package name omits docker.io/, the default registry, so that the
-      // titles of the digest updates stay within the length that the PR
-      // Metadata check allows.
-      "depNameTemplate": "aquasec/trivy"
     },
     {
       "customType": "regex",
@@ -125,9 +112,9 @@
       "commitMessagePrefix": "ci(deps):"
     },
     {
-      "description": "Tooling image and images of the shell lint tools, used locally and in CI",
+      "description": "Tooling image and images of the tools that the scripts run, used locally and in CI",
       "matchManagers": ["custom.regex"],
-      "matchFileNames": ["scripts/tooling.sh", "scripts/lint-shell.sh"],
+      "matchFileNames": ["scripts/tooling.sh", "scripts/lint-shell.sh", "scripts/image.sh"],
       "commitMessagePrefix": "chore(deps):"
     },
     {
@@ -192,15 +179,17 @@
     {
       // A change of the supported Sentinel version carries a release signal,
       // so that the next UI release supports the new version, and it is
-      // raised at once, because a Sentinel host deploys the two together —
-      // see docs/architecture.md (Backend Contract) and docs/deployment.md
-      // (Dependency Updates).
-      "description": "Supported Sentinel version: feat(deps):, outside the weekly schedule",
+      // raised at once, before every other update when Renovate limits the
+      // pull requests that it opens in an hour, because a Sentinel host
+      // deploys the two together — see docs/architecture.md (Backend
+      // Contract) and docs/deployment.md (Dependency Updates).
+      "description": "Supported Sentinel version: feat(deps):, outside the weekly schedule, first",
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["contract/sentinel-version"],
       "commitMessagePrefix": "feat(deps):",
       "commitMessageTopic": "Sentinel",
-      "schedule": ["at any time"]
+      "schedule": ["at any time"],
+      "prPriority": 10
     },
     {
       // An override forces a fixed version on a dependent that does not allow
