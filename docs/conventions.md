@@ -401,21 +401,15 @@ the tooling edits one script and the documents that state what it guarantees.
 `docs/architecture.md` (Tooling Language) records the decision behind the
 first rule.
 
-- **Language**: the language follows where the code runs. The code that runs
-  on the host is written in bash: the scripts that run Docker Engine and its
-  plugins, `gh`, `git`, or `curl`, or that receive credentials; the Git hooks
-  and the code that they share; and the scripts of the workflow steps that do
-  not use the tooling container, such as the `PR Metadata` check. Such a
-  script also does in bash the processing that its own work needs, such as
-  reading JSON, matching regular expressions, or checking files of the host.
-  A check that can run in the tooling container, because it needs nothing of
-  the host — neither the Docker daemon, nor credentials, nor a file outside
-  the container's mounts — in a command or job that uses the container, such
-  as the checks of HTTP responses, is written in TypeScript, as Playwright
-  tests in `test/e2e/` (Code Conventions, End-to-End Tests), and runs there
-  (`docs/architecture.md`, Development Environment); the script that starts
-  the tests keeps the checks that need the host. Any other language or
-  runtime is a new dependency (Dependency Admission)
+- **Language**: the tooling is written in bash: the scripts and their
+  libraries, which run on the host, and the Git hooks, together with the
+  processing that their work needs, such as reading JSON or matching regular
+  expressions. The checks of HTTP responses are the one exception: they are
+  written in TypeScript, as Playwright tests in `test/e2e/` (Code
+  Conventions, End-to-End Tests), which the script that starts the checked
+  target runs in the tooling container (`docs/architecture.md`, Development
+  Environment); that script keeps the checks that need Docker. Any other
+  language or runtime is a new dependency (Dependency Admission)
 - **Owning scripts**: each concern has one owning script under `scripts/`,
   and a new capability of a concern becomes a command of its owner, never a
   new script or a copy:

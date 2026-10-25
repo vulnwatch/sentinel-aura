@@ -213,9 +213,9 @@ workflows and the pipeline documentation, never by assumption.
 Apply the rules of Tooling Structure in `docs/conventions.md`:
 
 - **Language**: is new or moved logic written in the language that the
-  Language rule assigns to where it runs? Another language or runtime is a
-  new dependency, which needs the repository owner's decision
-  (`docs/conventions.md`, Dependency Admission)
+  Language rule assigns? Another language or runtime is a new dependency,
+  which needs the repository owner's decision (`docs/conventions.md`,
+  Dependency Admission)
 - **Owning scripts**: does a new capability become a command of the script
   that owns its concern? Does a new script serve a single-purpose task, or a
   new concern that the table of owning scripts lists?
