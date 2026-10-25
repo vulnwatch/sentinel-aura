@@ -1,0 +1,43 @@
+name: Release Please
+
+# Opens or updates the release pull request after every successful CI run of a
+# push to master, and, once a maintainer merges that pull request, creates the
+# version tag and the draft GitHub Release that the Release workflow
+# publishes. See docs/deployment.md (Release Process).
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [master]
+    types: [completed]
+
+permissions: {}
+
+# An interrupted run could leave a tag without its draft release, so a run is
+# never cancelled (docs/deployment.md, Workflow Conventions).
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release Please
+    # workflow_run.branches matches the head branch of the CI run, which a
+    # pull request from a fork's master also has: only a successful run of a
+    # push to master counts.
+    if: >
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The job acts only through RELEASE_TOKEN: the events of the GITHUB_TOKEN
+    # start no workflow run, so neither the CI of the release pull request
+    # nor the Release workflow of the tag would run. It checks out nothing
+    # and runs no code of the repository.
+    permissions: {}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

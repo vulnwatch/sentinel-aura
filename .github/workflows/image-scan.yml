@@ -25,52 +25,19 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-    env:
-      # Trivy's official image, pinned by version and digest and updated by
-      # Renovate (docs/deployment.md, Dependency Updates).
-      TRIVY_IMAGE: docker.io/aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Build the image
         run: scripts/image.sh build
-      - name: Export the image
-        run: scripts/image.sh save "${RUNNER_TEMP}/image.tar"
-      - name: Pull the pinned Trivy image
-        run: docker pull "${TRIVY_IMAGE}"
-      # Trivy runs with the runner's user and group IDs, without capabilities,
-      # on the archive of the image, read-only; it receives neither the Docker
-      # socket nor a token. The npm dependencies are audited separately
-      # (Workflow Inventory, Dependency audit), so the scan covers the
-      # operating system packages. The complete report reuses the
-      # vulnerability database of the first scan.
+      # Trivy, from the image that the script pins, runs with the runner's
+      # user and group IDs, without capabilities, on an archive of the image,
+      # read-only; it receives neither the Docker socket nor a token. It scans
+      # the operating system packages: the npm dependencies have the
+      # dependency audit (Workflow Inventory, Dependency audit).
       - name: Scan for vulnerabilities
-        run: |
-          set -euo pipefail
-          mkdir -p "${RUNNER_TEMP}/trivy" "${RUNNER_TEMP}/trivy-cache"
-          run_trivy() {
-            docker run --rm --pull=never \
-              --user="$(id -u):$(id -g)" \
-              --cap-drop=ALL \
-              --security-opt=no-new-privileges \
-              --volume="${RUNNER_TEMP}/image.tar:/scan/image.tar:ro" \
-              --volume="${RUNNER_TEMP}/trivy-cache:/scan/cache" \
-              --volume="${RUNNER_TEMP}/trivy:/scan/reports" \
-              "${TRIVY_IMAGE}" image \
-              --input=/scan/image.tar \
-              --cache-dir=/scan/cache \
-              --scanners=vuln \
-              --pkg-types=os \
-              --exit-code=0 \
-              --disable-telemetry \
-              --skip-version-check \
-              "$@"
-          }
-          run_trivy --ignore-unfixed --severity=HIGH,CRITICAL \
-            --format=json --output=/scan/reports/trivy-fixable.json
-          run_trivy --skip-db-update \
-            --format=table --output=/scan/reports/trivy-full.txt
+        run: scripts/image.sh scan "${RUNNER_TEMP}/trivy"
       - name: Retain the complete report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

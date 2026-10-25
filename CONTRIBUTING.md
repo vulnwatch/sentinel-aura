@@ -60,7 +60,7 @@ on your host
 The container sees the repository and the directory of its dependencies, and
 nothing else: no other part of your home directory and no credentials. It
 runs with your user and group IDs, without capabilities, so the files that it
-writes belong to you. The host needs Linux, Git, `curl`, and
+writes belong to you. The host needs Linux, Git, `curl`, `jq`, and
 [Docker Engine](https://docs.docker.com/engine/install/) 28.0.0 or later,
 which Sentinel's local development supports too, with its Buildx plugin and,
 for the [local backend](#local-backend), its Compose plugin 2.32.2 or later;
@@ -113,6 +113,8 @@ other scripts and CI run for you.
 | Update the reference screenshots after a change of what a screen shows | `scripts/dev-env.sh update-screenshots` |
 | Check the development proxy after changing `vite.config.ts`, `compose.yaml`, `test/e2e/same-origin.spec.ts`, `playwright.config.ts`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the supported version | `scripts/dev-env.sh test` |
 | Build and test the image that serves the UI in production ([Packaging and Serving](docs/architecture.md#packaging-and-serving)) | `scripts/image.sh build`, then `scripts/image.sh test` |
+| Generate and check the SBOM of the built image, as CI does ([Supply-Chain Artifacts](docs/deployment.md#supply-chain-artifacts)) | `scripts/image.sh sbom` |
+| Scan the built image for known vulnerabilities, as the weekly image scan does | `scripts/image.sh scan` |
 | Run the [checks of CI](#checks-of-ci) before pushing, or those of one job | `scripts/ci.sh all`, or `scripts/ci.sh ui-checks` or `scripts/ci.sh e2e` |
 | Lint the shell scripts, Git hooks, and workflows | `scripts/lint-shell.sh` |
 | Check the title and the issue linkage of a pull request | `scripts/check-pr-metadata.sh` |

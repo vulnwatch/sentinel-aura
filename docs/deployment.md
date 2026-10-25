@@ -2,8 +2,9 @@
 
 This document owns Sentinel Aura's CI pipeline, including the conventions that
 every workflow follows, the automated dependency updates, and the local Git
-hooks that complement the pipeline. The structure of the tooling and the rules
-for shell code in workflows, scripts, and hooks belong to `docs/conventions.md`
+hooks that complement the pipeline, and its release process, including how a
+deployment verifies a release. The structure of the tooling and the rules for
+shell code in workflows, scripts, and hooks belong to `docs/conventions.md`
 (Shell Scripting); the rules for branches, commits, and pull requests belong
 to `docs/conventions.md` (Git Conventions).
 
@@ -14,6 +15,15 @@ to `docs/conventions.md` (Git Conventions).
   - [Workflow Conventions](#workflow-conventions)
   - [Dependency Updates](#dependency-updates)
   - [Local Git Hooks](#local-git-hooks)
+- [Release Process](#release-process)
+  - [Versions](#versions)
+  - [Supported Sentinel Version](#supported-sentinel-version)
+  - [Release Chain](#release-chain)
+  - [Image](#image)
+  - [Supply-Chain Artifacts](#supply-chain-artifacts)
+  - [Publication and Immutability](#publication-and-immutability)
+  - [Verifying a Release](#verifying-a-release)
+  - [Secrets and Settings](#secrets-and-settings)
 
 ## CI Pipeline
 
@@ -26,10 +36,12 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test), and the generation and check of its SBOM (Release Process, Supply-Chain Artifacts); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
-| `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
+| `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities with `scripts/image.sh scan`. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
+| `release-please.yml` | Successful `ci.yml` run of a push to `master` | `Release Please` job: opens or updates the release pull request, and, once it is merged, creates the version tag and the draft GitHub Release (Release Process, Release Chain) | No |
+| `release.yml` | Push of a version tag | `Build Release Image` job: builds and tests the image of the tagged commit and generates its SBOM. `Publish Release` job: publishes the image, its SBOM, and its attestations, then the GitHub Release (Release Process, Release Chain) | No |
 
 **Blocking** means that the workflow yields a required status check of the
 `master` branch protection: a pull request cannot merge until `Shell Lint`,
@@ -50,7 +62,9 @@ The checks read the working tree and change no tracked file, so the command
 runs before a commit. The dependency audit runs locally as for a pull request
 (Dependency audit). `scripts/ci.sh` does not run what needs a CI run:
 `PR Metadata`, which needs the pull request; `renovate-validation.yml`; the
-image scan; and the upload of `Coverage Upload`.
+image scan; the upload of `Coverage Upload`; and the release workflows. The
+SBOM check needs `jq` on the host, which `CONTRIBUTING.md` (Development
+Setup) lists.
 
 `scripts/check-pr-metadata.sh` also runs locally, on its own, outside a pull
 request. It validates the title of a Renovate pull request (author
@@ -99,9 +113,12 @@ change cannot merge with a known vulnerability.
 **Image test.** `scripts/image.sh build` runs the production build through
 `scripts/tooling.sh`, then builds the image of `docs/architecture.md`
 (Packaging and Serving) from the `Containerfile`, so Node.js never enters the
-image. `scripts/image.sh test` runs that image with the settings of the Pod
-Security `restricted` profile, without a network, and fails unless:
+image, with the labels of Release Process (Image). `scripts/image.sh test`
+runs that image with the settings of the Pod Security `restricted` profile,
+without a network, and fails unless:
 
+- the image carries exactly the labels that the build sets, with their
+  values;
 - the image declares a numeric non-root user, no process of the container
   runs as root, and the image holds no Node.js;
 - the web root holds exactly the production build, and nginx has no server
@@ -118,8 +135,8 @@ Security `restricted` profile, without a network, and fails unless:
   `Strict-Transport-Security`, and no `Location`; and
 - the access log records a request but not the value of its `Cookie` header.
 
-The script checks the user, the content, the processes, and the access log
-through Docker; the `image` project of the end-to-end tests checks the
+The script checks the labels, the user, the content, the processes, and the
+access log through Docker; the `image` project of the end-to-end tests checks the
 responses, in the network namespace of the container, where
 `scripts/tooling.sh e2e` runs it and reaches nginx on the loopback interface
 (`docs/conventions.md`, End-to-End Tests).
@@ -159,10 +176,11 @@ repository, and no secret:
 **Image vulnerability scan.** `image-scan.yml` builds the image every Monday
 from `master`, and on demand from the branch of the run, and scans it with
 Trivy for known vulnerabilities of its operating system packages; the npm
-dependencies have the dependency audit. Trivy runs from its official image,
-pinned by version and digest, in a container with the runner's user and group
-IDs and without capabilities, which reads the archive of the UI's image and
-receives neither the Docker socket nor a token. The scan is advisory: a
+dependencies have the dependency audit. `scripts/image.sh scan` runs Trivy
+from its official image, which the script pins by version and digest, in a
+container with the runner's user and group IDs and without capabilities,
+which reads an archive of the UI's image, receives neither the Docker socket
+nor a token, and writes its reports to its output. The scan is advisory: a
 finding never fails the run, and only a scan that does not complete does. The
 `Image Scan` job, which runs the scanner, only reads the repository; it hands
 the report of the fixable HIGH and CRITICAL vulnerabilities to the `Scan
@@ -204,8 +222,10 @@ version and digest. Every pinned version is tracked by Renovate (Dependency
 Updates).
 
 **Checkout credentials.** Every `actions/checkout` step sets
-`persist-credentials: false`: no workflow pushes to the repository, so the
-token stays out of the working copy's Git configuration.
+`persist-credentials: false`: no workflow pushes to the repository through
+Git, and release-please, which creates tags and branches, does so through
+GitHub's API (Release Process), so the token stays out of the working copy's
+Git configuration.
 
 **Least-privilege permissions.** Every workflow MUST declare an explicit
 top-level `permissions:` block that is empty (`{}`) or read-only, rather than
@@ -265,14 +285,14 @@ repository runs the bot or creates its pull requests. It tracks:
   version), and the UI's image, which is built locally. The nginx image of
   `compose.yaml` is the base image of the `Containerfile`, and both are
   updated in one `nginx` pull request;
-- the Renovate image of `renovate-validation.yml` and the Trivy image of
-  `image-scan.yml`, by version and digest, each through a custom regex
-  manager;
+- the Renovate image of `renovate-validation.yml`, by version and digest,
+  through a custom regex manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a
   custom regex manager;
 - the images of `shellcheck`, `shfmt`, and `actionlint` in
-  `scripts/lint-shell.sh`, by version and digest, through a custom regex
-  manager;
+  `scripts/lint-shell.sh` and the Trivy image of `scripts/image.sh`, which
+  scans the image and generates its SBOM, by version and digest, through a
+  custom regex manager;
 - the `version:` inputs of actions that the `github-actions` manager does not
   track (the Codecov CLI of `codecov/codecov-action` in `ci.yml`), through a
   custom regex manager that reads a
@@ -345,9 +365,14 @@ development fails it (Workflow Inventory, End-to-end tests).
 **Sentinel version.** Renovate proposes a new supported Sentinel version once
 its GitHub Release is published, outside the weekly schedule, because the UI
 release deployed on a Sentinel host must support the Sentinel version
-deployed there (`docs/architecture.md`, Backend Contract). Its pull request
-changes only `contract/sentinel-version`, so `UI Checks` fails until a
-maintainer completes it on its branch:
+deployed there (`docs/architecture.md`, Backend Contract; Release Process,
+Supported Sentinel Version). No minimum release age delays it, and when
+Renovate limits the pull requests that it opens in an hour, it opens this one
+before the others (`prPriority` in `renovate.jsonc`). The Mend Renovate App
+runs on the repository every few hours; a maintainer starts a run at once
+with the checkbox at the end of the Dependency Dashboard issue. Its pull
+request changes only `contract/sentinel-version`, so `UI Checks` fails until
+a maintainer completes it on its branch:
 
 1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
    with the release asset of the new version, and the pinned image digest
@@ -378,7 +403,7 @@ Contract).
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, or `chore(deps):` for the tooling image, the images
-of the shell lint tools, the npm dependencies, the base image of the
+of the shell lint tools and Trivy, the npm dependencies, the base image of the
 `Containerfile`, and the images of `compose.yaml`, which are not used only by
 CI; neither carries a release signal (`docs/conventions.md`, Versioning).
 Renovate never merges its own pull requests: `automerge` is disabled, and each
@@ -521,3 +546,293 @@ scans for secrets, and GitHub secret scanning with push protection is the
 server-side check. A confirmed false positive of a non-secret value is
 allowlisted in `.gitleaks.toml` by a regular expression — never by path — with
 a comment that explains why the value is not a secret.
+
+## Release Process
+
+[release-please](https://github.com/googleapis/release-please) automates the
+versions, the changelog, and the GitHub Releases, from the commit subjects on
+`master` (`docs/conventions.md`, Versioning). A release is one version of the
+UI: its image, which a deployment runs by digest, the image's SBOM and signed
+attestations, and the GitHub Release that lists its changes and holds them.
+
+### Versions
+
+The UI has one version, which follows Semantic Versioning 2.0.0. Its source of
+truth in the repository is the `version` of `package.json`: release-please
+updates it in the release pull request, together with `package-lock.json`,
+`CHANGELOG.md`, and its record of the current version in
+`.release-please-manifest.json`, and tags the merged release as
+`v<major>.<minor>.<patch>`. The image and the GitHub Release take their
+version from the tag. Until the first release, `package.json` declares
+`0.0.0`, which no release has.
+
+| Commit subject on `master` | Current version | Release |
+|---|---|---|
+| `fix:` | Any | Patch |
+| `feat:` | Any | Minor |
+| `fix!:` or `feat!:` | `0.x.y` | Next minor |
+| `fix!:` or `feat!:` | `1.0.0` or later | Next major |
+| `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | Any | None on their own |
+
+| Release | Meaning |
+|---|---|
+| Major | A change that users or a deployment must act on, such as the removal of a screen or a change of how the Sentinel host serves the image (`docs/architecture.md`, Packaging and Serving) |
+| Minor | A new screen or capability, or the support of another Sentinel version (Supported Sentinel Version) |
+| Patch | A fix, including a security fix and a dependency update that fixes a vulnerability (Dependency Updates) |
+
+**Before 1.0.0.** The first release is `0.1.0` (`initial-version`). While the
+version is `0.x.y`, a breaking change advances the minor version
+(`bump-minor-pre-major`), so no commit reaches `1.0.0` by itself. The
+repository owner decides when the UI reaches `1.0.0`; the squash commit of a
+`feat` or `fix` pull request then carries the footer `Release-As: 1.0.0` in
+its body, which the maintainer checks in the merge dialog before confirming
+the merge, because a footer only in the pull request description has no
+effect.
+
+**Changelog.** release-please writes `CHANGELOG.md` and the notes of each
+GitHub Release. They list the `feat` and `fix` commits, under Features and
+Bug Fixes, and hide the other types, so commits of only those types open no
+release pull request. Nobody edits `CHANGELOG.md` by hand.
+
+**Configuration.** `release-please-config.json` holds the release policy and
+changes only through a reviewed pull request. `.release-please-manifest.json`
+is release-please's record of the current version, which nobody edits by
+hand.
+
+### Supported Sentinel Version
+
+Each release supports exactly one Sentinel version: the one that
+`contract/sentinel-version` declares at its tagged commit, against which its
+end-to-end tests passed (`docs/architecture.md`, Backend Contract). The image
+states it in the label `io.github.vulnwatch.sentinel-aura.sentinel-version`
+(Image), which the image's digest, and so its attestations, cover, and the
+notes of its GitHub Release repeat it. A Sentinel host deploys the release
+that supports its Sentinel version (Sentinel `docs/deployment.md`, Sentinel
+Host).
+
+Supported means tested together, also from Sentinel 1.0.0 on: every Sentinel
+version that a host deploys needs a release of the UI that supports it, even
+when the UI does not change. Every change of the supported version is
+therefore a `feat(deps):` commit, a minor release signal (Dependency Updates,
+Sentinel version), and a maintainer merges the release pull request once that
+change is on `master`, so that a host can deploy the new Sentinel version.
+When several changes of the supported version merge before a release, only
+the last one gets a release: no release supports the Sentinel versions in
+between, and a host that upgrades skips them.
+
+### Release Chain
+
+1. Pull requests are squash-merged into `master` (`docs/conventions.md`,
+   Workflow).
+2. After every successful `ci.yml` run of a push to `master`,
+   `release-please.yml` opens the release pull request, or updates it, with
+   the next version in `package.json` and `package-lock.json`, the new entry
+   of `CHANGELOG.md`, and the manifest. It stays open and follows the
+   releasable commits that land on `master`.
+3. A maintainer merges the release pull request after the repository owner
+   authorizes the merge, like any other pull request (`docs/conventions.md`,
+   Pull Request Requirements). Its required checks run as on every pull
+   request, the dependency audit included (Workflow Inventory, Dependency
+   audit), and its branch is up to date with `master`, so the merged commit
+   is the one that the checks passed. A release pull request whose audit
+   fails is not merged: a fix lands on `master` first, and release-please
+   updates the release pull request.
+4. The `ci.yml` run of that merge starts `release-please.yml` again, which
+   creates the version tag through the Git references API, then a draft
+   GitHub Release with the notes of the changelog (`draft` and
+   `force-tag-creation` in `release-please-config.json`).
+5. The tag starts `release.yml`, whose jobs run one after the other:
+   - `Build Release Image` builds the image of the tagged commit with the
+     labels of the release (Image), runs the test of the image as `UI
+     Checks` does (Workflow Inventory, Image test), generates and checks its
+     SBOM (Supply-Chain Artifacts), and retains the image and the SBOM as a
+     seven-day workflow artifact. It runs the code of the dependencies, in
+     the tooling containers, so it only reads the repository.
+   - `Publish Release` runs no code of the dependencies. Before anything
+     else, `scripts/release.sh check` verifies that the tag is a version tag
+     whose version `package.json` declares, and that it names a draft
+     release and no published one. `scripts/image.sh push` then pushes the
+     image, after checking that it is labeled as the release, and returns
+     the digest that the registry names for its tag; `actions/attest`
+     attests the image's SBOM and build provenance; and
+     `scripts/release.sh publish` attaches the assets, writes the image and
+     the supported Sentinel version into the notes, and publishes the draft,
+     as its last action.
+
+A tag that release-please did not create has no draft release, so its run
+publishes nothing. Neither workflow cancels a run in progress (Workflow
+Conventions, Concurrency).
+
+### Image
+
+A release publishes one image, `ghcr.io/vulnwatch/sentinel-aura`, under one
+tag, its exact version, such as `0.1.0`: there is no `latest`, no
+`<major>.<minor>`, and no tag for `master`. A floating tag would move before
+the release that it names is published, and a deployment runs one exact
+version (Supported Sentinel Version). The registry does not enforce the
+immutability of tags, so a deployment runs the image by the digest that the
+tag names (Verifying a Release).
+
+Every build of the image by `scripts/image.sh build` carries these labels,
+which replace those of the base image. The image test fails when the image
+carries another label or another value (Workflow Inventory, Image test), so
+no label of the base image describes this image:
+
+| Label | Value |
+|---|---|
+| `org.opencontainers.image.title` | `sentinel-aura` |
+| `org.opencontainers.image.description` | `Web user interface for Sentinel` |
+| `org.opencontainers.image.source`, `org.opencontainers.image.url` | `https://github.com/vulnwatch/sentinel-aura`, through which the registry links the image to the repository |
+| `org.opencontainers.image.licenses` | `Apache-2.0` |
+| `org.opencontainers.image.version` | The version of the release, or `dev` for a build outside a release |
+| `org.opencontainers.image.revision` | The commit that the image is built from |
+| `org.opencontainers.image.created` | The time of that commit, in UTC, so that two builds of one commit carry the same labels |
+| `io.github.vulnwatch.sentinel-aura.sentinel-version` | The supported Sentinel version (Supported Sentinel Version) |
+| `maintainer` | Empty, in place of the maintainers of the base image |
+
+### Supply-Chain Artifacts
+
+Each release publishes three records of its image:
+
+| Record | Meaning | Publication |
+|---|---|---|
+| CycloneDX SBOM | Inventory of the components of the image | The release asset `sentinel-aura-<version>.sbom.cdx.json`, where `<version>` omits the tag's `v` |
+| SBOM attestation | Signed claim that the SBOM describes the image's digest | GitHub's attestations API, the registry, beside the image, and the release asset `sentinel-aura-<version>.sbom.sigstore.json` |
+| Build provenance | Signed SLSA provenance of the image's digest: the repository, the commit, the workflow, and the run that built and published it | GitHub's attestations API, the registry, and the release asset `sentinel-aura-<version>.provenance.sigstore.json` |
+
+The subject of both attestations is
+`ghcr.io/vulnwatch/sentinel-aura@sha256:<digest>`, never a tag. Each bundle
+asset is the Sigstore bundle that `actions/attest` produced, so a deployment
+can verify the image without the attestations API or the registry. The
+attestations create no storage record (`create-storage-record: false`), which
+would only add the registry to the organization's metadata of linked
+artifacts and need a further permission.
+
+**SBOM scope.** `scripts/image.sh sbom` generates the SBOM with Trivy, from
+the image that the script pins and offline, and checks it. One CycloneDX
+document, whose subject is the image, named `ghcr.io/vulnwatch/sentinel-aura`
+with the image's version, holds two inventories:
+
+- the operating system packages of the image, nginx included, which Trivy
+  reads from the image; and
+- the production dependencies of `package-lock.json`, which the build bundles
+  into the scripts of the UI. The bundle keeps none of their manifests, so a
+  scan of the image cannot find them, and Trivy reads them from the lockfile,
+  without the development dependencies, which do not ship.
+
+The check fails unless the document is CycloneDX, describes the image and its
+version, lists the image's nginx package and exactly the production
+dependencies of the lockfile, at their locked versions, and has unique
+references, which its dependency graph resolves. `UI Checks` runs the same
+generation and check on every pull request (Workflow Inventory), so a change
+that breaks the SBOM fails before a release. The SBOM is an inventory, not a
+vulnerability report: the image scan and the dependency audit report the
+vulnerabilities (Workflow Inventory). It can list a production dependency of
+which the build bundles no code.
+
+### Publication and Immutability
+
+A version is released when its GitHub Release is published, which
+`scripts/release.sh publish` does last, once both attestations exist and every
+asset is attached.
+
+- **Before publication** the version is not released, even when its image tag
+  exists, and a deployment does not use it. A rerun of failed jobs or of all
+  jobs is allowed: it can rebuild the image, point its tag to a new digest,
+  add attestations of that digest, and replace the draft's assets.
+- **After publication** the image tag, the Git tag, and the assets are final.
+  `scripts/release.sh check` fails for a published release before the first
+  push, so a rerun neither moves the image tag nor adds an attestation. A
+  correction ships as a new release.
+
+Release immutability is enabled for the repository (Secrets and Settings). It
+locks the Git tag and the assets of every release published while it is
+enabled, and adds a release attestation, which `gh release verify` checks; it
+does not protect the image tag, which the check of `Publish Release` protects.
+`scripts/release.sh publish` warns when the release that it published is not
+immutable.
+
+| Failure of a `release.yml` run | Repair |
+|---|---|
+| `Build Release Image` fails for a transient cause, such as a download | Re-run failed jobs |
+| `Build Release Image` fails for a cause in the tagged commit | The version cannot be fixed, because its tag never moves: its release stays a draft, and the fix ships in the next release |
+| `Publish Release` fails while the release is a draft | Re-run failed jobs. A rerun can push a new digest; the superseded one was never part of a published release |
+| `Publish Release` fails because release-please created the tag but no draft release | Re-run the `release-please.yml` run that created the tag, which creates the draft, then re-run failed jobs |
+| The seven-day artifact expired while the release is a draft | Re-run all jobs |
+| The release is published | Nothing to repair: a rerun fails at `scripts/release.sh check`, before any push or attestation |
+
+### Verifying a Release
+
+A deployment uses a version only once its GitHub Release is published,
+resolves the version's tag to its digest once, verifies the image by that
+digest, and deploys it by the same digest, so that the deployed image is the
+verified one. The commands need Docker with its Buildx plugin and the GitHub
+CLI, `gh`, signed in:
+
+```bash
+set -euo pipefail
+
+VERSION="0.1.0" # the published release to verify
+IMAGE_NAME="ghcr.io/vulnwatch/sentinel-aura"
+DIGEST="$(docker buildx imagetools inspect "${IMAGE_NAME}:${VERSION}" \
+  --format '{{.Manifest.Digest}}')"
+IMAGE="${IMAGE_NAME}@${DIGEST}"
+
+# The build provenance: built and published by the Release workflow of this
+# repository, from the tag of the version.
+gh attestation verify "oci://${IMAGE}" \
+  --repo vulnwatch/sentinel-aura \
+  --signer-workflow vulnwatch/sentinel-aura/.github/workflows/release.yml \
+  --source-ref "refs/tags/v${VERSION}"
+
+# The signed claim that the SBOM describes the image.
+gh attestation verify "oci://${IMAGE}" \
+  --repo vulnwatch/sentinel-aura \
+  --signer-workflow vulnwatch/sentinel-aura/.github/workflows/release.yml \
+  --source-ref "refs/tags/v${VERSION}" \
+  --predicate-type https://cyclonedx.org/bom
+
+# The release, whose Git tag and assets release immutability locked.
+gh release verify "v${VERSION}" --repo vulnwatch/sentinel-aura
+
+# The supported Sentinel version, which is the one that the host runs.
+docker pull "${IMAGE}"
+docker image inspect "${IMAGE}" \
+  --format '{{index .Config.Labels "io.github.vulnwatch.sentinel-aura.sentinel-version"}}'
+
+# Deploy the image as ${IMAGE}, by its digest.
+```
+
+`--source-ref` rejects a digest that the build of another version attested.
+To verify with the bundle assets instead of the attestations API, download
+them with `gh release download "v${VERSION}" --repo vulnwatch/sentinel-aura
+--pattern '*.sigstore.json'` and add `--bundle
+sentinel-aura-<version>.provenance.sigstore.json` (respectively
+`sentinel-aura-<version>.sbom.sigstore.json`) to the command; the bundle of
+the published release binds the digest attested for that release.
+`--bundle-from-oci` verifies the copy in the registry instead. `gh release
+verify-asset "v${VERSION}" <file> --repo vulnwatch/sentinel-aura` confirms
+that a downloaded asset, such as the SBOM, is the published one.
+
+The verification checks the signer workflow, the source ref, the predicate
+type, and the subject digest. The provenance establishes which commit and
+workflow run built and published the digest; it does not prove that the
+build is reproducible.
+
+### Secrets and Settings
+
+- **`RELEASE_TOKEN`**: the repository secret of `release-please.yml`, a
+  fine-grained personal access token whose resource owner is the `vulnwatch`
+  organization, limited to this repository, with read and write access to
+  Contents, Issues, and Pull requests. The `GITHUB_TOKEN` cannot replace it:
+  its pull requests and tags start no workflow run, so the release pull
+  request would get no required checks and the tag no `release.yml` run. Only
+  the `Release Please` job receives it, which checks out and runs no code of
+  the repository. When it expires, `release-please.yml` fails until a
+  maintainer replaces it.
+- **Release immutability**, in Settings → General → Releases, is enabled
+  (Publication and Immutability).
+- **The `sentinel-aura` package** in the registry is public, so that a
+  deployment pulls and verifies the image without credentials. A new package
+  is private: the repository owner makes it public once, after the first
+  release publishes it; a public package cannot become private again.

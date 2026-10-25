@@ -2,9 +2,8 @@
 
 ## Supported Versions
 
-sentinel-aura has no release yet.
-Once releases exist, security fixes are applied to the latest release only,
-and this section will list the supported versions.
+Security fixes are applied to the latest release only and ship in a new release; see [Release Process](docs/deployment.md#release-process).
+Each release supports one exact Sentinel version, so applying a fix can require upgrading Sentinel as well; see [Supported Sentinel Version](docs/deployment.md#supported-sentinel-version).
 
 ## Reporting a Vulnerability
 
@@ -69,5 +68,6 @@ The repository currently has the following measures enabled:
 - **Security headers**: the image that serves the UI sends, on every response, a strict Content Security Policy that requires Trusted Types and forbids framing, together with `X-Content-Type-Options`, `Referrer-Policy`, cross-origin opener and resource policies, and a `Permissions-Policy` that disables the browser features that the UI does not use; CI checks them; see [Security Headers](docs/architecture.md#security-headers)
 - **Minimal, unprivileged image**: the image runs nginx as a numeric non-root user and adds to the official unprivileged nginx image only its server configuration and the production build, without Node.js, which CI checks; see [Packaging and Serving](docs/architecture.md#packaging-and-serving)
 - **Image vulnerability scan**: a weekly Trivy scan of the image's operating system packages, which tracks fixable HIGH and CRITICAL vulnerabilities in a `security` issue; see [Workflow Inventory](docs/deployment.md#workflow-inventory)
+- **Release supply-chain artifacts**: each release publishes its image, which a deployment runs by digest, with a CycloneDX SBOM of its operating system packages and of the npm packages that its build bundles, signed SBOM and SLSA build provenance attestations, and an immutable GitHub Release; see [Release Process](docs/deployment.md#release-process), which also describes how to verify a release
 
-Further measures for the UI stack, such as release supply-chain artifacts, are added as the tooling of the chosen stack ([docs/architecture.md](docs/architecture.md#technology-stack)) is built.
+Further measures for the UI stack are added as the tooling of the chosen stack ([docs/architecture.md](docs/architecture.md#technology-stack)) is built.
