@@ -7,7 +7,8 @@
 # and .githooks/pre-commit the staged ones.
 #
 # Usage:
-#   scripts/lint-shell.sh            Lint the tracked files
+#   scripts/lint-shell.sh            Lint the tracked files: a new file once
+#                                    it is added to the index
 #   scripts/lint-shell.sh --staged   Lint the staged files, as the working tree
 #                                    holds them; a tool that is not installed
 #                                    is skipped with a warning

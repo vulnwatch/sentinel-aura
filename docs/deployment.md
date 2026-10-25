@@ -2,10 +2,10 @@
 
 This document owns Sentinel Aura's CI pipeline, including the conventions that
 every workflow follows, the automated dependency updates, and the local Git
-hooks that complement the pipeline. The rules for shell code in workflows,
-scripts, and hooks belong to `docs/conventions.md` (Shell Scripting); the rules
-for branches, commits, and pull requests belong to `docs/conventions.md` (Git
-Conventions).
+hooks that complement the pipeline. The structure of the tooling and the rules
+for shell code in workflows, scripts, and hooks belong to `docs/conventions.md`
+(Shell Scripting); the rules for branches, commits, and pull requests belong
+to `docs/conventions.md` (Git Conventions).
 
 ## Contents
 
@@ -40,36 +40,20 @@ reporting) pass on its latest commit, and its branch must be up to date with
 prevents a merge.
 
 **Local run.** The `UI Checks` and `End-to-End Tests` jobs run their checks
-through `scripts/ci.sh` (Workflow Conventions, Checks in a script), which runs
-them locally too: `scripts/ci.sh ui-checks` and `scripts/ci.sh e2e` run the
-checks of one job and stop at its first failed check; in CI each check is a
-log group. `scripts/ci.sh all`, the check to run before pushing
-(`docs/conventions.md`, Checks), runs `scripts/lint-shell.sh` as `Shell Lint`
-does, then the checks of `UI Checks`, then those of `End-to-End Tests`, each
-job even when an earlier one failed, and fails when one of them failed.
+through `scripts/ci.sh` (Workflow Conventions, Checks in a script), which also
+runs them locally, for one job or for all of them. `scripts/ci.sh all`, the
+check to run before pushing (`docs/conventions.md`, Checks), runs the checks
+of the three jobs, including `scripts/lint-shell.sh` as `Shell Lint` runs it,
+and fails when any of them fails.
 
-The checks read the working tree, so the command runs before a commit;
-`scripts/lint-shell.sh` lints the files that Git tracks, so a new script or
-workflow is added to the index first. The check of the generated API client
-compares the client that it generates with the one of the working tree, which
-it leaves unchanged. Locally, `ui-checks` runs the dependency audit in the
-cases in which a pull request runs it: when `package.json`,
-`package-lock.json`, or `.npmrc` differ between the merge base with
-`origin/master` and the working tree, or when that merge base cannot be
-found; in CI, the workflow decides it from the event of the run (Dependency
-audit). `scripts/ci.sh` does not run what needs a CI run: `PR Metadata`, which
-needs the pull request; `renovate-validation.yml`; the image scan; and the
-upload of `Coverage Upload`.
+The checks read the working tree and change no tracked file, so the command
+runs before a commit. The dependency audit runs locally as for a pull request
+(Dependency audit). `scripts/ci.sh` does not run what needs a CI run:
+`PR Metadata`, which needs the pull request; `renovate-validation.yml`; the
+image scan; and the upload of `Coverage Upload`.
 
-`scripts/check-pr-metadata.sh` reads the pull request fields from environment
-variables, so it also runs locally, on its own:
-
-```bash
-PR_TITLE='docs: describe the empty state of the CVE list' \
-    PR_BODY='Closes #42' scripts/check-pr-metadata.sh
-```
-
-The script validates the title of a Renovate pull request (author
+`scripts/check-pr-metadata.sh` also runs locally, on its own, outside a pull
+request. It validates the title of a Renovate pull request (author
 `renovate[bot]`, branch `renovate/*`) and of a release-please pull request
 (branch `release-please--*`), but exempts both from the issue linkage, as
 `docs/conventions.md` (Issues and work units) allows. When such a pull request
@@ -106,11 +90,11 @@ only when the run can change or ship the locked dependency set: a pull request
 or push that changes `package.json`, `package-lock.json`, or `.npmrc`, a
 release-please pull request, a manual run, or a run whose changed files cannot
 be determined. `scripts/dependency-audit-scope.sh` takes that decision;
-locally, `scripts/ci.sh ui-checks` takes it as for a pull request (Local
-run). Other changes skip the audit, so a vulnerability disclosed against an
-unchanged lockfile reaches the repository as a Dependabot alert and a fix
-(Dependency Updates) rather than as a failure of unrelated work, while a
-dependency change cannot merge with a known vulnerability.
+locally, `scripts/ci.sh ui-checks` takes it as for a pull request. Other
+changes skip the audit, so a vulnerability disclosed against an unchanged
+lockfile reaches the repository as a Dependabot alert and a fix (Dependency
+Updates) rather than as a failure of unrelated work, while a dependency
+change cannot merge with a known vulnerability.
 
 **Image test.** `scripts/image.sh build` runs the production build through
 `scripts/tooling.sh`, then builds the image of `docs/architecture.md`
@@ -355,7 +339,7 @@ updated dependency.
 **Local backend.** `End-to-End Tests` runs `scripts/dev-env.sh test` on every
 pull request, so an update of `vite`, the tooling image, or an image of
 `compose.yaml` that breaks the development proxy or the backend of local
-development fails it (`CONTRIBUTING.md`, Local Backend).
+development fails it (Workflow Inventory, End-to-end tests).
 
 **Sentinel version.** Renovate proposes a new supported Sentinel version once
 its GitHub Release is published, outside the weekly schedule, because the UI
@@ -375,8 +359,8 @@ maintainer completes it on its branch:
    end-to-end tests, after `scripts/dev-env.sh update-screenshots` where the
    new version's dataset changes what a screen shows, and the test of the
    development proxy, which routes and forwards requests as before and
-   through which a dataset user signs in (`CONTRIBUTING.md`, Local Backend);
-   and
+   through which a dataset user signs in (Workflow Inventory, End-to-end
+   tests); and
 4. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
 
@@ -514,7 +498,7 @@ git config --local --unset core.hooksPath
 | Hook | Checks |
 |------|--------|
 | `commit-msg` | The first line of the message follows the Conventional Commits format and the breaking-marker rule and stays under 72 characters (`docs/conventions.md`, Commit Messages). Messages that Git generates (`Merge`, `Revert`, `fixup!`, `squash!`) are skipped |
-| `pre-commit` | `scripts/lint-shell.sh --staged`, which runs `shellcheck` and `shfmt` on the staged shell scripts and hooks and `actionlint` on the staged workflows, selected as the `Shell Lint` job selects the tracked ones, then `gitleaks` on the staged changes |
+| `pre-commit` | `scripts/lint-shell.sh` on the staged files: `shellcheck` and `shfmt` on the staged shell scripts and hooks and `actionlint` on the staged workflows, selected as the `Shell Lint` job selects the tracked ones; then `gitleaks` on the staged changes |
 | `pre-push` | Blocks pushes to `master` and pushes of tags (`docs/conventions.md`, Git Conventions) |
 
 The hooks are a supplementary safety net: they can be bypassed, while CI and

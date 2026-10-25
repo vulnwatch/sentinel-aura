@@ -8,10 +8,18 @@
 #   PR_TITLE=<title> PR_BODY=<body> PR_AUTHOR=<login> PR_HEAD_REF=<branch> \
 #       scripts/check-pr-metadata.sh
 #
-# Run by .github/workflows/pr-metadata.yml. Each failure is written to stderr
-# as a GitHub Actions error annotation, and the exit code is 1.
+# Run by .github/workflows/pr-metadata.yml, and locally, where PR_AUTHOR and
+# PR_HEAD_REF may be omitted for a pull request that Renovate or
+# release-please does not open. Each failure is written to stderr as a GitHub
+# Actions error annotation, and the exit code is 1.
+#
+# Example, locally:
+#   PR_TITLE='docs: describe the empty state of the CVE list' \
+#       PR_BODY='Closes #42' scripts/check-pr-metadata.sh
 set -euo pipefail
 
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 # shellcheck source=scripts/lib/commit-title.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-title.sh"
 
@@ -36,7 +44,7 @@ check_title() {
 is_approved_automation() {
     local author="$1" head_ref="$2"
     [[ "${author}" == "renovate[bot]" && "${head_ref}" == renovate/* ]] ||
-        [[ "${head_ref}" == release-please--* ]]
+        [[ "${head_ref}" == "${RELEASE_BRANCH_PREFIX}"* ]]
 }
 
 check_issue_linkage() {

@@ -7,14 +7,20 @@
 # A container runs with the user and group IDs of the invoking user, without
 # capabilities, and receives from the host the repository and the directory of
 # its dependencies, nothing else. The repository is mounted read-only, except
-# the output directories and, for the commands that change them by design, the
-# formatted sources, the generated API client, or the npm manifest and
-# lockfile. The dependencies live in a directory of this clone in the user's
-# cache directory, mounted on node_modules/, which stays empty on the host.
-# Every command but `npm` first installs them with `npm ci` when the directory
-# is new or when the tooling image, package.json, package-lock.json, or .npmrc
-# changed; a file beside the directory, which no container can reach, records
-# the installation.
+# the output directories, dist/, coverage/, and test-results/, and, for the
+# commands that change them by design, the formatted sources, the generated
+# API client, the npm manifest and lockfile, or the reference screenshots.
+# The dependencies live in a directory of this clone under
+# $XDG_CACHE_HOME/sentinel-aura/, or ~/.cache/sentinel-aura/ when
+# XDG_CACHE_HOME is not an absolute path, mounted on node_modules/, which
+# stays empty on the host. Every command that runs a container, except `npm`,
+# first installs them with `npm ci` when the directory is new or when the
+# tooling image, package.json, package-lock.json, or .npmrc changed, so
+# `install` only forces a clean installation; a file beside the directory,
+# which no container can reach, records the installation. `npm` runs on the
+# installation as it is, so that `npm install` can update a lockfile that no
+# longer matches a package.json changed by hand, and the next command installs
+# again.
 #
 # Usage:
 #   scripts/tooling.sh install               Install the dependencies (npm ci)
@@ -32,7 +38,9 @@
 #                                            Start the development server in
 #                                            the network of a local backend,
 #                                            on http://localhost:5173 or on
-#                                            <port>, 0 for a free one;
+#                                            <port>, 0 for a free one,
+#                                            published on the loopback
+#                                            interface only;
 #                                            scripts/dev-env.sh starts both
 #   scripts/tooling.sh e2e [--update] <container> <project> [args]
 #                                            Run the end-to-end tests of the
@@ -51,7 +59,9 @@
 #   scripts/tooling.sh clean                 Remove the dependency directory
 #
 # Examples:
-#   scripts/tooling.sh run check
+#   scripts/tooling.sh run check             The type check, lint, format
+#                                            check, and unit and component
+#                                            tests
 #   scripts/tooling.sh run test -- src/router.test.tsx
 #   scripts/tooling.sh npm install --save-dev <package>
 set -euo pipefail
@@ -291,7 +301,7 @@ cmd_e2e() {
         args+=(--update-snapshots=changed)
     fi
     run_container --network="container:${container}" "${mounts[@]}" \
-        --env=PLAYWRIGHT_HTML_OUTPUT_DIR="test-results/e2e/${project}/report" -- \
+        --env=PLAYWRIGHT_HTML_OUTPUT_DIR="${E2E_RESULTS_DIR}/${project}/report" -- \
         npm run e2e -- "${args[@]}" "$@"
 }
 

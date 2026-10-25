@@ -25,20 +25,22 @@
 #   scripts/dev-env.sh stop          Stop the development server and remove
 #                                    the backend with its data
 #   scripts/dev-env.sh logs [args]   Show the logs of the backend; the
-#                                    arguments go to `docker compose logs`
-#   scripts/dev-env.sh test          Check, with a separate backend and
-#                                    development server, that only the
-#                                    development server publishes a port, on
-#                                    the loopback interface; then run the
-#                                    same-origin checks of the end-to-end
-#                                    tests against it: the routing of the
-#                                    proxy, the request headers that it
-#                                    forwards, and a sign-in through it
+#                                    arguments go to `docker compose logs`,
+#                                    for example --follow sentinel
+#   scripts/dev-env.sh test          Check, with a separate backend and a
+#                                    development server on a free port,
+#                                    that only the development server
+#                                    publishes a port, on the loopback
+#                                    interface; then run the same-origin
+#                                    checks of the end-to-end tests against
+#                                    it: the routing of the proxy, the
+#                                    request headers that it forwards, and a
+#                                    sign-in through it
 #   scripts/dev-env.sh e2e [<browser>]
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and
-#                                    Firefox, or in <browser>, each against
-#                                    a new backend
+#                                    Firefox, or in <browser>, chromium or
+#                                    firefox, each against a new backend
 #   scripts/dev-env.sh update-screenshots
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and write
@@ -46,8 +48,17 @@
 #                                    or differ
 #   scripts/dev-env.sh preview <pr>  Run the production build that the CI of
 #                                    the latest commit of pull request <pr>
-#                                    tested, against a new backend, on
-#                                    http://localhost:4173; Ctrl+C removes it
+#                                    tested, against a new backend at the
+#                                    Sentinel version that the pull request
+#                                    declares, on http://localhost:4173;
+#                                    Ctrl+C removes it. Needs a completed CI
+#                                    run of that commit with a successful
+#                                    End-to-End Tests job, whose build is
+#                                    kept for seven days. Lists the files of
+#                                    the pull request that the preview takes
+#                                    from this checkout instead. One preview
+#                                    runs at a time; a new one of this clone
+#                                    replaces it
 set -euo pipefail
 
 # shellcheck source=scripts/lib/common.sh
@@ -285,7 +296,7 @@ cmd_test() {
     if ! "${REPO_ROOT}/scripts/tooling.sh" e2e "$(dev_server_name "${TEST_PROJECT}")" dev-server; then
         compose "${TEST_PROJECT}" logs --no-color --tail=50 sentinel >&2 || true
         tail -n 50 "${WORK_DIR}/dev-server.log" >&2
-        die "the same-origin checks of the development server failed; test-results/e2e/dev-server/report holds the report"
+        die "the same-origin checks of the development server failed; ${E2E_RESULTS_DIR}/dev-server/report holds the report"
     fi
     echo "dev-env.sh: every check passed" >&2
 }
@@ -329,7 +340,7 @@ run_e2e() {
 # The results of the browsers in an earlier run, so that only those of this
 # one remain; those of the other projects stay.
 remove_e2e_results() {
-    rm -rf -- "${REPO_ROOT}/test-results/e2e/chromium" "${REPO_ROOT}/test-results/e2e/firefox"
+    rm -rf -- "${REPO_ROOT}/${E2E_RESULTS_DIR}/chromium" "${REPO_ROOT}/${E2E_RESULTS_DIR}/firefox"
 }
 
 cmd_e2e() {
@@ -348,7 +359,7 @@ cmd_e2e() {
         run_e2e "${target}" || failed+=("${target}")
     done
     if ((${#failed[@]} > 0)); then
-        die "the end-to-end tests failed in ${failed[*]}; test-results/e2e/<browser>/report holds the report of each browser"
+        die "the end-to-end tests failed in ${failed[*]}; ${E2E_RESULTS_DIR}/<browser>/report holds the report of each browser"
     fi
     echo "dev-env.sh: the end-to-end tests passed in ${browsers[*]}" >&2
 }
@@ -361,7 +372,7 @@ cmd_update_screenshots() {
     "${REPO_ROOT}/scripts/image.sh" build
     remove_e2e_results
     run_e2e chromium --update ||
-        die "the end-to-end tests failed in chromium; test-results/e2e/chromium/report holds the report"
+        die "the end-to-end tests failed in chromium; ${E2E_RESULTS_DIR}/chromium/report holds the report"
     echo "dev-env.sh: test/e2e/screenshots holds the current references; remove those that no test takes any more" >&2
 }
 

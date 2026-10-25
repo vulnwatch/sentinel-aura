@@ -1,8 +1,8 @@
 ---
 description: >
   Reviews workflows, Git hooks, CI-consumed scripts, and release
-  configuration for pipeline correctness and convention drift. Use after
-  changing CI/CD artifacts. Read-only.
+  configuration for pipeline correctness, tooling structure, and convention
+  drift. Use after changing CI/CD artifacts. Read-only.
 mode: subagent
 permission:
   edit: deny
@@ -132,6 +132,9 @@ Artifacts in scope:
 - `.githooks/**`
 - `scripts/**` when consumed by a workflow or a Git hook
 - `release-please-config.json`, `.release-please-manifest.json`
+- the documentation of a command that the change adds, removes, or alters:
+  the header of its script, and the places that name the command, for the
+  tooling structure checks only
 
 ## Finding filter
 
@@ -156,12 +159,18 @@ workflows and the pipeline documentation, never by assumption.
    read its release process only when the release chain, release
    configuration, or repository secrets are implicated
 3. Read the applicable Shell Scripting and Git Conventions contracts in
-   `docs/conventions.md`, including Versioning when release configuration is
-   implicated
+   `docs/conventions.md`, including Tooling Structure when a script, library,
+   hook, command, or tooling logic is added, removed, moved, or changed, and
+   Versioning when release configuration is implicated. Read
+   `docs/architecture.md` (Tooling Language) when the change adds a language
+   or runtime or moves tooling logic between bash and TypeScript
 4. Read the changed artifacts and every workflow, hook, or script on the
    interacting trigger, artifact, gate, or publication path. Use targeted
    searches to find consumers; do not inspect unrelated workflows merely
    because they share the directory
+5. For each command whose syntax or behavior the change alters, search the
+   repository with `git grep` for the places that name it, documents and
+   comments included
 
 ## What to check
 
@@ -199,6 +208,29 @@ workflows and the pipeline documentation, never by assumption.
   required check remain required?
 - Are `concurrency` groups correct for the trigger?
 
+### Tooling structure
+
+Apply the rules of Tooling Structure in `docs/conventions.md`:
+
+- **Language**: is new or moved logic written in the language that the
+  Language rule assigns? Another language or runtime is a new dependency,
+  which needs the repository owner's decision (`docs/conventions.md`,
+  Dependency Admission)
+- **Owning scripts**: does a new capability become a command of the script
+  that owns its concern? Does a new script serve a single-purpose task, or a
+  new concern that the table of owning scripts lists?
+- **Shared code**: is a function, validation, or constant defined in more
+  than one script or hook instead of in a library under `scripts/lib/`? Does
+  a value repeated in a file that cannot source the library carry the comment
+  that names the file to keep in sync with?
+- **Documentation of commands**: does the syntax of a command — its
+  arguments, its options, or the environment variables that configure it —
+  appear anywhere but in the header of its script, apart from the arguments
+  that a procedure passes on to another tool? Does the header still match what
+  the command does after the change? Does `CONTRIBUTING.md` still name the
+  command for its task, and do the documents under `docs/` still state the
+  guarantees that the command provides?
+
 ### Git hooks
 
 - Do the hooks remain consistent with Git Conventions in
@@ -227,11 +259,12 @@ Provide a structured summary with these sections:
 1. **Correct**: what conforms to the conventions and to the documented
    pipeline
 2. **Convention violations**: pinning, secret handling, permission, timeout,
-   or hook rules that are broken
+   hook, or tooling structure rules that are broken
 3. **Pipeline risks**: changes that weaken a gate, alter the trigger
    chain, or create an unprotected publish path
 4. **Documentation drift**: divergence between the changed artifacts and the
-   pipeline documentation or `docs/conventions.md`
+   pipeline documentation, `docs/conventions.md`, `CONTRIBUTING.md`, or the
+   script headers, including a breach of the Documentation of commands rule
 5. **Verdict**: one of:
    - **Clean** — the change conforms and introduces no pipeline risk
    - **Minor issues** — small deviations that should be fixed but do not

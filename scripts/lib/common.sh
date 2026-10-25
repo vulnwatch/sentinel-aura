@@ -2,11 +2,11 @@
 # The code that the scripts under scripts/ and the Git hooks share, which they
 # source after setting their strict mode (docs/conventions.md, Shell
 # Scripting): their diagnostics and usage, the identity of the clone, the
-# development server and the UI's image, the files of the installed
-# dependencies and their changes, the directory of the generated API client,
-# the supported Sentinel version and image digest of contract/, the checks of
-# the container engine, and the digest that an image tag names in its
-# registry.
+# development server and the UI's image, the results of the end-to-end tests,
+# the files of the installed dependencies and their changes, the directory of
+# the generated API client, the supported Sentinel version and image digest of
+# contract/, the checks of the container engine, the digest that an image tag
+# names in its registry, and the head branch of a release-please pull request.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly REPO_ROOT
@@ -64,6 +64,11 @@ dev_server_container() {
 # end-to-end environment of compose.yaml runs.
 # shellcheck disable=SC2034  # used by the scripts that source this file
 readonly UI_IMAGE="localhost/sentinel-aura:local"
+
+# The results of the end-to-end tests, with a directory for each Playwright
+# project: keep in sync with playwright.config.ts and .github/workflows/ci.yml.
+# shellcheck disable=SC2034  # used by the scripts that source this file
+readonly E2E_RESULTS_DIR="test-results/e2e"
 
 # The files that define the installed dependencies: a change of one needs a
 # new installation (scripts/tooling.sh) and the dependency audit
@@ -199,3 +204,9 @@ resolve_digest() {
     is_digest "${digest}" || die "unexpected digest '${digest}' for $1"
     printf '%s\n' "${digest}"
 }
+
+# The prefix of the head branch of a release-please pull request, which is
+# exempt from the issue linkage (scripts/check-pr-metadata.sh) and always
+# audits the dependencies (scripts/dependency-audit-scope.sh).
+# shellcheck disable=SC2034  # used by the scripts that source this file
+readonly RELEASE_BRANCH_PREFIX="release-please--"

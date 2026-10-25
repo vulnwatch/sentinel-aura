@@ -31,6 +31,7 @@ source is a conflict to report, never a choice (`AGENTS.md`).
     - [Framework and Language](#framework-and-language)
     - [Build Tool, Package Manager, and Node.js](#build-tool-package-manager-and-nodejs)
     - [Development Environment](#development-environment)
+    - [Tooling Language](#tooling-language)
     - [Routing, Server State, and Forms](#routing-server-state-and-forms)
     - [Components and Styling](#components-and-styling)
     - [API Client Generation](#api-client-generation)
@@ -569,6 +570,42 @@ outside the project is previewed in a separate browser profile
 **Rationale:** the owner approves a change by looking at the result, which
 the preview shows as it will be released, while the pull request's code
 stays in the browser and the dataset backend on the developer's host.
+
+#### Tooling Language
+
+**Choice:** the scripts, their libraries, and the Git hooks are written in
+bash and run on the host. The checks of the HTTP responses of the UI's image
+and of the environments that the scripts start are the one exception: they
+are written in TypeScript, as Playwright tests that run in the tooling
+container. `docs/conventions.md` (Shell Scripting, Tooling Structure) states
+the rule.
+
+Most of the code that runs on the host runs host tools: Docker Engine and its
+plugins, the GitHub CLI, Git, and `curl`. The tooling container cannot run
+them, because it receives neither the Docker daemon's socket nor credentials
+(Development Environment). The rest of that code processes what those tools
+return, such as JSON, and validates values with regular expressions. The
+checks of the HTTP responses of the UI's image and of the environments need
+nothing of the host, and run as Playwright tests in the container
+(`docs/conventions.md`, End-to-End Tests).
+
+| Option | Impact |
+|---|---|
+| **Bash, with the checks of the image and the environments in TypeScript** (chosen) | No new dependency. TypeScript is the language of the UI, with its type check, lint, format check, and tests; Playwright, which the end-to-end tests use already, checks HTTP responses; and the container confines the code of the dependencies that it runs. Bash suits the scripts that run host tools, which the container cannot run; shellcheck and shfmt check them (`docs/conventions.md`, Shell Scripting), but they have no tests of their own, and CI exercises them |
+| TypeScript in the tooling container for every check that needs nothing of the host | Typed and linted code for more of the tooling. A check of a file in a command or job that uses the container, such as a validator of what a build produces, could belong to either language, and such a validator would become a Playwright project among the end-to-end tests |
+| Python, with its standard library only | Better than bash at JSON, HTTP, the cleanup of what a script started, and testing. A third language, whose checks would need further tools, such as Ruff and a type checker, and a CI job; a minimum Python version on every host; and a rewrite of working scripts, in which the code that runs host tools gets longer. Sentinel, a Python project, still writes most of its host orchestration in bash and uses Python for validators, such as its check of a Renovate lookup log |
+| Python with uv and third-party packages | Third-party code on the host, which Development Environment excludes for npm, against a threat that applies to PyPI as well |
+| Deno or Bun | A new runtime on every host. Deno's permissions cannot confine a script that runs Docker, whose access is equivalent to root on the host (Development Environment) |
+| A Makefile, as Sentinel has | One entry point for every command, but a layer over the scripts and one more place that describes the commands |
+
+**Rationale:** the tooling mostly orchestrates host tools, which bash
+expresses directly. The logic that bash handled poorly, the checks of the
+HTTP responses of the image and of the environments, needs no host access, so
+it runs as typed and linted TypeScript in the container, where the code of
+its dependencies is confined. Any other logic stays in bash, in the script or
+library whose work needs it, so that each piece of tooling has one language
+and one place. The decision is revisited when tooling logic other than these
+checks grows too complex for bash.
 
 #### Routing, Server State, and Forms
 

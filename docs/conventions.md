@@ -19,6 +19,15 @@
   - [End-to-End Tests](#end-to-end-tests)
   - [Checks](#checks)
 - [Shell Scripting](#shell-scripting)
+  - [Tooling Structure](#tooling-structure)
+  - [Scope](#scope)
+  - [Interpreter and Safety](#interpreter-and-safety)
+  - [Static Analysis — shellcheck](#static-analysis--shellcheck)
+  - [Formatting — shfmt](#formatting--shfmt)
+  - [Workflow Shell — actionlint](#workflow-shell--actionlint)
+  - [Naming and Structure](#naming-and-structure)
+  - [File Placement](#file-placement)
+  - [Enforcement](#enforcement)
 - [Git Conventions](#git-conventions)
   - [Workflow](#workflow)
     - [Issues and work units](#issues-and-work-units)
@@ -363,9 +372,8 @@ that needs it; content of another kind needs a new row first.
   errors of `process` and `Buffer`, so the type check also fails when a
   dependency brings the types of Node.js into the UI's program.
 - Like every Node.js command, they run through `scripts/tooling.sh`
-  (`docs/architecture.md`, Development Environment), never on the host:
-  `scripts/tooling.sh run check` runs all four, and
-  `scripts/tooling.sh format` formats the files in Prettier's scope.
+  (`docs/architecture.md`, Development Environment), never on the host; the
+  `check` script of `package.json` runs all four.
 - Every change also passes the end-to-end tests, which CI runs as a required
   check too (`docs/deployment.md`, Workflow Inventory) and
   `scripts/dev-env.sh e2e` runs locally.
@@ -380,14 +388,66 @@ that needs it; content of another kind needs a new row first.
 
 ## Shell Scripting
 
-This section governs standalone shell scripts, Git hooks, and shell embedded
-in CI workflows. Shell in this repository is limited to repository
-orchestration and developer or CI tooling; application logic is never written
-in shell.
+This section governs the repository's tooling: the structure of its scripts,
+Git hooks, and workflows, in any language (Tooling Structure), and the rules
+of its shell code, in standalone scripts, Git hooks, and CI workflows. Shell
+in this repository is limited to repository orchestration and developer or CI
+tooling; application logic is never written in shell.
+
+### Tooling Structure
+
+These rules keep each concern of the tooling in one place, so that a change of
+the tooling edits one script and the documents that state what it guarantees.
+`docs/architecture.md` (Tooling Language) records the decision behind the
+first rule.
+
+- **Language**: the tooling is written in bash: the scripts and their
+  libraries, which run on the host, and the Git hooks, together with the
+  processing that their work needs, such as reading JSON or matching regular
+  expressions. The checks of the HTTP responses of what a script starts, the
+  UI's image and the environments of `scripts/dev-env.sh`, are the one
+  exception: they are written in TypeScript, as Playwright tests in
+  `test/e2e/` (Code Conventions, End-to-End Tests), which that script runs in
+  the tooling container (`docs/architecture.md`, Development Environment);
+  it keeps the checks that need Docker. Any other language or runtime is a
+  new dependency (Dependency Admission)
+- **Owning scripts**: each concern has one owning script under `scripts/`,
+  and a new capability of a concern becomes a command of its owner, never a
+  new script or a copy:
+
+  | Concern | Owning script |
+  |---|---|
+  | The tooling containers, which run every Node.js command | `scripts/tooling.sh` |
+  | The environments: the local backend, the end-to-end environments, and the local preview | `scripts/dev-env.sh` |
+  | The image that serves the UI in production | `scripts/image.sh` |
+  | The Sentinel contract: the pinned OpenAPI document and image digest | `scripts/sentinel-contract.sh` |
+  | The checks of the `UI Checks` and `End-to-End Tests` jobs, and the local run of the checks of CI | `scripts/ci.sh` |
+  | One task of a workflow or a Git hook that no other concern covers | A single-purpose script, without commands, such as `scripts/lint-shell.sh` or `scripts/check-pr-metadata.sh` |
+
+  A new script is added only for such a single-purpose task, or for a new
+  concern, which first gets its row in this table
+- **Shared code**: a function, validation, or constant that several scripts
+  or hooks need lives in a library under `scripts/lib/` (Naming and
+  Structure), which they source; it is never copied. A value that a file of
+  another tool also holds and that cannot source the library, such as the
+  port of the development server in `vite.config.ts`, is repeated, with a
+  comment beside the copy in the script that names the file to keep in sync
+  with
+- **Documentation of commands**: each command is documented once, in the
+  header comment of its script: its syntax — its arguments, its options, and
+  the environment variables that configure it — and what it does. A script
+  with commands prints its header with its `help` command. `CONTRIBUTING.md`
+  says which command serves which task of a contributor and names it by its
+  script and command only, such as `scripts/dev-env.sh start`, without its
+  arguments or options; it keeps what a contributor needs around the command,
+  such as its setup, how to use its result, and its security cautions. The
+  documents under `docs/` state the guarantees of the tooling and name the
+  command that provides each, never its syntax; a procedure may show the
+  arguments that a command passes on to another tool, such as npm
 
 ### Scope
 
-These rules apply to:
+The rules of the shell code apply to:
 
 - Standalone scripts under `scripts/`, and the libraries under `scripts/lib/`
   that they source
@@ -445,9 +505,10 @@ such as `-i`, so it runs without one.
 Shell embedded in GitHub Actions `run:` steps is validated by
 `actionlint`, which checks workflow syntax and runs `shellcheck` on each
 `run:` block. Keep embedded shell short; when a `run:` block grows beyond
-simple orchestration, extract it into a script under `scripts/` (which is
-then covered by the standalone `shellcheck` and `shfmt` rules) and invoke that
-script from the workflow.
+simple orchestration, extract it into a script under `scripts/`, a command of
+the script that owns its concern or a single-purpose script (Tooling
+Structure), which is then covered by the standalone `shellcheck` and `shfmt`
+rules, and invoke that script from the workflow.
 
 ### Naming and Structure
 
@@ -455,8 +516,9 @@ script from the workflow.
   use the fixed names Git requires (`pre-commit`, `commit-msg`, `pre-push`)
   with no extension
 - **Functions**: `snake_case`; **constants/globals**: `UPPER_SNAKE_CASE`
-- Provide a header comment describing purpose and usage, and route
-  subcommand dispatch through a `main` function
+- Provide a header comment describing the script's purpose and its usage,
+  with each of its commands, the only documentation of their syntax (Tooling
+  Structure), and route subcommand dispatch through a `main` function
 - **Libraries**: a library under `scripts/lib/` holds functions and constants
   that several scripts and hooks share, which source it after their strict
   mode. It has the shebang and a header comment that describes its purpose,
@@ -486,11 +548,10 @@ for the authoritative mapping.
   `shellcheck` and `shfmt` on them, and runs `actionlint` on the workflows.
   The workflow pins the tool versions (`docs/deployment.md`, Workflow
   Conventions)
-- **Pre-commit hook**: `.githooks/pre-commit` runs
-  `scripts/lint-shell.sh --staged`, the same checks on the staged files,
-  selected in the same way, as a fast local safety net, which warns instead
-  of failing when a tool is not installed (`docs/deployment.md`, Local Git
-  Hooks)
+- **Pre-commit hook**: `.githooks/pre-commit` runs `scripts/lint-shell.sh`
+  on the staged files, the same checks, selected in the same way, as a fast
+  local safety net, which warns instead of failing when a tool is not
+  installed (`docs/deployment.md`, Local Git Hooks)
 
 ## Git Conventions
 
