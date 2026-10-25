@@ -4,10 +4,11 @@
 # - scripts/lint-shell.sh on the staged files: shellcheck and shfmt on the
 #   staged shell scripts and Git hooks, and actionlint on the staged
 #   workflows, selected like the Shell Lint job of .github/workflows/ci.yml
-#   selects the tracked ones
+#   selects the tracked ones, and run from the same pinned images
 # - gitleaks on the staged changes
 #
-# A missing tool produces a warning and does not block the commit. CI is the
+# When Docker Engine cannot run the images of the lint, or gitleaks is not
+# installed, a warning replaces the check and the commit proceeds. CI is the
 # authoritative gate for the shell and workflow checks; no workflow scans for
 # secrets. See docs/deployment.md (Local Git Hooks).
 set -euo pipefail
@@ -18,7 +19,11 @@ source "$(dirname "${BASH_SOURCE[0]}")/../scripts/lib/common.sh"
 main() {
     echo "Running pre-commit checks..."
     "${REPO_ROOT}/scripts/lint-shell.sh" --staged
-    run_if_installed "local-only check" gitleaks git --staged
+    if command -v gitleaks >/dev/null 2>&1; then
+        gitleaks git --staged
+    else
+        warn "gitleaks is not installed; skipping it (local-only check)"
+    fi
 }
 
 main "$@"

@@ -496,19 +496,20 @@ All shell scripts MUST pass `shellcheck` with no findings.
 
 All shell scripts MUST be formatted with `shfmt`, which takes its settings
 from `.editorconfig`: 4-space indentation and indented switch cases.
-`scripts/lint-shell.sh` verifies it (Enforcement), and `shfmt -w <files>`
-fixes it. shfmt ignores `.editorconfig` when it receives a formatting flag,
-such as `-i`, so it runs without one.
+`scripts/lint-shell.sh` verifies it (Enforcement) and changes no file: for a
+file that is not formatted, it prints the diff that formats it, which is the
+change to apply. shfmt ignores `.editorconfig` when it receives a formatting
+flag, such as `-i`, so it runs without one.
 
 ### Workflow Shell — actionlint
 
 Shell embedded in GitHub Actions `run:` steps is validated by
-`actionlint`, which checks workflow syntax and runs `shellcheck` on each
-`run:` block. Keep embedded shell short; when a `run:` block grows beyond
-simple orchestration, extract it into a script under `scripts/`, a command of
-the script that owns its concern or a single-purpose script (Tooling
-Structure), which is then covered by the standalone `shellcheck` and `shfmt`
-rules, and invoke that script from the workflow.
+`actionlint`, which checks workflow syntax and runs the `shellcheck` of its
+image on each `run:` block. Keep embedded shell short; when a `run:` block
+grows beyond simple orchestration, extract it into a script under `scripts/`,
+a command of the script that owns its concern or a single-purpose script
+(Tooling Structure), which is then covered by the standalone `shellcheck` and
+`shfmt` rules, and invoke that script from the workflow.
 
 ### Naming and Structure
 
@@ -546,12 +547,14 @@ for the authoritative mapping.
   tracked `*.sh` file and every file under `.githooks/` with `git ls-files`,
   so new scripts, libraries, and hooks are covered automatically, runs
   `shellcheck` and `shfmt` on them, and runs `actionlint` on the workflows.
-  The workflow pins the tool versions (`docs/deployment.md`, Workflow
-  Conventions)
+  The script runs each tool from its official image, pinned by version and
+  digest (`docs/deployment.md`, Workflow Conventions), through Docker Engine,
+  in a container without network that reads the repository only, so the
+  tools run the same way in CI and locally
 - **Pre-commit hook**: `.githooks/pre-commit` runs `scripts/lint-shell.sh`
   on the staged files, the same checks, selected in the same way, as a fast
-  local safety net, which warns instead of failing when a tool is not
-  installed (`docs/deployment.md`, Local Git Hooks)
+  local safety net, which warns instead of failing when Docker Engine cannot
+  run the images (`docs/deployment.md`, Local Git Hooks)
 
 ## Git Conventions
 

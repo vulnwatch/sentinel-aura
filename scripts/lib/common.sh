@@ -30,18 +30,6 @@ usage() {
     awk 'NR == 1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "$0" >&2
 }
 
-# Runs the command $2... when its program is installed; otherwise warns, with
-# the note $1 on what still enforces the check, and succeeds.
-run_if_installed() {
-    local note="$1"
-    shift
-    if ! command -v "$1" >/dev/null 2>&1; then
-        warn "$1 is not installed; skipping it (${note})"
-        return 0
-    fi
-    "$@"
-}
-
 # Prints the identifier of this clone, from the path of its root: the
 # dependency directory and the backends of a clone are named after it.
 clone_id() {
@@ -135,9 +123,10 @@ pinned_digest() {
 # Fails unless the container engine is the one that the repository supports:
 # Docker Engine 28.0.0 or later on Linux, with its default daemon, which runs
 # as root on this host, reached through its default socket
-# (docs/architecture.md, Development Environment). scripts/tooling.sh and
-# scripts/image.sh run the check before they start a container, locally and in
-# CI, and scripts/dev-env.sh before it starts the local backend.
+# (docs/architecture.md, Development Environment). scripts/tooling.sh,
+# scripts/image.sh, and scripts/lint-shell.sh run the check before they start a
+# container, locally and in CI, and scripts/dev-env.sh before it starts the
+# local backend.
 check_docker_engine() {
     # Docker Engine 28.0.0 stops other hosts of the network from reaching
     # ports published on the loopback interface (moby/moby#49325).
