@@ -43,21 +43,15 @@ prevents a merge.
 through `scripts/ci.sh` (Workflow Conventions, Checks in a script), which also
 runs them locally, for one job or for all of them. `scripts/ci.sh all`, the
 check to run before pushing (`docs/conventions.md`, Checks), runs the checks
-of the three jobs, `scripts/lint-shell.sh` as `Shell Lint` runs it included,
+of the three jobs, including `scripts/lint-shell.sh` as `Shell Lint` runs it,
 and fails when any of them fails.
 
-The checks read the working tree, so the command runs before a commit;
-`scripts/lint-shell.sh` lints the files that Git tracks, so a new script or
-workflow is added to the index first. The check of the generated API client
-compares the client that it generates with the one of the working tree, which
-it leaves unchanged. Locally, `ui-checks` runs the dependency audit in the
-cases in which a pull request runs it: when `package.json`,
-`package-lock.json`, or `.npmrc` differ between the merge base with
-`origin/master` and the working tree, or when that merge base cannot be
-found; in CI, the workflow decides it from the event of the run (Dependency
-audit). `scripts/ci.sh` does not run what needs a CI run: `PR Metadata`, which
-needs the pull request; `renovate-validation.yml`; the image scan; and the
-upload of `Coverage Upload`.
+The checks read the working tree and change no tracked file, so the command
+runs before a commit. Locally, the dependency audit runs in the cases in
+which a pull request runs it; in CI, the workflow decides it from the event
+of the run (Dependency audit). `scripts/ci.sh` does not run what needs a CI
+run: `PR Metadata`, which needs the pull request; `renovate-validation.yml`;
+the image scan; and the upload of `Coverage Upload`.
 
 `scripts/check-pr-metadata.sh` also runs locally, on its own, outside a pull
 request. It validates the title of a Renovate pull request (author
@@ -366,8 +360,8 @@ maintainer completes it on its branch:
    end-to-end tests, after `scripts/dev-env.sh update-screenshots` where the
    new version's dataset changes what a screen shows, and the test of the
    development proxy, which routes and forwards requests as before and
-   through which a dataset user signs in (`CONTRIBUTING.md`, Local Backend);
-   and
+   through which a dataset user signs in (Workflow Inventory, End-to-end
+   tests); and
 4. the pull request states which screens the API changes affect
    (`docs/conventions.md`, Pull Request Requirements).
 

@@ -401,19 +401,21 @@ the tooling edits one script and the documents that state what it guarantees.
 `docs/architecture.md` (Tooling Language) records the decision behind the
 first rule.
 
-- **Language**: the code that runs on the host is written in bash: the scripts
-  that run Docker Engine and its plugins, `gh`, `git`, or `curl`, or that
-  receive credentials; the Git hooks and the code that they share; and the
-  scripts of the workflow steps that do not use the tooling container, such
-  as the `PR Metadata` check. Such a script also does the processing that its
-  work needs, such as reading JSON with `jq` or matching regular expressions.
-  Logic that needs neither the Docker daemon nor credentials, in a command or
-  job that uses the tooling container, such as the checks of HTTP responses,
-  is written in TypeScript, as Playwright tests in `test/e2e/` (Code
-  Conventions, End-to-End Tests), and runs in the tooling container
+- **Language**: the language follows where the code runs. The code that runs
+  on the host is written in bash: the scripts that run Docker Engine and its
+  plugins, `gh`, `git`, or `curl`, or that receive credentials; the Git hooks
+  and the code that they share; and the scripts of the workflow steps that do
+  not use the tooling container, such as the `PR Metadata` check. Such a
+  script also does in bash the processing that its own work needs, such as
+  reading JSON, matching regular expressions, or checking files of the host.
+  A check that can run in the tooling container, because it needs nothing of
+  the host — neither the Docker daemon, nor credentials, nor a file outside
+  the container's mounts — in a command or job that uses the container, such
+  as the checks of HTTP responses, is written in TypeScript, as Playwright
+  tests in `test/e2e/` (Code Conventions, End-to-End Tests), and runs there
   (`docs/architecture.md`, Development Environment); the script that starts
-  the tests keeps the checks that need Docker. Any other language or runtime
-  is a new dependency (Dependency Admission)
+  the tests keeps the checks that need the host. Any other language or
+  runtime is a new dependency (Dependency Admission)
 - **Owning scripts**: each concern has one owning script under `scripts/`,
   and a new capability of a concern becomes a command of its owner, never a
   new script or a copy:
@@ -424,7 +426,7 @@ first rule.
   | The environments: the local backend, the end-to-end environments, and the local preview | `scripts/dev-env.sh` |
   | The image that serves the UI in production | `scripts/image.sh` |
   | The Sentinel contract: the pinned OpenAPI document and image digest | `scripts/sentinel-contract.sh` |
-  | The checks of CI, locally and in CI | `scripts/ci.sh` |
+  | The checks of the `UI Checks` and `End-to-End Tests` jobs, and the local run of the checks of CI | `scripts/ci.sh` |
   | One task of a workflow or a Git hook that no other concern covers | A single-purpose script, without commands, such as `scripts/lint-shell.sh` or `scripts/check-pr-metadata.sh` |
 
   A new script is added only for such a single-purpose task, or for a new
@@ -438,9 +440,9 @@ first rule.
   with
 - **Documentation of commands**: each command is documented once, in the
   header comment of its script: its syntax — its arguments, its options, and
-  the environment variables that it reads — and what it does. A script with
-  commands prints its header with its `help` command. `CONTRIBUTING.md` says
-  which command serves which task of a contributor and names it by its
+  the environment variables that configure it — and what it does. A script
+  with commands prints its header with its `help` command. `CONTRIBUTING.md`
+  says which command serves which task of a contributor and names it by its
   script and command only, such as `scripts/dev-env.sh start`, without its
   arguments or options; it keeps what a contributor needs around the command,
   such as its setup, how to use its result, and its security cautions. The

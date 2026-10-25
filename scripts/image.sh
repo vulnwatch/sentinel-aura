@@ -8,6 +8,7 @@
 #
 # Usage:
 #   scripts/image.sh build          Build the production build, then the image
+#                                   localhost/sentinel-aura:local
 #   scripts/image.sh test           Run the built image and check it: its user,
 #                                   its content, and its processes; then its
 #                                   responses, with the image project of the

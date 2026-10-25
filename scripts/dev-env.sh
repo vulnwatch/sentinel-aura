@@ -39,8 +39,8 @@
 #   scripts/dev-env.sh e2e [<browser>]
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and
-#                                    Firefox, or in <browser>, each against
-#                                    a new backend
+#                                    Firefox, or in <browser>, chromium or
+#                                    firefox, each against a new backend
 #   scripts/dev-env.sh update-screenshots
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and write
@@ -57,8 +57,8 @@
 #                                    kept for seven days. Lists the files of
 #                                    the pull request that the preview takes
 #                                    from this checkout instead. One preview
-#                                    runs for each clone; a new one replaces
-#                                    it
+#                                    runs at a time; a new one of this clone
+#                                    replaces it
 set -euo pipefail
 
 # shellcheck source=scripts/lib/common.sh

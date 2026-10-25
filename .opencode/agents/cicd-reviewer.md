@@ -168,9 +168,9 @@ workflows and the pipeline documentation, never by assumption.
    interacting trigger, artifact, gate, or publication path. Use targeted
    searches to find consumers; do not inspect unrelated workflows merely
    because they share the directory
-5. For each command whose syntax or behavior the change alters, search
-   `CONTRIBUTING.md`, `docs/`, `.github/`, `.opencode/`, `AGENTS.md`, and the
-   other scripts for the places that name it
+5. For each command whose syntax or behavior the change alters, search the
+   repository with `git grep` for the places that name it, documents and
+   comments included
 
 ## What to check
 
@@ -212,12 +212,10 @@ workflows and the pipeline documentation, never by assumption.
 
 Apply the rules of Tooling Structure in `docs/conventions.md`:
 
-- **Language**: is new or moved logic written in the language that the rule
-  assigns: bash for the code that runs on the host, and TypeScript, as
-  Playwright tests in the tooling container, for logic that needs neither the
-  Docker daemon nor credentials in a command or job that uses the container?
-  Another language or runtime is a new dependency, which needs the
-  repository owner's decision (`docs/conventions.md`, Dependency Admission)
+- **Language**: is new or moved logic written in the language that the
+  Language rule assigns to where it runs? Another language or runtime is a
+  new dependency, which needs the repository owner's decision
+  (`docs/conventions.md`, Dependency Admission)
 - **Owning scripts**: does a new capability become a command of the script
   that owns its concern? Does a new script serve a single-purpose task, or a
   new concern that the table of owning scripts lists?
@@ -226,8 +224,9 @@ Apply the rules of Tooling Structure in `docs/conventions.md`:
   a value repeated in a file that cannot source the library carry the comment
   that names the file to keep in sync with?
 - **Documentation of commands**: does the syntax of a command — its
-  arguments, its options, or the environment variables that it reads — appear
-  anywhere but in the header of its script? Does the header still match what
+  arguments, its options, or the environment variables that configure it —
+  appear anywhere but in the header of its script, apart from the arguments
+  that a procedure passes on to another tool? Does the header still match what
   the command does after the change? Does `CONTRIBUTING.md` still name the
   command for its task, and do the documents under `docs/` still state the
   guarantees that the command provides?
@@ -266,7 +265,8 @@ Provide a structured summary with these sections:
 4. **Documentation drift**: divergence between the changed artifacts and the
    pipeline documentation, `docs/conventions.md`, `CONTRIBUTING.md`, or the
    script headers, including the syntax of a command stated outside the
-   header of its script
+   header of its script, apart from the arguments that a procedure passes on
+   to another tool
 5. **Verdict**: one of:
    - **Clean** — the change conforms and introduces no pipeline risk
    - **Minor issues** — small deviations that should be fixed but do not

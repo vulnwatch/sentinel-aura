@@ -22,8 +22,6 @@ set -euo pipefail
 # shellcheck source=scripts/lib/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
-readonly RELEASE_BRANCH_PREFIX="release-please--"
-
 # Prints the files among DEPENDENCY_FILES that differ between $1 and the
 # checkout, which no earlier step of the job changes. Fails when the base
 # commit is not available.

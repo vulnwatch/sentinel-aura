@@ -18,6 +18,8 @@
 #       PR_BODY='Closes #42' scripts/check-pr-metadata.sh
 set -euo pipefail
 
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 # shellcheck source=scripts/lib/commit-title.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-title.sh"
 
@@ -42,7 +44,7 @@ check_title() {
 is_approved_automation() {
     local author="$1" head_ref="$2"
     [[ "${author}" == "renovate[bot]" && "${head_ref}" == renovate/* ]] ||
-        [[ "${head_ref}" == release-please--* ]]
+        [[ "${head_ref}" == "${RELEASE_BRANCH_PREFIX}"* ]]
 }
 
 check_issue_linkage() {

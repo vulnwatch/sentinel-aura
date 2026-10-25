@@ -92,8 +92,9 @@ digest of that release's image
 ### Commands
 
 The scripts under `scripts/` run the tooling on your host. The header comment
-of each script documents its commands, with their arguments, and what they
-do, and its `help` command prints it, for example `scripts/dev-env.sh help`
+of each script documents its usage, with its commands and their arguments,
+and what it does, and the `help` command of a script with commands prints
+it, for example `scripts/dev-env.sh help`
 ([Tooling Structure](docs/conventions.md#tooling-structure)). This table says
 which command serves which task; the headers also document the commands that
 other scripts and CI run for you.
@@ -209,11 +210,13 @@ with the [local backend](#local-backend).
 
 - The pull request contributes only its production build, static files that
   nginx serves to your browser, and the Sentinel version and image digest
-  that it declares, which must match your checkout's or those of a published
-  Sentinel release: nothing of it runs on your host. The `Containerfile`, the
-  nginx and reverse proxy configuration, `compose.yaml`, and the scripts come
-  from your checkout, so run the command from an up-to-date `master`; the
-  preview does not show a change of these files.
+  that it declares, which the command accepts only as your checkout's pinned
+  digest of the same version, or, for another version, as a published
+  Sentinel release whose tag names that digest: nothing of it runs on your
+  host. The `Containerfile`, the nginx and reverse proxy configuration,
+  `compose.yaml`, and the scripts come from your checkout, so run the command
+  from an up-to-date `master`; the preview does not show a change of these
+  files.
 - The pull request's JavaScript runs in your browser, which shares the cookies
   of `localhost` among all ports. For a pull request from outside the project,
   use a separate browser profile. For the same reason, signing in to the
