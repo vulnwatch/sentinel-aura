@@ -181,8 +181,10 @@ workflows and the pipeline documentation, never by assumption.
   always a finding
 - Does every action pinned by commit SHA carry the inline `# vX.Y.Z` comment
   that identifies its version?
-- Are tools installed by download (`shellcheck`, `shfmt`, `actionlint`,
-  scanners) pinned to an explicit version?
+- Is every tool that a workflow installs, itself or through a script that it
+  runs, pinned as the Pinned tools rule of the workflow conventions requires:
+  a download or an action's `version:` input to an explicit version, a
+  container image by version and digest, each tracked by Renovate?
 
 ### Secret handling and permissions
 

@@ -26,7 +26,7 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 | `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
@@ -193,11 +193,12 @@ references (`@main`, `@master`, any branch name) and tag references (`@v7`, or
 an exact release tag such as `@v7.0.1`) MUST NOT be used: the upstream
 maintainer can move a tag to different content, but not a commit SHA.
 
-**Pinned tools.** A tool that a workflow installs itself — downloaded
-directly, run as a container image, or requested through an action's
-`version:` input — MUST be pinned to an explicit version and never resolve to
-the latest release. A container image is pinned by version and digest. Every
-pinned version is tracked by Renovate (Dependency Updates).
+**Pinned tools.** A tool that a workflow installs, itself or through a script
+that it runs — downloaded directly, run as a container image, or requested
+through an action's `version:` input — MUST be pinned to an explicit version
+and never resolve to the latest release. A container image is pinned by
+version and digest. Every pinned version is tracked by Renovate (Dependency
+Updates).
 
 **Checkout credentials.** Every `actions/checkout` step sets
 `persist-credentials: false`: no workflow pushes to the repository, so the
@@ -267,19 +268,17 @@ repository runs the bot or creates its pull requests. It tracks:
   through a custom regex manager;
 - the tooling image of `scripts/tooling.sh`, by version and digest, through a
   custom regex manager;
-- the versions of the tools that a workflow downloads (`shellcheck`, `shfmt`,
-  and `actionlint` in `ci.yml`), through a custom regex manager that reads a
-  `# renovate: datasource=<datasource> depName=<name>` hint comment placed
-  directly above each `<NAME>_VERSION: "<version>"` line of the workflow's
-  `env:` block, for example
-  `# renovate: datasource=github-releases depName=rhysd/actionlint`. The value
-  holds the version without the `v` prefix of the release tag. A new tool that
-  a workflow downloads follows the same pattern, so that Renovate tracks it
-  from the start;
+- the images of `shellcheck`, `shfmt`, and `actionlint` in
+  `scripts/lint-shell.sh`, by version and digest, through a custom regex
+  manager;
 - the `version:` inputs of actions that the `github-actions` manager does not
   track (the Codecov CLI of `codecov/codecov-action` in `ci.yml`), through a
-  custom regex manager that reads the same hint comment placed directly above
-  the input; the value is the release tag;
+  custom regex manager that reads a
+  `# renovate: datasource=<datasource> depName=<name>` hint comment placed
+  directly above the input, for example
+  `# renovate: datasource=github-releases depName=codecov/codecov-cli`; the
+  value is the release tag. A new such input follows the same pattern, so that
+  Renovate tracks it from the start;
 - the npm dependencies of `package.json` and the lockfile, and the versions
   that the overrides of `package.json` force (below), through the `npm`
   manager; and
@@ -376,12 +375,13 @@ change of the supported version carries one (`docs/architecture.md`, Backend
 Contract).
 
 Routine updates follow the `schedule:earlyMondays` schedule and use the
-`ci(deps):` title prefix, or `chore(deps):` for the tooling image, the npm
-dependencies, the base image of the `Containerfile`, and the images of
-`compose.yaml`, which are not used only by CI; neither carries a release
-signal (`docs/conventions.md`, Versioning). Renovate never merges its own pull
-requests: `automerge` is disabled, and each one is merged like any other pull
-request, after the repository owner authorizes the merge.
+`ci(deps):` title prefix, or `chore(deps):` for the tooling image, the images
+of the shell lint tools, the npm dependencies, the base image of the
+`Containerfile`, and the images of `compose.yaml`, which are not used only by
+CI; neither carries a release signal (`docs/conventions.md`, Versioning).
+Renovate never merges its own pull requests: `automerge` is disabled, and each
+one is merged like any other pull request, after the repository owner
+authorizes the merge.
 
 Known vulnerabilities are handled by these complementary mechanisms:
 
@@ -498,30 +498,31 @@ git config --local --unset core.hooksPath
 | Hook | Checks |
 |------|--------|
 | `commit-msg` | The first line of the message follows the Conventional Commits format and the breaking-marker rule and stays under 72 characters (`docs/conventions.md`, Commit Messages). Messages that Git generates (`Merge`, `Revert`, `fixup!`, `squash!`) are skipped |
-| `pre-commit` | `scripts/lint-shell.sh` on the staged files: `shellcheck` and `shfmt` on the staged shell scripts and hooks and `actionlint` on the staged workflows, selected as the `Shell Lint` job selects the tracked ones; then `gitleaks` on the staged changes |
+| `pre-commit` | `scripts/lint-shell.sh` on the staged files: `shellcheck` and `shfmt` on the staged shell scripts and hooks and `actionlint` on the staged workflows, selected as the `Shell Lint` job selects the tracked ones and run from the same images; then `gitleaks` on the staged changes |
 | `pre-push` | Blocks pushes to `master` and pushes of tags (`docs/conventions.md`, Git Conventions) |
 
 The hooks are a supplementary safety net: they can be bypassed, while CI and
 the branch protection of `master` cannot. The shell and workflow checks of
 `pre-commit` read the working-tree content of the staged files; `gitleaks`
-scans the staged content. The tools of `pre-commit` are optional: a missing
-tool produces a warning and the commit proceeds. `scripts/ci.sh all` runs the
-shell and workflow checks as `Shell Lint` does, so it fails when one of their
-tools is missing (Workflow Inventory, Local run).
+scans the staged content.
 
-| Tool | Version | Used by |
-|------|---------|---------|
-| [shellcheck](https://www.shellcheck.net/) | The version that `ci.yml` pins | `pre-commit` and `scripts/ci.sh all`; `actionlint` also runs it on workflow `run:` blocks |
-| [shfmt](https://github.com/mvdan/sh) | The version that `ci.yml` pins, to avoid formatting drift | `pre-commit` and `scripts/ci.sh all` |
-| [actionlint](https://github.com/rhysd/actionlint) | The version that `ci.yml` pins | `pre-commit` and `scripts/ci.sh all` |
-| [gitleaks](https://github.com/gitleaks/gitleaks) | 8.19.0 or later, which provides the `git` command | `pre-commit` |
-
-Renovate updates the versions that `ci.yml` pins (Dependency Updates); after
-such an update is merged, update the local tools to match.
+The shell and workflow checks need no local installation:
+`scripts/lint-shell.sh` runs each tool from the image that it pins by version
+and digest, through Docker Engine (`docs/architecture.md`, Development
+Environment), so `pre-commit`, `scripts/ci.sh all`, and `Shell Lint` run the
+same versions, and a Renovate update reaches all of them at once (Dependency
+Updates). A commit that stages no shell script, hook, or workflow starts none
+of the tools. When Docker Engine cannot run the images, because the setup is
+not the supported one or an image cannot be downloaded, `pre-commit` warns and
+the commit proceeds, while `scripts/ci.sh all` fails (Workflow Inventory, Local
+run).
 
 **Secret scanning.** `gitleaks git --staged` scans the staged changes with
-`.gitleaks.toml`, which extends gitleaks' default rule set. It is local only:
-no workflow scans for secrets, and GitHub secret scanning with push protection
-is the server-side check. A confirmed false positive of a non-secret value is
+`.gitleaks.toml`, which extends gitleaks' default rule set. It needs
+[gitleaks](https://github.com/gitleaks/gitleaks) on the host, 8.19.0 or later,
+whose `git` subcommand it runs, and is optional: when it is not installed,
+`pre-commit` warns and the commit proceeds. It is local only: no workflow
+scans for secrets, and GitHub secret scanning with push protection is the
+server-side check. A confirmed false positive of a non-secret value is
 allowlisted in `.gitleaks.toml` by a regular expression — never by path — with
 a comment that explains why the value is not a secret.

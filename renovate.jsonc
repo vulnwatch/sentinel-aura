@@ -70,6 +70,18 @@
     },
     {
       "customType": "regex",
+      "description": "Images of shellcheck, shfmt, and actionlint in scripts/lint-shell.sh, by version and digest",
+      "managerFilePatterns": ["/^scripts/lint-shell\\.sh$/"],
+      // The package name omits docker.io/, the default registry, so that the
+      // titles of the version updates stay within the length that the PR
+      // Metadata check allows.
+      "matchStrings": [
+        "[A-Z]+_IMAGE=\"docker\\.io/(?<depName>[^:\"]+):(?<currentValue>[^@\"]+)@(?<currentDigest>sha256:[a-f0-9]+)\""
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
       "description": "Renovate validation container used by the advisory pull-request workflow",
       "managerFilePatterns": ["/^\\.github/workflows/renovate-validation\\.yml$/"],
       "matchStrings": [
@@ -85,17 +97,6 @@
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>\\S+)\\s+version:\\s*\"(?<currentValue>[^\"]+)\""
       ]
-    },
-    {
-      "customType": "regex",
-      "description": "Tool versions that a workflow downloads (e.g. shellcheck, shfmt, and actionlint in ci.yml), each marked by a '# renovate: datasource=<datasource> depName=<name>' hint comment directly above its <NAME>_VERSION: \"<version>\" line",
-      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
-      "matchStrings": [
-        "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>\\S+)\\s+[A-Z0-9_]+_VERSION:\\s*\"(?<currentValue>[^\"]+)\""
-      ],
-      // Release tags carry a 'v' prefix (v1.7.12) that the workflow values
-      // omit; tags that are not versions (such as 'latest') are ignored.
-      "extractVersionTemplate": "^v?(?<version>\\d.*)$"
     }
   ],
   "packageRules": [
@@ -111,9 +112,9 @@
       "commitMessagePrefix": "ci(deps):"
     },
     {
-      "description": "Tooling image, used locally and in CI",
+      "description": "Tooling image and images of the shell lint tools, used locally and in CI",
       "matchManagers": ["custom.regex"],
-      "matchFileNames": ["scripts/tooling.sh"],
+      "matchFileNames": ["scripts/tooling.sh", "scripts/lint-shell.sh"],
       "commitMessagePrefix": "chore(deps):"
     },
     {

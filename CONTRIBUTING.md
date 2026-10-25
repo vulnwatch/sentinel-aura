@@ -189,10 +189,10 @@ Run `scripts/ci.sh all` before pushing: it runs on your host the checks of
 the `Shell Lint`, `UI Checks`, and `End-to-End Tests` jobs, as CI runs them
 ([Workflow Inventory](docs/deployment.md#workflow-inventory), Local run).
 
-- It needs what the tooling, the image, and the local backend need, network
-  access, and `shellcheck`, `shfmt`, and `actionlint` at the versions of
-  [Local Git Hooks](docs/deployment.md#local-git-hooks). Once the images are
-  downloaded, it takes a few minutes.
+- It needs what the tooling, the image, and the local backend need, and
+  network access; the shell lint runs its tools from pinned images, so you
+  install none of them. Once the images are downloaded, it takes a few
+  minutes.
 - It checks your working tree, so you can run it before committing, but the
   shell lint checks only the files that Git tracks: `git add` a new script or
   workflow first.
@@ -240,11 +240,14 @@ git config --local core.hooksPath .githooks
 | `pre-commit` | `scripts/lint-shell.sh` on the staged files: `shellcheck` and `shfmt` on staged shell scripts and hooks, and `actionlint` on staged workflows; then `gitleaks` on the staged changes |
 | `pre-push` | Blocks pushes to `master` and pushes of tags |
 
-The tools of `pre-commit` are optional: a missing one produces a warning and
-does not block the commit. CI remains the authoritative gate for the shell and
-workflow checks. See
-[Local Git Hooks](docs/deployment.md#local-git-hooks) for the tool versions and
-how to deactivate the hooks.
+The shell and workflow checks of `pre-commit` run their tools from the same
+pinned images as CI, through Docker Engine, so you install none of them; when
+Docker Engine cannot run the images, the hook warns and the commit proceeds.
+`gitleaks` is optional: install it to scan your commits for secrets, or the
+hook warns and the commit proceeds. CI remains the authoritative gate for the
+shell and workflow checks. See
+[Local Git Hooks](docs/deployment.md#local-git-hooks) for the gitleaks version
+and how to deactivate the hooks.
 
 ## Conventions
 
