@@ -145,8 +145,11 @@ Every finding is anchored in a rule of `docs/conventions.md` or
 `docs/architecture.md`, or in a verbatim quote of Sentinel's contract at the
 revision read, together with a concrete scenario: the request that the code
 sends or the response that it handles, and the result that differs from what
-the screen document or the tracking issue intends. An inefficiency without a
-screen that suffers from it is not a finding.
+the screen document or the tracking issue intends. An unnecessary request is
+anchored instead in the screen that sends it: the requests that the screen
+sends and the requests that it needs to show what its screen document or
+issue states. An inefficiency without a screen that suffers from it is not a
+finding.
 
 ## Before reviewing
 
@@ -272,10 +275,6 @@ express, against the quoted section of Sentinel's contract:
   caller cannot access (Sentinel `docs/api-spec.md`, Anti-Enumeration
   Boundary)
 
-Whether an operation, parameter, field, or code exists in the contract is
-checked by `@spec-conformance-reviewer`; when a finding also lies there, tag
-it with that reviewer.
-
 ## Exclusions
 
 These belong to other reviewers. Do not report findings in their territory:
@@ -286,6 +285,12 @@ These belong to other reviewers. Do not report findings in their territory:
 | The session token, credentials, browser storage, and URLs as security risks | `@security-reviewer` |
 | The data flows of a screen as a foundation or screen document designs them | `@design-reviewer` |
 | Tests of the changed code | `@test-reviewer` |
+
+**Deliberate overlap.** The error codes that an operation can return, and
+the client obligations of the operations in the diff, also lie in the
+territory of `@spec-conformance-reviewer`. Report such a finding when it
+belongs to a check above, and tag it with that reviewer so that the invoking
+agent can deduplicate.
 
 ## Output
 

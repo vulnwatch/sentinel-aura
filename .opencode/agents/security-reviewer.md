@@ -170,7 +170,7 @@ These are decided elsewhere. Do NOT report findings about them:
   its own (`docs/architecture.md`, Session Cookie; Cross-Origin Requests)
 - **`Strict-Transport-Security`, TLS, and rate limiting**: the Sentinel host
   provides them, not the UI's image (`docs/architecture.md`, Security
-  Headers)
+  Headers; Sentinel `docs/deployment.md`, Pre-Production Checklist)
 - **Sentinel's interactive documentation page**, `/api/docs`, which runs in
   the same origin and belongs to Sentinel (Sentinel `docs/api-spec.md`,
   OpenAPI Document and Interactive Documentation). The UI's part is to keep
@@ -198,7 +198,9 @@ These are decided elsewhere. Do NOT report findings about them:
    Security Headers), complete Code Conventions in `docs/conventions.md`, in
    particular API Access, Data Read from the API, and No Raw HTML Injection,
    and the screen document of each screen in the diff
-3. When the change involves the session, sign-in, browser storage, or
+3. When the change renders a value from the API as a link or navigates to
+   it, read what the owning Sentinel specification guarantees about that
+   value. When the change involves the session, sign-in, browser storage, or
    cross-origin requests, read Sentinel
    `docs/features/identity/authentication.md` (Session cookie, Frontend
    session behavior, Cross-Origin Request Protection, Security
@@ -236,9 +238,13 @@ These are decided elsewhere. Do NOT report findings about them:
 
 - Is a URL built from data — in an `href`, a `src`, a router navigation,
   `window.location`, or `window.open` — limited to the schemes and origins
-  that its purpose needs? Lint rejects only literal `javascript:` URLs, and a
-  reference URL that an external source supplies through Sentinel can carry
-  any scheme
+  that its purpose needs? Lint rejects only literal `javascript:` URLs.
+  Sentinel guarantees the scheme of some URLs that it returns, such as those
+  of Ticket references (Sentinel `docs/features/tickets/ticket-references.md`,
+  URL Normalization), but not of others: a consumer that renders
+  `package_url`, `collection_url`, or `repo` as a link validates its scheme
+  first (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE Affected
+  Versions)
 - Can a navigation target read from the URL or from browser storage, such as
   the return URL after sign-in (Sentinel
   `docs/features/identity/authentication.md`, Post-login redirect), send the
@@ -249,8 +255,9 @@ These are decided elsewhere. Do NOT report findings about them:
 
 - Does the change need a source, an inline script or style, evaluated code,
   or a Trusted Types policy that the policy of Security Headers does not
-  allow? The policy changes only through a change of that architecture
-  decision, never to make a library work, and no test turns its check off
+  allow? Apart from its `<hash>`, which follows the stylesheet that React Aria
+  inserts, the policy changes only through a change of that architecture
+  decision, and no test turns its check off
 - Does Zod stay configured without its run-time code generation before any
   schema runs (`src/zod.ts`, imported first by `src/main.tsx`)?
 - Does the UI load anything from a third party — a script, a stylesheet, a
@@ -293,9 +300,9 @@ These are decided elsewhere. Do NOT report findings about them:
 
 ## Output
 
-Begin with the reviewed scope and the Sentinel revision read, or the
-limitation. Then provide these sections, omitting an empty one other than the
-verdict:
+Begin with the reviewed scope and, when you read Sentinel, the revision read
+or the limitation. Then provide these sections, omitting an empty one other
+than the verdict:
 
 1. **Secure**: one concise statement of the controls that the change
    preserves

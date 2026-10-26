@@ -220,10 +220,11 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
   Playwright project relies on, and sit in the project that End-to-End Tests
   assigns to its kind of change? Does a failed sign-in use a user that no
   other test signs in as?
-- Is each reference screenshot named after the screen and the state that it
-  shows, taken in Chromium, with the regions that change from one run to the
-  next masked, and absent for transient states? Does the change remove the
-  references that no test takes any more?
+- Does each state that the change shows have its reference screenshot,
+  except a transient state and one that a dataset backend cannot produce?
+  Is each reference named after the screen and the state that it shows,
+  taken in Chromium, with the regions that change from one run to the next
+  masked? Does the change remove the references that no test takes any more?
 
 ### Reliability and assertions
 
