@@ -117,6 +117,10 @@ change cannot merge with a known vulnerability.
 runs that image with the settings of the Pod Security `restricted` profile,
 without a network, and fails unless:
 
+- the image is one image manifest, not an index that holds another manifest
+  beside it, such as the provenance attestation that Buildx adds by default
+  (Release Process, Supply-Chain Artifacts); Docker's classic image store
+  records no descriptor of an image, and keeps no attestation;
 - the image carries exactly the labels that the build sets, with their
   values;
 - the image declares a numeric non-root user, no process of the container
@@ -135,11 +139,11 @@ without a network, and fails unless:
   `Strict-Transport-Security`, and no `Location`; and
 - the access log records a request but not the value of its `Cookie` header.
 
-The script checks the labels, the user, the content, the processes, and the
-access log through Docker; the `image` project of the end-to-end tests checks
-the responses, in the network namespace of the container, where
-`scripts/tooling.sh e2e` runs it and reaches nginx on the loopback interface
-(`docs/conventions.md`, End-to-End Tests).
+The script checks the manifest, the labels, the user, the content, the
+processes, and the access log through Docker; the `image` project of the
+end-to-end tests checks the responses, in the network namespace of the
+container, where `scripts/tooling.sh e2e` runs it and reaches nginx on the
+loopback interface (`docs/conventions.md`, End-to-End Tests).
 
 **End-to-end tests.** The `End-to-End Tests` job runs beside `UI Checks`,
 through `scripts/ci.sh e2e` (Local run). `scripts/dev-env.sh e2e` builds the

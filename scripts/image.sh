@@ -15,9 +15,11 @@
 #                                   labels of a release of <version>, such as
 #                                   1.2.3, or without it of a development
 #                                   build, whose version is "dev"
-#   scripts/image.sh test           Run the built image and check it: its
-#                                   labels, its user, its content, and its
-#                                   processes; then its responses, with the
+#   scripts/image.sh test           Run the built image and check it: that it
+#                                   is one image manifest, without an
+#                                   attestation, its labels, its user, its
+#                                   content, and its processes; then its
+#                                   responses, with the
 #                                   image project of the end-to-end tests: the
 #                                   entry document fallback, caching, the 404
 #                                   of a missing asset, the security headers,
@@ -142,6 +144,19 @@ image_shell() {
     docker run --rm --network=none --user=0 --entrypoint=sh \
         --cap-drop=ALL --cap-add=DAC_READ_SEARCH --security-opt=no-new-privileges \
         "${UI_IMAGE}" -c "$1"
+}
+
+# The image is one image manifest, which its tag names when it is published,
+# not an index that holds another manifest beside it, such as the provenance
+# attestation that Buildx adds by default. Docker's classic image store
+# records no descriptor of an image, and keeps no attestation.
+check_manifest() {
+    local media_type
+    media_type="$(docker image inspect --format '{{with .Descriptor}}{{.MediaType}}{{end}}' "${UI_IMAGE}")"
+    case "${media_type}" in
+        "" | application/vnd.oci.image.manifest.v1+json | application/vnd.docker.distribution.manifest.v2+json) ;;
+        *) die "the image is a ${media_type}, not one image manifest: its build added another manifest, such as an attestation" ;;
+    esac
 }
 
 # Every label of the image is one that build sets, with its value, so that no
@@ -359,6 +374,7 @@ cmd_test() {
         die "missing dist/index.html; run 'scripts/image.sh build' first"
     trap remove_state EXIT
 
+    check_manifest
     check_labels
     check_image_content
     start_container
