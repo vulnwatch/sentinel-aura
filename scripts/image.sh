@@ -14,15 +14,18 @@
 #                                   localhost/sentinel-aura:local, with the
 #                                   labels of a release of <version>, such as
 #                                   1.2.3, or without it of a development
-#                                   build, whose version is "dev"
-#   scripts/image.sh test           Run the built image and check it: its
-#                                   labels, its user, its content, and its
-#                                   processes; then its responses, with the
-#                                   image project of the end-to-end tests: the
-#                                   entry document fallback, caching, the 404
-#                                   of a missing asset, the security headers,
-#                                   and the absence of redirects; then an
-#                                   access log without the Cookie header
+#                                   build, whose version is "dev", and without
+#                                   the provenance attestation of Buildx
+#   scripts/image.sh test           Run the built image and check it: that it
+#                                   is one image manifest, without an
+#                                   attestation, its labels, its user, its
+#                                   content, and its processes; then its
+#                                   responses, with the image project of the
+#                                   end-to-end tests: the entry document
+#                                   fallback, caching, the 404 of a missing
+#                                   asset, the security headers, and the
+#                                   absence of redirects; then an access log
+#                                   without the Cookie header
 #   scripts/image.sh sbom <file>    Write the CycloneDX SBOM of the built image
 #                                   to <file>, then check it: the operating
 #                                   system packages of the image and the
@@ -142,6 +145,19 @@ image_shell() {
     docker run --rm --network=none --user=0 --entrypoint=sh \
         --cap-drop=ALL --cap-add=DAC_READ_SEARCH --security-opt=no-new-privileges \
         "${UI_IMAGE}" -c "$1"
+}
+
+# The image is one image manifest, which its tag names when it is published,
+# not an index that holds another manifest beside it, such as the provenance
+# attestation that Buildx adds by default. Docker's classic image store
+# records no descriptor of an image, and keeps no attestation.
+check_manifest() {
+    local media_type
+    media_type="$(docker image inspect --format '{{with .Descriptor}}{{.MediaType}}{{end}}' "${UI_IMAGE}")"
+    case "${media_type}" in
+        "" | application/vnd.oci.image.manifest.v1+json | application/vnd.docker.distribution.manifest.v2+json) ;;
+        *) die "the image's media type is ${media_type}, not that of one image manifest: its build added another manifest, such as an attestation" ;;
+    esac
 }
 
 # Every label of the image is one that build sets, with its value, so that no
@@ -345,8 +361,12 @@ cmd_build() {
     "${REPO_ROOT}/scripts/tooling.sh" run build
     [[ -f "${REPO_ROOT}/dist/index.html" ]] ||
         die "the production build wrote no dist/index.html"
-    docker buildx build --load --file "${REPO_ROOT}/Containerfile" --tag "${UI_IMAGE}" \
-        "${labels[@]}" "${REPO_ROOT}"
+    # Buildx adds an unsigned provenance attestation by default, which the
+    # containerd image store keeps and a push publishes beside the image; the
+    # release attests the image's provenance itself (docs/deployment.md,
+    # Supply-Chain Artifacts).
+    docker buildx build --load --provenance=false --file "${REPO_ROOT}/Containerfile" \
+        --tag "${UI_IMAGE}" "${labels[@]}" "${REPO_ROOT}"
 }
 
 # The checks that need Docker run here; the image project of the end-to-end
@@ -359,6 +379,7 @@ cmd_test() {
         die "missing dist/index.html; run 'scripts/image.sh build' first"
     trap remove_state EXIT
 
+    check_manifest
     check_labels
     check_image_content
     start_container

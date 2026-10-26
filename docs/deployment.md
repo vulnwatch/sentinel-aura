@@ -117,6 +117,10 @@ change cannot merge with a known vulnerability.
 runs that image with the settings of the Pod Security `restricted` profile,
 without a network, and fails unless:
 
+- the image is one image manifest, not an index that holds another manifest
+  beside it, such as the provenance attestation that Buildx adds by default
+  (Release Process, Supply-Chain Artifacts); Docker's classic image store
+  records no descriptor of an image, and keeps no attestation;
 - the image carries exactly the labels that the build sets, with their
   values;
 - the image declares a numeric non-root user, no process of the container
@@ -135,11 +139,11 @@ without a network, and fails unless:
   `Strict-Transport-Security`, and no `Location`; and
 - the access log records a request but not the value of its `Cookie` header.
 
-The script checks the labels, the user, the content, the processes, and the
-access log through Docker; the `image` project of the end-to-end tests checks
-the responses, in the network namespace of the container, where
-`scripts/tooling.sh e2e` runs it and reaches nginx on the loopback interface
-(`docs/conventions.md`, End-to-End Tests).
+The script checks the manifest, the labels, the user, the content, the
+processes, and the access log through Docker; the `image` project of the
+end-to-end tests checks the responses, in the network namespace of the
+container, where `scripts/tooling.sh e2e` runs it and reaches nginx on the
+loopback interface (`docs/conventions.md`, End-to-End Tests).
 
 **End-to-end tests.** The `End-to-End Tests` job runs beside `UI Checks`,
 through `scripts/ci.sh e2e` (Local run). `scripts/dev-env.sh e2e` builds the
@@ -326,24 +330,79 @@ repository runs the bot or creates its pull requests. It tracks:
   Sentinel's GitHub Releases, through a custom regex manager (Sentinel
   version).
 
-**npm dependencies.** Their routine updates wait for the minimum release age
-of `docs/architecture.md` (Build Tool, Package Manager, and Node.js), and
-Renovate opens none before it. Minor and patch updates are grouped into one
-pull request, and each major update gets its own, or one per monorepo when the
-`config:recommended` preset groups the packages of one project. A weekly lock
-file maintenance pull request regenerates `package-lock.json`, which keeps the
-transitive dependencies current, within npm's own minimum release age.
-Renovate does not update the Node.js line of `package.json`, which follows the
-tooling image (`docs/architecture.md`, Build Tool, Package Manager, and
-Node.js), nor the major version of `@types/node`, the types of the Node.js of
-that line: both change by hand, together.
+**Minimum release age.** Renovate proposes a new version of a dependency, a
+major, minor, or patch update, only once it is seven days old: the minimum
+release age of the npm dependencies (`docs/architecture.md`, Build Tool,
+Package Manager, and Node.js), applied to every manager for the same reason.
+The actions run with the tokens of the workflows, and the images and tools
+run in CI and locally or ship in the UI's image, so a malicious version of
+any of them does as much harm as one of an npm package. Renovate dates:
+
+- an npm version by its publication on the registry;
+- a version of a GitHub Release, such as Sentinel's or the Codecov CLI's, by
+  the publication of the release;
+- a version of an action by the later of the publication of its release and
+  the date of its tagged commit, or, for a tag without a release, by that
+  date alone, which its publisher sets; and
+- a version of a Docker Hub image by the last push of its tag.
+
+Renovate proposes the newest version that is old enough; while none is, the
+update is listed under "Pending Status Checks" on the Dependency Dashboard. A
+version without a release timestamp is held in the same way, so a missing
+timestamp never admits a version early. The Mend Renovate App reads the
+timestamps of the Docker Hub images that this repository uses; the lookup of
+`renovate-validation.yml`, whose Docker Hub requests are anonymous, lacks
+those of an image with more than 1,000 tags, such as `postgres` and
+`renovate/renovate`, and marks their updates as pending in its debug log
+only, which is not a warning.
+
+These updates are not held:
+
+- the supported Sentinel version (Sentinel version);
+- the `nginx` group, the base image of the `Containerfile` and the proxy
+  image of `compose.yaml`: upstream rebuilds every current tag every week,
+  and Docker Hub dates a version by the last push of its tag, so the newest
+  version would never reach the age: Renovate would propose only an earlier
+  one, and a security release of nginx would wait until a later release
+  replaced it;
+- the tooling image: `mcr.microsoft.com` publishes no release timestamps, so
+  the image would be held indefinitely, while `@playwright/test`, which joins
+  its pull request (npm dependencies), still waits for the age;
+- digest updates: Docker Hub dates a digest by the last push of its tag, and
+  the digest refresh of the base image is how a fix of its packages arrives
+  (Workflow Inventory, Image vulnerability scan);
+- lock file maintenance, which npm's own minimum release age covers (npm
+  dependencies); and
+- vulnerability-fix pull requests (below).
+
+A maintainer can request a held update early with its checkbox on the
+Dependency Dashboard, for example a security release of an action, an image,
+or a tool, for which Renovate raises no vulnerability-fix pull request
+(below). Its pull request is merged like any other; its
+`renovate/stability-days` status stays pending until the version reaches the
+age, and is not a required check. An npm dependency cannot be delivered early
+that way, because npm applies its own minimum release age when Renovate
+updates the lockfile: a fix that cannot wait follows the path of an npm fix
+younger than the minimum release age (below).
+
+**npm dependencies.** Minor and patch updates are grouped into one pull
+request, and each major update gets its own, or one per monorepo when the
+`config:recommended` preset groups the packages of one project. A lock file
+maintenance pull request, every Monday, regenerates `package-lock.json`,
+which keeps the transitive dependencies current, within npm's own minimum
+release age. The lockfile holds hundreds of packages, so a nightly regeneration
+would open a pull request almost every night, which would conflict with the
+npm group on the same file. Renovate does not update the Node.js line of
+`package.json`, which follows the tooling image (`docs/architecture.md`, Build
+Tool, Package Manager, and Node.js), nor the major version of `@types/node`,
+the types of the Node.js of that line: both change by hand, together.
 
 The tooling image and `@playwright/test` are updated in one `Playwright` pull
 request, because the browsers of the image must be the ones that the package
-expects. The image has no release timestamp, so Renovate raises its update at
-once and adds the package to the same pull request when the package reaches
-the minimum release age; until then `UI Checks` fails, and the pull request is
-not merged.
+expects. The image is exempt from the minimum release age (above), so
+Renovate raises its update at once and adds the package to the same pull
+request when the package reaches the age; until then `UI Checks` fails, and
+the pull request is not merged.
 
 Renovate updates the lockfile with the npm line of the tooling image
 (`constraints.npm` in `renovate.jsonc`, which Renovate does not update either:
@@ -381,16 +440,16 @@ pull request, so an update of `vite`, the tooling image, or an image of
 development fails it (Workflow Inventory, End-to-end tests).
 
 **Sentinel version.** Renovate proposes a new supported Sentinel version once
-its GitHub Release is published, outside the weekly schedule, because the UI
+its GitHub Release is published, outside the nightly schedule, because the UI
 release deployed on a Sentinel host must support the Sentinel version
 deployed there (`docs/architecture.md`, Backend Contract; Release Process,
-Supported Sentinel Version). No minimum release age delays it, and when
-Renovate limits the pull requests that it opens in an hour, it opens this one
-before the others (`prPriority` in `renovate.jsonc`). The Mend Renovate App
-runs on the repository every few hours; a maintainer starts a run at once
-with the checkbox at the end of the Dependency Dashboard issue. Its pull
-request changes only `contract/sentinel-version`, so `UI Checks` fails until
-a maintainer completes it on its branch:
+Supported Sentinel Version). No minimum release age delays it, and Renovate
+opens it before the routine pull requests of the same run (`prPriority` in
+`renovate.jsonc`). The Mend Renovate App runs on the repository every four
+hours; a maintainer starts a run at once with the checkbox at the end of the
+Dependency Dashboard issue. Its pull request changes only
+`contract/sentinel-version`, so `UI Checks` fails until a maintainer completes
+it on its branch:
 
 1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
    with the release asset of the new version, and the pinned image digest
@@ -419,14 +478,29 @@ Its title uses the `feat(deps):` prefix, a minor release signal, because every
 change of the supported version carries one (`docs/architecture.md`, Backend
 Contract).
 
-Routine updates follow the `schedule:earlyMondays` schedule and use the
-`ci(deps):` title prefix, or `chore(deps):` for the tooling image, the images
-of the shell lint tools and Trivy, the npm dependencies, the base image of the
-`Containerfile`, and the images of `compose.yaml`, which are not used only by
-CI; neither carries a release signal (`docs/conventions.md`, Versioning).
-Renovate never merges its own pull requests: `automerge` is disabled, and each
-one is merged like any other pull request, after the repository owner
-authorizes the merge.
+Routine updates follow a nightly schedule: Renovate opens them before 06:00
+UTC every day (`schedule` in `renovate.jsonc`), so that their pull requests
+are ready in the morning, within a day of the version reaching the minimum
+release age. The App's four-hourly runs drift, so the window is six hours
+long, enough to hold a run even when one is late. Renovate opens every update
+that is ready in the first run of the window: it limits neither the pull
+requests that it opens in an hour nor those that it keeps open
+(`prHourlyLimit` and `prConcurrentLimit`), because a limit would defer the
+other updates to the next night. Lock file maintenance runs in the same
+window, on Monday only (npm dependencies).
+
+Routine updates use the `ci(deps):` title prefix, or `chore(deps):` for the
+tooling image, the images of the shell lint tools and Trivy, the npm
+dependencies, the base image of the `Containerfile`, and the images of
+`compose.yaml`, which are not used only by CI; neither carries a release
+signal (`docs/conventions.md`, Versioning). So that the titles stay within
+the length that the `PR Metadata` check allows (`docs/conventions.md`, Pull
+Request Requirements), the `nginx` and `Playwright` pull requests are titled
+with the name of their group, also when they hold a single update, and any
+other digest update of an image names the image without its tag. Renovate
+never merges its own pull requests: `automerge` is disabled, and each one is
+merged like any other pull request, after the repository owner authorizes the
+merge.
 
 Known vulnerabilities are handled by these complementary mechanisms:
 
@@ -435,7 +509,7 @@ Known vulnerabilities are handled by these complementary mechanisms:
   disabled, so that Renovate remains the only component that creates
   dependency pull requests.
 - **Renovate vulnerability-fix pull requests** (`vulnerabilityAlerts`) are
-  raised from those alerts immediately, outside the weekly schedule and
+  raised from those alerts immediately, outside the nightly schedule and
   without Renovate's minimum release age, labeled `security`, with the
   `fix(deps):` prefix, so that a merged security fix is a patch release
   signal. This requires the Mend Renovate App to have read access to
@@ -448,11 +522,11 @@ Known vulnerabilities are handled by these complementary mechanisms:
   (below). A lock file maintenance pull request that delivers a security fix
   is merged with a `fix(deps):` subject, so that it is a patch release signal
   too (`docs/conventions.md`, Workflow, Squash merge).
-- **A fix younger than the minimum release age** cannot be resolved by npm,
-  which applies the age when Renovate updates the lockfile: Renovate then
-  reports an artifact update problem on the pull request, or opens none until
-  the fixed version reaches the age. A maintainer delivers it earlier from a
-  branch, excluding only the fixed package from the age
+- **An npm fix younger than the minimum release age** cannot be resolved by
+  npm, which applies the age when Renovate updates the lockfile: Renovate
+  then reports an artifact update problem on the pull request, or opens none
+  until the fixed version reaches the age. A maintainer delivers it earlier
+  from a branch, excluding only the fixed package from the age
   (`docs/architecture.md`, Build Tool, Package Manager, and Node.js), and
   merges the pull request with a `fix(deps):` title. For a direct dependency:
 
@@ -730,6 +804,13 @@ can verify the image without the attestations API or the registry. The
 attestations create no storage record (`create-storage-record: false`), which
 would only add the registry to the organization's metadata of linked
 artifacts and need a further permission.
+
+The image carries no other record: its tag names one image manifest, which is
+the subject of both attestations. `scripts/image.sh build` disables the
+provenance attestation that Buildx adds by default, an unsigned record that
+the containerd image store keeps and a push publishes beside the image, in an
+index that the tag would name; the image test fails for such an index
+(Workflow Inventory, Image test).
 
 **SBOM scope.** `scripts/image.sh sbom` generates the SBOM with Trivy, run
 offline from the image that the script pins, and checks it. One CycloneDX
