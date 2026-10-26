@@ -152,16 +152,30 @@
       "commitMessagePrefix": "chore(deps):"
     },
     {
+      // Renovate's default topic of a digest update also names the tag
+      // (<image>:<tag> Docker digest), which can take the title beyond the
+      // length that the PR Metadata check allows — see docs/deployment.md
+      // (Dependency Updates).
+      "description": "Docker digest updates name the image without its tag",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "commitMessageTopic": "{{{depName}}} Docker digest"
+    },
+    {
       // The reverse proxy of compose.yaml runs the base image of the
       // Containerfile, so both references change together. Exempt from the
       // minimum release age: upstream rebuilds every current tag each week,
       // and Docker Hub dates a version by the last push of its tag, so the
       // newest version would never reach the age — see docs/deployment.md
-      // (Dependency Updates, Minimum release age).
-      "description": "nginx: the base image of the Containerfile and the proxy image of compose.yaml in one pull request, without the minimum release age",
+      // (Dependency Updates, Minimum release age). groupSingleUpdates titles
+      // its pull request "Update nginx" also when it holds a single update,
+      // because the title that names the image would exceed the length that
+      // the PR Metadata check allows.
+      "description": "nginx: the base image of the Containerfile and the proxy image of compose.yaml in one pull request, titled by the group, without the minimum release age",
       "matchManagers": ["dockerfile", "docker-compose"],
       "matchPackageNames": ["/(^|/)nginx/nginx-unprivileged$/"],
       "groupName": "nginx",
+      "groupSingleUpdates": true,
       "minimumReleaseAge": null
     },
     {
@@ -238,10 +252,14 @@
       // Last but one, so that it overrides the groups above and the
       // playwright monorepo group of config:recommended. Renovate raises the
       // update of the image at once (below) and adds @playwright/test when
-      // that version reaches the minimum release age.
-      "description": "Playwright: the tooling image and @playwright/test in one pull request, so that the browsers of the image are the ones that Playwright expects",
+      // that version reaches the minimum release age. groupSingleUpdates
+      // titles the pull request "Update Playwright" also when it holds the
+      // image alone, whose own title would exceed the length that the PR
+      // Metadata check allows.
+      "description": "Playwright: the tooling image and @playwright/test in one pull request, so that the browsers of the image are the ones that Playwright expects; titled by the group",
       "matchPackageNames": ["mcr.microsoft.com/playwright", "@playwright/test"],
-      "groupName": "Playwright"
+      "groupName": "Playwright",
+      "groupSingleUpdates": true
     },
     {
       // mcr.microsoft.com publishes no release timestamps, so the minimum

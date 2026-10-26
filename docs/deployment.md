@@ -476,10 +476,14 @@ Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, or `chore(deps):` for the tooling image, the images
 of the shell lint tools and Trivy, the npm dependencies, the base image of the
 `Containerfile`, and the images of `compose.yaml`, which are not used only by
-CI; neither carries a release signal (`docs/conventions.md`, Versioning).
-Renovate never merges its own pull requests: `automerge` is disabled, and each
-one is merged like any other pull request, after the repository owner
-authorizes the merge.
+CI; neither carries a release signal (`docs/conventions.md`, Versioning). So
+that the titles stay within the length that the `PR Metadata` check allows
+(`docs/conventions.md`, Pull Request Requirements), the `nginx` and
+`Playwright` pull requests are titled with the name of their group, also when
+they hold a single update, and any other digest update of an image names the
+image without its tag. Renovate never merges its own pull requests:
+`automerge` is disabled, and each one is merged like any other pull request,
+after the repository owner authorizes the merge.
 
 Known vulnerabilities are handled by these complementary mechanisms:
 
