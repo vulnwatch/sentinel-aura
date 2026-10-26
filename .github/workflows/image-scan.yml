@@ -20,7 +20,8 @@ on:
 
 # A run that is writing the tracking issue finishes before the next starts.
 # The runs of master, which all scan the latest release, wait for each other;
-# a run on another branch, which leaves the issue alone, waits for none.
+# a run on another branch, which leaves the issue alone, waits for no run of
+# master.
 concurrency:
   group: image-scan-${{ github.ref }}
   cancel-in-progress: false
@@ -46,8 +47,8 @@ jobs:
         with:
           persist-credentials: false
       # On master, the image of the latest release, which GitHub marks as
-      # Latest, by the digest that its version tag names: the package is
-      # public, so the pull needs no credentials.
+      # Latest, by the digest that its image tag names: the package is public,
+      # so the pull needs no credentials.
       - name: Pull the image of the latest release
         id: release
         if: github.ref == 'refs/heads/master'

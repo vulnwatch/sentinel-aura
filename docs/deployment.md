@@ -176,8 +176,8 @@ repository, and no secret:
 **Image vulnerability scan.** `image-scan.yml` scans the image of the latest
 release with Trivy for known vulnerabilities of its operating system packages;
 the npm dependencies have the dependency audit. It scans no earlier release,
-because security fixes ship only in a new release (`SECURITY.md`, Supported
-Versions). It runs every Monday, for the advisories published between
+because security fixes are applied to the latest release only (`SECURITY.md`,
+Supported Versions). It runs every Monday, for the advisories published between
 releases, and after every successful `release.yml` run, so that a release
 that ships a fix closes the tracking issue without waiting for the next
 Monday. That trigger follows the `release.yml` run rather than the
@@ -185,7 +185,7 @@ publication of its GitHub Release, which the run performs with the
 `GITHUB_TOKEN`, whose events start no workflow run; a failed run starts no
 scan, because it may not have published its release. The latest release is
 the one that GitHub marks as Latest: `scripts/image.sh pull` pulls its image
-by the digest that its version tag names, without credentials, because the
+by the digest that its image tag names, without credentials, because the
 package is public (Release Process, Secrets and Settings), and checks that
 the image is labeled as that version.
 

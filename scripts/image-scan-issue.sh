@@ -68,9 +68,8 @@ main() {
     [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RUN_URL:-}" ]] ||
         die "GITHUB_REPOSITORY and RUN_URL must be set"
     is_version "${version}" || die "'${version}' is not a version such as 1.2.3"
-    if [[ "${image%@*}" != "${RELEASE_IMAGE}" ]] || ! is_digest "${image#*@}"; then
+    is_release_reference "${image}" ||
         die "'${image}' is not a reference by digest of ${RELEASE_IMAGE}"
-    fi
     count="$(jq '[.Results[]?.Vulnerabilities[]?] | length' "${report}")" ||
         die "cannot read the report ${report}"
     issue="$(open_issue)"
