@@ -479,6 +479,10 @@ report findings in their territory:
 | Placement of rules across documents | `@docs-placement-reviewer` |
 | Documentation completeness and accuracy | `@docs-reviewer` |
 | CI/CD artifacts and pipeline coherence | `@cicd-reviewer` |
+| Test coverage and test quality | `@test-reviewer` |
+| Security of the UI in the browser and of its image | `@security-reviewer` |
+| Accessibility of the UI | `@accessibility-reviewer` |
+| Use of the API client, server state, error handling, request efficiency, and the semantics of the operations used | `@api-usage-reviewer` |
 
 **Deliberate overlap.** An obligation that an authority states for an element
 in the diff is by construction a class A finding, even when it also lies in

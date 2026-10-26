@@ -134,13 +134,17 @@ preserving scope, limitations, evidence, and verdicts.
 
 | Agent | Type | Trigger | Purpose |
 |-------|------|---------|---------|
+| `@accessibility-reviewer` | Reviewer | Change to what the UI shows or how users operate it | Finds the accessibility failures that lint and axe-core cannot find, against the foundations, the code conventions, and WCAG 2.2 A and AA, also in the reference screenshots |
+| `@api-usage-reviewer` | Reviewer | Change to code that calls the API or handles its responses, the shared request function, the mapping of error codes, or the query client's configuration | Reviews access through the generated client, server state, error handling by code, request efficiency, URL state, and the semantics of each operation that the generated types do not express |
 | `@cicd-reviewer` | Reviewer | Workflow, hook, CI-consumed script, or release configuration change | Reviews CI/CD artifacts for convention conformity, tooling structure, and pipeline coherence |
 | `@design-reviewer` | Reviewer | New or substantially changed foundation or screen document, including an architecture decision | Applies a simplicity-first review to UI designs and architecture decisions |
 | `@docs-placement-reviewer` | Reviewer | Foundation or screen document that adds potentially shared rules | Verifies that rules sit in their owning document of this repository, or in Sentinel's contract, without duplication or premature generalization |
 | `@docs-reviewer` | Reviewer | Significant documentation, policy, or multi-document change | Reviews documentation completeness, accuracy, and coherence with the implementation and with Sentinel's contract |
+| `@security-reviewer` | Reviewer | Change to UI code, the entry document, the build or image configuration, or a new dependency that ships in the browser | Reviews concrete security risks in the browser and in the image: HTML and script injection, URLs and navigation, the Content Security Policy and Trusted Types, the security headers, the session, and browser storage |
 | `@spec-coherence-reviewer` | Reviewer | New or substantively changed foundation or screen document with impact on related documents or on what it relies on in Sentinel's contract, or a supported Sentinel version change | Detects contradictions, incompatible flows, and inconsistent terminology among this repository's documents and against Sentinel's contract |
 | `@spec-conformance-reviewer` | Reviewer | Pre-PR (unconditional) | Verifies a pull request implements what its issue, the foundation documents, and Sentinel's contract require, and introduces no unauthorized behavior |
 | `@spec-gap-analyzer` | Reviewer | New or substantially changed foundation or screen document that specifies UI behavior | Identifies unspecified UI scenarios and states, and the API capabilities a document relies on that Sentinel's contract lacks |
+| `@test-reviewer` | Reviewer | Change to UI code, tests, or their configuration | Reviews coverage of the changed behavior, the test conventions, isolation of the end-to-end tests, and assertions that prove what they claim; reads CI's results instead of running the tests |
 
 The triggers above summarize the `AGENTS.md` Reviewer Trigger Matrix, which is
 authoritative. `@spec-conformance-reviewer` is the only subagent whose trigger
@@ -167,11 +171,12 @@ three tiers:
 | Tier | Agents | Example model |
 |------|--------|---------------|
 | Primary | `plan`, `spec`, `code` | `anthropic/claude-opus-5-5`, `high` |
-| Tier 1 | `@spec-coherence-reviewer`, `@spec-gap-analyzer` | `anthropic/claude-opus-5-5`, `high` |
+| Tier 1 | `@security-reviewer`, `@spec-coherence-reviewer`, `@spec-gap-analyzer` | `anthropic/claude-opus-5-5`, `high` |
 | Tier 2 | All other reviewer subagents | `anthropic/claude-sonnet-5-5`, `high` |
 
 Tier 1 reviewers rely most on adversarial reasoning and long cross-document
-synthesis, so they benefit most from a stronger model.
+synthesis, so they benefit most from a stronger model. `@accessibility-reviewer`
+opens the reference screenshots, so its model must accept images.
 
 Without a local file, primary agents use the user's default model and every
 subagent inherits the model of the agent that invokes it. A reviewer listed
