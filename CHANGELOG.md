@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.1.1...v0.2.0) (2026-10-26)
+
+
+### Features
+
+* support Sentinel releases compatible with the pinned version ([#74](https://github.com/vulnwatch/sentinel-aura/issues/74)) ([38f2cd6](https://github.com/vulnwatch/sentinel-aura/commit/38f2cd6ad3bb26e23175833d92b93b33c6b41d7d)), closes [#72](https://github.com/vulnwatch/sentinel-aura/issues/72)
+
 ## [0.1.1](https://github.com/vulnwatch/sentinel-aura/compare/v0.1.0...v0.1.1) (2026-10-26)
 
 
