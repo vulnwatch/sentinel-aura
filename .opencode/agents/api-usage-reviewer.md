@@ -145,11 +145,11 @@ Every finding is anchored in a rule of `docs/conventions.md` or
 `docs/architecture.md`, or in a verbatim quote of Sentinel's contract at the
 revision read, together with a concrete scenario: the request that the code
 sends or the response that it handles, and the result that differs from what
-the screen document or the tracking issue intends. An unnecessary request is
-anchored instead in the screen that sends it: the requests that the screen
-sends and the requests that it needs to show what its screen document or
-issue states. An inefficiency without a screen that suffers from it is not a
-finding.
+the screen document or the tracking issue intends. An unnecessary or
+needlessly sequential request is anchored instead in the screen that sends
+it: the requests that the screen sends, in which order, and the requests
+that it needs to show what its screen document or issue states. An
+inefficiency without a screen that suffers from it is not a finding.
 
 ## Before reviewing
 
@@ -304,8 +304,9 @@ empty one other than the verdict:
    and line
 3. **Contract usage issues**: each with the verbatim quote of the Sentinel
    section at the revision read, the file and line, and the scenario
-4. **Unnecessary requests**: each with the screen, the requests that it
-   sends, and the requests that it needs
+4. **Unnecessary requests**: unnecessary or needlessly sequential requests,
+   each with the screen, the requests that it sends and in which order, and
+   the requests that it needs
 5. **API gaps**: data or operations that a screen needs and the contract
    lacks, each with the Sentinel specification that would own it
 6. **Verdict**: one of:
