@@ -2,15 +2,18 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    "schedule:earlyMondays",
     "helpers:pinGitHubActionDigests"
   ],
   "labels": ["dependencies"],
-  // No limit on the pull requests that Renovate opens in an hour (2 by
-  // default) or keeps open. The App runs on the repository every few hours,
-  // usually once in the window of schedule:earlyMondays, so a limit would
-  // defer by a week the other updates that are ready — see
+  // Routine updates open every night before 06:00 UTC, within a day of
+  // reaching the minimum release age. The App schedules a run of the
+  // repository every four hours, but its runs drift, so the window is six
+  // hours long, enough to hold a run even when one is late — see
   // docs/deployment.md (Dependency Updates).
+  "schedule": ["* 0-5 * * *"],
+  // No limit on the pull requests that Renovate opens in an hour (2 by
+  // default) or keeps open: the window may hold a single run, so a limit
+  // would defer the other updates that are ready to the next window.
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   // Every Renovate pull request is merged like any other pull request, after
@@ -18,7 +21,7 @@
   // Updates).
   "automerge": false,
   // Fix PRs raised from GitHub vulnerability (Dependabot) alerts. They bypass
-  // the weekly schedule and the minimum release age of Renovate by design.
+  // the schedule and the minimum release age of Renovate by design.
   // Requires Dependabot alerts and read access to them for the Mend Renovate
   // App. fix(deps): makes a merged security fix a release signal (patch) for
   // release-please, whereas routine ci(deps): and chore(deps): updates never
@@ -32,11 +35,13 @@
     "commitMessageTopic": "{{depName}}"
   },
   // Weekly regeneration of package-lock.json, which keeps the transitive npm
-  // dependencies current. Runs on the default "before 4am on monday"
-  // schedule, aligned with schedule:earlyMondays above.
+  // dependencies current: in the window of the schedule above, on Monday
+  // only, because a nightly regeneration would open a pull request almost
+  // every night that conflicts with the npm group on the same file.
   "lockFileMaintenance": {
     "enabled": true,
-    "commitMessagePrefix": "chore(deps):"
+    "commitMessagePrefix": "chore(deps):",
+    "schedule": ["* 0-5 * * 1"]
   },
   // The npm settings of Renovate's lockfile updates: a copy of .npmrc, keep
   // both in sync. The only difference is allow-remote=all: under
@@ -212,7 +217,7 @@
       // update, because a Sentinel host deploys the two together — see
       // docs/architecture.md (Backend Contract) and docs/deployment.md
       // (Dependency Updates).
-      "description": "Supported Sentinel version: feat(deps):, outside the weekly schedule and the minimum release age, first",
+      "description": "Supported Sentinel version: feat(deps):, outside the schedule and the minimum release age, first",
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["contract/sentinel-version"],
       "commitMessagePrefix": "feat(deps):",

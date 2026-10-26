@@ -383,13 +383,15 @@ younger than the minimum release age (below).
 
 **npm dependencies.** Minor and patch updates are grouped into one pull
 request, and each major update gets its own, or one per monorepo when the
-`config:recommended` preset groups the packages of one project. A weekly lock
-file maintenance pull request regenerates `package-lock.json`, which keeps the
-transitive dependencies current, within npm's own minimum release age.
-Renovate does not update the Node.js line of `package.json`, which follows the
-tooling image (`docs/architecture.md`, Build Tool, Package Manager, and
-Node.js), nor the major version of `@types/node`, the types of the Node.js of
-that line: both change by hand, together.
+`config:recommended` preset groups the packages of one project. A lock file
+maintenance pull request, every Monday, regenerates `package-lock.json`,
+which keeps the transitive dependencies current, within npm's own minimum
+release age. The lockfile holds hundreds of packages, so a nightly regeneration
+would open a pull request almost every night, which would conflict with the
+npm group on the same file. Renovate does not update the Node.js line of
+`package.json`, which follows the tooling image (`docs/architecture.md`, Build
+Tool, Package Manager, and Node.js), nor the major version of `@types/node`,
+the types of the Node.js of that line: both change by hand, together.
 
 The tooling image and `@playwright/test` are updated in one `Playwright` pull
 request, because the browsers of the image must be the ones that the package
@@ -434,12 +436,12 @@ pull request, so an update of `vite`, the tooling image, or an image of
 development fails it (Workflow Inventory, End-to-end tests).
 
 **Sentinel version.** Renovate proposes a new supported Sentinel version once
-its GitHub Release is published, outside the weekly schedule, because the UI
+its GitHub Release is published, outside the nightly schedule, because the UI
 release deployed on a Sentinel host must support the Sentinel version
 deployed there (`docs/architecture.md`, Backend Contract; Release Process,
 Supported Sentinel Version). No minimum release age delays it, and Renovate
 opens it before the routine pull requests of the same run (`prPriority` in
-`renovate.jsonc`). The Mend Renovate App runs on the repository every few
+`renovate.jsonc`). The Mend Renovate App runs on the repository every four
 hours; a maintainer starts a run at once with the checkbox at the end of the
 Dependency Dashboard issue. Its pull request changes only
 `contract/sentinel-version`, so `UI Checks` fails until a maintainer completes
@@ -472,20 +474,26 @@ Its title uses the `feat(deps):` prefix, a minor release signal, because every
 change of the supported version carries one (`docs/architecture.md`, Backend
 Contract).
 
-Routine updates follow the `schedule:earlyMondays` schedule, whose window
-usually holds one run of the Mend Renovate App. Renovate opens every update
-that is ready in that run: it limits neither the pull requests that it opens
-in an hour nor those that it keeps open (`prHourlyLimit` and
-`prConcurrentLimit` in `renovate.jsonc`), because a limit would defer the
-other updates by a week. Routine updates use the `ci(deps):` title prefix, or
-`chore(deps):` for the tooling image, the images of the shell lint tools and
-Trivy, the npm dependencies, the base image of the `Containerfile`, and the
-images of `compose.yaml`, which are not used only by CI; neither carries a
-release signal (`docs/conventions.md`, Versioning). So that the titles stay
-within the length that the `PR Metadata` check allows (`docs/conventions.md`,
-Pull Request Requirements), the `nginx` and `Playwright` pull requests are
-titled with the name of their group, also when they hold a single update, and
-any other digest update of an image names the image without its tag. Renovate
+Routine updates follow a nightly schedule: Renovate opens them before 06:00
+UTC every day (`schedule` in `renovate.jsonc`), so that their pull requests
+are ready in the morning, within a day of the version reaching the minimum
+release age. The App's four-hourly runs drift, so the window is six hours
+long, enough to hold a run even when one is late. Renovate opens every update
+that is ready in the first run of the window: it limits neither the pull
+requests that it opens in an hour nor those that it keeps open
+(`prHourlyLimit` and `prConcurrentLimit`), because a limit would defer the
+other updates to the next night. Lock file maintenance runs in the same
+window, on Monday only (npm dependencies).
+
+Routine updates use the `ci(deps):` title prefix, or `chore(deps):` for the
+tooling image, the images of the shell lint tools and Trivy, the npm
+dependencies, the base image of the `Containerfile`, and the images of
+`compose.yaml`, which are not used only by CI; neither carries a release
+signal (`docs/conventions.md`, Versioning). So that the titles stay within
+the length that the `PR Metadata` check allows (`docs/conventions.md`, Pull
+Request Requirements), the `nginx` and `Playwright` pull requests are titled
+with the name of their group, also when they hold a single update, and any
+other digest update of an image names the image without its tag. Renovate
 never merges its own pull requests: `automerge` is disabled, and each one is
 merged like any other pull request, after the repository owner authorizes the
 merge.
@@ -497,7 +505,7 @@ Known vulnerabilities are handled by these complementary mechanisms:
   disabled, so that Renovate remains the only component that creates
   dependency pull requests.
 - **Renovate vulnerability-fix pull requests** (`vulnerabilityAlerts`) are
-  raised from those alerts immediately, outside the weekly schedule and
+  raised from those alerts immediately, outside the nightly schedule and
   without Renovate's minimum release age, labeled `security`, with the
   `fix(deps):` prefix, so that a merged security fix is a patch release
   signal. This requires the Mend Renovate App to have read access to
