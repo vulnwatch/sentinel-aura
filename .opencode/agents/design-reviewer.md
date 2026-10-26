@@ -271,7 +271,7 @@ belongs to `@spec-gap-analyzer`.
 
 ### Maintainability
 
-- Is the design easy to modify when requirements or the supported Sentinel
+- Is the design easy to modify when requirements or the pinned Sentinel
   version change? Is the knowledge of API details concentrated, or spread
   across many screens?
 - Does the design create tight coupling between screens or components that

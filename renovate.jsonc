@@ -61,7 +61,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Supported Sentinel version of contract/sentinel-version, from Sentinel's GitHub Releases",
+      "description": "Pinned Sentinel version of contract/sentinel-version, from Sentinel's GitHub Releases",
       "managerFilePatterns": ["/^contract/sentinel-version$/"],
       "matchStrings": ["^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s*$"],
       "datasourceTemplate": "github-releases",
@@ -119,8 +119,8 @@
       // push of its tag. Nor is lock file maintenance, which npm's
       // min-release-age covers when it resolves the lockfile. A version
       // without a release timestamp is held until it is requested from the
-      // Dependency Dashboard. The nginx group, the supported Sentinel
-      // version, and the tooling image are exempt below.
+      // Dependency Dashboard. The nginx group, the pinned Sentinel version,
+      // and the tooling image are exempt below.
       "description": "Version updates wait for the minimum release age",
       "matchUpdateTypes": ["major", "minor", "patch"],
       "minimumReleaseAge": "7 days",
@@ -155,7 +155,7 @@
     {
       // Sentinel's image names its version and digest through variables, and
       // the UI's image is built locally, so the manager skips both: the
-      // supported version changes in contract/sentinel-version (below), and
+      // pinned version changes in contract/sentinel-version (below), and
       // scripts/sentinel-contract.sh pins its digest — see docs/deployment.md
       // (Dependency Updates).
       "description": "PostgreSQL, Redis, and nginx images of compose.yaml, which runs the backend of local development, the end-to-end tests, and the local preview",
@@ -211,20 +211,44 @@
       "groupName": "Orval"
     },
     {
-      // A change of the supported Sentinel version carries a release signal,
-      // so that the next UI release supports the new version, and it is
-      // raised at once, without the minimum release age, before every routine
-      // update, because a Sentinel host deploys the two together — see
-      // docs/architecture.md (Backend Contract) and docs/deployment.md
-      // (Dependency Updates).
-      "description": "Supported Sentinel version: feat(deps):, outside the schedule and the minimum release age, first",
+      // Every Sentinel release is raised at once, without the minimum release
+      // age, before every routine update: one outside the supported Sentinel
+      // versions of the current pin needs a UI release before a Sentinel host
+      // can deploy it, and one within them keeps the pin and the end-to-end
+      // tests on Sentinel's latest release — see docs/architecture.md
+      // (Backend Contract) and docs/deployment.md (Dependency Updates). A
+      // change within those versions carries no release signal; the two
+      // rules below give the others one.
+      "description": "Pinned Sentinel version: chore(deps):, outside the schedule and the minimum release age, first",
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["contract/sentinel-version"],
-      "commitMessagePrefix": "feat(deps):",
+      "commitMessagePrefix": "chore(deps):",
       "commitMessageTopic": "Sentinel",
       "schedule": ["at any time"],
       "minimumReleaseAge": null,
       "prPriority": 10
+    },
+    {
+      // A major update leaves the supported Sentinel versions of the current
+      // pin, so it carries a release signal, so that the next UI release
+      // supports the new version.
+      "description": "Pinned Sentinel version, major update: feat(deps):",
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["contract/sentinel-version"],
+      "matchUpdateTypes": ["major"],
+      "commitMessagePrefix": "feat(deps):"
+    },
+    {
+      // Before Sentinel 1.0.0, a minor update leaves them too. The manager
+      // uses semver-coerced versioning, which reads a range such as "<1.0.0"
+      // in matchCurrentVersion as a version, so a regular expression selects
+      // the pins below 1.0.0.
+      "description": "Pinned Sentinel version, minor update below 1.0.0: feat(deps):",
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["contract/sentinel-version"],
+      "matchUpdateTypes": ["minor"],
+      "matchCurrentVersion": "/^0\\./",
+      "commitMessagePrefix": "feat(deps):"
     },
     {
       // An override forces a fixed version on a dependent that does not allow

@@ -4,7 +4,7 @@ description: >
   Sentinel's contract for contradictory rules, incompatible flows, and
   inconsistent terminology. Use after changes to foundation or screen
   documents with impact on related documents or on what they rely on in
-  Sentinel's contract, and after a supported Sentinel version change.
+  Sentinel's contract, and after a pinned Sentinel version change.
   Read-only.
 mode: subagent
 permission:
@@ -172,11 +172,11 @@ complexity without presenting it to the user for a decision.
    revision: read with `git show <ref>:<path>`, running Git with `../sentinel`
    as the working directory of the shell command, because your permissions
    allow the read-only Git forms only without `-C`. Never change the clone
-6. For a change of the supported Sentinel version, read the differences
+6. For a change of the pinned Sentinel version, read the differences
    between the previous and the new pinned OpenAPI document and between
    Sentinel's specifications at the two tags, the screen documents that
    consume a changed operation, and the documents that cite a changed
-   Sentinel section (`AGENTS.md`, Cumulative Authority Routing, Supported
+   Sentinel section (`AGENTS.md`, Cumulative Authority Routing, Pinned
    Sentinel version change)
 
 Do NOT load every document of this repository or every Sentinel
@@ -211,7 +211,7 @@ to the changed obligations. Expand when impact cannot be bounded confidently.
   already describe, and define it differently? That behavior remains
   authoritative in Sentinel until a change moves it to this repository
   (`README.md`, Specification Boundary)
-- After a supported Sentinel version change: does a screen document still
+- After a pinned Sentinel version change: does a screen document still
   agree with the operations it consumes as the new contract defines them,
   and does every document still agree with the Sentinel sections it cites?
 

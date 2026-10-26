@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.11.0"
+    "version": "0.12.0"
   },
   "paths": {
     "/health": {

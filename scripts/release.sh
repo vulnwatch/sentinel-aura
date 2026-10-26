@@ -18,10 +18,11 @@
 #                                its assets, the SBOM of the image <image>, a
 #                                reference by digest, and the Sigstore bundles
 #                                of the image's SBOM and build provenance
-#                                attestations; state the image and the
-#                                supported Sentinel version in its notes;
-#                                then publish it, as the last action, and warn
-#                                when the release is not immutable
+#                                attestations; state the image, the pinned
+#                                Sentinel version, and the supported Sentinel
+#                                versions in its notes; then publish it, as
+#                                the last action, and warn when the release is
+#                                not immutable
 set -euo pipefail
 
 # shellcheck source=scripts/lib/common.sh
@@ -29,7 +30,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 # The line that starts the section of the release notes that publish writes,
 # so that a rerun replaces it.
-readonly NOTES_MARKER="<!-- scripts/release.sh: the image and the supported Sentinel version -->"
+readonly NOTES_MARKER="<!-- scripts/release.sh: the image and its Sentinel versions -->"
 
 # The working directory of publish, removed on exit.
 WORK_DIR=""
@@ -63,14 +64,31 @@ require_bundle() {
         die "$1 is not a Sigstore bundle"
 }
 
+# Prints the first Sentinel version that the pinned Sentinel version $1 does
+# not support: the next minor version while $1 is below 1.0.0, and the next
+# major version from 1.0.0 on (docs/deployment.md, Supported Sentinel
+# Versions).
+sentinel_upper_bound() {
+    local major minor
+    is_version "$1" || die "'$1' is not a Sentinel version such as 1.2.3"
+    IFS=. read -r major minor _ <<<"$1"
+    if ((10#${major} == 0)); then
+        printf '0.%d.0\n' "$((10#${minor} + 1))"
+    else
+        printf '%d.0.0\n' "$((10#${major} + 1))"
+    fi
+}
+
 # Prints the notes of the release of the tag $1 of version $2, with the
-# section that states the image $3 and the supported Sentinel version, which
-# the image's label also states, after the notes of release-please.
+# section that states the image $3, the pinned Sentinel version, which the
+# image's label also states, and the supported Sentinel versions, after the
+# notes of release-please.
 release_notes() {
-    local tag="$1" version="$2" image="$3" body sentinel
+    local tag="$1" version="$2" image="$3" body sentinel upper
     body="$(gh release view "${tag}" --repo "${REPOSITORY}" --json body --jq .body)" ||
         die "cannot read the notes of release ${tag}"
     sentinel="$(declared_version)"
+    upper="$(sentinel_upper_bound "${sentinel}")"
     body="${body%%"${NOTES_MARKER}"*}"
     while [[ "${body}" == *$'\n' ]]; do
         body="${body%$'\n'}"
@@ -81,7 +99,7 @@ ${body}
 ${NOTES_MARKER}
 ### Image
 
-\`${image}\`, tagged \`${RELEASE_IMAGE}:${version}\`, supports [Sentinel ${sentinel}](https://github.com/vulnwatch/sentinel/releases/tag/v${sentinel}). Verify it before deploying it by its digest, as [Verifying a Release](https://github.com/${REPOSITORY}/blob/${tag}/docs/deployment.md#verifying-a-release) describes.
+\`${image}\`, tagged \`${RELEASE_IMAGE}:${version}\`, is built and tested against [Sentinel ${sentinel}](https://github.com/vulnwatch/sentinel/releases/tag/v${sentinel}) and supports Sentinel \`>= ${sentinel}, < ${upper}\` ([Supported Sentinel Versions](https://github.com/${REPOSITORY}/blob/${tag}/docs/deployment.md#supported-sentinel-versions)). Verify it before deploying it by its digest, as [Verifying a Release](https://github.com/${REPOSITORY}/blob/${tag}/docs/deployment.md#verifying-a-release) describes.
 EOF
 }
 

@@ -52,16 +52,19 @@ from a local clone of `vulnwatch/sentinel` next to this repository, at
 Each Sentinel release publishes its OpenAPI document as the release asset
 `sentinel-<version>.openapi.json` (`../sentinel/docs/deployment.md`, API
 Documentation Publication). This repository declares the exact Sentinel version
-it supports and keeps a copy of that version's OpenAPI document: that copy is
-the **pinned OpenAPI document** (`docs/architecture.md`, Backend Contract).
-Moving to another Sentinel version is always an explicit pull request whose
+that the UI is built and tested against, the **pinned Sentinel version**, and
+keeps a copy of that version's OpenAPI document: that copy is the **pinned
+OpenAPI document**. A UI release supports the Sentinel versions from its pinned
+version up to the next minor version before Sentinel 1.0.0, and up to the next
+major version from 1.0.0 on (`docs/architecture.md`, Backend Contract). Moving
+to another pinned Sentinel version is always an explicit pull request whose
 diff shows the API changes.
 
-**Which version to read.** Read Sentinel's specifications at the release that
-this repository declares as supported in `contract/sentinel-version`, through
-its tag `v<version>`. Before relying on the clone, verify with read-only Git
-commands that this revision is present and current; `git -C ../sentinel fetch`
-is permitted for that purpose. The user may be working in the clone, so its
+**Which version to read.** Read Sentinel's specifications at the pinned
+Sentinel version, which `contract/sentinel-version` declares, through its tag
+`v<version>`. Before relying on the clone, verify with read-only Git commands
+that this revision is present and current; `git -C ../sentinel fetch` is
+permitted for that purpose. The user may be working in the clone, so its
 checkout is not the revision to read: read the files directly only when the
 revision is checked out and the worktree is clean, and otherwise read them with
 `git -C ../sentinel show <ref>:<path>`, never by changing the checkout. If the
@@ -229,7 +232,7 @@ the authoritative conventions. Core locations are:
 | Repository orchestration and developer or CI scripts | `scripts/` |
 | UI source code and its unit and component tests | `src/` (`docs/conventions.md`, Code Conventions) |
 | End-to-end tests, their reference screenshots, and their reverse proxy configuration | `test/e2e/` (`docs/conventions.md`, Code Conventions) |
-| Supported Sentinel version, pinned OpenAPI document, and pinned image digest | `contract/` (`docs/architecture.md`, Backend Contract) |
+| Pinned Sentinel version, pinned OpenAPI document, and pinned image digest | `contract/` (`docs/architecture.md`, Backend Contract) |
 | npm manifest, lockfile, and settings, the entry document, and the configuration of the build, type check, lint, format, test, and API client generation tools | Repository root |
 
 A location in this table may not exist yet; the first change that needs it
@@ -356,7 +359,7 @@ confidently.
   `README.md` (Specification Boundary), `docs/architecture.md` (Authority
   Between the Repositories), and `../sentinel/docs/architecture.md` (System
   Boundary) before recommending a placement.
-- **Supported Sentinel version change:** read Sentinel as an External
+- **Pinned Sentinel version change:** read Sentinel as an External
   Authority, `docs/architecture.md` (Backend Contract), and the steps in
   `docs/deployment.md` (Dependency Updates, Sentinel version); the pull
   request diff shows the API changes, every screen that consumes a changed
@@ -443,7 +446,7 @@ unless the reviewer definition says otherwise.
 | What the UI shows or how users operate it: components, routes, or styles under `src/`, or reference screenshots | `@accessibility-reviewer` |
 | Code under `src/` that calls the API or handles its responses, the shared request function, the mapping of error codes, or the configuration of the query client | `@api-usage-reviewer` |
 | Significant change to documented behavior, a foundation or screen document, agent policy or OpenCode documentation, or multiple documents | `@docs-reviewer` |
-| New foundation or screen document, substantive change to the rules, flows, or terminology of one, or change of the supported Sentinel version | `@spec-coherence-reviewer`; skip an isolated change with no impact on related documents or on what the document relies on in Sentinel's contract |
+| New foundation or screen document, substantive change to the rules, flows, or terminology of one, or change of the pinned Sentinel version | `@spec-coherence-reviewer`; skip an isolated change with no impact on related documents or on what the document relies on in Sentinel's contract |
 | New or substantially changed foundation or screen document, including an architecture decision | `@design-reviewer` |
 | New or substantially changed foundation or screen document that specifies UI behavior | `@spec-gap-analyzer`; skip `docs/architecture.md`, which specifies no screen behavior. High gaps block the work that depends on the document, Medium gaps are resolved in the same PR, and Low gaps may be deferred; an API gap follows the backend-gap rule in Sentinel as an External Authority |
 | Foundation or screen document that adds potentially shared rules or content related to several documents | `@docs-placement-reviewer` |

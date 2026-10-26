@@ -3,7 +3,7 @@
 ## Supported Versions
 
 Security fixes are applied to the latest release only and ship in a new release; see [Release Process](docs/deployment.md#release-process).
-Each release supports one exact Sentinel version, so applying a fix can require upgrading Sentinel as well; see [Supported Sentinel Version](docs/deployment.md#supported-sentinel-version).
+Each release supports the Sentinel versions from the one that it is built and tested against up to, but excluding, the next minor version before Sentinel 1.0.0, and the next major version from 1.0.0 on, so applying a fix can require upgrading Sentinel as well; see [Supported Sentinel Versions](docs/deployment.md#supported-sentinel-versions).
 
 ## Reporting a Vulnerability
 

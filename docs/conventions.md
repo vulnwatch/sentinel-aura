@@ -707,7 +707,7 @@ request carries `fix(deps):` in its title instead.
   considered and the choice.
 - **New dependencies**: record each new dependency with its justification and
   the repository owner's decision (Dependency Admission).
-- **Sentinel version**: a PR that changes the supported Sentinel version
+- **Sentinel version**: a PR that changes the pinned Sentinel version
   shows the resulting API changes in its diff and states which screens they
   affect.
 - **Manual verification**: record the exercised behavior and observed result.

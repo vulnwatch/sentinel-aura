@@ -1,9 +1,9 @@
 # The Sentinel backend of local development and of the end-to-end tests
 # (docs/architecture.md, Development Environment): Sentinel's published image
-# at the supported version, with the PostgreSQL and Redis that it requires,
+# at the pinned version, with the PostgreSQL and Redis that it requires,
 # loaded with Sentinel's example dataset in the order that Sentinel
 # docs/deployment.md (Loading the Example Dataset) prescribes. Run it through
-# scripts/dev-env.sh, which reads the supported version and its image digest
+# scripts/dev-env.sh, which reads the pinned version and its image digest
 # from contract/, recreates the backend instead of reusing a database, and
 # starts the development server in the network of the backend.
 #

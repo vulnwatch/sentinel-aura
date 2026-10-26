@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run the UI locally, and its end-to-end tests, against Sentinel's published
-# image at the supported version, on one origin (docs/architecture.md, Local
+# image at the pinned version, on one origin (docs/architecture.md, Local
 # Development; Development Environment). Docker Compose runs the backend of
 # compose.yaml: PostgreSQL, Redis, and Sentinel's API, loaded with Sentinel's
 # example dataset. The development server runs through scripts/tooling.sh in
@@ -12,7 +12,7 @@
 #
 # A backend is never migrated or loaded twice (Sentinel docs/deployment.md,
 # Loading the Example Dataset). start reuses a running backend only while it
-# is healthy and its configuration, compose.yaml and the supported version of
+# is healthy and its configuration, compose.yaml and the pinned version of
 # contract/, is unchanged; otherwise it removes the backend with its data and
 # creates a new one. stop removes it with its data. Every other command
 # creates its own backend and removes it when it ends.
@@ -81,7 +81,7 @@ readonly ALL_PROFILES="e2e,preview"
 
 # The CI workflow that tests the pull requests of the preview, of REPOSITORY,
 # its job that retains their production build, and the artifact that holds it
-# (with the supported version and image digest of their contract/), kept for
+# (with the pinned version and image digest of their contract/), kept for
 # seven days: keep in sync with .github/workflows/ci.yml.
 readonly CI_WORKFLOW="ci.yml"
 readonly E2E_JOB="End-to-End Tests"
@@ -130,7 +130,7 @@ check_compose() {
     done
 }
 
-# Checks the host and exports what compose.yaml interpolates: the supported
+# Checks the host and exports what compose.yaml interpolates: the pinned
 # version and the digest of its image, the identity of the backend's
 # configuration, which the API's container carries as a label, and the UI's
 # image of the profiles.
@@ -402,7 +402,7 @@ remove_preview_state() {
 }
 
 # The pull request's only input is the artifact of its CI run: its production
-# build, which nginx serves to the browser, and the supported version and
+# build, which nginx serves to the browser, and the pinned version and
 # image digest of its contract/, which select Sentinel's image. Everything
 # else, and everything that runs on the host, comes from this checkout.
 cmd_preview() {
@@ -426,7 +426,7 @@ cmd_preview() {
     gh run download "${run}" --repo "${REPOSITORY}" --name "${PREVIEW_ARTIFACT}" \
         --dir "${WORK_DIR}/build" ||
         die "cannot download the build of CI run ${run}, which is kept for seven days; run 'gh run rerun ${run} --repo ${REPOSITORY}', then preview again"
-    # The supported version of this checkout runs by its pinned digest
+    # The pinned version of this checkout runs by its pinned digest
     # (docs/architecture.md, Backend Contract). Another version runs only as
     # a published release (Sentinel docs/deployment.md, Release Publication
     # and Immutability), by the digest that its tag names.

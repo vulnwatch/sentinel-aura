@@ -99,22 +99,27 @@ needs a capability that the API lacks.
 ## Backend Contract
 
 The UI is built against one exact Sentinel version, which this repository
-declares in `contract/sentinel-version`: the supported Sentinel version.
-Sentinel's API is not considered stable before version 1.0.0, and its
-consumers pin exact versions rather than version ranges (Sentinel
-`docs/deployment.md`, Pre-1.0 Policy).
+declares in `contract/sentinel-version`: the pinned Sentinel version. A
+release of the UI supports the Sentinel versions from its pinned version up
+to, but excluding, the next minor version while the pinned version is below
+1.0.0, and the next major version from 1.0.0 on: its supported Sentinel
+versions. Sentinel guarantees that a consumer built and tested against one
+exact published version works with that version and with every later release
+of the same minor version before 1.0.0, and of the same major version from
+1.0.0 on, but may not work with an earlier release (Sentinel
+`docs/deployment.md`, Consumer Compatibility).
 
-- The repository keeps a copy of the OpenAPI document of the supported
-  version, `contract/sentinel.openapi.json`: the pinned OpenAPI document. The
-  copy is the release asset `sentinel-<version>.openapi.json` of that
-  version's published GitHub Release, the only source of a version's contract
-  (Sentinel `docs/deployment.md`, API Documentation Publication). A release
-  that does not publish this asset cannot be the supported version. The copy
-  keeps its name from one version to the next, so that the diff of a change
-  of the supported version shows the changes of the document.
+- The repository keeps a copy of the OpenAPI document of the pinned version,
+  `contract/sentinel.openapi.json`: the pinned OpenAPI document. The copy is
+  the release asset `sentinel-<version>.openapi.json` of that version's
+  published GitHub Release, the only source of a version's contract (Sentinel
+  `docs/deployment.md`, API Documentation Publication). A release that does
+  not publish this asset cannot be the pinned version. The copy keeps its name
+  from one version to the next, so that the diff of a change of the pinned
+  version shows the changes of the document.
 - The copy is identical to the release asset, and an automated check of the CI
   pipeline verifies it (`docs/deployment.md`, Workflow Inventory).
-- The repository also pins the digest of Sentinel's image of the supported
+- The repository also pins the digest of Sentinel's image of the pinned
   version, in `contract/sentinel-image-digest`, and the backends of local
   development, the end-to-end tests, and the local preview run the image by
   it (Development Environment). The registry does not enforce the
@@ -133,17 +138,30 @@ consumers pin exact versions rather than version ranges (Sentinel
 - The API types that the UI uses are generated from the copy, not written by
   hand, so that a change of the contract becomes a visible change of the
   generated types.
-- The supported version changes only through an explicit pull request whose
+- The pinned version is the minimum of the supported Sentinel versions: the
+  generated API types describe only what the pinned OpenAPI document
+  describes, and the end-to-end tests run against a backend of the pinned
+  version (Development Environment), so the UI uses no capability that the
+  pinned version lacks. The UI is not tested against the later versions of
+  the range; Sentinel's guarantee covers them.
+- The pinned version changes only through an explicit pull request whose
   diff shows the API changes and that states which screens they affect;
-  automation may propose such a pull request (`docs/conventions.md`, Pull
-  Request Requirements).
-- The UI release deployed on a Sentinel host is the one that supports the
-  Sentinel version deployed there, so an upgrade of Sentinel moves both
-  (Sentinel `docs/deployment.md`, Sentinel Host). Each release of the UI
-  therefore states the Sentinel version that it supports, and every change of
-  the supported version carries a release signal (`docs/conventions.md`,
-  Versioning), so that the next UI release supports the new version
-  (`docs/deployment.md`, Supported Sentinel Version).
+  automation proposes such a pull request for every Sentinel release
+  (`docs/conventions.md`, Pull Request Requirements).
+- The UI release deployed on a Sentinel host is one that supports the
+  Sentinel version deployed there (Sentinel `docs/deployment.md`, Sentinel
+  Host). A UI release built against a later Sentinel version than the
+  deployed one is deployed after Sentinel is upgraded to a version that it
+  supports. An upgrade of Sentinel to a version that the deployed UI release
+  does not support moves the UI to a release that supports the new version,
+  in the same deployment. Each release of the UI therefore states its
+  supported Sentinel versions (`docs/deployment.md`, Supported Sentinel
+  Versions).
+- A change of the pinned version carries a release signal only when the new
+  version is outside the supported Sentinel versions of the current pin: a
+  later minor version while the pin is below 1.0.0, or a later major version
+  (`docs/conventions.md`, Versioning), so that the next UI release supports
+  the new version. Automation still proposes every change.
 - Agents read Sentinel's specifications from a read-only local clone, at the
   revision that `AGENTS.md` (Sentinel as an External Authority) selects.
 
@@ -242,7 +260,7 @@ environment unless it names one.
 ### Local Development
 
 - A development server on `localhost` serves the UI and proxies `/api` and
-  every path under `/api/` to a Sentinel backend at the supported version, so
+  every path under `/api/` to a Sentinel backend at the pinned version, so
   that the browser sees one origin, as on the Sentinel host. Its proxy routes
   as the host does (Same Origin): it matches the prefix by whole path segment
   and forwards the path unchanged. It also follows Cross-Origin Requests: no
@@ -431,7 +449,7 @@ receive the socket, so dependency code cannot use it. A developer of Sentinel
 who uses Docker Engine's default daemon has this access already.
 
 For local development, the end-to-end tests, and the local preview, the
-Sentinel backend runs from Sentinel's published image at the supported
+Sentinel backend runs from Sentinel's published image at the pinned
 version, by its pinned digest (Backend Contract), with the PostgreSQL and
 Redis that it requires (Sentinel `docs/deployment.md`, Software
 Requirements), in containers of the same engine; Sentinel's image does not
@@ -439,16 +457,16 @@ depend on a specific runtime (Sentinel `docs/architecture.md`, Design
 Constraints). Docker Compose starts them from `compose.yaml`, through
 `scripts/dev-env.sh` (Backend orchestration, below).
 That backend holds fictional data only: it is loaded with Sentinel's example
-dataset, which the image of the supported version provides (Sentinel
+dataset, which the image of the pinned version provides (Sentinel
 `docs/features/platform/example-dataset.md`, Purpose):
 
 - The dataset is loaded into a newly created, migrated database before any
   other Sentinel process starts. The backend is recreated, never migrated, to
-  restore the dataset or to move to another supported version (Sentinel
+  restore the dataset or to move to another pinned version (Sentinel
   `docs/deployment.md`, Loading the Example Dataset). Its data lives only as
   long as its containers, and every new backend loads the dataset into a new
   database. In local development, the script reuses a running backend only
-  while its configuration and the supported version are unchanged, and
+  while its configuration and the pinned version are unchanged, and
   removes the data with the containers when it stops the backend.
 - The backend's containers receive nothing from the host and run as the
   non-root users of their images, without capabilities and unable to gain
@@ -501,7 +519,7 @@ inside the container.
 the order of their start, and their health checks, and Docker Compose runs
 them; two profiles add the containers of the end-to-end environment and of
 the local preview. `scripts/dev-env.sh` adds what Compose cannot decide: it
-reads the supported version and its image digest from `contract/`, reuses or
+reads the pinned version and its image digest from `contract/`, reuses or
 recreates the backend under the rules above, creates one for each browser of
 the end-to-end tests and one for the preview, and starts the development
 server and the end-to-end tests through `scripts/tooling.sh`, which keeps the
@@ -543,8 +561,8 @@ the CI of the pull request's latest commit tested (`docs/deployment.md`,
 Workflow Inventory), builds the UI's image from it with the `Containerfile`
 and the nginx configuration of the local checkout, and runs it behind the
 reverse proxy of the end-to-end environment against a new dataset backend,
-at the supported version and image digest that the pull request declares:
-the checkout's pinned digest for the checkout's supported version, and for
+at the pinned version and image digest that the pull request declares:
+the checkout's pinned digest for the checkout's pinned version, and for
 another version only a published Sentinel release whose tag names that
 digest (Backend Contract). The proxy is published on the loopback interface
 only, on `http://localhost:4173`. The preview also needs the GitHub CLI on
@@ -699,7 +717,7 @@ by hand for every operation.
 | Lint, including type-aware, React hooks, and accessibility (jsx-a11y) rules | Oxlint |
 | Formatting | Prettier |
 | Unit and component tests | Vitest in browser mode, in Chromium and Firefox through Playwright, with coverage measured by Istanbul |
-| End-to-end tests and screenshots | Playwright, in Chromium and Firefox, against the production image and a Sentinel backend at the supported version (Development Environment, End-to-end environment); reference screenshots in Chromium |
+| End-to-end tests and screenshots | Playwright, in Chromium and Firefox, against the production image and a Sentinel backend at the pinned version (Development Environment, End-to-end environment); reference screenshots in Chromium |
 | Automated accessibility checks | axe-core, through its Playwright integration, with the WCAG 2.2 A and AA rules, in the end-to-end tests |
 
 Automated accessibility checks find only part of the WCAG failures; the
@@ -783,7 +801,7 @@ dependencies that reach the browser bring about 30 packages in total.
 | `@playwright/test`, `@axe-core/playwright` | End-to-end and accessibility tests | No |
 | Container image `mcr.microsoft.com/playwright` | Tooling image (Development Environment) | No |
 | Container image `nginx/nginx-unprivileged` | Base of the released image (Packaging and Serving), and the reverse proxy of the end-to-end tests and the local preview (Development Environment) | No |
-| Container images `ghcr.io/vulnwatch/sentinel` at the supported version, and the official `postgres` and `redis` images at the versions that Sentinel requires | Backend for local development, the end-to-end tests, and the local preview | No |
+| Container images `ghcr.io/vulnwatch/sentinel` at the pinned version, and the official `postgres` and `redis` images at the versions that Sentinel requires | Backend for local development, the end-to-end tests, and the local preview | No |
 
 ### Packaging and Serving
 
