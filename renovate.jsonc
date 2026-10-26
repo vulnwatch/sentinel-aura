@@ -6,6 +6,12 @@
     "helpers:pinGitHubActionDigests"
   ],
   "labels": ["dependencies"],
+  // No limit on the pull requests that Renovate opens in an hour (2 by
+  // default) or keeps open. The App runs on the repository every few hours,
+  // usually once in the window of schedule:earlyMondays, so a limit would
+  // defer by a week the other updates that are ready — see
+  // docs/deployment.md (Dependency Updates).
+  "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   // Every Renovate pull request is merged like any other pull request, after
   // the repository owner authorizes it — see docs/deployment.md (Dependency
@@ -202,9 +208,8 @@
     {
       // A change of the supported Sentinel version carries a release signal,
       // so that the next UI release supports the new version, and it is
-      // raised at once, without the minimum release age, before every other
-      // update when Renovate limits the pull requests that it opens in an
-      // hour, because a Sentinel host deploys the two together — see
+      // raised at once, without the minimum release age, before every routine
+      // update, because a Sentinel host deploys the two together — see
       // docs/architecture.md (Backend Contract) and docs/deployment.md
       // (Dependency Updates).
       "description": "Supported Sentinel version: feat(deps):, outside the weekly schedule and the minimum release age, first",

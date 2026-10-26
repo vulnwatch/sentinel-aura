@@ -437,13 +437,13 @@ development fails it (Workflow Inventory, End-to-end tests).
 its GitHub Release is published, outside the weekly schedule, because the UI
 release deployed on a Sentinel host must support the Sentinel version
 deployed there (`docs/architecture.md`, Backend Contract; Release Process,
-Supported Sentinel Version). No minimum release age delays it, and when
-Renovate limits the pull requests that it opens in an hour, it opens this one
-before the others (`prPriority` in `renovate.jsonc`). The Mend Renovate App
-runs on the repository every few hours; a maintainer starts a run at once
-with the checkbox at the end of the Dependency Dashboard issue. Its pull
-request changes only `contract/sentinel-version`, so `UI Checks` fails until
-a maintainer completes it on its branch:
+Supported Sentinel Version). No minimum release age delays it, and Renovate
+opens it before the routine pull requests of the same run (`prPriority` in
+`renovate.jsonc`). The Mend Renovate App runs on the repository every few
+hours; a maintainer starts a run at once with the checkbox at the end of the
+Dependency Dashboard issue. Its pull request changes only
+`contract/sentinel-version`, so `UI Checks` fails until a maintainer completes
+it on its branch:
 
 1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
    with the release asset of the new version, and the pinned image digest
@@ -472,18 +472,23 @@ Its title uses the `feat(deps):` prefix, a minor release signal, because every
 change of the supported version carries one (`docs/architecture.md`, Backend
 Contract).
 
-Routine updates follow the `schedule:earlyMondays` schedule and use the
-`ci(deps):` title prefix, or `chore(deps):` for the tooling image, the images
-of the shell lint tools and Trivy, the npm dependencies, the base image of the
-`Containerfile`, and the images of `compose.yaml`, which are not used only by
-CI; neither carries a release signal (`docs/conventions.md`, Versioning). So
-that the titles stay within the length that the `PR Metadata` check allows
-(`docs/conventions.md`, Pull Request Requirements), the `nginx` and
-`Playwright` pull requests are titled with the name of their group, also when
-they hold a single update, and any other digest update of an image names the
-image without its tag. Renovate never merges its own pull requests:
-`automerge` is disabled, and each one is merged like any other pull request,
-after the repository owner authorizes the merge.
+Routine updates follow the `schedule:earlyMondays` schedule, whose window
+usually holds one run of the Mend Renovate App. Renovate opens every update
+that is ready in that run: it limits neither the pull requests that it opens
+in an hour nor those that it keeps open (`prHourlyLimit` and
+`prConcurrentLimit` in `renovate.jsonc`), because a limit would defer the
+other updates by a week. Routine updates use the `ci(deps):` title prefix, or
+`chore(deps):` for the tooling image, the images of the shell lint tools and
+Trivy, the npm dependencies, the base image of the `Containerfile`, and the
+images of `compose.yaml`, which are not used only by CI; neither carries a
+release signal (`docs/conventions.md`, Versioning). So that the titles stay
+within the length that the `PR Metadata` check allows (`docs/conventions.md`,
+Pull Request Requirements), the `nginx` and `Playwright` pull requests are
+titled with the name of their group, also when they hold a single update, and
+any other digest update of an image names the image without its tag. Renovate
+never merges its own pull requests: `automerge` is disabled, and each one is
+merged like any other pull request, after the repository owner authorizes the
+merge.
 
 Known vulnerabilities are handled by these complementary mechanisms:
 
