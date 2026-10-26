@@ -141,7 +141,7 @@
       // Containerfile, so both references change together.
       "description": "nginx: the base image of the Containerfile and the proxy image of compose.yaml in one pull request",
       "matchManagers": ["dockerfile", "docker-compose"],
-      "matchPackageNames": ["/(^|/)nginxinc/nginx-unprivileged$/"],
+      "matchPackageNames": ["/(^|/)nginx/nginx-unprivileged$/"],
       "groupName": "nginx"
     },
     {
