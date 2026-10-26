@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Keep the pinned OpenAPI document identical to the release asset of the
-# supported Sentinel version, and the pinned digest of its image identical to
+# pinned Sentinel version, and the pinned digest of its image identical to
 # the one that its version tag names (docs/architecture.md, Backend Contract).
 #
-# contract/sentinel-version declares the supported version, which Renovate
+# contract/sentinel-version declares the pinned version, which Renovate
 # updates (docs/deployment.md, Dependency Updates). contract/sentinel.openapi.json
 # is the pinned OpenAPI document: a copy of the asset
 # sentinel-<version>.openapi.json of that version's GitHub Release. The asset
@@ -71,12 +71,12 @@ tag_digest() {
 }
 
 # The message for a pinned digest that the tag of version $1 no longer names.
-# A new supported version needs its digest; for the same version, the tag
+# A new pinned version needs its digest; for the same version, the tag
 # moved, which Sentinel's release process never does after publication
 # (Sentinel docs/deployment.md, Release Publication and Immutability), so the
 # pin is kept and the move reported.
 moved_tag_message() {
-    printf '%s' "the tag ${IMAGE_NAME}:$1 names $2, not the pinned digest: after a change of the supported version, run 'scripts/sentinel-contract.sh update'; otherwise the published tag moved, which Sentinel's release process never does, so keep the pin and report it to Sentinel"
+    printf '%s' "the tag ${IMAGE_NAME}:$1 names $2, not the pinned digest: after a change of the pinned version, run 'scripts/sentinel-contract.sh update'; otherwise the published tag moved, which Sentinel's release process never does, so keep the pin and report it to Sentinel"
 }
 
 cmd_verify() {

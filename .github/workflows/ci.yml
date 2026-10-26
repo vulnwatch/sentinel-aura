@@ -80,7 +80,7 @@ jobs:
           retention-days: 7
 
   # The end-to-end tests, against the UI's production image and a Sentinel
-  # backend at the supported version, then the test of the development proxy
+  # backend at the pinned version, then the test of the development proxy
   # (docs/deployment.md, Workflow Inventory, End-to-end tests).
   end-to-end-tests:
     name: End-to-End Tests
@@ -105,7 +105,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           overwrite: true
-      # The production build that the tests passed, with the supported version
+      # The production build that the tests passed, with the pinned version
       # and image digest of contract/, for scripts/dev-env.sh preview. A rerun
       # replaces it.
       - name: Retain the production build for a local preview

@@ -83,10 +83,10 @@ needs the [GitHub CLI](https://cli.github.com/), `gh`, signed in.
 - A new dependency needs the decision that
   [Dependency Admission](docs/conventions.md#dependency-admission) defines.
 
-The supported Sentinel version is declared in `contract/sentinel-version`,
-`contract/sentinel.openapi.json` is the pinned OpenAPI document, the copy of
-that release's OpenAPI document, and `contract/sentinel-image-digest` pins the
-digest of that release's image
+The pinned Sentinel version, against which the UI is built and tested, is
+declared in `contract/sentinel-version`, `contract/sentinel.openapi.json` is
+the pinned OpenAPI document, the copy of that release's OpenAPI document, and
+`contract/sentinel-image-digest` pins the digest of that release's image
 ([Backend Contract](docs/architecture.md#backend-contract)).
 
 ### Commands
@@ -111,15 +111,15 @@ other scripts and CI run for you.
 | Install the dependencies from scratch, or remove them | `scripts/tooling.sh install`, or `scripts/tooling.sh clean` |
 | Run the [end-to-end tests](#end-to-end-tests) | `scripts/dev-env.sh e2e` |
 | Update the reference screenshots after a change of what a screen shows | `scripts/dev-env.sh update-screenshots` |
-| Check the development proxy after changing `vite.config.ts`, `compose.yaml`, `test/e2e/same-origin.spec.ts`, `playwright.config.ts`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the supported version | `scripts/dev-env.sh test` |
+| Check the development proxy after changing `vite.config.ts`, `compose.yaml`, `test/e2e/same-origin.spec.ts`, `playwright.config.ts`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the pinned version | `scripts/dev-env.sh test` |
 | Build and test the image that serves the UI in production ([Packaging and Serving](docs/architecture.md#packaging-and-serving)) | `scripts/image.sh build`, then `scripts/image.sh test` |
 | Generate and check the SBOM of the built image, as CI does ([Supply-Chain Artifacts](docs/deployment.md#supply-chain-artifacts)) | `scripts/image.sh sbom` |
 | Scan the built image, or the image of a release, for known vulnerabilities, as the image scan does | `scripts/image.sh build` or `scripts/image.sh pull`, then `scripts/image.sh scan` |
 | Run the [checks of CI](#checks-of-ci) before pushing, or those of one job | `scripts/ci.sh all`, or `scripts/ci.sh ui-checks` or `scripts/ci.sh e2e` |
 | Lint the shell scripts, Git hooks, and workflows | `scripts/lint-shell.sh` |
 | Check the title and the issue linkage of a pull request | `scripts/check-pr-metadata.sh` |
-| Check that the pinned OpenAPI document and image digest match the release of the supported Sentinel version | `scripts/sentinel-contract.sh verify` |
-| Complete a change of the supported Sentinel version ([Dependency Updates](docs/deployment.md#dependency-updates)) | `scripts/sentinel-contract.sh update` |
+| Check that the pinned OpenAPI document and image digest match the release of the pinned Sentinel version | `scripts/sentinel-contract.sh verify` |
+| Complete a change of the pinned Sentinel version ([Dependency Updates](docs/deployment.md#dependency-updates)) | `scripts/sentinel-contract.sh update` |
 | [Try a pull request](#trying-a-pull-request) as it will be released | `scripts/dev-env.sh preview` |
 
 ### Local Backend
@@ -127,7 +127,7 @@ other scripts and CI run for you.
 `scripts/dev-env.sh start` runs the UI on <http://localhost:5173> against
 Sentinel on one origin, as on a Sentinel host
 ([Local Development](docs/architecture.md#local-development)): a backend from
-Sentinel's published image at the supported version, with PostgreSQL and
+Sentinel's published image at the pinned version, with PostgreSQL and
 Redis, loaded with Sentinel's fictional example dataset, behind the
 development server, which sends `/api` and every path under it to the
 backend's API
@@ -146,7 +146,7 @@ backend's API
   `http://localhost`
   ([Supported Browsers](docs/architecture.md#supported-browsers)).
 - The data does not survive `stop`, a restart of Docker, or a change of
-  `compose.yaml` or of the supported version: the next `start` creates a new
+  `compose.yaml` or of the pinned version: the next `start` creates a new
   backend and loads the dataset again. The first start downloads the images.
 - Only the development server's port is published, on the loopback interface;
   the backend publishes none.

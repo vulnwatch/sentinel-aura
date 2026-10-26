@@ -5,7 +5,7 @@
 # repository on GitHub, the development server, the UI's image and the image
 # of a release, the results of the end-to-end tests, the files of the
 # installed dependencies and their changes, the directory of the generated API
-# client, the supported Sentinel version and image digest of contract/, the
+# client, the pinned Sentinel version and image digest of contract/, the
 # checks of the container engine, the digest that an image tag names in its
 # registry, and the head branch of a release-please pull request.
 
@@ -84,7 +84,7 @@ changed_dependency_files() {
 # shellcheck disable=SC2034  # used by the scripts that source this file
 readonly GENERATED_DIR="src/api/generated"
 
-# The files of contract/ that declare the supported Sentinel version and pin
+# The files of contract/ that declare the pinned Sentinel version and pin
 # the digest of its image (docs/architecture.md, Backend Contract), relative
 # to the root of a checkout or of the build artifact of a pull request.
 readonly VERSION_FILE="contract/sentinel-version"
@@ -106,7 +106,7 @@ is_release_reference() {
     [[ "${1%@*}" == "${RELEASE_IMAGE}" ]] && is_digest "${1#*@}"
 }
 
-# Prints the supported version that the file $1 declares.
+# Prints the pinned version that the file $1 declares.
 version_in() {
     local name="${1#"${REPO_ROOT}/"}" version
     [[ -f "$1" ]] || die "missing ${name}"
@@ -126,7 +126,7 @@ digest_in() {
     printf '%s\n' "${digest}"
 }
 
-# Prints the supported version that this checkout declares.
+# Prints the pinned version that this checkout declares.
 declared_version() {
     version_in "${REPO_ROOT}/${VERSION_FILE}"
 }

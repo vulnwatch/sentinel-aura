@@ -247,7 +247,7 @@ touches both runs both directions.
   OpenCode definitions. Verify the change against the issue and the
   authorities.
 - **Inverse** — the diff touches foundation or screen documents, or changes
-  the supported Sentinel version or the pinned OpenAPI document. Verify
+  the pinned Sentinel version or the pinned OpenAPI document. Verify
   whether already-implemented code becomes inconsistent with the changed
   obligations.
 
@@ -322,7 +322,7 @@ touches both runs both directions.
 ## Procedure — inverse direction
 
 1. Identify which obligations the diff changes, adds, or removes. Use
-   `git diff` on the changed documents. For a change of the supported Sentinel
+   `git diff` on the changed documents. For a change of the pinned Sentinel
    version, the changed obligations are the differences in the operations the
    UI consumes.
 2. For each changed obligation, search the tree for implementing code. Use the

@@ -17,7 +17,7 @@ to `docs/conventions.md` (Git Conventions).
   - [Local Git Hooks](#local-git-hooks)
 - [Release Process](#release-process)
   - [Versions](#versions)
-  - [Supported Sentinel Version](#supported-sentinel-version)
+  - [Supported Sentinel Versions](#supported-sentinel-versions)
   - [Release Chain](#release-chain)
   - [Image](#image)
   - [Supply-Chain Artifacts](#supply-chain-artifacts)
@@ -36,7 +36,7 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test), and the generation and check of its SBOM (Release Process, Supply-Chain Artifacts); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the pinned Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test), and the generation and check of its SBOM (Release Process, Supply-Chain Artifacts); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 | `image-scan.yml` | Weekly schedule, successful `release.yml` run, manual | `Image Scan` job: pulls the image of the latest release with `scripts/image.sh pull`, or, in a manual run on another branch than `master`, builds the image from that branch, and scans its operating system packages for known vulnerabilities with `scripts/image.sh scan`. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
@@ -149,7 +149,7 @@ loopback interface (`docs/conventions.md`, End-to-End Tests).
 through `scripts/ci.sh e2e` (Local run). `scripts/dev-env.sh e2e` builds the
 image as `scripts/image.sh build` does, then, for Chromium and then Firefox,
 creates an end-to-end environment with Docker Compose: a new backend from
-Sentinel's image at the supported version and pinned digest, loaded with the
+Sentinel's image at the pinned version and digest, loaded with the
 example dataset, the UI's image, and the reverse proxy in front of them, whose
 network namespace the tests share (`docs/architecture.md`, Development
 Environment). It runs the tests of `test/e2e/` except those of the UI's
@@ -326,7 +326,7 @@ repository runs the bot or creates its pull requests. It tracks:
 - the npm dependencies of `package.json` and the lockfile, and the versions
   that the overrides of `package.json` force (below), through the `npm`
   manager; and
-- the supported Sentinel version of `contract/sentinel-version`, from
+- the pinned Sentinel version of `contract/sentinel-version`, from
   Sentinel's GitHub Releases, through a custom regex manager (Sentinel
   version).
 
@@ -358,7 +358,7 @@ only, which is not a warning.
 
 These updates are not held:
 
-- the supported Sentinel version (Sentinel version);
+- the pinned Sentinel version (Sentinel version);
 - the `nginx` group, the base image of the `Containerfile` and the proxy
   image of `compose.yaml`: upstream rebuilds every current tag every week,
   and Docker Hub dates a version by the last push of its tag, so the newest
@@ -439,17 +439,19 @@ pull request, so an update of `vite`, the tooling image, or an image of
 `compose.yaml` that breaks the development proxy or the backend of local
 development fails it (Workflow Inventory, End-to-end tests).
 
-**Sentinel version.** Renovate proposes a new supported Sentinel version once
-its GitHub Release is published, outside the nightly schedule, because the UI
-release deployed on a Sentinel host must support the Sentinel version
-deployed there (`docs/architecture.md`, Backend Contract; Release Process,
-Supported Sentinel Version). No minimum release age delays it, and Renovate
-opens it before the routine pull requests of the same run (`prPriority` in
-`renovate.jsonc`). The Mend Renovate App runs on the repository every four
-hours; a maintainer starts a run at once with the checkbox at the end of the
-Dependency Dashboard issue. Its pull request changes only
-`contract/sentinel-version`, so `UI Checks` fails until a maintainer completes
-it on its branch:
+**Sentinel version.** Renovate proposes every Sentinel release as a new pinned
+Sentinel version once its GitHub Release is published, outside the nightly
+schedule: a release outside the supported Sentinel versions of the current
+pin needs a UI release before a Sentinel host can deploy it
+(`docs/architecture.md`, Backend Contract; Release Process, Supported Sentinel
+Versions), and a release within them is proposed alike, so that the pin and
+the end-to-end tests follow Sentinel's latest release. No minimum release age
+delays it, and Renovate opens it before the routine pull requests of the same
+run (`prPriority` in `renovate.jsonc`). The Mend Renovate App runs on the
+repository every four hours; a maintainer starts a run at once with the
+checkbox at the end of the Dependency Dashboard issue. Its pull request
+changes only `contract/sentinel-version`, so `UI Checks` fails until a
+maintainer completes it on its branch:
 
 1. `scripts/sentinel-contract.sh update` replaces the pinned OpenAPI document
    with the release asset of the new version, and the pinned image digest
@@ -474,9 +476,14 @@ screenshots in step 3, so the pull request stays exempt from an issue
 documents, that work is human-directed scope: it gets a tracking issue, which
 the pull request closes.
 
-Its title uses the `feat(deps):` prefix, a minor release signal, because every
-change of the supported version carries one (`docs/architecture.md`, Backend
-Contract).
+Its title uses the `feat(deps):` prefix, a minor release signal, when the new
+version is outside the supported Sentinel versions of the current pin: for a
+major update, and for a minor update while the pin is below 1.0.0
+(`docs/architecture.md`, Backend Contract). Every other update uses the
+`chore(deps):` prefix, which carries no release signal, because the supported
+Sentinel versions of the current pin include the new version. Renovate sets
+the prefix from the type of the update and the current version
+(`renovate.jsonc`), so no maintainer sets the subject at squash merge.
 
 Routine updates follow a nightly schedule: Renovate opens them before 06:00
 UTC every day (`schedule` in `renovate.jsonc`), so that their pull requests
@@ -669,7 +676,7 @@ version from the tag. Until the first release, `package.json` declares
 | Release | Meaning |
 |---|---|
 | Major | A change that users or a deployment must act on, such as the removal of a screen or a change of how the Sentinel host serves the image (`docs/architecture.md`, Packaging and Serving) |
-| Minor | A new screen or capability, or the support of another Sentinel version (Supported Sentinel Version) |
+| Minor | A new screen or capability, or the support of a Sentinel version outside the supported Sentinel versions of the previous release: a later minor version before Sentinel 1.0.0, a later major version from 1.0.0 on (Supported Sentinel Versions) |
 | Patch | A fix, including a security fix and a dependency update that fixes a vulnerability (Dependency Updates) |
 
 **Before 1.0.0.** The first release is `0.1.0` (`initial-version`). While the
@@ -691,26 +698,43 @@ changes only through a reviewed pull request. `.release-please-manifest.json`
 is release-please's record of the current version, which nobody edits by
 hand.
 
-### Supported Sentinel Version
+### Supported Sentinel Versions
 
-Each release supports exactly one Sentinel version: the one that
-`contract/sentinel-version` declares at its tagged commit, against which its
-end-to-end tests passed (`docs/architecture.md`, Backend Contract). The image
-states it in the label `io.github.vulnwatch.sentinel-aura.sentinel-version`
-(Image), which the image's digest, and so its attestations, cover, and the
-notes of its GitHub Release repeat it. A Sentinel host deploys the release
-that supports its Sentinel version (Sentinel `docs/deployment.md`, Sentinel
-Host).
+Each release is built and tested against one Sentinel version, its pinned
+Sentinel version: the one that `contract/sentinel-version` declares at its
+tagged commit, against which its end-to-end tests passed
+(`docs/architecture.md`, Backend Contract). It supports the Sentinel versions
+from its pinned version up to, but excluding:
 
-Supported means tested together, also from Sentinel 1.0.0 on: every Sentinel
-version that a host deploys needs a release of the UI that supports it, even
-when the UI does not change. Every change of the supported version is
-therefore a `feat(deps):` commit, a minor release signal (Dependency Updates,
-Sentinel version), and a maintainer merges the release pull request once that
-change is on `master`, so that a host can deploy the new Sentinel version.
-When several changes of the supported version merge before a release, only
-the last one gets a release: no release supports the Sentinel versions in
-between, and a host that upgrades skips them.
+- the next minor version while the pinned version is below 1.0.0: a release
+  pinned to `0.12.3` supports `>= 0.12.3, < 0.13.0`; and
+- the next major version from 1.0.0 on: a release pinned to `1.4.0` supports
+  `>= 1.4.0, < 2.0.0`.
+
+The range follows from the pinned version, so it is known when the image is
+built. The image states the pinned version in the label
+`io.github.vulnwatch.sentinel-aura.sentinel-version` (Image), which the
+image's digest, and so its attestations, cover, and the notes of its GitHub
+Release state the range. A Sentinel host deploys a release whose range holds
+its Sentinel version, in the order that `docs/architecture.md` (Backend
+Contract) states (Sentinel `docs/deployment.md`, Sentinel Host, Versions).
+
+A release is tested against its pinned version only. The later versions of
+its range are covered by Sentinel's guarantee that a consumer built and tested
+against one version works with them (Sentinel `docs/deployment.md`, Consumer
+Compatibility). A change of the pinned version to a version outside the range
+of the current pin, a later minor version before Sentinel 1.0.0 or a later
+major version, is therefore a `feat(deps):` commit, a minor release signal,
+and any other change of the pinned version a `chore(deps):` commit, which
+carries none (Dependency Updates, Sentinel version). A maintainer merges the
+release pull request once a `feat(deps):` change is on `master`, so that a
+host can deploy the new Sentinel version.
+
+When several changes of the pinned version merge before a release, the
+release is pinned to the last one. A Sentinel version below that pin and
+outside the range of every earlier release, such as a minor version that a
+later change replaced before a release, is supported by no release, and a
+host that upgrades skips it.
 
 ### Release Chain
 
@@ -748,8 +772,8 @@ between, and a host that upgrades skips them.
      labeled as the release, and returns the digest that the registry names
      for its tag; `actions/attest` attests the image's SBOM and build
      provenance; and `scripts/release.sh publish` attaches the assets, writes
-     the image and the supported Sentinel version into the notes, and
-     publishes the draft, as its last action.
+     the image, the pinned Sentinel version, and the supported Sentinel
+     versions into the notes, and publishes the draft, as its last action.
 6. A successful `release.yml` run starts `image-scan.yml`, which scans the
    image of the release that is now the latest one and opens, updates, or
    closes the tracking issue (Workflow Inventory, Image vulnerability scan).
@@ -766,9 +790,10 @@ A release publishes one image, `ghcr.io/vulnwatch/sentinel-aura`, under one
 tag, its exact version, such as `0.1.0`: there is no `latest`, no
 `<major>.<minor>`, and no tag for `master`. A floating tag would move before
 the release that it names is published, and a deployment runs one exact
-version (Supported Sentinel Version). The registry does not enforce the
-immutability of tags, so a deployment runs the image by the digest that the
-tag names (Verifying a Release).
+version, whose supported Sentinel versions follow from its label (Supported
+Sentinel Versions). The registry does not enforce the immutability of tags,
+so a deployment runs the image by the digest that the tag names (Verifying a
+Release).
 
 Every build of the image by `scripts/image.sh build` carries these labels,
 which replace those of the base image. The image test fails when the image
@@ -784,7 +809,7 @@ no label of the base image describes this image:
 | `org.opencontainers.image.version` | The version of the release, or `dev` for a build outside a release |
 | `org.opencontainers.image.revision` | The commit that the image is built from |
 | `org.opencontainers.image.created` | The time of that commit, in UTC, so that two builds of one commit carry the same labels |
-| `io.github.vulnwatch.sentinel-aura.sentinel-version` | The supported Sentinel version (Supported Sentinel Version) |
+| `io.github.vulnwatch.sentinel-aura.sentinel-version` | The pinned Sentinel version, the minimum of the supported Sentinel versions (Supported Sentinel Versions) |
 | `maintainer` | Empty, in place of the maintainers of the base image |
 
 ### Supply-Chain Artifacts
@@ -869,14 +894,20 @@ immutable.
 
 A deployment uses a version only once its GitHub Release is published,
 resolves the version's tag to its digest once, verifies the image by that
-digest, and deploys it by the same digest, so that the deployed image is the
-verified one. The commands need Docker with its Buildx plugin and the GitHub
-CLI, `gh`, signed in:
+digest, checks that the Sentinel version of the host is one of the supported
+Sentinel versions of the release (Supported Sentinel Versions), and deploys
+the image by the same digest, so that the deployed image is the verified one.
+The commands need Docker with its Buildx plugin and the GitHub CLI, `gh`,
+signed in:
 
 ```bash
 set -euo pipefail
 
 VERSION="0.1.0" # the published release to verify
+# The Sentinel version that the host runs after the deployment, which upgrades
+# Sentinel first when the release needs it (docs/architecture.md, Backend
+# Contract).
+SENTINEL_VERSION="0.11.0"
 IMAGE_NAME="ghcr.io/vulnwatch/sentinel-aura"
 DIGEST="$(docker buildx imagetools inspect "${IMAGE_NAME}:${VERSION}" \
   --format '{{.Manifest.Digest}}')"
@@ -899,10 +930,19 @@ gh attestation verify "oci://${IMAGE}" \
 # The release, whose Git tag and assets release immutability locked.
 gh release verify "v${VERSION}" --repo vulnwatch/sentinel-aura
 
-# The supported Sentinel version, which is the one that the host runs.
+# The supported Sentinel versions of the release hold the Sentinel version of
+# the host: at least the pinned version that the label states, and of the
+# same minor version while that version is below 1.0.0, of the same major
+# version from 1.0.0 on.
 docker pull "${IMAGE}"
-docker image inspect "${IMAGE}" \
-  --format '{{index .Config.Labels "io.github.vulnwatch.sentinel-aura.sentinel-version"}}'
+PINNED="$(docker image inspect "${IMAGE}" \
+  --format '{{index .Config.Labels "io.github.vulnwatch.sentinel-aura.sentinel-version"}}')"
+if [[ "${PINNED}" == 0.* ]]; then SERIES="${PINNED%.*}."; else SERIES="${PINNED%%.*}."; fi
+if [[ "${SENTINEL_VERSION}" != "${SERIES}"* ]] ||
+  ! printf '%s\n' "${PINNED}" "${SENTINEL_VERSION}" | sort -C -V; then
+  echo "release ${VERSION}, pinned to Sentinel ${PINNED}, does not support Sentinel ${SENTINEL_VERSION}" >&2
+  exit 1
+fi
 
 # Deploy the image as ${IMAGE}, by its digest.
 ```

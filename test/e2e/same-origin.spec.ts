@@ -18,7 +18,7 @@ import { expect, test } from "./fixtures";
 const DATASET_USER = "jdoe";
 const DATASET_PASSWORD = "example-dataset-password";
 const SESSION_COOKIE = "__Host-sentinel_session";
-// The supported Sentinel version (docs/architecture.md, Backend Contract).
+// The pinned Sentinel version (docs/architecture.md, Backend Contract).
 const VERSION_FILE = join(
   import.meta.dirname,
   "..",
@@ -48,7 +48,7 @@ function sessionCookies(response: APIResponse): string[] {
 }
 
 test.describe("the origin of the UI and the API", () => {
-  test("reaches Sentinel at the supported version", async ({ request }) => {
+  test("reaches Sentinel at the pinned version", async ({ request }) => {
     const version = (await readFile(VERSION_FILE, "utf8")).trim();
     const response = await request.get("/api/openapi.json", {
       maxRedirects: 0,

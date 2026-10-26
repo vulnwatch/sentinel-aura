@@ -75,8 +75,8 @@ readonly WEB_ROOT="/usr/share/nginx/html"
 readonly TRIVY_IMAGE="docker.io/aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c"
 
 # The label of the version of the image, the version of a development build,
-# and the label of the Sentinel version that the image supports
-# (docs/deployment.md, Release Process).
+# and the label of the pinned Sentinel version, the minimum of the Sentinel
+# versions that the image supports (docs/deployment.md, Release Process).
 readonly VERSION_LABEL="org.opencontainers.image.version"
 readonly DEV_VERSION="dev"
 readonly SENTINEL_LABEL="io.github.vulnwatch.sentinel-aura.sentinel-version"
@@ -98,7 +98,7 @@ image_version() {
 
 # Prints the labels of an image of version $1, one key=value per line, sorted
 # by key: its OCI annotations, which replace those of the base image, and the
-# supported Sentinel version. The revision and the time of creation are those
+# pinned Sentinel version. The revision and the time of creation are those
 # of the checkout's commit, so that a rebuild of a commit labels it alike.
 expected_labels() {
     local version="$1" revision created sentinel
