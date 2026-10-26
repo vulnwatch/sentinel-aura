@@ -20,12 +20,12 @@
 #                                   is one image manifest, without an
 #                                   attestation, its labels, its user, its
 #                                   content, and its processes; then its
-#                                   responses, with the
-#                                   image project of the end-to-end tests: the
-#                                   entry document fallback, caching, the 404
-#                                   of a missing asset, the security headers,
-#                                   and the absence of redirects; then an
-#                                   access log without the Cookie header
+#                                   responses, with the image project of the
+#                                   end-to-end tests: the entry document
+#                                   fallback, caching, the 404 of a missing
+#                                   asset, the security headers, and the
+#                                   absence of redirects; then an access log
+#                                   without the Cookie header
 #   scripts/image.sh sbom <file>    Write the CycloneDX SBOM of the built image
 #                                   to <file>, then check it: the operating
 #                                   system packages of the image and the
