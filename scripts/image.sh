@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Build, test, inventory, scan, and publish the image that serves the UI in
-# production: nginx and the production build (docs/architecture.md, Packaging
-# and Serving; Security Headers; docs/deployment.md, Release Process). The
-# script runs on the host with Docker Engine and its Buildx plugin, locally
-# and in CI, and sbom also with jq; the production build and the tests of the
-# image's responses run through scripts/tooling.sh, like every Node.js
-# command, and Trivy runs from its official image, which the script pins.
+# Build, test, inventory, scan, publish, and pull the image that serves the UI
+# in production: nginx and the production build (docs/architecture.md,
+# Packaging and Serving; Security Headers; docs/deployment.md, Release
+# Process). The script runs on the host with Docker Engine and its Buildx
+# plugin, locally and in CI, and sbom also with jq; the production build and
+# the tests of the image's responses run through scripts/tooling.sh, like
+# every Node.js command, and Trivy runs from its official image, which the
+# script pins.
 #
 # Usage:
 #   scripts/image.sh build [<version>]
@@ -43,6 +44,11 @@
 #                                   with the credentials of docker login, and
 #                                   print its reference by the digest that the
 #                                   registry names
+#   scripts/image.sh pull <version> Pull the image of the release <version>,
+#                                   such as 1.2.3, by the digest that its tag
+#                                   names in the registry, as the built image;
+#                                   check that it is labeled as that release,
+#                                   and print its reference by that digest
 #   scripts/image.sh package <dist> <tag>
 #                                   Build the image <tag> from a production
 #                                   build that another run produced, such as
@@ -431,6 +437,22 @@ cmd_push() {
     printf '%s@%s\n' "${RELEASE_IMAGE}" "${digest}"
 }
 
+# The tag is resolved once and the image pulled by that digest, so that the
+# printed reference names the pulled image even if the tag moves meanwhile.
+cmd_pull() {
+    [[ $# -eq 1 ]] || die "pull: takes the version of the release"
+    local version="$1" digest reference label
+    is_version "${version}" || die "pull: '${version}' is not a version such as 1.2.3"
+    digest="$(resolve_digest "${RELEASE_IMAGE}:${version}")"
+    reference="${RELEASE_IMAGE}@${digest}"
+    docker pull --quiet "${reference}" >&2
+    docker tag "${reference}" "${UI_IMAGE}"
+    label="$(image_version)"
+    [[ "${label}" == "${version}" ]] ||
+        die "the image ${reference} is labeled as version '${label}', not as the release ${version}"
+    printf '%s\n' "${reference}"
+}
+
 # The build context holds what the Containerfile copies, as .dockerignore
 # leaves it for a build from the repository: the production build, as dist/,
 # and nginx/ of this checkout.
@@ -455,7 +477,7 @@ main() {
     local command="$1"
     shift
     case "${command}" in
-        build | test | sbom | scan | save | load | push | package)
+        build | test | sbom | scan | save | load | push | pull | package)
             check_docker_engine
             "cmd_${command}" "$@"
             ;;

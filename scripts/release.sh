@@ -112,9 +112,8 @@ cmd_publish() {
     local version tag prefix immutable
     version="$(release_version)"
     tag="v${version}"
-    if [[ "${image%@*}" != "${RELEASE_IMAGE}" ]] || ! is_digest "${image#*@}"; then
+    is_release_reference "${image}" ||
         die "publish: '${image}' is not a reference by digest of ${RELEASE_IMAGE}"
-    fi
     jq -e --arg version "${version}" '.metadata.component.version == $version' \
         "${sbom}" >/dev/null 2>&1 || die "${sbom} is not the SBOM of version ${version}"
     require_bundle "${sbom_bundle}"

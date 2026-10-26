@@ -53,13 +53,13 @@ dev_server_container() {
     printf '%s-dev-server\n' "$1"
 }
 
-# The UI's image that scripts/image.sh builds from this checkout, which the
-# end-to-end environment of compose.yaml runs.
+# The UI's image that scripts/image.sh builds from this checkout, or pulls from
+# a release, which the end-to-end environment of compose.yaml runs.
 # shellcheck disable=SC2034  # used by the scripts that source this file
 readonly UI_IMAGE="localhost/sentinel-aura:local"
 # The image of a release in its registry, which scripts/image.sh push
 # publishes under the version of the release (docs/deployment.md, Release
-# Process).
+# Process) and scripts/image.sh pull pulls for the image scan.
 # shellcheck disable=SC2034  # used by the scripts that source this file
 readonly RELEASE_IMAGE="ghcr.io/${REPOSITORY}"
 
@@ -98,6 +98,12 @@ is_version() {
 # Succeeds when $1 is the digest of an image.
 is_digest() {
     [[ "$1" =~ ^sha256:[0-9a-f]{64}$ ]]
+}
+
+# Succeeds when $1 is a reference by digest of the image of a release, such as
+# ghcr.io/vulnwatch/sentinel-aura@sha256:<64 hexadecimal digits>.
+is_release_reference() {
+    [[ "${1%@*}" == "${RELEASE_IMAGE}" ]] && is_digest "${1#*@}"
 }
 
 # Prints the supported version that the file $1 declares.
