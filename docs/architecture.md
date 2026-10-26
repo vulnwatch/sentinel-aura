@@ -149,19 +149,17 @@ of the same minor version before 1.0.0, and of the same major version from
   automation proposes such a pull request for every Sentinel release
   (`docs/conventions.md`, Pull Request Requirements).
 - The UI release deployed on a Sentinel host is one that supports the
-  Sentinel version deployed there (Sentinel `docs/deployment.md`, Sentinel
-  Host). A UI release built against a later Sentinel version than the
-  deployed one is deployed after Sentinel is upgraded to a version that it
-  supports. An upgrade of Sentinel to a version that the deployed UI release
-  does not support moves the UI to a release that supports the new version,
-  in the same deployment. Each release of the UI therefore states its
-  supported Sentinel versions (`docs/deployment.md`, Supported Sentinel
-  Versions).
+  Sentinel version deployed there: Sentinel is upgraded first for a UI
+  release built against a later version, and an upgrade of Sentinel outside
+  the supported Sentinel versions of the deployed UI release moves the UI in
+  the same deployment (Sentinel `docs/deployment.md`, Sentinel Host,
+  Versions). Each release of the UI therefore states its supported Sentinel
+  versions (`docs/deployment.md`, Supported Sentinel Versions).
 - A change of the pinned version carries a release signal only when the new
-  version is outside the supported Sentinel versions of the current pin: a
-  later minor version while the pin is below 1.0.0, or a later major version
-  (`docs/conventions.md`, Versioning), so that the next UI release supports
-  the new version. Automation still proposes every change.
+  version is outside the supported Sentinel versions of the current pinned
+  version: a later minor version while the pinned version is below 1.0.0, or
+  a later major version (`docs/conventions.md`, Versioning), so that the next
+  UI release supports the new version.
 - Agents read Sentinel's specifications from a read-only local clone, at the
   revision that `AGENTS.md` (Sentinel as an External Authority) selects.
 

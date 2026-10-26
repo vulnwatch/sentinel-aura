@@ -55,10 +55,10 @@ Documentation Publication). This repository declares the exact Sentinel version
 that the UI is built and tested against, the **pinned Sentinel version**, and
 keeps a copy of that version's OpenAPI document: that copy is the **pinned
 OpenAPI document**. A UI release supports the Sentinel versions from its pinned
-version up to the next minor version before Sentinel 1.0.0, and up to the next
-major version from 1.0.0 on (`docs/architecture.md`, Backend Contract). Moving
-to another pinned Sentinel version is always an explicit pull request whose
-diff shows the API changes.
+version up to, but excluding, the next minor version while the pinned version
+is below 1.0.0, and the next major version from 1.0.0 on
+(`docs/architecture.md`, Backend Contract). Moving to another pinned Sentinel
+version is always an explicit pull request whose diff shows the API changes.
 
 **Which version to read.** Read Sentinel's specifications at the pinned
 Sentinel version, which `contract/sentinel-version` declares, through its tag

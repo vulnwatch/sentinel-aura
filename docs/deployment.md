@@ -717,7 +717,7 @@ built. The image states the pinned version in the label
 image's digest, and so its attestations, cover, and the notes of its GitHub
 Release state the range. A Sentinel host deploys a release whose range holds
 its Sentinel version, in the order that `docs/architecture.md` (Backend
-Contract) states (Sentinel `docs/deployment.md`, Sentinel Host).
+Contract) states (Sentinel `docs/deployment.md`, Sentinel Host, Versions).
 
 A release is tested against its pinned version only. The later versions of
 its range are covered by Sentinel's guarantee that a consumer built and tested
@@ -907,7 +907,7 @@ VERSION="0.1.0" # the published release to verify
 # The Sentinel version that the host runs after the deployment, which upgrades
 # Sentinel first when the release needs it (docs/architecture.md, Backend
 # Contract).
-SENTINEL_VERSION="0.12.3"
+SENTINEL_VERSION="0.11.0"
 IMAGE_NAME="ghcr.io/vulnwatch/sentinel-aura"
 DIGEST="$(docker buildx imagetools inspect "${IMAGE_NAME}:${VERSION}" \
   --format '{{.Manifest.Digest}}')"
