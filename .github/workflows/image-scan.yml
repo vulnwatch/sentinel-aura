@@ -1,19 +1,28 @@
 name: Image Scan
 
-# Weekly, non-blocking scan of the UI's image for known vulnerabilities of its
-# operating system packages. A scan finding is data for the tracking issue,
-# never a failure; only a scan that does not complete fails the run. See
-# docs/deployment.md (Workflow Inventory, Image vulnerability scan).
+# Non-blocking scan of the image of the latest release for known
+# vulnerabilities of its operating system packages, weekly and after each
+# release. A scan finding is data for the tracking issue, never a failure;
+# only a scan that does not complete fails the run. See docs/deployment.md
+# (Workflow Inventory, Image vulnerability scan).
 
 on:
   schedule:
-    # Every Monday at 06:00 UTC, after Renovate's early-Monday updates.
+    # Every Monday at 06:00 UTC.
     - cron: "0 6 * * 1"
+  # After a release: the Release workflow publishes the GitHub Release with
+  # the GITHUB_TOKEN, whose events start no workflow run, so the scan follows
+  # the completed run instead of the release's published event.
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
 
 # A run that is writing the tracking issue finishes before the next starts.
+# The runs of master, which all scan the latest release, wait for each other;
+# a run on another branch, which leaves the issue alone, waits for none.
 concurrency:
-  group: image-scan
+  group: image-scan-${{ github.ref }}
   cancel-in-progress: false
 
 permissions: {}
@@ -21,15 +30,39 @@ permissions: {}
 jobs:
   image-scan:
     name: Image Scan
+    # Only a successful Release run has published its release.
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      image: ${{ steps.release.outputs.image }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # On master, the image of the latest release, which GitHub marks as
+      # Latest, by the digest that its version tag names: the package is
+      # public, so the pull needs no credentials.
+      - name: Pull the image of the latest release
+        id: release
+        if: github.ref == 'refs/heads/master'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+          image="$(scripts/image.sh pull "${tag#v}")"
+          echo "version=${tag#v}" >>"${GITHUB_OUTPUT}"
+          echo "image=${image}" >>"${GITHUB_OUTPUT}"
+      # On another branch, such as the branch of a Renovate pull request, the
+      # image built from it.
       - name: Build the image
+        if: github.ref != 'refs/heads/master'
         run: scripts/image.sh build
       # Trivy, from the image that the script pins, runs with the runner's
       # user and group IDs, without capabilities, on an archive of the image,
@@ -55,8 +88,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # The issue tracks the image of master: a manual run on another branch
-  # scans that branch and keeps its reports, but leaves the issue alone.
+  # The issue tracks the image of the latest release, which the runs of
+  # master scan: a manual run on another branch scans the image built from
+  # that branch and keeps its reports, but leaves the issue alone.
   tracking-issue:
     name: Scan Tracking Issue
     needs: image-scan
@@ -78,4 +112,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: scripts/image-scan-issue.sh "${RUNNER_TEMP}/trivy/trivy-fixable.json"
+          VERSION: ${{ needs.image-scan.outputs.version }}
+          IMAGE: ${{ needs.image-scan.outputs.image }}
+        run: >-
+          scripts/image-scan-issue.sh "${RUNNER_TEMP}/trivy/trivy-fixable.json"
+          "${VERSION}" "${IMAGE}"

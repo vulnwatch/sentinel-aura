@@ -59,7 +59,7 @@ dev_server_container() {
 readonly UI_IMAGE="localhost/sentinel-aura:local"
 # The image of a release in its registry, which scripts/image.sh push
 # publishes under the version of the release (docs/deployment.md, Release
-# Process).
+# Process) and scripts/image.sh pull pulls for the image scan.
 # shellcheck disable=SC2034  # used by the scripts that source this file
 readonly RELEASE_IMAGE="ghcr.io/${REPOSITORY}"
 

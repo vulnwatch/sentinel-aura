@@ -39,7 +39,7 @@ that run a subset of the checks before a change reaches CI.
 | `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the supported Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); then the build and the test of the image that serves the UI in production (Image test), and the generation and check of its SBOM (Release Process, Supply-Chain Artifacts); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
-| `image-scan.yml` | Weekly schedule, manual | `Image Scan` job: builds the image that serves the UI in production from the branch of the run, `master` unless a manual run names another, and scans its operating system packages for known vulnerabilities with `scripts/image.sh scan`. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
+| `image-scan.yml` | Weekly schedule, successful `release.yml` run, manual | `Image Scan` job: pulls the image of the latest release with `scripts/image.sh pull`, or, in a manual run on another branch than `master`, builds the image from that branch, and scans its operating system packages for known vulnerabilities with `scripts/image.sh scan`. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
 | `release-please.yml` | Successful `ci.yml` run of a push to `master` | `Release Please` job: opens or updates the release pull request, and, once it is merged, creates the version tag and the draft GitHub Release (Release Process, Release Chain) | No |
 | `release.yml` | Push of a version tag | `Build Release Image` job: builds and tests the image of the tagged commit and generates its SBOM. `Publish Release` job: publishes the image, its SBOM, and its attestations, then the GitHub Release (Release Process, Release Chain) | No |
 
@@ -173,30 +173,48 @@ repository, and no secret:
   preview). A rerun of the job replaces it, so a maintainer reruns it to
   preview a pull request whose artifact expired.
 
-**Image vulnerability scan.** `image-scan.yml` builds the image every Monday
-from `master`, and on demand from the branch of the run, and scans it with
-Trivy for known vulnerabilities of its operating system packages; the npm
-dependencies have the dependency audit. `scripts/image.sh scan` runs Trivy
-from its official image, which the script pins by version and digest, in a
-container with the runner's user and group IDs and without capabilities,
-which reads an archive of the UI's image, receives neither the Docker socket
-nor a token, and writes its reports to its output. The scan is advisory: a
-finding never fails the run, and only a scan that does not complete does. The
-`Image Scan` job, which runs the scanner, only reads the repository; it hands
-the report of the fixable HIGH and CRITICAL vulnerabilities to the `Scan
-Tracking Issue` job, the only one that can write issues, where
-`scripts/image-scan-issue.sh` opens an issue labeled `security` that lists
-them, or updates the open one, and closes it once a scan finds none. The issue
-tracks the image of `master`: a manual run on another branch, such as the
-branch of a Renovate pull request, scans the image of that branch but skips
-the `Scan Tracking Issue` job. Every run retains the complete report, with
-every severity and the vulnerabilities without a fix, as a 90-day workflow
-artifact. A fix usually arrives as a Renovate pull request that updates the
-base image of the `Containerfile` (Dependency Updates), which a maintainer
-merges with a `fix(deps):` subject, so that it is a patch release signal
-(`docs/conventions.md`, Workflow, Squash merge); until the base image
-contains the fix, the issue stays open. nginx itself comes from nginx.org's
-package repository, not from Alpine's, so the scan does not match nginx's own
+**Image vulnerability scan.** `image-scan.yml` scans the image of the latest
+release with Trivy for known vulnerabilities of its operating system packages;
+the npm dependencies have the dependency audit. It scans no earlier release,
+because security fixes ship only in a new release (`SECURITY.md`, Supported
+Versions). It runs every Monday, for the advisories published between
+releases, and after every successful `release.yml` run, so that a release
+that ships a fix closes the tracking issue without waiting for the next
+Monday. That trigger follows the `release.yml` run rather than the
+publication of its GitHub Release, which the run performs with the
+`GITHUB_TOKEN`, whose events start no workflow run; a failed run starts no
+scan, because it may not have published its release. The latest release is
+the one that GitHub marks as Latest: `scripts/image.sh pull` pulls its image
+by the digest that its version tag names, without credentials, because the
+package is public (Release Process, Secrets and Settings), and checks that
+the image is labeled as that version.
+
+`scripts/image.sh scan` runs Trivy from its official image, which the script
+pins by version and digest, in a container with the runner's user and group
+IDs and without capabilities, which reads an archive of the UI's image,
+receives neither the Docker socket nor a token, and writes its reports to its
+output. The scan is advisory: a finding never fails the run, and only a scan
+that does not complete does. The `Image Scan` job, which runs the scanner,
+only reads the repository; it hands the report of the fixable HIGH and
+CRITICAL vulnerabilities to the `Scan Tracking Issue` job, the only one that
+can write issues, where `scripts/image-scan-issue.sh` opens an issue labeled
+`security` that lists them and names the release and the digest of its image,
+or updates the open one, and closes it once a scan finds none. The issue
+tracks the image of the latest release, which every run on `master` scans,
+manual runs included. A manual run on another branch, such as the branch of a
+Renovate pull request or of the release pull request, scans the image built
+from that branch instead, which shows whether a change fixes a finding before
+a release ships it, and skips the `Scan Tracking Issue` job. Every run retains
+the complete report, with every severity and the vulnerabilities without a
+fix, as a 90-day workflow artifact.
+
+A fix usually arrives as a Renovate pull request that updates the base image
+of the `Containerfile` (Dependency Updates), which a maintainer merges with a
+`fix(deps):` subject, so that it is a patch release signal
+(`docs/conventions.md`, Workflow, Squash merge). The fix reaches the scanned
+image with the release that ships it (Release Process, Release Chain); until
+then, the issue stays open. nginx itself comes from nginx.org's package
+repository, not from Alpine's, so the scan does not match nginx's own
 advisories: a security release of nginx arrives as a Renovate update of the
 base image, which a maintainer merges with a `fix(deps):` subject as well.
 
@@ -486,8 +504,8 @@ Known vulnerabilities are handled by these complementary mechanisms:
   dependency change and every release-please pull request back until a fix is
   available within those ranges or the owner decides on an override.
 - **The image vulnerability scan** (Workflow Inventory, Image vulnerability
-  scan) covers the operating system packages of the image, which none of the
-  mechanisms above sees.
+  scan) covers the operating system packages of the image of the latest
+  release, which none of the mechanisms above sees.
 
 `renovate-validation.yml` is an advisory check. It runs on every pull request
 rather than on a list of Renovate-managed paths, validates `renovate.jsonc` in
@@ -658,10 +676,15 @@ between, and a host that upgrades skips them.
      provenance; and `scripts/release.sh publish` attaches the assets, writes
      the image and the supported Sentinel version into the notes, and
      publishes the draft, as its last action.
+6. A successful `release.yml` run starts `image-scan.yml`, which scans the
+   image of the release that is now the latest one and opens, updates, or
+   closes the tracking issue (Workflow Inventory, Image vulnerability scan).
+   The scan starts once the run has completed, so it never delays or changes
+   a release.
 
 A tag that release-please did not create, or that names another commit than
-its draft release, publishes nothing. Neither workflow cancels a run in
-progress (Workflow Conventions, Concurrency).
+its draft release, publishes nothing. No workflow of the chain cancels a run
+in progress (Workflow Conventions, Concurrency).
 
 ### Image
 
@@ -833,6 +856,8 @@ build is reproducible.
 - **Release immutability**, in Settings → General → Releases, is enabled
   (Publication and Immutability).
 - **The `sentinel-aura` package** in the registry is public, so that a
-  deployment pulls and verifies the image without registry credentials. A new
-  package is private: the repository owner makes it public once, after the
-  first release publishes it; a public package cannot become private again.
+  deployment pulls and verifies the image, and the image scan pulls it
+  (Workflow Inventory, Image vulnerability scan), without registry
+  credentials. A new package is private: the repository owner makes it public
+  once, after the first release publishes it; a public package cannot become
+  private again.

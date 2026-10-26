@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Keep the tracking issue of the weekly image scan in step with its result
+# Keep the tracking issue of the image scan in step with its result
 # (docs/deployment.md, Workflow Inventory, Image vulnerability scan): open the
-# issue, or update the open one, when the scan found fixable HIGH or CRITICAL
-# vulnerabilities, and close it when the scan found none.
+# issue, or update the open one, when the scan of the image of the latest
+# release found fixable HIGH or CRITICAL vulnerabilities, and close it when
+# the scan found none.
 #
 # Usage:
-#   scripts/image-scan-issue.sh <report>
+#   scripts/image-scan-issue.sh <report> <version> <image>
 #
 # <report> is Trivy's JSON report of the scan, limited to fixable HIGH and
-# CRITICAL vulnerabilities. gh authenticates with GH_TOKEN. GITHUB_REPOSITORY
-# names the repository, GITHUB_SHA the scanned commit, and RUN_URL the
-# workflow run, which keeps the complete report.
+# CRITICAL vulnerabilities, of the image of the release <version>, such as
+# 1.2.3, whose reference by digest is <image>. gh authenticates with GH_TOKEN.
+# GITHUB_REPOSITORY names the repository, and RUN_URL the workflow run, which
+# keeps the complete report.
 set -euo pipefail
 
 # shellcheck source=scripts/lib/common.sh
@@ -29,13 +31,21 @@ open_issue() {
             '[.[] | select(.title == $title)][0].number // empty'
 }
 
-# Prints the body of the tracking issue for the report $1 with $2 findings.
-issue_body() {
-    local report="$1" count="$2"
-    cat <<EOF
-The image scan found ${count} fixable HIGH or CRITICAL vulnerabilities in the image built from \`${GITHUB_SHA}\`. The [workflow run](${RUN_URL}) keeps the complete report.
+# Prints the scanned image, of the release $1, whose reference by digest is
+# $2, as the issue and its closing comment name it.
+scanned_image() {
+    printf "the image of the latest release, [v%s](https://github.com/%s/releases/tag/v%s), \`%s\`" \
+        "$1" "${GITHUB_REPOSITORY}" "$1" "$2"
+}
 
-A fix usually arrives as a Renovate pull request that updates the base image of the \`Containerfile\`. Merge it with a \`fix(deps):\` subject, set when squash-merging rather than by renaming the pull request, whose title Renovate restores: for example \`gh pr merge <number> --squash --subject "fix(deps): <description> (#<number>)"\`. See \`docs/deployment.md\` (Workflow Inventory, Image vulnerability scan) and \`docs/conventions.md\` (Workflow, Squash merge).
+# Prints the body of the tracking issue for the report $1 with $2 findings,
+# of the image of the release $3, whose reference by digest is $4.
+issue_body() {
+    local report="$1" count="$2" version="$3" image="$4"
+    cat <<EOF
+The image scan found ${count} fixable HIGH or CRITICAL vulnerabilities in $(scanned_image "${version}" "${image}"). The [workflow run](${RUN_URL}) keeps the complete report.
+
+A fix usually arrives as a Renovate pull request that updates the base image of the \`Containerfile\`. Merge it with a \`fix(deps):\` subject, set when squash-merging rather than by renaming the pull request, whose title Renovate restores: for example \`gh pr merge <number> --squash --subject "fix(deps): <description> (#<number>)"\`. The fix reaches the scanned image with the next release, once the release pull request is merged, and the scan that runs after that release closes this issue if no fixable vulnerability remains. See \`docs/deployment.md\` (Workflow Inventory, Image vulnerability scan; Release Process, Release Chain) and \`docs/conventions.md\` (Workflow, Squash merge).
 
 | Vulnerability | Severity | Package | Installed | Fixed in |
 |---|---|---|---|---|
@@ -50,13 +60,17 @@ EOF
 }
 
 main() {
-    if [[ $# -ne 1 ]]; then
+    if [[ $# -ne 3 ]]; then
         usage
         exit 2
     fi
-    local report="$1" count issue body_file
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${GITHUB_SHA:-}" && -n "${RUN_URL:-}" ]] ||
-        die "GITHUB_REPOSITORY, GITHUB_SHA, and RUN_URL must be set"
+    local report="$1" version="$2" image="$3" count issue body_file
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RUN_URL:-}" ]] ||
+        die "GITHUB_REPOSITORY and RUN_URL must be set"
+    is_version "${version}" || die "'${version}' is not a version such as 1.2.3"
+    if [[ "${image%@*}" != "${RELEASE_IMAGE}" ]] || ! is_digest "${image#*@}"; then
+        die "'${image}' is not a reference by digest of ${RELEASE_IMAGE}"
+    fi
     count="$(jq '[.Results[]?.Vulnerabilities[]?] | length' "${report}")" ||
         die "cannot read the report ${report}"
     issue="$(open_issue)"
@@ -64,7 +78,7 @@ main() {
     if ((count == 0)); then
         if [[ -n "${issue}" ]]; then
             gh issue close "${issue}" --repo "${GITHUB_REPOSITORY}" \
-                --comment "The image scan of \`${GITHUB_SHA}\` found no fixable HIGH or CRITICAL vulnerabilities: [workflow run](${RUN_URL})."
+                --comment "The image scan found no fixable HIGH or CRITICAL vulnerabilities in $(scanned_image "${version}" "${image}"): [workflow run](${RUN_URL})."
             echo "Closed issue #${issue}: no fixable HIGH or CRITICAL vulnerabilities"
         else
             echo "No fixable HIGH or CRITICAL vulnerabilities, and no open issue"
@@ -73,7 +87,7 @@ main() {
     fi
 
     body_file="$(mktemp)"
-    issue_body "${report}" "${count}" >"${body_file}"
+    issue_body "${report}" "${count}" "${version}" "${image}" >"${body_file}"
     if [[ -n "${issue}" ]]; then
         gh issue edit "${issue}" --repo "${GITHUB_REPOSITORY}" --body-file "${body_file}"
         echo "Updated issue #${issue}: ${count} fixable HIGH or CRITICAL vulnerabilities"

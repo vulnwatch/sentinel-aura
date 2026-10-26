@@ -419,7 +419,7 @@ first rule.
   |---|---|
   | The tooling containers, which run every Node.js command | `scripts/tooling.sh` |
   | The environments: the local backend, the end-to-end environments, and the local preview | `scripts/dev-env.sh` |
-  | The image that serves the UI in production: its build, test, SBOM, scan, and push | `scripts/image.sh` |
+  | The image that serves the UI in production: its build, test, SBOM, scan, push, and pull | `scripts/image.sh` |
   | The publication of a release: its checks and its GitHub Release | `scripts/release.sh` |
   | The Sentinel contract: the pinned OpenAPI document and image digest | `scripts/sentinel-contract.sh` |
   | The checks of the `UI Checks` and `End-to-End Tests` jobs, and the local run of the checks of CI | `scripts/ci.sh` |

@@ -114,7 +114,7 @@ other scripts and CI run for you.
 | Check the development proxy after changing `vite.config.ts`, `compose.yaml`, `test/e2e/same-origin.spec.ts`, `playwright.config.ts`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the supported version | `scripts/dev-env.sh test` |
 | Build and test the image that serves the UI in production ([Packaging and Serving](docs/architecture.md#packaging-and-serving)) | `scripts/image.sh build`, then `scripts/image.sh test` |
 | Generate and check the SBOM of the built image, as CI does ([Supply-Chain Artifacts](docs/deployment.md#supply-chain-artifacts)) | `scripts/image.sh sbom` |
-| Scan the built image for known vulnerabilities, as the weekly image scan does | `scripts/image.sh scan` |
+| Scan the built image, or the image of a release, for known vulnerabilities, as the image scan does | `scripts/image.sh build` or `scripts/image.sh pull`, then `scripts/image.sh scan` |
 | Run the [checks of CI](#checks-of-ci) before pushing, or those of one job | `scripts/ci.sh all`, or `scripts/ci.sh ui-checks` or `scripts/ci.sh e2e` |
 | Lint the shell scripts, Git hooks, and workflows | `scripts/lint-shell.sh` |
 | Check the title and the issue linkage of a pull request | `scripts/check-pr-metadata.sh` |
