@@ -326,10 +326,63 @@ repository runs the bot or creates its pull requests. It tracks:
   Sentinel's GitHub Releases, through a custom regex manager (Sentinel
   version).
 
-**npm dependencies.** Their routine updates wait for the minimum release age
-of `docs/architecture.md` (Build Tool, Package Manager, and Node.js), and
-Renovate opens none before it. Minor and patch updates are grouped into one
-pull request, and each major update gets its own, or one per monorepo when the
+**Minimum release age.** Renovate proposes a new version of a dependency, a
+major, minor, or patch update, only once it is seven days old: the minimum
+release age of the npm dependencies (`docs/architecture.md`, Build Tool,
+Package Manager, and Node.js), applied to every manager for the same reason.
+The actions run with the tokens of the workflows, and the images and tools
+run in CI and locally or ship in the UI's image, so a malicious version of
+any of them does as much harm as one of an npm package. Renovate dates:
+
+- an npm version by its publication on the registry;
+- a version of a GitHub Release, such as Sentinel's or the Codecov CLI's, by
+  the publication of the release;
+- a version of an action by the later of the publication of its release and
+  the date of its tagged commit, or, for a tag without a release, by that
+  date alone, which its publisher sets; and
+- a version of a Docker Hub image by the last push of its tag.
+
+Renovate proposes the newest version that is old enough; while none is, the
+update is listed under "Pending Status Checks" on the Dependency Dashboard. A
+version without a release timestamp is held in the same way, so a missing
+timestamp never admits a version early. The Mend Renovate App reads the
+timestamps of the Docker Hub images that this repository uses; the lookup of
+`renovate-validation.yml`, whose Docker Hub requests are anonymous, lacks
+those of an image with more than 1,000 tags, such as `postgres` and
+`renovate/renovate`, and marks their updates as pending in its debug log
+only, which is not a warning.
+
+These updates are not held:
+
+- the supported Sentinel version (Sentinel version);
+- the `nginx` group, the base image of the `Containerfile` and the proxy
+  image of `compose.yaml`: upstream rebuilds every current tag every week,
+  and Docker Hub dates a version by the last push of its tag, so the newest
+  version would never reach the age: Renovate would propose only an earlier
+  one, and a security release of nginx would wait until a later release
+  replaced it;
+- the tooling image: `mcr.microsoft.com` publishes no release timestamps, so
+  the image would be held indefinitely, while `@playwright/test`, which joins
+  its pull request (npm dependencies), still waits for the age;
+- digest updates: Docker Hub dates a digest by the last push of its tag, and
+  the digest refresh of the base image is how a fix of its packages arrives
+  (Workflow Inventory, Image vulnerability scan);
+- lock file maintenance, which npm's own minimum release age covers (npm
+  dependencies); and
+- vulnerability-fix pull requests (below).
+
+A maintainer can request a held update early with its checkbox on the
+Dependency Dashboard, for example a security release of an action, an image,
+or a tool, for which Renovate raises no vulnerability-fix pull request
+(below). Its pull request is merged like any other; its
+`renovate/stability-days` status stays pending until the version reaches the
+age, and is not a required check. An npm dependency cannot be delivered early
+that way, because npm applies its own minimum release age when Renovate
+updates the lockfile: a fix that cannot wait follows the path of an npm fix
+younger than the minimum release age (below).
+
+**npm dependencies.** Minor and patch updates are grouped into one pull
+request, and each major update gets its own, or one per monorepo when the
 `config:recommended` preset groups the packages of one project. A weekly lock
 file maintenance pull request regenerates `package-lock.json`, which keeps the
 transitive dependencies current, within npm's own minimum release age.
@@ -340,10 +393,10 @@ that line: both change by hand, together.
 
 The tooling image and `@playwright/test` are updated in one `Playwright` pull
 request, because the browsers of the image must be the ones that the package
-expects. The image has no release timestamp, so Renovate raises its update at
-once and adds the package to the same pull request when the package reaches
-the minimum release age; until then `UI Checks` fails, and the pull request is
-not merged.
+expects. The image is exempt from the minimum release age (above), so
+Renovate raises its update at once and adds the package to the same pull
+request when the package reaches the age; until then `UI Checks` fails, and
+the pull request is not merged.
 
 Renovate updates the lockfile with the npm line of the tooling image
 (`constraints.npm` in `renovate.jsonc`, which Renovate does not update either:
@@ -423,10 +476,14 @@ Routine updates follow the `schedule:earlyMondays` schedule and use the
 `ci(deps):` title prefix, or `chore(deps):` for the tooling image, the images
 of the shell lint tools and Trivy, the npm dependencies, the base image of the
 `Containerfile`, and the images of `compose.yaml`, which are not used only by
-CI; neither carries a release signal (`docs/conventions.md`, Versioning).
-Renovate never merges its own pull requests: `automerge` is disabled, and each
-one is merged like any other pull request, after the repository owner
-authorizes the merge.
+CI; neither carries a release signal (`docs/conventions.md`, Versioning). So
+that the titles stay within the length that the `PR Metadata` check allows
+(`docs/conventions.md`, Pull Request Requirements), the `nginx` and
+`Playwright` pull requests are titled with the name of their group, also when
+they hold a single update, and any other digest update of an image names the
+image without its tag. Renovate never merges its own pull requests:
+`automerge` is disabled, and each one is merged like any other pull request,
+after the repository owner authorizes the merge.
 
 Known vulnerabilities are handled by these complementary mechanisms:
 
@@ -448,11 +505,11 @@ Known vulnerabilities are handled by these complementary mechanisms:
   (below). A lock file maintenance pull request that delivers a security fix
   is merged with a `fix(deps):` subject, so that it is a patch release signal
   too (`docs/conventions.md`, Workflow, Squash merge).
-- **A fix younger than the minimum release age** cannot be resolved by npm,
-  which applies the age when Renovate updates the lockfile: Renovate then
-  reports an artifact update problem on the pull request, or opens none until
-  the fixed version reaches the age. A maintainer delivers it earlier from a
-  branch, excluding only the fixed package from the age
+- **An npm fix younger than the minimum release age** cannot be resolved by
+  npm, which applies the age when Renovate updates the lockfile: Renovate
+  then reports an artifact update problem on the pull request, or opens none
+  until the fixed version reaches the age. A maintainer delivers it earlier
+  from a branch, excluding only the fixed package from the age
   (`docs/architecture.md`, Build Tool, Package Manager, and Node.js), and
   merges the pull request with a `fix(deps):` title. For a direct dependency:
 

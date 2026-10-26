@@ -101,6 +101,21 @@
   ],
   "packageRules": [
     {
+      // The minimum release age of docs/architecture.md (Build Tool, Package
+      // Manager, and Node.js), for the version updates of every manager —
+      // see docs/deployment.md (Dependency Updates, Minimum release age).
+      // Digest updates are not held: Docker Hub dates a digest by the last
+      // push of its tag. Nor is lock file maintenance, which npm's
+      // min-release-age covers when it resolves the lockfile. A version
+      // without a release timestamp is held until it is requested from the
+      // Dependency Dashboard. The nginx group, the supported Sentinel
+      // version, and the tooling image are exempt below.
+      "description": "Version updates wait for the minimum release age",
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "minimumReleaseAge": "7 days",
+      "internalChecksFilter": "strict"
+    },
+    {
       "description": "GitHub Actions updates: the commit SHA and its version comment",
       "matchManagers": ["github-actions"],
       "commitMessagePrefix": "ci(deps):"
@@ -137,28 +152,36 @@
       "commitMessagePrefix": "chore(deps):"
     },
     {
+      // Renovate's default topic of a digest update also names the tag
+      // (<image>:<tag> Docker digest), which can take the title beyond the
+      // length that the PR Metadata check allows — see docs/deployment.md
+      // (Dependency Updates).
+      "description": "Docker digest updates name the image without its tag",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "commitMessageTopic": "{{{depName}}} Docker digest"
+    },
+    {
       // The reverse proxy of compose.yaml runs the base image of the
-      // Containerfile, so both references change together.
-      "description": "nginx: the base image of the Containerfile and the proxy image of compose.yaml in one pull request",
+      // Containerfile, so both references change together. Exempt from the
+      // minimum release age: upstream rebuilds every current tag each week,
+      // and Docker Hub dates a version by the last push of its tag, so the
+      // newest version would never reach the age — see docs/deployment.md
+      // (Dependency Updates, Minimum release age). groupSingleUpdates titles
+      // its pull request "Update nginx" also when it holds a single update,
+      // because the title that names the image would exceed the length that
+      // the PR Metadata check allows.
+      "description": "nginx: the base image of the Containerfile and the proxy image of compose.yaml in one pull request, titled by the group, without the minimum release age",
       "matchManagers": ["dockerfile", "docker-compose"],
       "matchPackageNames": ["/(^|/)nginx/nginx-unprivileged$/"],
-      "groupName": "nginx"
+      "groupName": "nginx",
+      "groupSingleUpdates": true,
+      "minimumReleaseAge": null
     },
     {
       "description": "npm dependencies, which reach the browser or run in the tooling",
       "matchManagers": ["npm"],
       "commitMessagePrefix": "chore(deps):"
-    },
-    {
-      // The minimum release age of docs/architecture.md (Build Tool, Package
-      // Manager, and Node.js). Only these update types carry a release
-      // timestamp; npm's min-release-age covers the others, such as lock file
-      // maintenance, when it resolves the lockfile.
-      "description": "npm updates wait for the minimum release age",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["major", "minor", "patch"],
-      "minimumReleaseAge": "7 days",
-      "internalChecksFilter": "strict"
     },
     {
       "description": "npm minor and patch updates in one pull request; each major update gets its own",
@@ -179,16 +202,18 @@
     {
       // A change of the supported Sentinel version carries a release signal,
       // so that the next UI release supports the new version, and it is
-      // raised at once, before every other update when Renovate limits the
-      // pull requests that it opens in an hour, because a Sentinel host
-      // deploys the two together — see docs/architecture.md (Backend
-      // Contract) and docs/deployment.md (Dependency Updates).
-      "description": "Supported Sentinel version: feat(deps):, outside the weekly schedule, first",
+      // raised at once, without the minimum release age, before every other
+      // update when Renovate limits the pull requests that it opens in an
+      // hour, because a Sentinel host deploys the two together — see
+      // docs/architecture.md (Backend Contract) and docs/deployment.md
+      // (Dependency Updates).
+      "description": "Supported Sentinel version: feat(deps):, outside the weekly schedule and the minimum release age, first",
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["contract/sentinel-version"],
       "commitMessagePrefix": "feat(deps):",
       "commitMessageTopic": "Sentinel",
       "schedule": ["at any time"],
+      "minimumReleaseAge": null,
       "prPriority": 10
     },
     {
@@ -224,13 +249,25 @@
       "enabled": false
     },
     {
-      // Last, so that it overrides the groups above and the playwright
-      // monorepo group of config:recommended. The image has no release
-      // timestamp, so Renovate raises its update at once and adds
-      // @playwright/test when that version reaches the minimum release age.
-      "description": "Playwright: the tooling image and @playwright/test in one pull request, so that the browsers of the image are the ones that Playwright expects",
+      // Last but one, so that it overrides the groups above and the
+      // playwright monorepo group of config:recommended. Renovate raises the
+      // update of the image at once (below) and adds @playwright/test when
+      // that version reaches the minimum release age. groupSingleUpdates
+      // titles the pull request "Update Playwright" also when it holds the
+      // image alone, whose own title would exceed the length that the PR
+      // Metadata check allows.
+      "description": "Playwright: the tooling image and @playwright/test in one pull request, so that the browsers of the image are the ones that Playwright expects; titled by the group",
       "matchPackageNames": ["mcr.microsoft.com/playwright", "@playwright/test"],
-      "groupName": "Playwright"
+      "groupName": "Playwright",
+      "groupSingleUpdates": true
+    },
+    {
+      // mcr.microsoft.com publishes no release timestamps, so the minimum
+      // release age would hold the image indefinitely and leave the group
+      // above without it — see docs/deployment.md (Dependency Updates).
+      "description": "The tooling image is exempt from the minimum release age",
+      "matchPackageNames": ["mcr.microsoft.com/playwright"],
+      "minimumReleaseAge": null
     }
   ]
 }
