@@ -805,6 +805,13 @@ attestations create no storage record (`create-storage-record: false`), which
 would only add the registry to the organization's metadata of linked
 artifacts and need a further permission.
 
+The image carries no other record: its tag names one image manifest, which is
+the subject of both attestations. `scripts/image.sh build` disables the
+provenance attestation that Buildx adds by default, an unsigned record that
+the containerd image store keeps and a push publishes beside the image, in an
+index that the tag would name; the image test fails for such an index
+(Workflow Inventory, Image test).
+
 **SBOM scope.** `scripts/image.sh sbom` generates the SBOM with Trivy, run
 offline from the image that the script pins, and checks it. One CycloneDX
 document, whose subject is the image, named `ghcr.io/vulnwatch/sentinel-aura`

@@ -14,7 +14,8 @@
 #                                   localhost/sentinel-aura:local, with the
 #                                   labels of a release of <version>, such as
 #                                   1.2.3, or without it of a development
-#                                   build, whose version is "dev"
+#                                   build, whose version is "dev", and without
+#                                   the provenance attestation of Buildx
 #   scripts/image.sh test           Run the built image and check it: that it
 #                                   is one image manifest, without an
 #                                   attestation, its labels, its user, its
@@ -155,7 +156,7 @@ check_manifest() {
     media_type="$(docker image inspect --format '{{with .Descriptor}}{{.MediaType}}{{end}}' "${UI_IMAGE}")"
     case "${media_type}" in
         "" | application/vnd.oci.image.manifest.v1+json | application/vnd.docker.distribution.manifest.v2+json) ;;
-        *) die "the image is a ${media_type}, not one image manifest: its build added another manifest, such as an attestation" ;;
+        *) die "the image's media type is ${media_type}, not that of one image manifest: its build added another manifest, such as an attestation" ;;
     esac
 }
 
@@ -360,8 +361,12 @@ cmd_build() {
     "${REPO_ROOT}/scripts/tooling.sh" run build
     [[ -f "${REPO_ROOT}/dist/index.html" ]] ||
         die "the production build wrote no dist/index.html"
-    docker buildx build --load --file "${REPO_ROOT}/Containerfile" --tag "${UI_IMAGE}" \
-        "${labels[@]}" "${REPO_ROOT}"
+    # Buildx adds an unsigned provenance attestation by default, which the
+    # containerd image store keeps and a push publishes beside the image; the
+    # release attests the image's provenance itself (docs/deployment.md,
+    # Supply-Chain Artifacts).
+    docker buildx build --load --provenance=false --file "${REPO_ROOT}/Containerfile" \
+        --tag "${UI_IMAGE}" "${labels[@]}" "${REPO_ROOT}"
 }
 
 # The checks that need Docker run here; the image project of the end-to-end
