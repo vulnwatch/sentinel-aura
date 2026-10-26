@@ -782,7 +782,7 @@ dependencies that reach the browser bring about 30 packages in total.
 | `vitest`, `@vitest/browser-playwright`, `vitest-browser-react`, `@vitest/coverage-istanbul` | Unit and component tests | No |
 | `@playwright/test`, `@axe-core/playwright` | End-to-end and accessibility tests | No |
 | Container image `mcr.microsoft.com/playwright` | Tooling image (Development Environment) | No |
-| Container image `nginxinc/nginx-unprivileged` | Base of the released image (Packaging and Serving), and the reverse proxy of the end-to-end tests and the local preview (Development Environment) | No |
+| Container image `nginx/nginx-unprivileged` | Base of the released image (Packaging and Serving), and the reverse proxy of the end-to-end tests and the local preview (Development Environment) | No |
 | Container images `ghcr.io/vulnwatch/sentinel` at the supported version, and the official `postgres` and `redis` images at the versions that Sentinel requires | Backend for local development, the end-to-end tests, and the local preview | No |
 
 ### Packaging and Serving

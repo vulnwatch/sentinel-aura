@@ -7,7 +7,7 @@
 
 # The official unprivileged nginx image, pinned by version and digest and
 # updated by Renovate.
-FROM docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
+FROM docker.io/nginx/nginx-unprivileged:1.31.8-alpine-slim@sha256:629d3227f39ec10201345e420e2d9d430e463a9893d374b515a8eb6541e71938
 
 # The base image's default site and server give way to the build and to the
 # server of nginx/default.conf. The build belongs to root, so the runtime user
