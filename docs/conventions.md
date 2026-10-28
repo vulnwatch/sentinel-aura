@@ -227,8 +227,10 @@ that needs it; content of another kind needs a new row first.
   generated request functions type them, except the keys of a member that the
   pinned OpenAPI document leaves open, such as `custom_settings` of
   `PATCH /api/v1/fetchers/{fetcher_name}/config`, whose keys Sentinel's
-  contract declares. No code passes to a generated request function an
-  object that also carries other members, such as the state of a form.
+  contract declares (Sentinel
+  `docs/features/platform/fetcher-infrastructure.md`, Custom Settings
+  Schema). No code passes to a generated request function an object that
+  also carries other members, such as the state of a form.
 
 ### Data Read from the API
 
