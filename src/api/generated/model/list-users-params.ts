@@ -3,17 +3,13 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { SortOrder } from "./sort-order";
-import type { UserSortField } from "./user-sort-field";
+import type { UserDirectorySortField } from "./user-directory-sort-field";
 
 export type ListUsersParams = {
   /**
    * Case-insensitive substring across username, email, and full name.
    */
   search?: string | null;
-  /**
-   * One of 'local' or 'external'.
-   */
-  type?: string | null;
   /**
    * Filter by active status.
    */
@@ -39,9 +35,9 @@ export type ListUsersParams = {
    */
   per_page?: number;
   /**
-   * 'username' (default), 'full_name', 'email', or 'created_at'.
+   * 'username' (default), 'full_name', or 'email'.
    */
-  sort_by?: UserSortField;
+  sort_by?: UserDirectorySortField;
   /**
    * 'asc' or 'desc'.
    */

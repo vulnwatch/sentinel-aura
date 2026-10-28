@@ -62,7 +62,7 @@ export const getListFetchersUrl = () => {
 };
 
 /**
- * Returns every fetcher — registered and deregistered — merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Optional authentication: anonymous callers see sanitized fields only; callers with manage_fetchers additionally see the manual-trigger actor.
+ * Returns every fetcher — registered and deregistered — merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Requires authentication (JWT session or API key); every caller sees the same fields, including the user who triggered a manual run.
  * @summary List all fetchers
  */
 export const listFetchers = async (
@@ -215,7 +215,7 @@ export const getListFetcherRunsUrl = (
 };
 
 /**
- * Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range.
+ * Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range. Requires authentication (JWT session or API key).
  * @summary List fetcher run history
  */
 export const listFetcherRuns = async (
@@ -406,7 +406,7 @@ export const getGetFetcherRunUrl = (fetcherName: string, runId: string) => {
 };
 
 /**
- * Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers.
+ * Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers. Requires authentication (JWT session or API key).
  * @summary Get fetcher run detail
  */
 export const getFetcherRun = async (
@@ -593,7 +593,7 @@ export const getGetFetcherTimelineUrl = (
 };
 
 /**
- * Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days).
+ * Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days). Requires authentication (JWT session or API key).
  * @summary Get fetcher run timeline data
  */
 export const getFetcherTimeline = async (

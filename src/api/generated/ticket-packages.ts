@@ -63,7 +63,7 @@ export const getListTicketPackagesUrl = (ticketId: string) => {
 };
 
 /**
- * Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Public; optional authentication determines access to confidential Tickets.
+ * Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Ticket packages
  */
 export const listTicketPackages = async (
@@ -383,7 +383,7 @@ export const getSearchPackagesUrl = (params?: SearchPackagesParams) => {
 };
 
 /**
- * Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Public; optional authentication determines access to confidential Tickets.
+ * Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Search packages across Tickets
  */
 export const searchPackages = async (

@@ -6,10 +6,12 @@ import type { UserManagerData } from "./user-manager-data";
 import type { UserRoleAssignmentData } from "./user-role-assignment-data";
 
 /**
- * The full user profile object shared by `GET /api/v1/users` (list
- * items) and `GET /api/v1/users/{user}` (`user-management.md`, Get
- * User). `full_name` and `manager.full_name` are nullable — the API
- * returns `null` verbatim with no fallback substitution.
+ * The complete user profile returned by `GET /api/v1/admin/users`
+ * (list items), `GET /api/v1/admin/users/{user}`, and the admin
+ * mutation endpoints (`user-management.md`, Get User (Admin)).
+ * `full_name` and `manager.full_name` are nullable — the API returns
+ * `null` verbatim with no fallback substitution. `last_login_at` is
+ * `null` until the user's first login.
  */
 export interface UserData {
   id: string;
@@ -17,10 +19,12 @@ export interface UserData {
   email: string;
   full_name: string | null;
   active: boolean;
+  bot: boolean;
   source: string;
   external_id: string | null;
   manager: UserManagerData | null;
   roles: UserRoleAssignmentData[];
+  last_login_at: string | null;
   created_at: string;
   updated_at: string;
 }

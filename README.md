@@ -21,7 +21,7 @@ The bootstrap and the roadmap are tracked in
 [Sentinel](https://github.com/vulnwatch/sentinel) owns the domain and API
 contract specifications, including the obligations that its contracts place on
 clients, such as session cookie handling, error handling by the `code` field,
-and non-disclosure semantics.
+tolerance of non-breaking API changes, and non-disclosure semantics.
 
 This repository owns the UI and its specifications: navigation, screens,
 presentation, and client-side behavior. The UI uses Sentinel only through its

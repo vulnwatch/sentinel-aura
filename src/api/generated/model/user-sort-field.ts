@@ -4,11 +4,11 @@
  */
 
 /**
- * Sortable fields for the public user directory list query.
+ * Sortable fields for the administrator user list query.
  *
  * Category B — classification (Python Enum only; never stored in the
  * database). See `docs/features/identity/user-management.md` (List
- * Users) for the supported fields and NULL-placement rule for
+ * Users (Admin)) for the supported fields and NULL-placement rule for
  * `full_name`.
  */
 export type UserSortField = (typeof UserSortField)[keyof typeof UserSortField];

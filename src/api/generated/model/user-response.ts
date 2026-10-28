@@ -5,7 +5,8 @@
 import type { UserData } from "./user-data";
 
 /**
- * Response body for `GET /api/v1/users/{user}`.
+ * Response body for `GET /api/v1/admin/users/{user}` and the admin
+ * mutation endpoints that return the complete user profile.
  */
 export interface UserResponse {
   data: UserData;

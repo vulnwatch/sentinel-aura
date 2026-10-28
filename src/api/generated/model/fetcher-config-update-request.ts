@@ -9,15 +9,14 @@ import type { FetcherConfigUpdateRequestCustomSettings } from "./fetcher-config-
  * (`fetcher-operations.md`, Update Fetcher Config).
  *
  * All fields are optional but at least one must be provided
- * (`docs/api-spec.md`, Partial Update Semantics). The route
- * distinguishes "omitted" from "explicitly provided" via
- * `model_fields_set` (see `AdminUserUpdateRequest` for the same
- * pattern). `enabled`, `run_timeout`, and `request_delay` are
- * non-nullable in the data model — an explicit `null` for any of
- * them is rejected here, before the service is called.
- * `schedule_override` accepts `null` to revert to the fetcher's
- * `default_schedule`. `custom_settings`, when provided, cannot itself
- * be `null` (the JSONB column is non-nullable) — but an individual
+ * (`docs/api-spec.md`, Partial Update Semantics). An omitted field stays
+ * `MISSING` (`docs/conventions.md`, Omitted Values), which the route
+ * passes to the service unchanged. `enabled`, `run_timeout`, and
+ * `request_delay` are non-nullable in the data model, so their types
+ * exclude `None` and an explicit `null` fails type validation before the
+ * service is called. `schedule_override` accepts `null` to revert to the
+ * fetcher's `default_schedule`. `custom_settings`, when provided, cannot
+ * itself be `null` (the JSONB column is non-nullable) — but an individual
  * key *within* it may be `null`, resetting that key to its
  * `Settings` field default (`fetcher-operations.md`,
  * `update_fetcher_config`, step 6). Per-key/per-value validation
@@ -37,9 +36,17 @@ import type { FetcherConfigUpdateRequestCustomSettings } from "./fetcher-config-
  * is not a valid `run_timeout`.
  */
 export interface FetcherConfigUpdateRequest {
-  enabled?: boolean | null;
+  enabled?: boolean;
   schedule_override?: string | null;
-  run_timeout?: number | null;
-  request_delay?: number | null;
+  /**
+   * @minimum 60
+   * @maximum 604800
+   */
+  run_timeout?: number;
+  /**
+   * @minimum 0
+   * @maximum 300
+   */
+  request_delay?: number;
   custom_settings?: FetcherConfigUpdateRequestCustomSettings;
 }

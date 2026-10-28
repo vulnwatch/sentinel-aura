@@ -302,9 +302,9 @@ touches both runs both directions.
    handled exist in Sentinel's contract at the revision read. Relying on
    anything the contract does not state is `unspecified`. Every obligation
    that Sentinel places on clients of a consumed operation — for example
-   session cookie handling, error handling by the `code` field, or
-   non-disclosure semantics — is an obligation of the element that consumes
-   it.
+   session cookie handling, error handling by the `code` field, tolerance of
+   non-breaking API changes, or non-disclosure semantics — is an obligation of
+   the element that consumes it.
 
 5. **Cross-check the acceptance criteria.** For each acceptance criterion in
    the issue, find evidence in the diff. Mark satisfied or not satisfied. This

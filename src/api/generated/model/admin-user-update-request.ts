@@ -7,16 +7,17 @@
  * Request body for `PATCH /api/v1/admin/users/{user}`
  * (`user-management.md`, Update User (Admin)).
  *
- * Both fields are optional but at least one must be provided
- * (`docs/api-spec.md`, Partial Update Semantics). `email` rejects
- * explicit `null` (non-nullable field); `full_name` accepts explicit
- * `null` to clear the stored display name. The route distinguishes
- * "omitted" from "explicitly provided" via `model_fields_set` — see
- * `docs/features/identity/user-service.md` (`update_user()`, the
- * `_MISSING` sentinel pattern) for how the route threads this into the
- * service call.
+ * Every field is optional but at least one must be provided
+ * (`docs/api-spec.md`, Partial Update Semantics). An omitted field stays
+ * `MISSING` (`docs/conventions.md`, Omitted Values), which the route
+ * passes to `user_service.update_user()` unchanged. `email` and `bot` are
+ * non-nullable, so their types exclude `None` and an explicit `null` fails
+ * type validation; `full_name` accepts explicit `null` to clear the stored
+ * display name. `bot` accepts only a JSON boolean (`docs/api-spec.md`, JSON
+ * Request Body Scalar Types).
  */
 export interface AdminUserUpdateRequest {
-  email?: string | null;
+  email?: string;
   full_name?: string | null;
+  bot?: boolean;
 }

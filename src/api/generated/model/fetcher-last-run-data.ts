@@ -8,7 +8,8 @@ import type { UserReference } from "./user-reference";
  * The `last_run` object nested in a `List Fetchers` item.
  *
  * `triggered_by_user` is a `UserReference` when `triggered_by` is
- * `manual` and the caller holds `manage_fetchers`, otherwise `null`.
+ * `manual`, for every caller (`docs/features/identity/rbac.md`, Actor
+ * Identities), otherwise `null`.
  * `error_detail`/`error_traceback` are never included at this level
  * (list response) — see `docs/features/platform/fetcher-operations.md`
  * (List Fetchers, Fields).

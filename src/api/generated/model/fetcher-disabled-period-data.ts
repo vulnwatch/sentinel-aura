@@ -5,11 +5,10 @@
 import type { UserReference } from "./user-reference";
 
 /**
- * One derived disabled period. `disabled_by`/`enabled_by` are
- * `UserReference` objects only when the caller holds
- * `manage_fetchers`, otherwise `null` — never absent (unlike the run
- * detail's raw diagnostic fields), since these are always meaningful
- * as a null value regardless of capability.
+ * One derived disabled period. `disabled_by`/`enabled_by` are the
+ * `UserReference` objects of the users who disabled and enabled the
+ * fetcher, for every caller (`docs/features/identity/rbac.md`, Actor
+ * Identities); `enabled_by` is `null` while the period is open.
  */
 export interface FetcherDisabledPeriodData {
   disabled_at: string;

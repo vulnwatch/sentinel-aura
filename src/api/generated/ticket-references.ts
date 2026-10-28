@@ -71,7 +71,7 @@ export const getListReferencesUrl = (
 };
 
 /**
- * Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Anonymous callers see references of non-confidential Tickets only.
+ * Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Requires authentication (JWT session or API key).
  * @summary List References
  */
 export const listReferences = async (

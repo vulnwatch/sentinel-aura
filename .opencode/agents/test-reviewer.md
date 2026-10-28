@@ -181,7 +181,11 @@ missing coverage as a behavior, with the scenario that no test exercises.
 - Are the states that the screen document and the issue state covered: the
   loading, empty, and error states, the error codes that the screen handles
   specifically, an error with an unknown code or with none, the field errors
-  of `VALIDATION_ERROR`, and what each role sees where it differs?
+  of `VALIDATION_ERROR`, and what each role sees where it differs? Where the
+  code maps or branches on a value of a response enum, or handles an error
+  code or status specifically, is a value, or a code and a status, that the
+  contract of the pinned version does not list covered too
+  (`docs/conventions.md`, Tests)?
 - Is each behavior proved at the cheapest tier that can prove it? Component
   tests prove the states of a component and its handling of prepared
   responses; end-to-end tests prove flows across screens, the real backend,
@@ -202,7 +206,10 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
 - Do component tests replace the shared request function with prepared
   responses and make no network request? Are the prepared responses typed by
   the generated API types, without a type assertion that hides a body that
-  the pinned OpenAPI document does not allow?
+  the pinned OpenAPI document does not allow? A response that a test
+  prepares to cover a field, a value, a code, or a status that the contract
+  of the pinned version does not list is the exception: the generated types
+  cannot express it
 - Does every end-to-end test import `test` and `expect` from
   `test/e2e/fixtures.ts`, and check every further state that it shows, such
   as an open dialog or a field error, with `expectAccessible`? Does any test
