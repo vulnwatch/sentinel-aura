@@ -4,14 +4,15 @@
  */
 
 /**
- * The `manager` object in a full user profile — the standard User
- * Reference Object shape plus `email`, per `user-management.md` (Get
- * User).
+ * The `manager` object in a complete user profile — the standard
+ * User Reference Object shape plus `email`, per `user-management.md`
+ * (Get User (Admin)).
  */
 export interface UserManagerData {
   id: string;
   username: string;
   full_name: string | null;
   active: boolean;
+  bot: boolean;
   email: string;
 }

@@ -219,6 +219,13 @@ that needs it; content of another kind needs a new row first.
   the HTTP status and, when the response provides one, Sentinel's `code`
   (`docs/architecture.md`, API Client Generation; Sentinel
   `docs/api-spec.md`, Response Format).
+- A request sends only the query parameters and request body members that
+  the pinned OpenAPI document declares for the operation, as the generated
+  request functions type them: a later Sentinel release within the supported
+  Sentinel versions can declare another one and reject its invalid values
+  (Sentinel `docs/api-spec.md`, Undeclared Query Parameters; Client Tolerance
+  of Non-Breaking Changes). No code passes to a generated request function an
+  object that also carries other members, such as the state of a form.
 
 ### Data Read from the API
 
@@ -230,6 +237,19 @@ that needs it; content of another kind needs a new row first.
   editing the cached data.
 - Form input lives in React state until it is submitted
   (`docs/architecture.md`, Routing, Server State, and Forms).
+- A later Sentinel release within the supported Sentinel versions can return
+  a field, or a value of a response enum, that the contract of the pinned
+  version does not list (Sentinel `docs/api-spec.md`, Versioning; Response
+  Enums). Code ignores the fields that it does not use, and no validation of
+  a response at run time rejects a field or a value that the pinned OpenAPI
+  document does not list (Sentinel `docs/api-spec.md`, Client Tolerance of
+  Non-Breaking Changes).
+- Code that maps a value of a response enum, for example to a label, an
+  icon, or a color, or that branches on it, gives every value that the
+  contract of the pinned version does not list a default instead of failing,
+  and no exhaustiveness check over such a value throws at run time. The UI
+  foundations own the presentation of that default, as they own the default
+  of the error presentation (Error Codes and Messages).
 
 ### Error Codes and Messages
 
@@ -240,8 +260,21 @@ that needs it; content of another kind needs a new row first.
 - One module in `src/api/` maps error codes to the messages that the UI
   shows. A screen handles specifically only the codes that its screen
   document lists (Specification Writing, Screen Documents); every other code
-  gets the default of the error presentation of the UI foundations, which
-  also own the wording of the messages and where they appear.
+  gets the default of the error presentation of the UI foundations for its
+  HTTP status, and the foundations also own the wording of the messages and
+  where they appear.
+- A later Sentinel release within the supported Sentinel versions can answer
+  an operation with a status or a code that the contract of the pinned
+  version does not list for it, such as the error response of a new
+  condition (Sentinel `docs/api-spec.md`, Error Responses). Code handles it
+  like every other code that its screen does not handle specifically, by its
+  HTTP status, and never fails on it or rejects it because the pinned OpenAPI
+  document lacks that status or code for the operation (Sentinel
+  `docs/api-spec.md`, Client Tolerance of Non-Breaking Changes).
+- No code relies on `500 INTERNAL_ERROR` for a condition, or on which of two
+  conditions an error response reports where Sentinel's contract does not
+  state their precedence (Sentinel `docs/api-spec.md`, Client Tolerance of
+  Non-Breaking Changes).
 - The field errors of a `VALIDATION_ERROR` response are matched to the form
   fields by their `loc` (Sentinel `docs/api-spec.md`, Response Format).
 - A behavior that Sentinel's contract attaches to a response of any
@@ -286,6 +319,10 @@ that needs it; content of another kind needs a new row first.
   visible text, never by CSS class or document structure.
 - Component tests replace the shared request function with prepared
   responses and make no network request.
+- The tests of code that maps or branches on a value of a response enum, or
+  that handles an error code or status specifically, also cover a value of
+  that enum, or an error code and a status, that the contract of the pinned
+  version does not list (Data Read from the API; Error Codes and Messages).
 - Test data is fictional (Example Data in Documentation).
 
 ### End-to-End Tests

@@ -10,11 +10,13 @@
  * See `docs/api-spec.md` (User References in Responses): populated
  * from the *current* `User` row via a JOIN — never a historical
  * snapshot of the user's profile data at the time of the referenced
- * event or action.
+ * event or action. `bot` is the user's bot marker
+ * (`docs/features/identity/user-management.md`, Bot Accounts).
  */
 export interface UserReference {
   id: string;
   username: string;
   full_name: string | null;
   active: boolean;
+  bot: boolean;
 }

@@ -84,7 +84,7 @@ export const getListCvesUrl = (params?: ListCvesParams) => {
 };
 
 /**
- * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Public; optional authentication determines access to CVEs associated with confidential Tickets.
+ * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary List CVEs
  */
 export const listCves = async (
@@ -230,7 +230,7 @@ export const getGetCveUrl = (cveId: string) => {
 };
 
 /**
- * Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Public; optional authentication determines access to CVEs associated with confidential Tickets.
+ * Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE
  */
 export const getCve = async (
@@ -377,7 +377,7 @@ export const getGetCveAffectedVersionsUrl = (cveId: string) => {
 };
 
 /**
- * Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Public; optional authentication determines access to CVEs associated with confidential Tickets.
+ * Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE affected versions
  */
 export const getCveAffectedVersions = async (
@@ -565,7 +565,7 @@ export const getListCveSourcesUrl = (params?: ListCveSourcesParams) => {
 };
 
 /**
- * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps), filterable by source, status, stalled state, and fetch time. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. Exposes public CVE IDs and operational metadata only, so no Ticket visibility is applied. Public; optional authentication.
+ * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.
  * @summary List persisted CVE source records
  */
 export const listCveSources = async (
@@ -711,7 +711,7 @@ export const getGetCveSourceStatusUrl = (cveId: string) => {
 };
 
 /**
- * Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Public; optional authentication determines access to CVEs associated with confidential Tickets.
+ * Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE source status
  */
 export const getCveSourceStatus = async (
@@ -883,7 +883,7 @@ export const getGetCveCvssAssessmentsUrl = (cveId: string) => {
 };
 
 /**
- * Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Public; optional authentication determines access to CVEs associated with confidential Tickets.
+ * Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVSS assessments for a CVE
  */
 export const getCveCvssAssessments = async (

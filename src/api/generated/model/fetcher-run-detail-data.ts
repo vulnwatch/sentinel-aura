@@ -7,15 +7,12 @@ import type { UserReference } from "./user-reference";
 /**
  * The `data` object for `GET /api/v1/fetchers/{fetcher_name}/runs/{run_id}`.
  *
- * `error_detail`/`error_traceback` default to unset. The endpoint
- * constructs this model without passing them for callers lacking
- * `manage_fetchers` and declares `response_model_exclude_unset=True`,
- * so Pydantic renders them as fully absent JSON keys — not
- * `"error_detail": null` — for those callers, per
+ * `error_detail`/`error_traceback` are `MISSING` for callers lacking
+ * `manage_fetchers` (`docs/conventions.md`, Omitted Values), so Pydantic
+ * leaves them out of the body — absent JSON keys, not
+ * `"error_detail": null` — per
  * `docs/features/platform/fetcher-operations.md` (Get Fetcher Run
- * Detail, Fields). Every other field on this model is always
- * explicitly set at construction time, so `exclude_unset` has no
- * effect on them.
+ * Detail, Fields).
  */
 export interface FetcherRunDetailData {
   id: string;

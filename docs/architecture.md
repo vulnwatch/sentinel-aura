@@ -59,8 +59,9 @@ UI needs is added to the API for every consumer.
 - Reads and changes Sentinel's data only through Sentinel's REST API, whose
   endpoints are under `/api/v1/` (Sentinel `docs/api-spec.md`, Base URL)
 - Honors every obligation that Sentinel's contract places on clients, such as
-  session cookie handling, error handling by the `code` field, and
-  non-disclosure semantics (`README.md`, Specification Boundary)
+  session cookie handling, error handling by the `code` field, tolerance of
+  non-breaking API changes, and non-disclosure semantics (`README.md`,
+  Specification Boundary)
 
 **What the UI does not do:**
 
@@ -107,7 +108,13 @@ versions. Sentinel guarantees that a consumer built and tested against one
 exact published version works with that version and with every later release
 of the same minor version before 1.0.0, and of the same major version from
 1.0.0 on, but may not work with an earlier release (Sentinel
-`docs/deployment.md`, Consumer Compatibility).
+`docs/deployment.md`, Consumer Compatibility). The guarantee applies only to a
+consumer that honors the obligations that the contracts of its version place
+on clients, among them the tolerance of the changes that are not breaking,
+which those later releases can contain: a field or a value of a response enum
+that the contract of its version does not list, or an error response for a
+new condition (Sentinel `docs/api-spec.md`, Versioning; Client Tolerance of
+Non-Breaking Changes).
 
 - The repository keeps a copy of the OpenAPI document of the pinned version,
   `contract/sentinel.openapi.json`: the pinned OpenAPI document. The copy is
@@ -143,7 +150,9 @@ of the same minor version before 1.0.0, and of the same major version from
   describes, and the end-to-end tests run against a backend of the pinned
   version (Development Environment), so the UI uses no capability that the
   pinned version lacks. The UI is not tested against the later versions of
-  the range; Sentinel's guarantee covers them.
+  the range; Sentinel's guarantee covers them, because the UI honors the
+  obligations on which the guarantee relies (`docs/conventions.md`, API
+  Access; Data Read from the API; Error Codes and Messages).
 - The pinned version changes only through an explicit pull request whose
   diff shows the API changes and that states which screens they affect;
   automation proposes such a pull request for every Sentinel release

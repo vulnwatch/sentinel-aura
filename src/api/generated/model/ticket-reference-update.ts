@@ -8,9 +8,10 @@ import type { ReferenceTypeValue } from "./reference-type-value";
  * Request body of `PATCH .../references/{reference_id}`.
  *
  * Partial update (`docs/api-spec.md`, Partial Update Semantics): an
- * omitted field preserves the current value; `null` clears `title`,
- * `description`, or `type`; `url` rejects `null`. An empty object is
- * rejected. Changing `url` without `type` preserves the current type.
+ * omitted field stays `MISSING` and preserves the current value; `null`
+ * clears `title`, `description`, or `type`; `url` is non-nullable, so its
+ * type excludes `None` and `null` fails type validation. An empty object
+ * is rejected. Changing `url` without `type` preserves the current type.
  */
 export interface TicketReferenceUpdate {
   /**

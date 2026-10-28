@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { TicketStatusValue } from "./generated/model";
 import { listTickets, createTicket, getTicket } from "./generated/tickets";
 import { getUser } from "./generated/users";
 import { ApiError, apiRequest } from "./request";
@@ -205,5 +206,44 @@ describe("the generated client", () => {
     await request();
 
     expect(fetch).toHaveBeenCalledExactlyOnceWith(url, expect.anything());
+  });
+
+  // A later Sentinel release within the supported Sentinel versions can
+  // return what the contract of the pinned version does not list (Sentinel
+  // docs/api-spec.md, Client Tolerance of Non-Breaking Changes;
+  // docs/conventions.md, Data Read from the API; Error Codes and Messages).
+  test("returns a field and an enum value that the pinned contract does not list unchanged", async () => {
+    // Neither the status nor the field is in TicketDetail of the pinned
+    // OpenAPI document.
+    const body = {
+      data: {
+        ticket_id: "SNTL-1",
+        status: "embargoed",
+        review_notes: "A fictional field of a later release",
+      },
+    };
+    expect(Object.values(TicketStatusValue)).not.toContain("embargoed");
+    stubFetch(jsonResponse(200, body));
+
+    await expect(getTicket("SNTL-1")).resolves.toEqual(body);
+  });
+
+  test("turns an error with a status and a code that the operation does not list into an ApiError", async () => {
+    // The pinned OpenAPI document lists neither 409 nor this code for
+    // GET /api/v1/tickets/{ticket_id}.
+    const errorBody = {
+      code: "TICKET_FICTIONAL_CONDITION",
+      detail: "A fictional condition of a later release",
+    };
+    stubFetch(jsonResponse(409, errorBody));
+
+    const error = await rejection(getTicket("SNTL-1"));
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 409,
+      code: "TICKET_FICTIONAL_CONDITION",
+      body: errorBody,
+    });
   });
 });

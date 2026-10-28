@@ -163,10 +163,13 @@ inefficiency without a screen that suffers from it is not a finding.
 3. For each operation, read its complete governing contract in Sentinel's
    owning feature specification, its description in the pinned OpenAPI
    document, `contract/sentinel.openapi.json`, and the general conventions of
-   Sentinel `docs/api-spec.md` that apply to it, such as Pagination,
-   Filtering, Sorting, Query Parameter Length Limit, Response Format, Global
-   Responses, Scoped Responses, Response Applicability Derivation, Mutation
-   Patterns, and Partial Update Semantics. When the change handles a `401`,
+   Sentinel `docs/api-spec.md` that apply to it, such as Versioning (with
+   Response Enums, Error Responses, and Client Tolerance of Non-Breaking
+   Changes), Undeclared Query Parameters, Request Body Nullability and
+   Defaults, Pagination, Filtering, Sorting, Query Parameter Length Limit,
+   Response Format, Global Responses, Scoped Responses, Response
+   Applicability Derivation, Mutation Patterns, and Partial Update
+   Semantics. When the change handles a `401`,
    also read Sentinel `docs/features/identity/authentication.md` (Frontend
    session behavior). Read Sentinel in `../sentinel` at the revision the
    invoking agent states it verified (`AGENTS.md`, Sentinel as an External
@@ -203,6 +206,12 @@ inefficiency without a screen that suffers from it is not a finding.
   entity included — instead of editing the cached data? Does it invalidate
   queries that the change cannot affect?
 - Does form input stay in React state until it is submitted?
+- Does code that maps or branches on a value of a response enum give every
+  value that the contract of the pinned version does not list a default,
+  without an exhaustiveness check that throws at run time? Does any
+  validation of a response at run time reject a field or a value that the
+  pinned OpenAPI document does not list (`docs/conventions.md`, Data Read
+  from the API)?
 
 ### Errors
 
@@ -211,7 +220,12 @@ inefficiency without a screen that suffers from it is not a finding.
   (`docs/conventions.md`, Error Codes and Messages)?
 - Does a screen handle specifically only the codes that its screen document
   lists, through the one module in `src/api/` that maps codes to messages,
-  and leave every other code to the default of the UI foundations?
+  and leave every other code to the default of the UI foundations for its
+  HTTP status, including a status or a code that the contract of the pinned
+  version does not list for the operation, without failing on it?
+- Does the code rely on `500 INTERNAL_ERROR` for a condition, or on which of
+  two conditions a response reports where Sentinel's contract does not state
+  their precedence (`docs/conventions.md`, Error Codes and Messages)?
 - Are the field errors of a `VALIDATION_ERROR` response matched to the form
   fields by their `loc`?
 - Is a behavior that the contract attaches to a response of any operation,
@@ -237,6 +251,10 @@ inefficiency without a screen that suffers from it is not a finding.
   its control before the first completes?
 - Does it refetch periodically, or on an event, without a requirement that
   needs it?
+- Does a request send only the query parameters and request body members
+  that the pinned OpenAPI document declares for the operation, never an
+  object with other members, such as the state of a form, passed to a
+  generated request function (`docs/conventions.md`, API Access)?
 
 ### URL state
 
@@ -253,11 +271,16 @@ inefficiency without a screen that suffers from it is not a finding.
 For each operation in the diff, check what the generated types do not
 express, against the quoted section of Sentinel's contract:
 
-- **Partial updates**: does a `PATCH` send only the fields that the user
-  changed? An omitted field keeps its value and `null` clears it (Sentinel
-  `docs/api-spec.md`, Partial Update Semantics), so a form that sends every
-  field can overwrite a change made meanwhile, or clear a value that the user
-  did not touch
+- **Partial updates and request bodies**: does a `PATCH` send only the
+  fields that the user changed? An omitted field keeps its value and `null`
+  clears it (Sentinel `docs/api-spec.md`, Partial Update Semantics), so a
+  form that sends every field can overwrite a change made meanwhile, or clear
+  a value that the user did not touch. Does a request body send `null` only
+  for a member that the pinned OpenAPI document publishes as nullable, and
+  omit an optional non-nullable member to leave it unchanged? Does it send a
+  member whose presence alone has an effect, such as `is_confidential` of
+  `POST /api/v1/tickets`, only when the user sets it (Request Body
+  Nullability and Defaults)?
 - **Filters**: is a repeatable enum filter sent as repeated parameters, never
   as one comma-separated value, and does the screen account for an invalid
   value being ignored rather than rejected (Filtering, Enum Filter

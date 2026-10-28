@@ -21,4 +21,5 @@ export interface AdminUserCreateRequest {
   full_name?: string | null;
   password: string;
   roles?: string[];
+  bot?: boolean;
 }

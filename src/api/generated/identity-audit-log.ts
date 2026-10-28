@@ -75,7 +75,7 @@ export const getListMyIdentityAuditEventsUrl = (
 };
 
 /**
- * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is anonymized to 'system', 'self', or 'admin'. Requires authentication (JWT session or API key).
+ * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
  * @summary List my identity audit events
  */
 export const listMyIdentityAuditEvents = async (

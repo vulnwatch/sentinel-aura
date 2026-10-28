@@ -721,13 +721,15 @@ Contract) states (Sentinel `docs/deployment.md`, Sentinel Host, Versions).
 
 A release is tested against its pinned version only. The later versions of
 its range are covered by Sentinel's guarantee that a consumer built and tested
-against one version works with them (Sentinel `docs/deployment.md`, Consumer
-Compatibility). A change of the pinned version to a version outside the range
-of the current pin, a later minor version before Sentinel 1.0.0 or a later
-major version, is therefore a `feat(deps):` commit, a minor release signal,
-and any other change of the pinned version a `chore(deps):` commit, which
-carries none (Dependency Updates, Sentinel version). A maintainer merges the
-release pull request once a `feat(deps):` change is on `master`, so that a
+against one version works with them, which applies because the UI honors the
+obligations that the contracts of that version place on clients
+(`docs/architecture.md`, Backend Contract; Sentinel `docs/deployment.md`,
+Consumer Compatibility). A change of the pinned version to a version outside
+the range of the current pin, a later minor version before Sentinel 1.0.0 or a
+later major version, is therefore a `feat(deps):` commit, a minor release
+signal, and any other change of the pinned version a `chore(deps):` commit,
+which carries none (Dependency Updates, Sentinel version). A maintainer merges
+the release pull request once a `feat(deps):` change is on `master`, so that a
 host can deploy the new Sentinel version.
 
 When several changes of the pinned version merge before a release, the

@@ -25,8 +25,11 @@ import type {
   CurrentUserResponse,
   DeactivationImpactResponse,
   ErrorResponse,
+  ListUsersAdminParams,
   ListUsersParams,
   UserActionDetailResponse,
+  UserDirectoryListResponse,
+  UserDirectoryResponse,
   UserListResponse,
   UserResponse,
   UserRolesUpdateRequest,
@@ -82,14 +85,14 @@ export const getListUsersUrl = (params?: ListUsersParams) => {
 };
 
 /**
- * Returns a paginated public directory of users. Supports search across username, email, and full name; local/external type; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. Public endpoint.
+ * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, and role values. Supports search across username, email, and full name; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
  * @summary List users
  */
 export const listUsers = async (
   params?: ListUsersParams,
   options?: Parameters<typeof apiRequest>[1],
-): Promise<UserListResponse> => {
-  return apiRequest<UserListResponse>(getListUsersUrl(params), {
+): Promise<UserDirectoryListResponse> => {
+  return apiRequest<UserDirectoryListResponse>(getListUsersUrl(params), {
     ...options,
     method: "GET",
   });
@@ -386,14 +389,14 @@ export const getGetUserUrl = (user: string) => {
 };
 
 /**
- * Returns the full profile of one user, resolved by UUID or exact, case-sensitive username. Public endpoint.
+ * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
  * @summary Get user
  */
 export const getUser = async (
   user: string,
   options?: Parameters<typeof apiRequest>[1],
-): Promise<UserResponse> => {
-  return apiRequest<UserResponse>(getGetUserUrl(user), {
+): Promise<UserDirectoryResponse> => {
+  return apiRequest<UserDirectoryResponse>(getGetUserUrl(user), {
     ...options,
     method: "GET",
   });
@@ -530,6 +533,173 @@ export function useGetUser<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getListUsersAdminUrl = (params?: ListUsersAdminParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["role"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/users?${stringifiedParams}`
+    : `/api/v1/admin/users`;
+};
+
+/**
+ * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
+ * @summary List users (admin)
+ */
+export const listUsersAdmin = async (
+  params?: ListUsersAdminParams,
+  options?: Parameters<typeof apiRequest>[1],
+): Promise<UserListResponse> => {
+  return apiRequest<UserListResponse>(getListUsersAdminUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListUsersAdminQueryKey = (params?: ListUsersAdminParams) => {
+  return [`/api/v1/admin/users`, ...(params ? [params] : [])] as const;
+};
+
+export const getListUsersAdminQueryOptions = <
+  TData = Awaited<ReturnType<typeof listUsersAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  params?: ListUsersAdminParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUsersAdmin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListUsersAdminQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsersAdmin>>> = ({
+    signal,
+  }) => listUsersAdmin(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listUsersAdmin>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListUsersAdminQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listUsersAdmin>>
+>;
+export type ListUsersAdminQueryError = ErrorType<
+  ErrorResponse | ValidationErrorResponse
+>;
+
+export function useListUsersAdmin<
+  TData = Awaited<ReturnType<typeof listUsersAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  params: undefined | ListUsersAdminParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUsersAdmin>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsersAdmin>>,
+          TError,
+          Awaited<ReturnType<typeof listUsersAdmin>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListUsersAdmin<
+  TData = Awaited<ReturnType<typeof listUsersAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  params?: ListUsersAdminParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUsersAdmin>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsersAdmin>>,
+          TError,
+          Awaited<ReturnType<typeof listUsersAdmin>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListUsersAdmin<
+  TData = Awaited<ReturnType<typeof listUsersAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  params?: ListUsersAdminParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUsersAdmin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List users (admin)
+ */
+
+export function useListUsersAdmin<
+  TData = Awaited<ReturnType<typeof listUsersAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  params?: ListUsersAdminParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listUsersAdmin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListUsersAdminQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getCreateUserAdminUrl = () => {
   return `/api/v1/admin/users`;
 };
@@ -648,12 +818,163 @@ export const useCreateUserAdmin = <
 > => {
   return useMutation(getCreateUserAdminMutationOptions(options), queryClient);
 };
+export const getGetUserAdminUrl = (user: string) => {
+  return `/api/v1/admin/users/${encodeURIComponent(String(user))}`;
+};
+
+/**
+ * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
+ * @summary Get user (admin)
+ */
+export const getUserAdmin = async (
+  user: string,
+  options?: Parameters<typeof apiRequest>[1],
+): Promise<UserResponse> => {
+  return apiRequest<UserResponse>(getGetUserAdminUrl(user), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUserAdminQueryKey = (user: string) => {
+  return [`/api/v1/admin/users/${user}`] as const;
+};
+
+export const getGetUserAdminQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  user: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserAdmin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUserAdminQueryKey(user);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserAdmin>>> = ({
+    signal,
+  }) => getUserAdmin(user, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: user !== null && user !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserAdmin>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetUserAdminQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUserAdmin>>
+>;
+export type GetUserAdminQueryError = ErrorType<
+  ErrorResponse | ValidationErrorResponse
+>;
+
+export function useGetUserAdmin<
+  TData = Awaited<ReturnType<typeof getUserAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  user: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserAdmin>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserAdmin>>,
+          TError,
+          Awaited<ReturnType<typeof getUserAdmin>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetUserAdmin<
+  TData = Awaited<ReturnType<typeof getUserAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  user: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserAdmin>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserAdmin>>,
+          TError,
+          Awaited<ReturnType<typeof getUserAdmin>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetUserAdmin<
+  TData = Awaited<ReturnType<typeof getUserAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  user: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserAdmin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get user (admin)
+ */
+
+export function useGetUserAdmin<
+  TData = Awaited<ReturnType<typeof getUserAdmin>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  user: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getUserAdmin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetUserAdminQueryOptions(user, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getUpdateUserAdminUrl = (user: string) => {
   return `/api/v1/admin/users/${encodeURIComponent(String(user))}`;
 };
 
 /**
- * Updates a local user's email and/or full name. At least one field must be provided. Requires the 'manage_users' capability.
+ * Updates a local user's email, full name, and bot marker. At least one field must be provided. Requires the 'manage_users' capability.
  * @summary Update user (admin)
  */
 export const updateUserAdmin = async (

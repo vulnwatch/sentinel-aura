@@ -10,20 +10,20 @@ import type { SeverityValue } from "./severity-value";
  * See `docs/features/tickets/tickets.md` (Create Ticket). Every field is
  * optional. `cve_id` carries no schema length limit, so any string —
  * including an empty or over-length one — reaches the endpoint's
- * `422 CVE_INVALID_FORMAT` check. The endpoint distinguishes an omitted
- * `is_confidential` from an explicit `false` through `model_fields_set`
- * (the field-level `manage_confidentiality` check is presence-based);
- * the field accepts only a JSON boolean (`docs/api-spec.md`, JSON
- * Request Body Scalar Types). A non-null `coordinated_release_at`
- * without `is_confidential: true` fails with the global
- * `422 VALIDATION_ERROR`.
+ * `422 CVE_INVALID_FORMAT` check. An omitted `is_confidential` stays
+ * `MISSING` (`docs/conventions.md`, Omitted Values), distinct from an
+ * explicit `false`, because the field-level `manage_confidentiality`
+ * check is presence-based; it creates a non-confidential Ticket. The
+ * field accepts only a JSON boolean (`docs/api-spec.md`, JSON Request
+ * Body Scalar Types). A non-null `coordinated_release_at` without
+ * `is_confidential: true` fails with the global `422 VALIDATION_ERROR`.
  */
 export interface TicketCreateRequest {
   /** CVE identifier to associate (e.g. `CVE-2024-1234`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters; otherwise `422 CVE_INVALID_FORMAT`. An empty string is rejected the same way: omit the field or send `null` for no CVE. An unknown CVE is created as a placeholder record. */
   cve_id?: string | null;
   /** Initial manual severity: `critical`, `high`, `medium`, `low`, or `none` (CVSS score 0.0, informational). Omitted or `null` leaves it unresolved. Not allowed together with `cve_id` (`409 TICKET_SEVERITY_DERIVED`): severity is then derived from CVSS. */
   severity?: SeverityValue | null;
-  /** Create the Ticket as confidential. When present (`true` or `false`), the caller also needs the `manage_confidentiality` capability; otherwise `403 AUTH_INSUFFICIENT_PERMISSION`. Default `false`. */
+  /** Create the Ticket as confidential. When present (`true` or `false`), the caller also needs the `manage_confidentiality` capability; otherwise `403 AUTH_INSUFFICIENT_PERMISSION`. Omitted: the Ticket is not confidential and the capability is not checked. */
   is_confidential?: boolean;
   /** Initial Coordinated Release Date (embargo publication instant), an ISO 8601 date-time. Accepted only with `is_confidential: true`. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. Past instants are accepted. Omitted or `null` creates the Ticket without a CRD. */
   coordinated_release_at?: string | null;

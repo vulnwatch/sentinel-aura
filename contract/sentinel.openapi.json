@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.12.0"
+    "version": "0.13.0"
   },
   "paths": {
     "/health": {
@@ -759,8 +759,306 @@
           "Users"
         ],
         "summary": "List users",
-        "description": "Returns a paginated public directory of users. Supports search across username, email, and full name; local/external type; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. Public endpoint.",
+        "description": "Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, and role values. Supports search across username, email, and full name; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).",
         "operationId": "list_users_api_v1_users_get",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring across username, email, and full name.",
+              "title": "Search"
+            },
+            "description": "Case-insensitive substring across username, email, and full name."
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by active status.",
+              "title": "Active"
+            },
+            "description": "Filter by active status."
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics.",
+              "title": "Role"
+            },
+            "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics."
+          },
+          {
+            "name": "has_role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true for users with at least one role, false for none.",
+              "title": "Has Role"
+            },
+            "description": "true for users with at least one role, false for none."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 1,
+              "description": "Page number.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number."
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page; maximum 100.",
+              "default": 20,
+              "title": "Per Page"
+            },
+            "description": "Items per page; maximum 100."
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/UserDirectorySortField",
+              "description": "'username' (default), 'full_name', or 'email'.",
+              "default": "username"
+            },
+            "description": "'username' (default), 'full_name', or 'email'."
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "description": "'asc' or 'desc'.",
+              "default": "asc"
+            },
+            "description": "'asc' or 'desc'."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDirectoryListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get my profile",
+        "description": "Returns the concise profile of the currently authenticated user, including current role values. Requires authentication (JWT session or API key).",
+        "operationId": "get_current_user_profile_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get user",
+        "description": "Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).",
+        "operationId": "get_user_api_v1_users__user__get",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDirectoryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`USER_NOT_FOUND`: no user matches the given UUID or username.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List users (admin)",
+        "description": "Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.",
+        "operationId": "list_users_admin_api_v1_admin_users_get",
         "parameters": [
           {
             "name": "search",
@@ -912,58 +1210,6 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "`INTERNAL_ERROR`: unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/users/me": {
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Get my profile",
-        "description": "Returns the concise profile of the currently authenticated user, including current role values. Requires authentication (JWT session or API key).",
-        "operationId": "get_current_user_profile_api_v1_users_me_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CurrentUserResponse"
-                }
-              }
-            }
-          },
-          "401": {
             "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
@@ -973,71 +1219,8 @@
               }
             }
           },
-          "422": {
-            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "`INTERNAL_ERROR`: unhandled server error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/users/{user}": {
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Get user",
-        "description": "Returns the full profile of one user, resolved by UUID or exact, case-sensitive username. Public endpoint.",
-        "operationId": "get_user_api_v1_users__user__get",
-        "parameters": [
-          {
-            "name": "user",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "User"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`USER_NOT_FOUND`: no user matches the given UUID or username.",
+          "403": {
+            "description": "`AUTH_INSUFFICIENT_PERMISSION`: the caller lacks the required capability.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1067,9 +1250,7 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/admin/users": {
+      },
       "post": {
         "tags": [
           "Users"
@@ -1078,14 +1259,14 @@
         "description": "Creates a new local user with a password and optional initial manual roles. Requires the 'manage_users' capability and JWT session authentication \u2014 not reachable with an API key.",
         "operationId": "create_user_admin_api_v1_admin_users_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AdminUserCreateRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -1160,12 +1341,93 @@
       }
     },
     "/api/v1/admin/users/{user}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get user (admin)",
+        "description": "Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.",
+        "operationId": "get_user_admin_api_v1_admin_users__user__get",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`AUTH_INSUFFICIENT_PERMISSION`: the caller lacks the required capability.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`USER_NOT_FOUND`: no user matches the given UUID or username.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "tags": [
           "Users"
         ],
         "summary": "Update user (admin)",
-        "description": "Updates a local user's email and/or full name. At least one field must be provided. Requires the 'manage_users' capability.",
+        "description": "Updates a local user's email, full name, and bot marker. At least one field must be provided. Requires the 'manage_users' capability.",
         "operationId": "update_user_admin_api_v1_admin_users__user__patch",
         "parameters": [
           {
@@ -1851,7 +2113,7 @@
           "Identity Audit Log"
         ],
         "summary": "List my identity audit events",
-        "description": "Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is anonymized to 'system', 'self', or 'admin'. Requires authentication (JWT session or API key).",
+        "description": "Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).",
         "operationId": "list_my_identity_audit_events_api_v1_users_me_audit_log_get",
         "parameters": [
           {
@@ -2682,7 +2944,7 @@
           "Fetchers"
         ],
         "summary": "List all fetchers",
-        "description": "Returns every fetcher \u2014 registered and deregistered \u2014 merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Optional authentication: anonymous callers see sanitized fields only; callers with manage_fetchers additionally see the manual-trigger actor.",
+        "description": "Returns every fetcher \u2014 registered and deregistered \u2014 merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Requires authentication (JWT session or API key); every caller sees the same fields, including the user who triggered a manual run.",
         "operationId": "list_fetchers_api_v1_fetchers_get",
         "responses": {
           "200": {
@@ -2696,7 +2958,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2734,7 +2996,7 @@
           "Fetchers"
         ],
         "summary": "List fetcher run history",
-        "description": "Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range.",
+        "description": "Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range. Requires authentication (JWT session or API key).",
         "operationId": "list_fetcher_runs_api_v1_fetchers__fetcher_name__runs_get",
         "parameters": [
           {
@@ -2851,7 +3113,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2899,7 +3161,7 @@
           "Fetchers"
         ],
         "summary": "Get fetcher run detail",
-        "description": "Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers.",
+        "description": "Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers. Requires authentication (JWT session or API key).",
         "operationId": "get_fetcher_run_api_v1_fetchers__fetcher_name__runs__run_id__get",
         "parameters": [
           {
@@ -2934,7 +3196,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2982,7 +3244,7 @@
           "Fetchers"
         ],
         "summary": "Get fetcher run timeline data",
-        "description": "Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days).",
+        "description": "Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days). Requires authentication (JWT session or API key).",
         "operationId": "get_fetcher_timeline_api_v1_fetchers__fetcher_name__timeline_get",
         "parameters": [
           {
@@ -3053,7 +3315,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3585,7 +3847,7 @@
           "IBS Consumer"
         ],
         "summary": "Get IBS consumer status",
-        "description": "Reports the liveness and activity of the standalone IBS RabbitMQ consumer from its ephemeral Redis heartbeat: `connected`, `disconnected`, or `reconnecting` with the process timestamps, aggregate counters, and the latest bounded error category; `disabled` when the consumer is configured off; `unreachable` when the heartbeat is absent, invalid, stale, or unreadable. Always HTTP 200 for an operational status; `disabled` and `unreachable` return every other field as `null`. Public; optional authentication.",
+        "description": "Reports the liveness and activity of the standalone IBS RabbitMQ consumer from its ephemeral Redis heartbeat: `connected`, `disconnected`, or `reconnecting` with the process timestamps, aggregate counters, and the latest bounded error category; `disabled` when the consumer is configured off; `unreachable` when the heartbeat is absent, invalid, stale, or unreadable. Always HTTP 200 for an operational status; `disabled` and `unreachable` return every other field as `null`. Requires authentication (JWT session or API key).",
         "operationId": "get_ibs_consumer_status_api_v1_ibs_consumer_status_get",
         "responses": {
           "200": {
@@ -3599,7 +3861,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3839,7 +4101,7 @@
           "Tickets"
         ],
         "summary": "List Tickets",
-        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, and overdue filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Public; optional authentication determines access to confidential Tickets.",
+        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, and overdue filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_tickets_api_v1_tickets_get",
         "parameters": [
           {
@@ -4015,7 +4277,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4149,7 +4411,7 @@
           "Tickets"
         ],
         "summary": "Get Ticket",
-        "description": "Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree. Maintainer identities are not included. Public; optional authentication determines access to confidential Tickets.",
+        "description": "Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree. Maintainer identities are not included. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "get_ticket_api_v1_tickets__ticket_id__get",
         "parameters": [
           {
@@ -4179,7 +4441,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5740,7 +6002,7 @@
           "Ticket Packages"
         ],
         "summary": "List Ticket packages",
-        "description": "Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Public; optional authentication determines access to confidential Tickets.",
+        "description": "Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_ticket_packages_api_v1_tickets__ticket_id__packages_get",
         "parameters": [
           {
@@ -5770,7 +6032,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5942,7 +6204,7 @@
           "Ticket Packages"
         ],
         "summary": "Search packages across Tickets",
-        "description": "Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Public; optional authentication determines access to confidential Tickets.",
+        "description": "Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "search_packages_api_v1_packages_get",
         "parameters": [
           {
@@ -6058,7 +6320,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7128,7 +7390,7 @@
           "Ticket References"
         ],
         "summary": "List References",
-        "description": "Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Anonymous callers see references of non-confidential Tickets only.",
+        "description": "Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Requires authentication (JWT session or API key).",
         "operationId": "list_references_api_v1_tickets__ticket_id__references_get",
         "parameters": [
           {
@@ -7194,7 +7456,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7569,7 +7831,7 @@
           "IBS Submission Tracking"
         ],
         "summary": "List submission requests",
-        "description": "Returns the paginated IBS submission request (`maintenance_incident`) actions correlated to the Ticket's package tracks. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Public; optional authentication determines access to confidential Tickets.",
+        "description": "Returns the paginated IBS submission request (`maintenance_incident`) actions correlated to the Ticket's package tracks. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_submission_requests_api_v1_tickets__ticket_id__submission_requests_get",
         "parameters": [
           {
@@ -7703,7 +7965,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7751,7 +8013,7 @@
           "IBS Submission Tracking"
         ],
         "summary": "List release requests",
-        "description": "Returns the paginated IBS release request (`maintenance_release`) actions directly correlated to the Ticket's package tracks; they are never inferred from request-level incident equality. Also filterable by exact `incident_number`. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Public; optional authentication determines access to confidential Tickets.",
+        "description": "Returns the paginated IBS release request (`maintenance_release`) actions directly correlated to the Ticket's package tracks; they are never inferred from request-level incident equality. Also filterable by exact `incident_number`. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_release_requests_api_v1_tickets__ticket_id__release_requests_get",
         "parameters": [
           {
@@ -7905,7 +8167,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7953,7 +8215,7 @@
           "CVEs"
         ],
         "summary": "List CVEs",
-        "description": "Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Public; optional authentication determines access to CVEs associated with confidential Tickets.",
+        "description": "Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.",
         "operationId": "list_cves_api_v1_cves_get",
         "parameters": [
           {
@@ -8133,7 +8395,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8171,7 +8433,7 @@
           "CVEs"
         ],
         "summary": "Get CVE",
-        "description": "Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Public; optional authentication determines access to CVEs associated with confidential Tickets.",
+        "description": "Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.",
         "operationId": "get_cve_api_v1_cves__cve_id__get",
         "parameters": [
           {
@@ -8201,7 +8463,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8249,7 +8511,7 @@
           "CVEs"
         ],
         "summary": "Get CVE affected versions",
-        "description": "Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Public; optional authentication determines access to CVEs associated with confidential Tickets.",
+        "description": "Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.",
         "operationId": "get_cve_affected_versions_api_v1_cves__cve_id__affected_versions_get",
         "parameters": [
           {
@@ -8279,7 +8541,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8327,7 +8589,7 @@
           "CVEs"
         ],
         "summary": "List persisted CVE source records",
-        "description": "Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps), filterable by source, status, stalled state, and fetch time. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. Exposes public CVE IDs and operational metadata only, so no Ticket visibility is applied. Public; optional authentication.",
+        "description": "Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.",
         "operationId": "list_cve_sources_api_v1_cve_sources_get",
         "parameters": [
           {
@@ -8495,7 +8757,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8533,7 +8795,7 @@
           "CVEs"
         ],
         "summary": "Get CVE source status",
-        "description": "Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Public; optional authentication determines access to CVEs associated with confidential Tickets.",
+        "description": "Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.",
         "operationId": "get_cve_source_status_api_v1_cves__cve_id__sources_get",
         "parameters": [
           {
@@ -8563,7 +8825,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8611,7 +8873,7 @@
           "CVEs"
         ],
         "summary": "Get CVSS assessments for a CVE",
-        "description": "Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Public; optional authentication determines access to CVEs associated with confidential Tickets.",
+        "description": "Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.",
         "operationId": "get_cve_cvss_assessments_api_v1_cves__cve_id__cvss_get",
         "parameters": [
           {
@@ -8641,7 +8903,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9057,7 +9319,7 @@
           "Products"
         ],
         "summary": "List Products",
-        "description": "Returns a paginated list of the Products synchronized from SMELT, identified by their canonical CPE, with AIMAAS lifecycle dates, the derived lifecycle phase, and the CVSS threshold. By default only Products of the latest complete catalog snapshot are listed; retained historical Products are selected through `catalog_presence`. Supports search, exact CPE, repeatable catalog presence and lifecycle filters, and sorting. Before the first complete snapshot, the list is empty. Public; optional authentication.",
+        "description": "Returns a paginated list of the Products synchronized from SMELT, identified by their canonical CPE, with AIMAAS lifecycle dates, the derived lifecycle phase, and the CVSS threshold. By default only Products of the latest complete catalog snapshot are listed; retained historical Products are selected through `catalog_presence`. Supports search, exact CPE, repeatable catalog presence and lifecycle filters, and sorting. Before the first complete snapshot, the list is empty. Requires authentication (JWT session or API key).",
         "operationId": "list_products_api_v1_products_get",
         "parameters": [
           {
@@ -9187,7 +9449,7 @@
             }
           },
           "401": {
-            "description": "`AUTH_NOT_AUTHENTICATED`: a credential was sent and is invalid.",
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9941,6 +10203,11 @@
             },
             "type": "array",
             "title": "Roles"
+          },
+          "bot": {
+            "type": "boolean",
+            "title": "Bot",
+            "default": false
           }
         },
         "type": "object",
@@ -9955,14 +10222,7 @@
       "AdminUserUpdateRequest": {
         "properties": {
           "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Email"
           },
           "full_name": {
@@ -9976,11 +10236,15 @@
               }
             ],
             "title": "Full Name"
+          },
+          "bot": {
+            "type": "boolean",
+            "title": "Bot"
           }
         },
         "type": "object",
         "title": "AdminUserUpdateRequest",
-        "description": "Request body for `PATCH /api/v1/admin/users/{user}`\n(`user-management.md`, Update User (Admin)).\n\nBoth fields are optional but at least one must be provided\n(`docs/api-spec.md`, Partial Update Semantics). `email` rejects\nexplicit `null` (non-nullable field); `full_name` accepts explicit\n`null` to clear the stored display name. The route distinguishes\n\"omitted\" from \"explicitly provided\" via `model_fields_set` \u2014 see\n`docs/features/identity/user-service.md` (`update_user()`, the\n`_MISSING` sentinel pattern) for how the route threads this into the\nservice call."
+        "description": "Request body for `PATCH /api/v1/admin/users/{user}`\n(`user-management.md`, Update User (Admin)).\n\nEvery field is optional but at least one must be provided\n(`docs/api-spec.md`, Partial Update Semantics). An omitted field stays\n`MISSING` (`docs/conventions.md`, Omitted Values), which the route\npasses to `user_service.update_user()` unchanged. `email` and `bot` are\nnon-nullable, so their types exclude `None` and an explicit `null` fails\ntype validation; `full_name` accepts explicit `null` to clear the stored\ndisplay name. `bot` accepts only a JSON boolean (`docs/api-spec.md`, JSON\nRequest Body Scalar Types)."
       },
       "ApiKeyCreateRequest": {
         "properties": {
@@ -12184,6 +12448,10 @@
           "active": {
             "type": "boolean",
             "title": "Active"
+          },
+          "bot": {
+            "type": "boolean",
+            "title": "Bot"
           }
         },
         "type": "object",
@@ -12193,10 +12461,11 @@
           "email",
           "full_name",
           "roles",
-          "active"
+          "active",
+          "bot"
         ],
         "title": "CurrentUserData",
-        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe full profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Deterministic ordering)."
+        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe complete user profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Deterministic ordering)."
       },
       "CurrentUserResponse": {
         "properties": {
@@ -12569,14 +12838,7 @@
       "FetcherConfigUpdateRequest": {
         "properties": {
           "enabled": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Enabled"
           },
           "schedule_override": {
@@ -12592,47 +12854,26 @@
             "title": "Schedule Override"
           },
           "run_timeout": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 604800.0,
-                "minimum": 60.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "maximum": 604800.0,
+            "minimum": 60.0,
             "title": "Run Timeout"
           },
           "request_delay": {
-            "anyOf": [
-              {
-                "type": "number",
-                "maximum": 300.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "maximum": 300.0,
+            "minimum": 0.0,
             "title": "Request Delay"
           },
           "custom_settings": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Custom Settings"
           }
         },
         "type": "object",
         "title": "FetcherConfigUpdateRequest",
-        "description": "Request body for `PATCH /api/v1/fetchers/{fetcher_name}/config`\n(`fetcher-operations.md`, Update Fetcher Config).\n\nAll fields are optional but at least one must be provided\n(`docs/api-spec.md`, Partial Update Semantics). The route\ndistinguishes \"omitted\" from \"explicitly provided\" via\n`model_fields_set` (see `AdminUserUpdateRequest` for the same\npattern). `enabled`, `run_timeout`, and `request_delay` are\nnon-nullable in the data model \u2014 an explicit `null` for any of\nthem is rejected here, before the service is called.\n`schedule_override` accepts `null` to revert to the fetcher's\n`default_schedule`. `custom_settings`, when provided, cannot itself\nbe `null` (the JSONB column is non-nullable) \u2014 but an individual\nkey *within* it may be `null`, resetting that key to its\n`Settings` field default (`fetcher-operations.md`,\n`update_fetcher_config`, step 6). Per-key/per-value validation\n(unknown key, invalid value) is performed by the service layer,\nwhich raises the dedicated `FetcherSettingUnknownError`/\n`FetcherSettingInvalidError` (422\n`FETCHER_SETTING_UNKNOWN`/`FETCHER_SETTING_INVALID`) \u2014 this schema\nonly validates the group-level shape and the input-only\nconstraints (`docs/features/platform/fetcher-operations.md`,\n`update_fetcher_config`, Q3 step 1) that must produce the generic\n`422 VALIDATION_ERROR`: `schedule_override` cron syntax and\n50-character storage bound (matching `FetcherConfig.schedule_override`,\n`VARCHAR(50)`), and the `run_timeout`/`request_delay` numeric bounds.\n`enabled`, `run_timeout`, and `request_delay` accept only their JSON\ntype without coercion (`docs/api-spec.md`, JSON Request Body Scalar\nTypes): a JSON integer is still a valid `request_delay`, but `600.0`\nis not a valid `run_timeout`."
+        "description": "Request body for `PATCH /api/v1/fetchers/{fetcher_name}/config`\n(`fetcher-operations.md`, Update Fetcher Config).\n\nAll fields are optional but at least one must be provided\n(`docs/api-spec.md`, Partial Update Semantics). An omitted field stays\n`MISSING` (`docs/conventions.md`, Omitted Values), which the route\npasses to the service unchanged. `enabled`, `run_timeout`, and\n`request_delay` are non-nullable in the data model, so their types\nexclude `None` and an explicit `null` fails type validation before the\nservice is called. `schedule_override` accepts `null` to revert to the\nfetcher's `default_schedule`. `custom_settings`, when provided, cannot\nitself be `null` (the JSONB column is non-nullable) \u2014 but an individual\nkey *within* it may be `null`, resetting that key to its\n`Settings` field default (`fetcher-operations.md`,\n`update_fetcher_config`, step 6). Per-key/per-value validation\n(unknown key, invalid value) is performed by the service layer,\nwhich raises the dedicated `FetcherSettingUnknownError`/\n`FetcherSettingInvalidError` (422\n`FETCHER_SETTING_UNKNOWN`/`FETCHER_SETTING_INVALID`) \u2014 this schema\nonly validates the group-level shape and the input-only\nconstraints (`docs/features/platform/fetcher-operations.md`,\n`update_fetcher_config`, Q3 step 1) that must produce the generic\n`422 VALIDATION_ERROR`: `schedule_override` cron syntax and\n50-character storage bound (matching `FetcherConfig.schedule_override`,\n`VARCHAR(50)`), and the `run_timeout`/`request_delay` numeric bounds.\n`enabled`, `run_timeout`, and `request_delay` accept only their JSON\ntype without coercion (`docs/api-spec.md`, JSON Request Body Scalar\nTypes): a JSON integer is still a valid `request_delay`, but `600.0`\nis not a valid `run_timeout`."
       },
       "FetcherDisabledPeriodData": {
         "properties": {
@@ -12682,7 +12923,7 @@
           "enabled_by"
         ],
         "title": "FetcherDisabledPeriodData",
-        "description": "One derived disabled period. `disabled_by`/`enabled_by` are\n`UserReference` objects only when the caller holds\n`manage_fetchers`, otherwise `null` \u2014 never absent (unlike the run\ndetail's raw diagnostic fields), since these are always meaningful\nas a null value regardless of capability."
+        "description": "One derived disabled period. `disabled_by`/`enabled_by` are the\n`UserReference` objects of the users who disabled and enabled the\nfetcher, for every caller (`docs/features/identity/rbac.md`, Actor\nIdentities); `enabled_by` is `null` while the period is open."
       },
       "FetcherLastRunData": {
         "properties": {
@@ -12799,7 +13040,7 @@
           "stale"
         ],
         "title": "FetcherLastRunData",
-        "description": "The `last_run` object nested in a `List Fetchers` item.\n\n`triggered_by_user` is a `UserReference` when `triggered_by` is\n`manual` and the caller holds `manage_fetchers`, otherwise `null`.\n`error_detail`/`error_traceback` are never included at this level\n(list response) \u2014 see `docs/features/platform/fetcher-operations.md`\n(List Fetchers, Fields)."
+        "description": "The `last_run` object nested in a `List Fetchers` item.\n\n`triggered_by_user` is a `UserReference` when `triggered_by` is\n`manual`, for every caller (`docs/features/identity/rbac.md`, Actor\nIdentities), otherwise `null`.\n`error_detail`/`error_traceback` are never included at this level\n(list response) \u2014 see `docs/features/platform/fetcher-operations.md`\n(List Fetchers, Fields)."
       },
       "FetcherListItemData": {
         "properties": {
@@ -13073,7 +13314,7 @@
           "fetcher_name"
         ],
         "title": "FetcherRunDetailData",
-        "description": "The `data` object for `GET /api/v1/fetchers/{fetcher_name}/runs/{run_id}`.\n\n`error_detail`/`error_traceback` default to unset. The endpoint\nconstructs this model without passing them for callers lacking\n`manage_fetchers` and declares `response_model_exclude_unset=True`,\nso Pydantic renders them as fully absent JSON keys \u2014 not\n`\"error_detail\": null` \u2014 for those callers, per\n`docs/features/platform/fetcher-operations.md` (Get Fetcher Run\nDetail, Fields). Every other field on this model is always\nexplicitly set at construction time, so `exclude_unset` has no\neffect on them."
+        "description": "The `data` object for `GET /api/v1/fetchers/{fetcher_name}/runs/{run_id}`.\n\n`error_detail`/`error_traceback` are `MISSING` for callers lacking\n`manage_fetchers` (`docs/conventions.md`, Omitted Values), so Pydantic\nleaves them out of the body \u2014 absent JSON keys, not\n`\"error_detail\": null` \u2014 per\n`docs/features/platform/fetcher-operations.md` (Get Fetcher Run\nDetail, Fields)."
       },
       "FetcherRunDetailResponse": {
         "properties": {
@@ -14856,13 +15097,14 @@
             "title": "Created At"
           },
           "actor": {
-            "type": "string",
-            "enum": [
-              "system",
-              "self",
-              "admin"
-            ],
-            "title": "Actor"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -14876,7 +15118,7 @@
           "actor"
         ],
         "title": "SelfIdentityAuditEventData",
-        "description": "One event in the self-service identity audit log response\n(`identity-audit-log.md`, List My Identity Audit Events). `actor` is\nalways one of `system`/`self`/`admin` \u2014 never a User object \u2014 per\nthe documented anonymization mapping."
+        "description": "One event in the self-service identity audit log response\n(`identity-audit-log.md`, List My Identity Audit Events). `actor` is the\nuser reference of the recorded actor, the caller's own included, or\n`None` for an event with no recorded actor (`rbac.md`, Actor\nIdentities). The target is always the caller, so it is omitted."
       },
       "SelfIdentityAuditListResponse": {
         "properties": {
@@ -15526,8 +15768,7 @@
           "is_confidential": {
             "type": "boolean",
             "title": "Is Confidential",
-            "description": "Create the Ticket as confidential. When present (`true` or `false`), the caller also needs the `manage_confidentiality` capability; otherwise `403 AUTH_INSUFFICIENT_PERMISSION`. Default `false`.",
-            "default": false,
+            "description": "Create the Ticket as confidential. When present (`true` or `false`), the caller also needs the `manage_confidentiality` capability; otherwise `403 AUTH_INSUFFICIENT_PERMISSION`. Omitted: the Ticket is not confidential and the capability is not checked.",
             "examples": [
               true
             ]
@@ -15551,7 +15792,7 @@
         },
         "type": "object",
         "title": "TicketCreateRequest",
-        "description": "Request body of `POST /api/v1/tickets`.\n\nSee `docs/features/tickets/tickets.md` (Create Ticket). Every field is\noptional. `cve_id` carries no schema length limit, so any string \u2014\nincluding an empty or over-length one \u2014 reaches the endpoint's\n`422 CVE_INVALID_FORMAT` check. The endpoint distinguishes an omitted\n`is_confidential` from an explicit `false` through `model_fields_set`\n(the field-level `manage_confidentiality` check is presence-based);\nthe field accepts only a JSON boolean (`docs/api-spec.md`, JSON\nRequest Body Scalar Types). A non-null `coordinated_release_at`\nwithout `is_confidential: true` fails with the global\n`422 VALIDATION_ERROR`."
+        "description": "Request body of `POST /api/v1/tickets`.\n\nSee `docs/features/tickets/tickets.md` (Create Ticket). Every field is\noptional. `cve_id` carries no schema length limit, so any string \u2014\nincluding an empty or over-length one \u2014 reaches the endpoint's\n`422 CVE_INVALID_FORMAT` check. An omitted `is_confidential` stays\n`MISSING` (`docs/conventions.md`, Omitted Values), distinct from an\nexplicit `false`, because the field-level `manage_confidentiality`\ncheck is presence-based; it creates a non-confidential Ticket. The\nfield accepts only a JSON boolean (`docs/api-spec.md`, JSON Request\nBody Scalar Types). A non-null `coordinated_release_at` without\n`is_confidential: true` fails with the global `422 VALIDATION_ERROR`."
       },
       "TicketDetail": {
         "properties": {
@@ -16139,7 +16380,7 @@
         },
         "type": "object",
         "title": "TicketReferenceUpdate",
-        "description": "Request body of `PATCH .../references/{reference_id}`.\n\nPartial update (`docs/api-spec.md`, Partial Update Semantics): an\nomitted field preserves the current value; `null` clears `title`,\n`description`, or `type`; `url` rejects `null`. An empty object is\nrejected. Changing `url` without `type` preserves the current type."
+        "description": "Request body of `PATCH .../references/{reference_id}`.\n\nPartial update (`docs/api-spec.md`, Partial Update Semantics): an\nomitted field stays `MISSING` and preserves the current value; `null`\nclears `title`, `description`, or `type`; `url` is non-nullable, so its\ntype excludes `None` and `null` fails type validation. An empty object\nis rejected. Changing `url` without `type` preserves the current type."
       },
       "TicketSeverityUpdateRequest": {
         "properties": {
@@ -16974,6 +17215,10 @@
             "type": "boolean",
             "title": "Active"
           },
+          "bot": {
+            "type": "boolean",
+            "title": "Bot"
+          },
           "source": {
             "type": "string",
             "title": "Source"
@@ -17007,6 +17252,18 @@
             "type": "array",
             "title": "Roles"
           },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -17025,15 +17282,116 @@
           "email",
           "full_name",
           "active",
+          "bot",
           "source",
           "external_id",
           "manager",
           "roles",
+          "last_login_at",
           "created_at",
           "updated_at"
         ],
         "title": "UserData",
-        "description": "The full user profile object shared by `GET /api/v1/users` (list\nitems) and `GET /api/v1/users/{user}` (`user-management.md`, Get\nUser). `full_name` and `manager.full_name` are nullable \u2014 the API\nreturns `null` verbatim with no fallback substitution."
+        "description": "The complete user profile returned by `GET /api/v1/admin/users`\n(list items), `GET /api/v1/admin/users/{user}`, and the admin\nmutation endpoints (`user-management.md`, Get User (Admin)).\n`full_name` and `manager.full_name` are nullable \u2014 the API returns\n`null` verbatim with no fallback substitution. `last_login_at` is\n`null` until the user's first login."
+      },
+      "UserDirectoryData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "bot": {
+            "type": "boolean",
+            "title": "Bot"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "email",
+          "full_name",
+          "active",
+          "bot",
+          "roles"
+        ],
+        "title": "UserDirectoryData",
+        "description": "The user directory entry returned by `GET /api/v1/users` (list\nitems) and `GET /api/v1/users/{user}` (`user-management.md`, Get\nUser). It has the fields of the caller's own profile\n(`app.schemas.auth.CurrentUserData`) and none of the fields that\nonly the complete user profile (`UserData`) returns. `roles` is the\ndistinct, alphabetically wire-sorted set of current role values\n(`rbac.md`, Deterministic ordering); `full_name` is returned `null`\nverbatim with no fallback substitution."
+      },
+      "UserDirectoryListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/UserDirectoryData"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "UserDirectoryListResponse",
+        "description": "Response body for `GET /api/v1/users`."
+      },
+      "UserDirectoryResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UserDirectoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "UserDirectoryResponse",
+        "description": "Response body for `GET /api/v1/users/{user}`."
+      },
+      "UserDirectorySortField": {
+        "type": "string",
+        "enum": [
+          "username",
+          "full_name",
+          "email"
+        ],
+        "title": "UserDirectorySortField",
+        "description": "Sortable fields for the user directory list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). The subset of `UserSortField` whose values the directory\nentry returns: the directory sorts only on fields it returns\n(`docs/features/identity/user-management.md`, Access Level\nRequirements and List Users)."
       },
       "UserListResponse": {
         "properties": {
@@ -17054,7 +17412,7 @@
           "meta"
         ],
         "title": "UserListResponse",
-        "description": "Response body for `GET /api/v1/users`."
+        "description": "Response body for `GET /api/v1/admin/users`."
       },
       "UserManagerData": {
         "properties": {
@@ -17082,6 +17440,10 @@
             "type": "boolean",
             "title": "Active"
           },
+          "bot": {
+            "type": "boolean",
+            "title": "Bot"
+          },
           "email": {
             "type": "string",
             "title": "Email"
@@ -17093,10 +17455,11 @@
           "username",
           "full_name",
           "active",
+          "bot",
           "email"
         ],
         "title": "UserManagerData",
-        "description": "The `manager` object in a full user profile \u2014 the standard User\nReference Object shape plus `email`, per `user-management.md` (Get\nUser)."
+        "description": "The `manager` object in a complete user profile \u2014 the standard\nUser Reference Object shape plus `email`, per `user-management.md`\n(Get User (Admin))."
       },
       "UserReference": {
         "properties": {
@@ -17123,6 +17486,10 @@
           "active": {
             "type": "boolean",
             "title": "Active"
+          },
+          "bot": {
+            "type": "boolean",
+            "title": "Bot"
           }
         },
         "type": "object",
@@ -17130,10 +17497,11 @@
           "id",
           "username",
           "full_name",
-          "active"
+          "active",
+          "bot"
         ],
         "title": "UserReference",
-        "description": "The standard User Reference Object embedded in response payloads\nthat reference a user (e.g. `owner`, `revoked_by`).\n\nSee `docs/api-spec.md` (User References in Responses): populated\nfrom the *current* `User` row via a JOIN \u2014 never a historical\nsnapshot of the user's profile data at the time of the referenced\nevent or action."
+        "description": "The standard User Reference Object embedded in response payloads\nthat reference a user (e.g. `owner`, `revoked_by`).\n\nSee `docs/api-spec.md` (User References in Responses): populated\nfrom the *current* `User` row via a JOIN \u2014 never a historical\nsnapshot of the user's profile data at the time of the referenced\nevent or action. `bot` is the user's bot marker\n(`docs/features/identity/user-management.md`, Bot Accounts)."
       },
       "UserResponse": {
         "properties": {
@@ -17146,7 +17514,7 @@
           "data"
         ],
         "title": "UserResponse",
-        "description": "Response body for `GET /api/v1/users/{user}`."
+        "description": "Response body for `GET /api/v1/admin/users/{user}` and the admin\nmutation endpoints that return the complete user profile."
       },
       "UserRoleAssignmentData": {
         "properties": {
@@ -17161,14 +17529,12 @@
           "assigned_by": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "$ref": "#/components/schemas/UserReference"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Assigned By"
+            ]
           },
           "created_at": {
             "type": "string",
@@ -17184,7 +17550,7 @@
           "created_at"
         ],
         "title": "UserRoleAssignmentData",
-        "description": "One entry of a full user profile's `roles` array\n(`user-management.md`, Get User)."
+        "description": "One entry of a complete user profile's `roles` array\n(`user-management.md`, Get User (Admin)). `assigned_by` is the user\nreference of the recorded assigning user, or `None` when none is\nrecorded (CLI or external-group origin)."
       },
       "UserRolesUpdateRequest": {
         "properties": {
@@ -17216,7 +17582,7 @@
           "created_at"
         ],
         "title": "UserSortField",
-        "description": "Sortable fields for the public user directory list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/identity/user-management.md` (List\nUsers) for the supported fields and NULL-placement rule for\n`full_name`."
+        "description": "Sortable fields for the administrator user list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/identity/user-management.md` (List\nUsers (Admin)) for the supported fields and NULL-placement rule for\n`full_name`."
       },
       "ValidationErrorItem": {
         "properties": {

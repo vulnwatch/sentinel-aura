@@ -88,7 +88,7 @@ export const getListTicketsUrl = (params?: ListTicketsParams) => {
 };
 
 /**
- * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, and overdue filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Public; optional authentication determines access to confidential Tickets.
+ * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, and overdue filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
  */
 export const listTickets = async (
@@ -356,7 +356,7 @@ export const getGetTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree. Maintainer identities are not included. Public; optional authentication determines access to confidential Tickets.
+ * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree. Maintainer identities are not included. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Get Ticket
  */
 export const getTicket = async (
