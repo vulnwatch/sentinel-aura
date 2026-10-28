@@ -209,7 +209,7 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
   the pinned OpenAPI document does not allow? A response that a test
   prepares to cover a field, a value, a code, or a status that the contract
   of the pinned version does not list is the exception: the generated types
-  cannot express it, and the test states what it does not list
+  cannot express it
 - Does every end-to-end test import `test` and `expect` from
   `test/e2e/fixtures.ts`, and check every further state that it shows, such
   as an open dialog or a field error, with `expectAccessible`? Does any test

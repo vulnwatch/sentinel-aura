@@ -213,8 +213,8 @@ describe("the generated client", () => {
   // docs/api-spec.md, Client Tolerance of Non-Breaking Changes;
   // docs/conventions.md, Data Read from the API; Error Codes and Messages).
   test("returns a field and an enum value that the pinned contract does not list unchanged", async () => {
-    // Neither the status nor the field is in TicketDetail of the pinned
-    // OpenAPI document.
+    // Neither the status value nor the field is in TicketDetail of the
+    // pinned OpenAPI document.
     const body = {
       data: {
         ticket_id: "SNTL-1",

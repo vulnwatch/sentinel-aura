@@ -111,10 +111,10 @@ of the same minor version before 1.0.0, and of the same major version from
 `docs/deployment.md`, Consumer Compatibility). The guarantee applies only to a
 consumer that honors the obligations that the contracts of its version place
 on clients, among them the tolerance of the changes that are not breaking,
-which those later releases can contain: a field or a value of a response enum
-that the contract of its version does not list, or an error response for a
-new condition (Sentinel `docs/api-spec.md`, Versioning; Client Tolerance of
-Non-Breaking Changes).
+which those later releases can contain, such as a field or a value of a
+response enum that the contract of its version does not list, or an error
+response for a new condition (Sentinel `docs/api-spec.md`, Versioning; Client
+Tolerance of Non-Breaking Changes).
 
 - The repository keeps a copy of the OpenAPI document of the pinned version,
   `contract/sentinel.openapi.json`: the pinned OpenAPI document. The copy is

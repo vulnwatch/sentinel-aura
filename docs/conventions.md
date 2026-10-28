@@ -220,11 +220,14 @@ that needs it; content of another kind needs a new row first.
   (`docs/architecture.md`, API Client Generation; Sentinel
   `docs/api-spec.md`, Response Format).
 - A request sends only the query parameters and request body members that
-  the pinned OpenAPI document declares for the operation, as the generated
-  request functions type them: a later Sentinel release within the supported
-  Sentinel versions can declare another one and reject its invalid values
-  (Sentinel `docs/api-spec.md`, Undeclared Query Parameters; Client Tolerance
-  of Non-Breaking Changes). No code passes to a generated request function an
+  the contract of the pinned version declares for the operation: a later
+  Sentinel release within the supported Sentinel versions can declare
+  another one and reject its invalid values (Sentinel `docs/api-spec.md`,
+  Undeclared Query Parameters; Client Tolerance of Non-Breaking Changes). The
+  generated request functions type them, except the keys of a member that the
+  pinned OpenAPI document leaves open, such as `custom_settings` of
+  `PATCH /api/v1/fetchers/{fetcher_name}/config`, whose keys Sentinel's
+  contract declares. No code passes to a generated request function an
   object that also carries other members, such as the state of a form.
 
 ### Data Read from the API
@@ -240,10 +243,11 @@ that needs it; content of another kind needs a new row first.
 - A later Sentinel release within the supported Sentinel versions can return
   a field, or a value of a response enum, that the contract of the pinned
   version does not list (Sentinel `docs/api-spec.md`, Versioning; Response
-  Enums). Code ignores the fields that it does not use, and no validation of
-  a response at run time rejects a field or a value that the pinned OpenAPI
-  document does not list (Sentinel `docs/api-spec.md`, Client Tolerance of
-  Non-Breaking Changes).
+  Enums). Code ignores a field of a response that the contract of the pinned
+  version does not list, also where it iterates over the fields of a
+  response, and no validation of a response at run time rejects a field or a
+  value that the pinned OpenAPI document does not list (Sentinel
+  `docs/api-spec.md`, Client Tolerance of Non-Breaking Changes).
 - Code that maps a value of a response enum, for example to a label, an
   icon, or a color, or that branches on it, gives every value that the
   contract of the pinned version does not list a default instead of failing,
@@ -856,9 +860,10 @@ The UI foundations are written once, before any feature code, and cover:
   them, and the URLs that are part of the contract
 - **Roles**: what each Sentinel role sees and can do, expressed in terms of
   Sentinel's authorization model rather than a copy of it
-- **Cross-cutting behaviors**: session handling, error presentation, loading
-  and empty states, date and time display, accessibility requirements, and
-  wording
+- **Cross-cutting behaviors**: session handling, error presentation, the
+  presentation of a value of a response enum that the contract of the pinned
+  version does not list (Data Read from the API), loading and empty states,
+  date and time display, accessibility requirements, and wording
 - **Design system**: the visual language and the reusable interface patterns
 
 A screen follows the foundations. A screen that needs to depart from a

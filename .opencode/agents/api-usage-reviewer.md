@@ -169,15 +169,15 @@ inefficiency without a screen that suffers from it is not a finding.
    Defaults, Pagination, Filtering, Sorting, Query Parameter Length Limit,
    Response Format, Global Responses, Scoped Responses, Response
    Applicability Derivation, Mutation Patterns, and Partial Update
-   Semantics. When the change handles a `401`,
-   also read Sentinel `docs/features/identity/authentication.md` (Frontend
-   session behavior). Read Sentinel in `../sentinel` at the revision the
-   invoking agent states it verified (`AGENTS.md`, Sentinel as an External
-   Authority); record a missing revision as a limitation. The clone's
-   checkout may be a different revision: read with `git show <ref>:<path>`,
-   running Git with `../sentinel` as the working directory of the shell
-   command, because your permissions allow the read-only Git forms only
-   without `-C`. Never change the clone
+   Semantics. When the change handles a `401`, also read Sentinel
+   `docs/features/identity/authentication.md` (Frontend session behavior).
+   Read Sentinel in `../sentinel` at the revision the invoking agent states
+   it verified (`AGENTS.md`, Sentinel as an External Authority); record a
+   missing revision as a limitation. The clone's checkout may be a different
+   revision: read with `git show <ref>:<path>`, running Git with
+   `../sentinel` as the working directory of the shell command, because your
+   permissions allow the read-only Git forms only without `-C`. Never change
+   the clone
 4. Read the changed code, the generated hooks and request functions that it
    calls (`src/api/generated/`), the shared request function
    (`src/api/request.ts`), the mapping of error codes, and the configuration
@@ -194,6 +194,12 @@ inefficiency without a screen that suffers from it is not a finding.
   (`docs/conventions.md`, API Access)?
 - Does it use the query keys of the generated hooks, so that an invalidation
   reaches every query of the same data?
+- Does a request send only the query parameters and request body members
+  that the contract of the pinned version declares for the operation,
+  including only the declared keys of a member that the pinned OpenAPI
+  document leaves open, and never an object with other members, such as the
+  state of a form, passed to a generated request function
+  (`docs/conventions.md`, API Access)?
 
 ### Server state
 
@@ -206,9 +212,11 @@ inefficiency without a screen that suffers from it is not a finding.
   entity included — instead of editing the cached data? Does it invalidate
   queries that the change cannot affect?
 - Does form input stay in React state until it is submitted?
-- Does code that maps or branches on a value of a response enum give every
-  value that the contract of the pinned version does not list a default,
-  without an exhaustiveness check that throws at run time? Does any
+- Does code ignore a field of a response that the contract of the pinned
+  version does not list, also where it iterates over the fields of a
+  response? Does code that maps or branches on a value of a response enum
+  give every value that the contract of the pinned version does not list a
+  default, without an exhaustiveness check that throws at run time? Does any
   validation of a response at run time reject a field or a value that the
   pinned OpenAPI document does not list (`docs/conventions.md`, Data Read
   from the API)?
@@ -251,10 +259,6 @@ inefficiency without a screen that suffers from it is not a finding.
   its control before the first completes?
 - Does it refetch periodically, or on an event, without a requirement that
   needs it?
-- Does a request send only the query parameters and request body members
-  that the pinned OpenAPI document declares for the operation, never an
-  object with other members, such as the state of a form, passed to a
-  generated request function (`docs/conventions.md`, API Access)?
 
 ### URL state
 
