@@ -7,9 +7,9 @@ export type GetFetcherTimelineParams = {
   /**
    * ISO 8601 date/datetime; inclusive lower bound. Default: -7d.
    */
-  from_date?: string | null;
+  from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound. Default: now.
    */
-  to_date?: string | null;
+  to_date?: string;
 };

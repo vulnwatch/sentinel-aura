@@ -11,19 +11,19 @@ export type ListSettingAuditEventsParams = {
   /**
    * Filter by exact setting key.
    */
-  setting_key?: string | null;
+  setting_key?: string;
   /**
    * Actor UUID, exact username, or 'system'.
    */
-  actor?: string | null;
+  actor?: string;
   /**
    * ISO 8601 date/datetime; inclusive lower bound.
    */
-  from_date?: string | null;
+  from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound.
    */
-  to_date?: string | null;
+  to_date?: string;
   /**
    * Page number.
    * @minimum 1
