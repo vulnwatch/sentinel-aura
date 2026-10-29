@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.2.0...v0.3.0) (2026-10-29)
+
+
+### Features
+
+* pin Sentinel 0.13.0 and honor its client obligations ([#81](https://github.com/vulnwatch/sentinel-aura/issues/81)) ([403d846](https://github.com/vulnwatch/sentinel-aura/commit/403d846ad043e72d5910917f99c86639a69f820f))
+
+
+### Bug Fixes
+
+* **deps:** update seroval for open advisories ([#86](https://github.com/vulnwatch/sentinel-aura/issues/86)) ([859f58a](https://github.com/vulnwatch/sentinel-aura/commit/859f58a7c38c55f62da19ecdabd6311130334eec)), closes [#85](https://github.com/vulnwatch/sentinel-aura/issues/85)
+
 ## [0.2.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.1.1...v0.2.0) (2026-10-26)
 
 
