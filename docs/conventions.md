@@ -844,7 +844,7 @@ UI documents are of two kinds:
 
 | Document | Owns | Changed by |
 |---|---|---|
-| Foundation documents | The UI as a whole: architecture, screen map, roles, cross-cutting behaviors, design system | A documentation pull request merged before the code that depends on it (specification first) |
+| Foundation documents | The UI as a whole: architecture, users, screen map, roles, cross-cutting behaviors, design system | A documentation pull request merged before the code that depends on it (specification first) |
 | Screen documents | What one screen or area does, as built | The pull request that builds or changes the screen |
 
 Both describe observable behavior and its constraints, not implementation:
@@ -858,10 +858,13 @@ them.
 
 The UI foundations are written once, before any feature code, and cover:
 
+- **Users and frequent tasks**: who uses the UI under each profile and what
+  they do most often (`docs/screen-map.md`)
 - **Screen map and navigation**: the screens and areas, how users move between
-  them, and the URLs that are part of the contract
-- **Roles**: what each Sentinel role sees and can do, expressed in terms of
-  Sentinel's authorization model rather than a copy of it
+  them, and the URLs that are part of the contract (`docs/screen-map.md`)
+- **Roles**: what each profile sees and can do, expressed in terms of
+  Sentinel's capabilities and access levels rather than a copy of its role
+  definitions (`docs/screen-map.md`)
 - **Cross-cutting behaviors**: session handling, error presentation, the
   presentation of a value of a response enum that the contract of the pinned
   version does not list (Data Read from the API), loading and empty states,
@@ -884,10 +887,12 @@ verify the screen, references the foundations instead of restating their
 defaults, and omits sections that do not apply:
 
 - **Purpose**: what the screen is for and who uses it
-- **Access**: the roles that can open it and what each role sees or can do
-  when that differs
+- **Access**: the profiles that can open it and what each sees or can do when
+  that differs, in terms of the capabilities that its actions need
+  (`docs/screen-map.md`, Roles)
 - **Navigation**: how users reach the screen and where it leads, including its
-  URL when the URL is part of the contract
+  URL when the URL is part of the contract (`docs/screen-map.md`, Contract
+  URLs)
 - **Content**: what the screen shows and the Sentinel API operations that
   provide it (method and path), including the filtering, sorting, and
   pagination it exposes

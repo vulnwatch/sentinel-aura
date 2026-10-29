@@ -4,8 +4,9 @@ This document defines the architecture of Sentinel Aura: its scope and system
 boundary, its link to Sentinel's API contract, the hosting constraints that
 Sentinel fixes, and the architecture decisions, both those taken and those
 still open. It is the foundation document on which every other design builds.
-The screen map, roles, cross-cutting behaviors, and design system belong to the
-other foundation documents (`docs/conventions.md`, Foundation Documents); the
+The users, screen map, and roles belong to `docs/screen-map.md`, and the
+cross-cutting behaviors and design system to the other foundation documents
+(`docs/conventions.md`, Foundation Documents); the
 CI pipeline and the release process belong to `docs/deployment.md`; backend
 behavior, the API contract, and the obligations that the contract places on
 clients belong to Sentinel (`README.md`, Specification Boundary).
@@ -76,9 +77,8 @@ UI needs is added to the API for every consumer.
   External Authority)
 - Enforce authorization. Sentinel decides what each caller may see and do
   (Sentinel `docs/architecture.md`, Capability-based RBAC). What the UI shows
-  to each role guides its users and never replaces the API's decision; the
-  roles section of the UI foundations defines it (`docs/conventions.md`,
-  Foundation Documents)
+  to each profile guides its users and never replaces the API's decision;
+  `docs/screen-map.md` (Roles) defines it
 
 **Audience and language.** The UI is for internal use only. It is written in
 English only and has no localization. Its visual design belongs to the design
