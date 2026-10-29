@@ -40,9 +40,10 @@ Sentinel is an external, read-only authority. Agents read its specifications
 from a local clone of `vulnwatch/sentinel` next to this repository, at
 `../sentinel`:
 
-- `../sentinel/docs/features/**` owns domain behavior, including client-facing
-  rules such as `../sentinel/docs/features/identity/authentication.md`
-  (Frontend session behavior);
+- `../sentinel/docs/features/**` owns domain behavior, including the client
+  obligations and the facts for clients that its contracts state, such as
+  `../sentinel/docs/features/identity/authentication.md` (Frontend session
+  behavior);
 - `../sentinel/docs/api-spec.md` owns the general API conventions;
 - the other cross-cutting documents in `../sentinel/docs/` own the contracts
   their names indicate; and

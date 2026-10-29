@@ -201,7 +201,7 @@ These are decided elsewhere. Do NOT report findings about them:
 3. When the change renders a value from the API as a link or navigates to
    it, read what the owning Sentinel specification guarantees about that
    value. When the change involves the session, sign-in, browser storage, or
-   cross-origin requests, read Sentinel
+   cross-origin requests, read `docs/behaviors.md` (Session) and Sentinel
    `docs/features/identity/authentication.md` (Session cookie, Frontend
    session behavior, Cross-Origin Request Protection, Security
    Considerations) and `docs/api-spec.md` (Cross-Origin Request Protection;
@@ -246,10 +246,9 @@ These are decided elsewhere. Do NOT report findings about them:
   first (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE Affected
   Versions)
 - Can a navigation target read from the URL or from browser storage, such as
-  the return URL after sign-in (Sentinel
-  `docs/features/identity/authentication.md`, Post-login redirect), send the
-  user to another origin? `docs/architecture.md` (Same Origin) treats every
-  value read from that storage as untrusted input
+  the return URL after sign-in (`docs/behaviors.md`, Return After Sign-in),
+  send the user to another origin? `docs/architecture.md` (Same Origin)
+  treats every value read from that storage as untrusted input
 
 ### Content Security Policy and Trusted Types
 

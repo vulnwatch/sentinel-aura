@@ -233,12 +233,10 @@ The search takes one term:
 
 ## Landing
 
-After a sign-in, Sentinel's post-login redirect leads to the return URL that
-the sign-in saved, and otherwise to "the dashboard" (Sentinel
-`docs/features/identity/authentication.md`, Post-login redirect); how the UI
-treats the saved value, within the constraint of `docs/architecture.md` (Same
-Origin), belongs to `docs/behaviors.md` (Return After Sign-in). In this UI the
-dashboard is the landing, at `/`:
+The landing is the screen to which `/` leads, as the product name in the
+header does, and which Sign in opens after a sign-in when it has no saved URL
+to return to (`docs/behaviors.md`, Return After Sign-in). It depends on the
+user:
 
 - for a user who holds the `vulnerability_analyst` role, `/` leads to the URL
   of the Ticket list in its New view, the queue of new Tickets, with the
@@ -310,13 +308,13 @@ users bookmark and share them, and changing one changes this document first.
 
 - `/auth/callback` is fixed by Sentinel, which registers it as the address to
   which the identity provider returns the browser (`docs/architecture.md`, Same
-  Origin); what the UI does there follows Sentinel's SSO frontend flow
-  (Sentinel `docs/features/identity/sso-authentication.md`, Frontend flow).
-  SSO is deferred in Sentinel, and the pinned contract has none of its
-  operations (Sentinel `docs/features/identity/sso-authentication.md`,
-  Status): Sign in offers local sign-in only, and the path is reserved: no
-  screen uses it, so it shows as missing, like every path that matches no
-  screen.
+  Origin). The requests that the UI sends there follow Sentinel's browser flow
+  of SSO (Sentinel `docs/features/identity/sso-authentication.md`, Frontend
+  flow), while what it shows and where it leads belong to the UI. SSO is
+  deferred in Sentinel, and the pinned contract has none of its operations
+  (Sentinel `docs/features/identity/sso-authentication.md`, Status): Sign in
+  offers local sign-in only, and the path is reserved: no screen uses it, so
+  it shows as missing, like every path that matches no screen.
 - A Ticket is addressed by its `SNTL-{n}` identifier and a CVE by its CVE ID,
   in the canonical forms that the API uses (Sentinel `docs/api-spec.md`, Ticket
   Identifier Resolution; CVE Identifier Resolution). A user is addressed by
@@ -336,9 +334,8 @@ users bookmark and share them, and changing one changes this document first.
   has no guest or anonymous mode, because every read of application data
   requires authentication (Sentinel `docs/features/identity/rbac.md`, Access
   Levels). A visitor without a session is led to Sign in and, after signing
-  in, back to the path that they opened (Sentinel
-  `docs/features/identity/authentication.md`, Post-login redirect), as
-  `docs/behaviors.md` (Session) defines.
+  in, back to the path that they opened, as `docs/behaviors.md` (Session)
+  defines.
 
 ## Roles
 
@@ -404,26 +401,28 @@ below only summarizes them.
 
 ### Capabilities of the Signed-in User
 
-The UI reads the roles of the signed-in user from Get Current User (Sentinel
-`docs/features/identity/authentication.md`, Get Current User), the source of
-every element that depends on the `vulnerability_analyst` role, and reads them
-again during a session as `docs/behaviors.md` (The Signed-in User) defines, so
-that a change of the user's roles reaches an open tab. The contract of
-the pinned Sentinel version does not return the user's capabilities, and the UI
-does not derive them from the roles, which would copy Sentinel's role
-definitions and its union rule. Every element that depends on a capability
-therefore waits for a pinned Sentinel version that returns them (Open
-Decisions); the elements that depend only on the `vulnerability_analyst` role
-do not.
+The UI reads the roles and the capabilities of the signed-in user from Get
+Current User (Sentinel `docs/features/identity/authentication.md`, Get Current
+User): the roles are the source of every element that depends on the
+`vulnerability_analyst` role, and the capabilities of every element that
+depends on a capability (Principles). Sentinel resolves the capabilities from
+the roles with the union rule of its role definitions, so the UI does not
+derive them, which would copy those definitions. The UI reads the signed-in
+user again during a session as `docs/behaviors.md` (The Signed-in User)
+defines, so that a change of the user's roles reaches an open tab.
+
+The capabilities only guide what the UI shows (Principles). They grant
+nothing, and a list read earlier can be out of date: every operation still
+checks its own authorization, and Sentinel applies a change of the user's
+roles from the user's next request, so the API can refuse an action that the
+UI shows (Sentinel `docs/features/identity/authentication.md`, Get Current
+User). The refusal shows as `docs/behaviors.md` (Default Presentation by
+Status) defines, and the UI then reads the signed-in user again
+(`docs/behaviors.md`, The Signed-in User). The capabilities state neither the
+user's scope nor a permission that depends on a record, such as an access
+grant or package maintainership (same Sentinel section).
 
 ## Open Decisions
 
-A decision that is not taken yet is listed here, with who takes it, and every
-design that depends on it waits for it.
-
-- **The capabilities of the signed-in user.** Sentinel decides how a client
-  learns them, and the pinned contract does not provide them (Capabilities of
-  the Signed-in User). The actions, navigation entries, and parts of screens
-  that depend on a capability wait for a pinned Sentinel version that provides
-  them; this entry is then removed, and Capabilities of the Signed-in User
-  states how the UI learns them.
+No decision is open. A decision that is not taken yet is listed here, with who
+takes it, and every design that depends on it waits for it.

@@ -213,11 +213,10 @@ environment unless it names one.
   Documentation). Such a script can also read and change the origin's browser
   storage. The UI therefore keeps no API data there (`docs/conventions.md`,
   Data Read from the API), treats every value that it reads from that storage
-  as untrusted input, such as the return URL that the post-login redirect
-  keeps in `sessionStorage` (Sentinel
-  `docs/features/identity/authentication.md`, Frontend session behavior;
-  `docs/behaviors.md`, Return After Sign-in), and registers no service worker,
-  whose cache such a script could fill with responses of its own.
+  as untrusted input, such as the URL to which Sign in returns and the session
+  record (`docs/behaviors.md`, Return After Sign-in; Session Expiration
+  Message), and registers no service worker, whose cache such a script could
+  fill with responses of its own.
 
 ### Session Cookie
 
@@ -231,10 +230,10 @@ environment unless it names one.
   `docs/features/identity/authentication.md`, Frontend session behavior and
   Security Considerations).
 - Because scripts cannot read an `HttpOnly` cookie, the UI knows the state of
-  the session only from the API's responses, for example the `401` that
-  triggers the session expiration handling (Sentinel
-  `docs/features/identity/authentication.md`, Frontend session behavior;
-  `docs/behaviors.md`, Session State).
+  the session only from the API's responses, for example from Get Current
+  User, or from the `401` that a request without a valid session receives,
+  whatever the cause (Sentinel `docs/features/identity/authentication.md`,
+  Frontend session behavior; `docs/behaviors.md`, Session State).
 - A browser accepts the cookie only from a secure origin (Sentinel
   `docs/features/identity/authentication.md`, Session cookie). The Sentinel
   host is served over HTTPS only, in staging as in production: it answers a

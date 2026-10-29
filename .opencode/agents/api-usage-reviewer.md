@@ -169,8 +169,9 @@ inefficiency without a screen that suffers from it is not a finding.
    Defaults, Pagination, Filtering, Sorting, Query Parameter Length Limit,
    Response Format, Global Responses, Scoped Responses, Response
    Applicability Derivation, Mutation Patterns, and Partial Update
-   Semantics. When the change handles a `401`, also read Sentinel
-   `docs/features/identity/authentication.md` (Frontend session behavior).
+   Semantics. When the change handles a `401`, also read `docs/behaviors.md`
+   (Session State) and Sentinel `docs/features/identity/authentication.md`
+   (Frontend session behavior).
    Read Sentinel in `../sentinel` at the revision the invoking agent states
    it verified (`AGENTS.md`, Sentinel as an External Authority); record a
    missing revision as a limitation. The clone's checkout may be a different
@@ -236,9 +237,9 @@ inefficiency without a screen that suffers from it is not a finding.
   their precedence (`docs/conventions.md`, Error Codes and Messages)?
 - Are the field errors of a `VALIDATION_ERROR` response matched to the form
   fields by their `loc`?
-- Is a behavior that the contract attaches to a response of any operation,
-  such as the session expiration handling after a `401`, implemented once
-  for every request rather than by a screen?
+- Is a behavior that applies to a response of any operation, such as the end
+  of the session after a `401` (`docs/behaviors.md`, Session State),
+  implemented once for every request rather than by a screen?
 - Does a screen handle a code that the operation cannot return, or miss one
   that the screen document lists and the operation can return (Sentinel
   `docs/api-spec.md`, Response Applicability Derivation, and the operation's

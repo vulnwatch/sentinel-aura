@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.13.1"
+    "version": "0.14.0"
   },
   "paths": {
     "/health": {
@@ -890,7 +890,7 @@
           "Users"
         ],
         "summary": "Get my profile",
-        "description": "Returns the concise profile of the currently authenticated user, including current role values. Requires authentication (JWT session or API key).",
+        "description": "Returns the concise profile of the currently authenticated user, including current role values and the capabilities that those roles grant. The capabilities are informational: every operation still checks its own authorization. Requires authentication (JWT session or API key).",
         "operationId": "get_current_user_profile_api_v1_users_me_get",
         "responses": {
           "200": {
@@ -3877,7 +3877,7 @@
           "Tickets"
         ],
         "summary": "List Tickets",
-        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, and overdue filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
+        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_tickets_api_v1_tickets_get",
         "parameters": [
           {
@@ -3957,6 +3957,20 @@
               "title": "Overdue"
             },
             "description": "Filter by past-due, uncompleted milestones: `triage` (Ticket `new` or `analysis` past its triage due date, VA decision), `submission` (maintainer submission request), `um` (UM release request), `qa` (QA testing and publication): at least one track has that milestone overdue. Repeatable; OR semantics. Invalid values are ignored."
+          },
+          {
+            "name": "current_phase",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Filter by the Ticket's `current_phase`: `triage`, `submission`, `um`, `qa`, `done`. A Ticket whose current phase is `null` matches no value. Combined with the same `overdue` value (for example `current_phase=um&overdue=um`), it lists the Tickets whose current phase is past due. Repeatable; OR semantics. Invalid values are ignored.",
+              "title": "Current Phase"
+            },
+            "description": "Filter by the Ticket's `current_phase`: `triage`, `submission`, `um`, `qa`, `done`. A Ticket whose current phase is `null` matches no value. Combined with the same `overdue` value (for example `current_phase=um&overdue=um`), it lists the Tickets whose current phase is past due. Repeatable; OR semantics. Invalid values are ignored."
           },
           {
             "name": "maintainer",
@@ -9490,6 +9504,58 @@
           }
         }
       }
+    },
+    "/api/v1/version": {
+      "get": {
+        "tags": [
+          "Platform"
+        ],
+        "summary": "Get platform version",
+        "description": "Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).",
+        "operationId": "get_platform_version_api_v1_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformVersionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11858,6 +11924,24 @@
           "4.0"
         ]
       },
+      "Capability": {
+        "type": "string",
+        "enum": [
+          "create_ticket",
+          "triage_ticket",
+          "manage_packages",
+          "manage_cvss",
+          "manage_references",
+          "manage_confidentiality",
+          "manage_users",
+          "manage_role_mappings",
+          "manage_settings",
+          "manage_fetchers",
+          "admin_ticket_ops"
+        ],
+        "title": "Capability",
+        "description": "Static capabilities granted by roles.\n\nCategory B \u2014 classification (Python Enum only, no CHECK constraint;\ncapabilities are never stored in the database). See\n`docs/features/identity/rbac.md` (Capabilities) for the full\ndescription of the operations each capability covers."
+      },
       "CatalogPresenceValue": {
         "type": "string",
         "enum": [
@@ -11968,6 +12052,13 @@
         "title": "CreatedApiKeyResponse",
         "description": "Response body for `POST /api/v1/api-keys`."
       },
+      "CurrentPhaseMilestoneValue": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "overdue"
+        ]
+      },
       "CurrentPhaseValue": {
         "type": "string",
         "enum": [
@@ -12011,6 +12102,13 @@
             "type": "array",
             "title": "Roles"
           },
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
           "active": {
             "type": "boolean",
             "title": "Active"
@@ -12027,11 +12125,12 @@
           "email",
           "full_name",
           "roles",
+          "capabilities",
           "active",
           "bot"
         ],
         "title": "CurrentUserData",
-        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe complete user profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Deterministic ordering)."
+        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe complete user profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Role Wire Format, Deterministic\nordering). `capabilities` is the distinct, alphabetically\nwire-sorted union of the capabilities of those roles (see `rbac.md`,\nCapability Wire Format); typed as `Capability`, it is published as\nan OpenAPI `enum`. It is informational and grants nothing."
       },
       "CurrentUserResponse": {
         "properties": {
@@ -13957,6 +14056,37 @@
         "title": "PaginationMeta",
         "description": "The `meta` object of a paginated list response.\n\nSee `docs/api-spec.md` (Response Format, Pagination)."
       },
+      "PlatformVersionData": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Platform version of the process that serves the request, in the form `<major>.<minor>.<patch>`: the version of its release tag without the `v` prefix. Equal to `info.version` of the OpenAPI document that the same process serves.",
+            "examples": [
+              "0.13.1"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "PlatformVersionData",
+        "description": "The platform version of the process that serves the request."
+      },
+      "PlatformVersionResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PlatformVersionData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "PlatformVersionResponse",
+        "description": "Single-resource envelope of `GET /api/v1/version`."
+      },
       "ProductDetail": {
         "properties": {
           "id": {
@@ -15538,6 +15668,28 @@
             "title": "Release Due At",
             "description": "Final deadline (UTC) by which the update must be released; currently equal to `qa_due_at`."
           },
+          "current_phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentPhaseValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Earliest open remediation phase of the Ticket among the phases that Sentinel observes: `triage` (the VA, Vulnerability Analyst, decides affectedness) while the Ticket is `new` or `analysis`; otherwise `submission` (the maintainer submits the fix), `um` (the UM, SUSE maintenance update team, creates the release request), or `qa` (QA, quality assurance, tests the update before publication) when at least one track has that milestone `pending` or `overdue`. A phase that a track reports as `null` (not observable) does not hold it back. `done` when no phase is open and the Ticket is `resolved` or no track has a `null` milestone. `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`), or when no phase is open, the Ticket is not `resolved`, and a track has a `null` milestone. Unlike a track's `current_phase`, it takes `triage` from the Ticket status."
+          },
+          "current_phase_milestone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentPhaseMilestoneValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Milestone status of `current_phase`: `overdue` when the Ticket matches the `overdue` filter value of its current phase (the phase is not completed and its due date is past), otherwise `pending`; `null` when `current_phase` is `done` or `null`. A milestone `pending` is unrelated to `delivery_status = pending`."
+          },
           "packages": {
             "items": {
               "$ref": "#/components/schemas/PackageDetail"
@@ -15577,6 +15729,8 @@
           "um_due_at",
           "qa_due_at",
           "release_due_at",
+          "current_phase",
+          "current_phase_milestone",
           "packages",
           "created_at",
           "updated_at"
@@ -16158,6 +16312,28 @@
             "title": "Release Due At",
             "description": "Final deadline (UTC) by which the update must be released; currently equal to `qa_due_at`."
           },
+          "current_phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentPhaseValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Earliest open remediation phase of the Ticket among the phases that Sentinel observes: `triage` (the VA, Vulnerability Analyst, decides affectedness) while the Ticket is `new` or `analysis`; otherwise `submission` (the maintainer submits the fix), `um` (the UM, SUSE maintenance update team, creates the release request), or `qa` (QA, quality assurance, tests the update before publication) when at least one track has that milestone `pending` or `overdue`. A phase that a track reports as `null` (not observable) does not hold it back. `done` when no phase is open and the Ticket is `resolved` or no track has a `null` milestone. `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`), or when no phase is open, the Ticket is not `resolved`, and a track has a `null` milestone. Unlike a track's `current_phase`, it takes `triage` from the Ticket status."
+          },
+          "current_phase_milestone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentPhaseMilestoneValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Milestone status of `current_phase`: `overdue` when the Ticket matches the `overdue` filter value of its current phase (the phase is not completed and its due date is past), otherwise `pending`; `null` when `current_phase` is `done` or `null`. A milestone `pending` is unrelated to `delivery_status = pending`."
+          },
           "package_names": {
             "items": {
               "type": "string"
@@ -16201,6 +16377,8 @@
           "um_due_at",
           "qa_due_at",
           "release_due_at",
+          "current_phase",
+          "current_phase_milestone",
           "package_names",
           "created_at",
           "updated_at"
@@ -16913,7 +17091,7 @@
           "roles"
         ],
         "title": "UserDirectoryData",
-        "description": "The user directory entry returned by `GET /api/v1/users` (list\nitems) and `GET /api/v1/users/{user}` (`user-management.md`, Get\nUser). It has the fields of the caller's own profile\n(`app.schemas.auth.CurrentUserData`) and none of the fields that\nonly the complete user profile (`UserData`) returns. `roles` is the\ndistinct, alphabetically wire-sorted set of current role values\n(`rbac.md`, Deterministic ordering); `full_name` is returned `null`\nverbatim with no fallback substitution."
+        "description": "The user directory entry returned by `GET /api/v1/users` (list\nitems) and `GET /api/v1/users/{user}` (`user-management.md`, Get\nUser). It has the fields of the caller's own profile\n(`app.schemas.auth.CurrentUserData`) except `capabilities`, which\nonly the own profile returns, and none of the fields that only the\ncomplete user profile (`UserData`) returns. `roles` is the\ndistinct, alphabetically wire-sorted set of current role values\n(`rbac.md`, Role Wire Format, Deterministic ordering); `full_name`\nis returned `null` verbatim with no fallback substitution."
       },
       "UserDirectoryListResponse": {
         "properties": {
