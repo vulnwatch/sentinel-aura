@@ -237,9 +237,10 @@ that needs it; content of another kind needs a new row first.
 - Data read from the API lives only in TanStack Query's cache, read through
   the generated hooks. Components do not copy it into their state, a context,
   a module variable, or browser storage.
-- After a successful change, the code invalidates the queries whose data the
-  change affects, so that they are read again from the API, instead of
-  editing the cached data.
+- After a change, whether it succeeds or fails, the code invalidates the
+  queries whose data the change affects, so that they are read again from the
+  API, instead of editing the cached data (`docs/behaviors.md`, Outcome of a
+  Change).
 - Form input lives in React state until it is submitted
   (`docs/architecture.md`, Routing, Server State, and Forms).
 - A later Sentinel release within the supported Sentinel versions can return
@@ -253,9 +254,10 @@ that needs it; content of another kind needs a new row first.
 - Code that maps a value of a response enum, for example to a label, an
   icon, or a color, or that branches on it, gives every value that the
   contract of the pinned version does not list a default instead of failing,
-  and no exhaustiveness check over such a value throws at run time. The UI
-  foundations own the presentation of that default, as they own the default
-  of the error presentation (Error Codes and Messages).
+  and no exhaustiveness check over such a value throws at run time.
+  `docs/behaviors.md` (Unknown Values) defines the presentation of that
+  default, as it defines the default error presentation (Error Codes and
+  Messages).
 
 ### Error Codes and Messages
 
@@ -266,9 +268,9 @@ that needs it; content of another kind needs a new row first.
 - One module in `src/api/` maps error codes to the messages that the UI
   shows. A screen handles specifically only the codes that its screen
   document lists (Specification Writing, Screen Documents); every other code
-  gets the default of the error presentation of the UI foundations for its
-  HTTP status, and the foundations also own the wording of the messages and
-  where they appear.
+  gets the default presentation that `docs/behaviors.md` (Errors) defines:
+  the one of its HTTP status, except for the few codes that it names. That
+  document also defines the wording of the messages and where they appear.
 - A later Sentinel release within the supported Sentinel versions can answer
   an operation with a status or a code that the contract of the pinned
   version does not list for it, such as the error response of a new
@@ -283,8 +285,8 @@ that needs it; content of another kind needs a new row first.
   Non-Breaking Changes).
 - The field errors of a `VALIDATION_ERROR` response are matched to the form
   fields by their `loc` (Sentinel `docs/api-spec.md`, Response Format).
-- A behavior that Sentinel's contract attaches to a response of any
-  operation, such as the session expiration handling after a `401` (Sentinel
+- A behavior that applies to a response of any operation, such as the end of
+  the session after a `401` (`docs/behaviors.md`, Session State; Sentinel
   `docs/features/identity/authentication.md`, Frontend session behavior), is
   implemented once, for every request, never by each screen.
 
@@ -868,7 +870,9 @@ The UI foundations are written once, before any feature code, and cover:
 - **Cross-cutting behaviors**: session handling, error presentation, the
   presentation of a value of a response enum that the contract of the pinned
   version does not list (Data Read from the API), loading and empty states,
-  date and time display, accessibility requirements, and wording
+  date and time display, confirmations and the outcome of changes,
+  accessibility requirements, wording, and the representation of a user
+  (`docs/behaviors.md`)
 - **Design system**: the visual language and the reusable interface patterns
 
 A screen follows the foundations. A screen that needs to depart from a
@@ -897,10 +901,11 @@ defaults, and omits sections that do not apply:
   provide it (method and path), including the filtering, sorting, and
   pagination it exposes
 - **Actions**: what users can do, the operation each action calls, any
-  confirmation, and the visible result
+  confirmation, and the visible result (`docs/behaviors.md`, Confirmations and
+  Outcomes)
 - **States**: loading, empty, and error states, with the Sentinel error codes
   that the screen handles specifically, when they differ from the foundations'
-  defaults
+  defaults (`docs/behaviors.md`, Errors; Loading and Empty States)
 - **Cross-references**: the Sentinel specification sections and foundation
   sections the screen relies on
 

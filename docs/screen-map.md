@@ -6,10 +6,10 @@ the contract, and what each profile sees and can do. It is a foundation
 document (`docs/conventions.md`, Foundation Documents): every screen follows
 it, and a screen that needs another area, another navigation entry, or another
 rule for a profile changes this document first. The architecture belongs to
-`docs/architecture.md`, and the cross-cutting behaviors and the design system
-belong to the other foundation documents; backend behavior, the API contract,
-the obligations that the contract places on clients, and authorization belong
-to Sentinel (`README.md`, Specification Boundary).
+`docs/architecture.md`, the cross-cutting behaviors to `docs/behaviors.md`, and
+the design system to the other foundation document; backend behavior, the API
+contract, the obligations that the contract places on clients, and
+authorization belong to Sentinel (`README.md`, Specification Boundary).
 
 Every rule taken from Sentinel is summarized next to the Sentinel section that
 states it, and that section remains authoritative (`docs/conventions.md`,
@@ -29,6 +29,7 @@ to its screen document (`docs/conventions.md`, Screen Documents).
 - [Navigation](#navigation)
   - [Header](#header)
   - [Links Between Areas](#links-between-areas)
+  - [Browser History](#browser-history)
   - [Search](#search)
 - [Landing](#landing)
 - [Ticket List Views](#ticket-list-views)
@@ -121,7 +122,7 @@ under the path of the screen, and its screen document records it.
 
 | Area | Screen | Path | Content |
 |---|---|---|---|
-| Sign-in | Login | `/login` | Local sign-in (Sentinel `docs/features/identity/local-authentication.md`, Login) |
+| Sign-in | Sign in | `/login` | Local sign-in (Sentinel `docs/features/identity/local-authentication.md`, Login) |
 | Home | Home | `/` | The landing of the users without the `vulnerability_analyst` role: the search and a summary of their package work (Landing) |
 | Search | Search results | `/search` | The Tickets and CVEs that match a search term (Search) |
 | Tickets | Ticket list | `/tickets` | The Tickets, in the views of Ticket List Views |
@@ -166,7 +167,7 @@ under the path of the screen, and its screen document records it.
 
 ### Header
 
-Every screen except Login has a header with:
+Every screen except Sign in has a header with:
 
 - the product name, which leads to the landing (`/`);
 - the global navigation: Tickets, CVEs, Packages, Products, My packages, Data
@@ -176,7 +177,7 @@ Every screen except Login has a header with:
 - the search (Search), except on the Home, which presents the search as its
   main content; and
 - the account menu, which shows the signed-in user and leads to Profile, API
-  keys, Identity audit log, and sign-out.
+  keys, Identity audit log, and Sign out.
 
 The Tickets entry opens the Ticket list in its New view for a user who holds
 the `vulnerability_analyst` role (Roles), and in its All view for every other
@@ -200,9 +201,19 @@ A screen links each record that it shows to the screen of that record:
   `docs/features/platform/fetcher-operations.md`, Get Fetcher Run Detail), and
   a CVE source record links to its CVE.
 
-Every state of a screen that a user can return to, such as a view, a filter,
-or a page of a list, is in its URL (`docs/conventions.md`, Routes), so that
-back, reload, a bookmark, and a shared link show it again.
+### Browser History
+
+- Every state of a screen that a user can return to, such as a view, a
+  filter, or a page of a list, is in its URL (`docs/conventions.md`, Routes),
+  so that back, reload, a bookmark, and a shared link show it again.
+- A navigation away from an address to which back must not return replaces
+  that address in the browser history instead of adding an entry, so that
+  back never leads to an address that only leads away again. These
+  navigations are Sign in in place of a screen that needs a session or of the
+  screen from which the user signed out; the saved URL or the landing in place
+  of Sign in; the landing in place of `/`; the landing of another user who
+  signed in; and a screen's default in place of a search parameter that it
+  does not accept (`docs/behaviors.md`, Session; Invalid Search Parameters).
 
 ### Search
 
@@ -212,7 +223,7 @@ The search takes one term:
   identifier or a CVE ID opens that Ticket or that CVE (Sentinel
   `docs/api-spec.md`, Ticket Identifier Resolution; CVE Identifier
   Resolution). A Ticket or CVE that does not exist or that the user cannot see
-  shows as missing, with the error presentation of the UI foundations;
+  shows as missing (`docs/behaviors.md`, Missing and Inaccessible Records);
 - every other term opens Search results, which show the first Tickets and
   CVEs that the term matches, as the searches of their lists match it: the
   Ticket search also matches package names (Sentinel
@@ -225,14 +236,14 @@ The search takes one term:
 After a sign-in, Sentinel's post-login redirect leads to the return URL that
 the sign-in saved, and otherwise to "the dashboard" (Sentinel
 `docs/features/identity/authentication.md`, Post-login redirect); how the UI
-treats the saved value belongs to the session behavior of the UI foundations,
-within the constraint of `docs/architecture.md` (Same Origin). In this UI the
+treats the saved value, within the constraint of `docs/architecture.md` (Same
+Origin), belongs to `docs/behaviors.md` (Return After Sign-in). In this UI the
 dashboard is the landing, at `/`:
 
-- for a user who holds the `vulnerability_analyst` role, `/` is replaced,
-  without a new entry in the browser history, by the URL of the Ticket list in
-  its New view, the queue of new Tickets, with the attention summary (Ticket
-  List Views). Such a user does not see the Home;
+- for a user who holds the `vulnerability_analyst` role, `/` leads to the URL
+  of the Ticket list in its New view, the queue of new Tickets, with the
+  attention summary (Ticket List Views; Browser History). Such a user does not
+  see the Home;
 - every other user sees the Home at `/`.
 
 The landing depends on the role (Roles) and not on data, so the landing of a
@@ -258,9 +269,9 @@ them, as tabs in this order:
 
 - Each tab shows the number of Tickets of its view as this table defines it,
   without the filters and search that the user adds, so that it always shows
-  the size of the queue. A view without Tickets keeps its tab and shows the
-  empty state of the UI foundations: the tabs keep their places, and a zero
-  shows that the queue is empty.
+  the size of the queue. A view without Tickets keeps its tab and shows an
+  empty state (`docs/behaviors.md`, Empty States): the tabs keep their places,
+  and a zero shows that the queue is empty.
 - Each view has its URL. A Ticket list URL that names no view, or a view that
   the user is not shown, opens the All view.
 - A user can refine a view with the filters, sorting, and search of the list;
@@ -303,7 +314,7 @@ users bookmark and share them, and changing one changes this document first.
   (Sentinel `docs/features/identity/sso-authentication.md`, Frontend flow).
   SSO is deferred in Sentinel, and the pinned contract has none of its
   operations (Sentinel `docs/features/identity/sso-authentication.md`,
-  Status): Login offers local sign-in only, and the path is reserved: no
+  Status): Sign in offers local sign-in only, and the path is reserved: no
   screen uses it, so it shows as missing, like every path that matches no
   screen.
 - A Ticket is addressed by its `SNTL-{n}` identifier and a CVE by its CVE ID,
@@ -317,15 +328,17 @@ users bookmark and share them, and changing one changes this document first.
 - The search parameters of a screen, such as its view, filters, sorting, and
   page, belong to its screen document; which view a Ticket list URL opens
   when it names none, or one that the user is not shown, belongs to Ticket
-  List Views.
-- A path that matches no screen shows as missing, with the error presentation
-  of the UI foundations.
-- Every path except Login and `/auth/callback` requires a session: the UI has
-  no guest or anonymous mode, because every read of application data requires
-  authentication (Sentinel `docs/features/identity/rbac.md`, Access Levels). A
-  visitor without a session is led to Login and, after signing in, back to the
-  path that they opened (Sentinel `docs/features/identity/authentication.md`,
-  Post-login redirect), as the session behavior of the UI foundations defines.
+  List Views, and what a screen does with a value that it does not accept to
+  `docs/behaviors.md` (Invalid Search Parameters).
+- A path that matches no screen shows as missing (`docs/behaviors.md`,
+  Missing and Inaccessible Records).
+- Every path except Sign in and `/auth/callback` requires a session: the UI
+  has no guest or anonymous mode, because every read of application data
+  requires authentication (Sentinel `docs/features/identity/rbac.md`, Access
+  Levels). A visitor without a session is led to Sign in and, after signing
+  in, back to the path that they opened (Sentinel
+  `docs/features/identity/authentication.md`, Post-login redirect), as
+  `docs/behaviors.md` (Session) defines.
 
 ## Roles
 
@@ -360,8 +373,8 @@ users bookmark and share them, and changing one changes this document first.
   Visibility).
 - **Navigation follows the same rule.** A navigation entry appears only to a
   user who can use its area (Header). A user who opens the path of a screen
-  without the capability that its operations require sees the API's refusal,
-  with the error presentation of the UI foundations.
+  without the capability that its operations require sees the API's refusal
+  (`docs/behaviors.md`, Default Presentation by Status).
 - **A role decides only where Sentinel's rule is about a role.** Only holders
   of the `vulnerability_analyst` role can be assigned a Ticket (Sentinel
   `docs/features/identity/rbac.md`, Business Rules), so that role decides the
@@ -393,7 +406,9 @@ below only summarizes them.
 
 The UI reads the roles of the signed-in user from Get Current User (Sentinel
 `docs/features/identity/authentication.md`, Get Current User), the source of
-every element that depends on the `vulnerability_analyst` role. The contract of
+every element that depends on the `vulnerability_analyst` role, and reads them
+again during a session as `docs/behaviors.md` (The Signed-in User) defines, so
+that a change of the user's roles reaches an open tab. The contract of
 the pinned Sentinel version does not return the user's capabilities, and the UI
 does not derive them from the roles, which would copy Sentinel's role
 definitions and its union rule. Every element that depends on a capability

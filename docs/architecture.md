@@ -4,9 +4,9 @@ This document defines the architecture of Sentinel Aura: its scope and system
 boundary, its link to Sentinel's API contract, the hosting constraints that
 Sentinel fixes, and the architecture decisions, both those taken and those
 still open. It is the foundation document on which every other design builds.
-The users, screen map, and roles belong to `docs/screen-map.md`, and the
-cross-cutting behaviors and design system to the other foundation documents
-(`docs/conventions.md`, Foundation Documents); the
+The users, screen map, and roles belong to `docs/screen-map.md`, the
+cross-cutting behaviors to `docs/behaviors.md`, and the design system to the
+other foundation document (`docs/conventions.md`, Foundation Documents); the
 CI pipeline and the release process belong to `docs/deployment.md`; backend
 behavior, the API contract, and the obligations that the contract places on
 clients belong to Sentinel (`README.md`, Specification Boundary).
@@ -215,9 +215,9 @@ environment unless it names one.
   Data Read from the API), treats every value that it reads from that storage
   as untrusted input, such as the return URL that the post-login redirect
   keeps in `sessionStorage` (Sentinel
-  `docs/features/identity/authentication.md`, Frontend session behavior), and
-  registers no service worker, whose cache such a script could fill with
-  responses of its own.
+  `docs/features/identity/authentication.md`, Frontend session behavior;
+  `docs/behaviors.md`, Return After Sign-in), and registers no service worker,
+  whose cache such a script could fill with responses of its own.
 
 ### Session Cookie
 
@@ -233,7 +233,8 @@ environment unless it names one.
 - Because scripts cannot read an `HttpOnly` cookie, the UI knows the state of
   the session only from the API's responses, for example the `401` that
   triggers the session expiration handling (Sentinel
-  `docs/features/identity/authentication.md`, Frontend session behavior).
+  `docs/features/identity/authentication.md`, Frontend session behavior;
+  `docs/behaviors.md`, Session State).
 - A browser accepts the cookie only from a secure origin (Sentinel
   `docs/features/identity/authentication.md`, Session cookie). The Sentinel
   host is served over HTTPS only, in staging as in production: it answers a
@@ -729,7 +730,7 @@ by hand for every operation.
 
 Automated accessibility checks find only part of the WCAG failures; the
 accessibility requirements of the UI foundations cover the rest
-(`docs/conventions.md`, Foundation Documents).
+(`docs/behaviors.md`, Accessibility).
 
 | Option | Impact |
 |---|---|
