@@ -213,10 +213,10 @@ environment unless it names one.
   Documentation). Such a script can also read and change the origin's browser
   storage. The UI therefore keeps no API data there (`docs/conventions.md`,
   Data Read from the API), treats every value that it reads from that storage
-  as untrusted input, such as the URL to which Sign in returns and the record
-  of an earlier session (`docs/behaviors.md`, Return After Sign-in; Session
-  Expiration Message), and registers no service worker, whose cache such a
-  script could fill with responses of its own.
+  as untrusted input, such as the URL to which Sign in returns and the session
+  record (`docs/behaviors.md`, Return After Sign-in; Session Expiration
+  Message), and registers no service worker, whose cache such a script could
+  fill with responses of its own.
 
 ### Session Cookie
 

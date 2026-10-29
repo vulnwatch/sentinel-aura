@@ -233,9 +233,9 @@ The search takes one term:
 
 ## Landing
 
-The landing is the address `/`, to which the product name in the header leads
-and which Sign in opens after a sign-in when it has no saved URL to return to
-(`docs/behaviors.md`, Return After Sign-in). What it shows depends on the
+The landing is the screen to which `/` leads, as the product name in the
+header does, and which Sign in opens after a sign-in when it has no saved URL
+to return to (`docs/behaviors.md`, Return After Sign-in). It depends on the
 user:
 
 - for a user who holds the `vulnerability_analyst` role, `/` leads to the URL
@@ -310,12 +310,11 @@ users bookmark and share them, and changing one changes this document first.
   which the identity provider returns the browser (`docs/architecture.md`, Same
   Origin). The requests that the UI sends there follow Sentinel's browser flow
   of SSO (Sentinel `docs/features/identity/sso-authentication.md`, Frontend
-  flow), while what it shows and where it leads belong to the UI.
-  SSO is deferred in Sentinel, and the pinned contract has none of its
-  operations (Sentinel `docs/features/identity/sso-authentication.md`,
-  Status): Sign in offers local sign-in only, and the path is reserved: no
-  screen uses it, so it shows as missing, like every path that matches no
-  screen.
+  flow), while what it shows and where it leads belong to the UI. SSO is
+  deferred in Sentinel, and the pinned contract has none of its operations
+  (Sentinel `docs/features/identity/sso-authentication.md`, Status): Sign in
+  offers local sign-in only, and the path is reserved: no screen uses it, so
+  it shows as missing, like every path that matches no screen.
 - A Ticket is addressed by its `SNTL-{n}` identifier and a CVE by its CVE ID,
   in the canonical forms that the API uses (Sentinel `docs/api-spec.md`, Ticket
   Identifier Resolution; CVE Identifier Resolution). A user is addressed by
