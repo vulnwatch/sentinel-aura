@@ -317,7 +317,8 @@ users bookmark and share them, and changing one changes this document first.
 - The search parameters of a screen, such as its view, filters, sorting, and
   page, belong to its screen document; which view a Ticket list URL opens
   when it names none, or one that the user is not shown, belongs to Ticket
-  List Views.
+  List Views, and what a screen does with a value that it does not accept to
+  `docs/behaviors.md` (Invalid Search Parameters).
 - A path that matches no screen shows as missing (`docs/behaviors.md`,
   Missing and Inaccessible Records).
 - Every path except Sign in and `/auth/callback` requires a session: the UI

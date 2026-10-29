@@ -268,9 +268,9 @@ that needs it; content of another kind needs a new row first.
 - One module in `src/api/` maps error codes to the messages that the UI
   shows. A screen handles specifically only the codes that its screen
   document lists (Specification Writing, Screen Documents); every other code
-  gets the default presentation for its HTTP status. `docs/behaviors.md`
-  (Errors) defines these defaults, the wording of the messages, and where
-  they appear.
+  gets the default presentation that `docs/behaviors.md` (Errors) defines:
+  the one of its HTTP status, except for the few codes that it names. That
+  document also defines the wording of the messages and where they appear.
 - A later Sentinel release within the supported Sentinel versions can answer
   an operation with a status or a code that the contract of the pinned
   version does not list for it, such as the error response of a new

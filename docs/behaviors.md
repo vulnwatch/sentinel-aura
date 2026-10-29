@@ -81,8 +81,9 @@ document that do not take effect yet.
 - A navigation that the session forces, to Sign in or to the landing of
   another user (The Signed-in User), asks nothing and discards the input not
   yet submitted.
-- Each tab learns of a change of the session, such as a sign-out or a sign-in
-  in another tab, from its own next response.
+- Each tab learns of a sign-out in another tab from its own next response,
+  and of a sign-in in another tab from its next read of the signed-in user
+  (The Signed-in User).
 
 ### Return After Sign-in
 
@@ -134,8 +135,8 @@ document that do not take effect yet.
   Roles), and those that will depend on capabilities once a pinned Sentinel
   version returns them (`docs/screen-map.md`, Capabilities of the Signed-in
   User).
-- A read that fails other than with a `401` changes nothing: the tab keeps
-  the user that it shows, without a message.
+- A later read that fails other than with a `401` changes nothing: the tab
+  keeps the user that it shows, without a message.
 - When a read returns a user other than the one that the tab shows, for
   example after another account signed in in another tab, the UI discards all
   the data that it read from the API and opens the landing of that user.
@@ -171,8 +172,8 @@ message follows Wording.
 |---|---|
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the header, under a heading that names the error |
 | A read of one part of a screen, such as a section, a tab, or a count | In place of that part; the rest of the screen stays usable |
-| A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data, as for the first read |
-| A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown, saying that it could not be updated |
+| A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
+| A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown, saying that it could not be updated; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
 
@@ -210,12 +211,10 @@ message follows Wording.
   that the contract of the pinned version does not list for the operation
   also gets the row of its status (Sentinel `docs/api-spec.md`, Client
   Tolerance of Non-Breaking Changes).
-- Three codes report a fault in how the UI and the API are deployed, not in
-  the request, and get the message of `500`: `403
-  AUTH_CROSS_ORIGIN_REJECTED` (`docs/architecture.md`, Cross-Origin
-  Requests), and `404 ROUTE_NOT_FOUND` and `405 ROUTE_METHOD_NOT_ALLOWED`,
-  which an operation of the pinned contract receives only from a Sentinel
-  version that lacks it (Sentinel `docs/api-spec.md`, Routing Responses).
+- `403 AUTH_CROSS_ORIGIN_REJECTED`, which only a change can receive, reports
+  a fault in how the UI is served, not a missing permission
+  (`docs/architecture.md`, Cross-Origin Requests): it gets the message of
+  `500`.
 - Every `5xx` response, every response with the message of `500`, and every
   successful response that the UI cannot read also shows "Reference:"
   followed by the request identifier that the response carries, when it
@@ -280,9 +279,9 @@ from the API):
   design system, without the label, icon, or color of a known value; it is
   also its accessible name;
 - a record whose kind is an unknown value, such as an audit event of an
-  unknown type or a CVSS assessment of an unknown version, shows the fields
-  that every kind has, such as its time and actor, with its kind as received,
-  and omits the fields that depend on the kind;
+  unknown type or a CVSS assessment of an unknown version, shows its kind as
+  received and the fields whose meaning does not depend on the kind, such as
+  its time and actor, and omits the others;
 - an action that a screen offers according to the value, such as a status
   transition, is not offered for an unknown value; the API decides every
   request anyway; and
@@ -401,8 +400,8 @@ rows, shows it as a badge with the days that remain to it:
   due date on a track, and leave out one whose badge is red, such as one whose
   later phases Sentinel cannot observe (same document, Observability of Later
   Phases).
-- Another due date, such as one of a track or of a maintainer's work item,
-  shows as a date (Display), next to the milestone status that Sentinel
+- Another due date, such as one of a track or of a maintainer's workbench
+  item, shows as a date (Display), next to the milestone status that Sentinel
   returns for it, named as Sentinel names it (Wording). An `overdue` status is
   marked as a past deadline is, with the icon.
 
@@ -414,7 +413,8 @@ An action asks for confirmation in a dialog before it sends its request when
 it:
 
 - cannot be undone in the UI, such as revoking an API key, resetting a user's
-  password, or deleting a reference;
+  password, deleting a reference, or making a confidential Ticket
+  non-confidential, which discloses it to every user;
 - ends another person's access to Sentinel or to a record, such as
   deactivating a user, removing a role, or revoking an access grant, or
   changes a system setting or the operation of a fetcher, such as disabling
@@ -424,9 +424,10 @@ it:
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
-it. The navigations that the session forces ask nothing (Session State). The
-screen document states which of its actions ask for confirmation
-(`docs/conventions.md`, Screen Documents).
+it. The navigations that the session forces ask nothing (Session State). In a
+form, the confirmation comes when the form sends its request, such as when
+Save removes a role. The screen document states which of its actions ask for
+confirmation (`docs/conventions.md`, Screen Documents).
 
 A confirmation dialog:
 
@@ -454,7 +455,8 @@ A confirmation dialog:
 - Messages appear in one message area below the header, which every screen
   shares. A message stays until the user dismisses it or opens another
   screen. The outcome of a change that ends after the user left its screen
-  appears on the screen that the user is on.
+  appears on the screen that the user is on, and names the record that it
+  concerns, with a link to it, such as "SNTL-42: Priority changed to P2.".
 - An operation that Sentinel accepts with `202` has started, not finished:
   its message says so, such as "Refetch started.", and links to the screen
   that shows its progress, when one does.
@@ -630,5 +632,6 @@ design that depends on it waits for it.
   repository (`README.md`, Specification Boundary). Sentinel takes the
   decision. Until then, these behaviors of this document do not take effect:
   Return After Sign-in, Session Expiration Message, and the outcome of a `401`
-  to sign-out (Sign-out). Sign in, which carries them, waits for that version;
-  the rest of Session takes effect now. This entry is then removed.
+  to sign-out (Sign-out). The implementation of Sign in and of the session
+  handling of Session, which leads to Sign in, waits for that version. This
+  entry is then removed.
