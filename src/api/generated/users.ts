@@ -231,7 +231,7 @@ export const getGetCurrentUserProfileUrl = () => {
 };
 
 /**
- * Returns the concise profile of the currently authenticated user, including current role values. Requires authentication (JWT session or API key).
+ * Returns the concise profile of the currently authenticated user, including current role values and the capabilities that those roles grant. The capabilities are informational: every operation still checks its own authorization. Requires authentication (JWT session or API key).
  * @summary Get my profile
  */
 export const getCurrentUserProfile = async (

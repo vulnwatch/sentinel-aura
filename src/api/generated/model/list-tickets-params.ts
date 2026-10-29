@@ -31,6 +31,10 @@ export type ListTicketsParams = {
    */
   overdue?: string[];
   /**
+   * Filter by the Ticket's `current_phase`: `triage`, `submission`, `um`, `qa`, `done`. A Ticket whose current phase is `null` matches no value. Combined with the same `overdue` value (for example `current_phase=um&overdue=um`), it lists the Tickets whose current phase is past due. Repeatable; OR semantics. Invalid values are ignored.
+   */
+  current_phase?: string[];
+  /**
    * Filter by maintainer of at least one included package: user UUID or exact username. An unknown user yields an empty page.
    */
   maintainer?: string;

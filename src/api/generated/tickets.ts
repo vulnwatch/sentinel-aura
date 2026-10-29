@@ -66,7 +66,13 @@ export const getListTicketsUrl = (params?: ListTicketsParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["status", "severity", "priority", "overdue"];
+    const explodeParameters = [
+      "status",
+      "severity",
+      "priority",
+      "overdue",
+      "current_phase",
+    ];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
@@ -88,7 +94,7 @@ export const getListTicketsUrl = (params?: ListTicketsParams) => {
 };
 
 /**
- * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, and overdue filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
+ * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
  */
 export const listTickets = async (
