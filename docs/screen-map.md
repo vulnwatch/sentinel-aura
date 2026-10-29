@@ -182,8 +182,7 @@ The Tickets entry opens the Ticket list in its New view for a user who holds
 the `vulnerability_analyst` role (Roles), and in its All view for every other
 user. The Administration entry opens Users for a user who holds
 `manage_users`, and Settings for every other user who sees it; from each of
-its screens, the others that the user can use are one step away. Data sources
-links to CVE source records.
+its screens, the others that the user can use are one step away.
 
 ### Links Between Areas
 
@@ -193,9 +192,10 @@ A screen links each record that it shows to the screen of that record:
   Ticket that it duplicates;
 - a Ticket links to My work on that Ticket, the address that analysts share
   with the maintainers of its packages;
-- an item of the Package list, of My packages, or of the search results links
-  to its Ticket, and an item of My packages also to My work on that Ticket;
-- a run of a CVE fetcher links to the CVE source records of its failures, the
+- an item of the Package list or of My packages links to its Ticket, and an
+  item of My packages also to My work on that Ticket;
+- the Data sources screen links to CVE source records, and a run of a CVE
+  fetcher links to the CVE source records of its failures, the
   drill-down that Sentinel describes (Sentinel
   `docs/features/platform/fetcher-operations.md`, Get Fetcher Run Detail), and
   a CVE source record links to its CVE.
@@ -303,8 +303,9 @@ users bookmark and share them, and changing one changes this document first.
   (Sentinel `docs/features/identity/sso-authentication.md`, Frontend flow).
   SSO is deferred in Sentinel, and the pinned contract has none of its
   operations (Sentinel `docs/features/identity/sso-authentication.md`,
-  Status): Login offers local sign-in only, and the path stays reserved,
-  without a screen.
+  Status): Login offers local sign-in only, and the path is reserved: no
+  screen uses it, so it shows as missing, like every path that matches no
+  screen.
 - A Ticket is addressed by its `SNTL-{n}` identifier and a CVE by its CVE ID,
   in the canonical forms that the API uses (Sentinel `docs/api-spec.md`, Ticket
   Identifier Resolution; CVE Identifier Resolution). A user is addressed by
@@ -314,7 +315,9 @@ users bookmark and share them, and changing one changes this document first.
 - No path of the UI is `/api` or under `/api/`, which the host routes to the
   API (`docs/architecture.md`, Same Origin).
 - The search parameters of a screen, such as its view, filters, sorting, and
-  page, belong to its screen document.
+  page, belong to its screen document; which view a Ticket list URL opens
+  when it names none, or one that the user is not shown, belongs to Ticket
+  List Views.
 - A path that matches no screen shows as missing, with the error presentation
   of the UI foundations.
 - Every path except Login and `/auth/callback` requires a session: the UI has
@@ -346,8 +349,8 @@ users bookmark and share them, and changing one changes this document first.
   can never take. The action of an operation that accepts alternative
   capabilities appears to a user who holds any of them, and a request field or
   value with a capability requirement of its own, such as the confidentiality
-  of a new Ticket or the Fixed status of a track, appears only to a user who
-  meets it (Sentinel `docs/features/identity/rbac.md`, Endpoint Permission Map;
+  of a new Ticket or each status of a track, appears only to a user who meets
+  it (Sentinel `docs/features/identity/rbac.md`, Endpoint Permission Map;
   Business Rules). A condition on the state of a resource, such as a Ticket in
   status Ignored, is not a capability: the screen document states how its
   actions reflect it.
@@ -363,8 +366,10 @@ users bookmark and share them, and changing one changes this document first.
   of the `vulnerability_analyst` role can be assigned a Ticket (Sentinel
   `docs/features/identity/rbac.md`, Business Rules), so that role decides the
   landing (Landing), the view that the Tickets entry opens, the Assigned to me
-  view, the attention summary, and the actions that make the signed-in user
-  the assignee of a Ticket. Everything else depends on capabilities.
+  view, the attention summary, and whether the action that assigns a Ticket to
+  the signed-in user is offered, which also needs the capability of its
+  operation (Sentinel `docs/features/tickets/tickets.md`, Assign Ticket).
+  Everything else depends on capabilities.
 
 ### Profiles
 
@@ -393,8 +398,8 @@ the pinned Sentinel version does not return the user's capabilities, and the UI
 does not derive them from the roles, which would copy Sentinel's role
 definitions and its union rule. Every element that depends on a capability
 therefore waits for a pinned Sentinel version that returns them (Open
-Decisions); the elements that depend on the `vulnerability_analyst` role do
-not.
+Decisions); the elements that depend only on the `vulnerability_analyst` role
+do not.
 
 ## Open Decisions
 
