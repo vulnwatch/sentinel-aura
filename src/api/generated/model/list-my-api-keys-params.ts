@@ -9,7 +9,7 @@ export type ListMyApiKeysParams = {
   /**
    * One of 'active', 'expired', or 'revoked'.
    */
-  status?: string | null;
+  status?: string;
   /**
    * Page number.
    * @minimum 1

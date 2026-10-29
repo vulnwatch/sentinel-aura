@@ -8,16 +8,17 @@ import type { UserSortField } from "./user-sort-field";
 export type ListUsersAdminParams = {
   /**
    * Case-insensitive substring across username, email, and full name.
+   * @minLength 2
    */
-  search?: string | null;
+  search?: string;
   /**
    * One of 'local' or 'external'.
    */
-  type?: string | null;
+  type?: string;
   /**
    * Filter by active status.
    */
-  active?: boolean | null;
+  active?: boolean;
   /**
    * One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics.
    */
@@ -25,7 +26,7 @@ export type ListUsersAdminParams = {
   /**
    * true for users with at least one role, false for none.
    */
-  has_role?: boolean | null;
+  has_role?: boolean;
   /**
    * Page number.
    * @minimum 1

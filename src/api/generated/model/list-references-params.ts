@@ -7,9 +7,9 @@ export type ListReferencesParams = {
   /**
    * Exact, case-sensitive source (`manual` or a fetcher name).
    */
-  source?: string | null;
+  source?: string;
   /**
    * One of `advisory`, `patch`, `issue`, or `article`. Any other value matches no reference.
    */
-  type?: string | null;
+  type?: string;
 };

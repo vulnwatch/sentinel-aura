@@ -9,11 +9,11 @@ export type SearchPackagesParams = {
   /**
    * Case-insensitive substring match on the package name. Outer whitespace is trimmed once; an empty result means no search filter. `%`, `_`, and backslash are literal characters. Mutually exclusive with `name`.
    */
-  search?: string | null;
+  search?: string;
   /**
    * Exact, case-sensitive match on the package name. Mutually exclusive with a non-empty `search`.
    */
-  name?: string | null;
+  name?: string;
   /**
    * Ticket statuses to include: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored; if all values are invalid, the result is empty. Default: all statuses.
    */

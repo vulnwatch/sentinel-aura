@@ -9,11 +9,11 @@ export type ListProductsParams = {
   /**
    * Case-insensitive substring match against `name`, `display_name`, `version`, or `cpe`; a Product matches when any of those fields matches. `%`, `_`, and backslash are literal.
    */
-  search?: string | null;
+  search?: string;
   /**
    * Exact, case-sensitive match against the canonical CPE.
    */
-  cpe?: string | null;
+  cpe?: string;
   /**
    * Filter by membership in the latest complete SMELT snapshot: `current` (observed in it) or `historical` (retained, not observed in it). Repeatable; OR semantics; both values select every retained Product. Default when absent: `current`. Invalid values are ignored; only invalid values yield an empty page.
    */

@@ -8,20 +8,22 @@ import type { SortOrder } from "./sort-order";
 export type ListReleaseRequestsParams = {
   /**
    * Exact maintenance incident number: a positive integer of at most 2147483647.
+   * @minimum 1
+   * @maximum 2147483647
    */
-  incident_number?: number | null;
+  incident_number?: number;
   /**
    * Exact, case-sensitive logical package of the action.
    */
-  package_name?: string | null;
+  package_name?: string;
   /**
    * Exact, case-sensitive IBS codestream of the action.
    */
-  codestream_name?: string | null;
+  codestream_name?: string;
   /**
    * Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action.
    */
-  state?: string | null;
+  state?: string;
   /**
    * Sort field (default `upstream_updated_at`): the request's `upstream_created_at` or `upstream_updated_at`.
    */

@@ -7,15 +7,15 @@ export type ListFetcherRunsParams = {
   /**
    * Filter by run status (queued, running, success, failure, partial).
    */
-  status?: string | null;
+  status?: string;
   /**
    * ISO 8601 date/datetime; inclusive lower bound on created_at.
    */
-  from_date?: string | null;
+  from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound on created_at.
    */
-  to_date?: string | null;
+  to_date?: string;
   /**
    * Page number.
    * @minimum 1

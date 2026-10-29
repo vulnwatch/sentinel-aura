@@ -9,7 +9,7 @@ export type ListTicketsParams = {
   /**
    * Free-text search; a Ticket matches if any field matches. SNTL identifier: prefix of the numeric part (optional `SNTL-` prefix, case-insensitive). CVE ID: case-insensitive prefix (`CVE-` optional for a year-number term such as `2024-1234`). Included package names: case-insensitive substring. External identifiers (e.g. GHSA IDs): case-insensitive prefix. Outer whitespace is trimmed; `%`, `_`, and backslash are literal.
    */
-  search?: string | null;
+  search?: string;
   /**
    * Filter by Ticket status: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored.
    */
@@ -17,7 +17,7 @@ export type ListTicketsParams = {
   /**
    * Filter by assignee: user UUID, exact username, or `none` for unassigned Tickets. An unknown user yields an empty page.
    */
-  assignee?: string | null;
+  assignee?: string;
   /**
    * Filter by resolved severity: `critical`, `high`, `medium`, `low`, `none` (CVSS score 0.0), `unresolved` (no severity). Repeatable; OR semantics. Invalid values are ignored.
    */
@@ -33,7 +33,7 @@ export type ListTicketsParams = {
   /**
    * Filter by maintainer of at least one included package: user UUID or exact username. An unknown user yields an empty page.
    */
-  maintainer?: string | null;
+  maintainer?: string;
   /**
    * Page number.
    * @minimum 1
