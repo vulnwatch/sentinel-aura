@@ -29,6 +29,7 @@ to its screen document (`docs/conventions.md`, Screen Documents).
 - [Navigation](#navigation)
   - [Header](#header)
   - [Links Between Areas](#links-between-areas)
+  - [Browser History](#browser-history)
   - [Search](#search)
 - [Landing](#landing)
 - [Ticket List Views](#ticket-list-views)
@@ -200,9 +201,19 @@ A screen links each record that it shows to the screen of that record:
   `docs/features/platform/fetcher-operations.md`, Get Fetcher Run Detail), and
   a CVE source record links to its CVE.
 
-Every state of a screen that a user can return to, such as a view, a filter,
-or a page of a list, is in its URL (`docs/conventions.md`, Routes), so that
-back, reload, a bookmark, and a shared link show it again.
+### Browser History
+
+- Every state of a screen that a user can return to, such as a view, a
+  filter, or a page of a list, is in its URL (`docs/conventions.md`, Routes),
+  so that back, reload, a bookmark, and a shared link show it again.
+- A navigation that the UI makes on its own, rather than for a link or a
+  control that the user chose, replaces the current address in the browser
+  history instead of adding an entry, so that back never returns to an
+  address that only leads away again. Such navigations are Sign in in place of
+  a screen that needs a session, the landing in place of `/` or of Sign in,
+  the landing of another user who signed in, and a screen's default in place
+  of a search parameter that it does not accept (`docs/behaviors.md`,
+  Session; Invalid Search Parameters).
 
 ### Search
 
@@ -229,10 +240,10 @@ treats the saved value, within the constraint of `docs/architecture.md` (Same
 Origin), belongs to `docs/behaviors.md` (Return After Sign-in). In this UI the
 dashboard is the landing, at `/`:
 
-- for a user who holds the `vulnerability_analyst` role, `/` is replaced,
-  without a new entry in the browser history, by the URL of the Ticket list in
-  its New view, the queue of new Tickets, with the attention summary (Ticket
-  List Views). Such a user does not see the Home;
+- for a user who holds the `vulnerability_analyst` role, `/` leads to the URL
+  of the Ticket list in its New view, the queue of new Tickets, with the
+  attention summary (Ticket List Views; Browser History). Such a user does not
+  see the Home;
 - every other user sees the Home at `/`.
 
 The landing depends on the role (Roles) and not on data, so the landing of a

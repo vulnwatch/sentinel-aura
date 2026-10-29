@@ -89,17 +89,16 @@ document that do not take effect yet.
 
 - When the UI leads from a screen to Sign in, as it loads or after a `401`, it
   saves the URL of that screen, its path, search, and fragment, in the tab's
-  session storage, where it survives a reload of Sign in. Sign in replaces the
-  screen in the browser history, so that back does not return to a screen
-  that needs the session. Opening Sign in directly saves nothing.
+  session storage, where it survives a reload of Sign in. Opening Sign in
+  directly saves nothing.
 - Sign in is shown only without a session. Whenever it learns that a session
   exists, after its own sign-in, as it loads, or from a read of the signed-in
   user (The Signed-in User), it reads and removes the saved URL. It opens that
   URL only when it is a path of the UI's origin other than `/api`, a path
   under `/api/`, Sign in, or `/auth/callback`. Any other value, such as one
   that resolves to another origin, counts as absent, and the UI opens the
-  landing instead (`docs/screen-map.md`, Landing). Either replaces Sign in in
-  the browser history.
+  landing instead (`docs/screen-map.md`, Landing). The navigations to and
+  from Sign in follow `docs/screen-map.md` (Browser History).
 - A script of the API's documentation page can write the saved value, which
   is therefore untrusted (`docs/architecture.md`, Same Origin). The check
   keeps a planted value from leading the user out of the UI after a genuine
@@ -247,7 +246,7 @@ message follows Wording.
 
 A search parameter of a screen's URL that the screen does not accept, such as
 a page below 1 or an unknown sort, is dropped: the screen uses its default for
-it and replaces the URL without a new entry in the browser history. The UI
+it and removes it from the URL (`docs/screen-map.md`, Browser History). The UI
 sends no request with it, so the user never sees the API's validation error.
 A Ticket list URL with a view that the user is not shown is such a case
 (`docs/screen-map.md`, Ticket List Views).
