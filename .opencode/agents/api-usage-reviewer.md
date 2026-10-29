@@ -236,9 +236,9 @@ inefficiency without a screen that suffers from it is not a finding.
   their precedence (`docs/conventions.md`, Error Codes and Messages)?
 - Are the field errors of a `VALIDATION_ERROR` response matched to the form
   fields by their `loc`?
-- Is a behavior that the contract attaches to a response of any operation,
-  such as the session expiration handling after a `401`, implemented once
-  for every request rather than by a screen?
+- Is a behavior that applies to a response of any operation, such as the end
+  of the session after a `401` (`docs/behaviors.md`, Session State),
+  implemented once for every request rather than by a screen?
 - Does a screen handle a code that the operation cannot return, or miss one
   that the screen document lists and the operation can return (Sentinel
   `docs/api-spec.md`, Response Applicability Derivation, and the operation's

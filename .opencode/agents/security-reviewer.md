@@ -246,10 +246,9 @@ These are decided elsewhere. Do NOT report findings about them:
   first (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE Affected
   Versions)
 - Can a navigation target read from the URL or from browser storage, such as
-  the return URL after sign-in (Sentinel
-  `docs/features/identity/authentication.md`, Post-login redirect), send the
-  user to another origin? `docs/architecture.md` (Same Origin) treats every
-  value read from that storage as untrusted input
+  the return URL after sign-in (`docs/behaviors.md`, Return After Sign-in),
+  send the user to another origin? `docs/architecture.md` (Same Origin)
+  treats every value read from that storage as untrusted input
 
 ### Content Security Policy and Trusted Types
 

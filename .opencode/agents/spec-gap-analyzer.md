@@ -192,7 +192,8 @@ for a decision.
    codes; the general conventions in `docs/api-spec.md` that apply to them,
    such as pagination, filtering, sorting, and error responses; the
    authorization model in `docs/features/identity/rbac.md` when the document
-   states what roles see or do; and the client obligations that apply, such as
+   states what roles see or do; and the client obligations and the facts for
+   browser clients that apply, such as
    `docs/features/identity/authentication.md` (Frontend session behavior),
    together with the consumed operations in the pinned OpenAPI document when
    this repository keeps one (this repository's `docs/architecture.md`,
@@ -250,12 +251,14 @@ Expand when impact cannot be bounded confidently.
 
 ### 4. Session
 
-- The session expiration handling and the post-login redirect are client
-  obligations that Sentinel defines (Sentinel
-  `docs/features/identity/authentication.md`, Frontend session behavior);
-  they are not gaps of the document. The question
-  is only the screen-specific behavior they leave open, for example what
-  happens to input that the user has not submitted when the session expires
+- The session behavior of every screen, such as the return after sign-in and
+  the message when the session has expired, is defined once in
+  `docs/behaviors.md` (Session), on the facts that Sentinel
+  `docs/features/identity/authentication.md` (Frontend session behavior)
+  states for browser clients. A screen document that does not restate it has
+  no gap; the question is only the screen-specific behavior that it leaves
+  open. A change of `docs/behaviors.md` (Session) is checked against those
+  facts, like every Sentinel contract that a document relies on
 
 ### 5. Actions and forms
 
