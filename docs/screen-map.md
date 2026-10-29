@@ -19,6 +19,12 @@ to its screen document (`docs/conventions.md`, Screen Documents).
 ## Contents
 
 - [Users and Frequent Tasks](#users-and-frequent-tasks)
+  - [Vulnerability Analysts](#vulnerability-analysts)
+  - [Package Maintainers](#package-maintainers)
+  - [Readers](#readers)
+  - [Administrators](#administrators)
+  - [Restricted Analysts](#restricted-analysts)
+  - [Every User](#every-user)
 - [Areas and Screens](#areas-and-screens)
 - [Navigation](#navigation)
   - [Header](#header)
@@ -37,7 +43,7 @@ to its screen document (`docs/conventions.md`, Screen Documents).
 ## Users and Frequent Tasks
 
 Sentinel Aura is for internal use (`docs/architecture.md`, Scope and System
-Boundary). Two groups do most of their work in it: a small team of
+Boundary). Two groups do most of the work in it: a small team of
 vulnerability analysts, who work in it all day, and many package maintainers,
 who open it when work is pending for them. Every other employee with an
 account reads it occasionally. The screens are designed for the tasks below,
@@ -48,7 +54,7 @@ grouped by the profiles of Roles.
 The security team: about fifteen people who hold the `vulnerability_analyst`
 role and work in Sentinel all day. Their most frequent tasks:
 
-- work the triage queue: take the new Tickets, or ignore them, or mark them as
+- work the queue of new Tickets: take them, or ignore them, or mark them as
   duplicates;
 - analyze the packages, tracks, and Product eligibility of their Tickets;
 - maintain severities, SUSE CVSS assessments, priority overrides, and
@@ -116,11 +122,10 @@ under the path of the screen, and its screen document records it.
 | Area | Screen | Path | Content |
 |---|---|---|---|
 | Sign-in | Login | `/login` | Local sign-in (Sentinel `docs/features/identity/local-authentication.md`, Login) |
-| Sign-in | SSO return | `/auth/callback` | Reserved for the return from the identity provider (Contract URLs) |
-| Home | Home | `/` | The search and a summary of the user's package work (Landing) |
-| Search | Search results | `/search` | The Tickets, CVEs, and packages that match a search term (Search) |
+| Home | Home | `/` | The landing of the users without the `vulnerability_analyst` role: the search and a summary of their package work (Landing) |
+| Search | Search results | `/search` | The Tickets and CVEs that match a search term (Search) |
 | Tickets | Ticket list | `/tickets` | The Tickets, in the views of Ticket List Views |
-| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, package tree, references, IBS requests, audit log, and access grants |
+| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, package tree, references, IBS requests, and audit log, and, with `manage_confidentiality`, its access grants |
 | CVEs | CVE list | `/cves` | The CVEs, with or without a Ticket |
 | CVEs | CVE | `/cves/{cve_id}` | One CVE: its Ticket, CVSS assessments, sources, and affected versions |
 | Packages | Package list | `/packages` | The packages of the Tickets, across Tickets |
@@ -128,12 +133,12 @@ under the path of the screen, and its screen document records it.
 | My packages | My packages | `/my-packages` | The signed-in user's maintainer workbench: pending, in-progress, and completed work |
 | My packages | My work on a Ticket | `/my-packages/tickets/{ticket_id}` | The signed-in user's work on one Ticket, the view that analysts share |
 | Data sources | Data sources | `/data-sources` | The fetchers with their latest runs, and the status of the IBS consumer |
-| Data sources | Fetcher | `/data-sources/fetchers/{fetcher_name}` | One fetcher: its run history and timeline, its configuration, and its audit log |
+| Data sources | Fetcher | `/data-sources/fetchers/{fetcher_name}` | One fetcher: its run history and timeline, and, with `manage_fetchers`, its configuration and audit log |
 | Data sources | Fetcher run | `/data-sources/fetchers/{fetcher_name}/runs/{run_id}` | One run of a fetcher |
 | Data sources | CVE source records | `/data-sources/cve-sources` | The latest fetch status of each CVE in each source |
 | Account | Profile | `/account` | The signed-in user's own profile |
 | Account | API keys | `/account/api-keys` | The signed-in user's own API keys |
-| Account | Account activity | `/account/activity` | The identity events of the signed-in user's own account |
+| Account | Identity audit log | `/account/identity-audit-log` | The identity events of the signed-in user's own account |
 | Administration | Users | `/admin/users` | Every user, with the complete profile |
 | Administration | User | `/admin/users/{user_id}` | One user's complete profile and its administration |
 | Administration | API keys | `/admin/api-keys` | The API keys of every user |
@@ -150,10 +155,10 @@ under the path of the screen, and its screen document records it.
   signed-in user (Sentinel `docs/features/packages/maintainer.md`, API
   Endpoints), and a user who maintains no package with work sees its lists
   empty.
-- Data sources is open to every user, as Sentinel's fetcher monitoring is
-  (Sentinel `docs/features/platform/fetcher-operations.md`, Purpose). Its
-  management actions, and the configuration and audit log of a fetcher, need
-  `manage_fetchers` (Roles). Fetcher management is therefore part of Data
+- Data sources is open to every user, as Sentinel's fetcher monitoring is,
+  while operating a fetcher and reading its configuration and audit log need
+  `manage_fetchers` (Sentinel `docs/features/platform/fetcher-operations.md`,
+  Purpose; Access Control). Fetcher management is therefore part of Data
   sources rather than of Administration: the same screens show a fetcher to
   every user and its actions to the users who can take them.
 
@@ -161,7 +166,7 @@ under the path of the screen, and its screen document records it.
 
 ### Header
 
-Every screen except Login and SSO return has a header with:
+Every screen except Login has a header with:
 
 - the product name, which leads to the landing (`/`);
 - the global navigation: Tickets, CVEs, Packages, Products, My packages, Data
@@ -171,12 +176,14 @@ Every screen except Login and SSO return has a header with:
 - the search (Search), except on the Home, which presents the search as its
   main content; and
 - the account menu, which shows the signed-in user and leads to Profile, API
-  keys, Account activity, and sign-out.
+  keys, Identity audit log, and sign-out.
 
 The Tickets entry opens the Ticket list in its New view for a user who holds
-the `vulnerability_analyst` role, and in its All view for every other user.
-The Administration entry opens Users for a user who holds `manage_users`, and
-Settings for every other user who sees it.
+the `vulnerability_analyst` role (Roles), and in its All view for every other
+user. The Administration entry opens Users for a user who holds
+`manage_users`, and Settings for every other user who sees it; from each of
+its screens, the others that the user can use are one step away. Data sources
+links to CVE source records.
 
 ### Links Between Areas
 
@@ -184,6 +191,8 @@ A screen links each record that it shows to the screen of that record:
 
 - a Ticket and its CVE link to each other, and a duplicate Ticket links to the
   Ticket that it duplicates;
+- a Ticket links to My work on that Ticket, the address that analysts share
+  with the maintainers of its packages;
 - an item of the Package list, of My packages, or of the search results links
   to its Ticket, and an item of My packages also to My work on that Ticket;
 - a run of a CVE fetcher links to the CVE source records of its failures, the
@@ -204,34 +213,30 @@ The search takes one term:
   `docs/api-spec.md`, Ticket Identifier Resolution; CVE Identifier
   Resolution). A Ticket or CVE that does not exist or that the user cannot see
   shows as missing, with the error presentation of the UI foundations;
-- every other term opens Search results, which show the first Tickets, CVEs,
-  and packages that the term matches, as the searches of their lists match it
-  (Sentinel `docs/features/tickets/tickets.md`, Search; Sentinel
-  `docs/features/tickets/cve-tracking.md`, List CVEs; Sentinel
-  `docs/features/packages/package-model.md`, Search Packages Across Tickets).
-  Each group links to its list with the same search.
+- every other term opens Search results, which show the first Tickets and
+  CVEs that the term matches, as the searches of their lists match it: the
+  Ticket search also matches package names (Sentinel
+  `docs/features/tickets/tickets.md`, Search; Sentinel
+  `docs/features/tickets/cve-tracking.md`, List CVEs). Each group links to its
+  list with the same search, the Ticket list in its All view.
 
 ## Landing
 
 After a sign-in, Sentinel's post-login redirect leads to the return URL that
 the sign-in saved, and otherwise to "the dashboard" (Sentinel
 `docs/features/identity/authentication.md`, Post-login redirect); how the UI
-treats the saved value belongs to the session behavior of the UI foundations
-(`docs/architecture.md`, Same Origin). In this UI the dashboard is the landing,
-at `/`:
+treats the saved value belongs to the session behavior of the UI foundations,
+within the constraint of `docs/architecture.md` (Same Origin). In this UI the
+dashboard is the landing, at `/`:
 
-- a user who holds the `vulnerability_analyst` role lands on the Ticket list
-  in its New view, the triage queue, with the attention summary (Ticket List
-  Views);
-- every other user lands on the Home.
+- for a user who holds the `vulnerability_analyst` role, `/` is replaced,
+  without a new entry in the browser history, by the URL of the Ticket list in
+  its New view, the queue of new Tickets, with the attention summary (Ticket
+  List Views). Such a user does not see the Home;
+- every other user sees the Home at `/`.
 
-The landing depends on the role, not on a capability, because Sentinel lets
-only holders of that role own Tickets (Sentinel
-`docs/features/identity/rbac.md`, Business Rules), and the UI reads the roles
-of the signed-in user from Get Current User (Sentinel
-`docs/features/identity/authentication.md`, Get Current User). It does not
-depend on data, so the landing of a user does not change from one day to the
-next.
+The landing depends on the role (Roles) and not on data, so the landing of a
+user does not change from one day to the next.
 
 The Home leads with the search, followed by a summary of the user's pending
 and in-progress work in My packages, which links to its lists. A user without
@@ -245,18 +250,22 @@ them, as tabs in this order:
 | View | Tickets | Shown to |
 |---|---|---|
 | New | Status New: the Tickets that no analyst has taken yet, because the first assignment moves a Ticket to Analysis (Sentinel `docs/features/tickets/tickets.md`, Status Transitions) | Every user |
-| Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who holds the `vulnerability_analyst` role, the only role that can be assigned (Sentinel `docs/features/identity/rbac.md`, Business Rules) |
+| Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who holds the `vulnerability_analyst` role (Roles) |
 | Analysis | Status Analysis | Every user |
 | Analyzed | Status Analyzed | Every user |
 | Unassigned | Status Analysis or Analyzed without an assignee, such as the Tickets of an analyst who was deactivated or lost the role (Sentinel `docs/features/tickets/tickets.md`, Reassignment) | Every user |
 | All | Every status | Every user |
 
-- Each tab shows the number of Tickets of its view. A view without Tickets
-  keeps its tab and shows the empty state of the UI foundations: the tabs keep
-  their places, and a zero tells that the queue is empty.
-- Each view has its URL. A user can refine a view with the filters, sorting,
-  and search of the list; the exact filters, sorting, and columns of each view
-  belong to the screen document of the Ticket list.
+- Each tab shows the number of Tickets of its view as this table defines it,
+  without the filters and search that the user adds, so that it always shows
+  the size of the queue. A view without Tickets keeps its tab and shows the
+  empty state of the UI foundations: the tabs keep their places, and a zero
+  shows that the queue is empty.
+- Each view has its URL. A Ticket list URL that names no view, or a view that
+  the user is not shown, opens the All view.
+- A user can refine a view with the filters, sorting, and search of the list;
+  the exact filters, sorting, and columns of each view belong to the screen
+  document of the Ticket list.
 
 ### Attention Summary
 
@@ -269,34 +278,33 @@ above its views three counts of the Tickets that need attention:
 | Triage overdue | Status New or Analysis with the triage due date past (Sentinel `docs/features/tickets/ticket-deadlines.md`, Ticket-Level Overdue Filter) |
 | Delivery overdue | Status Analyzed, with a submission, UM, or QA milestone past due on at least one track (same section) |
 
-- Each count links to the Ticket list that shows those Tickets, where no view
-  is selected. A count of zero stays, in a neutral style.
-- Triage overdue and Delivery overdue never count the same Ticket, because
-  they select different statuses. A Ticket still in triage whose later
-  milestones are past due counts as Triage overdue: every later due date of a
-  Ticket comes after its triage due date (Sentinel
-  `docs/features/tickets/ticket-deadlines.md`, Due Dates). Active P1 measures
-  priority, not time, and can include Tickets of the other two counts.
+- Each count links to the All view of the Ticket list, refined to those
+  Tickets. A count of zero stays.
+- Triage overdue and Delivery overdue select different statuses, so they never
+  count the same Ticket. A Ticket in status New or Analysis whose later
+  milestones are past due counts as Triage overdue, because its triage due date
+  comes first (Sentinel `docs/features/tickets/ticket-deadlines.md`, Due
+  Dates). Active P1 measures priority, not time, and can include Tickets of
+  the other two counts.
 - Delivery overdue does not divide the Tickets by phase: a milestone that is
-  not completed leaves every later milestone not completed too, and each
-  becomes overdue when its due date passes (Sentinel
+  not completed leaves every later milestone not completed too (Sentinel
   `docs/features/tickets/ticket-deadlines.md`, Track Milestones), so a count
   per milestone would count a Ticket that waits for its submission under UM
   and QA as well.
 
 ## Contract URLs
 
-The paths of Areas and Screens are part of the contract: users bookmark and
-share them, and changing one changes this document first.
+The paths of Areas and Screens and `/auth/callback` are part of the contract:
+users bookmark and share them, and changing one changes this document first.
 
 - `/auth/callback` is fixed by Sentinel, which registers it as the address to
   which the identity provider returns the browser (`docs/architecture.md`, Same
-  Origin). Its screen follows Sentinel's SSO frontend flow (Sentinel
-  `docs/features/identity/sso-authentication.md`, Frontend flow). SSO is
-  deferred in Sentinel, and the pinned contract has none of its operations
-  (Sentinel `docs/features/identity/sso-authentication.md`, Status): Login
-  offers local sign-in only, and the path stays reserved, used by no other
-  screen.
+  Origin); what the UI does there follows Sentinel's SSO frontend flow
+  (Sentinel `docs/features/identity/sso-authentication.md`, Frontend flow).
+  SSO is deferred in Sentinel, and the pinned contract has none of its
+  operations (Sentinel `docs/features/identity/sso-authentication.md`,
+  Status): Login offers local sign-in only, and the path stays reserved,
+  without a screen.
 - A Ticket is addressed by its `SNTL-{n}` identifier and a CVE by its CVE ID,
   in the canonical forms that the API uses (Sentinel `docs/api-spec.md`, Ticket
   Identifier Resolution; CVE Identifier Resolution). A user is addressed by
@@ -309,8 +317,8 @@ share them, and changing one changes this document first.
   page, belong to its screen document.
 - A path that matches no screen shows as missing, with the error presentation
   of the UI foundations.
-- Every path except those of Sign-in requires a session: the UI has no guest
-  or anonymous mode, because every read of application data requires
+- Every path except Login and `/auth/callback` requires a session: the UI has
+  no guest or anonymous mode, because every read of application data requires
   authentication (Sentinel `docs/features/identity/rbac.md`, Access Levels). A
   visitor without a session is led to Login and, after signing in, back to the
   path that they opened (Sentinel `docs/features/identity/authentication.md`,
@@ -329,19 +337,20 @@ share them, and changing one changes this document first.
   records by profile, and never reveals a record that the API conceals: a
   Ticket or a CVE that the user cannot see is indistinguishable from one that
   does not exist (Sentinel `docs/api-spec.md`, Anti-Enumeration Boundary).
-- **An action needs its capability and is hidden without it.** An action
-  appears only to a user who holds a capability that Sentinel requires for its
-  operation (Sentinel `docs/features/identity/rbac.md`, Permission Matrix, and
-  the specification that owns the operation). Without it, the action is
-  hidden, not shown disabled: most users hold no capability, and disabled
-  controls would fill their read-only screens with actions that they can never
-  take. The action of an operation that accepts alternative capabilities
-  appears to a user who holds any of them, and a request field that needs a
-  further capability, such as the confidentiality of a new Ticket, appears only
-  to a user who holds it (Sentinel `docs/features/identity/rbac.md`, Endpoint
-  Permission Map; Business Rules). A condition on the state of a resource,
-  such as a Ticket in status Ignored, is not a capability: the screen document
-  states how its actions reflect it.
+- **What needs a capability is hidden without it.** An action, or a part of a
+  screen, appears only to a user who holds a capability that Sentinel requires
+  for its operation (Sentinel `docs/features/identity/rbac.md`, Permission
+  Matrix, and the specification that owns the operation). Without it, the
+  element is hidden, not shown disabled: most users hold no capability, and
+  disabled controls would fill their read-only screens with actions that they
+  can never take. The action of an operation that accepts alternative
+  capabilities appears to a user who holds any of them, and a request field or
+  value with a capability requirement of its own, such as the confidentiality
+  of a new Ticket or the Fixed status of a track, appears only to a user who
+  meets it (Sentinel `docs/features/identity/rbac.md`, Endpoint Permission Map;
+  Business Rules). A condition on the state of a resource, such as a Ticket in
+  status Ignored, is not a capability: the screen document states how its
+  actions reflect it.
 - **Visibility grants no action.** A user who sees a confidential Ticket
   through an access grant or package maintainership gains no capability from
   it (Sentinel `docs/features/identity/rbac.md`, Scope and Confidential Ticket
@@ -353,8 +362,9 @@ share them, and changing one changes this document first.
 - **A role decides only where Sentinel's rule is about a role.** Only holders
   of the `vulnerability_analyst` role can be assigned a Ticket (Sentinel
   `docs/features/identity/rbac.md`, Business Rules), so that role decides the
-  landing, the Assigned to me view, and the attention summary. Everything else
-  depends on capabilities.
+  landing (Landing), the view that the Tickets entry opens, the Assigned to me
+  view, the attention summary, and the actions that make the signed-in user
+  the assignee of a Ticket. Everything else depends on capabilities.
 
 ### Profiles
 
@@ -363,21 +373,22 @@ one, or several, and then receives the union of their capabilities and the
 least restrictive scope (Sentinel `docs/features/identity/rbac.md`,
 Capabilities; Scope; Predefined Roles). The UI therefore shows each user the
 elements of every capability that they hold, whichever role grants it.
-Predefined Roles states the capabilities of each role; this document does not
-repeat them.
+Predefined Roles states the capabilities of each role; the In Sentinel column
+below only summarizes them.
 
 | Profile | In Sentinel | In the UI |
 |---|---|---|
 | Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the Home |
 | Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
-| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all` | The triage queue as landing, with the attention summary and the Assigned to me view, and the actions of its capabilities on Tickets and CVEs |
+| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all` | The queue of new Tickets as landing, with the attention summary and the Assigned to me view, and the actions of its capabilities on Tickets and CVEs |
 | Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential` | The actions of its capabilities on the Tickets that the user sees. Lands on the Home; its users are mostly bot accounts, which use the UI for their API keys |
 | Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the fetcher management of Data sources, and the actions of its other capabilities; Ticket work needs the analyst role too. Lands on the Home unless the user also holds the `vulnerability_analyst` role |
 
 ### Capabilities of the Signed-in User
 
 The UI reads the roles of the signed-in user from Get Current User (Sentinel
-`docs/features/identity/authentication.md`, Get Current User). The contract of
+`docs/features/identity/authentication.md`, Get Current User), the source of
+every element that depends on the `vulnerability_analyst` role. The contract of
 the pinned Sentinel version does not return the user's capabilities, and the UI
 does not derive them from the roles, which would copy Sentinel's role
 definitions and its union rule. Every element that depends on a capability
