@@ -206,14 +206,14 @@ A screen links each record that it shows to the screen of that record:
 - Every state of a screen that a user can return to, such as a view, a
   filter, or a page of a list, is in its URL (`docs/conventions.md`, Routes),
   so that back, reload, a bookmark, and a shared link show it again.
-- A navigation that the UI makes on its own, rather than for a link or a
-  control that the user chose, replaces the current address in the browser
-  history instead of adding an entry, so that back never returns to an
-  address that only leads away again. Such navigations are Sign in in place of
-  a screen that needs a session, the landing in place of `/` or of Sign in,
-  the landing of another user who signed in, and a screen's default in place
-  of a search parameter that it does not accept (`docs/behaviors.md`,
-  Session; Invalid Search Parameters).
+- A navigation away from an address to which back must not return replaces
+  that address in the browser history instead of adding an entry, so that
+  back never leads to an address that only leads away again. These
+  navigations are Sign in in place of a screen that needs a session or of the
+  screen from which the user signed out; the saved URL or the landing in place
+  of Sign in; the landing in place of `/`; the landing of another user who
+  signed in; and a screen's default in place of a search parameter that it
+  does not accept (`docs/behaviors.md`, Session; Invalid Search Parameters).
 
 ### Search
 
