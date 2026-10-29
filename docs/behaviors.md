@@ -72,12 +72,11 @@ document that do not take effect yet.
   `docs/features/identity/local-authentication.md`, Login; Sentinel
   `docs/features/identity/authentication.md`, Logout) means that the browser
   has no valid session: Sentinel answers an absent, expired, and invalidated
-  session alike (Sentinel `docs/api-spec.md`, Global Responses). The UI then
-  discards all the data that it read from the API, so that the next user of
-  the browser cannot see it, and leads to Sign in, as Sentinel's session
-  expiration handling also does (Sentinel
-  `docs/features/identity/authentication.md`, Session expiration handling).
-  On Sign in, a `401` changes nothing.
+  session alike (Sentinel `docs/features/identity/authentication.md`,
+  Frontend session behavior; Sentinel `docs/api-spec.md`, Global Responses).
+  The UI then discards all the data that it read from the API, so that the
+  next user of the browser cannot see it, and leads to Sign in. On Sign in, a
+  `401` changes nothing.
 - A navigation that the session forces, to Sign in or to the landing of
   another user (The Signed-in User), asks nothing and discards the input not
   yet submitted.
@@ -107,10 +106,11 @@ document that do not take effect yet.
 ### Session Expiration Message
 
 - Sign in tells the user that their session has expired only when the
-  browser had a session before, never on a first visit (Sentinel
-  `docs/features/identity/authentication.md`, Session expiration handling).
-- The cookie does not show whether the browser had a session, so the UI
-  records it: it keeps in the origin's local storage a record that this
+  browser had a session before, never on a first visit.
+- Neither the cookie, which no script can read, nor the `401`, which is the
+  same whatever its cause, shows whether the browser had a session (Sentinel
+  `docs/features/identity/authentication.md`, Frontend session behavior), so
+  the UI records it: it keeps in the origin's local storage a record that this
   browser has a session when it reads the signed-in user successfully, and
   removes the record when the user signs out (Sign-out). The record holds no
   data read from the API. Local storage is shared by the tabs of the browser
@@ -130,10 +130,8 @@ document that do not take effect yet.
   `403 AUTH_CROSS_ORIGIN_REJECTED` (Default Presentation by Status). Sentinel
   applies a change of a user's roles from the user's next request (Sentinel
   `docs/features/identity/rbac.md`, Permission Checking), so these reads keep
-  current the elements that depend on the roles (`docs/screen-map.md`,
-  Roles), and those that will depend on capabilities once a pinned Sentinel
-  version returns them (`docs/screen-map.md`, Capabilities of the Signed-in
-  User).
+  current the elements that depend on the roles and on the capabilities of
+  the user (`docs/screen-map.md`, Roles; Capabilities of the Signed-in User).
 - A later read that fails other than with a `401` changes nothing: the tab
   keeps the user that it shows, without a message.
 - When a read returns a user other than the one that the tab shows, for
@@ -619,18 +617,5 @@ complete profile and its manager, and the signed-in user alike: `id`,
 
 ## Open Decisions
 
-A decision that is not taken yet is listed here, with who takes it, and every
-design that depends on it waits for it.
-
-- **The frontend session behavior.** Sentinel's specifications define the
-  post-login redirect and the message after a `401` (Sentinel
-  `docs/features/identity/authentication.md`, Frontend session behavior), and
-  the texts of the login page (Sentinel
-  `docs/features/identity/sso-authentication.md`, Frontend flow), and remain
-  their authority until a pinned Sentinel version moves them to this
-  repository (`README.md`, Specification Boundary). Sentinel takes the
-  decision. Until then, these behaviors of this document do not take effect:
-  Return After Sign-in, Session Expiration Message, and the outcome of a `401`
-  to sign-out (Sign-out). The implementation of Sign in and of the session
-  handling of Session, which leads to Sign in, waits for that version. This
-  entry is then removed.
+No decision is open. A decision that is not taken yet is listed here, with who
+takes it, and every design that depends on it waits for it.

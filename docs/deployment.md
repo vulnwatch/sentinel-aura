@@ -474,7 +474,11 @@ the updated dependency, and so does the regeneration of the reference
 screenshots in step 3, so the pull request stays exempt from an issue
 (`docs/conventions.md`, Issues and work units). When step 2 changes code or
 documents, that work is human-directed scope: it gets a tracking issue, which
-the pull request closes.
+the pull request closes. The maintainer can then take the four steps in a pull
+request of their own instead, from the topic branch of that issue, with the
+title prefix that the next paragraph sets; once it merges, `master` declares
+the new version, and Renovate closes its own pull request, which no longer
+proposes an update.
 
 Its title uses the `feat(deps):` prefix, a minor release signal, when the new
 version is outside the supported Sentinel versions of the current pin: for a
