@@ -201,7 +201,7 @@ These are decided elsewhere. Do NOT report findings about them:
 3. When the change renders a value from the API as a link or navigates to
    it, read what the owning Sentinel specification guarantees about that
    value. When the change involves the session, sign-in, browser storage, or
-   cross-origin requests, read Sentinel
+   cross-origin requests, read `docs/behaviors.md` (Session) and Sentinel
    `docs/features/identity/authentication.md` (Session cookie, Frontend
    session behavior, Cross-Origin Request Protection, Security
    Considerations) and `docs/api-spec.md` (Cross-Origin Request Protection;

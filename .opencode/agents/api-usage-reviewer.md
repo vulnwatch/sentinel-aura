@@ -169,8 +169,9 @@ inefficiency without a screen that suffers from it is not a finding.
    Defaults, Pagination, Filtering, Sorting, Query Parameter Length Limit,
    Response Format, Global Responses, Scoped Responses, Response
    Applicability Derivation, Mutation Patterns, and Partial Update
-   Semantics. When the change handles a `401`, also read Sentinel
-   `docs/features/identity/authentication.md` (Frontend session behavior).
+   Semantics. When the change handles a `401`, also read `docs/behaviors.md`
+   (Session State) and Sentinel `docs/features/identity/authentication.md`
+   (Frontend session behavior).
    Read Sentinel in `../sentinel` at the revision the invoking agent states
    it verified (`AGENTS.md`, Sentinel as an External Authority); record a
    missing revision as a limitation. The clone's checkout may be a different
