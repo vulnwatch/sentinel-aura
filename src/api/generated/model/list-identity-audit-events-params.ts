@@ -7,11 +7,11 @@ export type ListIdentityAuditEventsParams = {
   /**
    * Actor UUID, exact username, or 'system'.
    */
-  actor?: string | null;
+  actor?: string;
   /**
    * Target user UUID or exact username.
    */
-  target_user?: string | null;
+  target_user?: string;
   /**
    * Filter by event type. Repeatable; OR semantics.
    */
@@ -19,11 +19,11 @@ export type ListIdentityAuditEventsParams = {
   /**
    * ISO 8601 date/datetime; inclusive lower bound.
    */
-  from_date?: string | null;
+  from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound.
    */
-  to_date?: string | null;
+  to_date?: string;
   /**
    * Page number.
    * @minimum 1

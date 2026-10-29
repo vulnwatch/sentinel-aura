@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.13.0"
+    "version": "0.13.1"
   },
   "paths": {
     "/health": {
@@ -229,14 +229,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "One of 'active', 'expired', or 'revoked'.",
               "title": "Status"
             },
@@ -533,14 +526,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Owner UUID or case-sensitive exact username.",
               "title": "Owner"
             },
@@ -551,14 +537,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "One of 'active', 'expired', or 'revoked'.",
               "title": "Status"
             },
@@ -767,15 +746,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "minLength": 2
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "minLength": 2,
               "description": "Case-insensitive substring across username, email, and full name.",
               "title": "Search"
             },
@@ -786,14 +758,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "boolean",
               "description": "Filter by active status.",
               "title": "Active"
             },
@@ -818,14 +783,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "boolean",
               "description": "true for users with at least one role, false for none.",
               "title": "Has Role"
             },
@@ -1065,15 +1023,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "minLength": 2
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "minLength": 2,
               "description": "Case-insensitive substring across username, email, and full name.",
               "title": "Search"
             },
@@ -1084,14 +1035,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "One of 'local' or 'external'.",
               "title": "Type"
             },
@@ -1102,14 +1046,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "boolean",
               "description": "Filter by active status.",
               "title": "Active"
             },
@@ -1134,14 +1071,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "boolean",
               "description": "true for users with at least one role, false for none.",
               "title": "Has Role"
             },
@@ -2135,14 +2065,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
               "title": "From Date"
             },
@@ -2153,14 +2076,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
               "title": "To Date"
             },
@@ -2263,14 +2179,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Actor UUID, exact username, or 'system'.",
               "title": "Actor"
             },
@@ -2281,14 +2190,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Target user UUID or exact username.",
               "title": "Target User"
             },
@@ -2313,14 +2215,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
               "title": "From Date"
             },
@@ -2331,14 +2226,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
               "title": "To Date"
             },
@@ -2778,14 +2666,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Filter by exact setting key.",
               "title": "Setting Key"
             },
@@ -2796,14 +2677,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Actor UUID, exact username, or 'system'.",
               "title": "Actor"
             },
@@ -2814,14 +2688,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
               "title": "From Date"
             },
@@ -2832,14 +2699,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
               "title": "To Date"
             },
@@ -3013,14 +2873,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Filter by run status (queued, running, success, failure, partial).",
               "title": "Status"
             },
@@ -3031,14 +2884,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound on created_at.",
               "title": "From Date"
             },
@@ -3049,14 +2895,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound on created_at.",
               "title": "To Date"
             },
@@ -3261,14 +3100,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound. Default: -7d.",
               "title": "From Date"
             },
@@ -3279,14 +3111,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound. Default: now.",
               "title": "To Date"
             },
@@ -3689,14 +3514,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Actor UUID or exact username.",
               "title": "Actor"
             },
@@ -3707,14 +3525,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
               "title": "From Date"
             },
@@ -3725,14 +3536,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
               "title": "To Date"
             },
@@ -3935,14 +3739,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Actor user UUID, exact username, or 'system'.",
               "title": "Actor"
             },
@@ -3953,14 +3750,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Case-insensitive literal substring search across comment, old_value, new_value, and detail.",
               "title": "Search"
             },
@@ -3971,14 +3761,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
               "title": "From Date"
             },
@@ -3989,14 +3772,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
               "title": "To Date"
             },
@@ -4109,14 +3885,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Free-text search; a Ticket matches if any field matches. SNTL identifier: prefix of the numeric part (optional `SNTL-` prefix, case-insensitive). CVE ID: case-insensitive prefix (`CVE-` optional for a year-number term such as `2024-1234`). Included package names: case-insensitive substring. External identifiers (e.g. GHSA IDs): case-insensitive prefix. Outer whitespace is trimmed; `%`, `_`, and backslash are literal.",
               "title": "Search"
             },
@@ -4141,14 +3910,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Filter by assignee: user UUID, exact username, or `none` for unassigned Tickets. An unknown user yields an empty page.",
               "title": "Assignee"
             },
@@ -4201,14 +3963,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Filter by maintainer of at least one included package: user UUID or exact username. An unknown user yields an empty page.",
               "title": "Maintainer"
             },
@@ -6212,14 +5967,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Case-insensitive substring match on the package name. Outer whitespace is trimmed once; an empty result means no search filter. `%`, `_`, and backslash are literal characters. Mutually exclusive with `name`.",
               "title": "Search"
             },
@@ -6230,14 +5978,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive match on the package name. Mutually exclusive with a non-empty `search`.",
               "title": "Name"
             },
@@ -7412,14 +7153,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive source (`manual` or a fetcher name).",
               "title": "Source"
             },
@@ -7430,14 +7164,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "One of `advisory`, `patch`, `issue`, or `article`. Any other value matches no reference.",
               "title": "Type"
             },
@@ -7853,14 +7580,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive logical package of the action.",
               "title": "Package Name"
             },
@@ -7871,14 +7591,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive IBS codestream of the action.",
               "title": "Codestream Name"
             },
@@ -7889,14 +7602,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action.",
               "title": "State"
             },
@@ -8035,16 +7741,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 2147483647,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 1,
               "description": "Exact maintenance incident number: a positive integer of at most 2147483647.",
               "title": "Incident Number"
             },
@@ -8055,14 +7754,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive logical package of the action.",
               "title": "Package Name"
             },
@@ -8073,14 +7765,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive IBS codestream of the action.",
               "title": "Codestream Name"
             },
@@ -8091,14 +7776,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action.",
               "title": "State"
             },
@@ -8223,14 +7901,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Free-text search. Outer whitespace is trimmed; a whitespace-only value is ignored. CVE ID: case-insensitive prefix; title and description: case-insensitive substring. `%`, `_`, and backslash are literal.",
               "title": "Search"
             },
@@ -8241,14 +7912,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Filter by CVE state: `published` or `rejected`. Any other value yields an empty page.",
               "title": "Cve State"
             },
@@ -8273,14 +7937,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "boolean",
               "description": "`true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket.",
               "title": "Has Ticket"
             },
@@ -8291,14 +7948,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded.",
               "title": "From Date"
             },
@@ -8309,14 +7959,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound on `published_date`. CVEs without a publication date are excluded.",
               "title": "To Date"
             },
@@ -8597,16 +8240,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 100,
-                  "pattern": "^[a-z][a-z0-9_]*$"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^[a-z][a-z0-9_]*$",
               "description": "Filter by one exact persisted source identifier (e.g. `nvd`), currently registered or historical. Must match `^[a-z][a-z0-9_]*$` and be at most 100 characters; an absent well-formed value yields an empty page.",
               "title": "Source"
             },
@@ -8617,14 +8253,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Filter by persisted fetch status: `success`, `failure`, or `missing`. Any other value yields an empty page.",
               "title": "Status"
             },
@@ -8635,14 +8264,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "boolean",
               "description": "`true`: only stalled records (`failure` whose streak began more than 30 days ago); `false`: every record except stalled ones. `false` does not imply retryable.",
               "title": "Stalled"
             },
@@ -8653,14 +8275,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound on fetched_at.",
               "title": "From Date"
             },
@@ -8671,14 +8286,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound on fetched_at.",
               "title": "To Date"
             },
@@ -9204,14 +8812,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Limit the re-fetch to one CVE source (for example `nvd`). Omit to re-fetch from every enabled source that supports single-CVE fetch.",
               "examples": [
                 "nvd"
@@ -9327,14 +8928,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Case-insensitive substring match against `name`, `display_name`, `version`, or `cpe`; a Product matches when any of those fields matches. `%`, `_`, and backslash are literal.",
               "title": "Search"
             },
@@ -9345,14 +8939,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive match against the canonical CPE.",
               "title": "Cpe"
             },
@@ -9495,14 +9082,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization.",
               "title": "Package"
             },
@@ -9617,14 +9197,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization.",
               "title": "Package"
             },
@@ -9739,14 +9312,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization.",
               "title": "Package"
             },

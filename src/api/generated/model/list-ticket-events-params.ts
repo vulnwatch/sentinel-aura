@@ -11,19 +11,19 @@ export type ListTicketEventsParams = {
   /**
    * Actor user UUID, exact username, or 'system'.
    */
-  actor?: string | null;
+  actor?: string;
   /**
    * Case-insensitive literal substring search across comment, old_value, new_value, and detail.
    */
-  search?: string | null;
+  search?: string;
   /**
    * ISO 8601 date/datetime; inclusive lower bound.
    */
-  from_date?: string | null;
+  from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound.
    */
-  to_date?: string | null;
+  to_date?: string;
   /**
    * Page number.
    * @minimum 1

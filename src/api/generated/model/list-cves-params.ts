@@ -9,11 +9,11 @@ export type ListCvesParams = {
   /**
    * Free-text search. Outer whitespace is trimmed; a whitespace-only value is ignored. CVE ID: case-insensitive prefix; title and description: case-insensitive substring. `%`, `_`, and backslash are literal.
    */
-  search?: string | null;
+  search?: string;
   /**
    * Filter by CVE state: `published` or `rejected`. Any other value yields an empty page.
    */
-  cve_state?: string | null;
+  cve_state?: string;
   /**
    * Filter by resolved severity: `critical`, `high`, `medium`, `low`, `none` (CVSS score 0.0), `unresolved` (no CVSS assessment). Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    */
@@ -21,15 +21,15 @@ export type ListCvesParams = {
   /**
    * `true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket.
    */
-  has_ticket?: boolean | null;
+  has_ticket?: boolean;
   /**
    * ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded.
    */
-  from_date?: string | null;
+  from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound on `published_date`. CVEs without a publication date are excluded.
    */
-  to_date?: string | null;
+  to_date?: string;
   /**
    * Page number.
    * @minimum 1

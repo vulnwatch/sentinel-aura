@@ -9,11 +9,11 @@ export type ListAllApiKeysParams = {
   /**
    * Owner UUID or case-sensitive exact username.
    */
-  owner?: string | null;
+  owner?: string;
   /**
    * One of 'active', 'expired', or 'revoked'.
    */
-  status?: string | null;
+  status?: string;
   /**
    * Page number.
    * @minimum 1
