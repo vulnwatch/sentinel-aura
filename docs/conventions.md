@@ -216,11 +216,9 @@ that needs it; content of another kind needs a new row first.
 - Every generated request goes through one shared request function. It uses
   origin-relative URLs under `/api/v1/` and the browser's default same-origin
   credentials, and it turns every error response into an error that carries
-  the HTTP status and, when the response provides them, Sentinel's `code` and
-  the request identifier, which the error presentation shows
-  (`docs/architecture.md`, API Client Generation; `docs/behaviors.md`,
-  Default Presentation by Status; Sentinel `docs/api-spec.md`, Response
-  Format; Request Tracing).
+  the HTTP status and, when the response provides one, Sentinel's `code`
+  (`docs/architecture.md`, API Client Generation; Sentinel
+  `docs/api-spec.md`, Response Format).
 - A request sends only the query parameters and request body members that
   the contract of the pinned version declares for the operation: a later
   Sentinel release within the supported Sentinel versions can declare
@@ -239,9 +237,10 @@ that needs it; content of another kind needs a new row first.
 - Data read from the API lives only in TanStack Query's cache, read through
   the generated hooks. Components do not copy it into their state, a context,
   a module variable, or browser storage.
-- After a successful change, the code invalidates the queries whose data the
-  change affects, so that they are read again from the API, instead of
-  editing the cached data.
+- After a change, whether it succeeds or fails, the code invalidates the
+  queries whose data the change affects, so that they are read again from the
+  API, instead of editing the cached data (`docs/behaviors.md`, Outcome of a
+  Change).
 - Form input lives in React state until it is submitted
   (`docs/architecture.md`, Routing, Server State, and Forms).
 - A later Sentinel release within the supported Sentinel versions can return

@@ -176,7 +176,7 @@ Every screen except Sign in has a header with:
 - the search (Search), except on the Home, which presents the search as its
   main content; and
 - the account menu, which shows the signed-in user and leads to Profile, API
-  keys, Identity audit log, and sign-out.
+  keys, Identity audit log, and Sign out.
 
 The Tickets entry opens the Ticket list in its New view for a user who holds
 the `vulnerability_analyst` role (Roles), and in its All view for every other

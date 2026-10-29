@@ -216,8 +216,8 @@ environment unless it names one.
   as untrusted input, such as the return URL that the post-login redirect
   keeps in `sessionStorage` (Sentinel
   `docs/features/identity/authentication.md`, Frontend session behavior;
-  `docs/behaviors.md`, Session), and registers no service worker, whose cache
-  such a script could fill with responses of its own.
+  `docs/behaviors.md`, Return After Sign-in), and registers no service worker,
+  whose cache such a script could fill with responses of its own.
 
 ### Session Cookie
 
@@ -700,9 +700,8 @@ document also describes the probes `/health` and `/ready`, which the Sentinel
 host does not route to the API (Same Origin). The requests use origin-relative
 URLs under `/api/v1/` (Same Origin) and the browser's default same-origin
 credentials, through one shared request function, in `src/api/request.ts`,
-that turns every error response into an error, carrying Sentinel's `code` and
-the request identifier when the response provides them (Sentinel
-`docs/api-spec.md`, Response Format; Request Tracing).
+that turns every error response into an error, carrying Sentinel's `code` when
+the response provides one (Sentinel `docs/api-spec.md`, Response Format).
 
 | Option | Impact |
 |---|---|
