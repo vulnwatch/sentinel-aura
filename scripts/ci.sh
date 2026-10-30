@@ -180,6 +180,9 @@ readonly TOKEN_BEFORE='(^|[^][A-Za-z0-9_-])'
 readonly TOKEN_VALUE_CLASS='[A-Za-z0-9-]*[A-Za-z0-9]-(\[[^][:space:]]*\]|\(([^()[:space:]]|\([^()[:space:]]*\))*\))'
 readonly TOKEN_PROPERTY_CLASS='\[(--[A-Za-z0-9_-]+|[a-z-]+):[^][:space:]]+\]'
 readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:space:]]*\]|\([^()[:space:]]*\)|[0-9]*\.?[0-9]+)"
+# When src/styles.css applies the dark theme through a selector, such as a
+# class of the page, it defines that selector as the dark: variant, so that
+# this pattern still covers a class of the dark theme alone.
 readonly TOKEN_THEME_CLASS=$'(([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-]|\\[[^][:space:]]*prefers-color-scheme[^][:space:]]*\\]:)[^[:space:]"\'`{}<>]*'
 # Classes that the check rejects and accepts. It checks them first, after a
 # quote and after another class, so that a pattern that stops matching cannot
@@ -237,9 +240,10 @@ design_token_violation() {
 # Prints each class of the files $@ that sets a color or a type size outside
 # the tokens, as <file>:<line>: <class>: <reason>.
 design_token_violations() {
-    # In the C locale, so that grep and the classification read the files as
-    # the same bytes, and the ranges of the patterns are those of ASCII.
-    local LC_ALL=C
+    # In the C locale, for grep too, so that grep and the classification read
+    # the files as the same bytes, and the ranges of the patterns are those
+    # of ASCII.
+    local -x LC_ALL=C
     local matches entry file line class reason status=0
     matches="$(grep -HnoE -e "${TOKEN_BEFORE}${TOKEN_VALUE_CLASS}" \
         -e "${TOKEN_BEFORE}${TOKEN_PROPERTY_CLASS}" \

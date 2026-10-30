@@ -78,6 +78,18 @@
             "message": "Set a stroke with the class of its token or stroke-current, not a prop (docs/conventions.md, Components and Styling)."
           },
           {
+            "propName": "stopColor",
+            "message": "Set a color with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "floodColor",
+            "message": "Set a color with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "lightingColor",
+            "message": "Set a color with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
             "propName": "fontSize",
             "message": "Set a type size with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
           }
