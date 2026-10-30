@@ -670,11 +670,14 @@ A list screen, such as the Ticket list, shows from top to bottom:
    {records}", such as "Search Tickets", which applies its term when the user
    presses Enter and removes it with its clear button; Filters, a secondary
    button with `list-filter`, which opens a popover with the filter fields
-   and shows the number of the filters that apply after its label, a filter
-   applying as soon as its field changes, or, for a field that the user types
-   into, such as a text or a date field, when the user presses Enter; and,
-   while a filter or a search applies, Clear filters, a quiet button with
-   `x`. The toolbar wraps when the width runs short.
+   and shows the number of the filters that apply after its label. A filter
+   applies as soon as its field changes; a combobox, when the user chooses an
+   option; and a field that the user types into, such as a text or a date
+   field, when the user presses Enter, which in either field of a range, such
+   as two dates, applies both. A typed value that is not applied returns to
+   the applied one when its field loses the focus. While a filter or a search
+   applies, Clear filters, a quiet button with `x`, follows Filters. The
+   toolbar wraps when the width runs short.
 3. The table (Tables), 16 px below.
 4. The pagination, 16 px below, at the end of the line, when the list has
    more than one page: the range, such as "1–20 of 25", in `text-14` and
@@ -851,8 +854,8 @@ its sizes and labels look as follows.
 - **Inactive and Bot:** the label follows the name, 6 px later, in `text-12`,
   weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a 4 px radius,
   and 4 px of side padding. An inactive user's name is in `fg-muted`. Where
-  the place is too narrow, only the name ends with an ellipsis; the labels
-  always show.
+  the place is too narrow, only the name ends with an ellipsis, unless a
+  table wraps it (Tables); the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name.
 - **No recorded actor:** "System" after a square of the avatar's size, on
