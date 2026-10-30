@@ -170,17 +170,22 @@ foundations and a screen already built departs from them, the change is
 right: do not ask it to copy the earlier screen, and list that screen under
 Drift outside the change.
 
-**Needs that the foundations leave open.** When the change and a screen
-already built meet the same need in different ways and no rule of the
-foundations decides between them, recommend aligning the change with the
-screen already built: that is an interface detail, which the implementing
-agent decides (`AGENTS.md`, Delegated decisions). When the two needs differ,
-so that each pattern fits its own, there is no finding. Making a pattern a
-rule for every screen changes a foundation document first
-(`docs/conventions.md`, Foundation Documents) and is the user's decision:
-report it as a foundation gap with its options, never as a requirement, and
-do not generalize from a single screen (`AGENTS.md`, Stop conditions before
-retained work).
+**Details that the foundations leave open.** The foundations leave some
+interface details to each screen, such as the label of a field, the order of
+the columns of a list, or the verb of an action that `docs/behaviors.md`
+(Actions) does not list. When the change and a screen already built treat
+the same detail of the same need in different ways, recommend aligning the
+change with the screen already built: that is an interface detail, which the
+implementing agent decides (`AGENTS.md`, Delegated decisions). When the two
+needs differ, so that each treatment fits its own, there is no finding. A
+pattern, a color, or a size that the design system does not define is not
+such a detail: a screen adds it to the design system first
+(`docs/design-system.md`, Principles), so a screen already built that uses
+one is drift, not precedent. Making a detail a rule for every screen changes
+a foundation document first (`docs/conventions.md`, Foundation Documents)
+and needs the user's confirmation: report it as a foundation gap with its
+placement options, never as a requirement (`AGENTS.md`, Stop conditions
+before retained work).
 
 **Cross-cutting behavior.** When a fix needs a behavior that the foundations
 own for every screen and do not define, such as where every screen shows a
@@ -247,9 +252,11 @@ confidently.
   its cards, a form, a dialog, a message, the loading indicator, an empty
   state, or an error in place of content — and lay out its screen as Page
   Layout does?
-- Where the design system defines no pattern, does the change meet the need
-  as the screens already built meet it, such as where a card places its
-  actions, how a picker chooses a user, or how a list filters by date?
+- Where the foundations leave an interface detail open, does the change
+  treat it as the screens already built treat it for the same need, such as
+  the label of the same field, the order of the same columns in two lists of
+  Tickets, or the verb of an action that `docs/behaviors.md` (Actions) does
+  not list?
 - Does it show each value as Values defines it, such as a severity, a
   priority, a Ticket status, a deadline, or a confidential Ticket, and each
   user in the form and at the size that `docs/behaviors.md` (Representation
@@ -267,8 +274,9 @@ confidently.
   terms, capitalization included, and the values of the contract by their
   names in sentence case (Domain Terms)?
 - Does the text follow Style, such as sentence case, an action named by a
-  verb and its object and never "OK", "Yes", or "Submit", a message that says
-  what happened and what to do, and a count in the singular or the plural?
+  verb and, where the screen offers it for several objects, its object, never
+  "OK", "Yes", or "Submit", a message that says what happened and what to do,
+  and a count in the singular or the plural?
 
 ### Confirmations, outcomes, and errors
 
@@ -282,10 +290,11 @@ confidently.
 - Does the outcome of each change show where Outcome of a Change puts it: in
   place for a result that shows where the user acted, the screen of a record
   that the change created, and otherwise a short message in the message area?
-- Does each failure show where Where Errors Appear puts it, with the heading,
-  the message, and the action of Default Presentation by Status or of Missing
-  and Inaccessible Records, rather than in a place or with words of the
-  screen's own?
+- Does each failure show where Errors puts it, with the heading, the
+  message, and the action that Errors gives it (Where Errors Appear; Default
+  Presentation by Status; Missing and Inaccessible Records; Retries and
+  Unconfirmed Changes), rather than in a place or with words of the screen's
+  own?
 
 ### Visual consistency
 
@@ -364,9 +373,9 @@ the verdict:
    heuristic), the file and line or the screenshot of the change, the
    scenario, the smallest remediation, and the tag of another reviewer that
    also owns it
-3. **Foundation gaps**: each need that the change and a screen already built
-   meet in different ways without a rule to decide, or that a fix needs and
-   the foundations do not define, with the options and a recommendation
+3. **Foundation gaps**: each interface detail that should become a rule for
+   every screen, and each behavior that a fix needs and the foundations do
+   not define, with the placement options and a recommendation
 4. **Drift outside the change**: each screen already built that departs from
    the foundations where the change follows them, in one line with its
    anchor; it does not affect the verdict
