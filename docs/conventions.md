@@ -166,6 +166,7 @@ rules; review enforces the rest.
 | `src/main.tsx` | The entry point: global configuration, then the mounting of the application |
 | `src/zod.ts` | Zod's global configuration, which `src/main.tsx` imports first |
 | `src/styles.css` | The stylesheet: the Tailwind CSS entry point |
+| `src/favicon.svg` | The favicon, which the entry document links: the Sentinel mark in its own colors (`docs/design-system.md`, Sentinel Mark) |
 | `src/app.tsx` | The providers that every screen shares |
 | `src/router.ts` | The route tree and the router |
 | `src/routes/` | One module per route: its definition and its page component |

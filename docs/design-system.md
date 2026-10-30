@@ -43,6 +43,7 @@ sidebar is the one exception (Spacing and Sizes).
 - [Icons](#icons)
   - [Icon Set](#icon-set)
   - [Icons by Need](#icons-by-need)
+  - [Sentinel Mark](#sentinel-mark)
 - [Focus and Motion](#focus-and-motion)
 - [Page Layout](#page-layout)
   - [Sidebar](#sidebar)
@@ -98,7 +99,9 @@ sidebar is the one exception (Spacing and Sizes).
   class, such as `bg-surface`, `text-fg-muted`, or `text-14`, and code uses
   no other color or type size (`docs/conventions.md`, Components and
   Styling): a value that this document lacks is added to it first. The
-  avatar's colors are tokens too (Palette).
+  avatar's colors are tokens too (Palette). The favicon, which the browser
+  shows outside the page, has two colors of its own, which no screen uses
+  (Sentinel Mark).
 
 ## Themes and Colors
 
@@ -389,14 +392,15 @@ that the code imports ship.
   technologies. An icon alone in a control gives the control no name: the
   control has its own accessible name, which a tooltip shows (Menus,
   Popovers, and Tooltips).
-- The marks of severity, priority, and Ticket status are drawn by this
-  document, not taken from Lucide (Values).
+- The marks of severity, priority, and Ticket status (Values) and the
+  Sentinel mark (Sentinel Mark) are drawn by this document, not taken from
+  Lucide.
 
 ### Icons by Need
 
 | Need | Lucide icon |
 |---|---|
-| Product name | `shield-check` |
+| Product name | The Sentinel mark, which is not a Lucide icon (Sentinel Mark) |
 | Tickets, CVEs, Packages, Products, My packages, Data sources, Administration | `ticket`, `shield-alert`, `package`, `boxes`, `package-check`, `database`, `settings` |
 | Search | `search` |
 | Collapse and expand the sidebar | `panel-left-close`, `panel-left-open` |
@@ -419,6 +423,31 @@ that the code imports ship.
 
 A need that the table does not list takes the Lucide icon that names it best,
 and the change adds its row.
+
+### Sentinel Mark
+
+The Sentinel mark is the icon of the product name and the favicon of every
+page. It is drawn after Sentinel's logo, a shield whose outline two cuts open
+into an S (Sentinel `.github/assets/logo.svg`), in the style of Lucide, so
+that it sits with the icons around it.
+
+- It is one line on Lucide's 24-unit grid, with Lucide's stroke of 2 and
+  round ends and joins, the path
+  `M20 8V4.5C17.5 5 14 4.5 12 2C10 4.5 6.5 5 4 4.5V9.5L19.5 13.5C18 18.5 16.16 20.55 12 22C8.61 20.82 6.77 19.24 5.39 16`.
+  From the right side, it runs over the shoulders and the peak of the shield,
+  down the left side, across the shield in a diagonal, and around its lower
+  half. The right side ends above the diagonal, and the lower half short of
+  the left side: these two openings, the only parts that break the symmetry
+  of the shield, make the S.
+- In the page it follows the rules of the other icons (Icon Set), in the
+  color of the text.
+- As the favicon it is drawn in `#213661`, the blue of Sentinel's logo, and,
+  when the browser reports a preference for a dark color scheme, in
+  `#E6EDF3`, the `fg` of the dark theme. The browser shows the favicon in its
+  own tabs, whose colors follow its color scheme rather than the theme of the
+  UI (`docs/behaviors.md`, Preferences), and no single color stands out on
+  both light and dark tabs. These two colors are the favicon's own, and no
+  screen uses them (Principles).
 
 ## Focus and Motion
 
@@ -443,7 +472,7 @@ the sidebar, the sidebar scrolls within itself.
 
 **Expanded, 216 px wide,** from top to bottom:
 
-- the product name, a link to the landing: `shield-check` at 20 px and
+- the product name, a link to the landing: the Sentinel mark at 20 px and
   "Sentinel" in `text-16`, weight 600, in a row 56 px high;
 - the search field, 36 px high with 12 px margins, on `canvas` with a
   `border-strong` boundary, the `search` icon at its start, and the
@@ -462,7 +491,7 @@ the sidebar, the sidebar scrolls within itself.
   in `fg-muted`. It opens the account menu.
 
 **Collapsed, 56 px wide,** the same parts, centered, as icon buttons of 40 px:
-the product name as `shield-check` at 22 px, named "Sentinel"; the search as
+the product name as the Sentinel mark at 22 px, named "Sentinel"; the search as
 the `search` button, which opens the search field in a popover beside the
 sidebar; each entry as its icon at 18 px, named by its entry, the current one
 with the `sidebar-active` background, its icon in `link`, and the 3 px bar in
