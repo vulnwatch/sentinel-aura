@@ -675,7 +675,8 @@ A list screen, such as the Ticket list, shows from top to bottom:
    option; and a field that the user types into, such as a text or a date
    field, when the user presses Enter, which in either field of a range, such
    as two dates, applies both. A typed value that is not applied returns to
-   the applied one when its field loses the focus. While a filter or a search
+   the applied one when the focus leaves its field, or, for a range, both of
+   its fields. While a filter or a search
    applies, Clear filters, a quiet button with `x`, follows Filters. The
    toolbar wraps when the width runs short.
 3. The table (Tables), 16 px below.
