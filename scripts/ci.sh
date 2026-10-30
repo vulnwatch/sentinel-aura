@@ -181,7 +181,7 @@ readonly TOKEN_VALUE_CLASS='[A-Za-z0-9-]*[A-Za-z0-9]-(\[[^][:space:]]*\]|\(([^()
 readonly TOKEN_PROPERTY_CLASS='\[(--[A-Za-z0-9_-]+|[a-z-]+):[^][:space:]]+\]'
 readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:space:]]*\]|\([^()[:space:]]*\)|[0-9]*\.?[0-9]+)"
 # The variants of one theme that Tailwind and the browser provide. A change
-# that adds another way for a class to select a theme adds it here
+# that adds another way for a class to apply to one theme alone adds it here
 # (docs/conventions.md, Checks).
 readonly TOKEN_THEME_CLASS=$'(([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-]|\\[[^][:space:]]*prefers-color-scheme[^][:space:]]*\\]:)[^[:space:]"\'`{}<>]*'
 # Classes that the check rejects and accepts. It checks them first, after a
