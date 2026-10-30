@@ -628,12 +628,12 @@ A status that the pinned contract does not list shows as received, after
 
 `docs/behaviors.md` (Deadlines) defines the badge, its text, and its color.
 It is 24 px high, with a 4 px radius and 8 px of side padding, in `text-13`,
-weight 500, with tabular figures: the name of the phase, a space, and the
+weight 500, with tabular figures: the name of the deadline, a space, and the
 days. It is green as the `success` tone, yellow as the `warning` tone, and
 red as the `danger` tone, with `clock-alert` at 12 px, 4 px before the name
-of the phase. A current phase that the pinned contract does not list shows
-in the same shape in the `neutral` tone, without an icon. Another due date
-with an overdue milestone status shows `clock-alert` at 14 px in
+of the deadline. A current phase that the pinned contract does not list
+shows in the same shape in the `neutral` tone, without an icon. Another due
+date with an overdue milestone status shows `clock-alert` at 14 px in
 `danger-icon` before that status.
 
 ### Confidential Tickets

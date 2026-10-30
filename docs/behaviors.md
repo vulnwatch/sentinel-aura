@@ -392,8 +392,8 @@ actor of a recorded action (Representation of a User) are exceptions.
 ### Deadlines
 
 A screen that shows the deadline of a Ticket, such as the Ticket list in its
-rows, shows it as a badge with the phase that the deadline closes and the
-days that remain to it. The phase is the current phase of the Ticket, the
+rows, shows it as a badge with the name of the deadline and the days that
+remain to it. The deadline depends on the current phase of the Ticket, the
 earliest phase of its remediation that is not completed, among the phases
 that Sentinel observes (Sentinel `docs/features/tickets/ticket-deadlines.md`,
 Ticket Current Phase):
@@ -411,24 +411,25 @@ Ticket Current Phase):
 - A current phase of `null` with due dates belongs to a Ticket in status
   Analyzed that has no open phase that Sentinel observes but a track whose
   later phases it cannot observe, such as an Analyzed Ticket without a CVE
-  (same document, Rules; Observability of Later Phases). Its work is not
-  done, so its badge shows the final release deadline. A `null` without due
-  dates means that no SLA applies, as for an Ignored or Duplicated Ticket
-  (same document, Null Due Dates), and `done` that no phase remains, as for
-  a Resolved Ticket. Where a screen has no badge to show, the place stays
-  empty.
-- The badge shows the name of the phase, then the number of whole days that
-  remain, followed by `d`, such as `Submission 3d`, and `0d` in the last day.
-  Once the date is past, it shows the number of days begun since, as a
-  negative number, such as `UM -2d`.
+  (same document, Rules; Observability of Later Phases). Sentinel cannot tell
+  whether its work is done, so its badge shows the final release deadline,
+  which still applies. A `null` without due dates means that no SLA applies,
+  as for an Ignored or Duplicated Ticket (same document, Null Due Dates), and
+  `done` that no phase remains, as for a Resolved Ticket. Where a screen has
+  no badge to show, the place stays empty.
+- The badge shows the name of the deadline, Triage, Submission, UM, QA, or
+  Release, then the number of whole days that remain, followed by `d`, such
+  as `Submission 3d`, and `0d` in the last day. Once the date is past, it
+  shows the number of days begun since, as a negative number, such as
+  `UM -2d`.
 - The badge is red once the date is past, which Sentinel defines as a date
   before the current instant (same document, Evaluation Instant); yellow
-  while less than a third of the window of its phase remains; and green
-  otherwise. The window of a phase runs to its date from the due date of the
-  phase before it, or from the Ticket's creation for Triage and Release, so
-  that a phase that becomes current on time starts in green; a window from
-  the Ticket's creation would show UM and QA in yellow during all the time
-  that their shares of the SLA give them. The proportion fits windows that
+  while less than a third of the window of its deadline remains; and green
+  otherwise. The window runs to the date from the due date of the phase
+  before it, or from the Ticket's creation for Triage and Release, so that a
+  phase that becomes current on time starts in green; a window from the
+  Ticket's creation would show UM and QA in yellow during all the time that
+  their shares of the SLA give them. The proportion fits windows that
   differ widely, from 3 days for the triage or the UM phase of a Critical
   Ticket to 180 days for the release of a Low one (same document, SLA Tier;
   Phase Shares; Due Dates).
@@ -444,9 +445,10 @@ Ticket Current Phase):
   past due, and the Ticket counts in the overdue count of that phase in the
   attention summary (`docs/screen-map.md`, Attention Summary), as long as the
   browser's clock agrees with Sentinel's. A Release badge is the exception:
-  Sentinel never reports a phase that it cannot observe as past due, so its
-  Ticket counts in no overdue count, even when the badge is red (same
-  document, Observability of Later Phases).
+  its Ticket has no current phase, and Sentinel never reports a phase that it
+  cannot observe as past due, so the Ticket counts in no overdue count, even
+  when the badge is red (Sentinel `docs/features/tickets/ticket-deadlines.md`,
+  Observability of Later Phases).
 - Another due date, such as one of a track or of a maintainer's workbench
   item, shows as a date (Display), next to the milestone status that Sentinel
   returns for it, named as Sentinel names it (Wording). An `overdue` status is

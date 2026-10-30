@@ -304,7 +304,7 @@ above its views five counts of the Tickets that need attention:
 | Triage overdue | Current phase Triage, past due: in status New or Analysis, with the triage due date past |
 | Submission overdue | Current phase Submission, past due: a maintainer's submission of the fix is late |
 | UM overdue | Current phase UM, past due: the release request of the SUSE maintenance update team is late |
-| QA overdue | Current phase QA, past due: the release of the update after QA is late, past the final release deadline |
+| QA overdue | Current phase QA, past due: the release of the update after QA is late, past the final release deadline (Sentinel `docs/features/tickets/ticket-deadlines.md`, Formula) |
 
 - The current phase of a Ticket is the earliest phase of its remediation that
   is not completed, among the phases that Sentinel observes, and Sentinel
