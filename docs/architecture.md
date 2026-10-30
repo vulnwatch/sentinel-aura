@@ -5,9 +5,9 @@ boundary, its link to Sentinel's API contract, the hosting constraints that
 Sentinel fixes, and the architecture decisions, both those taken and those
 still open. It is the foundation document on which every other design builds.
 The users, screen map, and roles belong to `docs/screen-map.md`, the
-cross-cutting behaviors to `docs/behaviors.md`, and the design system to the
-other foundation document (`docs/conventions.md`, Foundation Documents); the
-CI pipeline and the release process belong to `docs/deployment.md`; backend
+cross-cutting behaviors to `docs/behaviors.md`, and the design system to
+`docs/design-system.md` (`docs/conventions.md`, Foundation Documents); the CI
+pipeline and the release process belong to `docs/deployment.md`; backend
 behavior, the API contract, and the obligations that the contract places on
 clients belong to Sentinel (`README.md`, Specification Boundary).
 
@@ -82,7 +82,7 @@ UI needs is added to the API for every consumer.
 
 **Audience and language.** The UI is for internal use only. It is written in
 English only and has no localization. Its visual design belongs to the design
-system of the UI foundations (`docs/conventions.md`, Foundation Documents).
+system, `docs/design-system.md`.
 
 ## Authority Between the Repositories
 
@@ -213,10 +213,10 @@ environment unless it names one.
   Documentation). Such a script can also read and change the origin's browser
   storage. The UI therefore keeps no API data there (`docs/conventions.md`,
   Data Read from the API), treats every value that it reads from that storage
-  as untrusted input, such as the URL to which Sign in returns and the session
-  record (`docs/behaviors.md`, Return After Sign-in; Session Expiration
-  Message), and registers no service worker, whose cache such a script could
-  fill with responses of its own.
+  as untrusted input, such as the URL to which Sign in returns, the session
+  record, and the preferences (`docs/behaviors.md`, Return After Sign-in;
+  Session Expiration Message; Preferences), and registers no service worker,
+  whose cache such a script could fill with responses of its own.
 
 ### Session Cookie
 
@@ -665,9 +665,9 @@ when a form needs one.
 #### Components and Styling
 
 **Choice:** React Aria Components provide the behavior and accessibility of the
-interactive elements, and Tailwind CSS styles them. The visual design belongs
-to the design system of the UI foundations (`docs/conventions.md`, Foundation
-Documents).
+interactive elements, and Tailwind CSS styles them. The visual design,
+including the font and the icon set that it chooses, belongs to the design
+system, `docs/design-system.md`.
 
 | Option | Impact |
 |---|---|
@@ -876,7 +876,10 @@ time. A production build of the stack runs under this policy without
 violations in Chromium and Firefox: it needs no inline script, no evaluated
 code, and no inserted style except the hashed one, once Zod's run-time code
 generation is disabled. The end-to-end tests fail on any policy violation, so
-a library update that breaks the policy is caught before release.
+a library update that breaks the policy is caught before release. The code
+that shows the theme from the first paint (`docs/behaviors.md`, Preferences)
+runs before the page renders, so it is a script file of the UI's origin as
+well; the policy is not relaxed for it.
 
 The image does not set `Strict-Transport-Security`, because the header
 applies to the whole host and only over HTTPS. The component that terminates

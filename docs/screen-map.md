@@ -7,7 +7,7 @@ document (`docs/conventions.md`, Foundation Documents): every screen follows
 it, and a screen that needs another area, another navigation entry, or another
 rule for a profile changes this document first. The architecture belongs to
 `docs/architecture.md`, the cross-cutting behaviors to `docs/behaviors.md`, and
-the design system to the other foundation document; backend behavior, the API
+the design system to `docs/design-system.md`; backend behavior, the API
 contract, the obligations that the contract places on clients, and
 authorization belong to Sentinel (`README.md`, Specification Boundary).
 
@@ -27,7 +27,7 @@ to its screen document (`docs/conventions.md`, Screen Documents).
   - [Every User](#every-user)
 - [Areas and Screens](#areas-and-screens)
 - [Navigation](#navigation)
-  - [Header](#header)
+  - [Sidebar](#sidebar)
   - [Links Between Areas](#links-between-areas)
   - [Browser History](#browser-history)
   - [Search](#search)
@@ -165,19 +165,36 @@ under the path of the screen, and its screen document records it.
 
 ## Navigation
 
-### Header
+### Sidebar
 
-Every screen except Sign in has a header with:
+Every screen has a sidebar along its left edge, except Sign in and a screen
+that shows while no signed-in user is known, such as the error of the first
+read of the signed-in user (`docs/behaviors.md`, Session State). The sidebar
+holds, from top to bottom:
 
 - the product name, which leads to the landing (`/`);
+- the search (Search), except on the Home, which presents the search as its
+  main content;
 - the global navigation: Tickets, CVEs, Packages, Products, My packages, Data
   sources, and Administration, in this order. Administration appears only to
   a user who holds `manage_users` or `manage_settings` (Roles); every other
   entry appears to every user;
-- the search (Search), except on the Home, which presents the search as its
-  main content; and
-- the account menu, which shows the signed-in user and leads to Profile, API
-  keys, Identity audit log, and Sign out.
+- the button that collapses or expands the sidebar; and
+- the account menu, which shows the signed-in user, leads to Profile, API
+  keys, and Identity audit log, offers the choice of theme
+  (`docs/behaviors.md`, Preferences), and offers Sign out.
+
+The sidebar is expanded, with the name of each entry, or collapsed to icons,
+each of which shows its name on hover and on keyboard focus
+(`docs/design-system.md`, Sidebar). From a window width of 1024 CSS pixels it
+follows the user's preference (`docs/behaviors.md`, Preferences). Below that
+width it is always collapsed, so that the content keeps its room, and its
+expand button opens the expanded sidebar over the content, as a dialog that
+takes the focus. Escape, its close button, or a click outside it closes it
+and returns the focus to the expand button; a navigation from it, such as an
+entry, the search, or an item of the account menu, closes it, and the focus
+follows the navigation (`docs/behaviors.md`, Accessibility). Opening it
+changes no preference, and a window that grows past that width closes it.
 
 The Tickets entry opens the Ticket list in its New view for a user who holds
 the `vulnerability_analyst` role (Roles), and in its All view for every other
@@ -234,7 +251,7 @@ The search takes one term:
 ## Landing
 
 The landing is the screen to which `/` leads, as the product name in the
-header does, and which Sign in opens after a sign-in when it has no saved URL
+sidebar does, and which Sign in opens after a sign-in when it has no saved URL
 to return to (`docs/behaviors.md`, Return After Sign-in). It depends on the
 user:
 
@@ -369,7 +386,7 @@ users bookmark and share them, and changing one changes this document first.
   it (Sentinel `docs/features/identity/rbac.md`, Scope and Confidential Ticket
   Visibility).
 - **Navigation follows the same rule.** A navigation entry appears only to a
-  user who can use its area (Header). A user who opens the path of a screen
+  user who can use its area (Sidebar). A user who opens the path of a screen
   without the capability that its operations require sees the API's refusal
   (`docs/behaviors.md`, Default Presentation by Status).
 - **A role decides only where Sentinel's rule is about a role.** Only holders

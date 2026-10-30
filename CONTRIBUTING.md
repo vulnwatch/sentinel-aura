@@ -12,10 +12,14 @@ Please report unacceptable behavior to security@suse.com.
 
 ## Project Status
 
-The repository contains the application skeleton and its build and test
-tooling, but no screens yet; see [README.md](README.md#project-status). Until
-the UI foundations exist, contributions are limited to documentation, project
-policy, and repository tooling.
+The repository contains the application skeleton, its build and test
+tooling, and the UI foundations, but no screens yet; see
+[README.md](README.md#project-status). The foundation documents define the
+architecture, the users, screen map, and roles, the cross-cutting behaviors,
+and the design system (see
+[Foundation Documents](docs/conventions.md#foundation-documents)). Screens are
+built feature by feature, each from an issue whose acceptance criteria are
+agreed with the maintainers (see [Specification Workflow](#specification-workflow)).
 
 ## How to Contribute
 
