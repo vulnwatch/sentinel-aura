@@ -453,11 +453,11 @@ that needs it; content of another kind needs a new row first.
   classes in the text of those files, comments included, and so does the
   check. A change that adds another way for a class to apply to one theme
   alone, such as a selector that marks the theme of the page, also extends
-  the check, so that it rejects those classes too. The lint rejects the `style` attribute
-  and the attributes and props of colors and type sizes, such as `fill`, on
-  elements and components alike. For a `style` attribute that sets neither a
-  color nor a type size, the rule is disabled inline as a false positive
-  (below).
+  the check, so that it rejects those classes too. The lint rejects the
+  `style` attribute and the attributes and props of colors and type sizes,
+  such as `fill`, on elements and components alike. For a `style` attribute
+  that sets neither a color nor a type size, the rule is disabled inline as a
+  false positive (below).
 - Every change also passes the end-to-end tests, which CI runs as a required
   check too (`docs/deployment.md`, Workflow Inventory) and
   `scripts/dev-env.sh e2e` runs locally.
