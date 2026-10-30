@@ -840,8 +840,9 @@ A list screen, such as the Ticket list, shows from top to bottom:
 
 ## Representation of a User
 
-`docs/behaviors.md` (Representation of a User) defines what shows for a user;
-its sizes and labels look as follows.
+`docs/behaviors.md` (Representation of a User) defines what shows for a user.
+This section defines the dimensions of its three sizes, where each is used,
+and how the labels look.
 
 | Size | Avatar | Use |
 |---|---|---|

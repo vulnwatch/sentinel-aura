@@ -643,11 +643,9 @@ complete profile and its manager, and the signed-in user alike: `id`,
   Only the actor of a recorded action is "System": another field without a
   user, such as the assignee of an unassigned Ticket, is an absent value
   (Absent Values).
-- **Sizes.** Three sizes: small for text, table rows, and the options of a
-  field; medium for other lists of users, the account button, and the account
-  menu; and large for the heading of a user's screen. `docs/design-system.md`
-  (Representation of a User) defines their dimensions and how the labels
-  look, never by color alone (Accessibility).
+- **Sizes.** Three sizes, small, medium, and large. `docs/design-system.md`
+  (Representation of a User) defines their dimensions, where each is used,
+  and how the labels look, never by color alone (Accessibility).
 
 ## Open Decisions
 
