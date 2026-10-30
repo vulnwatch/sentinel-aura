@@ -100,7 +100,7 @@ sidebar is the one exception (Spacing and Sizes).
   no other color or type size (`docs/conventions.md`, Components and
   Styling): a value that this document lacks is added to it first. The
   avatar's colors are tokens too (Palette). The favicon, which the browser
-  shows outside the page, has two colors of its own, which no screen uses
+  shows outside the page, has two colors of its own, outside the tokens
   (Sentinel Mark).
 
 ## Themes and Colors
@@ -441,13 +441,13 @@ that it sits with the icons around it.
   of the shield, make the S.
 - In the page it follows the rules of the other icons (Icon Set), in the
   color of the text.
-- As the favicon it is drawn in `#213661`, the blue of Sentinel's logo, and,
-  when the browser reports a preference for a dark color scheme, in
-  `#E6EDF3`, the `fg` of the dark theme. The browser shows the favicon in its
-  own tabs, whose colors follow its color scheme rather than the theme of the
-  UI (`docs/behaviors.md`, Preferences), and no single color stands out on
-  both light and dark tabs. These two colors are the favicon's own, and no
-  screen uses them (Principles).
+- As the favicon it is drawn in `#213661`, the lighter blue of Sentinel's
+  logo, and, when the browser reports a preference for a dark color scheme,
+  in `#E6EDF3`, taken from the `fg` of the dark theme. The browser shows the
+  favicon in its own tabs, whose colors follow its color scheme rather than
+  the theme of the UI (`docs/behaviors.md`, Preferences), and no single color
+  stands out on both light and dark tabs. These two colors are the favicon's
+  own, outside the tokens (Principles).
 
 ## Focus and Motion
 
