@@ -303,10 +303,18 @@ that needs it; content of another kind needs a new row first.
 - Styling uses the Tailwind CSS utility classes of the tokens that
   `docs/design-system.md` defines, which replace Tailwind's default colors
   and type sizes, and no screen or component styles the light or the dark
-  theme alone. No arbitrary value of Tailwind, such as `text-[#9A6700]`, and
-  no `style` attribute sets a color or a type size. `src/styles.css`, which
+  theme alone, so no class uses the `dark:` variant. `src/styles.css`, which
   holds the tokens, is the only stylesheet of the page besides the one that
   React Aria inserts (`docs/architecture.md`, Security Headers).
+- A color or a type size is set only by the class of its token, such as
+  `text-fg-muted`, `stroke-danger-icon`, or `text-14`: not by an arbitrary
+  value or property of Tailwind, such as `text-[#9A6700]`, `bg-(--accent)`,
+  or `[color:#FFFFFF]`, by a modifier of a class, such as the opacity of
+  `text-fg/70`, or by a `style` attribute. An SVG element or an icon takes
+  its colors and type size from classes, such as `fill-none` and
+  `stroke-current`, never from an attribute or a prop, such as `fill`,
+  `stroke`, `color`, or `fontSize`. The lint and the design token check
+  reject these (Checks).
 - A component declares the type of its props in its own module.
 
 ### No Raw HTML Injection
@@ -429,6 +437,17 @@ that needs it; content of another kind needs a new row first.
 - Like every Node.js command, they run through `scripts/tooling.sh`
   (`docs/architecture.md`, Development Environment), never on the host; the
   `check` script of `package.json` runs all four.
+- Every change also passes the design token check, which
+  `scripts/ci.sh ui-checks` runs after the lint, in the required `UI Checks`
+  job and in `scripts/ci.sh all` (`docs/deployment.md`, Workflow Inventory).
+  In the modules under `src/` other than the generated API client, it
+  rejects the classes that set a color or a type size outside the tokens and
+  those that use the `dark:` variant (Components and Styling). Tailwind CSS
+  finds its classes in the text of those files, comments included, and so
+  does the check. The lint rejects the `style` attribute and the attributes
+  and props of colors and type sizes, such as `fill`, on elements and
+  components alike; a `style` attribute that sets neither a color nor a type
+  size disables its rule inline, as the last rule of this section allows.
 - Every change also passes the end-to-end tests, which CI runs as a required
   check too (`docs/deployment.md`, Workflow Inventory) and
   `scripts/dev-env.sh e2e` runs locally.
