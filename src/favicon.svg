@@ -1,0 +1,13 @@
+<!-- The Sentinel mark with the stroke and the colors of the favicon
+     (docs/design-system.md, Sentinel Mark). The light color is an attribute,
+     so that the mark keeps it wherever the style does not apply. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#213661" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      path {
+        stroke: #E6EDF3;
+      }
+    }
+  </style>
+  <path d="M20 8V4.5C17.5 5 14 4.5 12 2C10 4.5 6.5 5 4 4.5V9.5L19.5 13.5C18 18.5 16.16 20.55 12 22C8.61 20.82 6.77 19.24 5.39 16" />
+</svg>

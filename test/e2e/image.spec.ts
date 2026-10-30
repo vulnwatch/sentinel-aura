@@ -145,6 +145,8 @@ test.describe("the UI's image", () => {
     const files = [
       { path: await referencedAsset("js"), type: "application/javascript" },
       { path: await referencedAsset("css"), type: "text/css" },
+      // The favicon (docs/design-system.md, Sentinel Mark).
+      { path: await referencedAsset("svg"), type: "image/svg+xml" },
     ];
     for (const { path, type } of files) {
       const response = await get(request, path);

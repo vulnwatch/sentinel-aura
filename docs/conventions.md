@@ -166,6 +166,7 @@ rules; review enforces the rest.
 | `src/main.tsx` | The entry point: global configuration, then the mounting of the application |
 | `src/zod.ts` | Zod's global configuration, which `src/main.tsx` imports first |
 | `src/styles.css` | The stylesheet: the Tailwind CSS entry point |
+| `src/favicon.svg` | The favicon, which the entry document links: the Sentinel mark in its own colors (`docs/design-system.md`, Sentinel Mark) |
 | `src/app.tsx` | The providers that every screen shares |
 | `src/router.ts` | The route tree and the router |
 | `src/routes/` | One module per route: its definition and its page component |
@@ -304,7 +305,8 @@ that needs it; content of another kind needs a new row first.
   and type sizes, and no screen or component styles the light or the dark
   theme alone. No arbitrary value of Tailwind, such as `text-[#9A6700]`, and
   no `style` attribute sets a color or a type size. `src/styles.css`, which
-  holds the tokens, is the only stylesheet.
+  holds the tokens, is the only stylesheet of the page besides the one that
+  React Aria inserts (`docs/architecture.md`, Security Headers).
 - A component declares the type of its props in its own module.
 
 ### No Raw HTML Injection
