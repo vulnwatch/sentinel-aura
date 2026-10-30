@@ -309,12 +309,13 @@ that needs it; content of another kind needs a new row first.
 - A color or a type size is set only by the class of its token, such as
   `text-fg-muted`, `stroke-danger-icon`, or `text-14`: not by an arbitrary
   value or property of Tailwind, such as `text-[#9A6700]`, `bg-(--accent)`,
-  or `[color:#FFFFFF]`, by a modifier of a class, such as the opacity of
-  `text-fg/70`, or by a `style` attribute. An SVG element or an icon takes
-  its colors and type size from classes, such as `fill-none` and
+  or `[color:#FFFFFF]`; not by a modifier of a class, such as the opacity of
+  `text-fg/70`; and not by a `style` attribute. An SVG element or an icon
+  takes its colors and type size from classes, such as `fill-none` and
   `stroke-current`, never from an attribute or a prop, such as `fill`,
-  `stroke`, `color`, or `fontSize`. The lint and the design token check
-  reject these (Checks).
+  `stroke`, `color`, or `fontSize`. The favicon, whose colors are its own, is
+  the exception (`docs/design-system.md`, Sentinel Mark). Checks states what
+  the lint and the design token check reject.
 - A component declares the type of its props in its own module.
 
 ### No Raw HTML Injection
@@ -441,13 +442,14 @@ that needs it; content of another kind needs a new row first.
   `scripts/ci.sh ui-checks` runs after the lint, in the required `UI Checks`
   job and in `scripts/ci.sh all` (`docs/deployment.md`, Workflow Inventory).
   In the modules under `src/` other than the generated API client, it
-  rejects the classes that set a color or a type size outside the tokens and
-  those that use the `dark:` variant (Components and Styling). Tailwind CSS
-  finds its classes in the text of those files, comments included, and so
-  does the check. The lint rejects the `style` attribute and the attributes
-  and props of colors and type sizes, such as `fill`, on elements and
-  components alike; a `style` attribute that sets neither a color nor a type
-  size disables its rule inline, as the last rule of this section allows.
+  rejects the classes that set a color or a type size with an arbitrary
+  value or property of Tailwind or with a modifier, and the variants that
+  style one theme alone, such as `dark:` (Components and Styling). Tailwind
+  CSS finds its classes in the text of those files, comments included, and
+  so does the check. The lint rejects the `style` attribute and the
+  attributes and props of colors and type sizes, such as `fill`, on elements
+  and components alike. For a `style` attribute that sets neither a color
+  nor a type size, the rule is disabled inline as a false positive (below).
 - Every change also passes the end-to-end tests, which CI runs as a required
   check too (`docs/deployment.md`, Workflow Inventory) and
   `scripts/dev-env.sh e2e` runs locally.

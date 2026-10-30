@@ -159,17 +159,19 @@ check_no_dependency_files() {
 #   arbitrary value of another utility of TOKEN_COLOR_UTILITY unless it is a
 #   number, a length, or a value with a type other than color:, such as
 #   border-(length:--width);
-# - an arbitrary property of TOKEN_COLOR_PROPERTY, such as [color:#FFFFFF],
-#   or one that holds a literal color;
+# - an arbitrary property of TOKEN_COLOR_PROPERTY, such as [color:#FFFFFF]
+#   or [--color-fg:red], which sets a variable of the tokens, or one that
+#   holds a literal color;
 # - a modifier of a utility of TOKEN_COLOR_UTILITY, such as the opacity of
 #   text-fg/70; and
-# - the dark: variant, also within another, such as not-dark:, which styles
-#   one theme alone.
+# - a variant that styles one theme alone: dark:, also within another, such
+#   as not-dark:, and an arbitrary variant of prefers-color-scheme.
 
 # The utilities that set a color, and text-, which also sets a type size.
 readonly TOKEN_COLOR_UTILITY='(text|bg|border(-[xysetrbl])?|divide|outline|ring|ring-offset|inset-ring|shadow|inset-shadow|drop-shadow|text-shadow|fill|stroke|accent|caret|decoration|placeholder|from|via|to)'
-# The CSS properties that set a color or a type size.
-readonly TOKEN_COLOR_PROPERTY='^(color|[a-z-]+-color|background|fill|stroke|font|font-size|box-shadow|text-shadow)$'
+# The CSS properties that set a color or a type size, and the variables of
+# Tailwind's colors and type sizes, which hold the tokens.
+readonly TOKEN_COLOR_PROPERTY='^(color|[a-z-]+-color|background|fill|stroke|font|font-size|box-shadow|text-shadow|--color-.+|--text-.+)$'
 readonly TOKEN_COLOR_LITERAL='#[0-9A-Fa-f]{3,8}([^0-9A-Za-z_-]|$)|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark)\('
 # A number or a length, or a value with a type.
 readonly TOKEN_TYPED_VALUE='^(-?[0-9]*\.?[0-9]+([a-z]+|%)?|[a-z-]+:.+)$'
@@ -177,18 +179,21 @@ readonly TOKEN_TYPED_VALUE='^(-?[0-9]*\.?[0-9]+([a-z]+|%)?|[a-z-]+:.+)$'
 readonly TOKEN_BEFORE='(^|[^][A-Za-z0-9_-])'
 readonly TOKEN_VALUE_CLASS='[A-Za-z0-9-]*[A-Za-z0-9]-(\[[^][:space:]]*\]|\(([^()[:space:]]|\([^()[:space:]]*\))*\))'
 readonly TOKEN_PROPERTY_CLASS='\[(--[A-Za-z0-9_-]+|[a-z-]+):[^][:space:]]+\]'
-readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:space:]]*\]|\([^()[:space:]]*\)|[0-9.]+)"
-readonly TOKEN_DARK_CLASS=$'([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-][^[:space:]"\'`{}<>]*'
-# Classes that the check rejects and accepts. It checks them first, so that a
-# pattern that stops matching cannot pass unnoticed.
+readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:space:]]*\]|\([^()[:space:]]*\)|[0-9]*\.?[0-9]+)"
+readonly TOKEN_THEME_CLASS=$'(([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-]|\\[[^][:space:]]*prefers-color-scheme[^][:space:]]*\\]:)[^[:space:]"\'`{}<>]*'
+# Classes that the check rejects and accepts. It checks them first, after a
+# quote and after another class, so that a pattern that stops matching cannot
+# pass unnoticed.
 readonly TOKEN_REJECTED_EXAMPLES=(
     'text-[#9A6700]' 'text-[13px]' 'text-(length:--size)' 'bg-[rgb(9_105_218)]'
     'fill-[oklch(0.55_0.2_25)]' 'hover:bg-[#F3F5F8]' 'border-t-[red]'
     'bg-(--accent)' 'stroke-[var(--line)]' 'ring-[color:var(--ring)]'
     'shadow-[0_1px_2px_#0000001A]' 'mask-b-from-[#000]' '[color:#FFFFFF]'
-    '[font-size:13px]' '[--mark:oklch(0.6_0.2_25)]' 'text-fg/70'
-    'bg-accent/[0.5]' 'text-14/6' 'dark:bg-surface' 'md:dark:text-fg'
-    'not-dark:bg-canvas'
+    '[font-size:13px]' '[background-color:var(--accent)]' '[--color-fg:red]'
+    '[--text-14:13px]' '[--mark:oklch(0.6_0.2_25)]' 'text-fg/70'
+    'bg-accent/[0.5]' 'bg-accent/(--alpha)' 'text-14/6' 'dark:bg-surface'
+    'md:dark:text-fg' 'not-dark:bg-canvas'
+    '[@media(prefers-color-scheme:dark)]:bg-surface'
 )
 readonly TOKEN_ACCEPTED_EXAMPLES=(
     'text-14' 'text-fg-muted' 'bg-surface' 'hover:bg-surface-hover' 'fill-none'
@@ -203,7 +208,7 @@ readonly TOKEN_ACCEPTED_EXAMPLES=(
 # nothing when it does not.
 design_token_violation() {
     local class="$1" name value
-    if [[ "${class}" =~ ^${TOKEN_DARK_CLASS}$ ]]; then
+    if [[ "${class}" =~ ^${TOKEN_THEME_CLASS}$ ]]; then
         echo "styles one theme alone"
     elif [[ "${class}" =~ ^\[([^:]+):(.*)\]$ ]]; then
         name="${BASH_REMATCH[1]}"
@@ -222,9 +227,9 @@ design_token_violation() {
             echo "an arbitrary color or type size"
         elif [[ "${name}" =~ ^${TOKEN_COLOR_UTILITY}$ ]] &&
             ! [[ "${value}" =~ ${TOKEN_TYPED_VALUE} && "${value}" != color:* ]]; then
-            echo "an arbitrary color"
+            echo "an arbitrary color, or a value without its type, such as length:"
         fi
-    else
+    elif [[ "${class}" =~ ^${TOKEN_MODIFIER_CLASS}$ ]]; then
         echo "a modifier of a color or a type size"
     fi
 }
@@ -232,12 +237,14 @@ design_token_violation() {
 # Prints each class of the files $@ that sets a color or a type size outside
 # the tokens, as <file>:<line>: <class>: <reason>.
 design_token_violations() {
+    # In the C locale, so that grep and the classification read the files as
+    # the same bytes, and the ranges of the patterns are those of ASCII.
+    local LC_ALL=C
     local matches entry file line class reason status=0
-    # In the C locale, so that the ranges of the patterns are those of ASCII.
-    matches="$(LC_ALL=C grep -HnoE -e "${TOKEN_BEFORE}${TOKEN_VALUE_CLASS}" \
+    matches="$(grep -HnoE -e "${TOKEN_BEFORE}${TOKEN_VALUE_CLASS}" \
         -e "${TOKEN_BEFORE}${TOKEN_PROPERTY_CLASS}" \
         -e "${TOKEN_BEFORE}${TOKEN_MODIFIER_CLASS}" \
-        -e "${TOKEN_BEFORE}${TOKEN_DARK_CLASS}" -- "$@")" || status=$?
+        -e "${TOKEN_BEFORE}${TOKEN_THEME_CLASS}" -- "$@")" || status=$?
     ((status <= 1)) || die "cannot search the modules for their classes"
     while IFS= read -r entry; do
         [[ -n "${entry}" ]] || continue
@@ -256,21 +263,27 @@ design_token_violations() {
 }
 
 # Fails unless the check rejects every class of TOKEN_REJECTED_EXAMPLES and
-# accepts every class of TOKEN_ACCEPTED_EXAMPLES, each in a className
-# attribute of its own line.
+# accepts every class of TOKEN_ACCEPTED_EXAMPLES, each on two lines of its
+# own: in a className attribute, and after another class in a template
+# literal.
 check_design_token_examples() {
     local examples=("${TOKEN_REJECTED_EXAMPLES[@]}" "${TOKEN_ACCEPTED_EXAMPLES[@]}")
-    local violations rejected i
-    violations="$(design_token_violations <(printf 'className="%s"\n' "${examples[@]}"))"
+    local lines=() example violations rejected i line
+    for example in "${examples[@]}"; do
+        lines+=("className=\"${example}\"" "\`p-4 ${example}\`")
+    done
+    violations="$(design_token_violations <(printf '%s\n' "${lines[@]}"))"
     rejected=" $(cut -d: -f2 <<<"${violations}" | tr '\n' ' ')"
     for i in "${!examples[@]}"; do
-        if ((i < ${#TOKEN_REJECTED_EXAMPLES[@]})); then
-            [[ "${rejected}" == *" $((i + 1)) "* ]] ||
-                die "the design token check accepts ${examples[i]}, which it must reject"
-        else
-            [[ "${rejected}" != *" $((i + 1)) "* ]] ||
-                die "the design token check rejects ${examples[i]}, which it must accept"
-        fi
+        for line in $((2 * i + 1)) $((2 * i + 2)); do
+            if ((i < ${#TOKEN_REJECTED_EXAMPLES[@]})); then
+                [[ "${rejected}" == *" ${line} "* ]] ||
+                    die "the design token check accepts ${lines[line - 1]}, which it must reject"
+            else
+                [[ "${rejected}" != *" ${line} "* ]] ||
+                    die "the design token check rejects ${lines[line - 1]}, which it must accept"
+            fi
+        done
     done
 }
 
@@ -284,7 +297,7 @@ check_design_tokens() {
     violations="$(design_token_violations "${files[@]}")"
     if [[ -n "${violations}" ]]; then
         echo "${violations}" >&2
-        die "these classes set a color or a type size outside the tokens of docs/design-system.md: use the class of a token (docs/conventions.md, Components and Styling)"
+        die "these classes bypass the tokens of docs/design-system.md: use the class of a token, which serves both themes (docs/conventions.md, Components and Styling)"
     fi
 }
 
