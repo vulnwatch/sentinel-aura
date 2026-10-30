@@ -1,7 +1,7 @@
-<!-- The Sentinel mark in the colors of the favicon (docs/design-system.md,
-     Sentinel Mark). The light color is an attribute, so that the mark keeps it
-     wherever the style does not apply. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#213661" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<!-- The Sentinel mark with the stroke and the colors of the favicon
+     (docs/design-system.md, Sentinel Mark). The light color is an attribute,
+     so that the mark keeps it wherever the style does not apply. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#213661" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
   <style>
     @media (prefers-color-scheme: dark) {
       path {

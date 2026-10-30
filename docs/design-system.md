@@ -441,13 +441,15 @@ that it sits with the icons around it.
   of the shield, make the S.
 - In the page it follows the rules of the other icons (Icon Set), in the
   color of the text.
-- As the favicon it is drawn in `#213661`, the lighter blue of Sentinel's
-  logo, and, when the browser reports a preference for a dark color scheme,
-  in `#E6EDF3`, taken from the `fg` of the dark theme. The browser shows the
-  favicon in its own tabs, whose colors follow its color scheme rather than
-  the theme of the UI (`docs/behaviors.md`, Preferences), and no single color
-  stands out on both light and dark tabs. These two colors are the favicon's
-  own, outside the tokens (Principles).
+- As the favicon it has a stroke of 2.5, because the browser shows it alone at
+  16 px, where a stroke of 2 draws a line thinner than 1.5 px. It is drawn in
+  `#213661`, the lighter blue of Sentinel's logo, and, when the browser
+  reports a preference for a dark color scheme, in `#E6EDF3`, taken from the
+  `fg` of the dark theme. The browser shows the favicon in its own tabs,
+  whose colors follow its color scheme rather than the theme of the UI
+  (`docs/behaviors.md`, Preferences), and no single color stands out on both
+  light and dark tabs. These two colors are the favicon's own, outside the
+  tokens (Principles).
 
 ## Focus and Motion
 
