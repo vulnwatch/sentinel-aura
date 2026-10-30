@@ -305,7 +305,8 @@ that needs it; content of another kind needs a new row first.
   and type sizes, and no screen or component styles the light or the dark
   theme alone. No arbitrary value of Tailwind, such as `text-[#9A6700]`, and
   no `style` attribute sets a color or a type size. `src/styles.css`, which
-  holds the tokens, is the only stylesheet of the page.
+  holds the tokens, is the only stylesheet of the page besides the one that
+  React Aria inserts (`docs/architecture.md`, Security Headers).
 - A component declares the type of its props in its own module.
 
 ### No Raw HTML Injection
