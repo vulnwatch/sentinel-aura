@@ -299,8 +299,10 @@ that needs it; content of another kind needs a new row first.
 - `src/components/` holds the components that several routes share. A React
   Aria component is styled once, in the shared component that wraps it, and
   routes use that component.
-- Styling uses Tailwind CSS utility classes, on the scale that the design
-  system of the UI foundations defines. `src/styles.css` is the only
+- Styling uses the Tailwind CSS utility classes of the tokens that
+  `docs/design-system.md` defines, which replace Tailwind's default colors
+  and type sizes, and no screen or component styles the light or the dark
+  theme alone. `src/styles.css`, which holds the tokens, is the only
   stylesheet.
 - A component declares the type of its props in its own module.
 
@@ -377,15 +379,20 @@ that needs it; content of another kind needs a new row first.
 - A test may send requests to the API itself, for example to check the
   environment or to create the data that it uses.
 - A screenshot is a reference in `test/e2e/screenshots/`, taken in Chromium,
-  named after the screen and the state that it shows, never after the test:
+  whose default light color scheme shows the light theme, at the viewport of
+  the tests, where the sidebar is expanded by default (`docs/behaviors.md`,
+  Preferences), and named after the screen and the state that it shows, never
+  after the test:
   `<screen>.png` for the main state of a screen and `<screen>-<state>.png`
   for each other state that it shows, such as `ticket-list-empty.png`.
   Transient states, such as loading, and states that a dataset backend
   cannot produce, such as one that needs an external source (Sentinel
   `docs/features/platform/example-dataset.md`, Operating a Dataset Backend),
-  have none. A region that changes from one run to the next, such as a date
-  that the dataset computes from the instant of its load (Sentinel
-  `docs/features/platform/example-dataset.md`, Time Base), is masked.
+  have none, and neither has the dark theme. A region that changes from one
+  run to the next, such as a date that the dataset computes from the instant
+  of its load (Sentinel `docs/features/platform/example-dataset.md`, Time
+  Base) or the avatar of a user, whose `id` the dataset does not fix (same
+  document, Users), is masked.
 - A test that changes no data that a screen shows takes the references of
   the dataset as loaded; its own sign-in, which changes only the sessions and
   the time of last sign-in of its user, is not such a change. It runs before
@@ -854,7 +861,8 @@ they name no component, file, library API, or internal state unless that name
 is itself part of the contract (for example, a URL that users can bookmark).
 An architecture decision is such a contract for what it chooses: it names the
 technologies, tools, and mechanisms that it selects and the files that carry
-them.
+them. So is a choice of the design system, such as its font, its icon set,
+and its Tailwind CSS tokens.
 
 ### Foundation Documents
 
@@ -871,9 +879,10 @@ The UI foundations are written once, before any feature code, and cover:
   presentation of a value of a response enum that the contract of the pinned
   version does not list (Data Read from the API), loading and empty states,
   date and time display, confirmations and the outcome of changes,
-  accessibility requirements, wording, and the representation of a user
-  (`docs/behaviors.md`)
-- **Design system**: the visual language and the reusable interface patterns
+  accessibility requirements, wording, the representation of a user, and the
+  preferences of the browser (`docs/behaviors.md`)
+- **Design system**: the visual language, the themes, the reusable interface
+  patterns, and the avatar (`docs/design-system.md`)
 
 A screen follows the foundations. A screen that needs to depart from a
 cross-cutting behavior changes the foundations first.

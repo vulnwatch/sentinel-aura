@@ -1,18 +1,19 @@
 # Cross-Cutting Behaviors
 
 This document defines the behaviors that every screen of Sentinel Aura shares:
-the session, the presentation of errors and of unknown values, the loading and
-empty states, dates and times, confirmations and the outcome of changes,
-accessibility, wording, and the representation of a user. It is a foundation
-document (`docs/conventions.md`, Foundation Documents): every screen follows
-it, and a screen that needs to depart from one of its behaviors changes this
-document first. A screen document records only what its screen adds, such as
-the error codes that it handles specifically (`docs/conventions.md`, Screen
-Documents). The architecture belongs to `docs/architecture.md`, the users,
-screen map, and roles to `docs/screen-map.md`, and the visual presentation of
-these behaviors to the design system of the UI foundations; backend behavior,
-the API contract, and the obligations that the contract places on clients
-belong to Sentinel (`README.md`, Specification Boundary).
+the session, the preferences of the browser, the presentation of errors and of
+unknown values, the loading and empty states, dates and times, confirmations
+and the outcome of changes, accessibility, wording, and the representation of
+a user. It is a foundation document (`docs/conventions.md`, Foundation
+Documents): every screen follows it, and a screen that needs to depart from
+one of its behaviors changes this document first. A screen document records
+only what its screen adds, such as the error codes that it handles
+specifically (`docs/conventions.md`, Screen Documents). The architecture
+belongs to `docs/architecture.md`, the users, screen map, and roles to
+`docs/screen-map.md`, and the visual presentation of these behaviors to
+`docs/design-system.md`; backend behavior, the API contract, and the
+obligations that the contract places on clients belong to Sentinel
+(`README.md`, Specification Boundary).
 
 Every rule taken from Sentinel is summarized next to the Sentinel section that
 states it, and that section remains authoritative (`docs/conventions.md`,
@@ -27,6 +28,7 @@ document that do not take effect yet.
   - [Session Expiration Message](#session-expiration-message)
   - [The Signed-in User](#the-signed-in-user)
   - [Sign-out](#sign-out)
+- [Preferences](#preferences)
 - [Errors](#errors)
   - [Where Errors Appear](#where-errors-appear)
   - [Default Presentation by Status](#default-presentation-by-status)
@@ -140,7 +142,7 @@ document that do not take effect yet.
 
 ### Sign-out
 
-- The account menu offers Sign out (`docs/screen-map.md`, Header). It asks
+- The account menu offers Sign out (`docs/screen-map.md`, Sidebar). It asks
   for no confirmation of its own; with input not yet submitted on the screen,
   it first asks to discard it (Confirmation). It then sends Sentinel's logout,
   which ends the session of this browser only: the user's sessions in other
@@ -153,6 +155,28 @@ document that do not take effect yet.
 - On any other outcome, such as a network failure or a `5xx`, the user stays
   signed in: the screen stays as it was and shows the message of the status
   (Default Presentation by Status).
+
+## Preferences
+
+- The UI keeps two preferences of the browser: the theme, System, Light, or
+  Dark, which the account menu sets, and whether the sidebar is expanded or
+  collapsed, which its own button sets (`docs/screen-map.md`, Sidebar). By
+  default the theme is System and the sidebar is expanded.
+- System follows the color scheme that the browser reports, usually the one of
+  the desktop, and changes with it; Light and Dark keep their theme
+  (`docs/design-system.md`, Themes). Every screen, Sign in included, shows in
+  the chosen theme from its first paint, never briefly in the other one.
+- The preference of the sidebar applies only where the window is wide enough
+  for the expanded sidebar beside the content; in a narrower window the
+  sidebar is always collapsed (`docs/screen-map.md`, Sidebar).
+- A preference belongs to the browser, not to the account: the API keeps no
+  preference of the UI, so a user finds the defaults in another browser. The
+  UI keeps the preferences in the origin's local storage, which the tabs of the
+  browser share and which lasts across restarts and sign-out, because they
+  hold no data read from the API. A change applies at once in every open tab.
+- A stored preference is untrusted like every value of the origin's storage
+  (`docs/architecture.md`, Same Origin): a value other than those listed here
+  counts as the default, so a planted value changes only how the UI looks.
 
 ## Errors
 
@@ -167,7 +191,7 @@ message follows Wording.
 
 | Failure | Where it appears |
 |---|---|
-| A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the header, under a heading that names the error |
+| A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
 | A read of one part of a screen, such as a section, a tab, or a count | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown, saying that it could not be updated; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
@@ -272,9 +296,9 @@ list, and the UI tolerates it (Sentinel `docs/api-spec.md`, Response Enums;
 Client Tolerance of Non-Breaking Changes; `docs/conventions.md`, Data Read
 from the API):
 
-- the value shows as received, as text, in the neutral appearance of the
-  design system, without the label, icon, or color of a known value; it is
-  also its accessible name;
+- the value shows as received, as text, in the neutral appearance of
+  `docs/design-system.md` (Values), without the label, icon, or color of a
+  known value; it is also its accessible name;
 - a record whose kind is an unknown value, such as an audit event of an
   unknown type or a CVSS assessment of an unknown version, shows its kind as
   received and the fields whose meaning does not depend on the kind, such as
@@ -288,10 +312,10 @@ from the API):
 
 ### Loading
 
-- A screen shows its header, heading, and controls, such as tabs and filters,
-  at once. Only a part that waits for data shows a loading indicator, and only
-  once the data has taken longer than 300 milliseconds, so that a fast
-  response shows none.
+- A screen shows the sidebar, its heading, and its controls, such as tabs and
+  filters, at once. Only a part that waits for data shows a loading
+  indicator, and only once the data has taken longer than 300 milliseconds, so
+  that a fast response shows none.
 - When a screen reads other data for what it shows, such as another page,
   filter, sort, or view of a list, it keeps showing the previous data, marked
   as being updated, until the new data arrives; if the read fails, its error
@@ -449,11 +473,11 @@ A confirmation dialog:
   which shows the result.
 - Any other successful change shows a short message that says what happened,
   such as "API key revoked.".
-- Messages appear in one message area below the header, which every screen
-  shares. A message stays until the user dismisses it or opens another
-  screen. The outcome of a change that ends after the user left its screen
-  appears on the screen that the user is on, and names the record that it
-  concerns, with a link to it, such as "SNTL-42: Priority changed to P2.".
+- Messages appear in one message area at the top of the main content, which
+  every screen shares. A message stays until the user dismisses it or opens
+  another screen. The outcome of a change that ends after the user left its
+  screen appears on the screen that the user is on, and names the record that
+  it concerns, with a link to it, such as "SNTL-42: Priority changed to P2.".
 - An operation that Sentinel accepts with `202` has started, not finished:
   its message says so, such as "Refetch started.", and links to the screen
   that shows its progress, when one does.
@@ -468,13 +492,14 @@ also meets these requirements, which they cannot check:
 
 - **Keyboard.** Every function works with the keyboard alone, in an order that
   follows the reading order, and the focus is never trapped. The focus is
-  always visible, and no fixed element, such as the header, hides it (2.1.1
+  always visible, and no fixed element, such as the sidebar, hides it (2.1.1
   Keyboard; 2.1.2 No Keyboard Trap; 2.4.3 Focus Order; 2.4.7 Focus Visible;
   2.4.11 Focus Not Obscured (Minimum)).
 - **Structure.** The first element that takes the focus is a link that skips
-  to the main content. Every screen has its header, navigation, and main
-  content as landmarks, and one level-one heading that names the screen
-  (2.4.1 Bypass Blocks; 1.3.1 Info and Relationships).
+  to the main content. Every screen has its main content as a landmark, every
+  screen but Sign in also its navigation, the sidebar, and every screen one
+  level-one heading that names it (2.4.1 Bypass Blocks; 1.3.1 Info and
+  Relationships).
 - **Page title.** The title of the page is the screen's heading followed by
   "– Sentinel", such as "SNTL-42 – Sentinel", "Tickets – Sentinel", or "Not
   found – Sentinel" (2.4.2 Page Titled).
@@ -549,6 +574,7 @@ also meets these requirements, which they cannot check:
 | Remove | Take an item out of a set that the user edits, such as a role from a user's roles |
 | Discard, Keep editing | Drop input not yet submitted, or keep it |
 | Try again | Repeat a read that failed |
+| Apply | Use the values of a set of fields that a list applies together, such as its filters |
 | Clear filters | Remove the filters and the search of a list |
 | Copy | Put a value on the clipboard, such as a new API key |
 | Dismiss | Remove a message from the message area |
@@ -559,16 +585,18 @@ also meets these requirements, which they cannot check:
 - Headings, labels, buttons, and menu entries use sentence case: only the
   first word, names, and the domain terms that Sentinel capitalizes start with
   a capital letter.
-- A button or menu entry names its action with a verb and, where the screen
-  offers it for several objects, its object, such as "Revoke API key"; never
-  "OK", "Yes", or "Submit".
+- A button or menu entry that performs an action names it with a verb and,
+  where the screen offers it for several objects, its object, such as "Revoke
+  API key"; never "OK", "Yes", or "Submit". One that opens a screen, a page,
+  or a set of choices, or that selects a choice, names what it opens or
+  selects, such as Profile, Next, Filters, or Dark.
 - A message states what happened and, when the user can do something about
   it, what to do. It blames no one and holds no technical detail except the
   reference of an error (Default Presentation by Status), and it uses
   contractions, such as "can't".
 - A count uses the singular or the plural, such as "1 Ticket" and "2
   Tickets", and groups thousands with commas, such as "1,250".
-- The header and the page titles name the product Sentinel. Sentinel Aura is
+- The sidebar and the page titles name the product Sentinel. Sentinel Aura is
   the name of this user interface, which the UI shows only next to its
   version.
 
@@ -586,7 +614,7 @@ complete profile and its manager, and the signed-in user alike: `id`,
   presentation (Sentinel `docs/features/identity/user-management.md`, Get
   User).
 - **Avatar.** A picture that the UI generates from the user's `id`, which
-  never changes; the design system defines it.
+  never changes (`docs/design-system.md`, Avatar).
 - **Full form.** The avatar followed by the display name. The avatar is
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the
@@ -610,9 +638,10 @@ complete profile and its manager, and the signed-in user alike: `id`,
   Only the actor of a recorded action is "System": another field without a
   user, such as the assignee of an unassigned Ticket, is an absent value
   (Absent Values).
-- **Sizes.** Three sizes: small for text and table rows, medium for lists and
-  the account menu, and large for the heading of a user's screen. The design
-  system defines their dimensions and how the labels look, never by color
+- **Sizes.** Three sizes: small for text and table rows, medium for lists of
+  users outside a table, the account button, and the account menu, and large
+  for the heading of a user's screen. `docs/design-system.md` (Representation
+  of a User) defines their dimensions and how the labels look, never by color
   alone (Accessibility).
 
 ## Open Decisions
