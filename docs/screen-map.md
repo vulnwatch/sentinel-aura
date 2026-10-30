@@ -296,27 +296,40 @@ them, as tabs in this order:
 ### Attention Summary
 
 For a user who holds the `vulnerability_analyst` role, the Ticket list shows
-above its views three counts of the Tickets that need attention:
+above its views five counts of the Tickets that need attention:
 
 | Count | Tickets |
 |---|---|
 | Active P1 | Effective priority P1, in status New, Analysis, or Analyzed (Sentinel `docs/features/tickets/ticket-priority.md`, Persistence and Effective Priority) |
-| Triage overdue | Status New or Analysis with the triage due date past (Sentinel `docs/features/tickets/ticket-deadlines.md`, Ticket-Level Overdue Filter) |
-| Delivery overdue | Status Analyzed, with a submission, UM, or QA milestone past due on at least one track (same section) |
+| Triage overdue | Current phase Triage, past due: in status New or Analysis, with the triage due date past |
+| Submission overdue | Current phase Submission, past due: a maintainer's submission of the fix is late |
+| UM overdue | Current phase UM, past due: the release request of the SUSE maintenance update team is late |
+| QA overdue | Current phase QA, past due: the release of the update after QA is late, past the final release deadline |
 
+- The current phase of a Ticket is the earliest phase of its remediation that
+  is not completed, among the phases that Sentinel observes, and Sentinel
+  states whether it is past due (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, Actors and Phases; Ticket
+  Current Phase). Each overdue count holds the Tickets whose current phase is
+  its phase and past due, which Sentinel lists when its `current_phase` and
+  `overdue` filters both name that phase (same document, Relation to the
+  Overdue Filter).
 - Each count links to the All view of the Ticket list, refined to those
   Tickets. A count of zero stays.
-- Triage overdue and Delivery overdue select different statuses, so they never
-  count the same Ticket. A Ticket in status New or Analysis whose later
-  milestones are past due counts as Triage overdue, because its triage due date
-  comes first (Sentinel `docs/features/tickets/ticket-deadlines.md`, Due
-  Dates). Active P1 measures priority, not time, and can include Tickets of
-  the other two counts.
-- Delivery overdue does not divide the Tickets by phase: a milestone that is
-  not completed leaves every later milestone not completed too (Sentinel
-  `docs/features/tickets/ticket-deadlines.md`, Track Milestones), so a count
-  per milestone would count a Ticket that waits for its submission under UM
-  and QA as well.
+- A Ticket has one current phase, so the four overdue counts never count the
+  same Ticket: a Ticket counts once, under its current phase, even when a
+  later phase is past due too, on the same track or on another; the package
+  tree of the Ticket shows the phase of each track. Sentinel applies one SLA
+  to every Product, so together the four counts hold every Ticket that its
+  `overdue` filter matches (same document, SLA Tier; Relation to the Overdue
+  Filter). Active P1 measures priority, not time, and can include Tickets of
+  the other counts.
+- A Ticket without a current phase counts in no overdue count: one without an
+  SLA, and one in status Analyzed whose remaining work Sentinel cannot
+  observe, such as one without a CVE (same document, Rules). A track whose
+  later phases Sentinel cannot observe does not hold back the current phase,
+  so it can still wait in a phase before the one under which its Ticket
+  counts (same document, Observable Bottleneck Only).
 
 ## Contract URLs
 
