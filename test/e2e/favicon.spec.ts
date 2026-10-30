@@ -40,7 +40,7 @@ test.describe("the favicon", () => {
   test.describe("under a light color scheme", () => {
     test.use({ colorScheme: "light" });
 
-    test("shows the Sentinel mark in its light color", async ({ page }) => {
+    test("draws its line in its light color", async ({ page }) => {
       await page.goto("/");
       expect(await faviconColor(page)).toEqual(LIGHT_COLOR);
     });
@@ -49,10 +49,7 @@ test.describe("the favicon", () => {
   test.describe("under a dark color scheme", () => {
     test.use({ colorScheme: "dark" });
 
-    test("shows the Sentinel mark in its dark color", async ({
-      page,
-      browserName,
-    }) => {
+    test("draws its line in its dark color", async ({ page, browserName }) => {
       test.skip(
         browserName === "firefox",
         "Playwright emulates the color scheme for the documents of a page, which in Firefox excludes its images",
