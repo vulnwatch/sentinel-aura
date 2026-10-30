@@ -167,8 +167,10 @@ under the path of the screen, and its screen document records it.
 
 ### Sidebar
 
-Every screen except Sign in has a sidebar along its left edge with, from top
-to bottom:
+Every screen has a sidebar along its left edge, except Sign in and a screen
+that shows while no signed-in user is known, such as the error of the first
+read of the signed-in user (`docs/behaviors.md`, Session State). The sidebar
+holds, from top to bottom:
 
 - the product name, which leads to the landing (`/`);
 - the search (Search), except on the Home, which presents the search as its
@@ -188,8 +190,10 @@ each of which shows its name on hover and on keyboard focus
 follows the user's preference (`docs/behaviors.md`, Preferences). Below that
 width it is always collapsed, so that the content keeps its room, and its
 expand button opens the expanded sidebar over the content, as a dialog that
-takes the focus. Choosing an entry, Escape, its close button, or a click
-outside it closes it, and the focus returns to the expand button. Opening it
+takes the focus. Escape, its close button, or a click outside it closes it
+and returns the focus to the expand button; a navigation from it, such as an
+entry, the search, or an item of the account menu, closes it, and the focus
+follows the navigation (`docs/behaviors.md`, Accessibility). Opening it
 changes no preference, and a window that grows past that width closes it.
 
 The Tickets entry opens the Ticket list in its New view for a user who holds

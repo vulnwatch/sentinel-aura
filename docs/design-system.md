@@ -79,9 +79,10 @@ sidebar is the one exception (Spacing and Sizes).
 - **One accent.** Blue marks what the user can act on and where the user is:
   primary actions, links, the current navigation entry, and the focus.
 - **Red means now.** Red is reserved for what needs attention at once: an
-  effective priority of P1, a deadline that has passed, an error, and an
-  action that destroys or ends access. Severity shows as a small mark beside
-  its name, not as a red fill, so that red keeps that meaning.
+  effective priority of P1, a deadline that has passed, an error, and the
+  button that confirms a destructive action (Buttons and Links). Severity
+  shows as a small mark beside its name, not as a red fill, so that red keeps
+  that meaning.
 - **Never color alone.** A text, an icon, or a shape always carries the same
   information as a color (`docs/behaviors.md`, Accessibility).
 - **Quiet surfaces.** Lines separate the content, and only what floats above
@@ -92,10 +93,9 @@ sidebar is the one exception (Spacing and Sizes).
 - **Tokens only.** A screen uses only the colors, type sizes, sizes, and
   patterns of this document. Its colors and type sizes are the tokens of
   Tailwind CSS, which replace Tailwind's default ones: a token is a utility
-  class, such as `bg-surface`, `text-fg-muted`, or `text-14`. No arbitrary
-  value of Tailwind, such as `text-[#9A6700]`, and no `style` attribute sets a
-  color or a type size; a value that this document lacks is added to it
-  first.
+  class, such as `bg-surface`, `text-fg-muted`, or `text-14`, and code uses
+  no other color or type size (`docs/conventions.md`, Components and
+  Styling): a value that this document lacks is added to it first.
 
 ## Themes and Colors
 
@@ -194,8 +194,8 @@ of the severity always follows them (Exempt Elements).
 These elements are decorative, or repeat what a text next to them states, so
 WCAG sets them no minimum:
 
-- the lines of `border`: between rows, around cards, tables, and menus, and
-  at the edge of the sidebar;
+- the lines of `border`, wherever a pattern draws them, such as between rows,
+  around cards, tabs, menus, and dialogs, and at the edge of the sidebar;
 - the severity marks, which the name of the severity follows;
 - the empty bars of a priority mark, whose label follows them;
 - the backgrounds that tell surfaces and states apart: `canvas`, `surface`,
@@ -326,7 +326,9 @@ Status).
 | `text-20` | 20 / 28 px | The level-one heading of a screen, with letter spacing of −0.025 em |
 
 The names state the sizes, so that a size shows in the code; Tailwind's own
-names, such as `text-sm`, do not exist.
+names, such as `text-sm`, do not exist. The uses above and the weights below
+are the defaults for a text that no pattern covers; a pattern's own value
+wins.
 
 - Weights: 400 for text; 500 for buttons, the labels of fields, and the
   identifiers that link to a record in a table; 600 for headings, the current
@@ -341,8 +343,8 @@ names, such as `text-sm`, do not exist.
 
 - **Spacing** uses a grid of 4 px, with steps of 2 px below 12 px: 4, 6, 8,
   10, 12, 16, 20, 24, 32, and 40 px.
-- **Heights:** controls are 24, 32, 36, 40, or 44 px high, as each pattern
-  states.
+- **Heights:** buttons, single-line fields, rows, and menu items are 24, 32,
+  36, 40, or 44 px high, as each pattern states.
 - **Targets:** every target of a pointer is at least 24 by 24 px (WCAG 2.2,
   2.5.8 Target Size (Minimum)).
 - **Widths:** a width that this document gives, such as that of a dialog, is
@@ -417,7 +419,8 @@ and the change adds its row.
 ## Focus and Motion
 
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
-  following its radius, shown on keyboard focus. No element removes it
+  following its radius, or inside it for a row or a cell of a table (Tables),
+  shown on keyboard focus. No element removes it
   (`docs/behaviors.md`, Accessibility).
 - **Motion:** only loading indicators move: the spinner turns and the progress
   bar runs (Loading). When the browser reports a preference for reduced
@@ -428,8 +431,8 @@ and the change adds its row.
 
 ### Sidebar
 
-The sidebar holds the navigation of every screen except Sign in
-(`docs/screen-map.md`, Sidebar). It runs along the left edge of the window,
+The sidebar holds the navigation of the screens that `docs/screen-map.md`
+(Sidebar) gives one. It runs along the left edge of the window,
 the full height, on `sidebar`, with a `border` line on its right edge, and
 stays in place while the content scrolls. When the window is shorter than
 the sidebar, the sidebar scrolls within itself.
@@ -488,24 +491,27 @@ selected one ends with `check`; and Sign out, an ordinary item.
 - The message area is at the top of the main content, above the heading:
   messages stack in it, 8 px apart, across the width of the content
   (`docs/behaviors.md`, Outcome of a Change), as Messages describes them.
-  While it holds a message, it stays at the top of the window when the
-  content scrolls, so that a message that appears is always in view, and the
-  content scrolls so that the element with the focus never lies under it
-  (`docs/behaviors.md`, Accessibility).
+  The newest message comes first. While the area holds a message, it stays at
+  the top of the window when the content scrolls, so that a message that
+  appears is always in view. It takes at most a third of the window's height,
+  beyond which its messages scroll within it, and the content scrolls so that
+  the element with the focus never lies under it (`docs/behaviors.md`,
+  Accessibility).
 - The heading row holds the level-one heading of the screen in `text-20`,
   weight 600, then what accompanies it, such as the attention summary, and
   the main action of the screen at its end. It wraps when the width runs
   short.
 - Running text, such as a CVE description, is at most 720 px wide. A word or
-  an address longer than its place, such as a URL, breaks where it must; only
-  a table cell cuts its text (Tables).
+  an address longer than its place, such as a URL, breaks where it must.
+  Only a table cell and a user's name cut a text to its place, with an
+  ellipsis (Tables; Representation of a User).
 - At a width of 320 CSS pixels, which is a window of 1280 px at a zoom of
   400 %, the collapsed sidebar and the content fit side by side: rows of
   controls wrap, and tables scroll within their frame (`docs/behaviors.md`,
   Accessibility).
-- A screen that shows before the signed-in user is known, such as the error
-  of the first read of the signed-in user (`docs/behaviors.md`, Session
-  State), has no sidebar and shows in the column of the Sign In Page.
+- A screen other than Sign in that has no sidebar, such as the error of the
+  first read of the signed-in user (`docs/screen-map.md`, Sidebar), shows in
+  the column of the Sign In Page.
 - The link that skips to the main content (`docs/behaviors.md`,
   Accessibility), "Skip to main content", shows only while it has the focus,
   at the top left of the window over the sidebar, as a primary button.
@@ -513,10 +519,9 @@ selected one ends with `check`; and Sign out, an ordinary item.
 ### Sign In Page
 
 Sign in has no sidebar. A column at most 400 px wide, centered on `canvas`,
-holds the
-product name, as in the sidebar but in `text-20`, and below it a card
-(`surface`, `border`, 8 px radius, 24 px padding) with the level-one heading
-"Sign in", the information of an expired session as an `info` message
+holds the product name, as in the sidebar but in `text-20`, and below it a
+card (`surface`, `border`, 8 px radius, 24 px padding) with the level-one
+heading "Sign in", the information of an expired session as an `info` message
 (`docs/behaviors.md`, Session Expiration Message), and the form (Forms).
 
 ## Values
@@ -562,14 +567,14 @@ The marks, in a box of 14 by 14 units:
 
 A Ticket status shows as a mark of 16 px followed, 6 px later, by its name in
 `fg` (`docs/behaviors.md`, Domain Terms). The mark shows how far the Ticket
-has come, and its color whether the status is active (Sentinel
-`docs/features/tickets/tickets.md`, Statuses; Status Categories):
-`info-icon` for the active statuses, New, Analysis, and Analyzed; among the
+has come, and its color tells the active statuses from the inactive ones
+(Sentinel `docs/features/tickets/tickets.md`, Statuses; Status Categories):
+`info-icon` for New, Analysis, and Analyzed, which are active; among the
 inactive ones, `success-icon` for Resolved and `neutral-icon` for Ignored and
 Duplicated.
 
 The marks, in a box of 16 by 16 units centered on (8, 8), in the color of the
-category; lines are 1.75 wide with round ends and joins, and the lines inside
+status; lines are 1.75 wide with round ends and joins, and the lines inside
 a disc are in `surface`:
 
 | Status | Shapes |
@@ -614,9 +619,9 @@ writes "Confidential" next to it.
 - The count of a view follows its label in `fg-muted`. A number of the
   attention summary is at weight 600, in `danger-on-soft` when it is above
   zero and in `fg` at zero, followed by its label in `fg-muted`. While a
-  count loads, its label shows alone; when its read fails, an en dash, read
-  as "Not available", takes the place of the number (`docs/behaviors.md`,
-  Where Errors Appear).
+  count loads, its label shows alone, and a count that is not available
+  (`docs/behaviors.md`, Where Errors Appear) shows an en dash in `fg-muted`
+  in place of its number.
 
 ## Interface Patterns
 
@@ -633,8 +638,9 @@ writes "Confidential" next to it.
 - Buttons have a 6 px radius, 12 px of side padding, or 16 px at a height
   of 40 px, their label at weight 500, and their icon at 16 px before the
   label; Next has its chevron after it. They are 32 px high in the toolbar
-  and pagination of a list, 36 px as the main action of a screen, and 40 px
-  in forms and dialogs.
+  and pagination of a list and in the heading of a card, 40 px in forms and
+  dialogs, and 36 px elsewhere, such as in the heading row of a screen, in an
+  empty state, and as Try again.
 - A disabled button shows at 60 % opacity. A busy button shows
   `loader-circle` in place of its icon, or before its label, keeps its label,
   and cannot be pressed (`docs/behaviors.md`, Loading).
@@ -653,14 +659,17 @@ A list screen, such as the Ticket list, shows from top to bottom:
 2. The toolbar, 16 px below: the views (`docs/screen-map.md`, Ticket List
    Views) as tabs 32 px high with a `border` line and a 6 px radius, each its
    label followed by its count; the selected tab has a `border-strong`
-   boundary, the `neutral-soft` background, and its label at weight 600. At
-   the end of the toolbar come the search field, 224 px wide and 32 px high,
-   with the placeholder "Search {records}", such as "Search Tickets", which
-   applies its term when the user presses Enter; Filters, a secondary button
-   with `list-filter`, which opens a popover with the filter fields and
-   Apply, and which shows the number of the filters that apply after its
-   label; and, while a filter or a search applies, Clear filters, a quiet
-   button with `x`. The toolbar wraps when the width runs short.
+   boundary, the `neutral-soft` background, and its label at weight 600. A
+   tab opens when the user clicks it or presses Enter or Space, not when the
+   arrow keys move the focus to it. At the end of the toolbar come the search
+   field, 224 px wide and 32 px high, with the placeholder "Search
+   {records}", such as "Search Tickets", which applies its term when the user
+   presses Enter and removes it with its clear button; Filters, a secondary
+   button with `list-filter`, which opens a popover with the filter fields
+   and shows the number of the filters that apply after its label, a filter
+   applying as soon as its field changes, or, for a text field, when the user
+   presses Enter; and, while a filter or a search applies, Clear filters, a
+   quiet button with `x`. The toolbar wraps when the width runs short.
 3. The table (Tables), 16 px below.
 4. The pagination, 16 px below, at the end of the line, when the list has
    more than one page: the range, such as "1–20 of 25", in `text-14` and
@@ -691,9 +700,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
   radius. Its tooltip lists every value under the count, such as "3
   packages", and its accessible name states the others, such as "2 more
   packages: fictional-curl-mini, fictional-libcurl4".
-- A text longer than its column, such as a title, ends with an ellipsis;
-  assistive technologies read it whole, and the screen of its record shows it
-  whole.
+- A text longer than its column, such as a title, ends with an ellipsis when
+  the screen of its record shows it whole, and assistive technologies read it
+  whole; in a table whose records have no screen of their own, such as an
+  audit log, it wraps, and its row grows.
 - A user shows in the full form at the small size (Representation of a
   User).
 - The loading indicator, an error in place of the data, and an empty state
@@ -714,7 +724,7 @@ A list screen, such as the Ticket list, shows from top to bottom:
   the heading's line. A part without items shows its short line in `fg-muted`
   (`docs/behaviors.md`, Empty States).
 - A screen document can show the parts of a long record one at a time, as
-  tabs styled like the views of a list.
+  tabs that look and behave like the views of a list.
 
 ### Forms
 
@@ -752,9 +762,9 @@ A list screen, such as the Ticket list, shows from top to bottom:
   window scrolls its content and keeps its buttons in view.
 - Its title is in `text-16`, weight 600, its text in `fg-muted`, and its
   buttons, 40 px high, close it aligned to its end: Cancel, or Keep editing,
-  as a secondary button, then the action, primary, or danger for an action
-  that destroys or ends access (`docs/behaviors.md`, Confirmation).
-- A dialog has no close icon: Cancel, Close, and Escape close it.
+  as a secondary button, then the action, primary or danger as Buttons and
+  Links states (`docs/behaviors.md`, Confirmation).
+- A centered dialog has no close icon: Cancel, Close, and Escape close it.
 
 ### Messages
 
@@ -762,10 +772,9 @@ A list screen, such as the Ticket list, shows from top to bottom:
   icon in the tone's `on-soft` color, a 6 px radius, 8 px of vertical and
   12 px of side padding, and `text-15`. It starts with the icon of its tone
   at 18 px; a link in it is in the color of its text, underlined, at weight
-  500; the reference of an
-  error follows on its own line as "Reference:" and the identifier in
-  monospace; and in the message area it ends with a dismiss button, `x` at
-  16 px in a 24 px target, named "Dismiss".
+  500; the reference of an error follows on its own line as "Reference:" and
+  the identifier in monospace; and in the message area it ends with a dismiss
+  button, `x` at 16 px in a 24 px target, named "Dismiss".
 - The tone follows the message: `success` for a change that succeeded,
   `info` for an operation that started and for information, `warning` for a
   change that Sentinel did not confirm (`docs/behaviors.md`, Retries and
@@ -826,8 +835,8 @@ its sizes and labels look as follows.
 
 | Size | Avatar | Use |
 |---|---|---|
-| Small | 24 px | Text and table rows |
-| Medium | 32 px | Lists of users outside a table, such as the access grants of a Ticket, the account button, and the account menu |
+| Small | 24 px | Text, table rows, and the options of a field |
+| Medium | 32 px | Other lists of users, such as the access grants of a Ticket, the account button, and the account menu |
 | Large | 64 px | The heading of a user's screen |
 
 - **Full form:** the avatar, 6 px of space, and the display name in the

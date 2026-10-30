@@ -302,8 +302,9 @@ that needs it; content of another kind needs a new row first.
 - Styling uses the Tailwind CSS utility classes of the tokens that
   `docs/design-system.md` defines, which replace Tailwind's default colors
   and type sizes, and no screen or component styles the light or the dark
-  theme alone. `src/styles.css`, which holds the tokens, is the only
-  stylesheet.
+  theme alone. No arbitrary value of Tailwind, such as `text-[#9A6700]`, and
+  no `style` attribute sets a color or a type size. `src/styles.css`, which
+  holds the tokens, is the only stylesheet.
 - A component declares the type of its props in its own module.
 
 ### No Raw HTML Injection
@@ -382,9 +383,9 @@ that needs it; content of another kind needs a new row first.
   whose default light color scheme shows the light theme, at the viewport of
   the tests, where the sidebar is expanded by default (`docs/behaviors.md`,
   Preferences), and named after the screen and the state that it shows, never
-  after the test:
-  `<screen>.png` for the main state of a screen and `<screen>-<state>.png`
-  for each other state that it shows, such as `ticket-list-empty.png`.
+  after the test: `<screen>.png` for the main state of a screen and
+  `<screen>-<state>.png` for each other state that it shows, such as
+  `ticket-list-empty.png`.
   Transient states, such as loading, and states that a dataset backend
   cannot produce, such as one that needs an external source (Sentinel
   `docs/features/platform/example-dataset.md`, Operating a Dataset Backend),

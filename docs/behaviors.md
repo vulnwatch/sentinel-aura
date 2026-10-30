@@ -192,7 +192,7 @@ message follows Wording.
 | Failure | Where it appears |
 |---|---|
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
-| A read of one part of a screen, such as a section, a tab, or a count | In place of that part; the rest of the screen stays usable |
+| A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown, saying that it could not be updated; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
@@ -201,6 +201,10 @@ message follows Wording.
 - An error in place of the content of a screen or of a part offers an action
   that tries again after a network failure, a `429`, or a `5xx`. In place of
   the content of a screen, every other error links to the landing instead.
+- A count, such as the count of a view or of the attention summary, has no
+  room for a message or an action: when its read fails, it shows as not
+  available, read as "Not available", and the screen's next read of its data
+  tries it again (Loading).
 - A form checks before sending the constraints that the pinned contract
   declares for its fields, such as a required value or a maximum length, and
   states the constraint at the field. A field error of a `VALIDATION_ERROR`
@@ -315,7 +319,8 @@ from the API):
 - A screen shows the sidebar, its heading, and its controls, such as tabs and
   filters, at once. Only a part that waits for data shows a loading
   indicator, and only once the data has taken longer than 300 milliseconds, so
-  that a fast response shows none.
+  that a fast response shows none; a count that waits shows nothing until it
+  arrives.
 - When a screen reads other data for what it shows, such as another page,
   filter, sort, or view of a list, it keeps showing the previous data, marked
   as being updated, until the new data arrives; if the read fails, its error
@@ -497,9 +502,9 @@ also meets these requirements, which they cannot check:
   2.4.11 Focus Not Obscured (Minimum)).
 - **Structure.** The first element that takes the focus is a link that skips
   to the main content. Every screen has its main content as a landmark, every
-  screen but Sign in also its navigation, the sidebar, and every screen one
-  level-one heading that names it (2.4.1 Bypass Blocks; 1.3.1 Info and
-  Relationships).
+  screen with a sidebar (`docs/screen-map.md`, Sidebar) also its navigation,
+  and every screen one level-one heading that names it (2.4.1 Bypass Blocks;
+  1.3.1 Info and Relationships).
 - **Page title.** The title of the page is the screen's heading followed by
   "– Sentinel", such as "SNTL-42 – Sentinel", "Tickets – Sentinel", or "Not
   found – Sentinel" (2.4.2 Page Titled).
@@ -574,7 +579,6 @@ also meets these requirements, which they cannot check:
 | Remove | Take an item out of a set that the user edits, such as a role from a user's roles |
 | Discard, Keep editing | Drop input not yet submitted, or keep it |
 | Try again | Repeat a read that failed |
-| Apply | Use the values of a set of fields that a list applies together, such as its filters |
 | Clear filters | Remove the filters and the search of a list |
 | Copy | Put a value on the clipboard, such as a new API key |
 | Dismiss | Remove a message from the message area |
@@ -638,11 +642,11 @@ complete profile and its manager, and the signed-in user alike: `id`,
   Only the actor of a recorded action is "System": another field without a
   user, such as the assignee of an unassigned Ticket, is an absent value
   (Absent Values).
-- **Sizes.** Three sizes: small for text and table rows, medium for lists of
-  users outside a table, the account button, and the account menu, and large
-  for the heading of a user's screen. `docs/design-system.md` (Representation
-  of a User) defines their dimensions and how the labels look, never by color
-  alone (Accessibility).
+- **Sizes.** Three sizes: small for text, table rows, and the options of a
+  field; medium for other lists of users, the account button, and the account
+  menu; and large for the heading of a user's screen. `docs/design-system.md`
+  (Representation of a User) defines their dimensions and how the labels
+  look, never by color alone (Accessibility).
 
 ## Open Decisions
 
