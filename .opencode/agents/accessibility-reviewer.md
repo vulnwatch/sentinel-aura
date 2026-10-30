@@ -256,7 +256,8 @@ These belong to other owners. Do not report findings in their territory:
 
 | Territory | Owner |
 |---|---|
-| Visual design, aesthetics, and usability preferences | The design system and the cross-cutting behaviors of the UI foundations |
+| Consistency of patterns, wording, and visuals with the foundations and the screens already built, the flows of the frequent tasks, and usability | `@ux-consistency-reviewer` |
+| Visual design and aesthetics | The design system of the UI foundations |
 | Behavior and states that a document leaves unspecified | `@spec-gap-analyzer` |
 | Whether tests check each state that they show, and test quality | `@test-reviewer` |
 | Security of the UI and of its image | `@security-reviewer` |

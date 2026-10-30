@@ -483,6 +483,7 @@ report findings in their territory:
 | Security of the UI in the browser and of its image | `@security-reviewer` |
 | Accessibility of the UI | `@accessibility-reviewer` |
 | Use of the API client, server state, error handling, request efficiency, and the semantics of the operations used | `@api-usage-reviewer` |
+| Consistency with the screens already built, the flows of the frequent tasks, and usability heuristics | `@ux-consistency-reviewer` |
 
 **Deliberate overlap.** An obligation that an authority states for an element
 in the diff is by construction a class A finding, even when it also lies in

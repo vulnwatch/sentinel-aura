@@ -18,7 +18,8 @@
     "spec-coherence-reviewer": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
     "spec-gap-analyzer": { "model": "anthropic/claude-opus-5-5", "variant": "high" },
 
-    // Tier 2 reviewers; accessibility-reviewer needs a model that accepts images
+    // Tier 2 reviewers; accessibility-reviewer and ux-consistency-reviewer
+    // need a model that accepts images
     "accessibility-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
     "api-usage-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
     "cicd-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
@@ -26,7 +27,8 @@
     "docs-placement-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
     "docs-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
     "spec-conformance-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
-    "test-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" }
+    "test-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
+    "ux-consistency-reviewer": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" }
 
     // Optional: built-in subagents otherwise inherit the invoking agent's model.
     // "general": { "model": "anthropic/claude-sonnet-5-5", "variant": "high" },
