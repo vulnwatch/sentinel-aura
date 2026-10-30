@@ -6,9 +6,11 @@ spacing and sizes, icons, focus and motion, the page layout, the presentation
 of values, the reusable patterns, the representation of a user, and the
 avatar. It is a foundation document (`docs/conventions.md`, Foundation
 Documents): every screen follows it, and a screen that needs a color, a size,
-or a pattern that it does not define changes this document first. It is the
-visual side of `docs/behaviors.md`, which owns what the shared behaviors do,
-such as when an error appears and what its message says; the areas, screens,
+or a pattern that it does not define changes this document first. It owns the
+look of the UI and the look and interaction of its reusable patterns, such as
+when a filter of a list applies; `docs/behaviors.md` owns the shared
+behaviors that `docs/conventions.md` (Foundation Documents) lists for it,
+such as when an error appears and what its message says. The areas, screens,
 and navigation belong to `docs/screen-map.md`, and the technology stack, React
 Aria Components styled with Tailwind CSS, and the Content Security Policy to
 `docs/architecture.md` (Components and Styling; Security Headers). Backend
@@ -95,7 +97,8 @@ sidebar is the one exception (Spacing and Sizes).
   Tailwind CSS, which replace Tailwind's default ones: a token is a utility
   class, such as `bg-surface`, `text-fg-muted`, or `text-14`, and code uses
   no other color or type size (`docs/conventions.md`, Components and
-  Styling): a value that this document lacks is added to it first.
+  Styling): a value that this document lacks is added to it first. The
+  avatar's colors are tokens too (Palette).
 
 ## Themes and Colors
 
@@ -343,8 +346,9 @@ wins.
 
 - **Spacing** uses a grid of 4 px, with steps of 2 px below 12 px: 4, 6, 8,
   10, 12, 16, 20, 24, 32, and 40 px.
-- **Heights:** buttons, single-line fields, rows, and menu items are 24, 32,
-  36, 40, or 44 px high, as each pattern states.
+- **Heights:** buttons, single-line fields, menu items, and the rows of a
+  table or of the sidebar are 24, 32, 36, 40, 44, or 56 px high, or at least
+  that, as each pattern states.
 - **Targets:** every target of a pointer is at least 24 by 24 px (WCAG 2.2,
   2.5.8 Target Size (Minimum)).
 - **Widths:** a width that this document gives, such as that of a dialog, is
@@ -420,8 +424,8 @@ and the change adds its row.
 
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
   following its radius, or inside it for a row or a cell of a table (Tables),
-  shown on keyboard focus. No element removes it
-  (`docs/behaviors.md`, Accessibility).
+  shown on keyboard focus. No element removes it (`docs/behaviors.md`,
+  Accessibility).
 - **Motion:** only loading indicators move: the spinner turns and the progress
   bar runs (Loading). When the browser reports a preference for reduced
   motion, they stand still. Menus, popovers, dialogs, tooltips, and the
@@ -432,8 +436,8 @@ and the change adds its row.
 ### Sidebar
 
 The sidebar holds the navigation of the screens that `docs/screen-map.md`
-(Sidebar) gives one. It runs along the left edge of the window,
-the full height, on `sidebar`, with a `border` line on its right edge, and
+(Sidebar) gives one. It runs along the left edge of the window, the full
+height, on `sidebar`, with a `border` line on its right edge, and
 stays in place while the content scrolls. When the window is shorter than
 the sidebar, the sidebar scrolls within itself.
 
@@ -640,7 +644,7 @@ writes "Confidential" next to it.
   label; Next has its chevron after it. They are 32 px high in the toolbar
   and pagination of a list and in the heading of a card, 40 px in forms and
   dialogs, and 36 px elsewhere, such as in the heading row of a screen, in an
-  empty state, and as Try again.
+  empty state, and as Try again, unless a pattern states its own height.
 - A disabled button shows at 60 % opacity. A busy button shows
   `loader-circle` in place of its icon, or before its label, keeps its label,
   and cannot be pressed (`docs/behaviors.md`, Loading).
@@ -667,9 +671,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
    presses Enter and removes it with its clear button; Filters, a secondary
    button with `list-filter`, which opens a popover with the filter fields
    and shows the number of the filters that apply after its label, a filter
-   applying as soon as its field changes, or, for a text field, when the user
-   presses Enter; and, while a filter or a search applies, Clear filters, a
-   quiet button with `x`. The toolbar wraps when the width runs short.
+   applying as soon as its field changes, or, for a field that the user types
+   into, such as a text or a date field, when the user presses Enter; and,
+   while a filter or a search applies, Clear filters, a quiet button with
+   `x`. The toolbar wraps when the width runs short.
 3. The table (Tables), 16 px below.
 4. The pagination, 16 px below, at the end of the line, when the list has
    more than one page: the range, such as "1–20 of 25", in `text-14` and
@@ -686,12 +691,14 @@ A list screen, such as the Ticket list, shows from top to bottom:
 - The header row is 36 px high, on `surface-2`, with the column names in
   `text-13`, weight 500, `fg-muted`. The sorted column shows `arrow-up` or
   `arrow-down` at 14 px after its name.
-- Each row is 36 px high, in `text-14`, with a `border` line below it and
-  `surface-hover` under the pointer, which helps to follow the row. Cells
-  have 10 px of side padding, the first and the last 16 px at the outer side,
-  and hold one line, centered vertically.
-- The first column holds the identifier of the record as a link at weight 500;
-  it is the only link to the record, and the row as a whole is not one.
+- Each row is at least 36 px high, in `text-14`, with a `border` line below
+  it and `surface-hover` under the pointer, which helps to follow the row.
+  Cells have 10 px of side padding, the first and the last 16 px at the outer
+  side, and hold one line, centered vertically, unless their text wraps
+  (below).
+- The first column holds the identifier of the record, as a link at weight
+  500 when the record has a screen of its own; it is the only link to the
+  record, and the row as a whole is not one.
 - The focus ring of a row or a cell is drawn inside it, so that the frame
   does not cut it.
 - A cell with several values, such as the packages of a Ticket, shows the
@@ -703,7 +710,7 @@ A list screen, such as the Ticket list, shows from top to bottom:
 - A text longer than its column, such as a title, ends with an ellipsis when
   the screen of its record shows it whole, and assistive technologies read it
   whole; in a table whose records have no screen of their own, such as an
-  audit log, it wraps, and its row grows.
+  audit log, it wraps, a user's name included, and its row grows.
 - A user shows in the full form at the small size (Representation of a
   User).
 - The loading indicator, an error in place of the data, and an empty state
@@ -905,7 +912,9 @@ of most languages.
 | 7 | `#A21CAF` | 5.54 |
 
 Every color has a contrast of at least 3:1 with the background of the avatar
-(WCAG 2.2, 1.4.11 Non-text Contrast).
+(WCAG 2.2, 1.4.11 Non-text Contrast). The colors and the background are
+tokens, `avatar-0` to `avatar-7` and `avatar-bg`, with one value for both
+themes.
 
 ### Versions
 

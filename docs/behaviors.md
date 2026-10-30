@@ -202,9 +202,9 @@ message follows Wording.
   that tries again after a network failure, a `429`, or a `5xx`. In place of
   the content of a screen, every other error links to the landing instead.
 - A count, such as the count of a view or of the attention summary, has no
-  room for a message or an action: when its read fails, it shows as not
-  available, read as "Not available", and the screen's next read of its data
-  tries it again (Loading).
+  room for a message or an action: when a read of it fails, even after it
+  showed a number, it shows as not available, read as "Not available", and
+  the screen's next read of its data tries it again (Loading).
 - A form checks before sending the constraints that the pinned contract
   declares for its fields, such as a required value or a maximum length, and
   states the constraint at the field. A field error of a `VALIDATION_ERROR`
@@ -446,7 +446,8 @@ it:
   changes a system setting or the operation of a fetcher, such as disabling
   it; or
 - discards input that the user has not submitted, such as leaving a form or
-  closing a dialog with changes.
+  closing a dialog with changes; a term typed in the search or a filter of a
+  list and not applied is not such input, and is dropped without a question.
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
