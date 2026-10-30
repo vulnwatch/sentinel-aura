@@ -19,11 +19,11 @@
 # Usage:
 #   scripts/ci.sh ui-checks   The checks of the UI Checks job: the pinned
 #                             Sentinel contract, the generated API client, the
-#                             type check, lint, format check, and unit and
-#                             component tests, the build and the test of the
-#                             image, its SBOM, which it writes to
-#                             test-results/sbom/, and no dependency in the
-#                             working tree
+#                             type check, lint, design token check, format
+#                             check, and unit and component tests, the build
+#                             and the test of the image, its SBOM, which it
+#                             writes to test-results/sbom/, and no dependency
+#                             in the working tree
 #   scripts/ci.sh e2e         The checks of the End-to-End Tests job: the
 #                             end-to-end tests, then the test of the
 #                             development proxy
@@ -146,6 +146,165 @@ check_no_dependency_files() {
     fi
 }
 
+# The design token check (docs/conventions.md, Components and Styling;
+# Checks): a color or a type size is set only by the class of its token. The
+# lint rejects the style attribute and the attributes that set a color or a
+# type size; this check rejects the classes of Tailwind CSS that do, in the
+# modules under src/ other than the generated API client. Tailwind finds its
+# classes in the text of the files, comments included, so the check searches
+# that text as well. It rejects:
+# - an arbitrary value, [...] or (...), of any utility, that holds a literal
+#   color: a hexadecimal color or a color function;
+# - every arbitrary value of text-, which sets a color or a type size, and an
+#   arbitrary value of another utility of TOKEN_COLOR_UTILITY unless it is a
+#   number, a length, or a value with a type other than color:, such as
+#   border-(length:--width);
+# - an arbitrary property of TOKEN_COLOR_PROPERTY, such as [color:#FFFFFF]
+#   or [--color-fg:red], which sets a variable of the tokens, or one that
+#   holds a literal color;
+# - a modifier of a utility of TOKEN_COLOR_UTILITY, such as the opacity of
+#   text-fg/70; and
+# - a variant that styles one theme alone: dark:, also within another, such
+#   as not-dark:, and an arbitrary variant of prefers-color-scheme.
+
+# The utilities that set a color, and text-, which also sets a type size.
+readonly TOKEN_COLOR_UTILITY='(text|bg|border(-[xysetrbl])?|divide|outline|ring|ring-offset|inset-ring|shadow|inset-shadow|drop-shadow|text-shadow|fill|stroke|accent|caret|decoration|placeholder|from|via|to)'
+# The CSS properties that set a color or a type size, and the variables of
+# Tailwind's colors and type sizes, which hold the tokens.
+readonly TOKEN_COLOR_PROPERTY='^(color|[a-z-]+-color|background|fill|stroke|font|font-size|box-shadow|text-shadow|--color-.+|--text-.+)$'
+readonly TOKEN_COLOR_LITERAL='#[0-9A-Fa-f]{3,8}([^0-9A-Za-z_-]|$)|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark)\('
+# A number or a length, or a value with a type.
+readonly TOKEN_TYPED_VALUE='^(-?[0-9]*\.?[0-9]+([a-z]+|%)?|[a-z-]+:.+)$'
+# The character before a class, and the classes that the check examines.
+readonly TOKEN_BEFORE='(^|[^][A-Za-z0-9_-])'
+readonly TOKEN_VALUE_CLASS='[A-Za-z0-9-]*[A-Za-z0-9]-(\[[^][:space:]]*\]|\(([^()[:space:]]|\([^()[:space:]]*\))*\))'
+readonly TOKEN_PROPERTY_CLASS='\[(--[A-Za-z0-9_-]+|[a-z-]+):[^][:space:]]+\]'
+readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:space:]]*\]|\([^()[:space:]]*\)|[0-9]*\.?[0-9]+)"
+# The variants of one theme that Tailwind and the browser provide. A change
+# that adds another way for a class to apply to one theme alone adds it here
+# (docs/conventions.md, Checks).
+readonly TOKEN_THEME_CLASS=$'(([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-]|\\[[^][:space:]]*prefers-color-scheme[^][:space:]]*\\]:)[^[:space:]"\'`{}<>]*'
+# Classes that the check rejects and accepts. It checks them first, after a
+# quote and after another class, so that a pattern that stops matching cannot
+# pass unnoticed.
+readonly TOKEN_REJECTED_EXAMPLES=(
+    'text-[#9A6700]' 'text-[13px]' 'text-(length:--size)' 'bg-[rgb(9_105_218)]'
+    'fill-[oklch(0.55_0.2_25)]' 'hover:bg-[#F3F5F8]' 'border-t-[red]'
+    'bg-(--accent)' 'stroke-[var(--line)]' 'ring-[color:var(--ring)]'
+    'shadow-[0_1px_2px_#0000001A]' 'mask-b-from-[#000]' '[color:#FFFFFF]'
+    '[font-size:13px]' '[background-color:var(--accent)]' '[--color-fg:red]'
+    '[--text-14:13px]' '[--mark:oklch(0.6_0.2_25)]' 'text-fg/70'
+    'bg-accent/[0.5]' 'bg-accent/(--alpha)' 'text-14/6' 'dark:bg-surface'
+    'md:dark:text-fg' 'not-dark:bg-canvas'
+    '[@media(prefers-color-scheme:dark)]:bg-surface'
+)
+readonly TOKEN_ACCEPTED_EXAMPLES=(
+    'text-14' 'text-fg-muted' 'bg-surface' 'hover:bg-surface-hover' 'fill-none'
+    'stroke-current' 'fill-danger-icon' 'w-[216px]' 'max-h-[33vh]'
+    'border-[1.5px]' 'stroke-[1.75]' 'border-(length:--width)'
+    'bg-[image:url(/mark.svg)]' 'grid-cols-[1fr_auto]'
+    'data-[selected]:font-semibold' 'w-1/2' '[overflow-wrap:anywhere]'
+    '[--sidebar-width:216px]'
+)
+
+# Prints why the class $1 sets a color or a type size outside the tokens, or
+# nothing when it does not.
+design_token_violation() {
+    local class="$1" name value
+    if [[ "${class}" =~ ^${TOKEN_THEME_CLASS}$ ]]; then
+        echo "styles one theme alone"
+    elif [[ "${class}" =~ ^\[([^:]+):(.*)\]$ ]]; then
+        name="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
+        if [[ "${name}" =~ ${TOKEN_COLOR_PROPERTY} ]]; then
+            echo "an arbitrary color or type size"
+        elif [[ "${value}" =~ ${TOKEN_COLOR_LITERAL} ]]; then
+            echo "a literal color"
+        fi
+    elif [[ "${class}" =~ ^([A-Za-z0-9-]*[A-Za-z0-9])-[[(](.*)[])]$ ]]; then
+        name="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
+        if [[ "${value}" =~ ${TOKEN_COLOR_LITERAL} ]]; then
+            echo "a literal color"
+        elif [[ "${name}" == text ]]; then
+            echo "an arbitrary color or type size"
+        elif [[ "${name}" =~ ^${TOKEN_COLOR_UTILITY}$ ]] &&
+            ! [[ "${value}" =~ ${TOKEN_TYPED_VALUE} && "${value}" != color:* ]]; then
+            echo "an arbitrary color, or a value without its type, such as length:"
+        fi
+    elif [[ "${class}" =~ ^${TOKEN_MODIFIER_CLASS}$ ]]; then
+        echo "a modifier of a color or a type size"
+    fi
+}
+
+# Prints each class of the files $@ that sets a color or a type size outside
+# the tokens, as <file>:<line>: <class>: <reason>.
+design_token_violations() {
+    # In the C locale, for grep too, so that grep and the classification read
+    # the files as the same bytes, and the ranges of the patterns are those
+    # of ASCII.
+    local -x LC_ALL=C
+    local matches entry file line class reason status=0
+    matches="$(grep -HnoE -e "${TOKEN_BEFORE}${TOKEN_VALUE_CLASS}" \
+        -e "${TOKEN_BEFORE}${TOKEN_PROPERTY_CLASS}" \
+        -e "${TOKEN_BEFORE}${TOKEN_MODIFIER_CLASS}" \
+        -e "${TOKEN_BEFORE}${TOKEN_THEME_CLASS}" -- "$@")" || status=$?
+    ((status <= 1)) || die "cannot search the modules for their classes"
+    while IFS= read -r entry; do
+        [[ -n "${entry}" ]] || continue
+        file="${entry%%:*}"
+        entry="${entry#*:}"
+        line="${entry%%:*}"
+        class="${entry#*:}"
+        if [[ "${class}" =~ ^[^][A-Za-z0-9_-] ]]; then
+            class="${class:1}"
+        fi
+        reason="$(design_token_violation "${class}")"
+        if [[ -n "${reason}" ]]; then
+            printf '%s:%s: %s: %s\n' "${file#"${REPO_ROOT}/"}" "${line}" "${class}" "${reason}"
+        fi
+    done <<<"${matches}"
+}
+
+# Fails unless the check rejects every class of TOKEN_REJECTED_EXAMPLES and
+# accepts every class of TOKEN_ACCEPTED_EXAMPLES, each on two lines of its
+# own: in a className attribute, and after another class in a template
+# literal.
+check_design_token_examples() {
+    local examples=("${TOKEN_REJECTED_EXAMPLES[@]}" "${TOKEN_ACCEPTED_EXAMPLES[@]}")
+    local lines=() example violations rejected i line
+    for example in "${examples[@]}"; do
+        lines+=("className=\"${example}\"" "\`p-4 ${example}\`")
+    done
+    violations="$(design_token_violations <(printf '%s\n' "${lines[@]}"))"
+    rejected=" $(cut -d: -f2 <<<"${violations}" | tr '\n' ' ')"
+    for i in "${!examples[@]}"; do
+        for line in $((2 * i + 1)) $((2 * i + 2)); do
+            if ((i < ${#TOKEN_REJECTED_EXAMPLES[@]})); then
+                [[ "${rejected}" == *" ${line} "* ]] ||
+                    die "the design token check accepts ${lines[line - 1]}, which it must reject"
+            else
+                [[ "${rejected}" != *" ${line} "* ]] ||
+                    die "the design token check rejects ${lines[line - 1]}, which it must accept"
+            fi
+        done
+    done
+}
+
+check_design_tokens() {
+    local list files violations
+    check_design_token_examples
+    list="$(find "${REPO_ROOT}/src" -path "${REPO_ROOT}/${GENERATED_DIR}" -prune -o \
+        -type f \( -name '*.ts' -o -name '*.tsx' \) -print | sort)"
+    [[ -n "${list}" ]] || return 0
+    mapfile -t files <<<"${list}"
+    violations="$(design_token_violations "${files[@]}")"
+    if [[ -n "${violations}" ]]; then
+        echo "${violations}" >&2
+        die "these classes bypass the tokens of docs/design-system.md: use the class of a token, which serves both themes (docs/conventions.md, Components and Styling)"
+    fi
+}
+
 cmd_ui_checks() {
     [[ $# -eq 0 ]] || die "ui-checks: takes no arguments"
     # In CI, the workflow decides the audit, from the event of the run, and
@@ -157,6 +316,7 @@ cmd_ui_checks() {
     run_check "Verify that the API client is current" check_client
     run_check "Type check" "${SCRIPTS}/tooling.sh" run typecheck
     run_check "Lint" "${SCRIPTS}/tooling.sh" run lint
+    run_check "Design token check" check_design_tokens
     run_check "Format check" "${SCRIPTS}/tooling.sh" run format:check
     run_check "Unit and component tests" "${SCRIPTS}/tooling.sh" run test
     run_check "Build the image" "${SCRIPTS}/image.sh" build

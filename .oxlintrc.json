@@ -13,7 +13,89 @@
     "no-new-func": "error",
     "no-script-url": "error",
     "typescript/no-explicit-any": "error",
-    "typescript/no-misused-promises": "error"
+    "typescript/no-misused-promises": "error",
+    // A color or a type size is set only by the class of its token
+    // (docs/conventions.md, Components and Styling; Checks): no style
+    // attribute, and no attribute or prop that sets a color or a type size,
+    // on an element or on a component, such as an icon of Lucide.
+    "react/forbid-dom-props": [
+      "error",
+      {
+        "forbid": [
+          {
+            "propName": "style",
+            "message": "Style with the classes of the tokens, not a style attribute (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "color",
+            "message": "Set a color with the class of its token, not an attribute (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "fill",
+            "message": "Set a fill with the class of its token or fill-none, not an attribute (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "stroke",
+            "message": "Set a stroke with the class of its token or stroke-current, not an attribute (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "stopColor",
+            "message": "Set a color with the class of its token, not an attribute (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "floodColor",
+            "message": "Set a color with the class of its token, not an attribute (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "lightingColor",
+            "message": "Set a color with the class of its token, not an attribute (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "fontSize",
+            "message": "Set a type size with the class of its token, not an attribute (docs/conventions.md, Components and Styling)."
+          }
+        ]
+      }
+    ],
+    "react/forbid-component-props": [
+      "error",
+      {
+        "forbid": [
+          {
+            "propName": "style",
+            "message": "Style with the classes of the tokens, not a style prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "color",
+            "message": "Set a color with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "fill",
+            "message": "Set a fill with the class of its token or fill-none, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "stroke",
+            "message": "Set a stroke with the class of its token or stroke-current, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "stopColor",
+            "message": "Set a color with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "floodColor",
+            "message": "Set a color with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "lightingColor",
+            "message": "Set a color with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          },
+          {
+            "propName": "fontSize",
+            "message": "Set a type size with the class of its token, not a prop (docs/conventions.md, Components and Styling)."
+          }
+        ]
+      }
+    ]
   },
   "overrides": [
     {
