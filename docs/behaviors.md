@@ -411,9 +411,10 @@ Ticket Current Phase):
 - A current phase of `null` with due dates belongs to a Ticket in status
   Analyzed that has no open phase that Sentinel observes but a track whose
   later phases it cannot observe, such as an Analyzed Ticket without a CVE
-  (same document, Rules; Observability of Later Phases). Sentinel cannot tell
-  whether its work is done, so its badge shows the final release deadline,
-  which still applies. A `null` without due dates means that no SLA applies,
+  (same document, Rules; Observability of Later Phases). The Ticket is not
+  Resolved, but its milestones do not show whether that track still has work
+  in a later phase, so its badge shows the final release deadline, which
+  still applies. A `null` without due dates means that no SLA applies,
   as for an Ignored or Duplicated Ticket (same document, Null Due Dates), and
   `done` that no phase remains, as for a Resolved Ticket. Where a screen has
   no badge to show, the place stays empty.
