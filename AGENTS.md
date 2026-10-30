@@ -445,6 +445,7 @@ unless the reviewer definition says otherwise.
 | Code or tests under `src/` or `test/e2e/`, other than the generated API client, or the configuration of the tests (`vite.config.ts`, `playwright.config.ts`) | `@test-reviewer` |
 | Code under `src/` other than tests and the generated API client; `index.html`, `vite.config.ts`, `Containerfile`, or `nginx/default.conf`; or a new dependency that ships in the browser | `@security-reviewer` |
 | What the UI shows or how users operate it: components, routes, or styles under `src/`, or reference screenshots | `@accessibility-reviewer` |
+| What the UI shows or how users operate it: components, routes, or styles under `src/`, or reference screenshots | `@ux-consistency-reviewer` |
 | Code under `src/` that calls the API or handles its responses, the shared request function, the mapping of error codes, or the configuration of the query client | `@api-usage-reviewer` |
 | Significant change to documented behavior, a foundation or screen document, agent policy or OpenCode documentation, or multiple documents | `@docs-reviewer` |
 | New foundation or screen document, substantive change to the rules, flows, or terminology of one, or change of the pinned Sentinel version | `@spec-coherence-reviewer`; skip an isolated change with no impact on related documents or on what the document relies on in Sentinel's contract |

@@ -145,6 +145,7 @@ preserving scope, limitations, evidence, and verdicts.
 | `@spec-conformance-reviewer` | Reviewer | Pre-PR (unconditional) | Verifies a pull request implements what its issue, the foundation documents, and Sentinel's contract require, and introduces no unauthorized behavior |
 | `@spec-gap-analyzer` | Reviewer | New or substantially changed foundation or screen document that specifies UI behavior | Identifies unspecified UI scenarios and states, and the API capabilities a document relies on that Sentinel's contract lacks |
 | `@test-reviewer` | Reviewer | Change to UI code, tests, or their configuration | Reviews coverage of the changed behavior, the test conventions, isolation of the end-to-end tests, and assertions that prove what they claim; reads CI's results instead of running the tests |
+| `@ux-consistency-reviewer` | Reviewer | Change to what the UI shows or how users operate it | Compares the change, also in the reference screenshots, with the foundations and the screens already built: the same pattern and word for the same need, confirmations, outcomes, and errors, the design system, the flows of the frequent tasks, and a few usability heuristics |
 
 The triggers above summarize the `AGENTS.md` Reviewer Trigger Matrix, which is
 authoritative. `@spec-conformance-reviewer` is the only subagent whose trigger
@@ -176,7 +177,8 @@ three tiers:
 
 Tier 1 reviewers rely most on adversarial reasoning and long cross-document
 synthesis, so they benefit most from a stronger model. `@accessibility-reviewer`
-opens the reference screenshots, so its model must accept images.
+and `@ux-consistency-reviewer` open the reference screenshots, so their models
+must accept images.
 
 Without a local file, primary agents use the user's default model and every
 subagent inherits the model of the agent that invokes it. A reviewer listed
