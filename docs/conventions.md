@@ -302,10 +302,14 @@ that needs it; content of another kind needs a new row first.
   routes use that component.
 - Styling uses the Tailwind CSS utility classes of the tokens that
   `docs/design-system.md` defines, which replace Tailwind's default colors
-  and type sizes, and no screen or component styles the light or the dark
-  theme alone, so no class uses the `dark:` variant. `src/styles.css`, which
-  holds the tokens, is the only stylesheet of the page besides the one that
-  React Aria inserts (`docs/architecture.md`, Security Headers).
+  and type sizes. `src/styles.css`, which holds the tokens, is the only
+  stylesheet of the page besides the one that React Aria inserts
+  (`docs/architecture.md`, Security Headers).
+- The themes are in the tokens (`docs/design-system.md`, Themes):
+  `src/styles.css` gives each color token its value in each theme, and a
+  screen or a component uses the same classes in both themes, so that it is
+  correct in both as built. None of its classes selects a theme, with the
+  `dark:` variant or in any other way.
 - A color or a type size is set only by the class of its token, such as
   `text-fg-muted`, `stroke-danger-icon`, or `text-14`: not by an arbitrary
   value or property of Tailwind, such as `text-[#9A6700]`, `bg-(--accent)`,
@@ -443,13 +447,17 @@ that needs it; content of another kind needs a new row first.
   job and in `scripts/ci.sh all` (`docs/deployment.md`, Workflow Inventory).
   In the modules under `src/` other than the generated API client, it
   rejects the classes that set a color or a type size with an arbitrary
-  value or property of Tailwind or with a modifier, and the variants that
-  style one theme alone, such as `dark:` (Components and Styling). Tailwind
-  CSS finds its classes in the text of those files, comments included, and
-  so does the check. The lint rejects the `style` attribute and the
-  attributes and props of colors and type sizes, such as `fill`, on elements
-  and components alike. For a `style` attribute that sets neither a color
-  nor a type size, the rule is disabled inline as a false positive (below).
+  value or property of Tailwind or with a modifier, and the classes that
+  select a theme with `dark:` or with an arbitrary variant of
+  `prefers-color-scheme` (Components and Styling). Tailwind CSS finds its
+  classes in the text of those files, comments included, and so does the
+  check. A change that adds another way for a class to select a theme, such
+  as a selector that marks the theme of the page, also extends the check, so
+  that it rejects those classes too. The lint rejects the `style` attribute
+  and the attributes and props of colors and type sizes, such as `fill`, on
+  elements and components alike. For a `style` attribute that sets neither a
+  color nor a type size, the rule is disabled inline as a false positive
+  (below).
 - Every change also passes the end-to-end tests, which CI runs as a required
   check too (`docs/deployment.md`, Workflow Inventory) and
   `scripts/dev-env.sh e2e` runs locally.

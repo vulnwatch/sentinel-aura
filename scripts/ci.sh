@@ -180,10 +180,9 @@ readonly TOKEN_BEFORE='(^|[^][A-Za-z0-9_-])'
 readonly TOKEN_VALUE_CLASS='[A-Za-z0-9-]*[A-Za-z0-9]-(\[[^][:space:]]*\]|\(([^()[:space:]]|\([^()[:space:]]*\))*\))'
 readonly TOKEN_PROPERTY_CLASS='\[(--[A-Za-z0-9_-]+|[a-z-]+):[^][:space:]]+\]'
 readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:space:]]*\]|\([^()[:space:]]*\)|[0-9]*\.?[0-9]+)"
-# An arbitrary variant of a selector of a theme, such as [.dark_&]:, is not
-# covered. When src/styles.css applies the dark theme through a selector,
-# defining that selector as the dark: variant makes the classes of the dark
-# theme alone dark: classes, which this pattern covers.
+# The variants of one theme that Tailwind and the browser provide. A change
+# that adds another way for a class to select a theme adds it here
+# (docs/conventions.md, Checks).
 readonly TOKEN_THEME_CLASS=$'(([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-]|\\[[^][:space:]]*prefers-color-scheme[^][:space:]]*\\]:)[^[:space:]"\'`{}<>]*'
 # Classes that the check rejects and accepts. It checks them first, after a
 # quote and after another class, so that a pattern that stops matching cannot
