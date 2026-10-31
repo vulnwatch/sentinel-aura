@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.3.0...v0.4.0) (2026-10-31)
+
+
+### Features
+
+* **deps:** pin Sentinel 0.14.0 and align the UI documents ([#95](https://github.com/vulnwatch/sentinel-aura/issues/95)) ([d670531](https://github.com/vulnwatch/sentinel-aura/commit/d67053166c8d1db6ff4f7b367950cf4405a9eb08))
+* show the Sentinel mark and name in the browser tab ([#104](https://github.com/vulnwatch/sentinel-aura/issues/104)) ([6507930](https://github.com/vulnwatch/sentinel-aura/commit/6507930b0a9aaa16e533aa8e23392ddbdecec07e)), closes [#103](https://github.com/vulnwatch/sentinel-aura/issues/103)
+
 ## [0.3.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.2.0...v0.3.0) (2026-10-29)
 
 
