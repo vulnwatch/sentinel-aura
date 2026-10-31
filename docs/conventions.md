@@ -376,9 +376,14 @@ that needs it; content of another kind needs a new row first.
   fixture fails it on any Content Security Policy violation, on any uncaught
   exception of a page, and on any violation of the WCAG 2.2 A and AA rules of
   axe-core in its final state. A test checks every further state that it
-  shows, such as an open dialog or a field error, with `expectAccessible`. No
-  test turns a check off, excludes an element or a rule from it, or changes
-  the policy.
+  shows, such as an open dialog or a field error, with `expectAccessible`.
+  The fixture and `expectAccessible` check each state under the light and
+  under the dark color scheme of the browser, which show the light and the
+  dark theme unless the user chooses one (`docs/behaviors.md`, Preferences),
+  and then return the page to its own color scheme, so that the test
+  continues, and takes its screenshots, in the theme that it shows. No test
+  turns a check off, excludes an element or a rule from it, or changes the
+  policy.
 - Tests find elements as users do (Tests), and sign in as a user of the
   dataset, with its published password (Sentinel
   `docs/features/platform/example-dataset.md`, Credentials).

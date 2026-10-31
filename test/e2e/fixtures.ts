@@ -4,12 +4,19 @@ import { test as base, expect, type Page } from "@playwright/test";
 // The checks of every end-to-end test (docs/conventions.md, End-to-End
 // Tests): a test fails on any Content Security Policy violation, on any
 // uncaught exception of a page, and on any violation of the WCAG 2.2 A and AA
-// rules of axe-core in its final state (docs/architecture.md, Static Checks
-// and Tests; Security Headers). Every test imports `test` and `expect` from
-// this module.
+// rules of axe-core in its final state, under the light and the dark color
+// scheme (docs/architecture.md, Static Checks and Tests; Security Headers).
+// Every test imports `test` and `expect` from this module.
 
 // The rules of WCAG 2.0, 2.1, and 2.2, levels A and AA, as axe-core tags them.
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+// A color scheme that the browser reports, which shows the theme of the same
+// name unless the user chooses one (docs/behaviors.md, Preferences).
+type ColorScheme = "light" | "dark";
+
+// The violations of the WCAG rules under each color scheme, one line each.
+type Violations = Record<ColorScheme, string[]>;
 
 declare global {
   interface Window {
@@ -20,7 +27,7 @@ declare global {
 
 // The violations of the WCAG rules in the current state of the page, one line
 // each.
-async function accessibilityViolations(page: Page): Promise<string[]> {
+async function violationsOf(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
   return results.violations.map(
     (violation) =>
@@ -30,13 +37,49 @@ async function accessibilityViolations(page: Page): Promise<string[]> {
   );
 }
 
-// Fails unless the current state of the page meets the WCAG rules. Every test
-// checks its final state; a test calls this for every further state that it
-// shows, such as an open dialog.
-export async function expectAccessible(page: Page) {
-  expect(await accessibilityViolations(page), "axe-core violations").toEqual(
-    [],
+// The violations of the WCAG rules in the current state of the page under each
+// color scheme. The page then returns to its own color scheme, so that the
+// test continues, and takes its screenshots, in the theme that it shows.
+//
+// The emulation of a color scheme, and with it every style that depends on
+// the scheme, has taken effect when emulateMedia returns. A page that applies
+// its theme later, for example from a script that reacts to the change, needs
+// this check to wait for it, or the check sees the other theme.
+async function accessibilityViolations(page: Page): Promise<Violations> {
+  const own = await page.evaluate((): ColorScheme =>
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light",
   );
+  try {
+    await page.emulateMedia({ colorScheme: "light" });
+    const light = await violationsOf(page);
+    await page.emulateMedia({ colorScheme: "dark" });
+    const dark = await violationsOf(page);
+    return { light, dark };
+  } finally {
+    await page.emulateMedia({ colorScheme: own });
+  }
+}
+
+// Fails on any violation of the WCAG rules, under the light color scheme
+// first, and names the scheme.
+function expectNoViolations(violations: Violations) {
+  expect(
+    violations.light,
+    "axe-core violations in the light color scheme",
+  ).toEqual([]);
+  expect(
+    violations.dark,
+    "axe-core violations in the dark color scheme",
+  ).toEqual([]);
+}
+
+// Fails unless the current state of the page meets the WCAG rules under each
+// color scheme. Every test checks its final state; a test calls this for every
+// further state that it shows, such as an open dialog.
+export async function expectAccessible(page: Page) {
+  expectNoViolations(await accessibilityViolations(page));
 }
 
 export const test = base.extend<{ pageChecks: undefined }>({
@@ -70,17 +113,17 @@ export const test = base.extend<{ pageChecks: undefined }>({
 
       await use(undefined);
 
-      // The final state, unless the test failed before reaching it or opened
-      // no page.
-      const accessibility =
+      // The final state, unless the test failed before reaching it or its
+      // page has no address: it opened none, or set its content itself.
+      const accessibility: Violations =
         testInfo.status === "passed" && page.url() !== "about:blank"
           ? await accessibilityViolations(page)
-          : [];
+          : { light: [], dark: [] };
       expect(policyViolations, "Content Security Policy violations").toEqual(
         [],
       );
       expect(uncaughtErrors, "uncaught exceptions").toEqual([]);
-      expect(accessibility, "axe-core violations").toEqual([]);
+      expectNoViolations(accessibility);
     },
     { auto: true },
   ],
