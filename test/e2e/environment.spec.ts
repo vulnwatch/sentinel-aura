@@ -21,6 +21,11 @@ const LIGHT_ONLY_CONTRAST = `<!doctype html>
   </body>
 </html>`;
 
+// The failure of the checks under the dark color scheme alone: the light one
+// is checked first, so this failure shows that the light one passed.
+const DARK_ONLY_FAILURE =
+  /^axe-core violations in the dark color scheme\n[\s\S]*color-contrast: /;
+
 // Whether the page reports a preference for a dark color scheme.
 async function prefersDark(page: Page): Promise<boolean> {
   return page.evaluate(
@@ -70,16 +75,33 @@ test.describe("the checks of every test", () => {
     });
   });
 
-  // The light color scheme is checked first, so a failure under the dark one
-  // shows that the light one passed. A page of content set by the test has no
-  // address, so the check of its final state leaves it out.
+  // Under the browser's default color scheme, and under a dark one that the
+  // test chose, which the checks leave for the light one too. A page of
+  // content set by the test has no address, so the check of its final state
+  // leaves it out.
   test("fail on an accessibility violation in the dark color scheme alone", async ({
     page,
   }) => {
     await page.setContent(LIGHT_ONLY_CONTRAST);
-    await expect(expectAccessible(page)).rejects.toThrow(
-      /^axe-core violations in the dark color scheme\n[\s\S]*color-contrast: /,
-    );
+    await expect(expectAccessible(page)).rejects.toThrow(DARK_ONLY_FAILURE);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(expectAccessible(page)).rejects.toThrow(DARK_ONLY_FAILURE);
+  });
+
+  // The same pair in the final state of a page of the UI, set through the CSS
+  // object model, which the policy allows. The heading takes 20 px, the size
+  // of a level-one heading (docs/design-system.md, Type Scale): axe-core holds
+  // text of 24 px or more to 3:1 only, which the pair meets.
+  test("fail on an accessibility violation of the final state in the dark color scheme", async ({
+    page,
+  }) => {
+    test.fail();
+    await page.goto("/");
+    await page.evaluate(() => {
+      document.styleSheets[0]?.insertRule(
+        "@media (prefers-color-scheme: dark) { h1 { font-size: 20px; color: #1f6feb; background-color: #151b23; } }",
+      );
+    });
   });
 
   test("return the page to its color scheme", async ({ page }) => {

@@ -113,8 +113,8 @@ export const test = base.extend<{ pageChecks: undefined }>({
 
       await use(undefined);
 
-      // The final state, unless the test failed before reaching it or opened
-      // no page.
+      // The final state, unless the test failed before reaching it or its
+      // page has no address: it opened none, or set its content itself.
       const accessibility: Violations =
         testInfo.status === "passed" && page.url() !== "about:blank"
           ? await accessibilityViolations(page)
