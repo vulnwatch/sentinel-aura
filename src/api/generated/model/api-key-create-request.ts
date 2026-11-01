@@ -12,9 +12,13 @@
  * raises the domain-specific `ApiKeyNameValidationError` — a schema
  * constraint here would instead produce the generic
  * `422 VALIDATION_ERROR`, losing the documented
- * `AUTH_API_KEY_NAME_INVALID` code.
+ * `AUTH_API_KEY_NAME_INVALID` code. The rule applies to the normalized
+ * value, so it is stated in the description rather than as keywords,
+ * which would apply to the raw value (`docs/api-spec.md`, Published
+ * Input Constraints).
  */
 export interface ApiKeyCreateRequest {
+  /** Leading and trailing whitespace is trimmed and the value is lowercased before it is validated; the normalized name is stored and returned. It has 1-128 characters and contains only `a`-`z`, `0`-`9`, `.`, `_`, and `-`; otherwise `422 AUTH_API_KEY_NAME_INVALID`. Unique per owner among non-revoked keys. */
   name: string;
   expires_at?: string | null;
 }

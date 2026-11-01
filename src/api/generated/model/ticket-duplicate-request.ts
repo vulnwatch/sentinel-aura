@@ -13,9 +13,16 @@
  * value (lowercase prefix, whitespace, zero padding, overflow, a
  * Ticket UUID, ...) fails with the global `422 VALIDATION_ERROR`. A
  * well-formed target that is missing or inaccessible is a
- * `404 TICKET_NOT_FOUND` decided by the service, not here.
+ * `404 TICKET_NOT_FOUND` decided by the service, not here. The Core
+ * parser enforces the grammar, including the range that no pattern
+ * expresses; the field publishes the pattern and the length bound
+ * (`docs/api-spec.md`, Published Input Constraints).
  */
 export interface TicketDuplicateRequest {
-  /** Canonical identity (`SNTL-{n}`) of the target Ticket, which must not itself be Duplicated. Malformed syntax fails validation; a missing or inaccessible target returns `404 TICKET_NOT_FOUND`. Required. */
+  /**
+   * Canonical identity (`SNTL-{n}`) of the target Ticket, which must not itself be Duplicated; `n` is at most 2147483647. Malformed syntax fails validation; a missing or inaccessible target returns `404 TICKET_NOT_FOUND`. Required.
+   * @maxLength 15
+   * @pattern ^SNTL-[1-9][0-9]*$
+   */
   duplicate_of_ticket_id: string;
 }

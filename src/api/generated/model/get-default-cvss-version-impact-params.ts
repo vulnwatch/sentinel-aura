@@ -7,6 +7,7 @@ import type { GetDefaultCvssVersionImpactProposedVersion } from "./get-default-c
 export type GetDefaultCvssVersionImpactParams = {
   /**
    * Proposed default CVSS version; exactly 3.1 or 4.0.
+   * @maxLength 500
    */
   proposed_version: GetDefaultCvssVersionImpactProposedVersion;
 };

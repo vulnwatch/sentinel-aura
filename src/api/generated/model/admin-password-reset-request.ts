@@ -7,11 +7,16 @@
  * Request body for `POST /api/v1/admin/users/{user}/password`
  * (`user-management.md`, Reset User Password).
  *
- * `password` intentionally carries no length constraint at this layer
- * for the same reason as `AdminUserCreateRequest.password` — the
- * policy is domain validation owned by
- * `user_service.reset_password()`.
+ * `password` intentionally carries no enforced length constraint at
+ * this layer for the same reason as `AdminUserCreateRequest.password` —
+ * the policy is domain validation owned by
+ * `user_service.reset_password()` — and publishes it the same way.
  */
 export interface AdminPasswordResetRequest {
+  /**
+   * 16-128 characters; no complexity rules. A password outside the policy returns `422 USER_PASSWORD_POLICY_VIOLATION`, not `VALIDATION_ERROR`.
+   * @minLength 16
+   * @maxLength 128
+   */
   password: string;
 }

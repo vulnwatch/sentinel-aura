@@ -3,27 +3,33 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { PackageSortField } from "./package-sort-field";
+import type { SearchPackagesTicketStatusItem } from "./search-packages-ticket-status-item";
 import type { SortOrder } from "./sort-order";
 
 export type SearchPackagesParams = {
   /**
    * Case-insensitive substring match on the package name. Outer whitespace is trimmed once; an empty result means no search filter. `%`, `_`, and backslash are literal characters. Mutually exclusive with `name`.
+   * @maxLength 500
    */
   search?: string;
   /**
    * Exact, case-sensitive match on the package name. Mutually exclusive with a non-empty `search`.
+   * @maxLength 500
    */
   name?: string;
   /**
    * Ticket statuses to include: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored; if all values are invalid, the result is empty. Default: all statuses.
+   * @items.maxLength 500
    */
-  ticket_status?: string[];
+  ticket_status?: SearchPackagesTicketStatusItem[];
   /**
    * Sort field (default `created_at`): `package_name` (Unicode code-point order) or `created_at` (when the package was added to the Ticket).
+   * @maxLength 500
    */
   sort_by?: PackageSortField;
   /**
    * `asc` or `desc` (default `desc`).
+   * @maxLength 500
    */
   sort_order?: SortOrder;
   /**

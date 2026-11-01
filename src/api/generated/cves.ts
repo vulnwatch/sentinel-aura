@@ -565,7 +565,7 @@ export const getListCveSourcesUrl = (params?: ListCveSourcesParams) => {
 };
 
 /**
- * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.
+ * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. For `kev` it lists only `success` records written by the KEV fetcher: it can disagree with the KEV status of `GET /api/v1/cves/{cve_id}/sources`, which derives it from the CVE's KEV entry, and the KEV fetcher writes no `failure` records. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.
  * @summary List persisted CVE source records
  */
 export const listCveSources = async (
@@ -1059,7 +1059,7 @@ export const getUpsertSuseCvssAssessmentUrl = (cveId: string) => {
 };
 
 /**
- * Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated. Requires `manage_cvss`.
+ * Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. An effective change re-resolves the CVE severity; for a CVE with a Ticket, it auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes automatic Product eligibility and priority, and re-evaluates the Ticket status. Requires `manage_cvss`.
  * @summary Set or update the SUSE CVSS assessment
  */
 export const upsertSuseCvssAssessment = async (
@@ -1191,7 +1191,7 @@ export const getDeleteSuseCvssAssessmentUrl = (
 };
 
 /**
- * Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.
+ * Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.
  * @summary Delete the SUSE CVSS assessment
  */
 export const deleteSuseCvssAssessment = async (

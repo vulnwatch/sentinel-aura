@@ -19,7 +19,7 @@ export interface CVEListItem {
   description: string | null;
   /** Resolved severity from the CVSS resolution cascade: `critical`, `high`, `medium`, `low`, or `none` (CVSS score 0.0), or `null` when no CVSS assessment is available (unresolved). */
   severity: SeverityValue | null;
-  /** `published` or `rejected`. */
+  /** CVE record state: `published` or `rejected`. A CVE for which no source that reports CVE state (MITRE, NVD, kernel) has reported one yet, such as a placeholder created for a Ticket or a CVE known only from GitHub advisories, reports `published`, which then means that its state is unknown. */
   cve_state: CveStateValue;
   /** CVE publication date (UTC). */
   published_date: string | null;

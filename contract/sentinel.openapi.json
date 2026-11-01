@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.14.0"
+    "version": "0.15.0"
   },
   "paths": {
     "/health": {
@@ -230,10 +230,16 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "One of 'active', 'expired', or 'revoked'.",
-              "title": "Status"
+              "description": "One of 'active', 'expired', or 'revoked'. Any other value yields an empty page.",
+              "enum": [
+                "active",
+                "expired",
+                "revoked"
+              ],
+              "title": "Status",
+              "maxLength": 500
             },
-            "description": "One of 'active', 'expired', or 'revoked'."
+            "description": "One of 'active', 'expired', or 'revoked'. Any other value yields an empty page."
           },
           {
             "name": "page",
@@ -270,7 +276,8 @@
             "schema": {
               "$ref": "#/components/schemas/ApiKeySortField",
               "description": "'created_at' or 'last_used_at'.",
-              "default": "created_at"
+              "default": "created_at",
+              "maxLength": 500
             },
             "description": "'created_at' or 'last_used_at'."
           },
@@ -281,7 +288,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "'asc' or 'desc'.",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "'asc' or 'desc'."
           }
@@ -528,7 +536,8 @@
             "schema": {
               "type": "string",
               "description": "Owner UUID or case-sensitive exact username.",
-              "title": "Owner"
+              "title": "Owner",
+              "maxLength": 500
             },
             "description": "Owner UUID or case-sensitive exact username."
           },
@@ -538,10 +547,16 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "One of 'active', 'expired', or 'revoked'.",
-              "title": "Status"
+              "description": "One of 'active', 'expired', or 'revoked'. Any other value yields an empty page.",
+              "enum": [
+                "active",
+                "expired",
+                "revoked"
+              ],
+              "title": "Status",
+              "maxLength": 500
             },
-            "description": "One of 'active', 'expired', or 'revoked'."
+            "description": "One of 'active', 'expired', or 'revoked'. Any other value yields an empty page."
           },
           {
             "name": "page",
@@ -578,7 +593,8 @@
             "schema": {
               "$ref": "#/components/schemas/ApiKeySortField",
               "description": "'created_at' or 'last_used_at'.",
-              "default": "created_at"
+              "default": "created_at",
+              "maxLength": 500
             },
             "description": "'created_at' or 'last_used_at'."
           },
@@ -589,7 +605,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "'asc' or 'desc'.",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "'asc' or 'desc'."
           }
@@ -749,7 +766,8 @@
               "type": "string",
               "minLength": 2,
               "description": "Case-insensitive substring across username, email, and full name.",
-              "title": "Search"
+              "title": "Search",
+              "maxLength": 500
             },
             "description": "Case-insensitive substring across username, email, and full name."
           },
@@ -771,12 +789,18 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "vulnerability_analyst",
+                  "restricted_analyst"
+                ],
+                "maxLength": 500
               },
-              "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics.",
+              "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Role"
             },
-            "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics."
+            "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "has_role",
@@ -824,7 +848,8 @@
             "schema": {
               "$ref": "#/components/schemas/UserDirectorySortField",
               "description": "'username' (default), 'full_name', or 'email'.",
-              "default": "username"
+              "default": "username",
+              "maxLength": 500
             },
             "description": "'username' (default), 'full_name', or 'email'."
           },
@@ -835,7 +860,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "'asc' or 'desc'.",
-              "default": "asc"
+              "default": "asc",
+              "maxLength": 500
             },
             "description": "'asc' or 'desc'."
           }
@@ -1026,7 +1052,8 @@
               "type": "string",
               "minLength": 2,
               "description": "Case-insensitive substring across username, email, and full name.",
-              "title": "Search"
+              "title": "Search",
+              "maxLength": 500
             },
             "description": "Case-insensitive substring across username, email, and full name."
           },
@@ -1036,10 +1063,15 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "One of 'local' or 'external'.",
-              "title": "Type"
+              "description": "One of 'local' or 'external'. Any other value yields an empty page.",
+              "enum": [
+                "local",
+                "external"
+              ],
+              "title": "Type",
+              "maxLength": 500
             },
-            "description": "One of 'local' or 'external'."
+            "description": "One of 'local' or 'external'. Any other value yields an empty page."
           },
           {
             "name": "active",
@@ -1059,12 +1091,18 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "vulnerability_analyst",
+                  "restricted_analyst"
+                ],
+                "maxLength": 500
               },
-              "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics.",
+              "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Role"
             },
-            "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics."
+            "description": "One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "has_role",
@@ -1112,7 +1150,8 @@
             "schema": {
               "$ref": "#/components/schemas/UserSortField",
               "description": "'username' (default), 'full_name', 'email', or 'created_at'.",
-              "default": "username"
+              "default": "username",
+              "maxLength": 500
             },
             "description": "'username' (default), 'full_name', 'email', or 'created_at'."
           },
@@ -1123,7 +1162,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "'asc' or 'desc'.",
-              "default": "asc"
+              "default": "asc",
+              "maxLength": 500
             },
             "description": "'asc' or 'desc'."
           }
@@ -2053,12 +2093,28 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "user_created",
+                  "user_deactivated",
+                  "user_reactivated",
+                  "password_reset",
+                  "role_added",
+                  "role_removed",
+                  "username_changed",
+                  "api_key_created",
+                  "api_key_revoked",
+                  "email_changed",
+                  "full_name_changed",
+                  "bot_changed",
+                  "manager_changed"
+                ],
+                "maxLength": 500
               },
-              "description": "Filter by event type. Repeatable; OR semantics.",
+              "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Event Type"
             },
-            "description": "Filter by event type. Repeatable; OR semantics."
+            "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "from_date",
@@ -2067,7 +2123,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound."
           },
@@ -2078,7 +2135,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound."
           },
@@ -2181,7 +2239,8 @@
             "schema": {
               "type": "string",
               "description": "Actor UUID, exact username, or 'system'.",
-              "title": "Actor"
+              "title": "Actor",
+              "maxLength": 500
             },
             "description": "Actor UUID, exact username, or 'system'."
           },
@@ -2192,7 +2251,8 @@
             "schema": {
               "type": "string",
               "description": "Target user UUID or exact username.",
-              "title": "Target User"
+              "title": "Target User",
+              "maxLength": 500
             },
             "description": "Target user UUID or exact username."
           },
@@ -2203,12 +2263,30 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "user_created",
+                  "user_deactivated",
+                  "user_reactivated",
+                  "password_reset",
+                  "role_added",
+                  "role_removed",
+                  "role_mapping_created",
+                  "role_mapping_deleted",
+                  "username_changed",
+                  "api_key_created",
+                  "api_key_revoked",
+                  "email_changed",
+                  "full_name_changed",
+                  "bot_changed",
+                  "manager_changed"
+                ],
+                "maxLength": 500
               },
-              "description": "Filter by event type. Repeatable; OR semantics.",
+              "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Event Type"
             },
-            "description": "Filter by event type. Repeatable; OR semantics."
+            "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "from_date",
@@ -2217,7 +2295,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound."
           },
@@ -2228,7 +2307,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound."
           },
@@ -2487,7 +2567,8 @@
               ],
               "type": "string",
               "description": "Proposed default CVSS version; exactly 3.1 or 4.0.",
-              "title": "Proposed Version"
+              "title": "Proposed Version",
+              "maxLength": 500
             },
             "description": "Proposed default CVSS version; exactly 3.1 or 4.0."
           }
@@ -2654,12 +2735,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "setting_changed"
+                ],
+                "maxLength": 500
               },
-              "description": "Filter by event type. Repeatable; OR semantics.",
+              "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Event Type"
             },
-            "description": "Filter by event type. Repeatable; OR semantics."
+            "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "setting_key",
@@ -2668,7 +2753,8 @@
             "schema": {
               "type": "string",
               "description": "Filter by exact setting key.",
-              "title": "Setting Key"
+              "title": "Setting Key",
+              "maxLength": 500
             },
             "description": "Filter by exact setting key."
           },
@@ -2679,7 +2765,8 @@
             "schema": {
               "type": "string",
               "description": "Actor UUID, exact username, or 'system'.",
-              "title": "Actor"
+              "title": "Actor",
+              "maxLength": 500
             },
             "description": "Actor UUID, exact username, or 'system'."
           },
@@ -2690,7 +2777,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound."
           },
@@ -2701,7 +2789,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound."
           },
@@ -2874,10 +2963,18 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Filter by run status (queued, running, success, failure, partial).",
-              "title": "Status"
+              "description": "Filter by run status (queued, running, success, failure, partial). Any other value yields an empty page.",
+              "enum": [
+                "queued",
+                "running",
+                "success",
+                "failure",
+                "partial"
+              ],
+              "title": "Status",
+              "maxLength": 500
             },
-            "description": "Filter by run status (queued, running, success, failure, partial)."
+            "description": "Filter by run status (queued, running, success, failure, partial). Any other value yields an empty page."
           },
           {
             "name": "from_date",
@@ -2886,7 +2983,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound on created_at.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound on created_at."
           },
@@ -2897,7 +2995,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound on created_at.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound on created_at."
           },
@@ -3102,7 +3201,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound. Default: -7d.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound. Default: -7d."
           },
@@ -3113,7 +3213,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound. Default: now.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound. Default: now."
           }
@@ -3447,19 +3548,11 @@
             }
           },
           "422": {
-            "description": "`FETCHER_SETTING_UNKNOWN`: `custom_settings` contains an unknown key. `FETCHER_SETTING_INVALID`: a submitted `custom_settings` value has the wrong JSON type, or the merged settings fail validation. `VALIDATION_ERROR`: the request fails validation.",
+            "description": "`FETCHER_SETTING_UNKNOWN`: `custom_settings` contains unknown keys. `FETCHER_SETTING_INVALID`: submitted `custom_settings` values have the wrong JSON type, or the merged settings fail validation. For both, `errors` locates each key at fault at `[\"body\", \"custom_settings\", <key>]`, also a stored value that the request did not submit, and an error of the whole settings model at `[\"body\", \"custom_settings\"]`. `VALIDATION_ERROR`: the request fails validation.",
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/ErrorResponse"
-                    }
-                  ],
-                  "title": "Response 422 Update Fetcher Config Api V1 Fetchers  Fetcher Name  Config Patch"
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
                 }
               }
             }
@@ -3502,12 +3595,19 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "disabled",
+                  "enabled",
+                  "triggered",
+                  "config_changed"
+                ],
+                "maxLength": 500
               },
-              "description": "Filter by event type. Repeatable; OR semantics.",
+              "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Event Type"
             },
-            "description": "Filter by event type. Repeatable; OR semantics."
+            "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "actor",
@@ -3516,7 +3616,8 @@
             "schema": {
               "type": "string",
               "description": "Actor UUID or exact username.",
-              "title": "Actor"
+              "title": "Actor",
+              "maxLength": 500
             },
             "description": "Actor UUID or exact username."
           },
@@ -3527,7 +3628,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound."
           },
@@ -3538,7 +3640,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound."
           },
@@ -3712,13 +3815,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "event_type",
@@ -3727,7 +3830,41 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "status_change",
+                  "assignment",
+                  "duplicate_set",
+                  "duplicate_removed",
+                  "duplicate_target_changed",
+                  "package_added",
+                  "package_maintainer_added",
+                  "package_excluded",
+                  "package_restored",
+                  "track_status_changed",
+                  "track_excluded",
+                  "track_restored",
+                  "product_released",
+                  "product_excluded",
+                  "product_restored",
+                  "ticket_created",
+                  "cve_associated",
+                  "severity_changed",
+                  "priority_changed",
+                  "cvss_assessment_changed",
+                  "product_eligibility_changed",
+                  "confidentiality_changed",
+                  "coordinated_release_changed",
+                  "access_grant_added",
+                  "access_grant_removed",
+                  "reference_added",
+                  "reference_deleted",
+                  "reference_url_changed",
+                  "reference_type_changed",
+                  "reference_title_changed",
+                  "reference_description_changed"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored.",
               "title": "Event Type"
@@ -3741,7 +3878,8 @@
             "schema": {
               "type": "string",
               "description": "Actor user UUID, exact username, or 'system'.",
-              "title": "Actor"
+              "title": "Actor",
+              "maxLength": 500
             },
             "description": "Actor user UUID, exact username, or 'system'."
           },
@@ -3752,7 +3890,8 @@
             "schema": {
               "type": "string",
               "description": "Case-insensitive literal substring search across comment, old_value, new_value, and detail.",
-              "title": "Search"
+              "title": "Search",
+              "maxLength": 500
             },
             "description": "Case-insensitive literal substring search across comment, old_value, new_value, and detail."
           },
@@ -3763,7 +3902,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound."
           },
@@ -3774,7 +3914,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound."
           },
@@ -3877,7 +4018,7 @@
           "Tickets"
         ],
         "summary": "List Tickets",
-        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
+        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, and track filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_tickets_api_v1_tickets_get",
         "parameters": [
           {
@@ -3887,7 +4028,8 @@
             "schema": {
               "type": "string",
               "description": "Free-text search; a Ticket matches if any field matches. SNTL identifier: prefix of the numeric part (optional `SNTL-` prefix, case-insensitive). CVE ID: case-insensitive prefix (`CVE-` optional for a year-number term such as `2024-1234`). Included package names: case-insensitive substring. External identifiers (e.g. GHSA IDs): case-insensitive prefix. Outer whitespace is trimmed; `%`, `_`, and backslash are literal.",
-              "title": "Search"
+              "title": "Search",
+              "maxLength": 500
             },
             "description": "Free-text search; a Ticket matches if any field matches. SNTL identifier: prefix of the numeric part (optional `SNTL-` prefix, case-insensitive). CVE ID: case-insensitive prefix (`CVE-` optional for a year-number term such as `2024-1234`). Included package names: case-insensitive substring. External identifiers (e.g. GHSA IDs): case-insensitive prefix. Outer whitespace is trimmed; `%`, `_`, and backslash are literal."
           },
@@ -3898,7 +4040,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "new",
+                  "analysis",
+                  "analyzed",
+                  "resolved",
+                  "ignored",
+                  "duplicated"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by Ticket status: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored.",
               "title": "Status"
@@ -3912,7 +4063,8 @@
             "schema": {
               "type": "string",
               "description": "Filter by assignee: user UUID, exact username, or `none` for unassigned Tickets. An unknown user yields an empty page.",
-              "title": "Assignee"
+              "title": "Assignee",
+              "maxLength": 500
             },
             "description": "Filter by assignee: user UUID, exact username, or `none` for unassigned Tickets. An unknown user yields an empty page."
           },
@@ -3923,7 +4075,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "critical",
+                  "high",
+                  "medium",
+                  "low",
+                  "none",
+                  "unresolved"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by resolved severity: `critical`, `high`, `medium`, `low`, `none` (CVSS score 0.0), `unresolved` (no severity). Repeatable; OR semantics. Invalid values are ignored.",
               "title": "Severity"
@@ -3937,7 +4098,15 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "p1",
+                  "p2",
+                  "p3",
+                  "p4",
+                  "unresolved"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by effective priority: `p1`, `p2`, `p3`, `p4`, `unresolved` (not yet prioritizable). Repeatable; OR semantics. Invalid values are ignored.",
               "title": "Priority"
@@ -3951,7 +4120,14 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "triage",
+                  "submission",
+                  "um",
+                  "qa"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by past-due, uncompleted milestones: `triage` (Ticket `new` or `analysis` past its triage due date, VA decision), `submission` (maintainer submission request), `um` (UM release request), `qa` (QA testing and publication): at least one track has that milestone overdue. Repeatable; OR semantics. Invalid values are ignored.",
               "title": "Overdue"
@@ -3965,7 +4141,15 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "triage",
+                  "submission",
+                  "um",
+                  "qa",
+                  "done"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by the Ticket's `current_phase`: `triage`, `submission`, `um`, `qa`, `done`. A Ticket whose current phase is `null` matches no value. Combined with the same `overdue` value (for example `current_phase=um&overdue=um`), it lists the Tickets whose current phase is past due. Repeatable; OR semantics. Invalid values are ignored.",
               "title": "Current Phase"
@@ -3979,9 +4163,34 @@
             "schema": {
               "type": "string",
               "description": "Filter by maintainer of at least one included package: user UUID or exact username. An unknown user yields an empty page.",
-              "title": "Maintainer"
+              "title": "Maintainer",
+              "maxLength": 500
             },
             "description": "Filter by maintainer of at least one included package: user UUID or exact username. An unknown user yields an empty page."
+          },
+          {
+            "name": "product",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by Product: canonical Product CPE, exact and case-sensitive, current or historical. Matches a Ticket with at least one occurrence of the Product whose package, track, and Product are not excluded. With `track`, the occurrence must lie under a track of that reference. An unknown CPE yields an empty page.",
+              "title": "Product",
+              "maxLength": 500
+            },
+            "description": "Filter by Product: canonical Product CPE, exact and case-sensitive, current or historical. Matches a Ticket with at least one occurrence of the Product whose package, track, and Product are not excluded. With `track`, the occurrence must lie under a track of that reference. An unknown CPE yields an empty page."
+          },
+          {
+            "name": "track",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by track: IBS codestream project name or Git branch name, exact and case-sensitive. Matches a Ticket with at least one track of that reference whose package and track are not excluded. Product lifecycle, eligibility, affectedness, and delivery have no effect on either filter. An unknown reference yields an empty page.",
+              "title": "Track",
+              "maxLength": 500
+            },
+            "description": "Filter by track: IBS codestream project name or Git branch name, exact and case-sensitive. Matches a Ticket with at least one track of that reference whose package and track are not excluded. Product lifecycle, eligibility, affectedness, and delivery have no effect on either filter. An unknown reference yields an empty page."
           },
           {
             "name": "page",
@@ -4018,7 +4227,8 @@
             "schema": {
               "$ref": "#/components/schemas/TicketSortField",
               "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), or a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`). `null` values sort last in both directions.",
-              "default": "created_at"
+              "default": "created_at",
+              "maxLength": 500
             },
             "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), or a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`). `null` values sort last in both directions."
           },
@@ -4029,7 +4239,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           }
@@ -4180,7 +4391,7 @@
           "Tickets"
         ],
         "summary": "Get Ticket",
-        "description": "Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree. Maintainer identities are not included. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
+        "description": "Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree, which names the maintainers of each package. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "get_ticket_api_v1_tickets__ticket_id__get",
         "parameters": [
           {
@@ -4189,13 +4400,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -4258,7 +4469,7 @@
           "Tickets"
         ],
         "summary": "Set Severity Manual",
-        "description": "Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An unassigned Ticket is auto-assigned to an active vulnerability analyst, the automatic priority is refreshed, and the Ticket status is re-evaluated. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes the automatic priority, and re-evaluates the Ticket status; an unchanged severity returns the current Ticket with no side effect. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "set_ticket_severity_api_v1_tickets__ticket_id__severity_patch",
         "parameters": [
           {
@@ -4267,13 +4478,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -4366,7 +4577,7 @@
           "Tickets"
         ],
         "summary": "Associate CVE",
-        "description": "Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to an active vulnerability analyst caller. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "associate_ticket_cve_api_v1_tickets__ticket_id__associate_cve_post",
         "parameters": [
           {
@@ -4375,13 +4586,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -4500,7 +4711,7 @@
           "Tickets"
         ],
         "summary": "Set Priority Override",
-        "description": "Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to an active vulnerability analyst caller and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "set_ticket_priority_api_v1_tickets__ticket_id__priority_patch",
         "parameters": [
           {
@@ -4509,13 +4720,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -4617,13 +4828,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -4726,7 +4937,7 @@
           "Tickets"
         ],
         "summary": "Ignore Ticket",
-        "description": "Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to an active vulnerability analyst caller, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "ignore_ticket_api_v1_tickets__ticket_id__ignore_post",
         "parameters": [
           {
@@ -4735,13 +4946,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -4824,7 +5035,7 @@
           "Tickets"
         ],
         "summary": "Mark Ticket as Duplicate",
-        "description": "Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to an active vulnerability analyst caller. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "mark_ticket_as_duplicate_api_v1_tickets__ticket_id__duplicate_post",
         "parameters": [
           {
@@ -4833,13 +5044,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -4951,13 +5162,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -5049,13 +5260,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -5147,13 +5358,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -5255,13 +5466,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -5353,13 +5564,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -5461,13 +5672,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -5557,13 +5768,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -5675,13 +5886,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "user",
@@ -5771,7 +5982,7 @@
           "Ticket Packages"
         ],
         "summary": "List Ticket packages",
-        "description": "Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
+        "description": "Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase, and the maintainers of each package. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_ticket_packages_api_v1_tickets__ticket_id__packages_get",
         "parameters": [
           {
@@ -5780,13 +5991,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -5847,7 +6058,7 @@
           "Ticket Packages"
         ],
         "summary": "Add Package to Ticket",
-        "description": "Adds a source package to a Ticket. Sentinel resolves every currently maintained track and Product of the package through SMELT, matches the Products against the current Product catalog snapshot, acquires package-wide maintainership, and creates the missing package, track, and Product records. Existing records, included or excluded, are skipped, so a repeated request is safe and reports zero created records. An effective addition records a `package_added` event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status. Requires `manage_packages`. Error rows are not ordered by status: the endpoint applies, in order, Ticket accessibility, SMELT availability, catalog readiness, package-not-found, target resolution, then the locked Ticket checks (accessibility, `TICKET_NOT_MUTABLE`, `PACKAGE_ALREADY_EXCLUDED`).",
+        "description": "Adds a source package to a Ticket. Sentinel resolves every currently maintained track and Product of the package through SMELT, matches the Products against the current Product catalog snapshot, acquires package-wide maintainership, and creates the missing package, track, and Product records. Existing records, included or excluded, are skipped, so a repeated request is safe and reports zero created records. An effective addition records a `package_added` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. Requires `manage_packages`. Error rows are not ordered by status: the endpoint applies, in order, Ticket accessibility, SMELT availability, catalog readiness, package-not-found, target resolution, then the locked Ticket checks (accessibility, `TICKET_NOT_MUTABLE`, `PACKAGE_ALREADY_EXCLUDED`).",
         "operationId": "add_ticket_package_api_v1_tickets__ticket_id__packages_post",
         "parameters": [
           {
@@ -5856,13 +6067,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -5983,7 +6194,8 @@
             "schema": {
               "type": "string",
               "description": "Case-insensitive substring match on the package name. Outer whitespace is trimmed once; an empty result means no search filter. `%`, `_`, and backslash are literal characters. Mutually exclusive with `name`.",
-              "title": "Search"
+              "title": "Search",
+              "maxLength": 500
             },
             "description": "Case-insensitive substring match on the package name. Outer whitespace is trimmed once; an empty result means no search filter. `%`, `_`, and backslash are literal characters. Mutually exclusive with `name`."
           },
@@ -5994,7 +6206,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive match on the package name. Mutually exclusive with a non-empty `search`.",
-              "title": "Name"
+              "title": "Name",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive match on the package name. Mutually exclusive with a non-empty `search`."
           },
@@ -6005,7 +6218,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "new",
+                  "analysis",
+                  "analyzed",
+                  "resolved",
+                  "ignored",
+                  "duplicated"
+                ],
+                "maxLength": 500
               },
               "description": "Ticket statuses to include: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored; if all values are invalid, the result is empty. Default: all statuses.",
               "title": "Ticket Status"
@@ -6019,7 +6241,8 @@
             "schema": {
               "$ref": "#/components/schemas/PackageSortField",
               "description": "Sort field (default `created_at`): `package_name` (Unicode code-point order) or `created_at` (when the package was added to the Ticket).",
-              "default": "created_at"
+              "default": "created_at",
+              "maxLength": 500
             },
             "description": "Sort field (default `created_at`): `package_name` (Unicode code-point order) or `created_at` (when the package was added to the Ticket)."
           },
@@ -6030,7 +6253,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           },
@@ -6113,7 +6337,7 @@
           "Ticket Packages"
         ],
         "summary": "Change Track Status",
-        "description": "Changes the affectedness status of one track. An effective change records a `track_status_changed` event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged status returns the current track with no side effect. `fixed` requires `admin_ticket_ops` (any Ticket) or `manage_packages` (only a Ticket without a CVE); every other status requires `manage_packages`. Returns the track and all its Products with their current eligibility and actionability.",
+        "description": "Changes the affectedness status of one track. An effective change records a `track_status_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged status returns the current track with no side effect. `fixed` requires `admin_ticket_ops` (any Ticket) or `manage_packages` (only a Ticket without a CVE); every other status requires `manage_packages`. Returns the track and all its Products with their current eligibility and actionability.",
         "operationId": "change_track_status_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__patch",
         "parameters": [
           {
@@ -6122,13 +6346,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "package_id",
@@ -6245,7 +6469,7 @@
           "Ticket Packages"
         ],
         "summary": "Override Product Eligibility",
-        "description": "Sets, changes, or clears the eligibility override of one Product occurrence. `eligible: true` or `false` sets or changes the manual override; `eligible: null` removes it and immediately recalculates eligibility from the current CVSS threshold and lifecycle rules (the SUSE assessment of the default CVSS version, otherwise the 10.0 fallback, including for a Ticket without a CVE). An effective change records a `product_eligibility_changed` event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged request returns the current Product with no side effect. Excluded and end-of-life Products remain editable. Requires `manage_packages`. Returns the Product with its current eligibility and actionability.",
+        "description": "Sets, changes, or clears the eligibility override of one Product occurrence. `eligible: true` or `false` sets or changes the manual override; `eligible: null` removes it and immediately recalculates eligibility from the current CVSS threshold and lifecycle rules (the SUSE assessment of the default CVSS version, otherwise the 10.0 fallback, including for a Ticket without a CVE). An effective change records a `product_eligibility_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged request returns the current Product with no side effect. Excluded and end-of-life Products remain editable. Requires `manage_packages`. Returns the Product with its current eligibility and actionability.",
         "operationId": "override_product_eligibility_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__products__ticket_package_product_id__patch",
         "parameters": [
           {
@@ -6290,13 +6514,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -6389,7 +6613,7 @@
           "Ticket Packages"
         ],
         "summary": "Soft-Delete Package from Ticket",
-        "description": "Directly excludes one package. Its tracks and Products become effectively excluded without being modified. Excluding the caller's last included maintained package may remove the caller's access to a confidential Ticket after this request. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Directly excludes one package. Its tracks and Products become effectively excluded without being modified. Excluding the caller's last included maintained package may remove the caller's access to a confidential Ticket after this request. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "exclude_package_api_v1_tickets__ticket_id__packages__package_id__exclude_post",
         "parameters": [
           {
@@ -6410,13 +6634,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -6499,7 +6723,7 @@
           "Ticket Packages"
         ],
         "summary": "Restore Package",
-        "description": "Restores one directly excluded package. Child markers are not modified, so the package may remain non-actionable (`no_actionable_tracks`). Restoring a maintained package reactivates maintainer visibility. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Restores one directly excluded package. Child markers are not modified, so the package may remain non-actionable (`no_actionable_tracks`). Restoring a maintained package reactivates maintainer visibility. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "restore_package_api_v1_tickets__ticket_id__packages__package_id__restore_post",
         "parameters": [
           {
@@ -6520,13 +6744,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -6617,7 +6841,7 @@
           "Ticket Packages"
         ],
         "summary": "Soft-Delete Track",
-        "description": "Directly excludes one track, also beneath an excluded package (the response reason is then `package_excluded`). Its Products become effectively excluded without being modified. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Directly excludes one track, also beneath an excluded package (the response reason is then `package_excluded`). Its Products become effectively excluded without being modified. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "exclude_track_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__exclude_post",
         "parameters": [
           {
@@ -6650,13 +6874,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -6739,7 +6963,7 @@
           "Ticket Packages"
         ],
         "summary": "Restore Track",
-        "description": "Restores one directly excluded track. Product markers are not modified, so the track may remain non-actionable (`no_actionable_products`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Restores one directly excluded track. Product markers are not modified, so the track may remain non-actionable (`no_actionable_products`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "restore_track_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__restore_post",
         "parameters": [
           {
@@ -6772,13 +6996,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -6869,7 +7093,7 @@
           "Ticket Packages"
         ],
         "summary": "Soft-Delete Product",
-        "description": "Directly excludes one Product occurrence, also beneath an excluded package or track and while the Product is end-of-life (ancestor reasons take precedence over `product_excluded`, which takes precedence over `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Directly excludes one Product occurrence, also beneath an excluded package or track and while the Product is end-of-life (ancestor reasons take precedence over `product_excluded`, which takes precedence over `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "exclude_product_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__products__ticket_package_product_id__exclude_post",
         "parameters": [
           {
@@ -6914,13 +7138,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -7003,7 +7227,7 @@
           "Ticket Packages"
         ],
         "summary": "Restore Product",
-        "description": "Restores one directly excluded Product occurrence. No ancestor or lifecycle pre-check applies, so the Product may remain non-actionable (for example `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Restores one directly excluded Product occurrence. No ancestor or lifecycle pre-check applies, so the Product may remain non-actionable (for example `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "restore_product_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__products__ticket_package_product_id__restore_post",
         "parameters": [
           {
@@ -7048,13 +7272,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -7154,13 +7378,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "source",
@@ -7169,7 +7393,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive source (`manual` or a fetcher name).",
-              "title": "Source"
+              "title": "Source",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive source (`manual` or a fetcher name)."
           },
@@ -7180,7 +7405,14 @@
             "schema": {
               "type": "string",
               "description": "One of `advisory`, `patch`, `issue`, or `article`. Any other value matches no reference.",
-              "title": "Type"
+              "enum": [
+                "advisory",
+                "patch",
+                "issue",
+                "article"
+              ],
+              "title": "Type",
+              "maxLength": 500
             },
             "description": "One of `advisory`, `patch`, `issue`, or `article`. Any other value matches no reference."
           }
@@ -7252,13 +7484,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -7360,13 +7592,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "reference_id",
@@ -7478,13 +7710,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "reference_id",
@@ -7581,13 +7813,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "package_name",
@@ -7596,7 +7828,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive logical package of the action.",
-              "title": "Package Name"
+              "title": "Package Name",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive logical package of the action."
           },
@@ -7607,7 +7840,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive IBS codestream of the action.",
-              "title": "Codestream Name"
+              "title": "Codestream Name",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive IBS codestream of the action."
           },
@@ -7618,7 +7852,17 @@
             "schema": {
               "type": "string",
               "description": "Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action.",
-              "title": "State"
+              "enum": [
+                "new",
+                "review",
+                "accepted",
+                "declined",
+                "revoked",
+                "superseded",
+                "deleted"
+              ],
+              "title": "State",
+              "maxLength": 500
             },
             "description": "Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action."
           },
@@ -7629,7 +7873,8 @@
             "schema": {
               "$ref": "#/components/schemas/IBSRequestSortField",
               "description": "Sort field (default `upstream_updated_at`): the request's `upstream_created_at` or `upstream_updated_at`.",
-              "default": "upstream_updated_at"
+              "default": "upstream_updated_at",
+              "maxLength": 500
             },
             "description": "Sort field (default `upstream_updated_at`): the request's `upstream_created_at` or `upstream_updated_at`."
           },
@@ -7640,7 +7885,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           },
@@ -7742,13 +7988,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           },
           {
             "name": "incident_number",
@@ -7770,7 +8016,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive logical package of the action.",
-              "title": "Package Name"
+              "title": "Package Name",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive logical package of the action."
           },
@@ -7781,7 +8028,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive IBS codestream of the action.",
-              "title": "Codestream Name"
+              "title": "Codestream Name",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive IBS codestream of the action."
           },
@@ -7792,7 +8040,17 @@
             "schema": {
               "type": "string",
               "description": "Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action.",
-              "title": "State"
+              "enum": [
+                "new",
+                "review",
+                "accepted",
+                "declined",
+                "revoked",
+                "superseded",
+                "deleted"
+              ],
+              "title": "State",
+              "maxLength": 500
             },
             "description": "Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action."
           },
@@ -7803,7 +8061,8 @@
             "schema": {
               "$ref": "#/components/schemas/IBSRequestSortField",
               "description": "Sort field (default `upstream_updated_at`): the request's `upstream_created_at` or `upstream_updated_at`.",
-              "default": "upstream_updated_at"
+              "default": "upstream_updated_at",
+              "maxLength": 500
             },
             "description": "Sort field (default `upstream_updated_at`): the request's `upstream_created_at` or `upstream_updated_at`."
           },
@@ -7814,7 +8073,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           },
@@ -7917,7 +8177,8 @@
             "schema": {
               "type": "string",
               "description": "Free-text search. Outer whitespace is trimmed; a whitespace-only value is ignored. CVE ID: case-insensitive prefix; title and description: case-insensitive substring. `%`, `_`, and backslash are literal.",
-              "title": "Search"
+              "title": "Search",
+              "maxLength": 500
             },
             "description": "Free-text search. Outer whitespace is trimmed; a whitespace-only value is ignored. CVE ID: case-insensitive prefix; title and description: case-insensitive substring. `%`, `_`, and backslash are literal."
           },
@@ -7927,10 +8188,15 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Filter by CVE state: `published` or `rejected`. Any other value yields an empty page.",
-              "title": "Cve State"
+              "description": "Filter by CVE state: `published` or `rejected`. Any other value yields an empty page. `published` also matches a CVE whose state is unknown and is therefore reported as `published`.",
+              "enum": [
+                "published",
+                "rejected"
+              ],
+              "title": "Cve State",
+              "maxLength": 500
             },
-            "description": "Filter by CVE state: `published` or `rejected`. Any other value yields an empty page."
+            "description": "Filter by CVE state: `published` or `rejected`. Any other value yields an empty page. `published` also matches a CVE whose state is unknown and is therefore reported as `published`."
           },
           {
             "name": "severity",
@@ -7939,7 +8205,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "critical",
+                  "high",
+                  "medium",
+                  "low",
+                  "none",
+                  "unresolved"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by resolved severity: `critical`, `high`, `medium`, `low`, `none` (CVSS score 0.0), `unresolved` (no CVSS assessment). Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Severity"
@@ -7964,7 +8239,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded."
           },
@@ -7975,7 +8251,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound on `published_date`. CVEs without a publication date are excluded.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound on `published_date`. CVEs without a publication date are excluded."
           },
@@ -8014,7 +8291,8 @@
             "schema": {
               "$ref": "#/components/schemas/CVESortField",
               "description": "Sort field (default `published_date`): `cve_id` (Unicode code-point lexical order), `published_date`, `severity` (semantic ordering), or `created_at`. `null` values sort last in both directions.",
-              "default": "published_date"
+              "default": "published_date",
+              "maxLength": 500
             },
             "description": "Sort field (default `published_date`): `cve_id` (Unicode code-point lexical order), `published_date`, `severity` (semantic ordering), or `created_at`. `null` values sort last in both directions."
           },
@@ -8025,7 +8303,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           }
@@ -8099,13 +8378,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted.",
+              "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`.",
               "examples": [
                 "CVE-2024-1234"
               ],
               "title": "Cve Id"
             },
-            "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted."
+            "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -8177,13 +8456,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted.",
+              "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`.",
               "examples": [
                 "CVE-2024-1234"
               ],
               "title": "Cve Id"
             },
-            "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted."
+            "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -8246,7 +8525,7 @@
           "CVEs"
         ],
         "summary": "List persisted CVE source records",
-        "description": "Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.",
+        "description": "Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. For `kev` it lists only `success` records written by the KEV fetcher: it can disagree with the KEV status of `GET /api/v1/cves/{cve_id}/sources`, which derives it from the CVE's KEV entry, and the KEV fetcher writes no `failure` records. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.",
         "operationId": "list_cve_sources_api_v1_cve_sources_get",
         "parameters": [
           {
@@ -8269,7 +8548,13 @@
             "schema": {
               "type": "string",
               "description": "Filter by persisted fetch status: `success`, `failure`, or `missing`. Any other value yields an empty page.",
-              "title": "Status"
+              "enum": [
+                "success",
+                "failure",
+                "missing"
+              ],
+              "title": "Status",
+              "maxLength": 500
             },
             "description": "Filter by persisted fetch status: `success`, `failure`, or `missing`. Any other value yields an empty page."
           },
@@ -8291,7 +8576,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive lower bound on fetched_at.",
-              "title": "From Date"
+              "title": "From Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive lower bound on fetched_at."
           },
@@ -8302,7 +8588,8 @@
             "schema": {
               "type": "string",
               "description": "ISO 8601 date/datetime; inclusive upper bound on fetched_at.",
-              "title": "To Date"
+              "title": "To Date",
+              "maxLength": 500
             },
             "description": "ISO 8601 date/datetime; inclusive upper bound on fetched_at."
           },
@@ -8341,7 +8628,8 @@
             "schema": {
               "$ref": "#/components/schemas/CVESourceSortField",
               "description": "Sort field (default `fetched_at`): `fetched_at`, `first_failed_at`, `source`, or `status` (the latter two in Unicode code-point lexical order). `null` values sort last in both directions.",
-              "default": "fetched_at"
+              "default": "fetched_at",
+              "maxLength": 500
             },
             "description": "Sort field (default `fetched_at`): `fetched_at`, `first_failed_at`, `source`, or `status` (the latter two in Unicode code-point lexical order). `null` values sort last in both directions."
           },
@@ -8352,7 +8640,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           }
@@ -8426,13 +8715,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted.",
+              "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`.",
               "examples": [
                 "CVE-2024-1234"
               ],
               "title": "Cve Id"
             },
-            "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted."
+            "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -8504,13 +8793,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted.",
+              "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`.",
               "examples": [
                 "CVE-2024-1234"
               ],
               "title": "Cve Id"
             },
-            "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted."
+            "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -8573,7 +8862,7 @@
           "CVEs"
         ],
         "summary": "Set or update the SUSE CVSS assessment",
-        "description": "Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated. Requires `manage_cvss`.",
+        "description": "Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. An effective change re-resolves the CVE severity; for a CVE with a Ticket, it auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes automatic Product eligibility and priority, and re-evaluates the Ticket status. Requires `manage_cvss`.",
         "operationId": "upsert_suse_cvss_assessment_api_v1_cves__cve_id__cvss_suse_post",
         "parameters": [
           {
@@ -8582,13 +8871,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted.",
+              "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`.",
               "examples": [
                 "CVE-2024-1234"
               ],
               "title": "Cve Id"
             },
-            "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted."
+            "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`."
           }
         ],
         "requestBody": {
@@ -8699,7 +8988,7 @@
           "CVEs"
         ],
         "summary": "Delete the SUSE CVSS assessment",
-        "description": "Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.",
+        "description": "Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.",
         "operationId": "delete_suse_cvss_assessment_api_v1_cves__cve_id__cvss_suse__cvss_version__delete",
         "parameters": [
           {
@@ -8708,13 +8997,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVSS version of the SUSE assessment: `2.0`, `3.0`, `3.1`, or `4.0`.",
+              "description": "CVSS version of the SUSE assessment: `2.0`, `3.0`, `3.1`, or `4.0`. Any other value returns `404 CVSS_ASSESSMENT_NOT_FOUND`.",
               "examples": [
                 "3.1"
               ],
               "title": "Cvss Version"
             },
-            "description": "CVSS version of the SUSE assessment: `2.0`, `3.0`, `3.1`, or `4.0`."
+            "description": "CVSS version of the SUSE assessment: `2.0`, `3.0`, `3.1`, or `4.0`. Any other value returns `404 CVSS_ASSESSMENT_NOT_FOUND`."
           },
           {
             "name": "cve_id",
@@ -8722,13 +9011,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted.",
+              "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`.",
               "examples": [
                 "CVE-2024-1234"
               ],
               "title": "Cve Id"
             },
-            "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted."
+            "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -8813,13 +9102,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted.",
+              "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`.",
               "examples": [
                 "CVE-2024-1234"
               ],
               "title": "Cve Id"
             },
-            "description": "CVE-ID (`CVE-YYYY-NNNN...`). The internal CVE UUID is never accepted."
+            "description": "CVE-ID (`CVE-YYYY-NNNN...`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters. Any other value, the internal CVE UUID included, returns `404 CVE_NOT_FOUND`."
           },
           {
             "name": "source",
@@ -8831,7 +9120,8 @@
               "examples": [
                 "nvd"
               ],
-              "title": "Source"
+              "title": "Source",
+              "maxLength": 500
             },
             "description": "Limit the re-fetch to one CVE source (for example `nvd`). Omit to re-fetch from every enabled source that supports single-CVE fetch."
           }
@@ -8944,7 +9234,8 @@
             "schema": {
               "type": "string",
               "description": "Case-insensitive substring match against `name`, `display_name`, `version`, or `cpe`; a Product matches when any of those fields matches. `%`, `_`, and backslash are literal.",
-              "title": "Search"
+              "title": "Search",
+              "maxLength": 500
             },
             "description": "Case-insensitive substring match against `name`, `display_name`, `version`, or `cpe`; a Product matches when any of those fields matches. `%`, `_`, and backslash are literal."
           },
@@ -8955,7 +9246,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive match against the canonical CPE.",
-              "title": "Cpe"
+              "title": "Cpe",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive match against the canonical CPE."
           },
@@ -8966,7 +9258,12 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "current",
+                  "historical"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by membership in the latest complete SMELT snapshot: `current` (observed in it) or `historical` (retained, not observed in it). Repeatable; OR semantics; both values select every retained Product. Default when absent: `current`. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Catalog Presence"
@@ -8980,7 +9277,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "pre_release",
+                  "general_support",
+                  "extended_support",
+                  "reactive_support",
+                  "eol",
+                  "unavailable"
+                ],
+                "maxLength": 500
               },
               "description": "Filter by current lifecycle phase: `pre_release`, `general_support`, `extended_support`, `reactive_support`, `eol`, or the filter-only `unavailable` (no phase can be established; never emitted in a response). Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
               "title": "Lifecycle Phase"
@@ -9022,7 +9328,8 @@
             "schema": {
               "$ref": "#/components/schemas/ProductSortField",
               "description": "Sort field (default `name`): `name`, `display_name`, `version`, `cpe` (Unicode code-point lexical order), `catalog_last_seen_at`, or `created_at`.",
-              "default": "name"
+              "default": "name",
+              "maxLength": 500
             },
             "description": "Sort field (default `name`): `name`, `display_name`, `version`, `cpe` (Unicode code-point lexical order), `catalog_last_seen_at`, or `created_at`."
           },
@@ -9033,7 +9340,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `asc`).",
-              "default": "asc"
+              "default": "asc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `asc`)."
           }
@@ -9098,7 +9406,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization.",
-              "title": "Package"
+              "title": "Package",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization."
           },
@@ -9109,7 +9418,8 @@
             "schema": {
               "$ref": "#/components/schemas/MaintainerWorkSortField",
               "description": "Sort field (default `severity`): `severity` (semantic ordering; see Sorting), `package` (Unicode code-point order), or `submission_due_at` (the track's submission due date). An unresolved severity and a null due date sort last in both directions.",
-              "default": "severity"
+              "default": "severity",
+              "maxLength": 500
             },
             "description": "Sort field (default `severity`): `severity` (semantic ordering; see Sorting), `package` (Unicode code-point order), or `submission_due_at` (the track's submission due date). An unresolved severity and a null due date sort last in both directions."
           },
@@ -9120,7 +9430,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           },
@@ -9213,7 +9524,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization.",
-              "title": "Package"
+              "title": "Package",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization."
           },
@@ -9224,7 +9536,8 @@
             "schema": {
               "$ref": "#/components/schemas/MaintainerWorkSortField",
               "description": "Sort field (default `severity`): `severity` (semantic ordering; see Sorting), `package` (Unicode code-point order), or `submission_due_at` (the track's submission due date). An unresolved severity and a null due date sort last in both directions.",
-              "default": "severity"
+              "default": "severity",
+              "maxLength": 500
             },
             "description": "Sort field (default `severity`): `severity` (semantic ordering; see Sorting), `package` (Unicode code-point order), or `submission_due_at` (the track's submission due date). An unresolved severity and a null due date sort last in both directions."
           },
@@ -9235,7 +9548,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           },
@@ -9328,7 +9642,8 @@
             "schema": {
               "type": "string",
               "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization.",
-              "title": "Package"
+              "title": "Package",
+              "maxLength": 500
             },
             "description": "Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization."
           },
@@ -9339,7 +9654,8 @@
             "schema": {
               "$ref": "#/components/schemas/MaintainerWorkSortField",
               "description": "Sort field (default `severity`): `severity` (semantic ordering; see Sorting), `package` (Unicode code-point order), or `submission_due_at` (the track's submission due date). An unresolved severity and a null due date sort last in both directions.",
-              "default": "severity"
+              "default": "severity",
+              "maxLength": 500
             },
             "description": "Sort field (default `severity`): `severity` (semantic ordering; see Sorting), `package` (Unicode code-point order), or `submission_due_at` (the track's submission due date). An unresolved severity and a null due date sort last in both directions."
           },
@@ -9350,7 +9666,8 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "description": "`asc` or `desc` (default `desc`).",
-              "default": "desc"
+              "default": "desc",
+              "maxLength": 500
             },
             "description": "`asc` or `desc` (default `desc`)."
           },
@@ -9442,13 +9759,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Canonical Ticket identity (`SNTL-{n}`).",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
               "examples": [
                 "SNTL-42"
               ],
               "title": "Ticket Id"
             },
-            "description": "Canonical Ticket identity (`SNTL-{n}`)."
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
         "responses": {
@@ -9691,8 +10008,7 @@
             "title": "Id"
           },
           "event_type": {
-            "type": "string",
-            "title": "Event Type"
+            "$ref": "#/components/schemas/IdentityAuditEventType"
           },
           "old_value": {
             "anyOf": [
@@ -9793,7 +10109,10 @@
         "properties": {
           "password": {
             "type": "string",
-            "title": "Password"
+            "maxLength": 128,
+            "minLength": 16,
+            "title": "Password",
+            "description": "16-128 characters; no complexity rules. A password outside the policy returns `422 USER_PASSWORD_POLICY_VIOLATION`, not `VALIDATION_ERROR`."
           }
         },
         "type": "object",
@@ -9801,17 +10120,22 @@
           "password"
         ],
         "title": "AdminPasswordResetRequest",
-        "description": "Request body for `POST /api/v1/admin/users/{user}/password`\n(`user-management.md`, Reset User Password).\n\n`password` intentionally carries no length constraint at this layer\nfor the same reason as `AdminUserCreateRequest.password` \u2014 the\npolicy is domain validation owned by\n`user_service.reset_password()`."
+        "description": "Request body for `POST /api/v1/admin/users/{user}/password`\n(`user-management.md`, Reset User Password).\n\n`password` intentionally carries no enforced length constraint at\nthis layer for the same reason as `AdminUserCreateRequest.password` \u2014\nthe policy is domain validation owned by\n`user_service.reset_password()` \u2014 and publishes it the same way."
       },
       "AdminUserCreateRequest": {
         "properties": {
           "username": {
             "type": "string",
-            "title": "Username"
+            "title": "Username",
+            "description": "Leading and trailing whitespace is trimmed and the value is lowercased before it is validated. The result has 1-64 characters, starts with a letter, contains only `a`-`z`, `0`-`9`, `.`, `_`, and `-`, and is not the reserved `me`; otherwise `422 VALIDATION_ERROR`.",
+            "examples": [
+              "jdoe"
+            ]
           },
           "email": {
             "type": "string",
-            "title": "Email"
+            "title": "Email",
+            "description": "Email address. Leading and trailing whitespace is trimmed and the value is lowercased before it is validated; an invalid address returns `422 VALIDATION_ERROR`."
           },
           "full_name": {
             "anyOf": [
@@ -9827,11 +10151,14 @@
           },
           "password": {
             "type": "string",
-            "title": "Password"
+            "maxLength": 128,
+            "minLength": 16,
+            "title": "Password",
+            "description": "16-128 characters; no complexity rules. A password outside the policy returns `422 USER_PASSWORD_POLICY_VIOLATION`, not `VALIDATION_ERROR`."
           },
           "roles": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RoleValue"
             },
             "type": "array",
             "title": "Roles"
@@ -9849,13 +10176,14 @@
           "password"
         ],
         "title": "AdminUserCreateRequest",
-        "description": "Request body for `POST /api/v1/admin/users`\n(`user-management.md`, Create User (Admin)).\n\n`password` intentionally carries no length constraint at this layer:\nthe 16-128 character policy is domain validation enforced by\n`user_service.create_user()`, which raises the domain-specific\n`PasswordValidationError` mapped to `422\nUSER_PASSWORD_POLICY_VIOLATION` \u2014 a schema constraint here would\ninstead produce the generic `422 VALIDATION_ERROR`, losing that\ndocumented code (mirrors `ApiKeyCreateRequest.name`)."
+        "description": "Request body for `POST /api/v1/admin/users`\n(`user-management.md`, Create User (Admin)).\n\n`password` intentionally carries no enforced length constraint at\nthis layer: the 16-128 character policy is domain validation enforced\nby `user_service.create_user()`, which raises the domain-specific\n`PasswordValidationError` mapped to `422\nUSER_PASSWORD_POLICY_VIOLATION` \u2014 an enforced schema constraint here\nwould instead produce the generic `422 VALIDATION_ERROR`, losing that\ndocumented code and its precedence (mirrors `ApiKeyCreateRequest.name`).\nThe policy is only published (`_PASSWORD_SCHEMA`). `username` and\n`email` are normalized before they are validated, so their rules are\nstated in their descriptions instead of as keywords, which would apply\nto the raw value (`docs/api-spec.md`, Published Input Constraints)."
       },
       "AdminUserUpdateRequest": {
         "properties": {
           "email": {
             "type": "string",
-            "title": "Email"
+            "title": "Email",
+            "description": "Email address. Leading and trailing whitespace is trimmed and the value is lowercased before it is validated; an invalid address returns `422 VALIDATION_ERROR`."
           },
           "full_name": {
             "anyOf": [
@@ -9882,7 +10210,11 @@
         "properties": {
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Leading and trailing whitespace is trimmed and the value is lowercased before it is validated; the normalized name is stored and returned. It has 1-128 characters and contains only `a`-`z`, `0`-`9`, `.`, `_`, and `-`; otherwise `422 AUTH_API_KEY_NAME_INVALID`. Unique per owner among non-revoked keys.",
+            "examples": [
+              "ci.production"
+            ]
           },
           "expires_at": {
             "anyOf": [
@@ -9902,7 +10234,7 @@
           "name"
         ],
         "title": "ApiKeyCreateRequest",
-        "description": "Request body for `POST /api/v1/api-keys`.\n\n`name` intentionally carries no length/charset constraint: the API\nKey Name Rule (trim, lowercase, 1-128 characters, `[a-z0-9._-]`) is\napplied and enforced by `api_key_service.create_key()`, which\nraises the domain-specific `ApiKeyNameValidationError` \u2014 a schema\nconstraint here would instead produce the generic\n`422 VALIDATION_ERROR`, losing the documented\n`AUTH_API_KEY_NAME_INVALID` code."
+        "description": "Request body for `POST /api/v1/api-keys`.\n\n`name` intentionally carries no length/charset constraint: the API\nKey Name Rule (trim, lowercase, 1-128 characters, `[a-z0-9._-]`) is\napplied and enforced by `api_key_service.create_key()`, which\nraises the domain-specific `ApiKeyNameValidationError` \u2014 a schema\nconstraint here would instead produce the generic\n`422 VALIDATION_ERROR`, losing the documented\n`AUTH_API_KEY_NAME_INVALID` code. The rule applies to the normalized\nvalue, so it is stated in the description rather than as keywords,\nwhich would apply to the raw value (`docs/api-spec.md`, Published\nInput Constraints)."
       },
       "ApiKeyData": {
         "properties": {
@@ -10299,14 +10631,20 @@
             "examples": [
               "SNTL-42"
             ]
+          },
+          "is_confidential": {
+            "type": "boolean",
+            "title": "Is Confidential",
+            "description": "Whether the Ticket is confidential. A CVE with an associated Ticket is returned only to a caller who can see that Ticket."
           }
         },
         "type": "object",
         "required": [
-          "ticket_id"
+          "ticket_id",
+          "is_confidential"
         ],
         "title": "CVEAssociatedTicket",
-        "description": "The public identity of the Ticket associated with a CVE."
+        "description": "The Ticket associated with a CVE: its public identity and\nconfidentiality."
       },
       "CVECVSSAssessments": {
         "properties": {
@@ -10420,7 +10758,7 @@
           },
           "cve_state": {
             "$ref": "#/components/schemas/CveStateValue",
-            "description": "CVE record state: `published` or `rejected`."
+            "description": "CVE record state: `published` or `rejected`. A CVE for which no source that reports CVE state (MITRE, NVD, kernel) has reported one yet, such as a placeholder created for a Ticket or a CVE known only from GitHub advisories, reports `published`, which then means that its state is unknown."
           },
           "date_rejected": {
             "anyOf": [
@@ -10531,7 +10869,7 @@
             "type": "string",
             "format": "date",
             "title": "Assessed At",
-            "description": "EPSS assessment date. EPSS refreshes only for active Tickets, so consumers use this date to indicate staleness."
+            "description": "EPSS assessment date of the retained score. The periodic refresh covers only CVEs with an active Ticket, so the score of any other CVE can be older than the latest EPSS publication."
           }
         },
         "type": "object",
@@ -10546,8 +10884,7 @@
       "CVEExternalIdentifierResponse": {
         "properties": {
           "source": {
-            "type": "string",
-            "title": "Source",
+            "$ref": "#/components/schemas/CVEExternalIdentifierSourceValue",
             "description": "Naming authority, serialized in lowercase (e.g. `ghsa`)."
           },
           "identifier": {
@@ -10565,7 +10902,7 @@
               }
             ],
             "title": "Url",
-            "description": "Direct link to the advisory page."
+            "description": "Direct link to the advisory page. An upstream string that is not validated: it is not guaranteed to be an `http` or `https` URL."
           }
         },
         "type": "object",
@@ -10576,6 +10913,14 @@
         ],
         "title": "CVEExternalIdentifierResponse",
         "description": "One external vulnerability identifier from another naming authority."
+      },
+      "CVEExternalIdentifierSourceValue": {
+        "type": "string",
+        "enum": [
+          "ghsa",
+          "pysec",
+          "rustsec"
+        ]
       },
       "CVEKEVResponse": {
         "properties": {
@@ -10595,7 +10940,7 @@
               }
             ],
             "title": "Reference Url",
-            "description": "KEV catalog entry URL."
+            "description": "KEV catalog entry URL. An upstream string that is not validated: it is not guaranteed to be an `http` or `https` URL."
           }
         },
         "type": "object",
@@ -10650,7 +10995,7 @@
           },
           "cve_state": {
             "$ref": "#/components/schemas/CveStateValue",
-            "description": "`published` or `rejected`."
+            "description": "CVE record state: `published` or `rejected`. A CVE for which no source that reports CVE state (MITRE, NVD, kernel) has reported one yet, such as a placeholder created for a Ticket or a CVE known only from GitHub advisories, reports `published`, which then means that its state is unknown."
           },
           "published_date": {
             "anyOf": [
@@ -10842,7 +11187,7 @@
           },
           "cve_state": {
             "$ref": "#/components/schemas/CveStateValue",
-            "description": "CVE record state: `published` or `rejected`."
+            "description": "CVE record state: `published` or `rejected`. A CVE for which no source that reports CVE state (MITRE, NVD, kernel) has reported one yet, such as a placeholder created for a Ticket or a CVE known only from GitHub advisories, reports `published`, which then means that its state is unknown."
           },
           "date_rejected": {
             "anyOf": [
@@ -10965,18 +11310,15 @@
       "CVESSVCResponse": {
         "properties": {
           "exploitation": {
-            "type": "string",
-            "title": "Exploitation",
+            "$ref": "#/components/schemas/SSVCExploitation",
             "description": "SSVC exploitation decision point: `none`, `poc`, or `active`."
           },
           "automatable": {
-            "type": "string",
-            "title": "Automatable",
+            "$ref": "#/components/schemas/SSVCAutomatable",
             "description": "SSVC automatable decision point: `no` or `yes`."
           },
           "technical_impact": {
-            "type": "string",
-            "title": "Technical Impact",
+            "$ref": "#/components/schemas/SSVCTechnicalImpact",
             "description": "SSVC technical impact decision point: `partial` or `total`."
           },
           "version": {
@@ -11853,8 +12195,7 @@
             "title": "Message"
           },
           "default_cvss_version": {
-            "type": "string",
-            "title": "Default Cvss Version"
+            "$ref": "#/components/schemas/DefaultCVSSVersionValue"
           },
           "scope": {
             "type": "string",
@@ -12097,7 +12438,7 @@
           },
           "roles": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RoleValue"
             },
             "type": "array",
             "title": "Roles"
@@ -12130,7 +12471,7 @@
           "bot"
         ],
         "title": "CurrentUserData",
-        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe complete user profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Role Wire Format, Deterministic\nordering). `capabilities` is the distinct, alphabetically\nwire-sorted union of the capabilities of those roles (see `rbac.md`,\nCapability Wire Format); typed as `Capability`, it is published as\nan OpenAPI `enum`. It is informational and grants nothing."
+        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe complete user profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Role Wire Format, Deterministic\nordering). `capabilities` is the distinct, alphabetically\nwire-sorted union of the capabilities of those roles (see `rbac.md`,\nCapability Wire Format). Both are typed with their value sets, so\nthe OpenAPI document publishes each as an `enum`. `capabilities` is\ninformational and grants nothing."
       },
       "CurrentUserResponse": {
         "properties": {
@@ -12202,12 +12543,10 @@
       "DefaultCVSSVersionImpactData": {
         "properties": {
           "observed_default_cvss_version": {
-            "type": "string",
-            "title": "Observed Default Cvss Version"
+            "$ref": "#/components/schemas/DefaultCVSSVersionValue"
           },
           "proposed_default_cvss_version": {
-            "type": "string",
-            "title": "Proposed Default Cvss Version"
+            "$ref": "#/components/schemas/DefaultCVSSVersionValue"
           },
           "no_op": {
             "type": "boolean",
@@ -12316,8 +12655,7 @@
             "title": "Fetcher Name"
           },
           "event_type": {
-            "type": "string",
-            "title": "Event Type"
+            "$ref": "#/components/schemas/FetcherAuditEventType"
           },
           "actor": {
             "$ref": "#/components/schemas/UserReference"
@@ -12375,6 +12713,17 @@
         ],
         "title": "FetcherAuditEventData",
         "description": "One event in the fetcher audit log response\n(`fetcher-operations.md`, Get Fetcher Audit Log). `actor` is always\nthe complete current user reference \u2014 every fetcher audit event\nrequires a human actor and user rows cannot be hard-deleted, so it\nis never `null`."
+      },
+      "FetcherAuditEventType": {
+        "type": "string",
+        "enum": [
+          "disabled",
+          "enabled",
+          "triggered",
+          "config_changed"
+        ],
+        "title": "FetcherAuditEventType",
+        "description": "Classifies the action recorded in a `FetcherAuditEvent`.\n\nCategory B \u2014 classification (Python Enum only, no CHECK constraint;\nadding a value requires only a code change). See\n`docs/features/platform/fetcher-infrastructure.md`\n(FetcherAuditEventType Enum, Event Field Values) for the field value\ncontract, and `docs/features/platform/fetcher-operations.md`\n(`update_fetcher_config`) for the one-event-per-changed-field rule."
       },
       "FetcherAuditListResponse": {
         "properties": {
@@ -12451,7 +12800,8 @@
           "custom_settings": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Custom Settings"
+            "title": "Custom Settings",
+            "description": "The stored custom setting values; a setting that is absent uses its default. For a registered fetcher, a stored key that `settings_schema` no longer declares is inert and cannot be changed or reset: sending it to `PATCH .../config`, also with `null`, returns `422 FETCHER_SETTING_UNKNOWN`."
           },
           "settings_schema": {
             "anyOf": [
@@ -12463,7 +12813,8 @@
                 "type": "null"
               }
             ],
-            "title": "Settings Schema"
+            "title": "Settings Schema",
+            "description": "JSON Schema of the custom settings: one property per setting, with its `default` and its `type`, or a `$ref` into `$defs` for an enum type; a choice whose values do not share one type has no `type`. Where they apply, a property also carries `title`, `description`, `minimum`/`maximum`, `exclusiveMinimum`/`exclusiveMaximum`, `maxLength`, `pattern`, `enum` or `const` for a choice, `warning`, and the informational `choices`. `null` when the fetcher declares no settings or is deregistered."
           },
           "updated_at": {
             "type": "string",
@@ -12516,7 +12867,8 @@
                 "type": "null"
               }
             ],
-            "title": "Schedule Override"
+            "title": "Schedule Override",
+            "description": "Five-field cron expression (minute, hour, day of month, month, day of week), as Celery's `crontab` parses it; `null` reverts to the default schedule. An expression that does not parse returns `422 VALIDATION_ERROR`."
           },
           "run_timeout": {
             "type": "integer",
@@ -12548,14 +12900,7 @@
             "title": "Disabled At"
           },
           "disabled_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/UserReference"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/UserReference"
           },
           "enabled_at": {
             "anyOf": [
@@ -12588,7 +12933,7 @@
           "enabled_by"
         ],
         "title": "FetcherDisabledPeriodData",
-        "description": "One derived disabled period. `disabled_by`/`enabled_by` are the\n`UserReference` objects of the users who disabled and enabled the\nfetcher, for every caller (`docs/features/identity/rbac.md`, Actor\nIdentities); `enabled_by` is `null` while the period is open."
+        "description": "One derived disabled period. `disabled_by`/`enabled_by` are the\n`UserReference` objects of the users who disabled and enabled the\nfetcher, for every caller (`docs/features/identity/rbac.md`, Actor\nIdentities); `disabled_by` is never `null`, and `enabled_by` is `null`\nwhile the period is open (`fetcher-operations.md`, Disabled Period\nDerivation)."
       },
       "FetcherLastRunData": {
         "properties": {
@@ -12638,8 +12983,7 @@
             "title": "Duration Seconds"
           },
           "status": {
-            "type": "string",
-            "title": "Status"
+            "$ref": "#/components/schemas/FetcherRunStatus"
           },
           "items_succeeded": {
             "type": "integer",
@@ -12658,8 +13002,7 @@
             "title": "Items Failed"
           },
           "triggered_by": {
-            "type": "string",
-            "title": "Triggered By"
+            "$ref": "#/components/schemas/FetcherRunTriggeredBy"
           },
           "triggered_by_user": {
             "anyOf": [
@@ -12885,8 +13228,7 @@
             "title": "Duration Seconds"
           },
           "status": {
-            "type": "string",
-            "title": "Status"
+            "$ref": "#/components/schemas/FetcherRunStatus"
           },
           "items_succeeded": {
             "type": "integer",
@@ -12905,8 +13247,7 @@
             "title": "Items Failed"
           },
           "triggered_by": {
-            "type": "string",
-            "title": "Triggered By"
+            "$ref": "#/components/schemas/FetcherRunTriggeredBy"
           },
           "triggered_by_user": {
             "anyOf": [
@@ -13042,8 +13383,7 @@
             "title": "Duration Seconds"
           },
           "status": {
-            "type": "string",
-            "title": "Status"
+            "$ref": "#/components/schemas/FetcherRunStatus"
           },
           "items_succeeded": {
             "type": "integer",
@@ -13062,8 +13402,7 @@
             "title": "Items Failed"
           },
           "triggered_by": {
-            "type": "string",
-            "title": "Triggered By"
+            "$ref": "#/components/schemas/FetcherRunTriggeredBy"
           },
           "triggered_by_user": {
             "anyOf": [
@@ -13137,6 +13476,27 @@
         "title": "FetcherRunListResponse",
         "description": "Response body for `GET /api/v1/fetchers/{fetcher_name}/runs`."
       },
+      "FetcherRunStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "success",
+          "failure",
+          "partial"
+        ],
+        "title": "FetcherRunStatus",
+        "description": "Execution outcome of a `FetcherRun`.\n\nCategory A \u2014 state-machine (VARCHAR + CHECK constraint\n`chk_fetcher_run_status_valid`; adding a value requires an Alembic\nmigration). See `docs/features/platform/fetcher-infrastructure.md`\n(FetcherRunStatus Enum) for the full status determination\nprecedence and lifecycle transitions."
+      },
+      "FetcherRunTriggeredBy": {
+        "type": "string",
+        "enum": [
+          "schedule",
+          "manual"
+        ],
+        "title": "FetcherRunTriggeredBy",
+        "description": "How a `FetcherRun` was initiated.\n\nCategory B \u2014 classification (Python Enum only, no CHECK constraint;\nadding a value requires only a code change). See\n`docs/features/platform/fetcher-infrastructure.md`\n(FetcherRunTriggeredBy Enum)."
+      },
       "FetcherTimelineData": {
         "properties": {
           "points": {
@@ -13201,8 +13561,7 @@
             "title": "Items Failed"
           },
           "status": {
-            "type": "string",
-            "title": "Status"
+            "$ref": "#/components/schemas/FetcherRunStatus"
           }
         },
         "type": "object",
@@ -13492,6 +13851,28 @@
           "deleted"
         ]
       },
+      "IdentityAuditEventType": {
+        "type": "string",
+        "enum": [
+          "user_created",
+          "user_deactivated",
+          "user_reactivated",
+          "password_reset",
+          "role_added",
+          "role_removed",
+          "role_mapping_created",
+          "role_mapping_deleted",
+          "username_changed",
+          "api_key_created",
+          "api_key_revoked",
+          "email_changed",
+          "full_name_changed",
+          "bot_changed",
+          "manager_changed"
+        ],
+        "title": "IdentityAuditEventType",
+        "description": "Classifies the action recorded in an `IdentityAuditEvent`.\n\nCategory B \u2014 classification (Python Enum only, no CHECK constraint;\nadding a value requires only a code change). See\n`docs/features/identity/identity-audit-log.md` (IdentityAuditEventType\nEnum) for the full event type contract: trigger, actor/target\nsemantics, and `old_value`/`new_value`/`detail` field values per\nevent type."
+      },
       "LifecyclePhaseValue": {
         "type": "string",
         "enum": [
@@ -13637,6 +14018,11 @@
               "SNTL-42"
             ]
           },
+          "is_confidential": {
+            "type": "boolean",
+            "title": "Is Confidential",
+            "description": "Whether the Ticket is confidential. Every item belongs to a Ticket that the caller can see."
+          },
           "cve_id": {
             "anyOf": [
               {
@@ -13706,6 +14092,7 @@
         "required": [
           "package_name",
           "ticket_id",
+          "is_confidential",
           "cve_id",
           "severity",
           "workflow_type",
@@ -13879,6 +14266,14 @@
               }
             ],
             "description": "First applicable reason in the order `package_excluded`, `no_actionable_tracks`; `null` when actionable."
+          },
+          "maintainers": {
+            "items": {
+              "$ref": "#/components/schemas/UserReference"
+            },
+            "type": "array",
+            "title": "Maintainers",
+            "description": "The users that Sentinel associated with this package as its maintainers, from SMELT maintainership data, as current user references ordered by `username` (Unicode code point); empty when none is associated. Associations are only added, never removed: a directly excluded package keeps them (they grant no access to a confidential Ticket while it is excluded), and an inactive user remains with `active` set to `false`."
           }
         },
         "type": "object",
@@ -13888,10 +14283,11 @@
           "tracks",
           "deleted_at",
           "actionable",
-          "non_actionable_reason"
+          "non_actionable_reason",
+          "maintainers"
         ],
         "title": "PackageDetail",
-        "description": "One source package within a Ticket, with its complete track tree.\n\nMaintainer identities are never exposed."
+        "description": "One source package within a Ticket, with its complete track tree\nand its maintainers."
       },
       "PackageExclusionPackage": {
         "properties": {
@@ -14723,6 +15119,42 @@
         "title": "ReleaseRequestListResponse",
         "description": "Response body for `GET /api/v1/tickets/{ticket_id}/release-requests`."
       },
+      "RoleValue": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "vulnerability_analyst",
+          "restricted_analyst"
+        ]
+      },
+      "SSVCAutomatable": {
+        "type": "string",
+        "enum": [
+          "no",
+          "yes"
+        ],
+        "title": "SSVCAutomatable",
+        "description": "SSVC Automatable decision point (CERT/CC v2.0.0).\n\nCategory B \u2014 classification (Python Enum only; stored in\n`CVESSVCAssessment.automatable`, VARCHAR(10)). See\n`docs/data-model.md` (CVESSVCAssessment)."
+      },
+      "SSVCExploitation": {
+        "type": "string",
+        "enum": [
+          "none",
+          "poc",
+          "active"
+        ],
+        "title": "SSVCExploitation",
+        "description": "SSVC Exploitation decision point (CERT/CC v1.1.0).\n\nCategory B \u2014 classification (Python Enum only; stored in\n`CVESSVCAssessment.exploitation`, VARCHAR(20)). See\n`docs/data-model.md` (CVESSVCAssessment) and\n`docs/features/tickets/cve-service.md` (CVEIngestPayload Schema)."
+      },
+      "SSVCTechnicalImpact": {
+        "type": "string",
+        "enum": [
+          "partial",
+          "total"
+        ],
+        "title": "SSVCTechnicalImpact",
+        "description": "SSVC Technical Impact decision point (CERT/CC v1.0.0).\n\nCategory B \u2014 classification (Python Enum only; stored in\n`CVESSVCAssessment.technical_impact`, VARCHAR(20)). See\n`docs/data-model.md` (CVESSVCAssessment)."
+      },
       "SUSECVSSAssessmentRequest": {
         "properties": {
           "vector_string": {
@@ -14750,8 +15182,7 @@
             "title": "Id"
           },
           "event_type": {
-            "type": "string",
-            "title": "Event Type"
+            "$ref": "#/components/schemas/SelfIdentityAuditEventTypeValue"
           },
           "old_value": {
             "anyOf": [
@@ -14814,7 +15245,25 @@
           "actor"
         ],
         "title": "SelfIdentityAuditEventData",
-        "description": "One event in the self-service identity audit log response\n(`identity-audit-log.md`, List My Identity Audit Events). `actor` is the\nuser reference of the recorded actor, the caller's own included, or\n`None` for an event with no recorded actor (`rbac.md`, Actor\nIdentities). The target is always the caller, so it is omitted."
+        "description": "One event in the self-service identity audit log response\n(`identity-audit-log.md`, List My Identity Audit Events). `actor` is the\nuser reference of the recorded actor, the caller's own included, or\n`None` for an event with no recorded actor (`rbac.md`, Actor\nIdentities). The target is always the caller, so it is omitted, and\n`event_type` is never a role mapping event."
+      },
+      "SelfIdentityAuditEventTypeValue": {
+        "type": "string",
+        "enum": [
+          "user_created",
+          "user_deactivated",
+          "user_reactivated",
+          "password_reset",
+          "role_added",
+          "role_removed",
+          "username_changed",
+          "api_key_created",
+          "api_key_revoked",
+          "email_changed",
+          "full_name_changed",
+          "bot_changed",
+          "manager_changed"
+        ]
       },
       "SelfIdentityAuditListResponse": {
         "properties": {
@@ -14845,8 +15294,7 @@
             "title": "Id"
           },
           "event_type": {
-            "type": "string",
-            "title": "Event Type"
+            "$ref": "#/components/schemas/SettingAuditEventType"
           },
           "setting_key": {
             "type": "string",
@@ -14888,6 +15336,14 @@
         ],
         "title": "SettingAuditEventData",
         "description": "One event in the setting audit log response\n(`system-settings.md`, List Settings Audit Events). `actor` is\nalways the complete current user reference \u2014 setting audit events\nrequire a human actor and user rows cannot be hard-deleted, so it\nis never `null`."
+      },
+      "SettingAuditEventType": {
+        "type": "string",
+        "enum": [
+          "setting_changed"
+        ],
+        "title": "SettingAuditEventType",
+        "description": "Classifies the action recorded in a `SettingAuditEvent`.\n\nCategory B \u2014 classification (Python Enum only, no CHECK constraint;\nadding a value requires only a code change). See\n`docs/features/platform/system-settings.md` (Setting Audit Log) for\nthe full event type contract."
       },
       "SettingAuditListResponse": {
         "properties": {
@@ -15067,8 +15523,7 @@
       "SystemSettingsData": {
         "properties": {
           "default_cvss_version": {
-            "type": "string",
-            "title": "Default Cvss Version"
+            "$ref": "#/components/schemas/DefaultCVSSVersionValue"
           }
         },
         "type": "object",
@@ -15187,6 +15642,8 @@
         "properties": {
           "cve_id": {
             "type": "string",
+            "maxLength": 20,
+            "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$",
             "title": "Cve Id",
             "description": "CVE identifier to associate (e.g. `CVE-2024-1234`), matching `^CVE-[0-9]{4}-[0-9]{4,}$` with at most 20 characters; otherwise `422 CVE_INVALID_FORMAT`. An unknown CVE is created as a placeholder record. Required.",
             "examples": [
@@ -15199,7 +15656,7 @@
           "cve_id"
         ],
         "title": "TicketAssociateCVERequest",
-        "description": "Request body of `POST /api/v1/tickets/{ticket_id}/associate-cve`.\n\nSee `docs/features/tickets/tickets.md` (Associate CVE). `cve_id` is\nrequired and carries no schema length limit, so any string \u2014 including\nan empty or over-length one \u2014 reaches the endpoint's\n`422 CVE_INVALID_FORMAT` check. A missing, `null`, or non-string value\nfails with the global `422 VALIDATION_ERROR`."
+        "description": "Request body of `POST /api/v1/tickets/{ticket_id}/associate-cve`.\n\nSee `docs/features/tickets/tickets.md` (Associate CVE). `cve_id` is\nrequired and carries no enforced schema constraint, so any string \u2014\nincluding an empty or over-length one \u2014 reaches the endpoint's\n`422 CVE_INVALID_FORMAT` check; the grammar is only published\n(`_CVE_ID_SCHEMA`). A missing, `null`, or non-string value fails with\nthe global `422 VALIDATION_ERROR`."
       },
       "TicketAuditEventData": {
         "properties": {
@@ -15217,8 +15674,7 @@
             ]
           },
           "event_type": {
-            "type": "string",
-            "title": "Event Type"
+            "$ref": "#/components/schemas/TicketAuditEventType"
           },
           "old_value": {
             "anyOf": [
@@ -15229,7 +15685,8 @@
                 "type": "null"
               }
             ],
-            "title": "Old Value"
+            "title": "Old Value",
+            "description": "Previous value, as its event type records it. An enumerated value is recorded as stored, which can differ from the lowercase form that other fields use: for example `New` for a Ticket status, `High` for a severity, `P1` for a priority, `AFFECTED` for a track status, and `advisory` for a reference type."
           },
           "new_value": {
             "anyOf": [
@@ -15240,7 +15697,8 @@
                 "type": "null"
               }
             ],
-            "title": "New Value"
+            "title": "New Value",
+            "description": "New value, as its event type records it. An enumerated value is recorded as stored, which can differ from the lowercase form that other fields use: for example `New` for a Ticket status, `High` for a severity, `P1` for a priority, `AFFECTED` for a track status, and `advisory` for a reference type."
           },
           "comment": {
             "anyOf": [
@@ -15295,6 +15753,44 @@
         ],
         "title": "TicketAuditEventData",
         "description": "One Ticket audit event.\n\n`ticket_id` is the parent's canonical `SNTL-{n}` identity; the\ninternal Ticket UUID is never exposed (`docs/api-spec.md`, Ticket\nIdentifier Resolution). `id` is the event's own UUID. `actor` is the\ncomplete current User reference, or `null` for a system event."
+      },
+      "TicketAuditEventType": {
+        "type": "string",
+        "enum": [
+          "status_change",
+          "assignment",
+          "duplicate_set",
+          "duplicate_removed",
+          "duplicate_target_changed",
+          "package_added",
+          "package_maintainer_added",
+          "package_excluded",
+          "package_restored",
+          "track_status_changed",
+          "track_excluded",
+          "track_restored",
+          "product_released",
+          "product_excluded",
+          "product_restored",
+          "ticket_created",
+          "cve_associated",
+          "severity_changed",
+          "priority_changed",
+          "cvss_assessment_changed",
+          "product_eligibility_changed",
+          "confidentiality_changed",
+          "coordinated_release_changed",
+          "access_grant_added",
+          "access_grant_removed",
+          "reference_added",
+          "reference_deleted",
+          "reference_url_changed",
+          "reference_type_changed",
+          "reference_title_changed",
+          "reference_description_changed"
+        ],
+        "title": "TicketAuditEventType",
+        "description": "Semantic Ticket event recorded in `TicketAuditEvent.event_type`.\n\nCategory B \u2014 classification (Python Enum only; stored in\n`TicketAuditEvent.event_type`, VARCHAR(50); adding a value requires\nonly a code change). A closed inventory of exactly 31 values; an\nexplicit no-event boundary is never represented by an additional\nvalue. See `docs/data-model.md` (TicketAuditEventType Enum) and\n`docs/features/tickets/ticket-audit-log.md` (Event Type Contract)."
       },
       "TicketAuditListResponse": {
         "properties": {
@@ -15435,7 +15931,9 @@
           "cve_id": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"
               },
               {
                 "type": "null"
@@ -15488,7 +15986,7 @@
         },
         "type": "object",
         "title": "TicketCreateRequest",
-        "description": "Request body of `POST /api/v1/tickets`.\n\nSee `docs/features/tickets/tickets.md` (Create Ticket). Every field is\noptional. `cve_id` carries no schema length limit, so any string \u2014\nincluding an empty or over-length one \u2014 reaches the endpoint's\n`422 CVE_INVALID_FORMAT` check. An omitted `is_confidential` stays\n`MISSING` (`docs/conventions.md`, Omitted Values), distinct from an\nexplicit `false`, because the field-level `manage_confidentiality`\ncheck is presence-based; it creates a non-confidential Ticket. The\nfield accepts only a JSON boolean (`docs/api-spec.md`, JSON Request\nBody Scalar Types). A non-null `coordinated_release_at` without\n`is_confidential: true` fails with the global `422 VALIDATION_ERROR`."
+        "description": "Request body of `POST /api/v1/tickets`.\n\nSee `docs/features/tickets/tickets.md` (Create Ticket). Every field is\noptional. `cve_id` carries no enforced schema constraint, so any string \u2014\nincluding an empty or over-length one \u2014 reaches the endpoint's\n`422 CVE_INVALID_FORMAT` check after the `manage_confidentiality`\ncheck; the grammar is only published on its string alternative\n(`_CVE_ID_SCHEMA`). An omitted `is_confidential` stays\n`MISSING` (`docs/conventions.md`, Omitted Values), distinct from an\nexplicit `false`, because the field-level `manage_confidentiality`\ncheck is presence-based; it creates a non-confidential Ticket. The\nfield accepts only a JSON boolean (`docs/api-spec.md`, JSON Request\nBody Scalar Types). A non-null `coordinated_release_at` without\n`is_confidential: true` fails with the global `422 VALIDATION_ERROR`."
       },
       "TicketDetail": {
         "properties": {
@@ -15601,7 +16099,7 @@
               }
             ],
             "title": "Coordinated Release At",
-            "description": "Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set."
+            "description": "Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. A retained value on a non-confidential Ticket is historical and inert."
           },
           "triage_due_at": {
             "anyOf": [
@@ -15696,7 +16194,7 @@
             },
             "type": "array",
             "title": "Packages",
-            "description": "Complete package/track/Product tree, including excluded and non-actionable records, ordered by `package_name` (Unicode code point). Maintainer identities are not exposed."
+            "description": "Complete package/track/Product tree, including excluded and non-actionable records, ordered by `package_name` (Unicode code point). Each package lists its maintainers."
           },
           "created_at": {
             "type": "string",
@@ -15736,7 +16234,7 @@
           "updated_at"
         ],
         "title": "TicketDetail",
-        "description": "Full Ticket representation for the detail endpoint and every\nmutation endpoint returning a Ticket.\n\nReplaces the compact `package_names` of list views with the complete\npackage tree and uses expanded CVE data. Maintainer identities are\nnever exposed."
+        "description": "Full Ticket representation for the detail endpoint and every\nmutation endpoint returning a Ticket.\n\nReplaces the compact `package_names` of list views with the complete\npackage tree and uses expanded CVE data. Each package names its\nmaintainers."
       },
       "TicketDetailResponse": {
         "properties": {
@@ -15755,8 +16253,10 @@
         "properties": {
           "duplicate_of_ticket_id": {
             "type": "string",
+            "maxLength": 15,
+            "pattern": "^SNTL-[1-9][0-9]*$",
             "title": "Duplicate Of Ticket Id",
-            "description": "Canonical identity (`SNTL-{n}`) of the target Ticket, which must not itself be Duplicated. Malformed syntax fails validation; a missing or inaccessible target returns `404 TICKET_NOT_FOUND`. Required.",
+            "description": "Canonical identity (`SNTL-{n}`) of the target Ticket, which must not itself be Duplicated; `n` is at most 2147483647. Malformed syntax fails validation; a missing or inaccessible target returns `404 TICKET_NOT_FOUND`. Required.",
             "examples": [
               "SNTL-42"
             ]
@@ -15767,7 +16267,7 @@
           "duplicate_of_ticket_id"
         ],
         "title": "TicketDuplicateRequest",
-        "description": "Request body of `POST /api/v1/tickets/{ticket_id}/duplicate`.\n\nSee `docs/features/tickets/tickets.md` (Mark Ticket as Duplicate) and\n`docs/api-spec.md` (Ticket Identifier Resolution): a request-body\nTicket field uses the canonical `SNTL-{n}` grammar with ordinary\nPydantic semantics, so a missing, `null`, non-string, or malformed\nvalue (lowercase prefix, whitespace, zero padding, overflow, a\nTicket UUID, ...) fails with the global `422 VALIDATION_ERROR`. A\nwell-formed target that is missing or inaccessible is a\n`404 TICKET_NOT_FOUND` decided by the service, not here."
+        "description": "Request body of `POST /api/v1/tickets/{ticket_id}/duplicate`.\n\nSee `docs/features/tickets/tickets.md` (Mark Ticket as Duplicate) and\n`docs/api-spec.md` (Ticket Identifier Resolution): a request-body\nTicket field uses the canonical `SNTL-{n}` grammar with ordinary\nPydantic semantics, so a missing, `null`, non-string, or malformed\nvalue (lowercase prefix, whitespace, zero padding, overflow, a\nTicket UUID, ...) fails with the global `422 VALIDATION_ERROR`. A\nwell-formed target that is missing or inaccessible is a\n`404 TICKET_NOT_FOUND` decided by the service, not here. The Core\nparser enforces the grammar, including the range that no pattern\nexpresses; the field publishes the pattern and the length bound\n(`docs/api-spec.md`, Published Input Constraints)."
       },
       "TicketListResponse": {
         "properties": {
@@ -15831,13 +16331,35 @@
               }
             ],
             "description": "Resolved Ticket severity (the CVE severity for a Ticket with a CVE, otherwise the manual severity): `critical`, `high`, `medium`, `low`, or `none` (CVSS score 0.0, informational), or `null` when unresolved. `none` is distinct from `null`."
+          },
+          "is_confidential": {
+            "type": "boolean",
+            "title": "Is Confidential",
+            "description": "Whether the Ticket is confidential. Every item belongs to a Ticket that the caller can see."
+          },
+          "cve_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cve Id",
+            "description": "Identifier of the CVE associated with the Ticket; `null` for a Ticket without a CVE.",
+            "examples": [
+              "CVE-2026-1234"
+            ]
           }
         },
         "type": "object",
         "required": [
           "ticket_id",
           "status",
-          "severity"
+          "severity",
+          "is_confidential",
+          "cve_id"
         ],
         "title": "TicketPackageRef",
         "description": "Lightweight reference to the Ticket of a package occurrence."
@@ -16414,7 +16936,7 @@
           "delivery_relevant": {
             "type": "boolean",
             "title": "Delivery Relevant",
-            "description": "Computed: `true` when the affectedness is `analysis` or `affected`, or `delivery_status` is not `pending`. When `false`, consumers should not display `delivery_status` or make decisions based on it."
+            "description": "Computed: `true` when the affectedness is `analysis` or `affected`, or `delivery_status` is not `pending`. When `false`, `delivery_status` is the system default, carries no delivery signal, and consumers should not make decisions based on it."
           },
           "products": {
             "items": {
@@ -16779,7 +17301,7 @@
           "delivery_relevant": {
             "type": "boolean",
             "title": "Delivery Relevant",
-            "description": "Computed: `true` when the affectedness is `analysis` or `affected`, or `delivery_status` is not `pending`. When `false`, consumers should not display `delivery_status` or make decisions based on it."
+            "description": "Computed: `true` when the affectedness is `analysis` or `affected`, or `delivery_status` is not `pending`. When `false`, `delivery_status` is the system default, carries no delivery signal, and consumers should not make decisions based on it."
           },
           "actionable": {
             "type": "boolean",
@@ -16964,8 +17486,7 @@
             "title": "Bot"
           },
           "source": {
-            "type": "string",
-            "title": "Source"
+            "$ref": "#/components/schemas/UserType"
           },
           "external_id": {
             "anyOf": [
@@ -17036,7 +17557,7 @@
           "updated_at"
         ],
         "title": "UserData",
-        "description": "The complete user profile returned by `GET /api/v1/admin/users`\n(list items), `GET /api/v1/admin/users/{user}`, and the admin\nmutation endpoints (`user-management.md`, Get User (Admin)).\n`full_name` and `manager.full_name` are nullable \u2014 the API returns\n`null` verbatim with no fallback substitution. `last_login_at` is\n`null` until the user's first login."
+        "description": "The complete user profile returned by `GET /api/v1/admin/users`\n(list items), `GET /api/v1/admin/users/{user}`, and the admin\nmutation endpoints (`user-management.md`, Get User (Admin)).\n`full_name` and `manager.full_name` are nullable \u2014 the API returns\n`null` verbatim with no fallback substitution. `source` is `local` or\n`external`. `last_login_at` is `null` until the user's first login."
       },
       "UserDirectoryData": {
         "properties": {
@@ -17074,7 +17595,7 @@
           },
           "roles": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RoleValue"
             },
             "type": "array",
             "title": "Roles"
@@ -17263,8 +17784,7 @@
       "UserRoleAssignmentData": {
         "properties": {
           "role": {
-            "type": "string",
-            "title": "Role"
+            "$ref": "#/components/schemas/RoleValue"
           },
           "group_name": {
             "type": "string",
@@ -17300,14 +17820,14 @@
         "properties": {
           "add": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RoleValue"
             },
             "type": "array",
             "title": "Add"
           },
           "remove": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RoleValue"
             },
             "type": "array",
             "title": "Remove"
@@ -17327,6 +17847,15 @@
         ],
         "title": "UserSortField",
         "description": "Sortable fields for the administrator user list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/identity/user-management.md` (List\nUsers (Admin)) for the supported fields and NULL-placement rule for\n`full_name`."
+      },
+      "UserType": {
+        "type": "string",
+        "enum": [
+          "local",
+          "external"
+        ],
+        "title": "UserType",
+        "description": "Local vs external authentication origin filter for user queries.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase \u2014 `User.source` is a derived field, never a persisted\ncolumn). See `docs/features/identity/user-management.md` (List\nUsers)."
       },
       "ValidationErrorItem": {
         "properties": {
@@ -17363,7 +17892,7 @@
           "type"
         ],
         "title": "ValidationErrorItem",
-        "description": "One element of the `errors` array of a `422 VALIDATION_ERROR`\nbody (`docs/api-spec.md`, Response Format)."
+        "description": "One element of the `errors` array of a `422` body that locates its\ninvalid inputs (`docs/api-spec.md`, Response Format)."
       },
       "ValidationErrorResponse": {
         "properties": {
@@ -17390,7 +17919,7 @@
           "errors"
         ],
         "title": "ValidationErrorResponse",
-        "description": "The `422 VALIDATION_ERROR` body: the standard envelope plus the\nfield-level `errors` array (`docs/api-spec.md`, Response Format)."
+        "description": "A `422` body that locates its invalid inputs: the standard envelope\nplus the field-level `errors` array. It is the body of\n`VALIDATION_ERROR` and of the domain validation codes whose contract\nlists `errors`, `FETCHER_SETTING_UNKNOWN` and `FETCHER_SETTING_INVALID`\n(`docs/api-spec.md`, Response Format)."
       },
       "WorkflowTypeValue": {
         "type": "string",

@@ -20,7 +20,9 @@ export interface FetcherConfigData {
   effective_schedule: string | null;
   run_timeout: number;
   request_delay: number;
+  /** The stored custom setting values; a setting that is absent uses its default. For a registered fetcher, a stored key that `settings_schema` no longer declares is inert and cannot be changed or reset: sending it to `PATCH .../config`, also with `null`, returns `422 FETCHER_SETTING_UNKNOWN`. */
   custom_settings: FetcherConfigDataCustomSettings;
+  /** JSON Schema of the custom settings: one property per setting, with its `default` and its `type`, or a `$ref` into `$defs` for an enum type; a choice whose values do not share one type has no `type`. Where they apply, a property also carries `title`, `description`, `minimum`/`maximum`, `exclusiveMinimum`/`exclusiveMaximum`, `maxLength`, `pattern`, `enum` or `const` for a choice, `warning`, and the informational `choices`. `null` when the fetcher declares no settings or is deregistered. */
   settings_schema: FetcherConfigDataSettingsSchema;
   updated_at: string;
 }

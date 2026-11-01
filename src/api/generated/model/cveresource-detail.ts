@@ -27,7 +27,7 @@ export interface CVEResourceDetail {
   published_date: string | null;
   /** Date last modified (UTC). */
   modified_date: string | null;
-  /** CVE record state: `published` or `rejected`. */
+  /** CVE record state: `published` or `rejected`. A CVE for which no source that reports CVE state (MITRE, NVD, kernel) has reported one yet, such as a placeholder created for a Ticket or a CVE known only from GitHub advisories, reports `published`, which then means that its state is unknown. */
   cve_state: CveStateValue;
   /** When the CVE was rejected (UTC); `null` if `cve_state` is `published`. */
   date_rejected: string | null;

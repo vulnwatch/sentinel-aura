@@ -17,6 +17,7 @@
  * Request Body Scalar Types).
  */
 export interface AdminUserUpdateRequest {
+  /** Email address. Leading and trailing whitespace is trimmed and the value is lowercased before it is validated; an invalid address returns `422 VALIDATION_ERROR`. */
   email?: string;
   full_name?: string | null;
   bot?: boolean;

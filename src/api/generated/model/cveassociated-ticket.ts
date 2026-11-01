@@ -4,9 +4,12 @@
  */
 
 /**
- * The public identity of the Ticket associated with a CVE.
+ * The Ticket associated with a CVE: its public identity and
+ * confidentiality.
  */
 export interface CVEAssociatedTicket {
   /** Canonical Ticket identity (`SNTL-{n}`). */
   ticket_id: string;
+  /** Whether the Ticket is confidential. A CVE with an associated Ticket is returned only to a caller who can see that Ticket. */
+  is_confidential: boolean;
 }

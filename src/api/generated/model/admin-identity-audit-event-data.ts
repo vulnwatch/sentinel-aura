@@ -3,6 +3,7 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { AdminIdentityAuditEventDataDetail } from "./admin-identity-audit-event-data-detail";
+import type { IdentityAuditEventType } from "./identity-audit-event-type";
 import type { UserReference } from "./user-reference";
 
 /**
@@ -14,7 +15,7 @@ import type { UserReference } from "./user-reference";
  */
 export interface AdminIdentityAuditEventData {
   id: string;
-  event_type: string;
+  event_type: IdentityAuditEventType;
   old_value: string | null;
   new_value: string | null;
   detail: AdminIdentityAuditEventDataDetail;

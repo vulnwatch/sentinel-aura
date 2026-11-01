@@ -6,10 +6,12 @@
 export type GetFetcherTimelineParams = {
   /**
    * ISO 8601 date/datetime; inclusive lower bound. Default: -7d.
+   * @maxLength 500
    */
   from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound. Default: now.
+   * @maxLength 500
    */
   to_date?: string;
 };

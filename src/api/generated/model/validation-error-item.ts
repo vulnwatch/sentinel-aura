@@ -4,8 +4,8 @@
  */
 
 /**
- * One element of the `errors` array of a `422 VALIDATION_ERROR`
- * body (`docs/api-spec.md`, Response Format).
+ * One element of the `errors` array of a `422` body that locates its
+ * invalid inputs (`docs/api-spec.md`, Response Format).
  */
 export interface ValidationErrorItem {
   /** Path to the invalid input, e.g. `["body", "field_name"]`. */

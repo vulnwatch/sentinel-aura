@@ -207,10 +207,6 @@ to the changed obligations. Expand when impact cannot be bounded confidently.
   model? Look for actions offered to a role that none of its capabilities
   allows, and for content that the API does not return to that role
   (Sentinel `docs/features/identity/rbac.md`)
-- Does a document define client-side behavior that Sentinel's specifications
-  already describe, and define it differently? That behavior remains
-  authoritative in Sentinel until a change moves it to this repository
-  (`README.md`, Specification Boundary)
 - After a pinned Sentinel version change: does a screen document still
   agree with the operations it consumes as the new contract defines them,
   and does every document still agree with the Sentinel sections it cites?

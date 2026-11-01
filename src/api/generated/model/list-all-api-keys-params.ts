@@ -3,17 +3,20 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { ApiKeySortField } from "./api-key-sort-field";
+import type { ListAllApiKeysStatus } from "./list-all-api-keys-status";
 import type { SortOrder } from "./sort-order";
 
 export type ListAllApiKeysParams = {
   /**
    * Owner UUID or case-sensitive exact username.
+   * @maxLength 500
    */
   owner?: string;
   /**
-   * One of 'active', 'expired', or 'revoked'.
+   * One of 'active', 'expired', or 'revoked'. Any other value yields an empty page.
+   * @maxLength 500
    */
-  status?: string;
+  status?: ListAllApiKeysStatus;
   /**
    * Page number.
    * @minimum 1
@@ -28,10 +31,12 @@ export type ListAllApiKeysParams = {
   per_page?: number;
   /**
    * 'created_at' or 'last_used_at'.
+   * @maxLength 500
    */
   sort_by?: ApiKeySortField;
   /**
    * 'asc' or 'desc'.
+   * @maxLength 500
    */
   sort_order?: SortOrder;
 };

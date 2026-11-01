@@ -3,6 +3,7 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { FetcherAuditEventDataDetail } from "./fetcher-audit-event-data-detail";
+import type { FetcherAuditEventType } from "./fetcher-audit-event-type";
 import type { UserReference } from "./user-reference";
 
 /**
@@ -15,7 +16,7 @@ import type { UserReference } from "./user-reference";
 export interface FetcherAuditEventData {
   id: string;
   fetcher_name: string;
-  event_type: string;
+  event_type: FetcherAuditEventType;
   actor: UserReference;
   old_value: string | null;
   new_value: string | null;

@@ -8,14 +8,17 @@ import type { SortOrder } from "./sort-order";
 export type ListCompletedPackagesParams = {
   /**
    * Exact, case-sensitive match on the package name: no trimming, aliasing, substring matching, or case normalization.
+   * @maxLength 500
    */
   package?: string;
   /**
    * Sort field (default `severity`): `severity` (semantic ordering; see Sorting), `package` (Unicode code-point order), or `submission_due_at` (the track's submission due date). An unresolved severity and a null due date sort last in both directions.
+   * @maxLength 500
    */
   sort_by?: MaintainerWorkSortField;
   /**
    * `asc` or `desc` (default `desc`).
+   * @maxLength 500
    */
   sort_order?: SortOrder;
   /**

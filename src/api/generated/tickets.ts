@@ -94,7 +94,7 @@ export const getListTicketsUrl = (params?: ListTicketsParams) => {
 };
 
 /**
- * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee and maintainer filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
+ * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, and track filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
  */
 export const listTickets = async (
@@ -362,7 +362,7 @@ export const getGetTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree. Maintainer identities are not included. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
+ * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree, which names the maintainers of each package. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Get Ticket
  */
 export const getTicket = async (
@@ -511,7 +511,7 @@ export const getSetTicketSeverityUrl = (ticketId: string) => {
 };
 
 /**
- * Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An unassigned Ticket is auto-assigned to an active vulnerability analyst, the automatic priority is refreshed, and the Ticket status is re-evaluated. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes the automatic priority, and re-evaluates the Ticket status; an unchanged severity returns the current Ticket with no side effect. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Set Severity Manual
  */
 export const setTicketSeverity = async (
@@ -634,7 +634,7 @@ export const getAssociateTicketCveUrl = (ticketId: string) => {
 };
 
 /**
- * Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to an active vulnerability analyst caller. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Associate CVE
  */
 export const associateTicketCve = async (
@@ -764,7 +764,7 @@ export const getSetTicketPriorityUrl = (ticketId: string) => {
 };
 
 /**
- * Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to an active vulnerability analyst caller and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Set Priority Override
  */
 export const setTicketPriority = async (
@@ -1009,7 +1009,7 @@ export const getIgnoreTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to an active vulnerability analyst caller, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Ignore Ticket
  */
 export const ignoreTicket = async (
@@ -1101,7 +1101,7 @@ export const getMarkTicketAsDuplicateUrl = (ticketId: string) => {
 };
 
 /**
- * Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to an active vulnerability analyst caller. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Mark Ticket as Duplicate
  */
 export const markTicketAsDuplicate = async (
