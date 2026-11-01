@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { THEME_STORAGE_KEY } from "./theme";
 import themeScriptUrl from "./theme-script?url";
 
@@ -6,13 +6,22 @@ import themeScriptUrl from "./theme-script?url";
 // (vite.config.ts), so the tests load it the same way.
 
 const root = document.documentElement;
+// The meta element of the color schemes, as the entry document declares it.
+const meta = document.createElement("meta");
+meta.name = "color-scheme";
 // The script elements that the tests added.
 const scripts: HTMLScriptElement[] = [];
+
+beforeEach(() => {
+  meta.content = "light dark";
+  document.head.append(meta);
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
   window.localStorage.removeItem(THEME_STORAGE_KEY);
   delete root.dataset.theme;
+  meta.remove();
   for (const script of scripts.splice(0)) {
     script.remove();
   }
@@ -46,12 +55,20 @@ async function runThemeScript(): Promise<unknown[]> {
   return errors;
 }
 
-test("marks a stored Light or Dark on the root element", async () => {
+test("marks a stored Light or Dark on the root element and the meta element", async () => {
   for (const theme of ["light", "dark"]) {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     expect(await runThemeScript()).toEqual([]);
     expect(root.dataset.theme).toBe(theme);
+    expect(meta.content).toBe(theme);
   }
+});
+
+test("marks the root element without the meta element", async () => {
+  meta.remove();
+  window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
+  expect(await runThemeScript()).toEqual([]);
+  expect(root.dataset.theme).toBe("dark");
 });
 
 test("marks nothing for a missing or any other stored value", async () => {
@@ -61,6 +78,7 @@ test("marks nothing for a missing or any other stored value", async () => {
     window.localStorage.setItem(THEME_STORAGE_KEY, value);
     expect(await runThemeScript()).toEqual([]);
     expect(root.dataset.theme, value).toBeUndefined();
+    expect(meta.content, value).toBe("light dark");
   }
 });
 
@@ -70,4 +88,5 @@ test("marks nothing, and throws nothing, when the browser blocks the storage", a
   });
   expect(await runThemeScript()).toEqual([]);
   expect(root.dataset.theme).toBeUndefined();
+  expect(meta.content).toBe("light dark");
 });

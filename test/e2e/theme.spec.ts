@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
 // The themes (docs/behaviors.md, Preferences; docs/design-system.md, Themes):
@@ -79,6 +79,55 @@ function other(theme: Theme): Theme {
   return theme === "light" ? "dark" : "light";
 }
 
+// Makes the page fail to load the application's own script and, with
+// `stylesheet`, the stylesheet, which the entry document references.
+async function blockAssets(
+  page: Page,
+  request: APIRequestContext,
+  { stylesheet }: { stylesheet: boolean },
+) {
+  const entry = await (await request.get("/")).text();
+  const application = /<script type="module"[^>]* src="([^"]+)"/.exec(
+    entry,
+  )?.[1];
+  expect(application, "the module script of the entry document").toMatch(
+    /^\/assets\/[^/]+\.js$/,
+  );
+  const blocked = [application];
+  if (stylesheet) {
+    const sheet = /<link rel="stylesheet"[^>]* href="([^"]+)"/.exec(entry)?.[1];
+    expect(sheet, "the stylesheet of the entry document").toMatch(
+      /^\/assets\/[^/]+\.css$/,
+    );
+    blocked.push(sheet);
+  }
+  await page.route(
+    (url) => blocked.includes(url.pathname),
+    (route) => route.abort(),
+  );
+}
+
+// The color scheme in which the browser draws the blank page while the page
+// has no stylesheet: the one of its meta element of the color schemes, which
+// selects the color of the system color Canvas, white in the light scheme.
+async function blankPage(
+  page: Page,
+): Promise<{ meta: string | null; scheme: Theme }> {
+  // The meta element is not shown to users, so the test finds it by its name.
+  const meta = await page
+    .locator('meta[name="color-scheme"]')
+    .getAttribute("content");
+  const canvas = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = "Canvas";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+  return { meta, scheme: canvas === "rgb(255, 255, 255)" ? "light" : "dark" };
+}
+
 test.describe("the themes", () => {
   for (const scheme of ["light", "dark"] as const) {
     test.describe(`under a ${scheme} color scheme`, () => {
@@ -119,17 +168,7 @@ test.describe("the themes", () => {
         page,
         request,
       }) => {
-        const entry = await (await request.get("/")).text();
-        const application = /<script type="module"[^>]* src="([^"]+)"/.exec(
-          entry,
-        )?.[1];
-        expect(application, "the module script of the entry document").toMatch(
-          /^\/assets\/[^/]+\.js$/,
-        );
-        await page.route(
-          (url) => url.pathname === application,
-          (route) => route.abort(),
-        );
+        await blockAssets(page, request, { stylesheet: false });
         await storePreference(page, other(scheme));
         await page.addInitScript(() => {
           new MutationObserver((_records, observer) => {
@@ -149,6 +188,31 @@ test.describe("the themes", () => {
         expect(await shownTheme(page)).toEqual({
           background: CANVAS[other(scheme)],
           colorScheme: other(scheme),
+        });
+      });
+
+      // Until the stylesheet arrives, the browser draws a blank page in the
+      // color scheme that the meta element of the color schemes declares,
+      // which the theme script sets to the stored theme.
+      test("System draws the blank page in the color scheme before the stylesheet arrives", async ({
+        page,
+        request,
+      }) => {
+        await blockAssets(page, request, { stylesheet: true });
+        await openUnder(page, scheme);
+        expect(await blankPage(page)).toEqual({ meta: "light dark", scheme });
+      });
+
+      test(`a stored ${other(scheme)} theme draws the blank page before the stylesheet arrives`, async ({
+        page,
+        request,
+      }) => {
+        await blockAssets(page, request, { stylesheet: true });
+        await storePreference(page, other(scheme));
+        await openUnder(page, scheme);
+        expect(await blankPage(page)).toEqual({
+          meta: other(scheme),
+          scheme: other(scheme),
         });
       });
     });

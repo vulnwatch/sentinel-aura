@@ -27,7 +27,9 @@ export function readThemePreference(): ThemePreference {
   }
 }
 
-// Shows the theme of the preference on the page.
+// Shows the theme of the preference on the page: marks it on the root element,
+// for the stylesheet, and sets the meta element of the color schemes of the
+// entry document to it, as src/theme-script.ts does.
 export function applyThemePreference(
   preference: ThemePreference,
   root: HTMLElement = document.documentElement,
@@ -36,6 +38,12 @@ export function applyThemePreference(
     delete root.dataset.theme;
   } else {
     root.dataset.theme = preference;
+  }
+  const meta = root.ownerDocument.querySelector<HTMLMetaElement>(
+    'meta[name="color-scheme"]',
+  );
+  if (meta !== null) {
+    meta.content = preference === "system" ? "light dark" : preference;
   }
 }
 

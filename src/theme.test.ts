@@ -55,6 +55,23 @@ test("marks the chosen theme on the root element, and System by no mark", () => 
   expect(root.dataset.theme).toBeUndefined();
 });
 
+test("sets the meta element of the color schemes to the theme", () => {
+  const meta = document.createElement("meta");
+  meta.name = "color-scheme";
+  meta.content = "light dark";
+  document.head.append(meta);
+  try {
+    applyThemePreference("dark");
+    expect(meta.content).toBe("dark");
+    applyThemePreference("light");
+    expect(meta.content).toBe("light");
+    applyThemePreference("system");
+    expect(meta.content).toBe("light dark");
+  } finally {
+    meta.remove();
+  }
+});
+
 test("applies the stored preference and follows its changes in other tabs", () => {
   window.localStorage.setItem(THEME_STORAGE_KEY, "light");
   const stop = followThemePreference();

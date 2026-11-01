@@ -7,12 +7,16 @@ import { defineConfig } from "vitest/config";
 
 // The script that applies the stored theme before the page renders
 // (src/theme-script.ts; docs/behaviors.md, Preferences). The build emits it as
-// a file of its own, and the entry document loads it as a classic script in
-// its head, which runs before the page renders: a script file of the UI's
-// origin, under the unchanged Content Security Policy (docs/architecture.md,
-// Security Headers). A classic script cannot import or export, so the build
-// fails when the emitted file does either.
+// a file of its own, and the entry document loads it as a classic script, a
+// script file of the UI's origin under the unchanged Content Security Policy
+// (docs/architecture.md, Security Headers). It runs right after the meta
+// element of the color schemes, before the stylesheet and the application
+// load, and sets that element to the stored theme, which the browser uses for
+// the blank page until the stylesheet arrives. A classic script cannot import
+// or export, so the build fails when the emitted file does either, and when
+// the entry document lacks that meta element.
 const THEME_SCRIPT = "src/theme-script.ts";
+const COLOR_SCHEME_META = /<meta name="color-scheme" content="light dark" \/>/;
 
 function themeScript(): Plugin {
   let root = "";
@@ -36,10 +40,15 @@ function themeScript(): Plugin {
     },
     transformIndexHtml: {
       order: "post",
-      handler(_html, { filename, bundle }) {
+      handler(html, { filename, bundle }) {
         // Only the entry document, not the pages of the unit tests.
         if (resolve(filename) !== resolve(root, "index.html")) {
-          return [];
+          return html;
+        }
+        if (!COLOR_SCHEME_META.test(html)) {
+          throw new Error(
+            'index.html has no <meta name="color-scheme" content="light dark" />, after which the theme script runs',
+          );
         }
         let src = `/${THEME_SCRIPT}`;
         if (bundle) {
@@ -61,7 +70,10 @@ function themeScript(): Plugin {
           }
           src = `${base}${chunk.fileName}`;
         }
-        return [{ tag: "script", attrs: { src }, injectTo: "head" }];
+        return html.replace(
+          COLOR_SCHEME_META,
+          (meta) => `${meta}\n    <script src="${src}"></script>`,
+        );
       },
     },
   };
