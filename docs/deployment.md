@@ -94,16 +94,18 @@ visible; while Codecov cannot process uploads, merges wait until it recovers.
 `codecov.yml` disables the `codecov/project` status, which the organization's
 Codecov plan does not publish.
 
-The report is LCOV because Codecov reads each of its branches on its own line,
-as Istanbul counts it: a line with branches shows as covered when every branch
+The report is LCOV because Codecov reads every branch of it at its line, as
+Istanbul counts it: a line with branches shows as covered when every branch
 on it was taken, as partial when some were, and as missed when none was.
 Istanbul's Clover and Cobertura reports omit the branches of a line on which
-no statement starts, such as a default parameter value; Codecov inverts the
-branch counts of the Clover report, and rejects a Clover or Cobertura report
-generated more than 12 hours before the upload, which a re-run of `Coverage
-Upload` can exceed. Codecov reads Istanbul's JSON report so that a partly
-covered line shows as covered. The LCOV report names each file by its path in
-the repository, so Codecov needs no mapping of the paths.
+no statement starts, such as a default parameter value; Codecov misreads the
+branch counts of the Clover report, so that a line whose branches were all
+taken shows as partial and a partly covered one as covered. It also rejects a
+Clover or Cobertura report generated more than 12 hours before the upload,
+which a re-run of `Coverage Upload` can exceed. Codecov reads Istanbul's JSON
+report so that a partly covered line shows as covered too. The LCOV report
+names each file by its path in the repository, so Codecov needs no mapping of
+the paths.
 
 **Dependency audit.** `scripts/tooling.sh audit` runs `npm audit signatures`,
 which verifies the registry signatures and the provenance attestations of the
