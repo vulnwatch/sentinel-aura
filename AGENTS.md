@@ -86,10 +86,10 @@ where Sentinel's spec-first process applies. Open that issue only after the
 user explicitly confirms its content. Work that depends on the capability waits
 until a Sentinel release provides it and this repository moves to that release.
 
-Client-side behavior is specified only in this repository. What a Sentinel
-specification says a client can do through the API is rationale of the
-contract, not a presentation that the UI must follow (`README.md`,
-Specification Boundary).
+Client-side behavior is specified only in this repository. A Sentinel
+specification that justifies a backend decision by what a client can do
+through the API states rationale of the contract, not a presentation that the
+UI must follow (`README.md`, Specification Boundary).
 
 ## Always-on Safety Kernel
 

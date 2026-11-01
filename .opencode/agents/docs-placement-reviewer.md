@@ -199,9 +199,10 @@ case.
   (`docs/conventions.md`, Sentinel Cross-references)
 - Does a document leave client-side behavior, such as what a screen shows,
   its texts, or how it loads data, to Sentinel's specifications? It is
-  specified only in this repository; what a Sentinel specification says a
-  client can do through the API is rationale of the contract and prescribes
-  no presentation (`README.md`, Specification Boundary)
+  specified only in this repository; a Sentinel specification that justifies
+  a backend decision by what a client can do through the API states
+  rationale of the contract and prescribes no presentation (`README.md`,
+  Specification Boundary)
 
 Whether a summary agrees with its Sentinel section is checked by
 `@docs-reviewer`; you check only where the content belongs.
