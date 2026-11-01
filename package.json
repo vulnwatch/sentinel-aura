@@ -32,7 +32,7 @@
     "@vitest/coverage-istanbul": "5.0.5",
     "orval": "8.44.0",
     "oxlint": "1.89.0",
-    "oxlint-tsgolint": "7.0.2004",
+    "oxlint-tsgolint": "7.0.2005",
     "prettier": "3.9.10",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.5",
-    "@tanstack/react-router": "1.170.45",
+    "@tanstack/react-router": "1.170.46",
     "react": "19.3.1",
     "react-aria-components": "1.22.1",
     "react-dom": "19.3.1",
