@@ -8,9 +8,11 @@ import type { SeverityValue } from "./severity-value";
  * Request body of `POST /api/v1/tickets`.
  *
  * See `docs/features/tickets/tickets.md` (Create Ticket). Every field is
- * optional. `cve_id` carries no schema length limit, so any string —
+ * optional. `cve_id` carries no enforced schema constraint, so any string —
  * including an empty or over-length one — reaches the endpoint's
- * `422 CVE_INVALID_FORMAT` check. An omitted `is_confidential` stays
+ * `422 CVE_INVALID_FORMAT` check after the `manage_confidentiality`
+ * check; the grammar is only published on its string alternative
+ * (`_CVE_ID_SCHEMA`). An omitted `is_confidential` stays
  * `MISSING` (`docs/conventions.md`, Omitted Values), distinct from an
  * explicit `false`, because the field-level `manage_confidentiality`
  * check is presence-based; it creates a non-confidential Ticket. The

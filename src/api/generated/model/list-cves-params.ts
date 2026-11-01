@@ -3,31 +3,38 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { CVESortField } from "./cvesort-field";
+import type { ListCvesCveState } from "./list-cves-cve-state";
+import type { ListCvesSeverityItem } from "./list-cves-severity-item";
 import type { SortOrder } from "./sort-order";
 
 export type ListCvesParams = {
   /**
    * Free-text search. Outer whitespace is trimmed; a whitespace-only value is ignored. CVE ID: case-insensitive prefix; title and description: case-insensitive substring. `%`, `_`, and backslash are literal.
+   * @maxLength 500
    */
   search?: string;
   /**
-   * Filter by CVE state: `published` or `rejected`. Any other value yields an empty page.
+   * Filter by CVE state: `published` or `rejected`. Any other value yields an empty page. `published` also matches a CVE whose state is unknown and is therefore reported as `published`.
+   * @maxLength 500
    */
-  cve_state?: string;
+  cve_state?: ListCvesCveState;
   /**
    * Filter by resolved severity: `critical`, `high`, `medium`, `low`, `none` (CVSS score 0.0), `unresolved` (no CVSS assessment). Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
+   * @items.maxLength 500
    */
-  severity?: string[];
+  severity?: ListCvesSeverityItem[];
   /**
    * `true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket.
    */
   has_ticket?: boolean;
   /**
    * ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded.
+   * @maxLength 500
    */
   from_date?: string;
   /**
    * ISO 8601 date/datetime; inclusive upper bound on `published_date`. CVEs without a publication date are excluded.
+   * @maxLength 500
    */
   to_date?: string;
   /**
@@ -44,10 +51,12 @@ export type ListCvesParams = {
   per_page?: number;
   /**
    * Sort field (default `published_date`): `cve_id` (Unicode code-point lexical order), `published_date`, `severity` (semantic ordering), or `created_at`. `null` values sort last in both directions.
+   * @maxLength 500
    */
   sort_by?: CVESortField;
   /**
    * `asc` or `desc` (default `desc`).
+   * @maxLength 500
    */
   sort_order?: SortOrder;
 };

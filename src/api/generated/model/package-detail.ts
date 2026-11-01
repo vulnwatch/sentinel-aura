@@ -4,11 +4,11 @@
  */
 import type { PackageReasonValue } from "./package-reason-value";
 import type { TrackDetail } from "./track-detail";
+import type { UserReference } from "./user-reference";
 
 /**
- * One source package within a Ticket, with its complete track tree.
- *
- * Maintainer identities are never exposed.
+ * One source package within a Ticket, with its complete track tree
+ * and its maintainers.
  */
 export interface PackageDetail {
   /** TicketPackage identifier. */
@@ -23,4 +23,6 @@ export interface PackageDetail {
   actionable: boolean;
   /** First applicable reason in the order `package_excluded`, `no_actionable_tracks`; `null` when actionable. */
   non_actionable_reason: PackageReasonValue | null;
+  /** The users that Sentinel associated with this package as its maintainers, from SMELT maintainership data, as current user references ordered by `username` (Unicode code point); empty when none is associated. Associations are only added, never removed: a directly excluded package keeps them (they grant no access to a confidential Ticket while it is excluded), and an inactive user remains with `active` set to `false`. */
+  maintainers: UserReference[];
 }

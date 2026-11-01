@@ -3,27 +3,33 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { IBSRequestSortField } from "./ibsrequest-sort-field";
+import type { ListSubmissionRequestsState } from "./list-submission-requests-state";
 import type { SortOrder } from "./sort-order";
 
 export type ListSubmissionRequestsParams = {
   /**
    * Exact, case-sensitive logical package of the action.
+   * @maxLength 500
    */
   package_name?: string;
   /**
    * Exact, case-sensitive IBS codestream of the action.
+   * @maxLength 500
    */
   codestream_name?: string;
   /**
    * Exact current request state: `new`, `review`, `accepted`, `declined`, `revoked`, `superseded`, or `deleted`. Any other value matches no action.
+   * @maxLength 500
    */
-  state?: string;
+  state?: ListSubmissionRequestsState;
   /**
    * Sort field (default `upstream_updated_at`): the request's `upstream_created_at` or `upstream_updated_at`.
+   * @maxLength 500
    */
   sort_by?: IBSRequestSortField;
   /**
    * `asc` or `desc` (default `desc`).
+   * @maxLength 500
    */
   sort_order?: SortOrder;
   /**

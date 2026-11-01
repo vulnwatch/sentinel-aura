@@ -15,4 +15,8 @@ export interface TicketPackageRef {
   status: TicketStatusValue;
   /** Resolved Ticket severity (the CVE severity for a Ticket with a CVE, otherwise the manual severity): `critical`, `high`, `medium`, `low`, or `none` (CVSS score 0.0, informational), or `null` when unresolved. `none` is distinct from `null`. */
   severity: SeverityValue | null;
+  /** Whether the Ticket is confidential. Every item belongs to a Ticket that the caller can see. */
+  is_confidential: boolean;
+  /** Identifier of the CVE associated with the Ticket; `null` for a Ticket without a CVE. */
+  cve_id: string | null;
 }

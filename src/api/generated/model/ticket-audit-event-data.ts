@@ -3,6 +3,7 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { TicketAuditEventDataDetail } from "./ticket-audit-event-data-detail";
+import type { TicketAuditEventType } from "./ticket-audit-event-type";
 import type { UserReference } from "./user-reference";
 
 /**
@@ -17,8 +18,10 @@ export interface TicketAuditEventData {
   id: string;
   /** Canonical Ticket identity (`SNTL-{n}`). */
   ticket_id: string;
-  event_type: string;
+  event_type: TicketAuditEventType;
+  /** Previous value, as its event type records it. An enumerated value is recorded as stored, which can differ from the lowercase form that other fields use: for example `New` for a Ticket status, `High` for a severity, `P1` for a priority, `AFFECTED` for a track status, and `advisory` for a reference type. */
   old_value: string | null;
+  /** New value, as its event type records it. An enumerated value is recorded as stored, which can differ from the lowercase form that other fields use: for example `New` for a Ticket status, `High` for a severity, `P1` for a priority, `AFFECTED` for a track status, and `advisory` for a reference type. */
   new_value: string | null;
   comment: string | null;
   detail: TicketAuditEventDataDetail;

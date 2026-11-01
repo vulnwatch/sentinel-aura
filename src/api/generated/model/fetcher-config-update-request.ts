@@ -37,6 +37,7 @@ import type { FetcherConfigUpdateRequestCustomSettings } from "./fetcher-config-
  */
 export interface FetcherConfigUpdateRequest {
   enabled?: boolean;
+  /** Five-field cron expression (minute, hour, day of month, month, day of week), as Celery's `crontab` parses it; `null` reverts to the default schedule. An expression that does not parse returns `422 VALIDATION_ERROR`. */
   schedule_override?: string | null;
   /**
    * @minimum 60

@@ -882,9 +882,10 @@ This repository specifies the UI: navigation, screens, presentation, and
 client-side behavior. Its documents never define backend behavior, the API
 contract, or an obligation that the contract places on clients; they
 reference the owning Sentinel specification instead of restating it
-(Sentinel Cross-references). Client-side behavior that Sentinel's
-specifications already describe remains authoritative there until a change
-moves it to this repository (`README.md`, Specification Boundary).
+(Sentinel Cross-references). Client-side behavior is specified only here:
+what a Sentinel specification says a client can do through the API is
+rationale of the contract and prescribes no presentation (`README.md`,
+Specification Boundary).
 
 UI documents are of two kinds:
 

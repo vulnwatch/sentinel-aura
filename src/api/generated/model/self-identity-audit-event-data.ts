@@ -3,6 +3,7 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { SelfIdentityAuditEventDataDetail } from "./self-identity-audit-event-data-detail";
+import type { SelfIdentityAuditEventTypeValue } from "./self-identity-audit-event-type-value";
 import type { UserReference } from "./user-reference";
 
 /**
@@ -10,11 +11,12 @@ import type { UserReference } from "./user-reference";
  * (`identity-audit-log.md`, List My Identity Audit Events). `actor` is the
  * user reference of the recorded actor, the caller's own included, or
  * `None` for an event with no recorded actor (`rbac.md`, Actor
- * Identities). The target is always the caller, so it is omitted.
+ * Identities). The target is always the caller, so it is omitted, and
+ * `event_type` is never a role mapping event.
  */
 export interface SelfIdentityAuditEventData {
   id: string;
-  event_type: string;
+  event_type: SelfIdentityAuditEventTypeValue;
   old_value: string | null;
   new_value: string | null;
   detail: SelfIdentityAuditEventDataDetail;

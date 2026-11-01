@@ -21,6 +21,8 @@ export interface MaintainerWorkItem {
   package_name: string;
   /** Canonical Ticket identity (`SNTL-{n}`). */
   ticket_id: string;
+  /** Whether the Ticket is confidential. Every item belongs to a Ticket that the caller can see. */
+  is_confidential: boolean;
   /** Associated CVE identifier; `null` for a Ticket without a CVE. */
   cve_id: string | null;
   /** Resolved Ticket severity: `critical`, `high`, `medium`, `low`, or `none`; `null` when not yet resolved. */

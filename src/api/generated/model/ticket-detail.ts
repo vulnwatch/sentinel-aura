@@ -16,8 +16,8 @@ import type { UserReference } from "./user-reference";
  * mutation endpoint returning a Ticket.
  *
  * Replaces the compact `package_names` of list views with the complete
- * package tree and uses expanded CVE data. Maintainer identities are
- * never exposed.
+ * package tree and uses expanded CVE data. Each package names its
+ * maintainers.
  */
 export interface TicketDetail {
   /** Canonical Ticket identity (`SNTL-{n}`). */
@@ -40,7 +40,7 @@ export interface TicketDetail {
   duplicate_of_ticket_id: string | null;
   /** Whether the Ticket is confidential. */
   is_confidential: boolean;
-  /** Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. */
+  /** Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. A retained value on a non-confidential Ticket is historical and inert. */
   coordinated_release_at: string | null;
   /** Due date (UTC) of the triage milestone, in which the VA (Vulnerability Analyst) decides affectedness; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). */
   triage_due_at: string | null;
@@ -56,7 +56,7 @@ export interface TicketDetail {
   current_phase: CurrentPhaseValue | null;
   /** Milestone status of `current_phase`: `overdue` when the Ticket matches the `overdue` filter value of its current phase (the phase is not completed and its due date is past), otherwise `pending`; `null` when `current_phase` is `done` or `null`. A milestone `pending` is unrelated to `delivery_status = pending`. */
   current_phase_milestone: CurrentPhaseMilestoneValue | null;
-  /** Complete package/track/Product tree, including excluded and non-actionable records, ordered by `package_name` (Unicode code point). Maintainer identities are not exposed. */
+  /** Complete package/track/Product tree, including excluded and non-actionable records, ordered by `package_name` (Unicode code point). Each package lists its maintainers. */
   packages: PackageDetail[];
   /** Creation timestamp (UTC). */
   created_at: string;

@@ -30,9 +30,9 @@ and by Sentinel's specifications. UI specifications never define backend
 behavior: a capability that the UI needs and the API lacks is specified and
 implemented in Sentinel first.
 
-Client-side behavior that Sentinel's specifications already describe remains
-authoritative there until a change moves it to this repository. New
-client-side behavior is specified only here.
+Client-side behavior is specified only here. A Sentinel specification may
+justify a backend decision by what a client can do through the API; that
+justification is rationale of the contract and prescribes no presentation.
 
 See the System Boundary section of Sentinel's
 [architecture document](https://github.com/vulnwatch/sentinel/blob/master/docs/architecture.md#system-boundary).

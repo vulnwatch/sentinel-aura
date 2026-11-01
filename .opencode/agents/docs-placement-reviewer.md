@@ -197,10 +197,11 @@ case.
   Sentinel section? That content belongs to Sentinel (`docs/conventions.md`,
   Specification Ownership); a short summary next to the reference is allowed
   (`docs/conventions.md`, Sentinel Cross-references)
-- Does a document define, in parallel, client-side behavior that Sentinel's
-  specifications already describe? That behavior remains authoritative in
-  Sentinel until a change moves it to this repository (`README.md`,
-  Specification Boundary), so a parallel definition creates two owners
+- Does a document leave client-side behavior, such as what a screen shows,
+  its texts, or how it loads data, to Sentinel's specifications? It is
+  specified only in this repository; what a Sentinel specification says a
+  client can do through the API is rationale of the contract and prescribes
+  no presentation (`README.md`, Specification Boundary)
 
 Whether a summary agrees with its Sentinel section is checked by
 `@docs-reviewer`; you check only where the content belongs.

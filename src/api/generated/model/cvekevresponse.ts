@@ -9,6 +9,6 @@
 export interface CVEKEVResponse {
   /** Date the CVE was added to the KEV catalog. */
   date_added: string;
-  /** KEV catalog entry URL. */
+  /** KEV catalog entry URL. An upstream string that is not validated: it is not guaranteed to be an `http` or `https` URL. */
   reference_url: string | null;
 }

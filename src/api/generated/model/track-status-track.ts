@@ -21,7 +21,7 @@ export interface TrackStatusTrack {
   status: PackageStatusValue;
   /** Delivery pipeline status: `pending`, `in_progress`, or `released`. `pending` is the system default: it does not imply that a fix is expected, does not prove that no submission request exists, and does not establish that synchronization succeeded. Use `delivery_relevant` to decide whether this value is operationally significant. */
   delivery_status: DeliveryStatusValue;
-  /** Computed: `true` when the affectedness is `analysis` or `affected`, or `delivery_status` is not `pending`. When `false`, consumers should not display `delivery_status` or make decisions based on it. */
+  /** Computed: `true` when the affectedness is `analysis` or `affected`, or `delivery_status` is not `pending`. When `false`, `delivery_status` is the system default, carries no delivery signal, and consumers should not make decisions based on it. */
   delivery_relevant: boolean;
   /** Whether the track is not manually excluded (directly or through its package) and has at least one actionable Product. */
   actionable: boolean;

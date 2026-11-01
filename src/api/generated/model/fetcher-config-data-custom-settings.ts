@@ -3,4 +3,7 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 
+/**
+ * The stored custom setting values; a setting that is absent uses its default. For a registered fetcher, a stored key that `settings_schema` no longer declares is inert and cannot be changed or reset: sending it to `PATCH .../config`, also with `null`, returns `422 FETCHER_SETTING_UNKNOWN`.
+ */
 export type FetcherConfigDataCustomSettings = { [key: string]: unknown };

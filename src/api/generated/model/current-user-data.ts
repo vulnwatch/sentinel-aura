@@ -3,6 +3,7 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { Capability } from "./capability";
+import type { RoleValue } from "./role-value";
 
 /**
  * The concise current-user profile object for `GET /api/v1/users/me`
@@ -14,15 +15,16 @@ import type { Capability } from "./capability";
  * role values (see `rbac.md`, Role Wire Format, Deterministic
  * ordering). `capabilities` is the distinct, alphabetically
  * wire-sorted union of the capabilities of those roles (see `rbac.md`,
- * Capability Wire Format); typed as `Capability`, it is published as
- * an OpenAPI `enum`. It is informational and grants nothing.
+ * Capability Wire Format). Both are typed with their value sets, so
+ * the OpenAPI document publishes each as an `enum`. `capabilities` is
+ * informational and grants nothing.
  */
 export interface CurrentUserData {
   id: string;
   username: string;
   email: string;
   full_name: string | null;
-  roles: string[];
+  roles: RoleValue[];
   capabilities: Capability[];
   active: boolean;
   bot: boolean;
