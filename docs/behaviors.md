@@ -201,13 +201,14 @@ message follows Wording.
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
-| A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown, saying that it could not be updated; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
+| A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
 
 - An error in place of the content of a screen or of a part offers an action
   that tries again after a network failure, a `429`, or a `5xx`. In place of
-  the content of a screen, every other error links to the landing instead.
+  the content of a screen, every other error links to the landing instead,
+  with "Go to the start page".
 - A count, such as the count of a view or of the attention summary, has no
   room for a message or an action: when a read of it fails, even after it
   showed a number, it shows as not available, read as "Not available", and
@@ -229,7 +230,7 @@ message follows Wording.
 | `403` | "You don't have permission to do this.", or in place of the content of a screen "You don't have permission to view this page." The UI also reads the signed-in user again (The Signed-in User) |
 | `404` | Missing and Inaccessible Records |
 | `409` | "This can't be done in the current state, which may have changed. Check it and try again." |
-| `422` | The field errors of a `VALIDATION_ERROR` as Where Errors Appear states; every other `422` as `400` |
+| `422` | The field errors of a `VALIDATION_ERROR` of a form as Where Errors Appear states; every other `422`, and a `VALIDATION_ERROR` of a request that no form sent, as `400` |
 | `429` | "Too many attempts. Try again later." |
 | `500`, and a successful response that the UI cannot read | "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below." |
 | `502`, `503`, `504`, and every other `5xx` | "Sentinel isn't available right now. Try again later." |
@@ -254,8 +255,8 @@ message follows Wording.
   names the request (Sentinel `docs/api-spec.md`, Request Tracing).
 - A failure of the UI itself, such as an error while it shows data, replaces
   the content of the screen under the heading "Something went wrong", with
-  "This page couldn't be shown. Reload the page to try again." and an action
-  that reloads it.
+  "This page couldn't be shown. Reload the page to try again." and "Reload
+  page", which reloads it.
 
 ### Missing and Inaccessible Records
 
@@ -265,15 +266,17 @@ message follows Wording.
   apart (`docs/screen-map.md`, Roles). It presents every `404` of a record in
   the same way, whatever the record.
 - These show the same page, with the heading "Not found", the text "This page
-  doesn't exist, or you don't have access to it.", and a link to the landing:
+  doesn't exist, or you don't have access to it.", and the link to the
+  landing, "Go to the start page":
   a `404` of the read of a screen; a path that matches no screen; a path
   whose identifier does not have the form that the contract declares, such as
   a run identifier that is not a UUID, for which the UI sends no request; and
   `/auth/callback` while it is reserved (`docs/screen-map.md`, Contract
   URLs).
-- A `404` of a change, such as one on a record that was deleted or became
-  inaccessible in the meantime, shows "This no longer exists, or you no longer
-  have access to it."
+- A `404` of a change, or of a read in place of a part of a screen or of its
+  data (Where Errors Appear), such as one on a record that was deleted or
+  became inaccessible in the meantime, shows "This no longer exists, or you no
+  longer have access to it."
 
 ### Invalid Search Parameters
 
@@ -329,9 +332,10 @@ from the API):
   that a fast response shows none; a count that waits shows nothing until it
   arrives.
 - When a screen reads other data for what it shows, such as another page,
-  filter, sort, or view of a list, it keeps showing the previous data, marked
-  as being updated, until the new data arrives; if the read fails, its error
-  replaces the data (Where Errors Appear).
+  filter, sort, or view of a list, it keeps showing the previous data until
+  the new data arrives, marked as being updated once the new data has taken
+  longer than 300 milliseconds; if the read fails, its error replaces the data
+  (Where Errors Appear).
 - A screen reads its data again when the tab returns to the foreground after
   being hidden and after a change (Outcome of a Change), and at intervals only
   where its screen document says so, such as for a fetcher run in progress.
@@ -611,6 +615,7 @@ also meets these requirements, which they cannot check:
 | Remove | Take an item out of a set that the user edits, such as a role from a user's roles |
 | Discard, Keep editing | Drop input not yet submitted, or keep it |
 | Try again | Repeat a read that failed |
+| Reload page | Load the whole page again after a failure of the UI itself (Default Presentation by Status) |
 | Clear filters | Remove the filters and the search of a list |
 | Copy | Put a value on the clipboard, such as a new API key |
 | Dismiss | Remove a message from the message area |

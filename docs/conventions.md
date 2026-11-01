@@ -170,10 +170,11 @@ rules; review enforces the rest.
 | `src/theme-script.ts` | The script that the entry document runs in its head, which applies the stored theme before the page renders: a classic script, so it imports and exports nothing |
 | `src/favicon.svg` | The favicon, which the entry document links: the Sentinel mark in its own colors (`docs/design-system.md`, Sentinel Mark) |
 | `src/app.tsx` | The providers that every screen shares |
-| `src/router.ts` | The route tree and the router |
+| `src/query-client.ts` | The query client, with the defaults of every read and change (`docs/behaviors.md`, Retries and Unconfirmed Changes; Loading) |
+| `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
 | `src/routes/` | One module per route: its definition and its page component |
 | `src/components/` | The components that several routes share |
-| `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages |
+| `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |

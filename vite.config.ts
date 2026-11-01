@@ -4,6 +4,20 @@ import react from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+import type { BrowserCommand } from "vitest/node";
+
+// A command of the unit and component tests that sets the preference for
+// reduced motion that the browser reports to the page of the tests, as a
+// user's desktop does (docs/design-system.md, Focus and Motion). The tests
+// that set it restore it.
+const emulateReducedMotion: BrowserCommand<[reduce: boolean]> = async (
+  { page },
+  reduce,
+) => {
+  await page.emulateMedia({
+    reducedMotion: reduce ? "reduce" : "no-preference",
+  });
+};
 
 // The script that applies the stored theme before the page renders
 // (src/theme-script.ts; docs/behaviors.md, Preferences). The build emits it as
@@ -117,6 +131,7 @@ export default defineConfig({
       provider: playwright(),
       headless: true,
       instances: [{ browser: "chromium" }, { browser: "firefox" }],
+      commands: { emulateReducedMotion },
     },
     coverage: {
       provider: "istanbul",
