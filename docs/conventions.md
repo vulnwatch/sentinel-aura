@@ -475,9 +475,10 @@ that needs it; content of another kind needs a new row first.
   The margin below 100 % is not room for untested behavior: a change still
   tests every behavior that it adds or alters. No comment, such as
   `istanbul ignore`, hides a line, a branch, or a function from the
-  measurement. The minimum and the measured files, which an exclusion
-  changes, change only with the repository owner's decision, recorded in the
-  pull request that changes them, and never to reach the minimum.
+  measurement. The measured files, which an exclusion changes, change only
+  with the repository owner's decision and never to reach the minimum; the
+  minimum changes only with that decision. The pull request that changes
+  either records the decision.
 - Every change also passes the design token check, which
   `scripts/ci.sh ui-checks` runs after the lint, in the required `UI Checks`
   job and in `scripts/ci.sh all` (`docs/deployment.md`, Workflow Inventory).
@@ -806,8 +807,7 @@ request carries `fix(deps):` in its title instead.
   component tests that it adds or whose assertions it changes (Code
   Conventions, Tests), the reference screenshots that it changes when
   required, delegated decisions, new dependencies, reviewer results, manual
-  verification notes. The pull request template provides
-  these sections.
+  verification notes. The pull request template provides these sections.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
   reason>` for an exempt human-authored PR under "Issues and work units"
   in Workflow. Use an `- Issue linkage:` field, or a standalone

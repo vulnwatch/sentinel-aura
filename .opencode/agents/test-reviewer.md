@@ -201,9 +201,9 @@ as a behavior, with the scenario that no test exercises.
   `istanbul ignore`, `v8 ignore`, or `c8 ignore`, which no decision allows
   (`docs/conventions.md`, Checks)?
 - Does the change alter the measured files, by adding an exclusion to
-  `vite.config.ts` or narrowing its `include`, or the minimum coverage,
-  without the repository owner's decision recorded in the pull request, or
-  to reach the minimum?
+  `vite.config.ts` or narrowing its `include`, without the repository
+  owner's decision recorded in the pull request, or to reach the minimum?
+  Does it change the minimum coverage without that decision?
 - For each unit or component test that the change adds, or whose assertions
   it changes, do the pull request, or before it exists the invoking agent,
   record the break of the behavior with which the test was seen to fail
@@ -303,6 +303,7 @@ omitting an empty one other than the verdict:
      regression test, a test does not assert its claim, a unit or component
      test that the change adds, or whose assertions it changes, lacks the
      record of its failure, a comment hides code from the coverage
-     measurement, the measured files or the minimum coverage change without
-     the repository owner's decision, or a test breaks a rule of End-to-End
-     Tests that keeps the tests isolated or their checks on
+     measurement, the measured files change without the repository owner's
+     decision or to reach the minimum, the minimum coverage changes without
+     that decision, or a test breaks a rule of End-to-End Tests that keeps
+     the tests isolated or their checks on
