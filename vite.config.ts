@@ -81,6 +81,12 @@ function themeScript(): Plugin {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), themeScript()],
+  // Vite pre-bundles the dependencies that the entry document loads, for the
+  // development server and for the tests, to which Vitest adds those of the
+  // test files. src/main.test.ts imports the entry point under a URL that Vite
+  // cannot scan, and a dependency that Vite finds only while the tests run
+  // makes it reload them.
+  optimizeDeps: { entries: ["index.html"] },
   // The development server of docs/architecture.md (Local Development): one
   // origin for the UI and the API, as on the Sentinel host.
   server: {
