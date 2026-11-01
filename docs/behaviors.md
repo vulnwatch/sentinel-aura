@@ -336,12 +336,15 @@ from the API):
   filter, sort, or view of a list, it keeps showing the previous data, marked
   as being updated once the new data has taken longer than 300 milliseconds,
   until the new data arrives; if the read fails, its error replaces the data
-  (Where Errors Appear).
+  (Where Errors Appear). Data that stays shown after a read of it failed is
+  marked in the same way while it is read again.
 - A screen reads its data again when the tab returns to the foreground after
   being hidden and after a change (Outcome of a Change), and at intervals only
   where its screen document says so, such as for a fetcher run in progress. A
-  read that failed without showing data is not read again when the tab
-  returns: its error stays until the user tries again (Where Errors Appear).
+  read whose error shows in place of content, because it failed before it
+  showed any data, is not read again when the tab returns: its error stays
+  until Try again, where the error offers it, or until the screen opens again
+  (Where Errors Appear).
 - A change in progress marks the control that started it as busy, and that
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while

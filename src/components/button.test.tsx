@@ -37,13 +37,10 @@ test("cannot be pressed while it is disabled", async () => {
   expect(onPress).not.toHaveBeenCalled();
 });
 
-test.each([
-  ["36 px high by default", undefined, 36],
-  ["32 px high in its small size, for a message", "small" as const, 32],
-])("is %s", async (_, size, height) => {
-  const screen = await render(<Button size={size}>Try again</Button>);
+test("is 36 px high", async () => {
+  const screen = await render(<Button>Try again</Button>);
   const button = screen.getByRole("button", { name: "Try again" });
 
   await expect.element(button).toBeVisible();
-  expect(button.element().getBoundingClientRect().height).toBe(height);
+  expect(button.element().getBoundingClientRect().height).toBe(36);
 });

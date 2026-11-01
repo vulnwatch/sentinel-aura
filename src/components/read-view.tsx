@@ -41,10 +41,11 @@ interface UpdateFailedProps {
 }
 
 // Above data that stays shown after a new read of it failed: a warning that
-// says that it could not be updated, with the message of the failure and,
-// when the failure offers it, Try again (docs/behaviors.md, Where Errors
-// Appear; docs/design-system.md, Messages). When the warning goes, the focus
-// on Try again passes to the screen's heading.
+// says that it could not be updated, with the message of the failure, and,
+// when the failure offers it, Try again below it, on the background of the
+// screen or of its part (docs/behaviors.md, Where Errors Appear;
+// docs/design-system.md, Messages). When the warning goes, the focus on Try
+// again passes to the screen's heading.
 function UpdateFailed({ error, onRetry }: UpdateFailedProps) {
   const ref = useRef<HTMLDivElement>(null);
   useFocusHeadingOnRemoval(ref);
@@ -57,19 +58,14 @@ function UpdateFailed({ error, onRetry }: UpdateFailedProps) {
   }
   return (
     <div ref={ref} className="mb-4">
-      <Message
-        tone="warning"
-        reference={presentation.reference}
-        action={
-          presentation.retry && (
-            <Button size="small" onPress={onRetry}>
-              Try again
-            </Button>
-          )
-        }
-      >
+      <Message tone="warning" reference={presentation.reference}>
         {`This couldn't be updated. ${presentation.message}`}
       </Message>
+      {presentation.retry && (
+        <div className="mt-2">
+          <Button onPress={onRetry}>Try again</Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -80,9 +76,9 @@ interface DataProps<TData> {
 }
 
 // The data of a read in its place: the loading indicator while it waits, its
-// error in place of the data, or the data, marked while other data loads and
-// below the warning of a new read that failed, which goes while the data is
-// read again. The error and the warning appear in a status region that is
+// error in place of the data, or the data, marked while other data loads, and
+// below the warning of a new read that failed, which goes, with the data
+// marked, while the data is read again. The error and the warning appear in a status region that is
 // there before them, so that assistive technologies announce them without
 // moving the focus (docs/behaviors.md, Accessibility, Announcements). When the
 // data leaves the page while it holds the focus, such as data that a 403
@@ -103,7 +99,10 @@ function Data<TData>({ read, children }: DataProps<TData>) {
   }
   return (
     <div className="relative">
-      {data !== undefined && read.isPlaceholderData && <UpdatingBar />}
+      {data !== undefined &&
+        (read.isPlaceholderData || (failed && read.isFetching)) && (
+          <UpdatingBar />
+        )}
       <output className="block">{status}</output>
       {data === undefined ? (
         !failed && <Loading />

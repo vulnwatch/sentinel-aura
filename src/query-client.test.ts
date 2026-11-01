@@ -164,6 +164,24 @@ describe("a read", () => {
       unsubscribe();
     });
 
+    test("is read again when the tab returns to the foreground after a new read of its data failed", async () => {
+      const fetch = vi
+        .spyOn(window, "fetch")
+        .mockResolvedValueOnce(jsonResponse(200, { data: [] }))
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(404, { code: "TICKET_NOT_FOUND" })),
+        );
+      const unsubscribe = await observe("success");
+      await client.refetchQueries({ queryKey: ["tickets"] });
+      expect(client.getQueryState(["tickets"])?.status).toBe("error");
+
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+
+      await expect.poll(() => fetch.mock.calls.length).toBe(3);
+      unsubscribe();
+    });
+
     test("is not read again when the network returns", async () => {
       const fetch = vi
         .spyOn(window, "fetch")

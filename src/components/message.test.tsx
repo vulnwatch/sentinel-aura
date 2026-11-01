@@ -1,7 +1,6 @@
 import { afterEach, expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { Button } from "./button";
 import { Message, type MessageTone } from "./message";
 import { applyThemePreference } from "../theme";
 
@@ -75,19 +74,4 @@ test("shows no reference without a request identifier", async () => {
     .element(screen.getByText("This couldn't be updated."))
     .toBeVisible();
   expect(screen.getByText(/Reference/).query()).toBeNull();
-});
-
-test("ends with its action, after the text", async () => {
-  const screen = await render(
-    <Message tone="warning" action={<Button size="small">Try again</Button>}>
-      This couldn't be updated.
-    </Message>,
-  );
-  const text = screen.getByText("This couldn't be updated.");
-  const action = screen.getByRole("button", { name: "Try again" });
-
-  await expect.element(action).toBeVisible();
-  expect(action.element().getBoundingClientRect().left).toBeGreaterThanOrEqual(
-    text.element().getBoundingClientRect().right,
-  );
 });

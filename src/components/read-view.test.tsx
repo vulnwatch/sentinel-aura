@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
+import "../styles.css";
 import {
   ApiError,
   NetworkError,
@@ -50,6 +51,22 @@ afterEach(() => {
   respond.mockReset();
   document.title = "Sentinel";
 });
+
+// The color behind an element, outside the element itself: the background of
+// the nearest element that contains it and has one.
+function backgroundBehind(element: Element): string {
+  for (
+    let current = element.parentElement;
+    current;
+    current = current.parentElement
+  ) {
+    const background = getComputedStyle(current).backgroundColor;
+    if (background !== "rgba(0, 0, 0, 0)") {
+      return background;
+    }
+  }
+  return "transparent";
+}
 
 // A response that the test gives when it chooses.
 function later() {
@@ -320,7 +337,6 @@ describe("ScreenRead", () => {
 
     await refetch();
 
-    expect(screen.getByRole("status").element()).toBe(region);
     await expect
       .element(
         screen
@@ -333,6 +349,7 @@ describe("ScreenRead", () => {
     await expect
       .element(screen.getByRole("status").getByText(`Reference: ${REQUEST_ID}`))
       .toBeVisible();
+    expect(screen.getByRole("status").element()).toBe(region);
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
@@ -414,11 +431,39 @@ describe("ScreenRead", () => {
         screen.getByRole("heading", { level: 1, name: "Fictional record" }),
       )
       .toHaveFocus();
+    await expect
+      .element(screen.getByRole("progressbar", { name: "Updating" }))
+      .toBeInTheDocument();
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
+      .toBeVisible();
     resolve({ title: "Renamed record" });
     await expect
       .element(screen.getByText("Details of Renamed record"))
       .toBeVisible();
     await expect.element(screen.getByRole("status")).toBeEmptyDOMElement();
+    expect(screen.getByRole("progressbar").query()).toBeNull();
+  });
+
+  test("shows Try again below the warning, outside it", async () => {
+    respond.mockResolvedValueOnce({ title: "Fictional record" });
+    const screen = await renderWithClient(<DetailScreen />);
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
+      .toBeVisible();
+    respond.mockRejectedValue(UNAVAILABLE);
+
+    await refetch();
+
+    const reference = screen.getByText(`Reference: ${REQUEST_ID}`);
+    const action = screen.getByRole("button", { name: "Try again" });
+    await expect.element(action).toBeVisible();
+    expect(action.element().getBoundingClientRect().top).toBeGreaterThan(
+      reference.element().getBoundingClientRect().bottom,
+    );
+    expect(backgroundBehind(action.element())).not.toBe(
+      backgroundBehind(reference.element()),
+    );
   });
 
   test("announces the warning again when the read that Try again sends fails too", async () => {

@@ -26,25 +26,18 @@ interface MessageProps {
   children: ReactNode;
   // The request identifier of an error, which follows on its own line.
   reference?: string | undefined;
-  // The action that ends the message, such as Try again: a button 32 px
-  // high, which goes below the text when the message is too narrow for both.
-  action?: ReactNode;
 }
 
 // A message in the soft background of its tone, which starts with the icon of
 // its tone (docs/design-system.md, Messages; Icons by Need).
-export function Message({ tone, children, reference, action }: MessageProps) {
+export function Message({ tone, children, reference }: MessageProps) {
   const { Icon, classes } = TONES[tone];
   return (
     <div className={`flex gap-2 rounded-md px-3 py-2 text-15 ${classes}`}>
       <Icon aria-hidden className="mt-0.75 size-4.5 shrink-0" />
-      <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <p>{children}</p>
-          {reference !== undefined && <Reference requestId={reference} />}
-        </div>
-        {/* Centered on the first line of the text, within the padding. */}
-        {action !== undefined && <div className="-my-1">{action}</div>}
+      <div>
+        <p>{children}</p>
+        {reference !== undefined && <Reference requestId={reference} />}
       </div>
     </div>
   );

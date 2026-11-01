@@ -27,8 +27,10 @@ export function createQueryClient(): QueryClient {
         // A screen reads its data again when the tab returns to the
         // foreground, which TanStack Query detects as a change of the
         // visibility of the page, but not when the network returns. A read
-        // that failed without data has no data to read again: its error
-        // stays, and Try again sends it again.
+        // that failed without data shows its error in place of content,
+        // which stays until Try again. A read that shows no error in place
+        // of content when it fails, such as a count or the signed-in user,
+        // sets its own.
         refetchOnWindowFocus: (query) => query.state.data !== undefined,
         refetchOnReconnect: false,
         // Every request is sent whatever the browser reports about the
