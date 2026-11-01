@@ -163,9 +163,13 @@ check_no_dependency_files() {
 #   or [--color-fg:red], which sets a variable of the tokens, or one that
 #   holds a literal color;
 # - a modifier of a utility of TOKEN_COLOR_UTILITY, such as the opacity of
-#   text-fg/70; and
+#   text-fg/70;
 # - a variant that styles one theme alone: dark:, also within another, such
-#   as not-dark:, and an arbitrary variant of prefers-color-scheme.
+#   as not-dark:, an arbitrary variant of prefers-color-scheme, and a variant
+#   of the attribute with which the root element marks the theme that the
+#   user chose (src/styles.css), such as in-data-[theme=dark]:; and
+# - a class that sets the color scheme of an element, such as scheme-dark or
+#   [color-scheme:dark], which shows the element in one theme alone.
 
 # The utilities that set a color, and text-, which also sets a type size.
 readonly TOKEN_COLOR_UTILITY='(text|bg|border(-[xysetrbl])?|divide|outline|ring|ring-offset|inset-ring|shadow|inset-shadow|drop-shadow|text-shadow|fill|stroke|accent|caret|decoration|placeholder|from|via|to)'
@@ -184,6 +188,11 @@ readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:spa
 # that adds another way for a class to apply to one theme alone adds it here
 # (docs/conventions.md, Checks).
 readonly TOKEN_THEME_CLASS=$'(([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-]|\\[[^][:space:]]*prefers-color-scheme[^][:space:]]*\\]:)[^[:space:]"\'`{}<>]*'
+# A class with a variant of the attribute with which the root element marks
+# the theme that the user chose, data-theme (src/styles.css).
+readonly TOKEN_THEME_ATTRIBUTE_CLASS=$'[^[:space:]"\'`{}<>]*data-\\[?theme[^[:space:]"\'`{}<>]*:[^[:space:]"\'`{}<>]+'
+# The utilities of the color scheme, such as scheme-dark.
+readonly TOKEN_SCHEME_CLASS='scheme-[A-Za-z0-9-]+!?'
 # Classes that the check rejects and accepts. It checks them first, after a
 # quote and after another class, so that a pattern that stops matching cannot
 # pass unnoticed.
@@ -197,6 +206,10 @@ readonly TOKEN_REJECTED_EXAMPLES=(
     'bg-accent/[0.5]' 'bg-accent/(--alpha)' 'text-14/6' 'dark:bg-surface'
     'md:dark:text-fg' 'not-dark:bg-canvas'
     '[@media(prefers-color-scheme:dark)]:bg-surface'
+    'in-data-[theme=dark]:bg-surface' 'data-[theme=light]:text-fg'
+    '[[data-theme=dark]_&]:bg-canvas' 'in-[[data-theme]]:text-fg-muted'
+    'scheme-dark' 'md:scheme-light' 'scheme-only-dark!' 'scheme-[dark]'
+    '[color-scheme:dark]'
 )
 readonly TOKEN_ACCEPTED_EXAMPLES=(
     'text-14' 'text-fg-muted' 'bg-surface' 'hover:bg-surface-hover' 'fill-none'
@@ -204,19 +217,25 @@ readonly TOKEN_ACCEPTED_EXAMPLES=(
     'border-[1.5px]' 'stroke-[1.75]' 'border-(length:--width)'
     'bg-[image:url(/mark.svg)]' 'grid-cols-[1fr_auto]'
     'data-[selected]:font-semibold' 'w-1/2' '[overflow-wrap:anywhere]'
-    '[--sidebar-width:216px]'
+    '[--sidebar-width:216px]' 'data-[state=open]:bg-surface-hover'
+    'in-data-[selected]:text-fg'
 )
 
 # Prints why the class $1 sets a color or a type size outside the tokens, or
 # nothing when it does not.
 design_token_violation() {
     local class="$1" name value
-    if [[ "${class}" =~ ^${TOKEN_THEME_CLASS}$ ]]; then
+    if [[ "${class}" =~ ^${TOKEN_THEME_CLASS}$ ||
+        "${class}" =~ ^${TOKEN_THEME_ATTRIBUTE_CLASS}$ ]]; then
         echo "styles one theme alone"
+    elif [[ "${class}" =~ ^scheme- ]]; then
+        echo "sets the color scheme, which shows one theme alone"
     elif [[ "${class}" =~ ^\[([^:]+):(.*)\]$ ]]; then
         name="${BASH_REMATCH[1]}"
         value="${BASH_REMATCH[2]}"
-        if [[ "${name}" =~ ${TOKEN_COLOR_PROPERTY} ]]; then
+        if [[ "${name}" == color-scheme ]]; then
+            echo "sets the color scheme, which shows one theme alone"
+        elif [[ "${name}" =~ ${TOKEN_COLOR_PROPERTY} ]]; then
             echo "an arbitrary color or type size"
         elif [[ "${value}" =~ ${TOKEN_COLOR_LITERAL} ]]; then
             echo "a literal color"
@@ -248,7 +267,9 @@ design_token_violations() {
     matches="$(grep -HnoE -e "${TOKEN_BEFORE}${TOKEN_VALUE_CLASS}" \
         -e "${TOKEN_BEFORE}${TOKEN_PROPERTY_CLASS}" \
         -e "${TOKEN_BEFORE}${TOKEN_MODIFIER_CLASS}" \
-        -e "${TOKEN_BEFORE}${TOKEN_THEME_CLASS}" -- "$@")" || status=$?
+        -e "${TOKEN_BEFORE}${TOKEN_THEME_CLASS}" \
+        -e "${TOKEN_BEFORE}${TOKEN_THEME_ATTRIBUTE_CLASS}" \
+        -e "${TOKEN_BEFORE}${TOKEN_SCHEME_CLASS}" -- "$@")" || status=$?
     ((status <= 1)) || die "cannot search the modules for their classes"
     while IFS= read -r entry; do
         [[ -n "${entry}" ]] || continue

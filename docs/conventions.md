@@ -165,7 +165,9 @@ rules; review enforces the rest.
 |---|---|
 | `src/main.tsx` | The entry point: global configuration, then the mounting of the application |
 | `src/zod.ts` | Zod's global configuration, which `src/main.tsx` imports first |
-| `src/styles.css` | The stylesheet: the Tailwind CSS entry point |
+| `src/styles.css` | The stylesheet: the Tailwind CSS entry point, with the tokens, the themes, and the font of `docs/design-system.md` |
+| `src/theme.ts` | The theme preference (`docs/behaviors.md`, Preferences): how a stored value reads, and the theme that the page shows while it runs |
+| `src/theme-script.ts` | The script that the entry document runs in its head, which applies the stored theme before the page renders: a classic script, so it imports and exports nothing |
 | `src/favicon.svg` | The favicon, which the entry document links: the Sentinel mark in its own colors (`docs/design-system.md`, Sentinel Mark) |
 | `src/app.tsx` | The providers that every screen shares |
 | `src/router.ts` | The route tree and the router |
@@ -309,7 +311,8 @@ that needs it; content of another kind needs a new row first.
   `src/styles.css` gives each color token its value in each theme, and a
   screen or a component uses the same classes in both themes, so that it is
   correct in both as built. None of its classes applies to one theme alone,
-  with the `dark:` variant or in any other way.
+  with the `dark:` variant or in any other way, or sets the color scheme of
+  its element, which would show the element in one theme alone.
 - A color or a type size is set only by the class of its token, such as
   `text-fg-muted`, `stroke-danger-icon`, or `text-14`: not by an arbitrary
   value or property of Tailwind, such as `text-[#9A6700]`, `bg-(--accent)`,
@@ -452,17 +455,19 @@ that needs it; content of another kind needs a new row first.
   job and in `scripts/ci.sh all` (`docs/deployment.md`, Workflow Inventory).
   In the modules under `src/` other than the generated API client, it
   rejects the classes that set a color or a type size with an arbitrary
-  value or property of Tailwind or with a modifier, and the classes that
-  apply to one theme alone with `dark:` or with an arbitrary variant of
-  `prefers-color-scheme` (Components and Styling). Tailwind CSS finds its
-  classes in the text of those files, comments included, and so does the
-  check. A change that adds another way for a class to apply to one theme
-  alone, such as a selector that marks the theme of the page, also extends
-  the check, so that it rejects those classes too. The lint rejects the
-  `style` attribute and the attributes and props of colors and type sizes,
-  such as `fill`, on elements and components alike. For a `style` attribute
-  that sets neither a color nor a type size, the rule is disabled inline as a
-  false positive (below).
+  value or property of Tailwind or with a modifier, the classes that apply
+  to one theme alone with `dark:`, with an arbitrary variant of
+  `prefers-color-scheme`, or with a variant of the attribute with which the
+  root element marks the theme that the user chose, and the classes that
+  set the color scheme of an element (Components and Styling). Tailwind CSS
+  finds its classes in the text of those files, comments included, and so
+  does the check. A change that adds another way for a class to apply to one
+  theme alone, such as another selector that marks the theme of the page,
+  also extends the check, so that it rejects those classes too. The lint
+  rejects the `style` attribute and the attributes and props of colors and
+  type sizes, such as `fill`, on elements and components alike. For a `style`
+  attribute that sets neither a color nor a type size, the rule is disabled
+  inline as a false positive (below).
 - Every change also passes the end-to-end tests, which CI runs as a required
   check too (`docs/deployment.md`, Workflow Inventory) and
   `scripts/dev-env.sh e2e` runs locally.

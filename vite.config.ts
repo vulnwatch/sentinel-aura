@@ -1,10 +1,74 @@
+import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
+import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
+// The script that applies the stored theme before the page renders
+// (src/theme-script.ts; docs/behaviors.md, Preferences). The build emits it as
+// a file of its own, and the entry document loads it as a classic script in
+// its head, which runs before the page renders: a script file of the UI's
+// origin, under the unchanged Content Security Policy (docs/architecture.md,
+// Security Headers). A classic script cannot import or export, so the build
+// fails when the emitted file does either.
+const THEME_SCRIPT = "src/theme-script.ts";
+
+function themeScript(): Plugin {
+  let root = "";
+  let base = "/";
+  let command = "";
+  return {
+    name: "sentinel-aura:theme-script",
+    configResolved(config) {
+      root = config.root;
+      base = config.base;
+      command = config.command;
+    },
+    buildStart() {
+      if (command === "build") {
+        this.emitFile({
+          type: "chunk",
+          id: resolve(root, THEME_SCRIPT),
+          name: "theme-script",
+        });
+      }
+    },
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, { filename, bundle }) {
+        // Only the entry document, not the pages of the unit tests.
+        if (resolve(filename) !== resolve(root, "index.html")) {
+          return [];
+        }
+        let src = `/${THEME_SCRIPT}`;
+        if (bundle) {
+          const script = resolve(root, THEME_SCRIPT);
+          const chunk = Object.values(bundle).find(
+            (file) => file.type === "chunk" && file.facadeModuleId === script,
+          );
+          if (chunk?.type !== "chunk") {
+            throw new Error(`the build has no file of ${THEME_SCRIPT}`);
+          }
+          if (
+            chunk.imports.length > 0 ||
+            chunk.dynamicImports.length > 0 ||
+            chunk.exports.length > 0
+          ) {
+            throw new Error(
+              `${THEME_SCRIPT} runs as a classic script, so it must import and export nothing`,
+            );
+          }
+          src = `${base}${chunk.fileName}`;
+        }
+        return [{ tag: "script", attrs: { src }, injectTo: "head" }];
+      },
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), themeScript()],
   // The development server of docs/architecture.md (Local Development): one
   // origin for the UI and the API, as on the Sentinel host.
   server: {

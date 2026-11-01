@@ -1,1 +1,144 @@
 @import "tailwindcss" source(".");
+
+/* Inter (docs/design-system.md, Font), served from the build: its Latin and
+   Latin Extended subsets, with the optical-size axis, as
+   @fontsource-variable/inter declares them. The browser downloads a subset
+   only for a text that needs its characters. */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-ext-opsz-normal.woff2")
+    format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2")
+    format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+/* The tokens of docs/design-system.md, which replace Tailwind's default
+   colors, type sizes, and font families. A color token that differs between
+   the themes holds both values in light-dark(), which picks the value of the
+   color scheme of the element that uses it (Themes, below). */
+@theme {
+  --color-*: initial;
+  --text-*: initial;
+  --font-*: initial;
+
+  /* Color Tokens */
+  --color-canvas: light-dark(#f6f8fa, #0d1117);
+  --color-surface: light-dark(#ffffff, #151b23);
+  --color-surface-2: light-dark(#f6f8fa, #1a212a);
+  --color-surface-hover: light-dark(#f3f5f8, #1e2630);
+  --color-sidebar: light-dark(#ffffff, #010409);
+  --color-sidebar-active: light-dark(#eaeef2, #1e2630);
+  --color-fg: light-dark(#1f2328, #e6edf3);
+  --color-fg-muted: light-dark(#59636e, #9198a1);
+  --color-border: light-dark(#d8dee4, #2f3742);
+  --color-border-strong: light-dark(#818b98, #6e7681);
+  --color-accent: light-dark(#0969da, #1f6feb);
+  --color-accent-hover: light-dark(#0757ba, #1a5fcc);
+  --color-on-accent: #ffffff;
+  --color-link: light-dark(#0969da, #4493f8);
+  --color-focus: light-dark(#0969da, #4493f8);
+  --color-danger-solid: light-dark(#cf222e, #da3633);
+  --color-danger-solid-hover: light-dark(#a40e26, #b62324);
+  --color-on-danger-solid: #ffffff;
+  --color-overlay: light-dark(rgb(15 23 42 / 0.45), rgb(1 4 9 / 0.7));
+
+  /* Tones */
+  --color-neutral-soft: light-dark(#eff2f5, #262c36);
+  --color-neutral-on-soft: light-dark(#3b434b, #c9d1d9);
+  --color-neutral-icon: light-dark(#6e7781, #9198a1);
+  --color-info-soft: light-dark(#ddf4ff, #0d2a52);
+  --color-info-on-soft: light-dark(#0a3069, #a5d6ff);
+  --color-info-icon: light-dark(#0969da, #4493f8);
+  --color-success-soft: light-dark(#dafbe1, #0e3320);
+  --color-success-on-soft: light-dark(#0f5323, #7ee2a8);
+  --color-success-icon: light-dark(#1a7f37, #3fb950);
+  --color-warning-soft: light-dark(#fff8c5, #3a2d00);
+  --color-warning-on-soft: light-dark(#6c4400, #f2cc60);
+  --color-warning-icon: light-dark(#9a6700, #d29922);
+  --color-danger-soft: light-dark(#ffebe9, #4a111a);
+  --color-danger-on-soft: light-dark(#a40e26, #ffa198);
+  --color-danger-icon: light-dark(#cf222e, #f85149);
+
+  /* Severity Marks */
+  --color-mark-critical: #e5252a;
+  --color-mark-high: #f76b15;
+  --color-mark-medium: #f5c400;
+  --color-mark-low: #3b82f6;
+  --color-mark-none: #8b949e;
+
+  /* Avatar, Palette */
+  --color-avatar-bg: #f0f0f0;
+  --color-avatar-0: #b91c1c;
+  --color-avatar-1: #c2410c;
+  --color-avatar-2: #a16207;
+  --color-avatar-3: #15803d;
+  --color-avatar-4: #0f766e;
+  --color-avatar-5: #0369a1;
+  --color-avatar-6: #4338ca;
+  --color-avatar-7: #a21caf;
+
+  /* Type Scale, relative to the text size of the browser: 16 px by default */
+  --text-12: 0.75rem;
+  --text-12--line-height: 1rem;
+  --text-13: 0.8125rem;
+  --text-13--line-height: 1.25rem;
+  --text-14: 0.875rem;
+  --text-14--line-height: 1.25rem;
+  --text-15: 0.9375rem;
+  --text-15--line-height: 1.5rem;
+  --text-16: 1rem;
+  --text-16--line-height: 1.5rem;
+  --text-20: 1.25rem;
+  --text-20--line-height: 1.75rem;
+  --text-20--letter-spacing: -0.025em;
+
+  /* Font */
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+}
+
+@layer base {
+  /* Themes (docs/design-system.md; docs/behaviors.md, Preferences): the page
+     takes the color scheme that the browser reports, the System theme, unless
+     the root element marks the theme that the user chose (src/theme.ts). The
+     color scheme of the root element selects the values of light-dark() and
+     the colors of the parts that the browser draws itself. It is set here, by
+     the stylesheet: the build turns light-dark() into variables, for browsers
+     older than the supported ones, that only these rules set. */
+  :root {
+    color-scheme: light dark;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-size: var(--text-15);
+    line-height: var(--text-15--line-height);
+  }
+}
