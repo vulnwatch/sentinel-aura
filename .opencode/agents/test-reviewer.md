@@ -197,12 +197,13 @@ as a behavior, with the scenario that no test exercises.
 
 ### Coverage measurement and failure records
 
-- Does the change leave code out of the coverage measurement, by adding a
-  file to the exclusions of `vite.config.ts`, narrowing its `include`, or
-  adding a comment that hides code, such as `istanbul ignore`, `v8 ignore`,
-  or `c8 ignore`, or does it lower the minimum coverage, without the
-  repository owner's decision recorded in the pull request
+- Does a comment hide code from the coverage measurement, such as
+  `istanbul ignore`, `v8 ignore`, or `c8 ignore`, which no decision allows
   (`docs/conventions.md`, Checks)?
+- Does the change alter the measured files, by adding an exclusion to
+  `vite.config.ts` or narrowing its `include`, or the minimum coverage,
+  without the repository owner's decision recorded in the pull request, or
+  to reach the minimum?
 - For each unit or component test that the change adds, or whose assertions
   it changes, do the pull request, or before it exists the invoking agent,
   record the break of the behavior with which the test was seen to fail
@@ -290,8 +291,8 @@ omitting an empty one other than the verdict:
    with the authority or the code that requires it
 3. **Weak tests**: tests that cannot prove their claim or are unreliable,
    with file and line
-4. **Convention violations**: breaches of Tests or End-to-End Tests in
-   `docs/conventions.md`, with file and line
+4. **Convention violations**: breaches of Tests, End-to-End Tests, or the
+   coverage rules of Checks in `docs/conventions.md`, with file and line
 5. **Redundant tests**: each with the retained test that already proves it
 6. **Verdict**: one of:
    - **Clean** — the changed behavior and applicable regressions are well
@@ -299,8 +300,9 @@ omitting an empty one other than the verdict:
    - **Minor issues** — useful non-blocking improvements remain, including
      removable redundant tests
    - **Needs revision** — a changed behavior lacks a test, a fix lacks a
-     regression test, a test does not assert its claim, a new or changed
-     unit or component test lacks the record of its failure, code leaves the
-     coverage measurement or the minimum coverage drops without the
-     repository owner's decision, or a test breaks a rule of End-to-End Tests
-     that keeps the tests isolated or their checks on
+     regression test, a test does not assert its claim, a unit or component
+     test that the change adds, or whose assertions it changes, lacks the
+     record of its failure, a comment hides code from the coverage
+     measurement, the measured files or the minimum coverage change without
+     the repository owner's decision, or a test breaks a rule of End-to-End
+     Tests that keeps the tests isolated or their checks on

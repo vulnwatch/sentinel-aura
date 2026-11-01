@@ -22,9 +22,9 @@
 #                             type check, lint, design token check, format
 #                             check, and unit and component tests with their
 #                             minimum coverage, the build and the test of the
-#                             image, its SBOM, which it
-#                             writes to test-results/sbom/, and no dependency
-#                             in the working tree
+#                             image, its SBOM, which it writes to
+#                             test-results/sbom/, and no dependency in the
+#                             working tree
 #   scripts/ci.sh e2e         The checks of the End-to-End Tests job: the
 #                             end-to-end tests, then the test of the
 #                             development proxy

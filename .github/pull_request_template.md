@@ -14,7 +14,7 @@
 
 ## Tests
 
-<!-- Tests added or modified, the break with which each new or changed unit or component test was seen to fail (docs/conventions.md, Tests), and the checks run. -->
+<!-- Tests added or modified, the break with which each unit or component test that the PR adds, or whose assertions it changes, was seen to fail (docs/conventions.md, Tests), and the checks run. -->
 
 -
 
