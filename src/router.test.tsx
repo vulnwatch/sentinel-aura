@@ -9,9 +9,11 @@ import {
 import { useState } from "react";
 import { Link } from "react-aria-components";
 import { afterEach, describe, expect, test } from "vitest";
+import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { z } from "zod";
 import { App } from "./app";
+import { Button } from "./components/button";
 import { createAppRouter, routerDefaults } from "./router";
 import { RootLayout } from "./routes/root";
 
@@ -142,6 +144,53 @@ test("shows the page of a failure of the UI when a screen fails", async () => {
     .element(screen.getByRole("button", { name: "Reload page" }))
     .toBeVisible();
   expect(document.title).toBe("Something went wrong – Sentinel");
+});
+
+// A screen whose control makes it fail.
+function BreakingScreen() {
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    throw new TypeError("Cannot read properties of undefined");
+  }
+  return (
+    <Button
+      onPress={() => {
+        setBroken(true);
+      }}
+    >
+      Break
+    </Button>
+  );
+}
+
+test("moves the focus to the heading of the page of a failure of the UI when the failure removes the control that the user used", async () => {
+  const root = createRootRoute({ component: RootLayout });
+  const breaking = createRoute({
+    getParentRoute: () => root,
+    path: "/",
+    component: BreakingScreen,
+  });
+  const router = createRouter({
+    routeTree: root.addChildren([breaking]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+    ...routerDefaults,
+  });
+  const screen = await render(<RouterProvider router={router} />);
+  await expect
+    .element(screen.getByRole("button", { name: "Break" }))
+    .toBeVisible();
+
+  await userEvent.keyboard("{Tab}");
+  await expect
+    .element(screen.getByRole("button", { name: "Break" }))
+    .toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+
+  await expect
+    .element(
+      screen.getByRole("heading", { level: 1, name: "Something went wrong" }),
+    )
+    .toHaveFocus();
 });
 
 test("starts a screen again when it opens with other path parameters, but not with other search parameters", async () => {

@@ -46,11 +46,11 @@ function UpdateFailed({ error }: UpdateFailedProps) {
     return null;
   }
   return (
-    <output className="mb-4 block">
+    <div className="mb-4">
       <Message tone="warning" reference={presentation.reference}>
         {`This couldn't be updated. ${presentation.message}`}
       </Message>
-    </output>
+    </div>
   );
 }
 
@@ -61,30 +61,35 @@ interface DataProps<TData> {
 
 // The data of a read in its place: the loading indicator while it waits, its
 // error in place of the data, or the data, marked while other data loads and
-// below the warning of a new read that failed.
+// below the warning of a new read that failed. The error and the warning
+// appear in a status region that is there before them, so that assistive
+// technologies announce them without moving the focus (docs/behaviors.md,
+// Accessibility, Announcements).
 function Data<TData>({ read, children }: DataProps<TData>) {
   const failed = read.status === "error";
-  if (read.data !== undefined && !(failed && replacesShownData(read.error))) {
-    return (
-      <div className="relative">
-        {read.isPlaceholderData && <UpdatingBar />}
-        {failed && <UpdateFailed error={read.error} />}
-        {children(read.data)}
-      </div>
-    );
-  }
+  const data = failed && replacesShownData(read.error) ? undefined : read.data;
+  let status: ReactNode;
   if (failed) {
-    return (
-      <ErrorInPlace
-        error={read.error}
-        placement="part"
-        onRetry={() => {
-          retry(read);
-        }}
-      />
-    );
+    status =
+      data === undefined ? (
+        <ErrorInPlace
+          error={read.error}
+          placement="part"
+          onRetry={() => {
+            retry(read);
+          }}
+        />
+      ) : (
+        <UpdateFailed error={read.error} />
+      );
   }
-  return <Loading />;
+  return (
+    <div className="relative">
+      {data !== undefined && read.isPlaceholderData && <UpdatingBar />}
+      <output className="block">{status}</output>
+      {data === undefined ? !failed && <Loading /> : children(data)}
+    </div>
+  );
 }
 
 interface ScreenReadProps<TData> {

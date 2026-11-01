@@ -44,6 +44,19 @@ test("takes the focus when asked to", async () => {
     .toHaveFocus();
 });
 
+test("passes the focus to the heading that replaces it", async () => {
+  const screen = await render(
+    <ScreenHeading key="record">Fictional record</ScreenHeading>,
+  );
+  focusScreenHeading();
+
+  await screen.rerender(<ScreenHeading key="error">Not found</ScreenHeading>);
+
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
+    .toHaveFocus();
+});
+
 test("asks for nothing when no heading is shown", () => {
   expect(() => {
     focusScreenHeading();

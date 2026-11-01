@@ -50,16 +50,16 @@ function change() {
   }).mutate();
 }
 
-// Observes a read as a screen does, once its data has arrived, and returns
-// the function that stops observing it.
-async function observe() {
+// Observes a read as a screen does until it has succeeded or failed, and
+// returns the function that stops observing it.
+async function observe(until: "success" | "error") {
   const observer = new QueryObserver(client, {
     queryKey: ["tickets"],
     queryFn: ({ signal }) =>
       apiRequest("/api/v1/tickets", { method: "GET", signal }),
   });
   const unsubscribe = observer.subscribe(() => undefined);
-  await vi.waitUntil(() => observer.getCurrentResult().isSuccess);
+  await vi.waitUntil(() => observer.getCurrentResult().status === until);
   return unsubscribe;
 }
 
@@ -139,13 +139,28 @@ describe("a read", () => {
         .mockImplementation(() =>
           Promise.resolve(jsonResponse(200, { data: [] })),
         );
-      const unsubscribe = await observe();
+      const unsubscribe = await observe("success");
+
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+
+      await expect.poll(() => fetch.mock.calls.length).toBe(2);
+      unsubscribe();
+    });
+
+    test("is not read again when the tab returns to the foreground after it failed without data", async () => {
+      const fetch = vi
+        .spyOn(window, "fetch")
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(404, { code: "TICKET_NOT_FOUND" })),
+        );
+      const unsubscribe = await observe("error");
 
       focusManager.setFocused(false);
       focusManager.setFocused(true);
       await settle();
 
-      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(fetch).toHaveBeenCalledOnce();
       unsubscribe();
     });
 
@@ -155,7 +170,7 @@ describe("a read", () => {
         .mockImplementation(() =>
           Promise.resolve(jsonResponse(200, { data: [] })),
         );
-      const unsubscribe = await observe();
+      const unsubscribe = await observe("success");
 
       onlineManager.setOnline(false);
       onlineManager.setOnline(true);

@@ -851,9 +851,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
 
 - An error in place of the content of a screen shows below the message area:
   the level-one heading that names the error, its message in `fg-muted`, the
-  reference of the error when it has one, and its action, Try again as a
-  secondary button or a link to the landing, aligned to the start and at most
-  560 px wide (`docs/behaviors.md`, Default Presentation by Status).
+  reference of the error when it has one, and its action, Try again or Reload
+  page as a secondary button, or a link to the landing, aligned to the start
+  and at most 560 px wide (`docs/behaviors.md`, Default Presentation by
+  Status).
 - An error in place of a part shows the same inside the part, below its
   heading, without a heading of its own.
 

@@ -1,9 +1,9 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { isRequestFailure, presentFailure } from "../api/errors";
 import { Button } from "./button";
 import { Link } from "./link";
 import { Reference } from "./reference";
-import { focusScreenHeading, ScreenHeading } from "./screen-heading";
+import { ScreenHeading, useFocusHeadingOnRemoval } from "./screen-heading";
 
 interface ErrorContentProps {
   // The level-one heading that names the error, in place of the content of a
@@ -52,19 +52,10 @@ interface ErrorInPlaceProps {
 // session has ended (docs/behaviors.md, Session State). Any other error is a
 // failure of the UI itself, which the router shows (src/router.ts).
 export function ErrorInPlace({ error, placement, onRetry }: ErrorInPlaceProps) {
+  // The focus on Try again passes to the screen's heading when the error
+  // disappears.
   const ref = useRef<HTMLDivElement>(null);
-  // When the element with the focus disappears with the error, such as Try
-  // again, the focus moves to the screen's heading once the screen shows
-  // what replaces the error (docs/behaviors.md, Accessibility, Focus after
-  // an action).
-  useLayoutEffect(() => {
-    const element = ref.current;
-    return () => {
-      if (element?.contains(document.activeElement)) {
-        queueMicrotask(focusScreenHeading);
-      }
-    };
-  }, []);
+  useFocusHeadingOnRemoval(ref);
   if (!isRequestFailure(error)) {
     throw error;
   }

@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Button } from "./button";
 import { ErrorContent } from "./error-in-place";
+import { focusScreenHeading } from "./screen-heading";
 
 interface UiFailureProps {
   // Reloads the page.
@@ -8,8 +10,15 @@ interface UiFailureProps {
 
 // A failure of the UI itself, such as an error while it shows data, in place
 // of the content of the screen (docs/behaviors.md, Default Presentation by
-// Status).
+// Status). When the failure removed the element that held the focus, such as
+// the control that the user had just used, the focus moves to its heading
+// (docs/behaviors.md, Accessibility, Focus after an action).
 export function UiFailure({ onReload }: UiFailureProps) {
+  useEffect(() => {
+    if (document.activeElement === document.body) {
+      focusScreenHeading();
+    }
+  }, []);
   return (
     <main className="p-6">
       <ErrorContent

@@ -266,6 +266,20 @@ describe("apiRequest", () => {
     },
   );
 
+  test("turns a successful response whose body breaks off into a NetworkError", async () => {
+    const failure = new TypeError("network error");
+    const response = jsonResponse(200, { data: [] });
+    vi.spyOn(response, "json").mockRejectedValue(failure);
+    stubFetch(response);
+
+    const error = await rejection(
+      apiRequest("/api/v1/tickets", { method: "GET" }),
+    );
+
+    expect(error).toBeInstanceOf(NetworkError);
+    expect(error).toMatchObject({ cause: failure });
+  });
+
   test.each([200, 404])(
     "lets a request that is cancelled while its body with status %i is read fail with the browser's error",
     async (status) => {

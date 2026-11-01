@@ -273,10 +273,10 @@ message follows Wording.
   a run identifier that is not a UUID, for which the UI sends no request; and
   `/auth/callback` while it is reserved (`docs/screen-map.md`, Contract
   URLs).
-- A `404` of a change, or of a read in place of a part of a screen or of its
-  data (Where Errors Appear), such as one on a record that was deleted or
-  became inaccessible in the meantime, shows "This no longer exists, or you no
-  longer have access to it."
+- A `404` of a change, of the read of a part of a screen, or of a read of
+  other data for what the screen shows (Where Errors Appear), such as one on a
+  record that was deleted or became inaccessible in the meantime, shows "This
+  no longer exists, or you no longer have access to it."
 
 ### Invalid Search Parameters
 
@@ -332,13 +332,15 @@ from the API):
   that a fast response shows none; a count that waits shows nothing until it
   arrives.
 - When a screen reads other data for what it shows, such as another page,
-  filter, sort, or view of a list, it keeps showing the previous data until
-  the new data arrives, marked as being updated once the new data has taken
-  longer than 300 milliseconds; if the read fails, its error replaces the data
+  filter, sort, or view of a list, it keeps showing the previous data, marked
+  as being updated once the new data has taken longer than 300 milliseconds,
+  until the new data arrives; if the read fails, its error replaces the data
   (Where Errors Appear).
 - A screen reads its data again when the tab returns to the foreground after
   being hidden and after a change (Outcome of a Change), and at intervals only
-  where its screen document says so, such as for a fetcher run in progress.
+  where its screen document says so, such as for a fetcher run in progress. A
+  read that failed without showing data is not read again when the tab
+  returns: its error stays until the user tries again (Where Errors Appear).
 - A change in progress marks the control that started it as busy, and that
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while

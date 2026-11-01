@@ -44,9 +44,10 @@ export class ApiError extends Error {
   }
 }
 
-// A request that received no response, because the network, Sentinel's
-// host, or Sentinel could not be reached. A request that its caller cancels
-// fails with the browser's own error instead, such as an AbortError.
+// A request that received no response, or no body of a successful response,
+// because the network, Sentinel's host, or Sentinel could not be reached. A
+// request that its caller cancels fails with the browser's own error
+// instead, such as an AbortError.
 export class NetworkError extends Error {
   constructor(options: ErrorOptions) {
     super("API request received no response", options);
@@ -54,8 +55,8 @@ export class NetworkError extends Error {
   }
 }
 
-// A successful response whose body the UI cannot read, such as one that is
-// not JSON.
+// A successful response whose body the UI cannot read because it is not
+// JSON.
 export class UnreadableResponseError extends Error {
   // The HTTP status of the response.
   readonly status: number;
@@ -83,9 +84,9 @@ export type ErrorType<_DeclaredBody> =
 
 // Sends a request of the generated client and returns its parsed JSON body,
 // or undefined for 204 No Content. Throws an ApiError for every response
-// whose status is not successful, a NetworkError when no response arrives,
-// and an UnreadableResponseError when the body of a successful response
-// cannot be read; a cancelled request keeps the browser's error.
+// whose status is not successful, a NetworkError when no response or no
+// body arrives, and an UnreadableResponseError when the body of a successful
+// response is not JSON; a cancelled request keeps the browser's error.
 export async function apiRequest<T>(
   url: string,
   init: RequestInit,
@@ -111,11 +112,17 @@ export async function apiRequest<T>(
     try {
       body = await response.json();
     } catch (error) {
-      throw init.signal?.aborted
-        ? error
-        : new UnreadableResponseError(response.status, requestId, {
+      if (init.signal?.aborted) {
+        throw error;
+      }
+      // A body that is not JSON, or none, is a SyntaxError; any other error
+      // means that the body did not arrive, such as when the connection
+      // breaks during its transfer.
+      throw error instanceof SyntaxError
+        ? new UnreadableResponseError(response.status, requestId, {
             cause: error,
-          });
+          })
+        : new NetworkError({ cause: error });
     }
   }
   // The generated client types the body by the pinned OpenAPI document, which

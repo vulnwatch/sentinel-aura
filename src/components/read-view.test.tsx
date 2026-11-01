@@ -49,10 +49,12 @@ afterEach(() => {
 // A response that the test gives when it chooses.
 function later() {
   let resolve!: (record: FictionalRecord) => void;
-  const promise = new Promise<FictionalRecord>((done) => {
+  let reject!: (failure: unknown) => void;
+  const promise = new Promise<FictionalRecord>((done, fail) => {
     resolve = done;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 function useRecord(page: number) {
@@ -188,6 +190,23 @@ describe("ScreenRead", () => {
       .toHaveFocus();
   });
 
+  test("moves the focus to the heading of the error when the read fails again after Try again", async () => {
+    respond.mockRejectedValue(UNAVAILABLE);
+    const screen = await renderWithClient(<ListScreen page={1} />);
+
+    await screen.getByRole("button", { name: "Try again" }).click();
+
+    await expect
+      .element(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "This page couldn't be loaded",
+        }),
+      )
+      .toHaveFocus();
+    expect(respond).toHaveBeenCalledTimes(6);
+  });
+
   test("shows Not found in place of the screen when its record does not exist", async () => {
     respond.mockRejectedValueOnce(NOT_FOUND);
     const screen = await renderWithClient(<DetailScreen />);
@@ -260,10 +279,12 @@ describe("ScreenRead", () => {
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
+    const region = screen.getByRole("status").element();
     respond.mockRejectedValue(UNAVAILABLE);
 
     await refetch();
 
+    expect(screen.getByRole("status").element()).toBe(region);
     await expect
       .element(screen.getByRole("status"))
       .toHaveTextContent(
@@ -322,7 +343,7 @@ describe("ScreenRead", () => {
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
-    expect(screen.getByRole("status").query()).toBeNull();
+    await expect.element(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 
   test("leaves a new read of the data shown that fails in the UI itself to the page of a failure of the UI", async () => {
@@ -372,6 +393,24 @@ describe("PartRead", () => {
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Record" }))
       .toBeVisible();
+  });
+
+  test("announces the failure of its read in a status region that is there before it", async () => {
+    const { promise, reject } = later();
+    respond.mockReturnValueOnce(promise);
+    const screen = await renderWithClient(<PartScreen />);
+    const region = screen.getByRole("status");
+    await expect.element(region).toBeEmptyDOMElement();
+    const before = region.element();
+
+    reject(NOT_FOUND);
+
+    await expect
+      .element(region)
+      .toHaveTextContent(
+        "This no longer exists, or you no longer have access to it.",
+      );
+    expect(region.element()).toBe(before);
   });
 
   test("offers Try again after a network failure, and moves the focus to the screen's heading", async () => {
