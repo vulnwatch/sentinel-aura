@@ -170,7 +170,7 @@ document that do not take effect yet.
   script that applies the theme has run: it shows in the color scheme that
   the browser reports, so it can differ from Light or Dark for a moment while
   the browser downloads that script, as on the first load after a release
-  that changes it. The script is a file of the UI's origin, not part of the
+  that changes it. The script is a file of the UI's origin, not inline in the
   page, because the Content Security Policy is not relaxed for it
   (`docs/architecture.md`, Security Headers).
 - The preference of the sidebar applies only where the window is wide enough

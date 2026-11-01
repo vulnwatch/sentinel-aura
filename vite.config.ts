@@ -13,8 +13,8 @@ import { defineConfig } from "vitest/config";
 // element of the color schemes, before the stylesheet and the application
 // load, and sets that element to the stored theme, which the browser uses for
 // the blank page until the stylesheet arrives. A classic script cannot import
-// or export, so the build fails when the emitted file does either, and when
-// the entry document lacks that meta element.
+// or export, so the build fails when the emitted file does either. It also
+// fails when the entry document lacks that meta element.
 const THEME_SCRIPT = "src/theme-script.ts";
 const COLOR_SCHEME_META = /<meta name="color-scheme" content="light dark" \/>/;
 
