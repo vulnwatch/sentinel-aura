@@ -75,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ui-coverage
-          path: coverage/unit/clover.xml
+          path: coverage/unit/lcov.info
           if-no-files-found: error
           retention-days: 7
 
@@ -144,7 +144,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          files: coverage/unit/clover.xml
+          files: coverage/unit/lcov.info
           disable_search: true
           fail_ci_if_error: ${{ github.event_name == 'pull_request' }}
           # renovate: datasource=github-releases depName=codecov/codecov-cli

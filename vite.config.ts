@@ -118,8 +118,10 @@ export default defineConfig({
       // The generated API client: its requests are tested through the shared
       // request function, and its other code belongs to its generator.
       exclude: ["src/api/generated/**"],
-      // clover.xml is the report that CI uploads to Codecov.
-      reporter: ["text", "html", "clover"],
+      // lcov.info, which lcovonly writes, is the report that CI uploads to
+      // Codecov, which reads every branch of it as Istanbul counts it
+      // (docs/deployment.md, Workflow Inventory, Coverage reporting).
+      reporter: ["text", "html", "lcovonly"],
       // A subdirectory, because Vitest removes and recreates the reports
       // directory, and coverage/ is a mount point in the tooling container.
       reportsDirectory: "coverage/unit",
