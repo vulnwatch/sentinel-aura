@@ -81,6 +81,12 @@ function themeScript(): Plugin {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), themeScript()],
+  // Vite pre-bundles the dependencies that the entry document loads, for the
+  // development server and for the tests, to which Vitest adds those of the
+  // test files. src/main.test.ts imports the entry point under a URL that Vite
+  // cannot scan, and a dependency that Vite finds only while the tests run
+  // makes it reload them.
+  optimizeDeps: { entries: ["index.html"] },
   // The development server of docs/architecture.md (Local Development): one
   // origin for the UI and the API, as on the Sentinel host.
   server: {
@@ -118,8 +124,10 @@ export default defineConfig({
       // The generated API client: its requests are tested through the shared
       // request function, and its other code belongs to its generator.
       exclude: ["src/api/generated/**"],
-      // clover.xml is the report that CI uploads to Codecov.
-      reporter: ["text", "html", "clover"],
+      // lcov.info, which lcovonly writes, is the report that CI uploads to
+      // Codecov, which reads every branch of it as Istanbul counts it
+      // (docs/deployment.md, Workflow Inventory, Coverage reporting).
+      reporter: ["text", "html", "lcovonly"],
       // A subdirectory, because Vitest removes and recreates the reports
       // directory, and coverage/ is a mount point in the tooling container.
       reportsDirectory: "coverage/unit",

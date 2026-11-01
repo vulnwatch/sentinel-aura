@@ -26,6 +26,16 @@ test("shows the home page at /", async () => {
     .toBeVisible();
 });
 
+test("follows the URL of the browser by default", () => {
+  const url = window.location.href;
+  window.history.replaceState(window.history.state, "", "/?from=browser#top");
+  try {
+    expect(createAppRouter().history.location.href).toBe("/?from=browser#top");
+  } finally {
+    window.history.replaceState(window.history.state, "", url);
+  }
+});
+
 test("navigates through the router when a React Aria link is pressed", async () => {
   const root = createRootRoute({ component: RootLayout });
   const start = createRoute({

@@ -76,15 +76,15 @@ not by the script.
 
 **Coverage reporting.** The tests of `UI Checks` measure coverage with
 Istanbul (`docs/architecture.md`, Static Checks and Tests), and when every
-check of the job passes, the job retains the Clover report as a seven-day
-workflow artifact; it never receives `CODECOV_TOKEN`, because it runs the code
-of the dependencies. The separate `Coverage Upload` job, which runs after a
-successful `UI Checks`, uploads only that report to Codecov, with a pinned
-Codecov CLI version (Dependency Updates) and the `CODECOV_TOKEN` repository
-secret, the upload token that Codecov issues for the repository. On a pull
-request, a failed upload fails the job, which can be re-run on its own while
-the artifact is retained; on a push to `master` or a manual run it does not
-fail the run, so that a Codecov outage does not mark `master` red after a
+check of the job passes, the job retains Istanbul's LCOV report, `lcov.info`,
+as a seven-day workflow artifact; it never receives `CODECOV_TOKEN`, because it
+runs the code of the dependencies. The separate `Coverage Upload` job, which
+runs after a successful `UI Checks`, uploads only that report to Codecov, with
+a pinned Codecov CLI version (Dependency Updates) and the `CODECOV_TOKEN`
+repository secret, the upload token that Codecov issues for the repository. On
+a pull request, a failed upload fails the job, which can be re-run on its own
+while the artifact is retained; on a push to `master` or a manual run it does
+not fail the run, so that a Codecov outage does not mark `master` red after a
 merge. The repository `codecov.yml` makes the resulting `codecov/patch` status
 informational, so it always passes and no coverage threshold gates a merge,
 and has Codecov publish it as soon as the upload is processed rather than
@@ -92,8 +92,20 @@ waiting for, or failing because of, the other checks. `codecov/patch` is a
 required check, so a pull request cannot merge before its coverage report is
 visible; while Codecov cannot process uploads, merges wait until it recovers.
 `codecov.yml` disables the `codecov/project` status, which the organization's
-Codecov plan does not publish, and maps the paths of the report, which the
-tooling container writes under `/work/`, to the repository's.
+Codecov plan does not publish.
+
+The report is LCOV because Codecov reads every branch of it at its line, as
+Istanbul counts it: a line with branches shows as covered when every branch
+on it was taken, as partial when some were, and as missed when none was.
+Istanbul's Clover and Cobertura reports omit the branches of a line on which
+no statement starts, such as a default parameter value; Codecov misreads the
+branch counts of the Clover report, so that a line whose branches were all
+taken shows as partial and a partly covered one as covered. It also rejects a
+Clover or Cobertura report generated more than 12 hours before the upload,
+which a re-run of `Coverage Upload` can exceed. Codecov reads Istanbul's JSON
+report so that a partly covered line shows as covered too. The LCOV report
+names each file by its path in the repository, so Codecov needs no mapping of
+the paths.
 
 **Dependency audit.** `scripts/tooling.sh audit` runs `npm audit signatures`,
 which verifies the registry signatures and the provenance attestations of the
