@@ -49,9 +49,9 @@ interface ErrorInPlaceProps {
 // The failure of a read in place of what it would show, with Try again after
 // a network failure, a 429, a 5xx, or a successful response that the UI
 // cannot read, and otherwise, in place of the content of a screen, a link to
-// the landing. A 401 shows nothing, because the
-// session has ended (docs/behaviors.md, Session State). Any other error is a
-// failure of the UI itself, which the router shows (src/router.ts).
+// the landing. A 401 shows nothing, because the session has ended
+// (docs/behaviors.md, Session State). Any other error is a failure of the UI
+// itself, which the router shows (src/router.ts).
 export function ErrorInPlace({ error, placement, onRetry }: ErrorInPlaceProps) {
   // The focus on Try again passes to the screen's heading when the error
   // disappears.

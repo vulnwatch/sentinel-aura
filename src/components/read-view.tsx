@@ -76,13 +76,13 @@ interface DataProps<TData> {
 }
 
 // The data of a read in its place: the loading indicator while it waits, its
-// error in place of the data, or the data, marked while other data loads, and
-// below the warning of a new read that failed, which goes, with the data
-// marked, while the data is read again. The error and the warning appear in a status region that is
-// there before them, so that assistive technologies announce them without
-// moving the focus (docs/behaviors.md, Accessibility, Announcements). When the
-// data leaves the page while it holds the focus, such as data that a 403
-// replaces, the focus moves to the screen's heading.
+// error in place of the data, or the data, marked while other data loads. A
+// new read that failed shows its warning above the data, which goes while the
+// data is read again, marked meanwhile. The error and the warning appear in a
+// status region that is there before them, so that assistive technologies
+// announce them without moving the focus (docs/behaviors.md, Accessibility,
+// Announcements). When the data leaves the page while it holds the focus,
+// such as data that a 403 replaces, the focus moves to the screen's heading.
 function Data<TData>({ read, children }: DataProps<TData>) {
   const failed = read.status === "error";
   const data = failed && replacesShownData(read.error) ? undefined : read.data;

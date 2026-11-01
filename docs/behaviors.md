@@ -341,10 +341,10 @@ from the API):
 - A screen reads its data again when the tab returns to the foreground after
   being hidden and after a change (Outcome of a Change), and at intervals only
   where its screen document says so, such as for a fetcher run in progress. A
-  read whose error shows in place of content, because it failed before it
-  showed any data, is not read again when the tab returns: its error stays
-  until Try again, where the error offers it, or until the screen opens again
-  (Where Errors Appear).
+  screen's read whose error shows in place of content, because it failed
+  before it showed any data, is not read again when the tab returns: its
+  error stays until Try again, where the error offers it, or until the screen
+  opens again (Where Errors Appear).
 - A change in progress marks the control that started it as busy, and that
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while
