@@ -797,6 +797,8 @@ dependencies that reach the browser bring about 30 packages in total.
 | `@tanstack/react-query` | Server state | Yes |
 | `react-aria-components` | Accessible components | Yes |
 | `zod` | Validation of search parameters and form input | Yes |
+| `@fontsource-variable/inter` | The font of the design system, Inter (`docs/design-system.md`, Font) | Yes |
+| `lucide-react` | The icon set of the design system, Lucide (`docs/design-system.md`, Icon Set) | Yes |
 | `typescript`, `@types/react`, `@types/react-dom` | Language and type check | No |
 | `@types/node` | Type check of the code that runs in Node.js, the end-to-end tests and the configuration of the tools, at the major version of the Node.js line | No |
 | `vite`, `@vitejs/plugin-react` | Build and development server | No |

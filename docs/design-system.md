@@ -329,7 +329,7 @@ Status).
 | `text-14` | 14 / 20 px | The cells of a table, and the toolbar, attention counts, and pagination of a list |
 | `text-15` | 15 / 24 px | Everything else: running text, the sidebar, buttons, menus, fields, and messages |
 | `text-16` | 16 / 24 px | Level-two headings, the title of a dialog, and the product name |
-| `text-20` | 20 / 28 px | The level-one heading of a screen, with letter spacing of −0.025 em |
+| `text-20` | 20 / 28 px, letter spacing −0.025 em | The level-one heading of a screen |
 
 The names state the sizes, so that a size shows in the code; Tailwind's own
 names, such as `text-sm`, do not exist. The uses above and the weights below
