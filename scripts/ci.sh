@@ -189,8 +189,9 @@ readonly TOKEN_MODIFIER_CLASS="${TOKEN_COLOR_UTILITY}-[A-Za-z0-9.-]+/(\[[^][:spa
 # (docs/conventions.md, Checks).
 readonly TOKEN_THEME_CLASS=$'(([A-Za-z0-9-]*-)?dark:[A-Za-z0-9[!*@-]|\\[[^][:space:]]*prefers-color-scheme[^][:space:]]*\\]:)[^[:space:]"\'`{}<>]*'
 # A class with a variant of the attribute with which the root element marks
-# the theme that the user chose, data-theme (src/styles.css).
-readonly TOKEN_THEME_ATTRIBUTE_CLASS=$'[^[:space:]"\'`{}<>]*data-\\[?theme[^[:space:]"\'`{}<>]*:[^[:space:]"\'`{}<>]+'
+# the theme that the user chose, data-theme (src/styles.css), its value
+# quoted or not.
+readonly TOKEN_THEME_ATTRIBUTE_CLASS=$'[^[:space:]"\'`{}<>]*data-\\[?theme([^][:space:]]*\\])?[^[:space:]"\'`{}<>]*:[^[:space:]"\'`{}<>]+'
 # The utilities of the color scheme, such as scheme-dark.
 readonly TOKEN_SCHEME_CLASS='scheme-[A-Za-z0-9-]+!?'
 # Classes that the check rejects and accepts. It checks them first, after a
@@ -207,6 +208,7 @@ readonly TOKEN_REJECTED_EXAMPLES=(
     'md:dark:text-fg' 'not-dark:bg-canvas'
     '[@media(prefers-color-scheme:dark)]:bg-surface'
     'in-data-[theme=dark]:bg-surface' 'data-[theme=light]:text-fg'
+    "in-data-[theme='dark']:bg-surface" "[:root[data-theme='dark']_&]:bg-canvas"
     '[[data-theme=dark]_&]:bg-canvas' 'in-[[data-theme]]:text-fg-muted'
     'scheme-dark' 'md:scheme-light' 'scheme-only-dark!' 'scheme-[dark]'
     '[color-scheme:dark]'

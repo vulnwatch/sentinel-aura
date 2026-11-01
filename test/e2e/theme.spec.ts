@@ -11,6 +11,14 @@ const THEME_STORAGE_KEY = "sentinel-aura:theme";
 
 type Theme = "light" | "dark";
 
+declare global {
+  interface Window {
+    // The theme that the root element marked when the parser inserted the
+    // body of the page, System for no mark.
+    themeAtBody?: string;
+  }
+}
+
 // The color of canvas, the background of the page, in each theme
 // (docs/design-system.md, Color Tokens).
 const CANVAS: Record<Theme, string> = {
@@ -103,9 +111,11 @@ test.describe("the themes", () => {
       });
 
       // The theme script of the entry document applies the stored theme
-      // before the page renders: with the application's own script blocked,
-      // the page shows it all the same.
-      test(`a stored ${other(scheme)} theme shows before the application runs`, async ({
+      // before the page renders: the root element marks it when the parser
+      // inserts the body, before which the browser renders nothing (HTML,
+      // render-blocking), and with the application's own script blocked, the
+      // page shows it all the same.
+      test(`a stored ${other(scheme)} theme shows from the first paint, before the application runs`, async ({
         page,
         request,
       }) => {
@@ -121,8 +131,21 @@ test.describe("the themes", () => {
           (route) => route.abort(),
         );
         await storePreference(page, other(scheme));
+        await page.addInitScript(() => {
+          new MutationObserver((_records, observer) => {
+            if (document.body !== null) {
+              window.themeAtBody =
+                document.documentElement.dataset.theme ?? "system";
+              observer.disconnect();
+            }
+          }).observe(document, { childList: true, subtree: true });
+        });
         await openUnder(page, scheme);
         await expect(page.getByRole("heading")).toHaveCount(0);
+        expect(
+          await page.evaluate(() => window.themeAtBody),
+          "the theme that the root element marks when the body appears",
+        ).toBe(other(scheme));
         expect(await shownTheme(page)).toEqual({
           background: CANVAS[other(scheme)],
           colorScheme: other(scheme),

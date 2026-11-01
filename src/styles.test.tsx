@@ -140,7 +140,38 @@ test("gives every type size its size, line height, and letter spacing", async ()
   }
 });
 
+// The browser's text size, 16 px by default, enlarged to 20 px: every type
+// size grows with it (docs/design-system.md, the sizes relative to the text
+// size).
+test("states every type size relative to the text size", async () => {
+  const root = document.documentElement;
+  root.style.fontSize = "20px";
+  try {
+    const screen = await render(
+      <>
+        {TYPE_SIZES.map(([className]) => (
+          <p key={className} className={className}>
+            {className}
+          </p>
+        ))}
+      </>,
+    );
+    for (const [className, size, lineHeight] of TYPE_SIZES) {
+      const style = await styleOf(screen, className);
+      expect(style.fontSize, className).toBe(
+        `${Number.parseFloat(size) * 1.25}px`,
+      );
+      expect(style.lineHeight, className).toBe(
+        `${Number.parseFloat(lineHeight) * 1.25}px`,
+      );
+    }
+  } finally {
+    root.style.removeProperty("font-size");
+  }
+});
+
 test("shows the page in canvas and fg, with text of 15 px in Inter", async () => {
+  applyThemePreference("light");
   const body = getComputedStyle(document.body);
   expect(body.backgroundColor).toBe(computed("#F6F8FA"));
   expect(body.color).toBe(computed("#1F2328"));
