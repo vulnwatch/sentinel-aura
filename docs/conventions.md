@@ -348,6 +348,16 @@ that needs it; content of another kind needs a new row first.
   visible text, never by CSS class or document structure.
 - Component tests replace the shared request function with prepared
   responses and make no network request.
+- A test checks the outcome of the behavior that it covers, as a user or a
+  caller observes it, so that it fails when the behavior breaks. A test that
+  runs code without checking its outcome proves nothing, and the minimum
+  coverage (Checks) never justifies one.
+- Each unit or component test that a change adds, or whose assertions it
+  changes, is seen to fail when the behavior that it checks breaks: the
+  author breaks that behavior in the code, or for a fix restores the defect,
+  runs the test, sees it fail because of the break, and restores the code.
+  The pull request records the break and the failure of each such test with
+  its test evidence (Pull Request Requirements).
 - The tests of code that maps or branches on a value of a response enum, or
   that handles an error code or status specifically, also cover a value of
   that enum, or an error code and a status, that the contract of the pinned
@@ -450,6 +460,25 @@ that needs it; content of another kind needs a new row first.
 - Like every Node.js command, they run through `scripts/tooling.sh`
   (`docs/architecture.md`, Development Environment), never on the host; the
   `check` script of `package.json` runs all four.
+- The unit and component tests measure their coverage with Istanbul
+  (`docs/architecture.md`, Static Checks and Tests) and fail when the
+  statements, the branches, the functions, or the lines that they run fall
+  below 95 % of those of the measured files together: the modules under
+  `src/` other than the generated API client, whose requests are tested
+  through the shared request function. The `test:coverage` script of
+  `package.json`, which `check` and `scripts/ci.sh` run, applies the minimum.
+  It applies to every measured module, so a module that the tests do not
+  load counts as not covered; a run of the tests of some modules therefore
+  uses the `test` script, which measures no coverage.
+- The minimum coverage is a floor, not a target: it catches code that no test
+  runs, while the tests are judged by the behavior that they check (Tests).
+  The margin below 100 % is not room for untested behavior: a change still
+  tests every behavior that it adds or alters. No comment, such as
+  `istanbul ignore`, hides a line, a branch, or a function from the
+  measurement. The measured files, which an exclusion changes, change only
+  with the repository owner's decision and never to reach the minimum; the
+  minimum changes only with that decision. The pull request that changes
+  either records the decision.
 - Every change also passes the design token check, which
   `scripts/ci.sh ui-checks` runs after the lint, in the required `UI Checks`
   job and in `scripts/ci.sh all` (`docs/deployment.md`, Workflow Inventory).
@@ -774,10 +803,11 @@ request carries `fix(deps):` in its title instead.
   characters.
 - **Description**: at minimum: issue linkage, owning documents (foundation
   and screen documents of this repository and the Sentinel specifications
-  relied on), scope summary, test evidence, the reference screenshots that
-  it changes when required, delegated decisions, new dependencies, reviewer
-  results, manual verification notes. The pull request template provides
-  these sections.
+  relied on), scope summary, test evidence, with the failures of the unit and
+  component tests that it adds or whose assertions it changes (Code
+  Conventions, Tests), the reference screenshots that it changes when
+  required, delegated decisions, new dependencies, reviewer results, manual
+  verification notes. The pull request template provides these sections.
 - **Issue linkage**: `Closes #<issue>` for normal work, `N/A - <specific
   reason>` for an exempt human-authored PR under "Issues and work units"
   in Workflow. Use an `- Issue linkage:` field, or a standalone

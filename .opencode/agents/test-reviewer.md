@@ -140,9 +140,12 @@ new fixture layer, test helper library, or Playwright project — without
 presenting it to the user for a decision.
 
 **Do not duplicate automated enforcement.** The type check and lint cover the
-tests too, and coverage is informational (`codecov.yml`): an uncovered
-changed line points to a possible gap but is not a finding by itself. Report
-missing coverage as a behavior, with the scenario that no test exercises.
+tests too, and the unit and component tests fail below the minimum coverage
+(`docs/conventions.md`, Checks), over all the measured files together. A run
+that reaches the minimum proves nothing about a change: an uncovered changed
+line points to a possible gap but is not a finding by itself, and a covered
+line is not tested until a test checks its outcome. Report missing coverage
+as a behavior, with the scenario that no test exercises.
 
 ## Before reviewing
 
@@ -191,6 +194,23 @@ missing coverage as a behavior, with the scenario that no test exercises.
   responses; end-to-end tests prove flows across screens, the real backend,
   how the UI is served, the Content Security Policy, and the reference
   screenshots. Do not require both tiers for the same behavior
+
+### Coverage measurement and failure records
+
+- Does a comment hide code from the coverage measurement, such as
+  `istanbul ignore`, `v8 ignore`, or `c8 ignore`, which no decision allows
+  (`docs/conventions.md`, Checks)?
+- Does the change alter the measured files, by adding an exclusion to
+  `vite.config.ts` or narrowing its `include`, without the repository
+  owner's decision recorded in the pull request, or to reach the minimum?
+  Does it change the minimum coverage without that decision?
+- For each unit or component test that the change adds, or whose assertions
+  it changes, do the pull request, or before it exists the invoking agent,
+  record the break of the behavior with which the test was seen to fail
+  (`docs/conventions.md`, Tests)? Is the break one of the behavior that the
+  test claims, such as an inverted condition or a removed call, rather than
+  one that any test would catch, such as removing the module, and would the
+  test's assertions fail on it?
 
 ### Test conventions
 
@@ -241,8 +261,9 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
   leaves, or on the current date outside the dataset's time base?
 - Does each test assert the observable outcome that it claims, so that it
   fails when the behavior breaks? A test that only checks that a replaced
-  function was called, asserts internal state, or still passes with the
-  behavior removed proves nothing
+  function was called, asserts internal state, still passes with the
+  behavior removed, or runs code without asserting its outcome proves
+  nothing, whatever coverage it adds
 - Does a test repeat a proof that another test already owns, at the same or
   another tier? Name the retained test and state whether removing the
   redundant one loses a required scenario
@@ -270,8 +291,8 @@ omitting an empty one other than the verdict:
    with the authority or the code that requires it
 3. **Weak tests**: tests that cannot prove their claim or are unreliable,
    with file and line
-4. **Convention violations**: breaches of Tests or End-to-End Tests in
-   `docs/conventions.md`, with file and line
+4. **Convention violations**: breaches of Tests, End-to-End Tests, or the
+   coverage rules of Checks in `docs/conventions.md`, with file and line
 5. **Redundant tests**: each with the retained test that already proves it
 6. **Verdict**: one of:
    - **Clean** — the changed behavior and applicable regressions are well
@@ -279,6 +300,10 @@ omitting an empty one other than the verdict:
    - **Minor issues** — useful non-blocking improvements remain, including
      removable redundant tests
    - **Needs revision** — a changed behavior lacks a test, a fix lacks a
-     regression test, a test does not assert its claim, or a test breaks a
-     rule of End-to-End Tests that keeps the tests isolated or their checks
-     on
+     regression test, a test does not assert its claim, a unit or component
+     test that the change adds, or whose assertions it changes, lacks the
+     record of its failure, a comment hides code from the coverage
+     measurement, the measured files change without the repository owner's
+     decision or to reach the minimum, the minimum coverage changes without
+     that decision, or a test breaks a rule of End-to-End Tests that keeps
+     the tests isolated or their checks on

@@ -36,7 +36,7 @@ that run a subset of the checks before a change reaches CI.
 
 | Workflow | Trigger | Purpose | Blocking |
 |----------|---------|---------|----------|
-| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the pinned Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, design token check, format check, and unit and component tests of the UI (`docs/conventions.md`, Code Conventions), all but the design token check run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); the design token check rejects the classes of the UI's modules that bypass the tokens of `docs/design-system.md` with an arbitrary value or property, a modifier, a variant of one theme, such as `dark:`, or a color scheme of their own (`docs/conventions.md`, Checks); then the build and the test of the image that serves the UI in production (Image test), and the generation and check of its SBOM (Release Process, Supply-Chain Artifacts); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
+| `ci.yml` | Push to `master`, pull request to `master`, manual | `Shell Lint` job: `scripts/lint-shell.sh`, which runs `shellcheck` and `shfmt` on every tracked shell script, library, and Git hook, and `actionlint` on every workflow, each from its official image, pinned by version and digest (`docs/conventions.md`, Shell Scripting). `UI Checks` job: the dependency audit when the run can change the dependencies (Dependency audit), then `scripts/ci.sh ui-checks` (Local run): `scripts/sentinel-contract.sh verify`, which checks that the pinned OpenAPI document is identical to the release asset of the pinned Sentinel version and that the version's image tag names the pinned image digest (`docs/architecture.md`, Backend Contract); the generation of the API client, which fails the job when the result differs from the committed client (`docs/architecture.md`, API Client Generation); then the type check, lint, design token check, format check, and unit and component tests of the UI, with their minimum coverage (`docs/conventions.md`, Code Conventions), all but the design token check run through `scripts/tooling.sh` like every Node.js command (`docs/architecture.md`, Development Environment); the design token check rejects the classes of the UI's modules that bypass the tokens of `docs/design-system.md` with an arbitrary value or property, a modifier, a variant of one theme, such as `dark:`, or a color scheme of their own (`docs/conventions.md`, Checks); then the build and the test of the image that serves the UI in production (Image test), and the generation and check of its SBOM (Release Process, Supply-Chain Artifacts); then a check that `node_modules/` holds no file in the working tree. `End-to-End Tests` job: `scripts/ci.sh e2e` (Local run): `scripts/dev-env.sh e2e`, which builds the image that serves the UI in production and runs the end-to-end tests against it in Chromium and Firefox (End-to-end tests), then `scripts/dev-env.sh test`, which checks the development proxy (End-to-end tests). `Coverage Upload` job: uploads the coverage report of the tests to Codecov (Coverage reporting) | Yes |
 | `pr-metadata.yml` | Pull request to `master` opened, edited, reopened, or synchronized | `PR Metadata` job: validates the title format and length and the issue linkage (`docs/conventions.md`, Pull Request Requirements) with `scripts/check-pr-metadata.sh` | Yes |
 | `renovate-validation.yml` | Pull request opened, synchronized, or reopened; manual | Validates `renovate.jsonc` and performs a read-only Renovate dependency lookup (Dependency Updates) | No |
 | `image-scan.yml` | Weekly schedule, successful `release.yml` run, manual | `Image Scan` job: pulls the image of the latest release with `scripts/image.sh pull`, or, in a manual run on another branch than `master`, builds the image from that branch, and scans its operating system packages for known vulnerabilities with `scripts/image.sh scan`. `Scan Tracking Issue` job, on `master` only: opens, updates, or closes the issue that tracks the fixable HIGH and CRITICAL ones (Image vulnerability scan) | No |
@@ -75,24 +75,28 @@ gains human-directed scope, its `Closes #<issue>` line is checked in review,
 not by the script.
 
 **Coverage reporting.** The tests of `UI Checks` measure coverage with
-Istanbul (`docs/architecture.md`, Static Checks and Tests), and when every
-check of the job passes, the job retains Istanbul's LCOV report, `lcov.info`,
-as a seven-day workflow artifact; it never receives `CODECOV_TOKEN`, because it
-runs the code of the dependencies. The separate `Coverage Upload` job, which
-runs after a successful `UI Checks`, uploads only that report to Codecov, with
-a pinned Codecov CLI version (Dependency Updates) and the `CODECOV_TOKEN`
-repository secret, the upload token that Codecov issues for the repository. On
-a pull request, a failed upload fails the job, which can be re-run on its own
-while the artifact is retained; on a push to `master` or a manual run it does
-not fail the run, so that a Codecov outage does not mark `master` red after a
-merge. The repository `codecov.yml` makes the resulting `codecov/patch` status
-informational, so it always passes and no coverage threshold gates a merge,
-and has Codecov publish it as soon as the upload is processed rather than
+Istanbul (`docs/architecture.md`, Static Checks and Tests) and fail below the
+minimum coverage that `docs/conventions.md` (Checks) sets, which fails the
+job. When every check of the job passes, the job retains Istanbul's LCOV
+report, `lcov.info`, as a seven-day workflow artifact; it never receives
+`CODECOV_TOKEN`, because it runs the code of the dependencies. The separate
+`Coverage Upload` job, which runs after a successful `UI Checks`, uploads only
+that report to Codecov, with a pinned Codecov CLI version (Dependency Updates)
+and the `CODECOV_TOKEN` repository secret, the upload token that Codecov
+issues for the repository. On a pull request, a failed upload fails the job,
+which can be re-run on its own while the artifact is retained; on a push to
+`master` or a manual run it does not fail the run, so that a Codecov outage
+does not mark `master` red after a merge. The repository `codecov.yml` makes
+the resulting `codecov/patch` status informational, so it always passes, and
+the minimum coverage of the tests is the only one that gates a merge; Codecov
+shows the coverage of each line that a pull request changes, which the
+minimum, over all the measured files together, does not. `codecov.yml` also
+has Codecov publish the status as soon as the upload is processed rather than
 waiting for, or failing because of, the other checks. `codecov/patch` is a
 required check, so a pull request cannot merge before its coverage report is
 visible; while Codecov cannot process uploads, merges wait until it recovers.
-`codecov.yml` disables the `codecov/project` status, which the organization's
-Codecov plan does not publish.
+`codecov.yml` disables the `codecov/project` status, which the minimum
+coverage replaces and which the organization's Codecov plan does not publish.
 
 The report is LCOV because Codecov reads every branch of it at its line, as
 Istanbul counts it: a line with branches shows as covered when every branch

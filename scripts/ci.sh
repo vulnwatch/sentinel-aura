@@ -20,10 +20,11 @@
 #   scripts/ci.sh ui-checks   The checks of the UI Checks job: the pinned
 #                             Sentinel contract, the generated API client, the
 #                             type check, lint, design token check, format
-#                             check, and unit and component tests, the build
-#                             and the test of the image, its SBOM, which it
-#                             writes to test-results/sbom/, and no dependency
-#                             in the working tree
+#                             check, and unit and component tests with their
+#                             minimum coverage, the build and the test of the
+#                             image, its SBOM, which it writes to
+#                             test-results/sbom/, and no dependency in the
+#                             working tree
 #   scripts/ci.sh e2e         The checks of the End-to-End Tests job: the
 #                             end-to-end tests, then the test of the
 #                             development proxy
@@ -341,7 +342,7 @@ cmd_ui_checks() {
     run_check "Lint" "${SCRIPTS}/tooling.sh" run lint
     run_check "Design token check" check_design_tokens
     run_check "Format check" "${SCRIPTS}/tooling.sh" run format:check
-    run_check "Unit and component tests" "${SCRIPTS}/tooling.sh" run test
+    run_check "Unit and component tests" "${SCRIPTS}/tooling.sh" run test:coverage
     run_check "Build the image" "${SCRIPTS}/image.sh" build
     run_check "Test the image" "${SCRIPTS}/image.sh" test
     run_check "Generate and check the SBOM of the image" "${SCRIPTS}/image.sh" sbom \
