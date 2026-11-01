@@ -825,8 +825,11 @@ A list screen, such as the Ticket list, shows from top to bottom:
   change that Sentinel did not confirm (`docs/behaviors.md`, Retries and
   Unconfirmed Changes), and `danger` for an error.
 - When data stays shown after a new read of it failed, a `warning` message
-  above the data says that it could not be updated (`docs/behaviors.md`, Where
-  Errors Appear).
+  above the data says that it could not be updated, followed 8 px below by
+  Try again as a secondary button when the failure offers it
+  (`docs/behaviors.md`, Where Errors Appear). The button stands outside the
+  message, on the background of the screen or of its part, against which its
+  boundary keeps its contrast (Contrast Table).
 
 ### Loading
 
@@ -835,9 +838,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
   waits (`docs/behaviors.md`, Loading). As the UI loads, before it shows any
   screen, the indicator is centered in the window, without the sidebar
   (`docs/behaviors.md`, Session State).
-- Data that stays shown while other data loads is marked by a progress bar,
-  2 px high in `accent`, running along the top edge of its frame or part; the
-  data itself does not change its appearance.
+- Data that stays shown while other data loads, or while it is read again
+  after a read of it failed, is marked by a progress bar, 2 px high in
+  `accent`, running along the top edge of its frame or part; the data itself
+  does not change its appearance.
 
 ### Empty States
 
@@ -851,9 +855,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
 
 - An error in place of the content of a screen shows below the message area:
   the level-one heading that names the error, its message in `fg-muted`, the
-  reference of the error when it has one, and its action, Try again as a
-  secondary button or a link to the landing, aligned to the start and at most
-  560 px wide (`docs/behaviors.md`, Default Presentation by Status).
+  reference of the error when it has one, and its action, Try again or Reload
+  page as a secondary button, or a link to the landing, aligned to the start
+  and at most 560 px wide (`docs/behaviors.md`, Default Presentation by
+  Status).
 - An error in place of a part shows the same inside the part, below its
   heading, without a heading of its own.
 

@@ -1,0 +1,170 @@
+import { ApiError, NetworkError, UnreadableResponseError } from "./request";
+
+// The presentation of every failure of a request that a screen does not
+// handle specifically (docs/behaviors.md, Errors; docs/conventions.md, Error
+// Codes and Messages). It decides by the HTTP status and Sentinel's code,
+// never by detail, and shows no text of an error response. A status or code
+// that the contract of the pinned version does not list for an operation
+// gets the presentation of its status (Sentinel docs/api-spec.md, Client
+// Tolerance of Non-Breaking Changes).
+
+// A failure of a request: an error response, no response, or a successful
+// response that the UI cannot read (src/api/request.ts).
+export type RequestFailure = ApiError | NetworkError | UnreadableResponseError;
+
+export function isRequestFailure(error: unknown): error is RequestFailure {
+  return (
+    error instanceof ApiError ||
+    error instanceof NetworkError ||
+    error instanceof UnreadableResponseError
+  );
+}
+
+// What failed (docs/behaviors.md, Where Errors Appear; Retries and
+// Unconfirmed Changes):
+// - screen: a read in place of the content of a screen;
+// - part: any other read, in place of a part of a screen or of its data, or
+//   next to data that stays shown;
+// - change: a change of Sentinel's data;
+// - session: sign-in or sign-out, which are harmless to repeat.
+export type FailureContext = "screen" | "part" | "change" | "session";
+
+export interface FailurePresentation {
+  // The heading in place of the content of a screen.
+  heading: string;
+  message: string;
+  // The request identifier, shown after "Reference:", when the message has
+  // a reference and the response carried an identifier.
+  reference: string | undefined;
+  // Whether the failure offers Try again: after a network failure, a 429, a
+  // 5xx, or a successful response that the UI cannot read.
+  retry: boolean;
+}
+
+// The page of a missing or inaccessible record, and of a path that matches
+// no screen (docs/behaviors.md, Missing and Inaccessible Records).
+export const NOT_FOUND = {
+  heading: "Not found",
+  message: "This page doesn't exist, or you don't have access to it.",
+} as const;
+
+const HEADING_NO_ACCESS = "No access";
+const HEADING_NOT_LOADED = "This page couldn't be loaded";
+
+const MESSAGE_NETWORK =
+  "Sentinel can't be reached. Check your connection and try again.";
+const MESSAGE_NOT_ACCEPTED = "Sentinel didn't accept this request.";
+const MESSAGE_FORBIDDEN = "You don't have permission to do this.";
+const MESSAGE_FORBIDDEN_SCREEN = "You don't have permission to view this page.";
+const MESSAGE_GONE =
+  "This no longer exists, or you no longer have access to it.";
+const MESSAGE_CONFLICT =
+  "This can't be done in the current state, which may have changed. Check it and try again.";
+const MESSAGE_TOO_MANY = "Too many attempts. Try again later.";
+const MESSAGE_INTERNAL =
+  "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.";
+const MESSAGE_UNAVAILABLE =
+  "Sentinel isn't available right now. Try again later.";
+const MESSAGE_UNCONFIRMED =
+  "Sentinel didn't confirm this change. It may have taken effect: check before trying again.";
+
+// The presentation of a failure in its context, or undefined for a 401,
+// which shows no message: the session has ended (docs/behaviors.md, Session
+// State).
+export function presentFailure(
+  failure: RequestFailure,
+  context: FailureContext,
+): FailurePresentation | undefined {
+  if (failure instanceof NetworkError) {
+    return {
+      heading: HEADING_NOT_LOADED,
+      message: context === "change" ? MESSAGE_UNCONFIRMED : MESSAGE_NETWORK,
+      reference: undefined,
+      retry: true,
+    };
+  }
+  if (failure instanceof UnreadableResponseError) {
+    return internal(failure.requestId, true);
+  }
+  return presentErrorResponse(failure, context);
+}
+
+function presentErrorResponse(
+  { status, code, requestId }: ApiError,
+  context: FailureContext,
+): FailurePresentation | undefined {
+  if (status === 401) {
+    return undefined;
+  }
+  if (status >= 500) {
+    // A change may have taken effect (Sentinel docs/api-spec.md,
+    // Infrastructure Dependency Errors (HTTP 503)).
+    if (context === "change") {
+      return {
+        heading: HEADING_NOT_LOADED,
+        message: MESSAGE_UNCONFIRMED,
+        reference: requestId,
+        retry: true,
+      };
+    }
+    return status === 500
+      ? internal(requestId, true)
+      : {
+          heading: HEADING_NOT_LOADED,
+          message: MESSAGE_UNAVAILABLE,
+          reference: requestId,
+          retry: true,
+        };
+  }
+  switch (status) {
+    case 403:
+      // A fault in how the UI is served, not a missing permission
+      // (docs/architecture.md, Cross-Origin Requests).
+      if (code === "AUTH_CROSS_ORIGIN_REJECTED") {
+        return internal(requestId, false);
+      }
+      return {
+        heading: HEADING_NO_ACCESS,
+        message:
+          context === "screen" ? MESSAGE_FORBIDDEN_SCREEN : MESSAGE_FORBIDDEN,
+        reference: undefined,
+        retry: false,
+      };
+    case 404:
+      return context === "screen"
+        ? { ...NOT_FOUND, reference: undefined, retry: false }
+        : notRetried(MESSAGE_GONE);
+    case 409:
+      return notRetried(MESSAGE_CONFLICT);
+    case 429:
+      return { ...notRetried(MESSAGE_TOO_MANY), retry: true };
+    default:
+      // Every other 4xx, 422 included: a form matches the field errors of
+      // VALIDATION_ERROR to its fields itself. A status that is neither
+      // successful nor an error is a response that the UI cannot read.
+      return status >= 400
+        ? notRetried(MESSAGE_NOT_ACCEPTED)
+        : internal(requestId, true);
+  }
+}
+
+function internal(
+  requestId: string | undefined,
+  retry: boolean,
+): FailurePresentation {
+  return {
+    heading: HEADING_NOT_LOADED,
+    message: MESSAGE_INTERNAL,
+    reference: requestId,
+    retry,
+  };
+}
+
+function notRetried(message: string): FailurePresentation {
+  return {
+    heading: HEADING_NOT_LOADED,
+    message,
+    reference: undefined,
+    retry: false,
+  };
+}

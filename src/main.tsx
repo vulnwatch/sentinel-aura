@@ -1,10 +1,10 @@
 // Zod's configuration comes first, before any module uses a schema.
 import "./zod";
 import "./styles.css";
-import { QueryClient } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app";
+import { createQueryClient } from "./query-client";
 import { createAppRouter } from "./router";
 import { followThemePreference } from "./theme";
 
@@ -17,6 +17,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App router={createAppRouter()} queryClient={new QueryClient()} />
+    <App router={createAppRouter()} queryClient={createQueryClient()} />
   </StrictMode>,
 );

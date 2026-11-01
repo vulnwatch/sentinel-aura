@@ -2,16 +2,25 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { TicketStatusValue } from "./generated/model";
 import { listTickets, createTicket, getTicket } from "./generated/tickets";
 import { getUser } from "./generated/users";
-import { ApiError, apiRequest } from "./request";
+import {
+  ApiError,
+  apiRequest,
+  NetworkError,
+  UnreadableResponseError,
+} from "./request";
 
 function stubFetch(response: Response) {
   return vi.spyOn(window, "fetch").mockResolvedValue(response);
 }
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
   });
 }
 
@@ -155,14 +164,140 @@ describe("apiRequest", () => {
     },
   );
 
-  test("lets a request that receives no response fail with the browser's error", async () => {
+  test("gives an error response the identifier of its request", async () => {
+    stubFetch(
+      jsonResponse(
+        503,
+        { code: "REDIS_UNAVAILABLE", detail: "Redis is unavailable" },
+        { "X-Request-ID": "01890a5d-ac96-774b-bcce-b302099a8057" },
+      ),
+    );
+
+    const error = await rejection(
+      apiRequest("/api/v1/tickets", { method: "GET" }),
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 503,
+      code: "REDIS_UNAVAILABLE",
+      requestId: "01890a5d-ac96-774b-bcce-b302099a8057",
+    });
+  });
+
+  test("gives an error response without JSON the identifier of its request", async () => {
+    stubFetch(
+      new Response("Internal Server Error", {
+        status: 500,
+        headers: { "X-Request-ID": "01890a5d-ac96-774b-bcce-b302099a8058" },
+      }),
+    );
+
+    const error = await rejection(
+      apiRequest("/api/v1/tickets", { method: "GET" }),
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 500,
+      code: undefined,
+      requestId: "01890a5d-ac96-774b-bcce-b302099a8058",
+    });
+  });
+
+  test("gives an error response without the header no request identifier", async () => {
+    stubFetch(jsonResponse(429, "Too Many Requests"));
+
+    const error = await rejection(
+      apiRequest("/api/v1/tickets", { method: "GET" }),
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 429, requestId: undefined });
+  });
+
+  test("turns a request that receives no response into a NetworkError", async () => {
     const failure = new TypeError("Failed to fetch");
     vi.spyOn(window, "fetch").mockRejectedValue(failure);
 
-    await expect(apiRequest("/api/v1/tickets", { method: "GET" })).rejects.toBe(
-      failure,
+    const error = await rejection(
+      apiRequest("/api/v1/tickets", { method: "GET" }),
     );
+
+    expect(error).toBeInstanceOf(NetworkError);
+    expect(error).toMatchObject({ cause: failure });
   });
+
+  test("lets a cancelled request fail with the browser's error", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    vi.spyOn(window, "fetch").mockRejectedValue(controller.signal.reason);
+
+    await expect(
+      apiRequest("/api/v1/tickets", {
+        method: "GET",
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(controller.signal.reason);
+  });
+
+  test.each([
+    ["is not JSON", "<html><body>Sentinel</body></html>"],
+    ["is empty", null],
+  ])(
+    "turns a successful response whose body %s into an UnreadableResponseError",
+    async (_, body) => {
+      stubFetch(
+        new Response(body, {
+          status: 200,
+          headers: { "X-Request-ID": "01890a5d-ac96-774b-bcce-b302099a8059" },
+        }),
+      );
+
+      const error = await rejection(
+        apiRequest("/api/v1/tickets", { method: "GET" }),
+      );
+
+      expect(error).toBeInstanceOf(UnreadableResponseError);
+      expect(error).toMatchObject({
+        status: 200,
+        requestId: "01890a5d-ac96-774b-bcce-b302099a8059",
+      });
+    },
+  );
+
+  test("turns a successful response whose body breaks off into a NetworkError", async () => {
+    const failure = new TypeError("network error");
+    const response = jsonResponse(200, { data: [] });
+    vi.spyOn(response, "json").mockRejectedValue(failure);
+    stubFetch(response);
+
+    const error = await rejection(
+      apiRequest("/api/v1/tickets", { method: "GET" }),
+    );
+
+    expect(error).toBeInstanceOf(NetworkError);
+    expect(error).toMatchObject({ cause: failure });
+  });
+
+  test.each([200, 404])(
+    "lets a request that is cancelled while its body with status %i is read fail with the browser's error",
+    async (status) => {
+      const controller = new AbortController();
+      controller.abort();
+      const reason: unknown = controller.signal.reason;
+      const response = jsonResponse(status, { data: [] });
+      vi.spyOn(response, "json").mockRejectedValue(reason);
+      stubFetch(response);
+
+      await expect(
+        apiRequest("/api/v1/tickets", {
+          method: "GET",
+          signal: controller.signal,
+        }),
+      ).rejects.toBe(reason);
+    },
+  );
 });
 
 describe("the generated client", () => {
