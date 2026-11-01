@@ -36,8 +36,8 @@ export interface FailurePresentation {
   // The request identifier, shown after "Reference:", when the message has
   // a reference and the response carried an identifier.
   reference: string | undefined;
-  // Whether the failure offers Try again: after a network failure, a 429,
-  // or a 5xx.
+  // Whether the failure offers Try again: after a network failure, a 429, a
+  // 5xx, or a successful response that the UI cannot read.
   retry: boolean;
 }
 
@@ -84,7 +84,7 @@ export function presentFailure(
     };
   }
   if (failure instanceof UnreadableResponseError) {
-    return internal(failure.requestId, false);
+    return internal(failure.requestId, true);
   }
   return presentErrorResponse(failure, context);
 }
@@ -144,7 +144,7 @@ function presentErrorResponse(
       // successful nor an error is a response that the UI cannot read.
       return status >= 400
         ? notRetried(MESSAGE_NOT_ACCEPTED)
-        : internal(requestId, false);
+        : internal(requestId, true);
   }
 }
 

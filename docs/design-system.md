@@ -676,9 +676,10 @@ writes "Confidential" next to it.
 - Buttons have a 6 px radius, 12 px of side padding, or 16 px at a height
   of 40 px, their label at weight 500, and their icon at 16 px before the
   label; Next has its chevron after it. They are 32 px high in the toolbar
-  and pagination of a list and in the heading of a card, 40 px in forms and
-  dialogs, and 36 px elsewhere, such as in the heading row of a screen, in an
-  empty state, and as Try again, unless a pattern states its own height.
+  and pagination of a list, in the heading of a card, and in a message, 40 px
+  in forms and dialogs, and 36 px elsewhere, such as in the heading row of a
+  screen, in an empty state, and as Try again in place of content, unless a
+  pattern states its own height.
 - A disabled button shows at 60 % opacity. A busy button shows
   `loader-circle` in place of its icon, or before its label, keeps its label,
   and cannot be pressed (`docs/behaviors.md`, Loading).
@@ -825,8 +826,9 @@ A list screen, such as the Ticket list, shows from top to bottom:
   change that Sentinel did not confirm (`docs/behaviors.md`, Retries and
   Unconfirmed Changes), and `danger` for an error.
 - When data stays shown after a new read of it failed, a `warning` message
-  above the data says that it could not be updated (`docs/behaviors.md`, Where
-  Errors Appear).
+  above the data says that it could not be updated, and ends with Try again
+  as a secondary button when the failure offers it (`docs/behaviors.md`,
+  Where Errors Appear).
 
 ### Loading
 

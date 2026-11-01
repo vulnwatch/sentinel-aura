@@ -201,14 +201,15 @@ message follows Wording.
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
-| A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
+| A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
 
-- An error in place of the content of a screen or of a part offers an action
-  that tries again after a network failure, a `429`, or a `5xx`. In place of
-  the content of a screen, every other error links to the landing instead,
-  with "Go to the start page".
+- An error in place of the content of a screen or of a part, and the message
+  next to data that stays shown, offer an action that tries again after a
+  network failure, a `429`, a `5xx`, or a successful response that the UI
+  cannot read. In place of the content of a screen, every other error links
+  to the landing instead, with "Go to the start page".
 - A count, such as the count of a view or of the attention summary, has no
   room for a message or an action: when a read of it fails, even after it
   showed a number, it shows as not available, read as "Not available", and
@@ -555,7 +556,10 @@ also meets these requirements, which they cannot check:
   and announces the number of results.
 - **Focus after an action.** When the element that has the focus disappears
   after an action, the focus moves to the element that takes its place, such
-  as the action that reverses it, or otherwise to the screen's heading.
+  as the action that reverses it, or otherwise to the screen's heading. When
+  it disappears without an action, because a read replaced what the screen
+  shows, such as a `403` after the tab returns to the foreground (Where Errors
+  Appear), the focus moves to the screen's heading.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing. Escape closes it, and the focus then returns to the element that

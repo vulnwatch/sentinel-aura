@@ -120,12 +120,12 @@ const READ_FAILURES: [string, RequestFailure, FailurePresentation][] = [
     new UnreadableResponseError(200, REQUEST_ID, {
       cause: new SyntaxError("Unexpected token"),
     }),
-    shown(INTERNAL, { reference: REQUEST_ID, retry: false }),
+    shown(INTERNAL, { reference: REQUEST_ID, retry: true }),
   ],
   [
     "a status that is neither successful nor an error",
     errorResponse(304),
-    shown(INTERNAL, { reference: REQUEST_ID, retry: false }),
+    shown(INTERNAL, { reference: REQUEST_ID, retry: true }),
   ],
 ];
 

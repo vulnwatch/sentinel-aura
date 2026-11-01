@@ -7,8 +7,13 @@ import {
 import { CatchBoundary } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
-import { ApiError, NetworkError } from "../api/request";
+import {
+  ApiError,
+  NetworkError,
+  UnreadableResponseError,
+} from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
 import { PartRead, ScreenRead } from "./read-view";
@@ -112,6 +117,37 @@ function PartScreen() {
       <ScreenHeading>Record</ScreenHeading>
       <h2>References</h2>
       <PartRead read={read}>{(record) => <p>{record.title}</p>}</PartRead>
+    </main>
+  );
+}
+
+// A screen, and a part of a screen, whose data holds a control.
+function EditableScreen() {
+  const read = useRecord(1);
+  return (
+    <ScreenRead
+      read={read}
+      renderFrame={(place, record) => (
+        <main>
+          <ScreenHeading>{record?.title ?? "Record"}</ScreenHeading>
+          {place}
+        </main>
+      )}
+    >
+      {(record) => <Button>Edit {record.title}</Button>}
+    </ScreenRead>
+  );
+}
+
+function EditablePart() {
+  const read = useRecord(1);
+  return (
+    <main>
+      <ScreenHeading>Record</ScreenHeading>
+      <h2>References</h2>
+      <PartRead read={read}>
+        {(record) => <Button>Edit {record.title}</Button>}
+      </PartRead>
     </main>
   );
 }
@@ -286,10 +322,17 @@ describe("ScreenRead", () => {
 
     expect(screen.getByRole("status").element()).toBe(region);
     await expect
-      .element(screen.getByRole("status"))
-      .toHaveTextContent(
-        `This couldn't be updated. Sentinel isn't available right now. Try again later.Reference: ${REQUEST_ID}`,
-      );
+      .element(
+        screen
+          .getByRole("status")
+          .getByText(
+            "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+          ),
+      )
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("status").getByText(`Reference: ${REQUEST_ID}`))
+      .toBeVisible();
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
@@ -298,6 +341,108 @@ describe("ScreenRead", () => {
         screen.getByRole("heading", { level: 1, name: "Fictional record" }),
       )
       .toBeVisible();
+  });
+
+  test.each([
+    ["a network failure", new NetworkError({ cause: new TypeError("Failed") })],
+    ["a 500", new ApiError(500, "INTERNAL_ERROR", {}, REQUEST_ID)],
+    ["a 429", new ApiError(429, undefined, undefined, undefined)],
+    [
+      "an unreadable response",
+      new UnreadableResponseError(200, REQUEST_ID, {
+        cause: new SyntaxError("Unexpected token"),
+      }),
+    ],
+  ])("offers Try again next to the data shown after %s", async (_, failure) => {
+    respond.mockResolvedValueOnce({ title: "Fictional record" });
+    const screen = await renderWithClient(<DetailScreen />);
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
+      .toBeVisible();
+    respond.mockRejectedValue(failure);
+
+    await refetch();
+
+    await expect
+      .element(
+        screen.getByRole("status").getByRole("button", { name: "Try again" }),
+      )
+      .toBeVisible();
+  });
+
+  test("offers no Try again next to the data shown after a 409", async () => {
+    respond.mockResolvedValueOnce({ title: "Fictional record" });
+    const screen = await renderWithClient(<DetailScreen />);
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
+      .toBeVisible();
+    respond.mockRejectedValue(
+      new ApiError(409, "RESOURCE_CONFLICT", {}, REQUEST_ID),
+    );
+
+    await refetch();
+
+    await expect
+      .element(
+        screen
+          .getByRole("status")
+          .getByText(
+            "This couldn't be updated. This can't be done in the current state, which may have changed. Check it and try again.",
+          ),
+      )
+      .toBeVisible();
+    expect(screen.getByRole("button").query()).toBeNull();
+  });
+
+  test("hides the warning while Try again reads the data again, then shows the new data", async () => {
+    respond.mockResolvedValueOnce({ title: "Fictional record" });
+    const screen = await renderWithClient(<DetailScreen />);
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
+      .toBeVisible();
+    respond.mockRejectedValue(UNAVAILABLE);
+    await refetch();
+    const { promise, resolve } = later();
+    respond.mockReset();
+    respond.mockReturnValueOnce(promise);
+
+    await screen.getByRole("button", { name: "Try again" }).click();
+
+    await expect.element(screen.getByRole("status")).toBeEmptyDOMElement();
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "Fictional record" }),
+      )
+      .toHaveFocus();
+    resolve({ title: "Renamed record" });
+    await expect
+      .element(screen.getByText("Details of Renamed record"))
+      .toBeVisible();
+    await expect.element(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  test("announces the warning again when the read that Try again sends fails too", async () => {
+    respond.mockResolvedValueOnce({ title: "Fictional record" });
+    const screen = await renderWithClient(<DetailScreen />);
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
+      .toBeVisible();
+    respond.mockRejectedValue(UNAVAILABLE);
+    await refetch();
+    const region = screen.getByRole("status");
+    const before = region.element();
+    const { promise, reject } = later();
+    respond.mockReset();
+    respond.mockReturnValueOnce(promise).mockRejectedValue(UNAVAILABLE);
+
+    await screen.getByRole("button", { name: "Try again" }).click();
+    await expect.element(region).toBeEmptyDOMElement();
+    reject(UNAVAILABLE);
+
+    await expect
+      .element(region.getByRole("button", { name: "Try again" }))
+      .toBeVisible();
+    expect(region.element()).toBe(before);
   });
 
   test.each([
@@ -470,4 +615,47 @@ test("leaves a read that fails in the UI itself to the page of a failure of the 
       ),
     )
     .toBeVisible();
+});
+
+describe("when a new read replaces what holds the focus", () => {
+  test.each([
+    [
+      "the data of the screen",
+      <EditableScreen key="screen" />,
+      "Edit Fictional record",
+      NOT_FOUND,
+      "Not found",
+    ],
+    [
+      "a control of the screen",
+      <ListScreen key="list" page={1} />,
+      "Next",
+      FORBIDDEN,
+      "No access",
+    ],
+    [
+      "the data of a part",
+      <EditablePart key="part" />,
+      "Edit Fictional record",
+      FORBIDDEN,
+      "Record",
+    ],
+  ])(
+    "moves the focus to the screen's heading when it replaces %s",
+    async (_, ui, name, failure, heading) => {
+      respond.mockResolvedValueOnce({ title: "Fictional record" });
+      const screen = await renderWithClient(ui);
+      const control = screen.getByRole("button", { name });
+      await expect.element(control).toBeVisible();
+      await userEvent.keyboard("{Tab}");
+      await expect.element(control).toHaveFocus();
+      respond.mockRejectedValue(failure);
+
+      await refetch();
+
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: heading }))
+        .toHaveFocus();
+    },
+  );
 });

@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { FOCUS_RING } from "./focus-ring";
 
 // The title of the entry document, which names the product, and the end of
@@ -16,7 +22,7 @@ export function focusScreenHeading() {
 // again after it was pressed, or the screen's heading when an error replaces
 // the screen, the focus moves to the screen's heading once the screen shows
 // what replaces the element (docs/behaviors.md, Accessibility, Focus after an
-// action).
+// action), with or without an action of the user.
 export function useFocusHeadingOnRemoval(ref: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const element = ref.current;
@@ -26,6 +32,24 @@ export function useFocusHeadingOnRemoval(ref: RefObject<HTMLElement | null>) {
       }
     };
   }, [ref]);
+}
+
+interface FocusHandOffProps {
+  children: ReactNode;
+}
+
+// Content that a read can replace without an action of the user, such as
+// data that a 403 replaces: when it leaves the page while it holds the
+// focus, the focus moves to the screen's heading (useFocusHeadingOnRemoval).
+// It adds no box of its own to the layout.
+export function FocusHandOff({ children }: FocusHandOffProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusHeadingOnRemoval(ref);
+  return (
+    <div ref={ref} className="contents">
+      {children}
+    </div>
+  );
 }
 
 interface ScreenHeadingProps {
