@@ -14,7 +14,7 @@
 
 ## Tests
 
-<!-- Tests added or modified, and the checks run. -->
+<!-- Tests added or modified, the break with which each new or changed unit or component test was seen to fail (docs/conventions.md, Tests), and the checks run. -->
 
 -
 

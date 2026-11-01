@@ -107,7 +107,7 @@ other scripts and CI run for you.
 |------|---------|
 | Run the UI against a [local backend](#local-backend), then remove the backend with its data | `scripts/dev-env.sh start`, then `scripts/dev-env.sh stop` |
 | Show the logs of the local backend | `scripts/dev-env.sh logs` |
-| Run a script of `package.json`, such as `check`: the type check, lint, format check, and unit and component tests | `scripts/tooling.sh run` |
+| Run a script of `package.json`, such as `check`: the type check, lint, format check, and unit and component tests with their minimum coverage ([Checks](docs/conventions.md#checks)) | `scripts/tooling.sh run` |
 | Format the sources | `scripts/tooling.sh format` |
 | Regenerate the API client after a change of the pinned OpenAPI document or of `orval.config.ts` ([API Client Generation](docs/architecture.md#api-client-generation)) | `scripts/tooling.sh generate` |
 | Add, update, or remove a dependency | `scripts/tooling.sh npm` |

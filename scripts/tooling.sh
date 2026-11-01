@@ -61,8 +61,12 @@
 # Examples:
 #   scripts/tooling.sh run check             The type check, lint, format
 #                                            check, and unit and component
-#                                            tests
+#                                            tests with their minimum
+#                                            coverage, as CI runs them
 #   scripts/tooling.sh run test -- src/router.test.tsx
+#                                            The tests of one module, without
+#                                            coverage, which test:coverage
+#                                            measures over every module
 #   scripts/tooling.sh npm install --save-dev <package>
 set -euo pipefail
 

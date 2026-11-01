@@ -3,7 +3,9 @@
 #
 # The codecov/patch status is a required check of master, so that a pull
 # request cannot merge before its coverage report is visible. It is
-# informational: it always passes, and no coverage threshold gates a merge.
+# informational: it always passes, and the only minimum coverage that gates a
+# merge is the one of the unit and component tests (vite.config.ts), which
+# fails UI Checks.
 codecov:
   # Publish the status as soon as the upload is processed, instead of waiting
   # for, or failing because of, the other checks. With the defaults, a failing
@@ -18,9 +20,10 @@ codecov:
 
 coverage:
   status:
-    # Disabled: the organization's Codecov plan does not publish project
-    # coverage. Omitting the key would select Codecov's default project
-    # status, which is not informational.
+    # Disabled: the minimum coverage of the unit and component tests already
+    # gates the coverage of the project, and the organization's Codecov plan
+    # does not publish project coverage. Omitting the key would select
+    # Codecov's default project status, which is not informational.
     project: false
     patch:
       default:

@@ -140,9 +140,12 @@ new fixture layer, test helper library, or Playwright project — without
 presenting it to the user for a decision.
 
 **Do not duplicate automated enforcement.** The type check and lint cover the
-tests too, and coverage is informational (`codecov.yml`): an uncovered
-changed line points to a possible gap but is not a finding by itself. Report
-missing coverage as a behavior, with the scenario that no test exercises.
+tests too, and the unit and component tests fail below the minimum coverage
+(`docs/conventions.md`, Checks), over all the measured files together. A run
+that reaches the minimum proves nothing about a change: an uncovered changed
+line points to a possible gap but is not a finding by itself, and a covered
+line is not tested until a test checks its outcome. Report missing coverage
+as a behavior, with the scenario that no test exercises.
 
 ## Before reviewing
 
@@ -191,6 +194,22 @@ missing coverage as a behavior, with the scenario that no test exercises.
   responses; end-to-end tests prove flows across screens, the real backend,
   how the UI is served, the Content Security Policy, and the reference
   screenshots. Do not require both tiers for the same behavior
+
+### Coverage measurement and failure records
+
+- Does the change leave code out of the coverage measurement, by adding a
+  file to the exclusions of `vite.config.ts`, narrowing its `include`, or
+  adding a comment that hides code, such as `istanbul ignore`, `v8 ignore`,
+  or `c8 ignore`, or does it lower the minimum coverage, without the
+  repository owner's decision recorded in the pull request
+  (`docs/conventions.md`, Checks)?
+- For each unit or component test that the change adds, or whose assertions
+  it changes, do the pull request, or before it exists the invoking agent,
+  record the break of the behavior with which the test was seen to fail
+  (`docs/conventions.md`, Tests)? Is the break one of the behavior that the
+  test claims, such as an inverted condition or a removed call, rather than
+  one that any test would catch, such as removing the module, and would the
+  test's assertions fail on it?
 
 ### Test conventions
 
@@ -241,8 +260,9 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
   leaves, or on the current date outside the dataset's time base?
 - Does each test assert the observable outcome that it claims, so that it
   fails when the behavior breaks? A test that only checks that a replaced
-  function was called, asserts internal state, or still passes with the
-  behavior removed proves nothing
+  function was called, asserts internal state, still passes with the
+  behavior removed, or runs code without asserting its outcome proves
+  nothing, whatever coverage it adds
 - Does a test repeat a proof that another test already owns, at the same or
   another tier? Name the retained test and state whether removing the
   redundant one loses a required scenario
@@ -279,6 +299,8 @@ omitting an empty one other than the verdict:
    - **Minor issues** — useful non-blocking improvements remain, including
      removable redundant tests
    - **Needs revision** — a changed behavior lacks a test, a fix lacks a
-     regression test, a test does not assert its claim, or a test breaks a
-     rule of End-to-End Tests that keeps the tests isolated or their checks
-     on
+     regression test, a test does not assert its claim, a new or changed
+     unit or component test lacks the record of its failure, code leaves the
+     coverage measurement or the minimum coverage drops without the
+     repository owner's decision, or a test breaks a rule of End-to-End Tests
+     that keeps the tests isolated or their checks on

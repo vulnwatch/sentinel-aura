@@ -131,6 +131,10 @@ export default defineConfig({
       // A subdirectory, because Vitest removes and recreates the reports
       // directory, and coverage/ is a mount point in the tooling container.
       reportsDirectory: "coverage/unit",
+      // The minimum coverage of the measured files together, not of each
+      // file: below it, the run fails, and so do UI Checks and scripts/ci.sh
+      // all (docs/conventions.md, Checks).
+      thresholds: { statements: 95, branches: 95, functions: 95, lines: 95 },
     },
   },
 });
