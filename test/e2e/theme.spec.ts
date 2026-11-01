@@ -16,6 +16,9 @@ declare global {
     // The theme that the root element marked when the parser inserted the
     // body of the page, System for no mark.
     themeAtBody?: string;
+    // The content of the meta element of the color schemes when the parser
+    // inserted the link of the stylesheet.
+    schemeAtStylesheet?: string | null;
   }
 }
 
@@ -203,13 +206,33 @@ test.describe("the themes", () => {
         expect(await blankPage(page)).toEqual({ meta: "light dark", scheme });
       });
 
+      // The theme script runs before the parser reaches the link of the
+      // stylesheet, so that it does not wait for the stylesheet: a script
+      // after the link would run only once the stylesheet arrived, and the
+      // observer, which the parser runs before a script, would see the
+      // meta element unchanged.
       test(`a stored ${other(scheme)} theme draws the blank page before the stylesheet arrives`, async ({
         page,
         request,
       }) => {
         await blockAssets(page, request, { stylesheet: true });
         await storePreference(page, other(scheme));
+        await page.addInitScript(() => {
+          new MutationObserver((_records, observer) => {
+            if (document.querySelector('link[rel="stylesheet"]') !== null) {
+              window.schemeAtStylesheet =
+                document.querySelector<HTMLMetaElement>(
+                  'meta[name="color-scheme"]',
+                )?.content ?? null;
+              observer.disconnect();
+            }
+          }).observe(document, { childList: true, subtree: true });
+        });
         await openUnder(page, scheme);
+        expect(
+          await page.evaluate(() => window.schemeAtStylesheet),
+          "the color schemes that the meta element declares when the link of the stylesheet appears",
+        ).toBe(other(scheme));
         expect(await blankPage(page)).toEqual({
           meta: other(scheme),
           scheme: other(scheme),
