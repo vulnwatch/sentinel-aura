@@ -373,6 +373,10 @@ returns, whatever Sentinel guarantees for its field:
   (Absent Values).
 - **No address in a text.** The UI turns no address inside a text into a
   link, such as one in a CVE description or in the title of a reference.
+- **Composed addresses.** A screen document can define an address of another
+  site that the UI composes from a value of the API, with its fixed origin,
+  such as the page of a CVE on NVD from its CVE ID. Such a link follows this
+  section as an address that the API returns does.
 - **The same tab.** A link opens in the same tab, as the browser opens a
   link: back returns to the screen, whose state is in its URL
   (`docs/screen-map.md`, Browser History), and the browser's own commands open

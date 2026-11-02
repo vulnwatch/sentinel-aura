@@ -210,8 +210,8 @@ that needs it; content of another kind needs a new row first.
   reads them through the router's typed hooks.
 - Links use the router's typed paths. React Aria's links, and the components
   that contain links, navigate through the router, which the root route
-  connects to React Aria, except a link whose address the API returns (Links
-  from the API).
+  connects to React Aria, except a link whose address the API returns or the
+  UI composes from a value of the API (Links from the API).
 
 ### API Access
 
@@ -356,13 +356,16 @@ that needs it; content of another kind needs a new row first.
 
 ### Links from the API
 
-- A link whose address the API returns is built only by one shared
-  component, which applies `docs/behaviors.md` (Links to Other Sites): the
-  check of the address, the mark of a link to another site, and the loading
-  of the address by the browser rather than by the router. The link leads
-  to, and where its text is the address shows, the URL that the check
-  parsed, never the value as received, so that the check and the browser
-  read the same address. No other code passes a value of the API as the
+- A link whose address the API returns, or that the UI composes from a value
+  of the API, is built only by one shared component, which applies
+  `docs/behaviors.md` (Links to Other Sites): the check of the address, the
+  mark of a link to another site, and the loading of the address by the
+  browser rather than by the router. The link leads to, and where its text
+  is the address shows, the URL that the check parsed, never the value as
+  received, so that the check and the browser read the same address. A
+  composed address takes the fixed origin that its screen document states,
+  and holds the value of the API only encoded, as a path segment or the
+  value of a query parameter. No other code passes a value of the API as the
   address of a link or of a navigation, such as an `href`, `window.location`,
   or `window.open`.
 - No code looks for addresses inside a text of the API to turn them into
@@ -985,10 +988,10 @@ The UI foundations are written once, before any feature code, and cover:
 - **Cross-cutting behaviors**: session handling, error presentation, the
   presentation of a value of a response enum that the contract of the pinned
   version does not list (Data Read from the API), the links to other sites
-  built from addresses that the API returns (Links from the API), loading and
-  empty states, date and time display, confirmations and the outcome of
-  changes, accessibility requirements, wording, the representation of a user,
-  and the preferences of the browser (`docs/behaviors.md`)
+  built from values of the API (Links from the API), loading and empty
+  states, date and time display, confirmations and the outcome of changes,
+  accessibility requirements, wording, the representation of a user, and the
+  preferences of the browser (`docs/behaviors.md`)
 - **Design system**: the visual language, the themes, the reusable interface
   patterns, and the avatar (`docs/design-system.md`)
 
