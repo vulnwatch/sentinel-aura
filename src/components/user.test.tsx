@@ -148,22 +148,28 @@ test("cuts only the name when the place is too narrow, and keeps it whole for as
   }
 });
 
+// The small avatar is as high as the line of the name, so only the medium
+// and the large sizes show in the height; a small avatar by default does
+// not show a medium one.
 test.each([
-  ["small", 24],
-  ["medium", 32],
-  ["large", 64],
-] as const)("takes the height of a %s avatar, %i px", async (size, pixels) => {
-  const screen = await render(
-    <section aria-label="Row" className="flex">
-      <User user={ALICE} size={size} />
-    </section>,
-  );
+  ["small, by default", 24, undefined],
+  ["medium", 32, "medium"],
+  ["large", 64, "large"],
+] as const)(
+  "takes the height of its avatar: %s, %i px",
+  async (_, pixels, size) => {
+    const screen = await render(
+      <section aria-label="Row" className="flex">
+        <User user={ALICE} size={size} />
+      </section>,
+    );
 
-  await expect.element(screen.getByText("Alice Smith")).toBeVisible();
-  expect(
-    screen.getByRole("region").element().getBoundingClientRect().height,
-  ).toBe(pixels);
-});
+    await expect.element(screen.getByText("Alice Smith")).toBeVisible();
+    expect(
+      screen.getByRole("region").element().getBoundingClientRect().height,
+    ).toBe(pixels);
+  },
+);
 
 describe("actor of a recorded action", () => {
   test("is the user in the full form", async () => {
@@ -185,12 +191,12 @@ describe("actor of a recorded action", () => {
   });
 
   test.each([
-    ["small", 24],
-    ["medium", 32],
-    ["large", 64],
+    ["small, by default", 24, undefined],
+    ["medium", 32, "medium"],
+    ["large", 64, "large"],
   ] as const)(
-    "System takes the height of a %s avatar, %i px",
-    async (size, pixels) => {
+    "System takes the height of its picture: %s, %i px",
+    async (_, pixels, size) => {
       const screen = await render(
         <section aria-label="Row" className="flex">
           <Actor actor={null} size={size} />

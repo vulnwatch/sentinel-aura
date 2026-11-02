@@ -672,7 +672,8 @@ complete profile and its manager, and the signed-in user alike: `id`,
   presentation (Sentinel `docs/features/identity/user-management.md`, Get
   User).
 - **Avatar.** A picture that the UI generates from the user's `id`, which
-  never changes, round for a person (`docs/design-system.md`, Avatar).
+  never changes; a person's avatar is round (`docs/design-system.md`,
+  Avatar).
 - **Full form.** The avatar followed by the display name. The avatar is
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the

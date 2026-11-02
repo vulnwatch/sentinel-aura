@@ -1,6 +1,7 @@
-// The picture of the avatar (docs/design-system.md, Avatar, Definition,
-// Version 1): the SHA-256 digest of a user's id, and the cells and the color
-// that it selects. src/components/avatar.tsx draws it.
+// The pattern and the color of the avatar (docs/design-system.md, Avatar,
+// Definition, Version 1): the SHA-256 digest of a user's id, and the cells
+// and the index of the color in the Palette that it selects.
+// src/components/avatar.tsx draws the picture.
 
 // The constants of SHA-256: the first 32 bits of the fractional parts of the
 // cube roots of the first 64 primes, and of the square roots of the first 8
@@ -93,7 +94,9 @@ export function sha256(message: Uint8Array): Uint8Array {
   return new Uint8Array(hash.buffer);
 }
 
-// The picture that a user's id selects (Definition, Version 1, steps 1 to 4).
+// The pattern and the color that a user's id selects (Definition, Version 1,
+// steps 1 to 4). src/components/avatar.tsx gives an inactive user the gray
+// in place of the color, and draws the picture.
 export interface AvatarPicture {
   // The cells of step 3: cell 5c + r is the cell of column c, from 0 to 2,
   // and row r, from 0 to 4, and is true when it is filled.

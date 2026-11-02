@@ -62,6 +62,7 @@ const COLOR_TOKENS: [className: string, light: string, dark: string][] = [
   ["bg-avatar-5", "#0369A1", "#0369A1"],
   ["bg-avatar-6", "#4338CA", "#4338CA"],
   ["bg-avatar-7", "#A21CAF", "#A21CAF"],
+  ["bg-avatar-inactive", "#6E6E6E", "#6E6E6E"],
 ];
 
 // Each type size (Type Scale): its size, line height, and letter spacing.

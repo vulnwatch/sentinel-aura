@@ -897,30 +897,37 @@ and how the labels look.
 | Large | 64 px | The heading of a user's screen |
 
 - **Full form:** the avatar, 6 px of space, and the display name in the
-  surrounding text's style; where the username follows, it is in `fg-muted`.
-- **Inactive and Bot:** the label follows the name, 6 px later, in `text-12`,
-  weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a 4 px radius,
-  and 4 px of side padding; on an inactive bot account, Inactive follows Bot,
-  6 px later. An inactive user's name is in `fg-muted`, and its avatar is gray
-  (Avatar). Where the place is too narrow, only the name ends with an
-  ellipsis, unless a table wraps it (Tables); the labels always show.
+  surrounding text's style; where the username follows, it comes after a
+  space, in `fg-muted`, before the labels.
+- **Inactive and Bot:** the label follows the name, or the username where it
+  follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
+  1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a
+  second label follows the first, 6 px later. An inactive user's name is in
+  `fg-muted`, and its avatar is gray (Avatar). Where the place is too narrow,
+  only the name, with the username that follows it, ends with an ellipsis,
+  unless a table wraps it (Tables); the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name.
-- **No recorded actor:** "System" after a square of the avatar's size, on
-  `neutral-soft` with a corner radius of 20 %, holding the Sentinel mark
-  (Sentinel Mark) at 70 % of that size in `neutral-on-soft`. It is square
-  like the avatar of a bot account, because neither stands for a person, and
-  differs from it by its neutral colors and the mark (Avatar).
+- **No recorded actor:** a square of the avatar's size, on `neutral-soft`
+  with a corner radius of 20 %, holding the Sentinel mark (Sentinel Mark) at
+  70 % of that size in `neutral-on-soft`, then, 6 px later, "System" in the
+  surrounding text's style. It is square like the avatar of a bot account,
+  because neither stands for a person, and differs from it by the Sentinel
+  mark in place of the cells (Avatar).
 
 ## Avatar
 
 The avatar is a square picture that the UI generates from the user's `id`,
 which is stable and never changes (Sentinel `docs/api-spec.md`, User
 References in Responses), in the colors that the user's `bot` and `active`
-select. The UI shows the picture through a shape, as a mask over the square:
-round for a person, and with rounded corners for a bot account. The
-definition is exact, so that any implementation, in any language, draws the
-same picture and shape.
+select. The definition is exact, so that any implementation, in any
+language, draws the same picture.
+
+The UI shows the picture through a shape, as a mask that hides what lies
+outside it: for a person, a circle that touches the sides of the square,
+which hides part of the cells in the corners; for a bot account, the square
+with its corners rounded at 20 % of its size. The shape belongs to how the UI
+shows the picture, not to its definition.
 
 ### Definition, Version 1
 
@@ -949,10 +956,6 @@ same picture and shape.
    takes the color and the cells `#F0F0F0`. The picture has no border and is
    the same in both themes; it scales to the size of its use, and until it is
    drawn its place stays empty at that size.
-6. **Shape:** the picture shows through a shape that hides what lies outside
-   it: for a person, a circle that touches the sides of the square, which
-   hides part of the cells in the corners; for a bot account, the square with
-   its corners rounded at a radius of 1.2 units, 20 % of its size.
 
 The `id` is the input because it never changes: a username and an email
 address can change, and a digest of an email address could identify its user
@@ -966,10 +969,9 @@ A bot account differs from a person by two cues that do not depend on hue,
 its shape and its lightness, in both themes and at every size. The shape
 alone would not suffice: `#F0F0F0` differs little from the page and the
 surfaces of the light theme, where the outline of a person's avatar shows
-only through its cells. The gray of an inactive user shows the state also in
-the compact form, where no label follows the avatar and the accessible name
-and the tooltip state it (Representation of a User), and a bot account keeps
-its shape.
+only through its cells. The gray of an inactive user shows the state on the
+avatar itself, also where no label follows it (`docs/behaviors.md`,
+Representation of a User), and a bot account keeps its shape.
 
 ### Palette
 
@@ -1026,19 +1028,17 @@ in position `5c + r`, 1 for a filled cell; the grids show filled cells as
 .....     .###.     .....     .###.     ##.##     ..#..
 ```
 
-The colors and the shape of vector 1 for each kind of user, whose cells stay
-the same:
+The colors of vector 1 for each kind of user, whose cells stay the same:
 
-| User | Square | Cells | Shape |
-|---|---|---|---|
-| A person | `#F0F0F0` | `#A21CAF`, color 7 | Circle |
-| A bot account | `#A21CAF` | `#F0F0F0` | Corners rounded at 1.2 units |
-| An inactive person | `#F0F0F0` | `#6E6E6E` | Circle |
-| An inactive bot account | `#6E6E6E` | `#F0F0F0` | Corners rounded at 1.2 units |
+| User | Square | Cells |
+|---|---|---|
+| A person | `#F0F0F0` | `#A21CAF`, color 7 |
+| A bot account | `#A21CAF` | `#F0F0F0` |
+| An inactive person | `#F0F0F0` | `#6E6E6E` |
+| An inactive bot account | `#6E6E6E` | `#F0F0F0` |
 
 An implementation is correct when it gives these cells and colors for every
-vector, the mirrored grids above, and these colors and shapes for each kind
-of user.
+vector, the mirrored grids above, and these colors for each kind of user.
 
 ## Open Decisions
 

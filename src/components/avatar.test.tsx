@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "vitest";
 import { page, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { avatarGrid, avatarPicture } from "../avatar";
 import { Avatar, NoActorPicture, type AvatarSize } from "./avatar";
 
 // The avatar (docs/design-system.md, Avatar; Representation of a User), at
@@ -125,6 +126,27 @@ test("draws an inactive bot account in #F0F0F0 on gray", async () => {
   expect(picture.at(...CORNER)).toBe(GRAY);
 });
 
+// A fictional id of each color of the Palette, by its index, with the
+// color: vectors 1 to 5 of the design system and three more.
+test.each([
+  ["019a2b3c-4d5e-7f00-8000-00000000000a", "#b91c1c"],
+  ["019a2b3c-4d5e-7f00-8000-000000000007", "#c2410c"],
+  ["019a2b3c-4d5e-7f00-8000-00000000000d", "#a16207"],
+  ["019a2b3c-4d5f-7f00-8000-000000000001", "#15803d"],
+  ["019a2b3c-4d5e-7f00-8000-000000000004", "#0f766e"],
+  ["019a2b3c-4d5e-7f00-8000-000000000003", "#0369a1"],
+  ["019a2b3c-4d5e-7f00-8000-000000000002", "#4338ca"],
+  ["019a2b3c-4d5e-7f00-8000-000000000001", "#a21caf"],
+])("draws the cells of %s in the color of its index, %s", async (id, color) => {
+  const grid = avatarGrid(avatarPicture(id).cells);
+  const row = grid.findIndex((cells) => cells.includes(true));
+  const column = grid[row]?.indexOf(true) ?? -1;
+  const screen = await renderAvatar({ ...PERSON, id });
+  const picture = await screenshot(screen.getByRole("figure"));
+
+  expect(picture.at(1 + column, 1 + row)).toBe(color);
+});
+
 test("shows no seam between neighboring cells", async () => {
   const screen = await renderAvatar(PERSON);
   const picture = await screenshot(screen.getByRole("figure"));
@@ -171,6 +193,7 @@ test("is hidden from assistive technologies", async () => {
 // The picture of an action without an actor, in place of an avatar.
 
 const NEUTRAL_SOFT = "#eff2f5";
+const NEUTRAL_ON_SOFT = "#3b434b";
 
 function renderNoActor(size: AvatarSize = "large") {
   return render(
@@ -183,12 +206,20 @@ function renderNoActor(size: AvatarSize = "large") {
 test("draws the Sentinel mark on neutral-soft, with rounded corners, for no actor", async () => {
   const screen = await renderNoActor();
   const picture = await screenshot(screen.getByRole("figure"));
-  let markPixels = 0;
-  for (let y = 0; y < 6; y += 6 / picture.height) {
-    for (let x = 0; x < 6; x += 6 / picture.width) {
-      // The mark, neutral-on-soft, is darker than neutral-soft.
-      if (Number.parseInt(picture.at(x, y).slice(1, 3), 16) < 0x90) {
-        markPixels++;
+  const unit = picture.width / 6;
+  // The centers of the pixels of the mark, darker than neutral-soft, in the
+  // units of the picture, and how many of them are neutral-on-soft.
+  const mark: [number, number][] = [];
+  let onSoft = 0;
+  for (let j = 0; j < picture.height; j++) {
+    for (let i = 0; i < picture.width; i++) {
+      const point: [number, number] = [(i + 0.5) / unit, (j + 0.5) / unit];
+      const color = picture.at(...point);
+      if (Number.parseInt(color.slice(1, 3), 16) < 0x90) {
+        mark.push(point);
+      }
+      if (color === NEUTRAL_ON_SOFT) {
+        onSoft++;
       }
     }
   }
@@ -196,7 +227,11 @@ test("draws the Sentinel mark on neutral-soft, with rounded corners, for no acto
   expect(picture.at(...SIDE)).toBe(NEUTRAL_SOFT);
   expect(picture.at(...CORNER)).toBe(NEUTRAL_SOFT);
   expect(picture.at(0.05, 0.05)).toBe(CANVAS_LIGHT);
-  expect(markPixels).toBeGreaterThan(100);
+  expect(onSoft).toBeGreaterThan(50);
+  // The mark is 70 % of the size, centered: within 0.9 units of each side.
+  expect(mark.filter(([x, y]) => Math.min(x, y, 6 - x, 6 - y) < 0.9)).toEqual(
+    [],
+  );
 });
 
 test.each([
