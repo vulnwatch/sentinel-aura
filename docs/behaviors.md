@@ -380,13 +380,13 @@ returns, whatever Sentinel guarantees for its field:
 - **The same tab.** A link opens in the same tab, as the browser opens a
   link: back returns to the screen, whose state is in its URL
   (`docs/screen-map.md`, Browser History), and the browser's own commands open
-  the link in another tab. Following it leaves the page as closing it does:
-  the browser's own prompt asks before input not yet submitted is lost
-  (Confirmation), and a change still in progress shows no outcome, so the
-  data that the screen reads when the user returns shows whether it took
-  effect. The other site does not learn the URL of the screen from which the
-  user came, because the UI's responses tell the browser not to send it
-  (`docs/architecture.md`, Security Headers).
+  the link in another tab. Following it leaves the page: the browser's own
+  prompt asks before input not yet submitted is lost (Confirmation), and a
+  change still in progress shows no outcome, so the data that the screen
+  reads when the user returns shows whether it took effect. The other site
+  does not learn the URL of the screen from which the user came, because the
+  UI's responses tell the browser not to send it (`docs/architecture.md`,
+  Security Headers).
 - **Marked.** A link whose address lies on an origin other than the UI's, a
   link to another site, ends with an icon that shows that it leaves Sentinel
   (`docs/design-system.md`, Buttons and Links), and its accessible name is
