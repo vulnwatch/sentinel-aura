@@ -179,6 +179,7 @@ rules; review enforces the rest.
 | `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
 | `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` beneath the shared request function (Tests) |
+| `src/test-setup.ts` | The setup that Vitest runs in the document of every unit and component test file before its tests: it gives that document the focus, which Playwright's Firefox does not reliably move into it |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
 | `test/e2e/screenshots/` | The reference screenshots of the end-to-end tests (End-to-End Tests) |
@@ -475,11 +476,12 @@ that needs it; content of another kind needs a new row first.
   statements, the branches, the functions, or the lines that they run fall
   below 95 % of those of the measured files together: the modules under
   `src/` other than the generated API client, whose requests are tested
-  through the shared request function. The `test:coverage` script of
-  `package.json`, which `check` and `scripts/ci.sh` run, applies the minimum.
-  It applies to every measured module, so a module that the tests do not
-  load counts as not covered; a run of the tests of some modules therefore
-  uses the `test` script, which measures no coverage.
+  through the shared request function, and other than the setup of the
+  tests, `src/test-setup.ts`, which Vitest never measures. The
+  `test:coverage` script of `package.json`, which `check` and `scripts/ci.sh`
+  run, applies the minimum. It applies to every measured module, so a module
+  that the tests do not load counts as not covered; a run of the tests of
+  some modules therefore uses the `test` script, which measures no coverage.
 - The minimum coverage is a floor, not a target: it catches code that no test
   runs, while the tests are judged by the behavior that they check (Tests).
   The margin below 100 % is not room for untested behavior: a change still
