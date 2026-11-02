@@ -129,7 +129,7 @@ test("draws an inactive bot account in #F0F0F0 on gray", async () => {
 // A fictional id of each color of the Palette, by its index, with the
 // color: vectors 1 to 5 of the design system and three more.
 test.each([
-  ["019a2b3c-4d5e-7f00-8000-00000000000a", "#b91c1c"],
+  ["019a2b3c-4d5e-7f00-8000-00000000000a", "#65730f"],
   ["019a2b3c-4d5e-7f00-8000-000000000007", "#c2410c"],
   ["019a2b3c-4d5e-7f00-8000-00000000000d", "#a16207"],
   ["019a2b3c-4d5f-7f00-8000-000000000001", "#15803d"],

@@ -48,15 +48,18 @@ interface UserProps {
   // Small in text, table rows, and the options of a field; medium in other
   // lists of users; large in the heading of a user's screen.
   size?: AvatarSize;
-  // Whether the username follows the display name when the two differ,
-  // where users must be told apart exactly, such as in a user picker.
+  // Whether the username follows the display name when the two differ, as @
+  // and the username in fg-muted, where users must be told apart exactly,
+  // such as in a user picker.
   withUsername?: boolean;
 }
 
 // A user in the full form: the avatar, then the display name in the style of
-// the surrounding text, and the labels Bot, then Inactive. An inactive user's
-// name is in fg-muted. Where the place is too narrow, only the name ends with
-// an ellipsis, and assistive technologies read it whole.
+// the surrounding text, the username when asked, and the labels Bot, then
+// Inactive. An inactive user's name is in fg-muted, and the @ sets its
+// username apart from it. Where the place is too narrow, only the name, with
+// its username, ends with an ellipsis, and assistive technologies read it
+// whole.
 export function User({
   user,
   size = "small",
@@ -71,7 +74,7 @@ export function User({
       >
         {name}
         {withUsername && user.username !== name && (
-          <span className="text-fg-muted"> {user.username}</span>
+          <span className="text-fg-muted"> @{user.username}</span>
         )}
       </span>
       {user.bot && <Label>Bot</Label>}

@@ -898,7 +898,9 @@ and how the labels look.
 
 - **Full form:** the avatar, 6 px of space, and the display name in the
   surrounding text's style; where the username follows, it comes after a
-  space, in `fg-muted`, before the labels.
+  space as `@` and the username, such as `@jdoe`, in `fg-muted`, before the
+  labels. The `@` sets the username apart from the name without relying on
+  color, also for an inactive user, whose name is in `fg-muted` too.
 - **Inactive and Bot:** the label follows the name, or the username where it
   follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
   1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a
@@ -977,7 +979,7 @@ Representation of a User), and a bot account keeps its shape.
 
 | Index | Color | Contrast with `#F0F0F0` |
 |---|---|---|
-| 0 | `#B91C1C` | 5.67 |
+| 0 | `#65730F` | 4.59 |
 | 1 | `#C2410C` | 4.54 |
 | 2 | `#A16207` | 4.32 |
 | 3 | `#15803D` | 4.40 |
@@ -989,7 +991,9 @@ Representation of a User), and a bot account keeps its shape.
 
 Every color has a contrast of at least 3:1 with `#F0F0F0` (WCAG 2.2, 1.4.11
 Non-text Contrast), also in the picture of a bot account, which swaps the
-two. The colors and `#F0F0F0` are tokens, `avatar-0` to `avatar-7`,
+two. The Palette has no red, which is kept for what needs attention at once
+(Principles): the square of a bot account in red would look like the P1
+mark. The colors and `#F0F0F0` are tokens, `avatar-0` to `avatar-7`,
 `avatar-inactive`, and `avatar-bg`, with one value for both themes.
 
 ### Versions

@@ -70,13 +70,21 @@ test("shows the display name in the style of the surrounding text, and hides the
   await expect.element(screen.getByText("Inactive")).not.toBeInTheDocument();
 });
 
-test("shows the username after the display name in fg-muted when asked and when the two differ", async () => {
-  const screen = await render(<User user={ALICE} withUsername />);
-  const username = screen.getByText("asmith", { exact: true });
+// An inactive user's name is in fg-muted too, so the @ sets the username
+// apart from the name.
+test.each([
+  ["an active user", ALICE],
+  ["an inactive user", { ...ALICE, active: false }],
+])(
+  "shows the username of %s after the display name, as @ and the username in fg-muted, when asked and when the two differ",
+  async (_, user) => {
+    const screen = await render(<User user={user} withUsername />);
+    const username = screen.getByText("@asmith", { exact: true });
 
-  await expect.element(screen.getByText("Alice Smith asmith")).toBeVisible();
-  expect(getComputedStyle(username.element()).color).toBe(FG_MUTED);
-});
+    await expect.element(screen.getByText("Alice Smith @asmith")).toBeVisible();
+    expect(getComputedStyle(username.element()).color).toBe(FG_MUTED);
+  },
+);
 
 test("shows the username once when it is the display name", async () => {
   const screen = await render(
