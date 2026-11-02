@@ -191,9 +191,10 @@ follows the user's preference (`docs/behaviors.md`, Preferences). Below that
 width it is always collapsed, so that the content keeps its room, and its
 expand button opens the expanded sidebar over the content, as a dialog that
 takes the focus. Escape, its close button, or a click outside it closes it
-and returns the focus to the expand button, and so does an action from it
-whose result shows in the message area, such as a Sign out that fails, so
-that the message shows (`docs/behaviors.md`, Outcome of a Change). A
+and returns the focus to the expand button, and so does a new message in the
+message area, such as the failure of a Sign out from it, so that the message
+shows (`docs/behaviors.md`, Outcome of a Change); after any of these, only
+the expand button opens it again. A
 navigation from it, such as an entry, the search, or an item of the account
 menu, closes it, also to the URL that shows, and the focus follows the
 navigation (`docs/behaviors.md`, Accessibility). Opening it changes no

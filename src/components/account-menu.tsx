@@ -21,6 +21,7 @@ import {
   MenuTrigger,
   Popover,
   Separator,
+  Text,
   type MenuItemProps,
   type Selection,
 } from "react-aria-components";
@@ -78,28 +79,24 @@ interface ItemProps extends Omit<
   "className" | "children" | "isDisabled"
 > {
   icon: LucideIcon;
-  // Whether the change that the item started is in progress: its icon gives
-  // way to loader-circle, and assistive technologies learn that it cannot be
-  // chosen again until the change ends, as of a busy button
-  // (docs/behaviors.md, Loading).
-  busy?: boolean;
+  // The description of the change that the item started, while it is in
+  // progress: its icon gives way to loader-circle, and assistive technologies
+  // read the description with the item, which keeps the focus, as a busy
+  // button does (docs/behaviors.md, Loading). The item's action guards
+  // against a second start.
+  busy?: string | undefined;
   children: string;
 }
 
 // An item of the account menu: its icon at 16 px in fg-muted before its
 // label, and check at its end when it is the selected item of a single
 // selection.
-function Item({ icon: Icon, busy = false, children, ...props }: ItemProps) {
+function Item({ icon: Icon, busy, children, ...props }: ItemProps) {
   return (
-    <MenuItem
-      {...props}
-      isDisabled={busy}
-      textValue={children}
-      className={ITEM}
-    >
+    <MenuItem {...props} textValue={children} className={ITEM}>
       {({ isSelected }) => (
         <>
-          {busy ? (
+          {busy !== undefined ? (
             <LoaderCircle
               aria-hidden
               className="size-4 shrink-0 animate-spin text-fg-muted motion-reduce:animate-none"
@@ -107,7 +104,14 @@ function Item({ icon: Icon, busy = false, children, ...props }: ItemProps) {
           ) : (
             <Icon aria-hidden className="size-4 shrink-0 text-fg-muted" />
           )}
-          <span className="min-w-0 flex-1">{children}</span>
+          <Text slot="label" className="min-w-0 flex-1">
+            {children}
+          </Text>
+          {/* Always there, so that React Aria links it to the item, and
+              empty unless the item is busy. */}
+          <Text slot="description" className="sr-only">
+            {busy}
+          </Text>
           {isSelected && <Check aria-hidden className="size-4 shrink-0" />}
         </>
       )}
@@ -243,7 +247,7 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
             <Item
               id="sign-out"
               icon={LogOut}
-              busy={signOut.busy}
+              busy={signOut.busy ? "Signing out" : undefined}
               shouldCloseOnSelect={false}
               onAction={signOut.start}
             >

@@ -96,7 +96,8 @@ document that do not take effect yet.
 - When the UI leads from a screen to Sign in, as it loads or after a `401`, it
   saves the URL of that screen, its path, search, and fragment, in the tab's
   session storage, where it survives a reload of Sign in. Opening Sign in
-  directly saves nothing.
+  directly saves nothing, and neither does a sign-out, nor a `401` while a
+  sign-out is in progress (Sign-out).
 - Sign in is shown only without a session. Whenever it learns that a session
   exists, after its own sign-in, as it loads, or from a read of the signed-in
   user (The Signed-in User), it reads and removes the saved URL. It opens that

@@ -7,8 +7,8 @@ import { Button } from "./button";
 import { IconButton } from "./icon-button";
 
 // A quiet button with an icon alone (docs/design-system.md, Buttons and
-// Links). Its icon, at 16 or 18 px, shows in the reference screenshots of the
-// sidebar (test/e2e/screenshots/home.png).
+// Links). The medium icon, at 18 px, shows in the reference screenshots of
+// the sidebar (test/e2e/screenshots/home.png).
 
 afterEach(() => {
   vi.restoreAllMocks();

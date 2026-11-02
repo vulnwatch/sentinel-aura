@@ -324,10 +324,12 @@ export function Sidebar({ user, wide, expanded }: SidebarProps) {
   const href = useRouterState({ select: (state) => state.location.href });
   const message = useNewestMessage();
   const [openedAt, setOpenedAt] = useState<OpenedAt>();
-  if (wide && openedAt !== undefined) {
+  const open = !wide && openedAt?.href === href && openedAt.message === message;
+  // Once closed, only the expand button opens it again: not a return to the
+  // URL, nor the dismissal of the message, nor a window that narrows.
+  if (openedAt !== undefined && !open) {
     setOpenedAt(undefined);
   }
-  const open = !wide && openedAt?.href === href && openedAt.message === message;
   const close = () => {
     setOpenedAt(undefined);
   };

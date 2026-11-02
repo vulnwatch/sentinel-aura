@@ -399,7 +399,7 @@ describe("Sign out", () => {
     },
   );
 
-  test("asks for no confirmation, stays in the open menu while it is in progress, and is sent once", async () => {
+  test("asks for no confirmation, stays in the open menu, busy, while it is in progress, and is sent once", async () => {
     let answer!: (response: Response) => void;
     const { fetch } = stubSession(
       FICTIONAL_USER,
@@ -409,20 +409,23 @@ describe("Sign out", () => {
         }),
     );
     const { screen } = await renderApp();
-    const menu = await openMenu(screen);
+    accountButton(screen).element().focus();
+    await userEvent.keyboard("{Enter}");
+    const menu = screen.getByRole("menu", { name: "John Doe" });
     const item = menu.getByRole("menuitem", { name: "Sign out" });
-
+    await userEvent.keyboard("{End}");
+    await expect.element(item).toHaveFocus();
     expect(item.element().getAnimations({ subtree: true })).toEqual([]);
-    await expect.element(item).not.toHaveAttribute("aria-disabled");
+    await expect.element(item).not.toHaveAccessibleDescription("Signing out");
 
-    await item.click();
+    await userEvent.keyboard("{Enter}");
     await expect.poll(() => requestsTo(fetch, LOGOUT)).toBe(1);
-    // Pressed again, although it shows as busy.
-    await item.click({ force: true });
+    await userEvent.keyboard("{Enter}");
 
-    // Busy: loader-circle turns in place of its icon, and assistive
-    // technologies learn that it cannot be chosen again.
-    await expect.element(item).toHaveAttribute("aria-disabled", "true");
+    // Busy: the item keeps the focus, loader-circle turns in place of its
+    // icon, and assistive technologies read that it is signing out.
+    await expect.element(item).toHaveFocus();
+    await expect.element(item).toHaveAccessibleDescription("Signing out");
     expect(
       item
         .element()
@@ -662,6 +665,15 @@ describe("Sign out", () => {
     await expect.element(message).toBeVisible();
     expect(message.element().closest("[inert], [aria-hidden]")).toBeNull();
     await expect.element(expand).toHaveFocus();
+
+    // Only the expand button opens it again, not the dismissal of the
+    // message that closed it.
+    await screen.getByRole("button", { name: "Dismiss" }).click();
+    await expect.element(message).not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
+      .toHaveFocus();
+    expect(screen.getByRole("dialog").query()).toBeNull();
   });
 
   test("leaves a failure of the UI itself to the page of a failure of the UI, in the column of the Sign In Page", async () => {

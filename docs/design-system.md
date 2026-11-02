@@ -527,11 +527,13 @@ into three groups: Profile, API keys, and Identity audit log; the section
 Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
 weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
 selected one ends with `check`; and Sign out, an ordinary item. While Sign
-out is in progress, the menu stays open, and the item shows `loader-circle`
-in place of its icon and cannot be chosen again (`docs/behaviors.md`,
-Loading); when it fails, the menu closes, and so does the sidebar opened
-over the content, and the message area shows its error
-(`docs/behaviors.md`, Where Errors Appear).
+out is in progress, the menu stays open, and the item keeps the focus, shows
+`loader-circle` in place of its icon, has the description "Signing out" for
+assistive technologies, and cannot start the sign-out again
+(`docs/behaviors.md`, Loading); when it fails, the menu closes, and the
+message area shows its error (`docs/behaviors.md`, Where Errors Appear), which
+also closes the sidebar opened over the content (`docs/screen-map.md`,
+Sidebar).
 
 ### Main Content
 

@@ -499,6 +499,26 @@ describe("in a window narrower than 1024 px", () => {
       .toHaveFocus();
   });
 
+  test("does not open again when the user returns to the URL at which it opened", async () => {
+    const { router, screen } = await renderApp("/");
+    await sidebarOf(screen)
+      .getByRole("button", { name: "Expand navigation" })
+      .click();
+    const dialog = screen.getByRole("dialog", { name: "Navigation" });
+    await expect.element(dialog).toBeVisible();
+    // A navigation that is not from it, such as the browser's Forward.
+    router.history.push("/cves");
+    await expect.element(dialog).not.toBeInTheDocument();
+
+    router.history.back();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .toBeVisible();
+    expect(router.state.location.pathname).toBe("/");
+    expect(screen.getByRole("dialog").query()).toBeNull();
+  });
+
   test("closes after a navigation from it to the URL that shows", async () => {
     const { router, screen } = await renderApp("/packages");
     await sidebarOf(screen)

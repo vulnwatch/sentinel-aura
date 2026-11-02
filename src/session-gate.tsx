@@ -50,9 +50,9 @@ import {
 // The session of the UI (docs/behaviors.md, Session State; Return After
 // Sign-in; The Signed-in User; Sign-out): the read of the signed-in user
 // before any screen, Sign in when the browser has no valid session, the
-// return from Sign in once a session exists, and Sign out. The UI cannot read the session cookie, so it
-// learns the state of the session only from the API's responses
-// (docs/architecture.md, Session Cookie).
+// return from Sign in once a session exists, and Sign out. The UI cannot
+// read the session cookie, so it learns the state of the session only from
+// the API's responses (docs/architecture.md, Session Cookie).
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -198,18 +198,18 @@ function endSignedOutSession(client: QueryClient, router: AnyRouter) {
 }
 
 export interface SignOut {
-  // Sends the sign-out.
+  // Sends the sign-out, unless one is in progress (docs/behaviors.md,
+  // Loading).
   start: () => void;
-  // Whether the sign-out is in progress, during which the control that
-  // started it cannot start it again (docs/behaviors.md, Loading).
+  // Whether the sign-out is in progress.
   busy: boolean;
 }
 
 // Sign out (docs/behaviors.md, Sign-out), which the account menu offers. On
 // any outcome other than 204 or 401 the user stays signed in, unless a 401 of
 // another request has ended the session meanwhile, and onFailure receives the
-// failure, which the screen shows. The outcome applies also when the component that started it
-// has left the page (docs/behaviors.md, Loading).
+// failure, which the screen shows. The outcome applies also when the
+// component that started it has left the page (docs/behaviors.md, Loading).
 export function useSignOut(onFailure: (failure: unknown) => void): SignOut {
   const client = useQueryClient();
   const router = useRouter();
@@ -229,7 +229,9 @@ export function useSignOut(onFailure: (failure: unknown) => void): SignOut {
   });
   return {
     start: () => {
-      signOut.mutate();
+      if (!signOut.isPending) {
+        signOut.mutate();
+      }
     },
     busy: signOut.isPending,
   };
