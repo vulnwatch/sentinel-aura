@@ -501,14 +501,14 @@ the sidebar, the sidebar scrolls within itself.
 
 **Collapsed, 56 px wide,** the same parts, centered, as icon buttons of 40 px:
 the product name as the Sentinel mark at 20 px, as in the expanded sidebar,
-named "Sentinel"; the search as
-the `search` button, which opens the search field in a popover beside the
-sidebar; each entry as its icon at 18 px, named by its entry, the current one
-with the `sidebar-active` background, its icon in `link`, and the 3 px bar in
-`link` along the left edge of the sidebar; the expand button,
-`panel-left-open` at 18 px in a 32 px target, named "Expand navigation"; and
-the account button as the avatar alone, the compact form of the user. Each
-shows its name in a tooltip to its right, on hover and on keyboard focus.
+named "Sentinel"; the search as the `search` button, which opens the search
+field in a popover beside the sidebar; each entry as its icon at 18 px, named
+by its entry, the current one with the `sidebar-active` background, its icon
+in `link`, and the 3 px bar in `link` along the left edge of the sidebar; the
+expand button, `panel-left-open` at 18 px in a 32 px target, named "Expand
+navigation"; and the account button as the avatar alone, the compact form of
+the user. Each shows its name in a tooltip to its right, on hover and on
+keyboard focus.
 
 **Over the content:** below the breakpoint, the expand button opens the
 expanded sidebar over the content, on `overlay`, with a shadow; its collapse

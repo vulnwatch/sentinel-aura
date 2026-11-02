@@ -213,16 +213,23 @@ describe("with the username on a line of its own", () => {
 
     await expect.element(inactive).toBeVisible();
     const nameBox = name.element().getBoundingClientRect();
+    const usernameBox = screen
+      .getByText("@security-scanner")
+      .element()
+      .getBoundingClientRect();
     expect(bot.element().getBoundingClientRect().left).toBeGreaterThan(
       nameBox.right,
     );
     expect(inactive.element().getBoundingClientRect().left).toBeGreaterThan(
       bot.element().getBoundingClientRect().right,
     );
-    expect(
-      screen.getByText("@security-scanner").element().getBoundingClientRect()
-        .top,
-    ).toBeGreaterThanOrEqual(nameBox.bottom);
+    // The labels on the line of the name, above the username.
+    for (const label of [bot, inactive]) {
+      expect(
+        label.element().getBoundingClientRect().bottom,
+      ).toBeLessThanOrEqual(usernameBox.top);
+    }
+    expect(usernameBox.top).toBeGreaterThanOrEqual(nameBox.bottom);
     expect(getComputedStyle(name.element()).color).toBe(FG_MUTED);
   });
 

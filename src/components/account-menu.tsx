@@ -166,13 +166,12 @@ interface AccountMenuProps {
 // named by the button. The menu starts with the signed-in user, with the
 // username always on a line of its own, and the name and the username wrap
 // rather than end with an ellipsis, so that the menu shows whole the name
-// that the button cuts. Its items follow in three groups: the
-// screens of the user's own account; the theme, which applies at once in
-// every open tab; and Sign out, which asks for no confirmation and stays in
-// the open menu, busy, until it ends. When it fails, the menu closes and the
-// message area shows the message of its status, which also closes the
-// sidebar opened over the content (docs/behaviors.md, Sign-out; Default
-// Presentation by Status).
+// that the button cuts. Its items follow in three groups: the screens of the
+// user's own account; the theme, which applies at once in every open tab;
+// and Sign out, which asks for no confirmation and stays in the open menu,
+// busy, until it ends. When it fails, the menu closes and the message area
+// shows the message of its status, which also closes the sidebar opened over
+// the content (docs/behaviors.md, Sign-out; Default Presentation by Status).
 export function AccountMenu({ user, compact }: AccountMenuProps) {
   const showMessage = useShowMessage();
   const theme = usePreference(themePreference);
