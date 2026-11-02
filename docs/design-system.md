@@ -457,9 +457,11 @@ that it sits with the icons around it.
 ## Focus and Motion
 
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
-  following its radius, or inside it for a row or a cell of a table (Tables)
-  and for a menu item (Menus, Popovers, and Tooltips), shown on keyboard
-  focus. No element removes it (`docs/behaviors.md`,
+  following its radius, or inside it for an element whose edges would cut
+  it: a row or a cell of a table (Tables), a menu item (Menus, Popovers, and
+  Tooltips), the main content after the link that skips to it (Main
+  Content), and the sidebar opened over the content (Sidebar). It shows on
+  keyboard focus, and no element removes it (`docs/behaviors.md`,
   Accessibility).
 - **Motion:** only loading indicators move: the spinner turns and the progress
   bar runs (Loading). When the browser reports a preference for reduced
@@ -525,10 +527,11 @@ into three groups: Profile, API keys, and Identity audit log; the section
 Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
 weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
 selected one ends with `check`; and Sign out, an ordinary item. While Sign
-out is in progress, the menu stays open and the item shows `loader-circle` in
-place of its icon (`docs/behaviors.md`, Loading); when it fails, the menu
-closes and the message area shows its error (`docs/behaviors.md`, Where
-Errors Appear).
+out is in progress, the menu stays open, and the item shows `loader-circle`
+in place of its icon and cannot be chosen again (`docs/behaviors.md`,
+Loading); when it fails, the menu closes, and so does the sidebar opened
+over the content, and the message area shows its error
+(`docs/behaviors.md`, Where Errors Appear).
 
 ### Main Content
 
@@ -911,15 +914,17 @@ and how the labels look.
 - **Full form:** the avatar, 6 px of space, and the display name in the
   surrounding text's style; where the username follows, as `@` and the
   username (`docs/behaviors.md`, Representation of a User), it comes after a
-  space, in `fg-muted` at weight 400. The `@` sets it apart from the name without relying
-  on color, also for an inactive user, whose name is in `fg-muted` too.
+  space, in `fg-muted` at weight 400. The `@` sets it apart from the name
+  without relying on color, also for an inactive user, whose name is in
+  `fg-muted` too.
 - **Inactive and Bot:** the label follows the name, or the username where it
   follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
   1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a
   second label follows the first, 6 px later. An inactive user's name is in
   `fg-muted`, and its avatar is gray (Avatar). Where the place is too narrow,
   only the name, with the username that follows it, ends with an ellipsis,
-  unless a table wraps it (Tables); the labels always show.
+  unless a table or the account menu wraps it (Tables; Account Menu); the
+  labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name.
 - **No recorded actor:** a square of the avatar's size, on `neutral-soft`

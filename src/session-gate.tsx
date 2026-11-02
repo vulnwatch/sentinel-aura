@@ -48,9 +48,9 @@ import {
 } from "./session";
 
 // The session of the UI (docs/behaviors.md, Session State; Return After
-// Sign-in; The Signed-in User): the read of the signed-in user before any
-// screen, Sign in when the browser has no valid session, and the return from
-// Sign in once a session exists. The UI cannot read the session cookie, so it
+// Sign-in; The Signed-in User; Sign-out): the read of the signed-in user
+// before any screen, Sign in when the browser has no valid session, the
+// return from Sign in once a session exists, and Sign out. The UI cannot read the session cookie, so it
 // learns the state of the session only from the API's responses
 // (docs/architecture.md, Session Cookie).
 
@@ -177,14 +177,14 @@ export function readSignedInUser(
   };
 }
 
-// Whether a sign-out is in progress, which decides itself how the session
-// ends.
+// Whether a sign-out is in progress.
 function isSigningOut(client: QueryClient): boolean {
   return client.isMutating({ mutationKey: getLogoutMutationKey() }) > 0;
 }
 
 // Ends the session of this browser after a sign-out that Sentinel confirmed,
-// or answered with a 401, which means that no valid session remained
+// or after a 401 of the sign-out or of another request while the sign-out is
+// in progress, which means that no valid session remained
 // (docs/behaviors.md, Sign-out): forgets the session, so that Sign in shows
 // no message, opens Sign in without a saved URL in place of the screen in the
 // browser history (docs/screen-map.md, Browser History), and discards all the
@@ -198,17 +198,18 @@ function endSignedOutSession(client: QueryClient, router: AnyRouter) {
 }
 
 export interface SignOut {
-  // Sends the sign-out, unless one is in progress.
+  // Sends the sign-out.
   start: () => void;
-  // Whether the sign-out is in progress.
+  // Whether the sign-out is in progress, during which the control that
+  // started it cannot start it again (docs/behaviors.md, Loading).
   busy: boolean;
 }
 
 // Sign out (docs/behaviors.md, Sign-out), which the account menu offers. On
-// any outcome other than 204 or 401 the user stays signed in, and onFailure
-// receives the failure, which the screen shows. The outcome applies also when
-// the component that started it has left the page (docs/behaviors.md,
-// Loading).
+// any outcome other than 204 or 401 the user stays signed in, unless a 401 of
+// another request has ended the session meanwhile, and onFailure receives the
+// failure, which the screen shows. The outcome applies also when the component that started it
+// has left the page (docs/behaviors.md, Loading).
 export function useSignOut(onFailure: (failure: unknown) => void): SignOut {
   const client = useQueryClient();
   const router = useRouter();
@@ -228,9 +229,7 @@ export function useSignOut(onFailure: (failure: unknown) => void): SignOut {
   });
   return {
     start: () => {
-      if (!signOut.isPending) {
-        signOut.mutate();
-      }
+      signOut.mutate();
     },
     busy: signOut.isPending,
   };
@@ -273,11 +272,15 @@ export function SessionGate({ children }: SessionGateProps) {
   // saves the URL of the screen. The read of the signed-in user is kept only
   // when it holds no user, as after a 401 as the UI loads. It leads there
   // once, however many responses end the session: the navigation sets the
-  // router's latest location at once. While a sign-out is in progress, its
-  // outcome decides where the UI leads, so that Sign in does not tell that
-  // the session has expired after a request that the sign-out ended.
+  // router's latest location at once. While a sign-out is in progress, the
+  // session ends as the sign-out ends it, so that Sign in does not tell that
+  // the session has expired after the user signed out.
   const endSession = useCallback(() => {
-    if (latestRequirement(router) !== "required" || isSigningOut(client)) {
+    if (latestRequirement(router) !== "required") {
+      return;
+    }
+    if (isSigningOut(client)) {
+      endSignedOutSession(client, router);
       return;
     }
     saveReturnUrl(router.state.location.href);

@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { Ref } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { FOCUS_RING } from "./focus-ring";
 import { Tooltip } from "./tooltip";
@@ -19,6 +20,7 @@ interface IconButtonProps {
   // Where the tooltip shows (Tooltip).
   tooltipPlacement?: "top" | "end";
   onPress: () => void;
+  ref?: Ref<HTMLButtonElement> | undefined;
 }
 
 // A quiet button with an icon alone, named by its accessible name and its
@@ -30,10 +32,12 @@ export function IconButton({
   size,
   tooltipPlacement = "top",
   onPress,
+  ref,
 }: IconButtonProps) {
   return (
     <Tooltip text={label} placement={tooltipPlacement}>
       <AriaButton
+        ref={ref}
         aria-label={label}
         onPress={onPress}
         className={`inline-flex shrink-0 items-center justify-center rounded-md data-hovered:bg-surface-hover ${SIZES[size].target} ${FOCUS_RING}`}

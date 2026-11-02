@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from "react";
 import { Link as AriaLink } from "react-aria-components";
 import type { CurrentUserData } from "../api/generated/model";
 import { sidebarPreference, usePreference } from "../preferences";
-import { FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { MessageArea, MessageAreaProvider } from "./message-area";
 import { Sidebar, useWideWindow } from "./sidebar";
 
@@ -39,7 +39,7 @@ export function AppFrame({ user, children }: AppFrameProps) {
       <main
         ref={main}
         tabIndex={-1}
-        className={`min-h-dvh p-6 outline-none ${expanded ? "ml-54" : "ml-14"}`}
+        className={`min-h-dvh p-6 ${INSIDE_FOCUS_RING} ${expanded ? "ml-54" : "ml-14"}`}
       >
         <MessageArea />
         {children}

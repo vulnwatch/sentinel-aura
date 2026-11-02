@@ -26,9 +26,17 @@ import { ScreenHeading } from "./screen-heading";
 afterEach(async () => {
   await page.viewport(414, 896);
   document.title = "Sentinel";
+  endChange = undefined;
+  window.scrollTo(0, 0);
 });
 
-// A screen with a heading and an action that shows a message in the area.
+// The message of a change that the test ends when it chooses, such as after
+// the user opened another screen.
+let endChange: (() => void) | undefined;
+
+// A screen with a heading, an action that shows a message in the area, one
+// that starts a change whose message shows when the test ends it, and a
+// control further down.
 function MessageScreen({ title }: { title: string }) {
   const show = useShowMessage();
   const count = useRef(0);
@@ -47,7 +55,18 @@ function MessageScreen({ title }: { title: string }) {
       >
         Show a message
       </Button>
+      <Button
+        onPress={() => {
+          endChange = () => {
+            show({ tone: "success", text: `${title}: change ended.` });
+          };
+        }}
+      >
+        Start a change
+      </Button>
       <div className="h-[200dvh]" />
+      <Button>Next control</Button>
+      <div className="h-dvh" />
     </>
   );
 }
@@ -189,6 +208,26 @@ test("shows a message on the screen that the user is on when it appears, until a
     .not.toBeInTheDocument();
 });
 
+test("shows the message of a change that ends after the user left its screen on the screen that the user is on", async () => {
+  const { router, screen } = await renderArea();
+  await screen.getByRole("button", { name: "Start a change" }).click();
+  router.history.push("/second");
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "Second" }))
+    .toBeVisible();
+
+  endChange?.();
+
+  await expect.element(screen.getByText("First: change ended.")).toBeVisible();
+  router.history.push("/first");
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "First" }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByText("First: change ended."))
+    .not.toBeInTheDocument();
+});
+
 test("keeps its messages when the search of the same screen changes", async () => {
   const { router, screen } = await renderArea();
   await screen.getByRole("button", { name: "Show a message" }).click();
@@ -198,7 +237,7 @@ test("keeps its messages when the search of the same screen changes", async () =
   await expect.element(screen.getByText("First: message 1.")).toBeVisible();
 });
 
-test("stays at the top of the window when the content scrolls, and keeps the focus out from under it", async () => {
+test("stays at the top of the window when the content scrolls", async () => {
   await page.viewport(1280, 800);
   const { screen } = await renderArea();
   await screen.getByRole("button", { name: "Show a message" }).click();
@@ -208,11 +247,39 @@ test("stays at the top of the window when the content scrolls, and keeps the foc
   window.scrollTo(0, 600);
 
   await expect.poll(() => window.scrollY).toBe(600);
-  const area = message.element().closest<HTMLElement>("[aria-live]");
+  const area = message.element().closest("[aria-live]");
   expect(area?.getBoundingClientRect().top).toBe(0);
-  expect(document.documentElement.style.scrollPaddingTop).toBe(
-    `${area?.offsetHeight}px`,
+});
+
+test("keeps the element that takes the focus out from under it while it stays at the top of the window", async () => {
+  await page.viewport(1280, 800);
+  const { screen } = await renderArea();
+  await screen.getByRole("button", { name: "Show a message" }).click();
+  const message = screen.getByText("First: message 1.");
+  await expect.element(message).toBeVisible();
+  const area = () =>
+    message.element().closest("[aria-live]")?.getBoundingClientRect().bottom ??
+    0;
+  const next = screen.getByRole("button", { name: "Next control" });
+  // The window scrolls so that the control lies under the area.
+  window.scrollTo(
+    0,
+    window.scrollY + next.element().getBoundingClientRect().top - 10,
   );
+  await expect
+    .poll(() => next.element().getBoundingClientRect().top)
+    .toBeLessThan(area());
+  screen
+    .getByRole("button", { name: "Start a change" })
+    .element()
+    .focus({ preventScroll: true });
+
+  await userEvent.keyboard("{Tab}");
+
+  await expect.element(next).toHaveFocus();
+  await expect
+    .poll(() => next.element().getBoundingClientRect().top)
+    .toBeGreaterThanOrEqual(area());
 });
 
 test("takes at most a third of the window's height, beyond which its messages scroll within it", async () => {

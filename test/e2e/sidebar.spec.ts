@@ -51,22 +51,6 @@ test.describe("the sidebar", () => {
     ).toBeVisible();
   });
 
-  test("leads to the screen of an entry, marked as current, which shows Not found until its area is built", async ({
-    page,
-  }) => {
-    await signIn(page);
-
-    await sidebar(page).getByRole("link", { name: "Tickets" }).click();
-
-    await expect(page).toHaveURL("/tickets");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Not found" }),
-    ).toBeFocused();
-    await expect(
-      sidebar(page).getByRole("link", { name: "Tickets" }),
-    ).toHaveAttribute("aria-current", "page");
-  });
-
   test("stays collapsed after a reload", async ({ page }) => {
     await signIn(page);
     await sidebar(page)

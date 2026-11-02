@@ -11,7 +11,13 @@ import {
   Ticket,
   type LucideIcon,
 } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   Link as AriaLink,
   Dialog,
@@ -19,10 +25,13 @@ import {
   ModalOverlay,
 } from "react-aria-components";
 import type { CurrentUserData } from "../api/generated/model";
-import { sidebarPreference } from "../preferences";
+import { sidebarPreference, type SidebarPreference } from "../preferences";
 import { AccountMenu } from "./account-menu";
-import { FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { IconButton } from "./icon-button";
+import { useNewestMessage } from "./message-area";
+import { RouterLinks } from "./router-links";
+import { focusScreenHeading } from "./screen-heading";
 import { SentinelMark } from "./sentinel-mark";
 import { Tooltip } from "./tooltip";
 
@@ -63,7 +72,7 @@ interface Entry {
 }
 
 // The entries that every user sees, in their order (docs/screen-map.md,
-// Sidebar, Areas and Screens).
+// Sidebar; Areas and Screens).
 const ENTRIES: readonly Entry[] = [
   { name: "Tickets", href: "/tickets", area: "/tickets", icon: Ticket },
   { name: "CVEs", href: "/cves", area: "/cves", icon: ShieldAlert },
@@ -190,11 +199,14 @@ interface SidebarContentProps {
   user: CurrentUserData;
   // The button that collapses, closes, or expands the sidebar.
   toggle: ToggleButton;
+  // Called with that button as it appears and leaves, so that it can take
+  // the focus after it switched the sidebar.
+  onToggleShown?: (button: HTMLButtonElement | null) => void;
 }
 
 // The expanded sidebar, 216 px wide: the product name, the entries, the
 // collapse button, aligned right, and, below a line, the account button.
-function ExpandedContent({ user, toggle }: SidebarContentProps) {
+function ExpandedContent({ user, toggle, onToggleShown }: SidebarContentProps) {
   const path = usePath();
   return (
     <>
@@ -221,6 +233,7 @@ function ExpandedContent({ user, toggle }: SidebarContentProps) {
           size="medium"
           tooltipPlacement="end"
           onPress={toggle.onPress}
+          ref={onToggleShown}
         />
       </div>
       <div className="border-t border-border p-2">
@@ -232,7 +245,11 @@ function ExpandedContent({ user, toggle }: SidebarContentProps) {
 
 // The collapsed sidebar, 56 px wide: the same parts as icon controls of
 // 40 px, centered, each with its name in a tooltip to its right.
-function CollapsedContent({ user, toggle }: SidebarContentProps) {
+function CollapsedContent({
+  user,
+  toggle,
+  onToggleShown,
+}: SidebarContentProps) {
   const path = usePath();
   return (
     <>
@@ -261,6 +278,7 @@ function CollapsedContent({ user, toggle }: SidebarContentProps) {
           size="medium"
           tooltipPlacement="end"
           onPress={toggle.onPress}
+          ref={onToggleShown}
         />
       </div>
       <div className="flex justify-center border-t border-border py-2">
@@ -284,25 +302,70 @@ interface SidebarProps {
   expanded: boolean;
 }
 
+// Where the sidebar opened over the content: the URL, and the newest message
+// of the message area. Another URL, or a new message, closes it.
+interface OpenedAt {
+  href: string;
+  message: number | undefined;
+}
+
 // The sidebar, expanded or collapsed as the user prefers where the window is
-// wide enough (docs/behaviors.md, Preferences). Below that width it is always
-// collapsed, and its expand button opens the expanded sidebar over the
-// content, as a dialog that takes the focus. Escape, its close button, or a
-// click outside it closes it and returns the focus to the expand button. A
-// navigation from it closes it, and the focus follows the navigation
-// (FocusAfterNavigation). Opening it changes no preference, and a window
-// that grows past that width closes it.
+// wide enough (docs/behaviors.md, Preferences); its button keeps the focus
+// when it switches the sidebar. Below that width it is always collapsed, and
+// its expand button opens the expanded sidebar over the content, as a dialog
+// that takes the focus. Escape, its close button, or a click outside it
+// closes it and returns the focus to the expand button, and so does a new
+// message, such as the failure of Sign out, so that the message shows. A
+// navigation from it closes it, also to the URL that shows, and the focus
+// follows the navigation (FocusAfterNavigation). Opening it changes no
+// preference, and a window that grows past that width closes it, with the
+// focus on the screen's heading.
 export function Sidebar({ user, wide, expanded }: SidebarProps) {
   const href = useRouterState({ select: (state) => state.location.href });
-  // The URL at which the sidebar opened over the content: another URL closes
-  // it.
-  const [openedAt, setOpenedAt] = useState<string>();
+  const message = useNewestMessage();
+  const [openedAt, setOpenedAt] = useState<OpenedAt>();
   if (wide && openedAt !== undefined) {
     setOpenedAt(undefined);
   }
+  const open = !wide && openedAt?.href === href && openedAt.message === message;
   const close = () => {
     setOpenedAt(undefined);
   };
+
+  // The button that collapses or expands the sidebar beside the content
+  // gives way to the one of the other state, which takes the focus as it
+  // appears.
+  const focusToggle = useRef(false);
+  const switchTo = (preference: SidebarPreference) => {
+    focusToggle.current = true;
+    sidebarPreference.set(preference);
+  };
+  const toggleShown = useCallback((button: HTMLButtonElement | null) => {
+    if (button !== null && focusToggle.current) {
+      focusToggle.current = false;
+      button.focus();
+    }
+  }, []);
+
+  // The sidebar over the content held the focus, which the window that grew
+  // has removed with it, once the sidebar has left the page.
+  const wasOpen = useRef(open);
+  useLayoutEffect(() => {
+    const closedByWidth = wasOpen.current && wide;
+    wasOpen.current = open;
+    if (!closedByWidth) {
+      return undefined;
+    }
+    const frame = requestAnimationFrame(() => {
+      if (document.activeElement === document.body) {
+        focusScreenHeading();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [open, wide]);
+
   return (
     <>
       <nav
@@ -316,9 +379,10 @@ export function Sidebar({ user, wide, expanded }: SidebarProps) {
               label: "Collapse navigation",
               icon: PanelLeftClose,
               onPress: () => {
-                sidebarPreference.set("collapsed");
+                switchTo("collapsed");
               },
             }}
+            onToggleShown={toggleShown}
           />
         ) : (
           <CollapsedContent
@@ -328,19 +392,20 @@ export function Sidebar({ user, wide, expanded }: SidebarProps) {
               icon: PanelLeftOpen,
               onPress: () => {
                 if (wide) {
-                  sidebarPreference.set("expanded");
+                  switchTo("expanded");
                 } else {
-                  setOpenedAt(href);
+                  setOpenedAt({ href, message });
                 }
               },
             }}
+            onToggleShown={toggleShown}
           />
         )}
       </nav>
       <ModalOverlay
-        isOpen={!wide && openedAt === href}
-        onOpenChange={(open) => {
-          if (!open) {
+        isOpen={open}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
             close();
           }
         }}
@@ -348,17 +413,22 @@ export function Sidebar({ user, wide, expanded }: SidebarProps) {
         className="fixed inset-0 z-30 bg-overlay"
       >
         <Modal className="fixed inset-y-0 left-0 w-54 max-w-full shadow-xl outline-none">
-          <Dialog aria-label="Navigation" className="h-full outline-none">
-            <nav aria-label="Main" className={`h-full ${SIDEBAR_FRAME}`}>
-              <ExpandedContent
-                user={user}
-                toggle={{
-                  label: "Close navigation",
-                  icon: PanelLeftClose,
-                  onPress: close,
-                }}
-              />
-            </nav>
+          <Dialog
+            aria-label="Navigation"
+            className={`h-full ${INSIDE_FOCUS_RING}`}
+          >
+            <RouterLinks onNavigate={close}>
+              <nav aria-label="Main" className={`h-full ${SIDEBAR_FRAME}`}>
+                <ExpandedContent
+                  user={user}
+                  toggle={{
+                    label: "Close navigation",
+                    icon: PanelLeftClose,
+                    onPress: close,
+                  }}
+                />
+              </nav>
+            </RouterLinks>
           </Dialog>
         </Modal>
       </ModalOverlay>

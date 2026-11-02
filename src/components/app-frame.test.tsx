@@ -132,7 +132,15 @@ describe("with a signed-in user", () => {
 
     await userEvent.keyboard("{Enter}");
 
-    await expect.element(screen.getByRole("main")).toHaveFocus();
+    const main = screen.getByRole("main");
+    await expect.element(main).toHaveFocus();
+    // The focus ring inside it, in focus of the light theme.
+    const style = getComputedStyle(main.element());
+    expect([
+      style.outlineStyle,
+      style.outlineColor,
+      style.outlineOffset,
+    ]).toEqual(["solid", "rgb(9, 105, 218)", "-2px"]);
   });
 
   test("shows Not found at /auth/callback beside the sidebar", async () => {

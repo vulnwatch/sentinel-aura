@@ -284,6 +284,55 @@ describe("collapsed", () => {
     );
   });
 
+  test("keeps the focus on the button that collapses and expands it", async () => {
+    const { screen } = await renderApp("/");
+    const collapse = sidebarOf(screen).getByRole("button", {
+      name: "Collapse navigation",
+    });
+    collapse.element().focus();
+
+    await userEvent.keyboard("{Enter}");
+
+    const expand = sidebarOf(screen).getByRole("button", {
+      name: "Expand navigation",
+    });
+    await expect.element(expand).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .element(
+        sidebarOf(screen).getByRole("button", { name: "Collapse navigation" }),
+      )
+      .toHaveFocus();
+  });
+
+  test("leaves the focus where it was when another tab collapses it", async () => {
+    const { screen } = await renderApp("/");
+    const entry = sidebarOf(screen).getByRole("link", { name: "CVEs" });
+    await expect.element(entry).toBeVisible();
+    // An earlier switch in this tab, which took the focus.
+    await sidebarOf(screen)
+      .getByRole("button", { name: "Collapse navigation" })
+      .click();
+    await sidebarOf(screen)
+      .getByRole("button", { name: "Expand navigation" })
+      .click();
+    sidebarOf(screen).getByRole("link", { name: "CVEs" }).element().focus();
+
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "collapsed");
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: SIDEBAR_STORAGE_KEY,
+        newValue: "collapsed",
+      }),
+    );
+
+    await expect
+      .element(
+        sidebarOf(screen).getByRole("button", { name: "Expand navigation" }),
+      )
+      .not.toHaveFocus();
+  });
+
   test("follows a change of the preference in another tab", async () => {
     const { screen } = await renderApp("/");
     await expect
@@ -307,7 +356,9 @@ describe("collapsed", () => {
       .toBeVisible();
   });
 
-  test.each(["hidden", "Collapsed", ""])(
+  // The parsing of the stored value is tested with the preference
+  // (src/preferences.test.ts).
+  test.each(["Collapsed"])(
     "is expanded when the stored preference is %j",
     async (value) => {
       window.localStorage.setItem(SIDEBAR_STORAGE_KEY, value);
@@ -339,6 +390,33 @@ describe("in a window narrower than 1024 px", () => {
       )
       .toBeVisible();
     expect(widthOf(sidebarOf(screen).element())).toBe(56);
+  });
+
+  test("shows the focus inside the sidebar over the content when the keyboard opens it", async () => {
+    const { screen } = await renderApp("/");
+    // The keyboard reaches the expand button from the entry before it.
+    sidebarOf(screen)
+      .getByRole("link", { name: "Data sources" })
+      .element()
+      .focus();
+    await userEvent.keyboard("{Tab}");
+    await expect
+      .element(
+        sidebarOf(screen).getByRole("button", { name: "Expand navigation" }),
+      )
+      .toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    const dialog = screen.getByRole("dialog", { name: "Navigation" });
+    await expect.element(dialog).toHaveFocus();
+    const style = getComputedStyle(dialog.element());
+    // The focus ring inside it, in focus of the light theme.
+    expect([
+      style.outlineStyle,
+      style.outlineColor,
+      style.outlineOffset,
+    ]).toEqual(["solid", "rgb(9, 105, 218)", "-2px"]);
   });
 
   test("opens the expanded sidebar over the content, as a dialog that takes the focus, without changing the preference", async () => {
@@ -421,7 +499,20 @@ describe("in a window narrower than 1024 px", () => {
       .toHaveFocus();
   });
 
-  test("closes when the window grows past 1024 px, and does not open again when it narrows", async () => {
+  test("closes after a navigation from it to the URL that shows", async () => {
+    const { router, screen } = await renderApp("/packages");
+    await sidebarOf(screen)
+      .getByRole("button", { name: "Expand navigation" })
+      .click();
+    const dialog = screen.getByRole("dialog", { name: "Navigation" });
+
+    await dialog.getByRole("link", { name: "Packages", exact: true }).click();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/packages");
+  });
+
+  test("closes when the window grows past 1024 px, with the focus on the screen's heading, and does not open again when it narrows", async () => {
     const { screen } = await renderApp("/");
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
@@ -435,6 +526,9 @@ describe("in a window narrower than 1024 px", () => {
       .element(screen.getByRole("dialog", { name: "Navigation" }))
       .not.toBeInTheDocument();
     expect(widthOf(sidebarOf(screen).element())).toBe(216);
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .toHaveFocus();
 
     await page.viewport(1023, 700);
     await expect

@@ -90,6 +90,12 @@ function useMessageAreaState(): MessageAreaState {
   return state;
 }
 
+// The identifier of the newest message of the area, which changes when a
+// message appears, or undefined without one.
+export function useNewestMessage(): number | undefined {
+  return useMessageAreaState().messages[0]?.id;
+}
+
 // Shows a message in the message area of the screen.
 export function useShowMessage(): (message: AreaMessage) => void {
   return useMessageAreaState().show;

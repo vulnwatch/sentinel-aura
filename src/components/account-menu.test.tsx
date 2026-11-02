@@ -59,6 +59,24 @@ const SCANNER: CurrentUserResponse = {
 
 let client: QueryClient;
 
+// A read of other data of a screen, through the shared request function.
+function readTickets() {
+  return client
+    .fetchQuery({
+      queryKey: ["tickets"],
+      queryFn: ({ signal }) => apiRequest(TICKETS, { method: "GET", signal }),
+    })
+    .catch(() => undefined);
+}
+
+// Resolves once the pending callbacks of the timers have run, for a test that
+// checks that nothing more happens.
+function settle() {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+}
+
 beforeEach(async () => {
   client = createQueryClient();
   client.setQueryDefaults(getGetCurrentUserProfileQueryKey(), {
@@ -131,21 +149,17 @@ async function openMenu(screen: Screen, name = "John Doe") {
 }
 
 describe("the account button", () => {
-  test("shows the avatar, the display name, and chevrons-up-down", async () => {
+  // The avatar, its size, and chevrons-up-down show in the reference
+  // screenshot home.png.
+  test("shows the display name, with its pictures hidden from assistive technologies", async () => {
     stubSession();
     const { screen } = await renderApp();
     const button = accountButton(screen);
 
     await expect.element(button).toBeVisible();
+    expect(button.element().textContent).toBe("John Doe");
+    expect(button.getByRole("img").query()).toBeNull();
     expect(button.element().getBoundingClientRect().height).toBe(44);
-    // The avatar at the medium size and chevrons-up-down, both hidden from
-    // assistive technologies.
-    const pictures = [...button.element().querySelectorAll("svg")];
-    expect(pictures.map((svg) => svg.getAttribute("aria-hidden"))).toEqual([
-      "true",
-      "true",
-    ]);
-    expect(pictures[0]?.getBoundingClientRect().width).toBe(32);
     expect(getComputedStyle(button.element()).fontWeight).toBe("500");
     await expect.element(button).toHaveAttribute("aria-haspopup", "true");
   });
@@ -203,9 +217,13 @@ describe("the account menu", () => {
 
     const menu = await openMenu(screen);
 
-    const popover = menu.element().parentElement;
-    expect(popover?.getBoundingClientRect().width).toBe(256);
-    expect(popover?.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+    // The popover of the menu, which React Aria names after the button.
+    const popover = screen
+      .getByRole("dialog", { name: "John Doe" })
+      .element()
+      .getBoundingClientRect();
+    expect(popover.width).toBe(256);
+    expect(popover.bottom).toBeLessThanOrEqual(
       button.element().getBoundingClientRect().top,
     );
     await expect.element(screen.getByText("John Doe @jdoe")).toBeVisible();
@@ -228,6 +246,27 @@ describe("the account menu", () => {
     await expect
       .element(menu.getByRole("group", { name: "Theme" }))
       .toBeVisible();
+  });
+
+  test("shows the focus ring inside the item that the keyboard focuses", async () => {
+    stubSession();
+    const { screen } = await renderApp();
+    accountButton(screen).element().focus();
+
+    await userEvent.keyboard("{Enter}");
+
+    const item = screen
+      .getByRole("menu", { name: "John Doe" })
+      .getByRole("menuitem", { name: "Profile" });
+    await expect.element(item).toHaveFocus();
+    const style = getComputedStyle(item.element());
+    // focus and surface-hover of the light theme.
+    expect([
+      style.outlineStyle,
+      style.outlineColor,
+      style.outlineOffset,
+      style.backgroundColor,
+    ]).toEqual(["solid", "rgb(9, 105, 218)", "-2px", "rgb(243, 245, 248)"]);
   });
 
   test("wraps a long name and username instead of cutting them", async () => {
@@ -373,10 +412,25 @@ describe("Sign out", () => {
     const menu = await openMenu(screen);
     const item = menu.getByRole("menuitem", { name: "Sign out" });
 
+    expect(item.element().getAnimations({ subtree: true })).toEqual([]);
+    await expect.element(item).not.toHaveAttribute("aria-disabled");
+
     await item.click();
     await expect.poll(() => requestsTo(fetch, LOGOUT)).toBe(1);
-    await item.click();
+    // Pressed again, although it shows as busy.
+    await item.click({ force: true });
 
+    // Busy: loader-circle turns in place of its icon, and assistive
+    // technologies learn that it cannot be chosen again.
+    await expect.element(item).toHaveAttribute("aria-disabled", "true");
+    expect(
+      item
+        .element()
+        .getAnimations({ subtree: true })
+        .map((animation) =>
+          animation instanceof CSSAnimation ? animation.animationName : "",
+        ),
+    ).toEqual(["spin"]);
     await expect.element(menu).toBeVisible();
     // The only dialog is the popover of the menu: no confirmation.
     const dialogs = screen.getByRole("dialog").all();
@@ -389,7 +443,7 @@ describe("Sign out", () => {
       .toBeVisible();
   });
 
-  test("ends as Sign out also when another request receives a 401 meanwhile", async () => {
+  test("ends the session as Sign out at once when another request receives a 401 meanwhile, whatever its outcome", async () => {
     let answer!: (response: Response) => void;
     const { session } = stubSession(
       FICTIONAL_USER,
@@ -405,20 +459,116 @@ describe("Sign out", () => {
     // Sentinel ended the session, and another read receives its 401 before
     // the response of the sign-out arrives.
     session.active = false;
-    await client
-      .fetchQuery({
-        queryKey: ["tickets"],
-        queryFn: ({ signal }) => apiRequest(TICKETS, { method: "GET", signal }),
-      })
-      .catch(() => undefined);
-    expect(router.state.location.pathname).toBe("/tickets");
-    answer(new Response(null, { status: 204 }));
+    await readTickets();
 
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
       .toBeVisible();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(router.history.length).toBe(1);
     await expect.element(screen.getByText(EXPIRED)).not.toBeInTheDocument();
     expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBeNull();
+    expect(hasSessionRecord()).toBe(false);
+
+    answer(errorResponse(503, "DATABASE_UNAVAILABLE"));
+    await settle();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+    expect(router.state.location.pathname).toBe("/login");
+    await expect
+      .element(screen.getByText(/Sentinel isn't available/))
+      .not.toBeInTheDocument();
+  });
+
+  test("ends the session as Sign out when the read of the signed-in user receives a 401 meanwhile", async () => {
+    let answer!: (response: Response) => void;
+    const { session } = stubSession(
+      FICTIONAL_USER,
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const { router, screen } = await renderApp("/tickets");
+    const menu = await openMenu(screen);
+    await menu.getByRole("menuitem", { name: "Sign out" }).click();
+
+    session.active = false;
+    await client.invalidateQueries({
+      queryKey: getGetCurrentUserProfileQueryKey(),
+    });
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+    expect(router.state.location.pathname).toBe("/login");
+    await expect.element(screen.getByText(EXPIRED)).not.toBeInTheDocument();
+    answer(new Response(null, { status: 204 }));
+    await settle();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+  });
+
+  test("leads to Sign in as for an expired session after a 401 that follows a sign-out that failed", async () => {
+    const { session } = stubSession(FICTIONAL_USER, () =>
+      errorResponse(503, "DATABASE_UNAVAILABLE"),
+    );
+    const { router, screen } = await renderApp("/tickets");
+    const menu = await openMenu(screen);
+    await menu.getByRole("menuitem", { name: "Sign out" }).click();
+    await expect
+      .element(
+        screen
+          .getByRole("main")
+          .getByText("Sentinel isn't available right now. Try again later."),
+      )
+      .toBeVisible();
+
+    session.active = false;
+    await readTickets();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+    await expect.element(screen.getByText(EXPIRED)).toBeVisible();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBe("/tickets");
+  });
+
+  test("shows the failure of a sign-out that ends after the account menu has left the page", async () => {
+    let answer!: (response: Response) => void;
+    stubSession(
+      FICTIONAL_USER,
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const { screen } = await renderApp("/tickets");
+    const menu = await openMenu(screen);
+    await menu.getByRole("menuitem", { name: "Sign out" }).click();
+
+    // Another tab collapses the sidebar, which replaces the account button
+    // and its menu.
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "collapsed");
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: SIDEBAR_STORAGE_KEY,
+        newValue: "collapsed",
+      }),
+    );
+    await expect.element(menu).not.toBeInTheDocument();
+    answer(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    await expect
+      .element(
+        screen
+          .getByRole("main")
+          .getByText("Sentinel isn't available right now. Try again later."),
+      )
+      .toBeVisible();
   });
 
   test.each([
@@ -486,6 +636,33 @@ describe("Sign out", () => {
         .toBeVisible();
     },
   );
+
+  test("closes the sidebar opened over the content when Sign out fails from it, so that the message shows, and returns the focus to the expand button", async () => {
+    await page.viewport(800, 700);
+    stubSession(FICTIONAL_USER, () =>
+      errorResponse(503, "DATABASE_UNAVAILABLE"),
+    );
+    const { screen } = await renderApp("/tickets");
+    const expand = screen
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("button", { name: "Expand navigation" });
+    await expand.click();
+    const dialog = screen.getByRole("dialog", { name: "Navigation" });
+    await dialog.getByRole("button", { name: "John Doe" }).click();
+
+    await screen
+      .getByRole("menu", { name: "John Doe" })
+      .getByRole("menuitem", { name: "Sign out" })
+      .click();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    const message = screen
+      .getByRole("main")
+      .getByText("Sentinel isn't available right now. Try again later.");
+    await expect.element(message).toBeVisible();
+    expect(message.element().closest("[inert], [aria-hidden]")).toBeNull();
+    await expect.element(expand).toHaveFocus();
+  });
 
   test("leaves a failure of the UI itself to the page of a failure of the UI, in the column of the Sign In Page", async () => {
     stubSession();

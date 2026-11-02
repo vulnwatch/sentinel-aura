@@ -30,7 +30,7 @@ import { usePreference } from "../preferences";
 import { useSignOut } from "../session-gate";
 import { themePreference, type ThemePreference } from "../theme";
 import { Avatar } from "./avatar";
-import { FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { useShowMessage } from "./message-area";
 import { Tooltip } from "./tooltip";
 import { compactName, User } from "./user";
@@ -59,8 +59,7 @@ function isThemePreference(key: unknown): key is ThemePreference {
 // The classes of the parts of the menu (docs/design-system.md, Menus,
 // Popovers, and Tooltips). A menu item shows the focus with surface-hover and,
 // on keyboard focus, the focus ring inside it.
-const ITEM =
-  "flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 text-15 outline-none data-focused:bg-surface-hover data-hovered:bg-surface-hover data-focus-visible:outline-2 data-focus-visible:-outline-offset-2 data-focus-visible:outline-focus";
+const ITEM = `flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 text-15 data-focused:bg-surface-hover data-hovered:bg-surface-hover ${INSIDE_FOCUS_RING}`;
 const SEPARATOR = "-mx-1 my-1 border-t border-border";
 
 // Applies the theme that the user selects, in every open tab.
@@ -74,10 +73,15 @@ function selectTheme(keys: Selection) {
   }
 }
 
-interface ItemProps extends Omit<MenuItemProps, "className" | "children"> {
+interface ItemProps extends Omit<
+  MenuItemProps,
+  "className" | "children" | "isDisabled"
+> {
   icon: LucideIcon;
   // Whether the change that the item started is in progress: its icon gives
-  // way to loader-circle.
+  // way to loader-circle, and assistive technologies learn that it cannot be
+  // chosen again until the change ends, as of a busy button
+  // (docs/behaviors.md, Loading).
   busy?: boolean;
   children: string;
 }
@@ -87,7 +91,12 @@ interface ItemProps extends Omit<MenuItemProps, "className" | "children"> {
 // selection.
 function Item({ icon: Icon, busy = false, children, ...props }: ItemProps) {
   return (
-    <MenuItem {...props} textValue={children} className={ITEM}>
+    <MenuItem
+      {...props}
+      isDisabled={busy}
+      textValue={children}
+      className={ITEM}
+    >
       {({ isSelected }) => (
         <>
           {busy ? (
@@ -149,20 +158,22 @@ interface AccountMenuProps {
   compact: boolean;
 }
 
-// The account button, which opens the account menu upward, 256 px wide, named
-// by the button. The menu starts with the signed-in user, whose name and username wrap rather
-// than end with an ellipsis, so that it shows whole the name that the button
-// cuts. Its items follow in three groups: the screens of the user's own
-// account; the theme, which applies at once in every open tab; and Sign out,
-// which asks for no confirmation and stays in the open menu, busy, until it
-// ends. When it fails, the menu closes and the message area shows the message
-// of its status (docs/behaviors.md, Sign-out; Default Presentation by
-// Status).
+// The account button, which opens the account menu upward, 256 px wide,
+// named by the button. The menu starts with the signed-in user, whose name
+// and username wrap rather than end with an ellipsis, so that it shows whole
+// the name that the button cuts. Its items follow in three groups: the
+// screens of the user's own account; the theme, which applies at once in
+// every open tab; and Sign out, which asks for no confirmation and stays in
+// the open menu, busy, until it ends. When it fails, the menu closes and the
+// message area shows the message of its status, which also closes the
+// sidebar opened over the content (docs/behaviors.md, Sign-out; Default
+// Presentation by Status).
 export function AccountMenu({ user, compact }: AccountMenuProps) {
   const showMessage = useShowMessage();
   const theme = usePreference(themePreference);
   const [isOpen, setOpen] = useState(false);
-  // A failure of the UI itself, which the router shows (src/router.ts).
+  // A failure of the UI itself, which the root route shows
+  // (src/routes/root.tsx).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const signOut = useSignOut((failure) => {
     setOpen(false);
