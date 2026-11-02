@@ -134,6 +134,9 @@ document that do not take effect yet.
   `docs/features/identity/rbac.md`, Permission Checking), so these reads keep
   current the elements that depend on the roles and on the capabilities of
   the user (`docs/screen-map.md`, Roles; Capabilities of the Signed-in User).
+  While the error of a read of the signed-in user shows in place of the
+  screen (Session State), it is read again only with Try again, as a screen's
+  read whose error shows in place of content is (Loading).
 - A later read that fails other than with a `401` changes nothing: the tab
   keeps the user that it shows, without a message.
 - When a read returns a user other than the one that the tab shows, for
@@ -570,8 +573,8 @@ also meets these requirements, which they cannot check:
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus (4.1.3 Status Messages). After a form is submitted with errors,
-  the focus moves to the message at the top of the form, or to the field when
-  only one field has an error (3.3.1 Error Identification).
+  the focus moves to the message at the top of the form, or, when only fields
+  have errors, to the first of them (3.3.1 Error Identification).
 - **Reflow and text size.** Screens work at a width of 320 CSS pixels without
   scrolling in two directions, except data tables, which scroll within
   themselves, and text enlarged to 200 % loses no content or function (1.4.4

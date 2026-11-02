@@ -554,10 +554,13 @@ selected one ends with `check`; and Sign out, an ordinary item.
 ### Sign In Page
 
 Sign in has no sidebar. A column at most 400 px wide, centered on `canvas`,
-holds the product name, as in the sidebar but in `text-20`, and below it a
-card (`surface`, `border`, 8 px radius, 24 px padding) with the level-one
-heading "Sign in", the information of an expired session as an `info` message
-(`docs/behaviors.md`, Session Expiration Message), and the form (Forms).
+holds the product name, as in the sidebar but in `text-20` with the Sentinel
+mark at 24 px, centered and not a link, and 24 px below it a card (`surface`,
+`border`, 8 px radius, 24 px padding) with the level-one heading "Sign in",
+the information of an expired session as an `info` message
+(`docs/behaviors.md`, Session Expiration Message), and the form (Forms),
+16 px apart. Another screen in this column, such as the error of the first
+read of the signed-in user (Main Content), shows in the card in the same way.
 
 ## Values
 

@@ -1,18 +1,67 @@
+import { LoaderCircle } from "lucide-react";
+import type { ReactNode } from "react";
 import {
   Button as AriaButton,
   type ButtonProps as AriaButtonProps,
 } from "react-aria-components";
 import { FOCUS_RING } from "./focus-ring";
 
-export type ButtonProps = Omit<AriaButtonProps, "className" | "style">;
+export type ButtonProps = Omit<
+  AriaButtonProps,
+  "className" | "style" | "children" | "isPending"
+> & {
+  // The label of the button.
+  children: ReactNode;
+  // Primary for the main action of a screen, a form, or a dialog, one per
+  // screen part; secondary for every other action, such as Try again
+  // (docs/design-system.md, Buttons and Links).
+  variant?: "primary" | "secondary";
+  // Large in forms and dialogs, 40 px high; medium elsewhere, 36 px high.
+  size?: "medium" | "large";
+  // Whether the change that the button started is in progress.
+  isBusy?: boolean;
+};
 
-// A secondary button, 36 px high (docs/design-system.md, Buttons and Links),
-// such as Try again.
-export function Button(props: ButtonProps) {
+const VARIANTS = {
+  primary: "bg-accent text-on-accent data-hovered:bg-accent-hover",
+  secondary:
+    "border border-border-strong bg-surface text-fg data-hovered:bg-surface-hover",
+} as const;
+
+const SIZES = { medium: "h-9 px-3", large: "h-10 px-4" } as const;
+
+// A button (docs/design-system.md, Buttons and Links). While the change that
+// it started is in progress, it is busy: it shows loader-circle before its
+// label, which it keeps, and cannot be pressed, nor submit its form, but it
+// keeps the focus (docs/behaviors.md, Loading). The spinner stands still
+// under reduced motion (Focus and Motion). React Aria's own pending state is
+// not used: it announces the button through a reference to it, which stays
+// behind in the page when the button leaves it, as Sign in does once it
+// succeeds.
+export function Button({
+  children,
+  variant = "secondary",
+  size = "medium",
+  isBusy = false,
+  type,
+  onPress,
+  ...props
+}: ButtonProps) {
   return (
     <AriaButton
       {...props}
-      className={`inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-3 text-15 font-medium text-fg data-disabled:opacity-60 data-hovered:bg-surface-hover ${FOCUS_RING}`}
-    />
+      type={isBusy && type === "submit" ? "button" : type}
+      onPress={isBusy ? undefined : onPress}
+      aria-disabled={isBusy || undefined}
+      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-15 font-medium data-disabled:opacity-60 ${VARIANTS[variant]} ${SIZES[size]} ${FOCUS_RING}`}
+    >
+      {isBusy && (
+        <LoaderCircle
+          aria-hidden
+          className="size-4 animate-spin motion-reduce:animate-none"
+        />
+      )}
+      {children}
+    </AriaButton>
   );
 }

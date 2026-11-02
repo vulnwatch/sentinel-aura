@@ -148,6 +148,66 @@ function presentErrorResponse(
   }
 }
 
+// The message of a field error of a VALIDATION_ERROR response
+// (docs/behaviors.md, Where Errors Appear).
+export const MESSAGE_INVALID_VALUE = "This value isn't valid.";
+
+export interface ValidationErrorFields<TField extends string> {
+  // The fields of the form that an error of the response locates.
+  fields: TField[];
+  // Whether an error of the response matches no field of the form, or the
+  // response locates none, which makes it an error of the form.
+  unmatched: boolean;
+}
+
+// The fields of a form that the field errors of a VALIDATION_ERROR response
+// locate, matched by their loc, the request body member of the field, as
+// ["body", <field>] (docs/conventions.md, Error Codes and Messages; Sentinel
+// docs/api-spec.md, Response Format). Every other error response locates no
+// field.
+export function validationErrorFields<TField extends string>(
+  failure: RequestFailure,
+  fields: readonly TField[],
+): ValidationErrorFields<TField> {
+  const located: TField[] = [];
+  let unmatched = false;
+  const errors =
+    failure instanceof ApiError &&
+    failure.code === "VALIDATION_ERROR" &&
+    typeof failure.body === "object" &&
+    failure.body !== null &&
+    "errors" in failure.body
+      ? failure.body.errors
+      : undefined;
+  if (!Array.isArray(errors) || errors.length === 0) {
+    return { fields: located, unmatched: true };
+  }
+  for (const error of errors) {
+    const field = fieldOf(error, fields);
+    if (field === undefined) {
+      unmatched = true;
+    } else if (!located.includes(field)) {
+      located.push(field);
+    }
+  }
+  return { fields: located, unmatched };
+}
+
+function fieldOf<TField extends string>(
+  error: unknown,
+  fields: readonly TField[],
+): TField | undefined {
+  if (typeof error !== "object" || error === null || !("loc" in error)) {
+    return undefined;
+  }
+  const { loc } = error;
+  if (!Array.isArray(loc) || loc.length !== 2 || loc[0] !== "body") {
+    return undefined;
+  }
+  const member: unknown = loc[1];
+  return fields.find((field) => field === member);
+}
+
 function internal(
   requestId: string | undefined,
   retry: boolean,

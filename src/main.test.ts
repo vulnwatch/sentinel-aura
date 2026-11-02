@@ -1,6 +1,8 @@
-import { afterEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import mainUrl from "./main?url";
+import { SESSION_RECORD_KEY } from "./session";
+import { FICTIONAL_USER, jsonResponse, stubApi } from "./test-api";
 import { THEME_STORAGE_KEY } from "./theme";
 
 // The entry document runs the entry point as a module (index.html), so the
@@ -10,8 +12,15 @@ const root = document.documentElement;
 // The runs of the entry point, which name the URL of each.
 let runs = 0;
 
+// The application reads the signed-in user as it loads.
+beforeEach(() => {
+  stubApi(() => jsonResponse(200, FICTIONAL_USER));
+});
+
 afterEach(() => {
+  vi.restoreAllMocks();
   window.localStorage.removeItem(THEME_STORAGE_KEY);
+  window.localStorage.removeItem(SESSION_RECORD_KEY);
   delete root.dataset.theme;
   document.getElementById("root")?.remove();
 });
@@ -30,7 +39,8 @@ async function runEntryPoint(): Promise<void> {
 }
 
 test("mounts the application in the #root element", async () => {
-  // The page of the tests is at /, the path of the home page.
+  // The page of the tests is at /, the path of the home page, which shows to
+  // a signed-in user (beforeEach).
   expect(window.location.pathname).toBe("/");
   const container = addRootElement();
 

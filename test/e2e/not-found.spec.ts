@@ -1,10 +1,13 @@
-import { expect, test } from "./fixtures";
+import { expect, signIn, test } from "./fixtures";
 
 // Not found (docs/behaviors.md, Missing and Inaccessible Records): the UI's
 // image serves the entry document for a path that matches no file of the
 // build, and the application shows Not found for a path that matches no
-// screen.
+// screen, which requires a session like every path but Sign in and
+// /auth/callback (docs/screen-map.md, Contract URLs).
 test("a path that matches no screen shows Not found", async ({ page }) => {
+  await signIn(page);
+
   await page.goto("/fictional/path");
 
   await expect(
@@ -18,4 +21,14 @@ test("a path that matches no screen shows Not found", async ({ page }) => {
   ).toBeVisible();
   await expect(page).toHaveTitle("Not found – Sentinel");
   await expect(page).toHaveScreenshot("not-found.png");
+});
+
+// /auth/callback is reserved: it shows as missing, without a session too.
+test("/auth/callback shows Not found without a session", async ({ page }) => {
+  await page.goto("/auth/callback?code=fictional&state=fictional");
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Not found" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL("/auth/callback?code=fictional&state=fictional");
 });

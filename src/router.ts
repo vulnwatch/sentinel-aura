@@ -1,10 +1,16 @@
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import { NotFound } from "./components/not-found";
 import { UiFailurePage } from "./components/ui-failure";
+import { authCallbackRoute } from "./routes/auth-callback";
 import { homeRoute } from "./routes/home";
 import { rootRoute } from "./routes/root";
+import { signInRoute } from "./routes/sign-in";
 
-const routeTree = rootRoute.addChildren([homeRoute]);
+const routeTree = rootRoute.addChildren([
+  homeRoute,
+  signInRoute,
+  authCallbackRoute,
+]);
 
 // What every route shows when its screen does not apply: Not found for a
 // path that matches no screen, and the page of a failure of the UI itself

@@ -3,16 +3,23 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { RootLayout } from "../routes/root";
+import { RouterLinks } from "../routes/root";
 import { Link } from "./link";
 
 test("leads to its screen through the router, underlined as a link of running text", async () => {
-  const root = createRootRoute({ component: RootLayout });
+  const root = createRootRoute({
+    component: () => (
+      <RouterLinks>
+        <Outlet />
+      </RouterLinks>
+    ),
+  });
   const start = createRoute({
     getParentRoute: () => root,
     path: "/start",

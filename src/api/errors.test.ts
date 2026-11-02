@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   isRequestFailure,
   presentFailure,
+  validationErrorFields,
   type FailurePresentation,
   type RequestFailure,
 } from "./errors";
@@ -278,6 +279,82 @@ describe("presentFailure", () => {
         expect(presentFailure(failure, "session")?.message).toBe(message);
       },
     );
+  });
+});
+
+// A VALIDATION_ERROR response with its field errors.
+function validationError(errors: unknown): ApiError {
+  return new ApiError(
+    422,
+    "VALIDATION_ERROR",
+    { code: "VALIDATION_ERROR", detail: "A fictional detail", errors },
+    REQUEST_ID,
+  );
+}
+
+// A field error at the location.
+function entry(loc: unknown) {
+  return { loc, msg: "A fictional message", type: "string_type" };
+}
+
+describe("validationErrorFields", () => {
+  const FIELDS = ["username", "password"] as const;
+
+  test("finds the fields that the errors locate in the request body, each once", () => {
+    const failure = validationError([
+      entry(["body", "password"]),
+      entry(["body", "username"]),
+      entry(["body", "password"]),
+    ]);
+
+    expect(validationErrorFields(failure, FIELDS)).toEqual({
+      fields: ["password", "username"],
+      unmatched: false,
+    });
+  });
+
+  test.each([
+    ["the body as a whole", ["body"]],
+    ["a member that the form does not have", ["body", "full_name"]],
+    ["a member under a field", ["body", "username", 0]],
+    ["a query parameter", ["query", "username"]],
+    ["a malformed location", "body.username"],
+  ])("makes an error of %s an error of the form", (_, loc) => {
+    const failure = validationError([entry(["body", "username"]), entry(loc)]);
+
+    expect(validationErrorFields(failure, FIELDS)).toEqual({
+      fields: ["username"],
+      unmatched: true,
+    });
+  });
+
+  test.each([
+    ["without errors", validationError(undefined)],
+    ["with an empty list of errors", validationError([])],
+    ["with an entry that is not an object", validationError(["username"])],
+    [
+      "of another code that locates its errors",
+      new ApiError(
+        422,
+        "FETCHER_SETTING_INVALID",
+        {
+          code: "FETCHER_SETTING_INVALID",
+          detail: "A fictional detail",
+          errors: [entry(["body", "username"])],
+        },
+        REQUEST_ID,
+      ),
+    ],
+    ["of another status", errorResponse(400)],
+    [
+      "that receives no response",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("locates no field for a failure %s", (_, failure) => {
+    expect(validationErrorFields(failure, FIELDS)).toEqual({
+      fields: [],
+      unmatched: true,
+    });
   });
 });
 

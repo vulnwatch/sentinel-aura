@@ -70,9 +70,9 @@ async function openUnder(page: Page, scheme: Theme) {
   expect(await reportedScheme(page), "the emulated color scheme").toBe(scheme);
 }
 
-// Opens the home page under the color scheme and waits for the application to
-// show it.
-async function openHome(page: Page, scheme: Theme) {
+// Opens the entry document under the color scheme and waits for the
+// application to show its screen, Sign in without a session.
+async function openApplication(page: Page, scheme: Theme) {
   await openUnder(page, scheme);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 }
@@ -135,7 +135,7 @@ test.describe("the themes", () => {
   for (const scheme of ["light", "dark"] as const) {
     test.describe(`under a ${scheme} color scheme`, () => {
       test(`System shows the ${scheme} theme`, async ({ page }) => {
-        await openHome(page, scheme);
+        await openApplication(page, scheme);
         expect(await shownTheme(page)).toEqual({
           background: CANVAS[scheme],
           colorScheme: "light dark",
@@ -145,7 +145,7 @@ test.describe("the themes", () => {
       for (const theme of ["light", "dark"] as const) {
         test(`a stored ${theme} theme shows`, async ({ page }) => {
           await storePreference(page, theme);
-          await openHome(page, scheme);
+          await openApplication(page, scheme);
           expect(await shownTheme(page)).toEqual({
             background: CANVAS[theme],
             colorScheme: theme,
@@ -155,7 +155,7 @@ test.describe("the themes", () => {
 
       test("any other stored value counts as System", async ({ page }) => {
         await storePreference(page, other(scheme).toUpperCase());
-        await openHome(page, scheme);
+        await openApplication(page, scheme);
         expect(await shownTheme(page)).toEqual({
           background: CANVAS[scheme],
           colorScheme: "light dark",
@@ -243,7 +243,7 @@ test.describe("the themes", () => {
 
   test.describe("while a page is open", () => {
     test("System follows the change without a reload", async ({ page }) => {
-      await openHome(page, "light");
+      await openApplication(page, "light");
       expect((await shownTheme(page)).background).toBe(CANVAS.light);
       await page.emulateMedia({ colorScheme: "dark" });
       expect((await shownTheme(page)).background).toBe(CANVAS.dark);
@@ -254,8 +254,8 @@ test.describe("the themes", () => {
     }) => {
       const otherTab = await page.context().newPage();
       try {
-        await openHome(otherTab, "light");
-        await openHome(page, "light");
+        await openApplication(otherTab, "light");
+        await openApplication(page, "light");
 
         await page.evaluate((key) => {
           window.localStorage.setItem(key, "dark");
