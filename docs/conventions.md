@@ -210,7 +210,8 @@ that needs it; content of another kind needs a new row first.
   reads them through the router's typed hooks.
 - Links use the router's typed paths. React Aria's links, and the components
   that contain links, navigate through the router, which the root route
-  connects to React Aria.
+  connects to React Aria, except a link whose address the API returns (Links
+  from the API).
 
 ### API Access
 
@@ -358,14 +359,17 @@ that needs it; content of another kind needs a new row first.
 - A link whose address the API returns is built only by one shared
   component, which applies `docs/behaviors.md` (Links to Other Sites): the
   check of the address, the mark of a link to another site, and the loading
-  of the address by the browser rather than by the router. No other code
-  passes a value of the API as the address of a link or of a navigation, such
-  as an `href`, `window.location`, or `window.open`.
+  of the address by the browser rather than by the router. The link leads
+  to, and where its text is the address shows, the URL that the check
+  parsed, never the value as received, so that the check and the browser
+  read the same address. No other code passes a value of the API as the
+  address of a link or of a navigation, such as an `href`, `window.location`,
+  or `window.open`.
 - No code looks for addresses inside a text of the API to turn them into
-  links (No Raw HTML Injection).
-- The Content Security Policy blocks an address with the scheme
-  `javascript:` (`docs/architecture.md`, Security Headers), but not the other
-  schemes, and does not replace this rule.
+  links (`docs/behaviors.md`, Links to Other Sites).
+- The Content Security Policy blocks an address with the scheme `javascript`
+  (`docs/architecture.md`, Security Headers), but not the other schemes, and
+  does not replace this rule.
 
 ### Tests
 

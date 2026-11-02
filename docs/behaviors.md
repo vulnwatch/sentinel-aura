@@ -354,32 +354,43 @@ Affected Versions). The UI applies one rule to every address that the API
 returns, whatever Sentinel guarantees for its field:
 
 - **Only a web address becomes a link.** An address becomes a link only when
-  it is an absolute URL whose scheme is `http` or `https`, in any case. For
-  any other value, such as a Package URL (`pkg:`) or a value whose scheme is
-  `javascript:`, `file:`, or that of a desktop application, the text of the
-  link shows as received, without a link, so that the user cannot follow a
-  value that runs code in the UI or starts another application. The screen
-  document decides that text: the address itself, or another value, such as
-  the identifier of an advisory.
+  it is an absolute URL whose scheme is `http` or `https`, whatever its
+  letter case, without a user name or password. For any other value, such as
+  a Package URL (`pkg:`) or a value whose scheme is `javascript`, `file`, or
+  that of a desktop application, the text of the link shows as received,
+  without a link, so that the user cannot follow a value that runs code in
+  the UI or starts another application. The screen document decides that
+  text: the address itself, or another value, such as the identifier of an
+  advisory.
+- **The address as parsed.** A link leads to the address as the browser
+  parses it for that check and, where its text is the address, shows that
+  form, which writes every host in ASCII. So a link cannot show one host and
+  lead to another, such as a host that imitates `suse.com` with letters of
+  another script.
 - **Without an address.** An address that is `null`, omitted, empty, or made
   of whitespace only gives no link either: the text of the link shows without
   one, and where the screen shows the address itself, it is an absent value
   (Absent Values).
 - **No address in a text.** The UI turns no address inside a text into a
   link, such as one in a CVE description or in the title of a reference.
-- **The same tab.** A link to another site opens in the same tab, as the
-  browser opens a link: back returns to the screen, whose state is in its URL
+- **The same tab.** A link opens in the same tab, as the browser opens a
+  link: back returns to the screen, whose state is in its URL
   (`docs/screen-map.md`, Browser History), and the browser's own commands open
-  the link in another tab. The other site does not learn the URL of the screen
-  from which the user came, because the UI's responses tell the browser not to
-  send it (`docs/architecture.md`, Security Headers).
-- **Marked.** A link to another site ends with an icon that shows that it
-  leaves Sentinel (`docs/design-system.md`, Buttons and Links), and its
-  accessible name is its text followed by "(another site)".
+  the link in another tab. Following it leaves the page as closing it does:
+  the browser's own prompt asks before input not yet submitted is lost
+  (Confirmation), and a change still in progress shows no outcome, so the
+  data that the screen reads when the user returns shows whether it took
+  effect. The other site does not learn the URL of the screen from which the
+  user came, because the UI's responses tell the browser not to send it
+  (`docs/architecture.md`, Security Headers).
+- **Marked.** A link whose address lies on an origin other than the UI's, a
+  link to another site, ends with an icon that shows that it leaves Sentinel
+  (`docs/design-system.md`, Buttons and Links), and its accessible name is
+  its text followed by "(another site)".
 - **The UI's own origin.** The UI does not interpret an address that the API
   returns: the browser loads it as a new page, also when it lies on the UI's
   own origin, such as a reference to a Ticket of this UI. Such a link leads to
-  Sentinel, so it is not marked as a link to another site.
+  Sentinel, so it has no mark.
 
 ## Loading and Empty States
 
@@ -564,7 +575,8 @@ A confirmation dialog:
 - offers a button named after the action, such as "Revoke API key", and
   "Cancel"; and
 - asks before discarding input "Discard changes?", with "Discard" and "Keep
-  editing". Closing or reloading the page with changed input leaves the
+  editing". Closing or reloading the page, or following a link that the
+  browser loads (Links to Other Sites), with changed input leaves the
   question to the browser's own prompt.
 
 ### Outcome of a Change

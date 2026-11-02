@@ -721,16 +721,15 @@ writes "Confidential" next to it.
   `loader-circle` in place of its icon, or before its label, keeps its label,
   and cannot be pressed (`docs/behaviors.md`, Loading).
 - A link is in `link`. In running text it is underlined; in a table or a list,
-  where it is an identifier or a name, it is underlined under the pointer and
-  on focus.
+  where it is an identifier, a name, or an address, it is underlined under
+  the pointer and on focus.
 - A link to another site (`docs/behaviors.md`, Links to Other Sites) ends
   with `external-link`, 4 px after its text, in `link`, at the size of an
   icon beside that text (Icon Set), such as 14 px in a table. The icon is
   hidden from assistive technologies, because the accessible name of the link
   states that it leads to another site, and it stays on the line of the last
   characters of the text when the text wraps. An address longer than its
-  place breaks or wraps as running text and table cells do (Main Content;
-  Tables).
+  place follows Main Content and Tables.
 
 ### Lists
 
