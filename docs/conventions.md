@@ -15,6 +15,7 @@
   - [Error Codes and Messages](#error-codes-and-messages)
   - [Components and Styling](#components-and-styling)
   - [No Raw HTML Injection](#no-raw-html-injection)
+  - [Links from the API](#links-from-the-api)
   - [Tests](#tests)
   - [End-to-End Tests](#end-to-end-tests)
   - [Checks](#checks)
@@ -207,9 +208,11 @@ that needs it; content of another kind needs a new row first.
   pagination, lives in the route's path and search parameters. A Zod schema
   in the route definition validates the search parameters, and the screen
   reads them through the router's typed hooks.
-- Links use the router's typed paths. React Aria's links, and the components
-  that contain links, navigate through the router, which the root route
-  connects to React Aria.
+- Links between the UI's screens use the router's typed paths: React Aria's
+  links, and the components that contain links, navigate through the router,
+  which the root route connects to React Aria. A link to an address that the
+  API returns, or to an address of another site that the UI composes from a
+  value of the API, follows Links from the API instead.
 
 ### API Access
 
@@ -351,6 +354,27 @@ that needs it; content of another kind needs a new row first.
   production the Content Security Policy with Trusted Types blocks the
   injection of HTML into the page (`docs/architecture.md`, Security Headers).
   Neither replaces this rule.
+
+### Links from the API
+
+- A link to an address that the API returns, or to an address of another
+  site that the UI composes from a value of the API (`docs/behaviors.md`,
+  Links to Other Sites), is built only by one shared component, which
+  applies that section: the check of the address, the mark of a link to
+  another site, and the loading of the address by the browser rather than by
+  the router. The link leads to, and where its text is the address shows,
+  the URL that the check parsed, never the value as received, so that the
+  check and the browser read the same address. A composed address takes the
+  fixed origin that its screen document states, and holds the value of the
+  API, or the part of it that the screen document names, only encoded,
+  within a path segment or as the value of a query parameter. No other code
+  passes a value of the API as the address of a link or of a navigation,
+  such as an `href`, `window.location`, or `window.open`.
+- No code looks for addresses inside a text of the API to turn them into
+  links (`docs/behaviors.md`, Links to Other Sites).
+- The Content Security Policy blocks an address with the scheme `javascript`
+  (`docs/architecture.md`, Security Headers), but not the other schemes, and
+  does not replace this rule.
 
 ### Tests
 
@@ -965,8 +989,9 @@ The UI foundations are written once, before any feature code, and cover:
   definitions (`docs/screen-map.md`)
 - **Cross-cutting behaviors**: session handling, error presentation, the
   presentation of a value of a response enum that the contract of the pinned
-  version does not list (Data Read from the API), loading and empty states,
-  date and time display, confirmations and the outcome of changes,
+  version does not list (Data Read from the API), the links to other sites
+  built from values of the API (Links from the API), loading and empty
+  states, date and time display, confirmations and the outcome of changes,
   accessibility requirements, wording, the representation of a user, and the
   preferences of the browser (`docs/behaviors.md`)
 - **Design system**: the visual language, the themes, the reusable interface

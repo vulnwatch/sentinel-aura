@@ -296,7 +296,9 @@ Graphical elements, minimum 3:1:
 
 A mark drawn in `surface` inside a filled `{tone}-icon` or `danger-solid`
 shape, such as the check of the Resolved status, has the contrast of the same
-pair. The avatar colors are in Palette.
+pair. The icon of a link to another site (Buttons and Links), an icon that
+carries a meaning without a text, has the contrast of the text of its link.
+The avatar colors are in Palette.
 
 ## Type
 
@@ -421,6 +423,7 @@ that the code imports ship.
 | Loading, busy | `loader-circle` |
 | A Ticket status that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
+| A link to another site | `external-link` |
 
 A need that the table does not list takes the Lucide icon that names it best,
 and the change adds its row.
@@ -718,8 +721,15 @@ writes "Confidential" next to it.
   `loader-circle` in place of its icon, or before its label, keeps its label,
   and cannot be pressed (`docs/behaviors.md`, Loading).
 - A link is in `link`. In running text it is underlined; in a table or a list,
-  where it is an identifier or a name, it is underlined under the pointer and
-  on focus.
+  where it is an identifier, a name, or an address, it is underlined under
+  the pointer and on focus.
+- A link to another site (`docs/behaviors.md`, Links to Other Sites) ends
+  with `external-link`, 4 px after its text, in `link`, at the size of an
+  icon beside that text (Icon Set), such as 14 px in a table. The icon is
+  hidden from assistive technologies, because the accessible name of the link
+  states that it leads to another site, and it stays on the line of the last
+  characters of the text when the text wraps. An address longer than its
+  place follows Main Content and Tables.
 
 ### Lists
 

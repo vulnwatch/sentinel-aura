@@ -2,16 +2,16 @@
 
 This document defines the behaviors that every screen of Sentinel Aura shares:
 the session, the preferences of the browser, the presentation of errors and of
-unknown values, the loading and empty states, dates and times, confirmations
-and the outcome of changes, accessibility, wording, and the representation of
-a user. It is a foundation document (`docs/conventions.md`, Foundation
-Documents): every screen follows it, and a screen that needs to depart from
-one of its behaviors changes this document first. A screen document records
-only what its screen adds, such as the error codes that it handles
-specifically (`docs/conventions.md`, Screen Documents). The architecture
-belongs to `docs/architecture.md`, the users, screen map, and roles to
-`docs/screen-map.md`, and the visual presentation of these behaviors to
-`docs/design-system.md`; backend behavior, the API contract, and the
+unknown values, the links to other sites, the loading and empty states, dates
+and times, confirmations and the outcome of changes, accessibility, wording,
+and the representation of a user. It is a foundation document
+(`docs/conventions.md`, Foundation Documents): every screen follows it, and a
+screen that needs to depart from one of its behaviors changes this document
+first. A screen document records only what its screen adds, such as the error
+codes that it handles specifically (`docs/conventions.md`, Screen Documents).
+The architecture belongs to `docs/architecture.md`, the users, screen map, and
+roles to `docs/screen-map.md`, and the visual presentation of these behaviors
+to `docs/design-system.md`; backend behavior, the API contract, and the
 obligations that the contract places on clients belong to Sentinel
 (`README.md`, Specification Boundary).
 
@@ -36,6 +36,7 @@ document that do not take effect yet.
   - [Invalid Search Parameters](#invalid-search-parameters)
   - [Retries and Unconfirmed Changes](#retries-and-unconfirmed-changes)
 - [Unknown Values](#unknown-values)
+- [Links to Other Sites](#links-to-other-sites)
 - [Loading and Empty States](#loading-and-empty-states)
   - [Loading](#loading)
   - [Empty States](#empty-states)
@@ -337,6 +338,64 @@ from the API):
   request anyway; and
 - filters offer only the values that the pinned contract lists.
 
+## Links to Other Sites
+
+Responses of the API carry addresses of other sites, such as those of a
+Ticket's references and IBS requests, of a CVE's KEV catalog entry and
+external advisories, and of the packages and repositories of its affected
+versions. Sentinel accepts a reference only as an `http` or `https` URL and
+composes the links of the IBS requests itself, but passes the other addresses
+on as its sources wrote them, so such a value need not be a web address
+(Sentinel `docs/features/tickets/ticket-references.md`, URL Normalization;
+Sentinel `docs/features/packages/ibs-submission-tracking.md`, List Submission
+Requests; List Release Requests; Sentinel `docs/features/tickets/tickets.md`,
+Shared Sub-Schemas; Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE
+Affected Versions). The UI applies one rule to every address that the API
+returns, whatever Sentinel guarantees for its field:
+
+- **Only a web address becomes a link.** An address becomes a link only when
+  it is an absolute URL whose scheme is `http` or `https`, whatever its
+  letter case, without a user name or password. For any other value, such as
+  a Package URL (`pkg:`) or a value whose scheme is `javascript`, `file`, or
+  that of a desktop application, the text of the link shows as received,
+  without a link, so that the user cannot follow a value that runs code in
+  the UI or starts another application. The screen document decides that
+  text: the address itself, or another value, such as the identifier of an
+  advisory.
+- **The address as parsed.** A link leads to the address as the browser
+  parses it for that check and, where its text is the address, shows that
+  form, which writes every host in ASCII. So a link cannot show one host and
+  lead to another, such as a host that imitates `suse.com` with letters of
+  another script.
+- **Without an address.** An address that is `null`, omitted, empty, or made
+  of whitespace only gives no link either: the text of the link shows without
+  one, and where the screen shows the address itself, it is an absent value
+  (Absent Values).
+- **No address in a text.** The UI turns no address inside a text into a
+  link, such as one in a CVE description or in the title of a reference.
+- **Composed addresses.** A screen document can define an address of another
+  site that the UI composes from a value of the API, with its fixed origin,
+  such as the page of a CVE on NVD from its CVE ID. Such a link follows this
+  section as an address that the API returns does.
+- **The same tab.** A link opens in the same tab, as the browser opens a
+  link: back returns to the screen, whose state is in its URL
+  (`docs/screen-map.md`, Browser History), and the browser's own commands open
+  the link in another tab. Following it leaves the page: the browser's own
+  prompt asks before input not yet submitted is lost (Confirmation), and a
+  change still in progress shows no outcome, so the data that the screen
+  reads when the user returns shows whether it took effect. The other site
+  does not learn the URL of the screen from which the user came, because the
+  UI's responses tell the browser not to send it (`docs/architecture.md`,
+  Security Headers).
+- **Marked.** A link whose address lies on an origin other than the UI's, a
+  link to another site, ends with an icon that shows that it leaves Sentinel
+  (`docs/design-system.md`, Buttons and Links), and its accessible name is
+  its text followed by "(another site)".
+- **The UI's own origin.** The UI does not interpret an address that the API
+  returns: the browser loads it as a new page, also when it lies on the UI's
+  own origin, such as a reference to a Ticket of this UI. Such a link leads to
+  Sentinel, so it has no mark.
+
 ## Loading and Empty States
 
 ### Loading
@@ -520,7 +579,8 @@ A confirmation dialog:
 - offers a button named after the action, such as "Revoke API key", and
   "Cancel"; and
 - asks before discarding input "Discard changes?", with "Discard" and "Keep
-  editing". Closing or reloading the page with changed input leaves the
+  editing". Closing or reloading the page, or following a link that the
+  browser loads (Links to Other Sites), with changed input leaves the
   question to the browser's own prompt.
 
 ### Outcome of a Change
