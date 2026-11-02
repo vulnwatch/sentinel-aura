@@ -457,8 +457,9 @@ that it sits with the icons around it.
 ## Focus and Motion
 
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
-  following its radius, or inside it for a row or a cell of a table (Tables),
-  shown on keyboard focus. No element removes it (`docs/behaviors.md`,
+  following its radius, or inside it for a row or a cell of a table (Tables)
+  and for a menu item (Menus, Popovers, and Tooltips), shown on keyboard
+  focus. No element removes it (`docs/behaviors.md`,
   Accessibility).
 - **Motion:** only loading indicators move: the spinner turns and the progress
   bar runs (Loading). When the browser reports a preference for reduced
@@ -492,8 +493,9 @@ the sidebar, the sidebar scrolls within itself.
   navigation", which its tooltip shows; and
 - below a `border` line, the account button, 44 px high: the signed-in user's
   avatar at the medium size, the display name at weight 500, cut with an
-  ellipsis when it is longer than its place, and `chevrons-up-down` at 16 px
-  in `fg-muted`. It opens the account menu.
+  ellipsis when it is longer than its place, followed by its labels, as
+  Representation of a User shows them, and `chevrons-up-down` at 16 px in
+  `fg-muted`. It opens the account menu.
 
 **Collapsed, 56 px wide,** the same parts, centered, as icon buttons of 40 px:
 the product name as the Sentinel mark at 22 px, named "Sentinel"; the search as
@@ -515,12 +517,18 @@ The account menu (`docs/screen-map.md`, Sidebar) opens upward from the
 account button, 256 px wide (Menus, Popovers, and Tooltips). It starts with
 the signed-in user: the avatar at the medium size, the display name at
 weight 600, and, when it differs from the display name, the username as
-Representation of a User shows it, such as `@jdoe`. Its items follow,
-separated by `border` lines into three groups: Profile, API keys, and
-Identity audit log; the section Theme (`docs/behaviors.md`, Preferences),
-with its heading in `text-12`, weight 500, `fg-muted`, and the items System,
-Light, and Dark, of which the selected one ends with `check`; and Sign out,
-an ordinary item.
+Representation of a User shows it, such as `@jdoe`, then the labels. The name
+and the username wrap where the menu is too narrow, instead of ending with an
+ellipsis, so that the menu shows whole the name that the account button
+cuts. Its items follow, below a `border` line and separated by `border` lines
+into three groups: Profile, API keys, and Identity audit log; the section
+Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
+weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
+selected one ends with `check`; and Sign out, an ordinary item. While Sign
+out is in progress, the menu stays open and the item shows `loader-circle` in
+place of its icon (`docs/behaviors.md`, Loading); when it fails, the menu
+closes and the message area shows its error (`docs/behaviors.md`, Where
+Errors Appear).
 
 ### Main Content
 
@@ -535,7 +543,9 @@ an ordinary item.
   appears is always in view. It takes at most a third of the window's height,
   beyond which its messages scroll within it, and the content scrolls so that
   the element with the focus never lies under it (`docs/behaviors.md`,
-  Accessibility).
+  Accessibility). While it holds a message, the area is on `canvas`, with
+  8 px of space above and below its messages, and the heading follows 16 px
+  below the last message; without one, it takes no room.
 - The heading row holds the level-one heading of the screen in `text-20`,
   weight 600, then what accompanies it, such as the attention summary, and
   the main action of the screen at its end. It wraps when the width runs
@@ -874,7 +884,8 @@ A list screen, such as the Ticket list, shows from top to bottom:
 - A menu or a popover is on `surface`, with a `border` line, an 8 px radius,
   a shadow, and 4 px of padding. A menu item is 36 px high with a 6 px radius
   and 10 px of side padding, its icon at 16 px in `fg-muted` before its label
-  in `text-15`, and `surface-hover` under the pointer and on focus. The
+  in `text-15`, and `surface-hover` under the pointer and on focus, with the
+  focus ring inside it on keyboard focus (Focus and Motion). The
   heading of a section is in `text-12`, weight 500, `fg-muted`; groups are
   separated by `border` lines; and an item of a single selection ends with
   `check` at 16 px when it is selected.
@@ -900,7 +911,7 @@ and how the labels look.
 - **Full form:** the avatar, 6 px of space, and the display name in the
   surrounding text's style; where the username follows, as `@` and the
   username (`docs/behaviors.md`, Representation of a User), it comes after a
-  space, in `fg-muted`. The `@` sets it apart from the name without relying
+  space, in `fg-muted` at weight 400. The `@` sets it apart from the name without relying
   on color, also for an inactive user, whose name is in `fg-muted` too.
 - **Inactive and Bot:** the label follows the name, or the username where it
   follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a

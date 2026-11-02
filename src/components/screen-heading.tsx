@@ -1,6 +1,10 @@
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import {
+  createContext,
+  use,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   type ReactNode,
   type RefObject,
@@ -16,6 +20,76 @@ const PRODUCT_NAME = "Sentinel";
 // action).
 export function focusScreenHeading() {
   document.querySelector<HTMLElement>("h1")?.focus();
+}
+
+// What a screen's heading tells the root of the screens and asks it
+// (FocusAfterNavigation).
+interface NavigationFocus {
+  // Tells that a screen shows, at the path to which the router leads.
+  screenShown: () => void;
+  // Whether the heading that appears takes the focus, because the screen
+  // changed while it showed no heading yet. Only the first heading that asks
+  // takes it.
+  takesFocus: () => boolean;
+}
+
+const NavigationFocusContext = createContext<NavigationFocus | null>(null);
+
+interface FocusAfterNavigationProps {
+  children: ReactNode;
+}
+
+// When the screen changes, the focus moves to its heading (docs/behaviors.md,
+// Accessibility, Focus after a navigation). The screen is the path of the
+// URL that the router has shown: another search of the same screen, such as
+// another page of a list, leaves the focus where it was. So does a screen
+// that follows a path at which no screen showed, as the page loads, where the
+// browser starts the focus at the top of the page, also when the UI leads at
+// once from the URL that the page loaded to Sign in.
+export function FocusAfterNavigation({ children }: FocusAfterNavigationProps) {
+  const router = useRouter();
+  // The paths at which a screen has shown its heading since the router last
+  // showed a path, the one that it shows included.
+  const shownPaths = useRef(new Set<string>());
+  const awaitsHeading = useRef(false);
+  const path = useRouterState({
+    select: (state) => state.resolvedLocation?.pathname,
+  });
+  const previousPath = useRef(path);
+  useLayoutEffect(() => {
+    const previous = previousPath.current;
+    if (path === undefined || path === previous) {
+      return;
+    }
+    previousPath.current = path;
+    const screenShown =
+      previous !== undefined && shownPaths.current.has(previous);
+    shownPaths.current = new Set(shownPaths.current.has(path) ? [path] : []);
+    if (!screenShown) {
+      return;
+    }
+    const heading = document.querySelector<HTMLElement>("h1");
+    awaitsHeading.current = heading === null;
+    heading?.focus();
+  }, [path]);
+  const focus = useMemo<NavigationFocus>(
+    () => ({
+      // The router shows the screen of a path before it records that it has
+      // shown the path, so the screen counts for the path to which it leads.
+      screenShown: () => {
+        shownPaths.current.add(router.state.location.pathname);
+      },
+      takesFocus: () => {
+        const takes = awaitsHeading.current;
+        awaitsHeading.current = false;
+        return takes;
+      },
+    }),
+    [router],
+  );
+  return (
+    <NavigationFocusContext value={focus}>{children}</NavigationFocusContext>
+  );
 }
 
 // When the element leaves the page while it holds the focus, such as Try
@@ -59,10 +133,18 @@ interface ScreenHeadingProps {
 // The level-one heading of a screen (docs/design-system.md, Main Content),
 // which also titles the page: the heading followed by "– Sentinel". The
 // focus can move to it (focusScreenHeading), and passes to the heading that
-// replaces it.
+// replaces it. It takes the focus as it appears when the screen changed
+// before it (FocusAfterNavigation).
 export function ScreenHeading({ children }: ScreenHeadingProps) {
   const ref = useRef<HTMLHeadingElement>(null);
   useFocusHeadingOnRemoval(ref);
+  const focus = use(NavigationFocusContext);
+  useLayoutEffect(() => {
+    focus?.screenShown();
+    if (focus?.takesFocus() === true) {
+      ref.current?.focus();
+    }
+  }, [focus]);
   useEffect(() => {
     document.title = `${children} – ${PRODUCT_NAME}`;
     return () => {

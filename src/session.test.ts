@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+  forgetSession,
   hasSessionRecord,
   rememberSession,
   RETURN_URL_KEY,
@@ -133,5 +134,25 @@ describe("the session record", () => {
       rememberSession();
     }).not.toThrow();
     expect(hasSessionRecord()).toBe(false);
+  });
+});
+
+describe("after a sign-out", () => {
+  test("the session record and the saved URL are gone", () => {
+    rememberSession();
+    saveReturnUrl("/cves");
+
+    forgetSession();
+
+    expect(hasSessionRecord()).toBe(false);
+    expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBeNull();
+  });
+
+  test("nothing fails while the browser blocks the storage", () => {
+    blockStorage();
+
+    expect(() => {
+      forgetSession();
+    }).not.toThrow();
   });
 });

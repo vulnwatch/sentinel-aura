@@ -1,0 +1,246 @@
+import {
+  Check,
+  ChevronsUpDown,
+  KeyRound,
+  LoaderCircle,
+  LogOut,
+  Monitor,
+  Moon,
+  ScrollText,
+  Sun,
+  User as UserIcon,
+  type LucideIcon,
+} from "lucide-react";
+import { useState, type ReactNode } from "react";
+import {
+  Button as AriaButton,
+  Header,
+  Menu,
+  MenuItem,
+  MenuSection,
+  MenuTrigger,
+  Popover,
+  Separator,
+  type MenuItemProps,
+  type Selection,
+} from "react-aria-components";
+import { isRequestFailure, presentFailure } from "../api/errors";
+import type { CurrentUserData } from "../api/generated/model";
+import { usePreference } from "../preferences";
+import { useSignOut } from "../session-gate";
+import { themePreference, type ThemePreference } from "../theme";
+import { Avatar } from "./avatar";
+import { FOCUS_RING } from "./focus-ring";
+import { useShowMessage } from "./message-area";
+import { Tooltip } from "./tooltip";
+import { compactName, User } from "./user";
+
+// The account button of the sidebar and the account menu that it opens
+// (docs/screen-map.md, Sidebar; docs/design-system.md, Sidebar; Account
+// Menu): the signed-in user, the screens of the user's own account, the
+// theme, and Sign out.
+
+// The choices of the theme, in the order of the menu (docs/behaviors.md,
+// Preferences).
+const THEMES: readonly {
+  id: ThemePreference;
+  name: string;
+  icon: LucideIcon;
+}[] = [
+  { id: "system", name: "System", icon: Monitor },
+  { id: "light", name: "Light", icon: Sun },
+  { id: "dark", name: "Dark", icon: Moon },
+];
+
+function isThemePreference(key: unknown): key is ThemePreference {
+  return THEMES.some(({ id }) => id === key);
+}
+
+// The classes of the parts of the menu (docs/design-system.md, Menus,
+// Popovers, and Tooltips). A menu item shows the focus with surface-hover and,
+// on keyboard focus, the focus ring inside it.
+const ITEM =
+  "flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 text-15 outline-none data-focused:bg-surface-hover data-hovered:bg-surface-hover data-focus-visible:outline-2 data-focus-visible:-outline-offset-2 data-focus-visible:outline-focus";
+const SEPARATOR = "-mx-1 my-1 border-t border-border";
+
+// Applies the theme that the user selects, in every open tab.
+function selectTheme(keys: Selection) {
+  if (keys === "all") {
+    return;
+  }
+  const [key] = keys;
+  if (isThemePreference(key)) {
+    themePreference.set(key);
+  }
+}
+
+interface ItemProps extends Omit<MenuItemProps, "className" | "children"> {
+  icon: LucideIcon;
+  // Whether the change that the item started is in progress: its icon gives
+  // way to loader-circle.
+  busy?: boolean;
+  children: string;
+}
+
+// An item of the account menu: its icon at 16 px in fg-muted before its
+// label, and check at its end when it is the selected item of a single
+// selection.
+function Item({ icon: Icon, busy = false, children, ...props }: ItemProps) {
+  return (
+    <MenuItem {...props} textValue={children} className={ITEM}>
+      {({ isSelected }) => (
+        <>
+          {busy ? (
+            <LoaderCircle
+              aria-hidden
+              className="size-4 shrink-0 animate-spin text-fg-muted motion-reduce:animate-none"
+            />
+          ) : (
+            <Icon aria-hidden className="size-4 shrink-0 text-fg-muted" />
+          )}
+          <span className="min-w-0 flex-1">{children}</span>
+          {isSelected && <Check aria-hidden className="size-4 shrink-0" />}
+        </>
+      )}
+    </MenuItem>
+  );
+}
+
+interface AccountTriggerProps {
+  user: CurrentUserData;
+  compact: boolean;
+}
+
+// The account button: the avatar at the medium size, the display name, cut
+// with an ellipsis when it is longer than its place, with its labels, and
+// chevrons-up-down; in the collapsed sidebar, the avatar alone, the compact
+// form of the user, named by the compact name, which its tooltip shows
+// (docs/behaviors.md, Representation of a User).
+function AccountTrigger({ user, compact }: AccountTriggerProps): ReactNode {
+  if (compact) {
+    const name = compactName(user);
+    return (
+      <Tooltip text={name} placement="end">
+        <AriaButton
+          aria-label={name}
+          className={`flex size-10 items-center justify-center rounded-md data-hovered:bg-sidebar-active ${FOCUS_RING}`}
+        >
+          <Avatar user={user} size="medium" />
+        </AriaButton>
+      </Tooltip>
+    );
+  }
+  return (
+    <AriaButton
+      className={`flex h-11 w-full items-center gap-2 rounded-md px-1.5 text-start font-medium data-hovered:bg-sidebar-active ${FOCUS_RING}`}
+    >
+      <span className="flex min-w-0 flex-1">
+        <User user={user} size="medium" />
+      </span>
+      <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-fg-muted" />
+    </AriaButton>
+  );
+}
+
+interface AccountMenuProps {
+  user: CurrentUserData;
+  // Whether the sidebar is collapsed, so that the button shows the avatar
+  // alone.
+  compact: boolean;
+}
+
+// The account button, which opens the account menu upward, 256 px wide, named
+// by the button. The menu starts with the signed-in user, whose name and username wrap rather
+// than end with an ellipsis, so that it shows whole the name that the button
+// cuts. Its items follow in three groups: the screens of the user's own
+// account; the theme, which applies at once in every open tab; and Sign out,
+// which asks for no confirmation and stays in the open menu, busy, until it
+// ends. When it fails, the menu closes and the message area shows the message
+// of its status (docs/behaviors.md, Sign-out; Default Presentation by
+// Status).
+export function AccountMenu({ user, compact }: AccountMenuProps) {
+  const showMessage = useShowMessage();
+  const theme = usePreference(themePreference);
+  const [isOpen, setOpen] = useState(false);
+  // A failure of the UI itself, which the router shows (src/router.ts).
+  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
+  const signOut = useSignOut((failure) => {
+    setOpen(false);
+    if (!isRequestFailure(failure)) {
+      setUiFailure({ error: failure });
+      return;
+    }
+    const presentation = presentFailure(failure, "session");
+    if (presentation !== undefined) {
+      showMessage({
+        tone: "danger",
+        text: presentation.message,
+        reference: presentation.reference,
+      });
+    }
+  });
+  if (uiFailure !== undefined) {
+    throw uiFailure.error;
+  }
+
+  return (
+    <MenuTrigger isOpen={isOpen} onOpenChange={setOpen}>
+      <AccountTrigger user={user} compact={compact} />
+      <Popover
+        placement="top start"
+        offset={4}
+        className="w-64 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
+      >
+        <div className="px-2.5 py-2 font-semibold">
+          <User user={user} size="medium" withUsername wrap />
+        </div>
+        <div className={SEPARATOR} />
+        <Menu className="outline-none">
+          <MenuSection>
+            <Item id="profile" icon={UserIcon} href="/account">
+              Profile
+            </Item>
+            <Item id="api-keys" icon={KeyRound} href="/account/api-keys">
+              API keys
+            </Item>
+            <Item
+              id="identity-audit-log"
+              icon={ScrollText}
+              href="/account/identity-audit-log"
+            >
+              Identity audit log
+            </Item>
+          </MenuSection>
+          <Separator className={SEPARATOR} />
+          <MenuSection
+            selectionMode="single"
+            disallowEmptySelection
+            selectedKeys={[theme]}
+            onSelectionChange={selectTheme}
+          >
+            <Header className="px-2.5 pt-1 pb-0.5 text-12 font-medium text-fg-muted">
+              Theme
+            </Header>
+            {THEMES.map(({ id, name, icon }) => (
+              <Item key={id} id={id} icon={icon}>
+                {name}
+              </Item>
+            ))}
+          </MenuSection>
+          <Separator className={SEPARATOR} />
+          <MenuSection>
+            <Item
+              id="sign-out"
+              icon={LogOut}
+              busy={signOut.busy}
+              shouldCloseOnSelect={false}
+              onAction={signOut.start}
+            >
+              Sign out
+            </Item>
+          </MenuSection>
+        </Menu>
+      </Popover>
+    </MenuTrigger>
+  );
+}

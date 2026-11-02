@@ -52,29 +52,33 @@ interface UserProps {
   // and the username in fg-muted, where users must be told apart exactly,
   // such as in a user picker.
   withUsername?: boolean;
+  // Whether the name, with its username, wraps where the place is too
+  // narrow, instead of ending with an ellipsis.
+  wrap?: boolean;
 }
 
 // A user in the full form: the avatar, then the display name in the style of
-// the surrounding text, the username when asked, and the labels Bot, then
-// Inactive. An inactive user's name is in fg-muted, and the @ sets its
-// username apart from it. Where the place is too narrow, only the name, with
-// its username, ends with an ellipsis, and assistive technologies read it
-// whole.
+// the surrounding text, the username when asked, at weight 400, and the labels
+// Bot, then Inactive. An inactive user's name is in fg-muted, and the @ sets
+// its username apart from it. Where the place is too narrow, only the name,
+// with its username, ends with an ellipsis, and assistive technologies read
+// it whole, unless it wraps.
 export function User({
   user,
   size = "small",
   withUsername = false,
+  wrap = false,
 }: UserProps) {
   const name = displayName(user);
   return (
     <span className="inline-flex max-w-full items-center gap-1.5 align-middle">
       <Avatar user={user} size={size} />
       <span
-        className={`min-w-0 truncate ${user.active ? "" : "text-fg-muted"}`}
+        className={`min-w-0 ${wrap ? "wrap-anywhere" : "truncate"} ${user.active ? "" : "text-fg-muted"}`}
       >
         {name}
         {withUsername && user.username !== name && (
-          <span className="text-fg-muted"> @{user.username}</span>
+          <span className="font-normal text-fg-muted"> @{user.username}</span>
         )}
       </span>
       {user.bot && <Label>Bot</Label>}

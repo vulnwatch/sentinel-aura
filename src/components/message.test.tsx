@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { Message, type MessageTone } from "./message";
@@ -74,4 +74,35 @@ test("shows no reference without a request identifier", async () => {
     .element(screen.getByText("This couldn't be updated."))
     .toBeVisible();
   expect(screen.getByText(/Reference/).query()).toBeNull();
+});
+
+test("ends with Dismiss, a target of 24 px, when it can be dismissed", async () => {
+  const dismiss = vi.fn();
+  const screen = await render(
+    <Message tone="danger" onDismiss={dismiss}>
+      Sentinel isn't available right now.
+    </Message>,
+  );
+  const button = screen.getByRole("button", { name: "Dismiss" });
+  await expect.element(button).toBeVisible();
+  const box = button.element().getBoundingClientRect();
+  const text = screen.getByText("Sentinel isn't available right now.");
+
+  expect([box.width, box.height]).toEqual([24, 24]);
+  expect(box.left).toBeGreaterThan(
+    text.element().getBoundingClientRect().right,
+  );
+  await button.click();
+  expect(dismiss).toHaveBeenCalledTimes(1);
+});
+
+test("has no Dismiss unless it can be dismissed", async () => {
+  const screen = await render(
+    <Message tone="danger">Sentinel isn't available right now.</Message>,
+  );
+
+  await expect
+    .element(screen.getByText("Sentinel isn't available right now."))
+    .toBeVisible();
+  expect(screen.getByRole("button").query()).toBeNull();
 });

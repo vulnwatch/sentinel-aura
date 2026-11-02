@@ -9,10 +9,11 @@ interface UiFailureProps {
 }
 
 // A failure of the UI itself, such as an error while it shows data, in place
-// of the content of the screen (docs/behaviors.md, Default Presentation by
-// Status). When the failure removed the element that held the focus, such as
-// the control that the user had just used, the focus moves to its heading
-// (docs/behaviors.md, Accessibility, Focus after an action).
+// of the content of the screen, in the frame of the screen (docs/behaviors.md,
+// Default Presentation by Status; src/routes/root.tsx). When the failure
+// removed the element that held the focus, such as the control that the user
+// had just used, the focus moves to its heading (docs/behaviors.md,
+// Accessibility, Focus after an action).
 export function UiFailure({ onReload }: UiFailureProps) {
   useEffect(() => {
     if (document.activeElement === document.body) {
@@ -20,13 +21,11 @@ export function UiFailure({ onReload }: UiFailureProps) {
     }
   }, []);
   return (
-    <main className="p-6">
-      <ErrorContent
-        heading="Something went wrong"
-        message="This page couldn't be shown. Reload the page to try again."
-        action={<Button onPress={onReload}>Reload page</Button>}
-      />
-    </main>
+    <ErrorContent
+      heading="Something went wrong"
+      message="This page couldn't be shown. Reload the page to try again."
+      action={<Button onPress={onReload}>Reload page</Button>}
+    />
   );
 }
 

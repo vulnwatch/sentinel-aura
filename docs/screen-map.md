@@ -196,9 +196,13 @@ entry, the search, or an item of the account menu, closes it, and the focus
 follows the navigation (`docs/behaviors.md`, Accessibility). Opening it
 changes no preference, and a window that grows past that width closes it.
 
-The Tickets entry opens the Ticket list in its New view for a user who holds
-the `vulnerability_analyst` role (Roles), and in its All view for every other
-user. The Administration entry opens Users for a user who holds
+An entry is marked as current while the path of the URL is the path under
+which every screen of its area lies (Areas and Screens), `/tickets`, `/cves`,
+`/packages`, `/products`, `/my-packages`, `/data-sources`, or `/admin`, or a
+path under it, such as Tickets at `/tickets/SNTL-42`. The Home, Search
+results, and the screens of Account belong to no entry. The Tickets entry opens the Ticket list in its New view for a user who
+holds the `vulnerability_analyst` role (Roles), and in its All view for every
+other user. The Administration entry opens Users for a user who holds
 `manage_users`, and Settings for every other user who sees it; from each of
 its screens, the others that the user can use are one step away.
 

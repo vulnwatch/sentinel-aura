@@ -30,6 +30,13 @@ or the landing, as when it learns that a session exists
 - The UI leads to Sign in from every screen that requires a session when the
   browser has none, in place of that screen in the browser history
   (`docs/behaviors.md`, Session State; `docs/screen-map.md`, Browser History).
+  Sign out leads to it in the same way, without the information of an expired
+  session and without a saved URL (`docs/behaviors.md`, Sign-out). Either
+  moves the focus to the heading "Sign in", unless the UI leads there at once
+  from the URL that the page loaded (`docs/behaviors.md`, Accessibility, Focus
+  after a navigation).
+- Sign in has no sidebar: it shows in the column of the Sign In Page
+  (`docs/screen-map.md`, Sidebar; `docs/design-system.md`, Sign In Page).
 - After the sign-in, it opens the saved URL, or the landing, in place of Sign
   in in the browser history.
 - The product name above the card is not a link: without a session, the
@@ -96,13 +103,13 @@ Login). It asks for no confirmation.
 
 - `docs/behaviors.md` — Session; Errors; Loading; Accessibility; Wording
 - `docs/design-system.md` — Sign In Page; Buttons and Links; Forms; Messages
-- `docs/screen-map.md` — Areas and Screens; Browser History; Landing;
-  Contract URLs
+- `docs/screen-map.md` — Areas and Screens; Sidebar; Browser History;
+  Landing; Contract URLs
 - `docs/architecture.md` — Session Cookie
 - Sentinel `docs/features/identity/local-authentication.md` — Login; Account
   lockout; Login Page
 - Sentinel `docs/features/identity/authentication.md` — Session cookie;
-  Frontend session behavior; Get Current User
+  Frontend session behavior; Get Current User; Logout
 - Sentinel `docs/features/identity/sso-authentication.md` — Status
 - Sentinel `docs/api-spec.md` — Published Input Constraints; Response Format;
   Global Responses

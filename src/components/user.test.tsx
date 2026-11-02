@@ -159,6 +159,38 @@ test("cuts only the name, with its username, when the place is too narrow, and k
   }
 });
 
+test("wraps the name, with its username, when asked, instead of cutting it", async () => {
+  const longName = "Alice Fictional Smith-Wilson-Brown";
+  const screen = await render(
+    <section aria-label="Narrow place" className="w-40">
+      <User user={{ ...SCANNER, full_name: longName }} withUsername wrap />
+    </section>,
+  );
+  const place = screen.getByRole("region").element().getBoundingClientRect();
+  const name = screen.getByText(`${longName} @security-scanner`).element();
+
+  await expect.element(screen.getByText("Bot")).toBeVisible();
+  expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+  expect(name.getBoundingClientRect().height).toBeGreaterThan(24);
+  expect(name.getBoundingClientRect().right).toBeLessThanOrEqual(place.right);
+});
+
+test("shows the username at weight 400 after a name at another weight", async () => {
+  const screen = await render(
+    <p className="font-semibold">
+      <User user={ALICE} withUsername />
+    </p>,
+  );
+  const username = screen.getByText("@asmith", { exact: true });
+
+  await expect.element(username).toBeVisible();
+  expect(getComputedStyle(username.element()).fontWeight).toBe("400");
+  expect(
+    getComputedStyle(screen.getByText("Alice Smith @asmith").element())
+      .fontWeight,
+  ).toBe("600");
+});
+
 // The small avatar is as high as the line of the name, so only the medium
 // and the large sizes show in the height; a small avatar by default does
 // not show a medium one.

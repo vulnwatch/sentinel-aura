@@ -5,6 +5,7 @@ import {
   parseThemePreference,
   readThemePreference,
   THEME_STORAGE_KEY,
+  themePreference,
 } from "./theme";
 
 const root = document.documentElement;
@@ -103,6 +104,21 @@ test("ignores the changes of other keys", () => {
       new StorageEvent("storage", { key: "another-key", newValue: "x" }),
     );
     expect(root.dataset.theme).toBeUndefined();
+  } finally {
+    stop();
+  }
+});
+
+test("applies and stores a preference set in this tab at once", () => {
+  const stop = followThemePreference();
+  try {
+    themePreference.set("dark");
+    expect(root.dataset.theme).toBe("dark");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+
+    themePreference.set("system");
+    expect(root.dataset.theme).toBeUndefined();
+    expect(readThemePreference()).toBe("system");
   } finally {
     stop();
   }

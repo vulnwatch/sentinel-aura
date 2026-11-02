@@ -1,5 +1,6 @@
-import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react";
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { IconButton } from "./icon-button";
 import { Reference } from "./reference";
 
 // The tone of a message (docs/design-system.md, Messages): success for a
@@ -26,19 +27,30 @@ interface MessageProps {
   children: ReactNode;
   // The request identifier of an error, which follows on its own line.
   reference?: string | undefined;
+  // Removes the message, in the message area, which then ends it with
+  // Dismiss.
+  onDismiss?: (() => void) | undefined;
 }
 
 // A message in the soft background of its tone, which starts with the icon of
 // its tone (docs/design-system.md, Messages; Icons by Need).
-export function Message({ tone, children, reference }: MessageProps) {
+export function Message({
+  tone,
+  children,
+  reference,
+  onDismiss,
+}: MessageProps) {
   const { Icon, classes } = TONES[tone];
   return (
     <div className={`flex gap-2 rounded-md px-3 py-2 text-15 ${classes}`}>
       <Icon aria-hidden className="mt-0.75 size-4.5 shrink-0" />
-      <div>
+      <div className="min-w-0 flex-1">
         <p>{children}</p>
         {reference !== undefined && <Reference requestId={reference} />}
       </div>
+      {onDismiss !== undefined && (
+        <IconButton label="Dismiss" icon={X} size="small" onPress={onDismiss} />
+      )}
     </div>
   );
 }

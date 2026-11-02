@@ -166,16 +166,18 @@ rules; review enforces the rest.
 | `src/main.tsx` | The entry point: global configuration, then the mounting of the application |
 | `src/zod.ts` | Zod's global configuration, which `src/main.tsx` imports first |
 | `src/styles.css` | The stylesheet: the Tailwind CSS entry point, with the tokens, the themes, and the font of `docs/design-system.md` |
+| `src/preferences.ts` | The preferences of the browser in the origin's local storage (`docs/behaviors.md`, Preferences): how a stored value reads and changes in every open tab, and the preference of the sidebar |
 | `src/theme.ts` | The theme preference (`docs/behaviors.md`, Preferences): how a stored value reads, and the theme that the page shows while it runs |
 | `src/theme-script.ts` | The script that the entry document runs in its head, which applies the stored theme before the page renders: a classic script, so it imports and exports nothing |
 | `src/favicon.svg` | The favicon, which the entry document links: the Sentinel mark in its own colors (`docs/design-system.md`, Sentinel Mark) |
 | `src/app.tsx` | The providers that every screen shares |
 | `src/query-client.ts` | The query client, with the defaults of every read and change (`docs/behaviors.md`, Retries and Unconfirmed Changes; Loading) |
-| `src/session.ts` | What the UI keeps of the session in the origin's browser storage: the session record, and the saved URL with its check (`docs/behaviors.md`, Return After Sign-in; Session Expiration Message) |
-| `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, and the return from Sign in (`docs/behaviors.md`, Session) |
+| `src/session.ts` | What the UI keeps of the session in the origin's browser storage: the session record, and the saved URL with its check, both forgotten after a sign-out (`docs/behaviors.md`, Return After Sign-in; Session Expiration Message; Sign-out) |
+| `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, the return from Sign in, and Sign out (`docs/behaviors.md`, Session) |
 | `src/avatar.ts` | The pattern and the color of the avatar (`docs/design-system.md`, Avatar, Definition, Version 1): the SHA-256 digest of a user's `id`, and the cells and the index of the color in the Palette that it selects |
 | `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
 | `src/routes/` | One module per route: its definition and its page component |
+| `src/routes/unbuilt.ts` | The routes of the screens of `docs/screen-map.md` (Areas and Screens) to which the sidebar and the account menu lead before those screens are built: each shows Not found, and the change that builds a screen replaces its route |
 | `src/components/` | The components that several routes share |
 | `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |

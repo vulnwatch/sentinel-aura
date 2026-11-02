@@ -81,7 +81,8 @@ document that do not take effect yet.
   The UI then discards all the data that it read from the API, so that the
   next user of the browser cannot see it, and leads to Sign in. On a path that
   requires no session, Sign in or `/auth/callback`, a `401` discards nothing
-  and leads nowhere.
+  and leads nowhere, and so does a `401` while a sign-out is in progress,
+  whose outcome decides (Sign-out).
 - A navigation that the session forces, to Sign in or to the landing of
   another user (The Signed-in User), asks nothing and discards the input not
   yet submitted.
@@ -157,7 +158,8 @@ document that do not take effect yet.
 - On `204`, or on `401`, which means that no valid session remained, the UI
   removes the session record (Session Expiration Message), discards all the
   data that it read from the API, and opens Sign in without a message and
-  without a saved URL.
+  without a saved URL, also when another request receives a `401` while the
+  sign-out is in progress (Session State).
 - On any other outcome, such as a network failure or a `5xx`, the user stays
   signed in: the screen stays as it was and shows the message of the status
   (Default Presentation by Status).
@@ -559,7 +561,10 @@ also meets these requirements, which they cannot check:
   "– Sentinel", such as "SNTL-42 – Sentinel", "Tickets – Sentinel", or "Not
   found – Sentinel" (2.4.2 Page Titled).
 - **Focus after a navigation.** When the screen changes, the focus moves to
-  its level-one heading. A heading that depends on the screen's data names the
+  its level-one heading. The first screen that the page shows as it loads
+  leaves the focus where the browser starts it, at the top of the page, also
+  when the UI leads to it at once from the URL that the page loaded, such as
+  to Sign in without a session (Session State). A heading that depends on the screen's data names the
   kind of screen, such as "Fetcher run", until the data arrives, then takes
   the name from the data without moving the focus, or the name of the error
   when the read fails. A change of the state that a screen keeps in its URL,
