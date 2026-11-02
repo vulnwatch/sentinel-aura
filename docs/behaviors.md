@@ -688,12 +688,12 @@ complete profile and its manager, and the signed-in user alike: `id`,
 - **Full form.** The avatar followed by the display name. The avatar is
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the
-  access grants of a Ticket, Administration, or the account menu, the
-  username follows the display name, as `@` and the username, such as
-  `@jdoe`, before the labels. It shows wherever it is shown, also when it is
-  the display name, so that it is always found in the same place and never
-  taken for a name; the account menu shows it on a line of its own
-  (`docs/design-system.md`, Account Menu).
+  access grants of a Ticket, or Administration, the username follows the
+  display name, as `@` and the username, such as `@jdoe`, before the labels;
+  the account menu shows it on a line of its own, below the name and its
+  labels (`docs/design-system.md`, Account Menu). In these places it shows
+  also when it is the display name, so that it is always found in the same
+  place and never taken for a name.
 - **Compact form.** The avatar alone, in a link, a button, or another
   interactive element without room for the name. The display name is its
   accessible name and shows in a tooltip on hover and on keyboard focus. Every

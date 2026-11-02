@@ -482,7 +482,10 @@ the sidebar, the sidebar scrolls within itself.
 the avatar, are centered on one vertical axis, 28 px from its left edge, the
 middle of the collapsed sidebar, and every part keeps its height and place in
 both states. Collapsing or expanding the sidebar only changes its width and
-hides or shows the names, so that nothing that stays moves.
+hides or shows the names, so that nothing that stays moves. The axis decides
+where each picture sits inside its part, before the spacing grid (Spacing and
+Sizes): an 18 px icon sits 11 px into its entry, and the 20 px mark 10 px
+into its link.
 
 **Expanded, 216 px wide,** from top to bottom:
 
@@ -505,16 +508,17 @@ hides or shows the names, so that nothing that stays moves.
   as Representation of a User shows them, and `chevrons-up-down` at 16 px in
   `fg-muted`. It opens the account menu.
 
-**Collapsed, 56 px wide,** the same parts at the same places, each narrowed to
-40 px around the axis, without their names: the product name as the Sentinel
-mark, named "Sentinel"; the search as the `search` button, 36 px high, which
-opens the search field in a popover beside the sidebar; each entry as its
-icon, named by its entry, the current one with the `sidebar-active`
-background, its icon in `link`, and the 3 px bar along its left edge; the
-expand button, `panel-left-open`, named "Expand navigation"; and the account
-button as the avatar alone, the compact form of the user. Each shows its name
-in a tooltip to its right, on hover and on keyboard focus; in the expanded
-sidebar, where the names show, only the collapse button has a tooltip.
+**Collapsed, 56 px wide,** the same parts at the same places, each row
+narrowed to 40 px around the axis, without their names, while the toggle
+keeps its 32 px target: the product name as the Sentinel mark, named
+"Sentinel"; the search as the `search` button, 36 px high, which opens the
+search field in a popover beside the sidebar; each entry as its icon, named
+by its entry, the current one with the `sidebar-active` background, its icon
+in `link`, and the 3 px bar along its left edge; the expand button,
+`panel-left-open`, named "Expand navigation"; and the account button as the
+avatar alone, the compact form of the user. Each shows its name in a tooltip
+to its right, on hover and on keyboard focus; in the expanded sidebar, where
+the names show, only the collapse button has a tooltip.
 
 **Over the content:** below the breakpoint, the expand button opens the
 expanded sidebar over the content, on `overlay`, with a shadow; its collapse

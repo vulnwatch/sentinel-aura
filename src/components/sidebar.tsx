@@ -256,15 +256,15 @@ interface OpenedAt {
 }
 
 // The sidebar, expanded or collapsed as the user prefers where the window is
-// wide enough (docs/behaviors.md, Preferences). Below that width it is always collapsed, and
-// its expand button opens the expanded sidebar over the content, as a dialog
-// that takes the focus. Escape, its close button, or a click outside it
-// closes it and returns the focus to the expand button, and so does a new
-// message, such as the failure of Sign out, so that the message shows. A
-// navigation from it closes it, also to the URL that shows, and the focus
-// follows the navigation (FocusAfterNavigation). Opening it changes no
-// preference, and a window that grows past that width closes it, with the
-// focus on the screen's heading.
+// wide enough (docs/behaviors.md, Preferences). Below that width it is always
+// collapsed, and its expand button opens the expanded sidebar over the
+// content, as a dialog that takes the focus. Escape, its close button, or a
+// click outside it closes it and returns the focus to the expand button, and
+// so does a new message, such as the failure of Sign out, so that the
+// message shows. A navigation from it closes it, also to the URL that shows,
+// and the focus follows the navigation (FocusAfterNavigation). Opening it
+// changes no preference, and a window that grows past that width closes it,
+// with the focus on the screen's heading.
 export function Sidebar({ user, wide, expanded }: SidebarProps) {
   const href = useRouterState({ select: (state) => state.location.href });
   const message = useNewestMessage();

@@ -104,8 +104,9 @@ interface StackedUserProps {
 // A user with the username on a line of its own, as the account menu shows
 // the signed-in user (docs/design-system.md, Account Menu): the avatar, then
 // the display name in the style of the surrounding text with its labels, and
-// below them @ and the username in text-13, fg-muted, at weight 400. The name and the username wrap where the
-// place is too narrow, instead of ending with an ellipsis.
+// below them @ and the username in text-13, fg-muted, at weight 400. The name
+// and the username wrap where the place is too narrow, instead of ending with
+// an ellipsis.
 export function StackedUser({ user, size }: StackedUserProps) {
   return (
     <span className="flex max-w-full items-center gap-1.5">
