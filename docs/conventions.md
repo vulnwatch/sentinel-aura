@@ -15,6 +15,7 @@
   - [Error Codes and Messages](#error-codes-and-messages)
   - [Components and Styling](#components-and-styling)
   - [No Raw HTML Injection](#no-raw-html-injection)
+  - [Links from the API](#links-from-the-api)
   - [Tests](#tests)
   - [End-to-End Tests](#end-to-end-tests)
   - [Checks](#checks)
@@ -351,6 +352,20 @@ that needs it; content of another kind needs a new row first.
   production the Content Security Policy with Trusted Types blocks the
   injection of HTML into the page (`docs/architecture.md`, Security Headers).
   Neither replaces this rule.
+
+### Links from the API
+
+- A link whose address the API returns is built only by one shared
+  component, which applies `docs/behaviors.md` (Links to Other Sites): the
+  check of the address, the mark of a link to another site, and the loading
+  of the address by the browser rather than by the router. No other code
+  passes a value of the API as the address of a link or of a navigation, such
+  as an `href`, `window.location`, or `window.open`.
+- No code looks for addresses inside a text of the API to turn them into
+  links (No Raw HTML Injection).
+- The Content Security Policy blocks an address with the scheme
+  `javascript:` (`docs/architecture.md`, Security Headers), but not the other
+  schemes, and does not replace this rule.
 
 ### Tests
 
@@ -965,10 +980,11 @@ The UI foundations are written once, before any feature code, and cover:
   definitions (`docs/screen-map.md`)
 - **Cross-cutting behaviors**: session handling, error presentation, the
   presentation of a value of a response enum that the contract of the pinned
-  version does not list (Data Read from the API), loading and empty states,
-  date and time display, confirmations and the outcome of changes,
-  accessibility requirements, wording, the representation of a user, and the
-  preferences of the browser (`docs/behaviors.md`)
+  version does not list (Data Read from the API), the links to other sites
+  built from addresses that the API returns (Links from the API), loading and
+  empty states, date and time display, confirmations and the outcome of
+  changes, accessibility requirements, wording, the representation of a user,
+  and the preferences of the browser (`docs/behaviors.md`)
 - **Design system**: the visual language, the themes, the reusable interface
   patterns, and the avatar (`docs/design-system.md`)
 
