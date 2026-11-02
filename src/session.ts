@@ -19,9 +19,10 @@ export const RETURN_URL_KEY = "sentinel-aura:return-url";
 
 // The paths to which Sign in never returns, in lower case and without a
 // trailing slash, as the router matches them: Sign in itself and
-// /auth/callback (docs/screen-map.md, Contract URLs). /api and the paths under
-// /api/ belong to the API (docs/architecture.md, Same Origin).
-const NO_RETURN_PATHS = new Set(["/api", "/login", "/auth/callback"]);
+// /auth/callback (docs/screen-map.md, Contract URLs), and /api and the paths
+// under /api/, which belong to the API (docs/architecture.md, Same Origin) and
+// which the prefix of the API matches once a slash ends the path.
+const NO_RETURN_PATHS = new Set(["/login", "/auth/callback"]);
 const API_PREFIX = "/api/";
 
 // Records that this browser has a session, after a successful read of the
