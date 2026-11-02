@@ -77,15 +77,19 @@ Login). It asks for no confirmation.
   the message, or, when only fields have errors, to the first of them in the
   form (`docs/behaviors.md`, Accessibility, Announcements). The button is then
   no longer busy, and the user can sign in again.
+- When the check before sending stops the form, the focus moves to the first
+  field with an error, even while a message of an earlier failure stays at
+  the top of the form.
 - A field error goes once its value changes and the focus leaves the field;
-  the message at the top of the form goes when the form is sent again.
+  the message at the top of the form goes when the form sends its request
+  again.
 
 | Request | Response | Shows |
 |---|---|---|
 | Sign-in | `401 AUTH_INVALID_CREDENTIALS`, and any other `401` | "The username or password isn't correct." Sentinel answers every credential failure alike, so Sign in never tells whether the username exists (Sentinel `docs/features/identity/local-authentication.md`, Login) |
 | Sign-in | `429 AUTH_ACCOUNT_LOCKED` | The message of `429`, "Too many attempts. Try again later." The time that the `Retry-After` header states is not shown (Sentinel `docs/features/identity/local-authentication.md`, Account lockout) |
 | Sign-in | `422 VALIDATION_ERROR` | Each field error at its field, as `docs/behaviors.md` (Where Errors Appear) states |
-| Read of the signed-in user after a successful sign-in | `401` | "Sentinel signed you in, but this browser didn't keep the session. Allow cookies for Sentinel, then sign in again." The session cookie did not reach Sentinel, for example because the browser refuses cookies for the site (Sentinel `docs/features/identity/authentication.md`, Session cookie; Frontend session behavior) |
+| Read of the signed-in user after a successful sign-in | `401` | "Sentinel signed you in, but this browser didn't keep the session. Allow cookies for Sentinel, then sign in again." Sentinel answers a `401` whatever the cause; right after a successful sign-in, the likely cause is that the browser did not keep the session cookie, for example because it refuses cookies for the site (Sentinel `docs/features/identity/authentication.md`, Session cookie; Frontend session behavior) |
 | Either | Any other failure | The message of its status for sign-in (`docs/behaviors.md`, Default Presentation by Status; Retries and Unconfirmed Changes) |
 
 ## Cross-references

@@ -218,12 +218,11 @@ export function SignInPage() {
   // Read once, so that the message stays while Sign in shows.
   const [expired] = useState(() => ledHere && hasSessionRecord());
 
-  // Sign in accepts no search parameter, so it drops every one from its URL,
-  // and keeps the state of its entry (docs/behaviors.md, Invalid Search
-  // Parameters).
+  // Sign in accepts no search parameter, so it drops every one from its URL
+  // (docs/behaviors.md, Invalid Search Parameters).
   useEffect(() => {
     if (search !== "") {
-      void navigate({ to: "/login", hash: true, state: true, replace: true });
+      void navigate({ to: "/login", hash: true, replace: true });
     }
   }, [search, navigate]);
 

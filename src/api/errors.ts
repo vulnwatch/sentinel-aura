@@ -196,10 +196,11 @@ export function validationErrorFields<TField extends string>(
 
 // The messages of Sign in, which handles a 401 itself (docs/screens/sign-in.md,
 // States): Sentinel answers every credential failure of local sign-in with a
-// 401 (Sentinel docs/features/identity/local-authentication.md, Login), and the
-// read of the signed-in user that follows a successful sign-in answers one
-// when the session cookie did not reach Sentinel (Sentinel
-// docs/features/identity/authentication.md, Frontend session behavior).
+// 401 (Sentinel docs/features/identity/local-authentication.md, Login). The
+// read of the signed-in user answers a 401 whatever the cause (Sentinel
+// docs/features/identity/authentication.md, Frontend session behavior); right
+// after a successful sign-in, the likely cause is that the browser did not
+// keep the session cookie.
 const MESSAGE_SIGN_IN_REJECTED = "The username or password isn't correct.";
 const MESSAGE_SESSION_NOT_KEPT =
   "Sentinel signed you in, but this browser didn't keep the session. Allow cookies for Sentinel, then sign in again.";

@@ -461,6 +461,26 @@ describe("Sign in, after a failure", () => {
       .toBeVisible();
   });
 
+  test("moves the focus to the empty field when the check stops the form, and keeps the message of the earlier failure", async () => {
+    const fetch = stubSignIn(() =>
+      errorResponse(401, "AUTH_INVALID_CREDENTIALS"),
+    );
+    const { screen } = await renderSignIn();
+    await fillIn(screen, "jdoe", "fictional password");
+    await screen.getByRole("button", { name: "Sign in" }).click();
+    await expectFocusOnMessage(REJECTED);
+
+    await screen.getByLabelText("Password").clear();
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(screen.getByText("Enter your password."))
+      .toBeVisible();
+    await expect.element(screen.getByLabelText("Password")).toHaveFocus();
+    await expect.element(screen.getByText(REJECTED)).toBeVisible();
+    expect(requestsTo(fetch, LOGIN)).toBe(1);
+  });
+
   test("clears the message of a failure when the form is sent again", async () => {
     const { response, answer } = later();
     let attempts = 0;

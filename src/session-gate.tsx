@@ -294,12 +294,12 @@ export function SessionGate({ children }: SessionGateProps) {
 
   // Try again replaces its error with the loading indicator, which has no
   // heading, so the focus that it held moves to the heading of what shows
-  // once the read ends: its error again, or the screen, after the navigation
-  // that leaves Sign in when it applies (docs/behaviors.md, Accessibility,
-  // Focus after an action).
+  // once the read ends: its error again, or the screen (docs/behaviors.md,
+  // Accessibility, Focus after an action). When the read leads to another
+  // screen, such as from Sign in, the focus follows the navigation instead.
   const retried = useRef(false);
   useEffect(() => {
-    if (retried.current && !waiting && document.querySelector("h1") !== null) {
+    if (retried.current && !waiting) {
       retried.current = false;
       focusScreenHeading();
     }

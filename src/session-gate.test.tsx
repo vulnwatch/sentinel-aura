@@ -204,6 +204,20 @@ describe("as the UI loads", () => {
       .not.toBeInTheDocument();
   });
 
+  test("tells nothing on Sign in opened directly in a tab where the UI led to Sign in earlier", async () => {
+    window.localStorage.setItem(SESSION_RECORD_KEY, "signed-in");
+    window.sessionStorage.setItem(RETURN_URL_KEY, SCREEN);
+    stubSession("none");
+    const { screen } = await renderApp("/login");
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText("Your session has expired. Sign in again."))
+      .not.toBeInTheDocument();
+  });
+
   test.each([
     ["without a session", "none"],
     ["with a session", "signed-in"],

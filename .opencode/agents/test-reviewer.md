@@ -223,8 +223,9 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
 - Do tests find elements as users do, by role and accessible name or by
   visible text, rather than by CSS class, a test identifier, or document
   structure?
-- Do component tests replace the shared request function with prepared
-  responses and make no network request? Are the prepared responses typed by
+- Do component tests replace the shared request function, or the browser's
+  `fetch` beneath it, with prepared responses and make no network request?
+  Are the prepared responses typed by
   the generated API types, without a type assertion that hides a body that
   the pinned OpenAPI document does not allow? A response that a test
   prepares to cover a field, a value, a code, or a status that the contract

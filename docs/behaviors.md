@@ -80,7 +80,8 @@ document that do not take effect yet.
   Frontend session behavior; Sentinel `docs/api-spec.md`, Global Responses).
   The UI then discards all the data that it read from the API, so that the
   next user of the browser cannot see it, and leads to Sign in. On a path that
-  requires no session, Sign in or `/auth/callback`, a `401` changes nothing.
+  requires no session, Sign in or `/auth/callback`, a `401` discards nothing
+  and leads nowhere.
 - A navigation that the session forces, to Sign in or to the landing of
   another user (The Signed-in User), asks nothing and discards the input not
   yet submitted.
