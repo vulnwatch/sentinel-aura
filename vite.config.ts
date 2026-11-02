@@ -124,6 +124,8 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
+    // Gives the document of each test file the focus before its tests.
+    setupFiles: ["src/test-setup.ts"],
     // Holds the screenshots of failed tests, among other attachments.
     attachmentsDir: "test-results/vitest",
     browser: {
