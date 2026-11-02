@@ -515,11 +515,12 @@ The account menu (`docs/screen-map.md`, Sidebar) opens upward from the
 account button, 256 px wide (Menus, Popovers, and Tooltips). It starts with
 the signed-in user: the avatar at the medium size, the display name at
 weight 600, and, when it differs from the display name, the username as
-Representation of a User shows it, such as `@jdoe`. Its items follow, separated by `border` lines into three groups:
-Profile, API keys, and Identity audit log; the section Theme
-(`docs/behaviors.md`, Preferences), with its heading in `text-12`, weight
-500, `fg-muted`, and the items System, Light, and Dark, of which the
-selected one ends with `check`; and Sign out, an ordinary item.
+Representation of a User shows it, such as `@jdoe`. Its items follow,
+separated by `border` lines into three groups: Profile, API keys, and
+Identity audit log; the section Theme (`docs/behaviors.md`, Preferences),
+with its heading in `text-12`, weight 500, `fg-muted`, and the items System,
+Light, and Dark, of which the selected one ends with `check`; and Sign out,
+an ordinary item.
 
 ### Main Content
 
