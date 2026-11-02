@@ -199,7 +199,7 @@ describe("the account button", () => {
     await expect.element(button).toBeVisible();
     expect(button.element().textContent).toBe("");
     const box = button.element().getBoundingClientRect();
-    expect([box.width, box.height]).toEqual([40, 40]);
+    expect([box.width, box.height]).toEqual([40, 44]);
 
     button.element().focus();
     await userEvent.keyboard("{Shift>}{Tab}{/Shift}{Tab}");
@@ -579,19 +579,21 @@ describe("Sign out", () => {
           answer = resolve;
         }),
     );
+    await page.viewport(800, 700);
     const { screen } = await renderApp("/tickets");
-    const menu = await openMenu(screen);
+    await screen
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("button", { name: "Expand navigation" })
+      .click();
+    const dialog = screen.getByRole("dialog", { name: "Navigation" });
+    await dialog.getByRole("button", { name: "John Doe" }).click();
+    const menu = screen.getByRole("menu", { name: "John Doe" });
     await menu.getByRole("menuitem", { name: "Sign out" }).click();
 
-    // Another tab collapses the sidebar, which replaces the account button
-    // and its menu.
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "collapsed");
-    window.dispatchEvent(
-      new StorageEvent("storage", {
-        key: SIDEBAR_STORAGE_KEY,
-        newValue: "collapsed",
-      }),
-    );
+    // The window grows, which closes the sidebar over the content with its
+    // account button and menu.
+    await page.viewport(1280, 800);
+    await expect.element(dialog).not.toBeInTheDocument();
     await expect.element(menu).not.toBeInTheDocument();
     answer(errorResponse(503, "DATABASE_UNAVAILABLE"));
 

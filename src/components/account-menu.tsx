@@ -124,34 +124,36 @@ interface AccountTriggerProps {
   compact: boolean;
 }
 
-// The account button: the avatar at the medium size, the display name, cut
+// The account button, 44 px high: the avatar at the medium size, 12 px from
+// the left edge of the sidebar in both of its states, the display name, cut
 // with an ellipsis when it is longer than its place, with its labels, and
 // chevrons-up-down; in the collapsed sidebar, the avatar alone, the compact
 // form of the user, named by the compact name, which its tooltip shows
-// (docs/behaviors.md, Representation of a User).
+// (docs/behaviors.md, Representation of a User; docs/design-system.md,
+// Sidebar). The button keeps its element across the states.
 function AccountTrigger({ user, compact }: AccountTriggerProps): ReactNode {
-  if (compact) {
-    const name = compactName(user);
-    return (
-      <Tooltip text={name} placement="end">
-        <AriaButton
-          aria-label={name}
-          className={`flex size-10 items-center justify-center rounded-md data-hovered:bg-sidebar-active ${FOCUS_RING}`}
-        >
-          <Avatar user={user} size="medium" />
-        </AriaButton>
-      </Tooltip>
-    );
-  }
+  const name = compactName(user);
   return (
-    <AriaButton
-      className={`flex h-11 w-full items-center gap-2 rounded-md px-1.5 text-start font-medium data-hovered:bg-sidebar-active ${FOCUS_RING}`}
-    >
-      <span className="flex min-w-0 flex-1">
-        <User user={user} size="medium" />
-      </span>
-      <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-fg-muted" />
-    </AriaButton>
+    <Tooltip text={name} placement="end" isDisabled={!compact}>
+      <AriaButton
+        aria-label={compact ? name : undefined}
+        className={`flex h-11 items-center gap-2 rounded-md px-1 text-start ${compact ? "w-10" : "w-full"} font-medium data-hovered:bg-sidebar-active ${FOCUS_RING}`}
+      >
+        <span className="flex min-w-0 flex-1">
+          {compact ? (
+            <Avatar user={user} size="medium" />
+          ) : (
+            <User user={user} size="medium" />
+          )}
+        </span>
+        {!compact && (
+          <ChevronsUpDown
+            aria-hidden
+            className="size-4 shrink-0 text-fg-muted"
+          />
+        )}
+      </AriaButton>
+    </Tooltip>
   );
 }
 

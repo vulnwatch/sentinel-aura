@@ -84,10 +84,19 @@ test.describe("the sidebar", () => {
     await expand.click();
 
     const dialog = page.getByRole("dialog", { name: "Navigation" });
-    await expect(
-      dialog.getByRole("button", { name: "Close navigation" }),
-    ).toBeVisible();
+    const close = dialog.getByRole("button", { name: "Close navigation" });
+    await expect(close).toBeVisible();
     await expectAccessible(page);
+    // The close button takes the place of the expand button, under the
+    // pointer, so its tooltip shows, and Escape hides the tooltip first
+    // (WCAG 2.2, 1.4.13 Content on Hover or Focus).
+    await close.hover();
+    await expect(
+      page.getByRole("tooltip", { name: "Close navigation" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await expect(dialog).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(expand).toBeFocused();

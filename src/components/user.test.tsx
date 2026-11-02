@@ -83,7 +83,7 @@ test.each([
   ["an active user", ALICE],
   ["an inactive user", { ...ALICE, active: false }],
 ])(
-  "shows the username of %s after the display name, as @ and the username in fg-muted, when asked and when the two differ",
+  "shows the username of %s after the display name, as @ and the username in fg-muted, when asked",
   async (_, user) => {
     const screen = await render(<User user={user} withUsername />);
     const username = screen.getByText("@asmith", { exact: true });
@@ -93,7 +93,7 @@ test.each([
   },
 );
 
-test("shows the username once when it is the display name", async () => {
+test("shows the username also when it is the display name", async () => {
   const screen = await render(
     <section aria-label="Row">
       <User user={{ ...ALICE, full_name: null }} withUsername />
@@ -102,7 +102,7 @@ test("shows the username once when it is the display name", async () => {
   const row = screen.getByRole("region");
 
   await expect.element(row).toBeVisible();
-  expect(row.element().textContent).toBe("asmith");
+  expect(row.element().textContent).toBe("asmith @asmith");
 });
 
 test("shows no username unless asked", async () => {

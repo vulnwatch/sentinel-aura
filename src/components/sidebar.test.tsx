@@ -188,6 +188,23 @@ describe("expanded", () => {
     ).toHaveLength(0);
   });
 
+  test("shows no tooltip on an entry, whose name shows", async () => {
+    const { screen } = await renderApp("/");
+    const entry = sidebarOf(screen).getByRole("link", {
+      name: "Packages",
+      exact: true,
+    });
+    sidebarOf(screen).getByRole("link", { name: "CVEs" }).element().focus();
+
+    await userEvent.keyboard("{Tab}");
+
+    await expect.element(entry).toHaveFocus();
+    await new Promise((resolve) => {
+      setTimeout(resolve, 400);
+    });
+    expect(screen.getByRole("tooltip").query()).toBeNull();
+  });
+
   test("leads to the screen of an entry and moves the focus to its heading", async () => {
     const { router, screen } = await renderApp("/");
 
@@ -234,10 +251,14 @@ describe("collapsed", () => {
     ).toBe(56);
     expect(window.localStorage.getItem(SIDEBAR_STORAGE_KEY)).toBe("collapsed");
     for (const [name, path] of ENTRIES) {
-      const link = sidebar.getByRole("link", { name });
+      const link = sidebar.getByRole("link", { name, exact: true });
       await expect.element(link).toHaveAttribute("href", path);
-      expect(link.element().textContent).toBe("");
-      expect(widthOf(link.element())).toBe(40);
+      // The name names the entry, but takes no room.
+      expect(
+        widthOf(link.getByText(name, { exact: true }).element()),
+      ).toBeLessThanOrEqual(1);
+      const box = link.element().getBoundingClientRect();
+      expect([box.width, box.height]).toEqual([40, 36]);
     }
     await expect
       .element(sidebar.getByRole("link", { name: "Tickets" }))
@@ -330,7 +351,11 @@ describe("collapsed", () => {
       .element(
         sidebarOf(screen).getByRole("button", { name: "Expand navigation" }),
       )
-      .not.toHaveFocus();
+      .toBeVisible();
+    // The entry stays the same element, with the focus.
+    await expect
+      .element(sidebarOf(screen).getByRole("link", { name: "CVEs" }))
+      .toHaveFocus();
   });
 
   test("follows a change of the preference in another tab", async () => {
@@ -373,6 +398,49 @@ describe("collapsed", () => {
         .toBeVisible();
     },
   );
+});
+
+// The center of the picture of a control of the sidebar: its icon, the
+// Sentinel mark, or the avatar, which are hidden from assistive technologies
+// and so are found as the first picture of their control.
+function pictureCenter(control: Element): { x: number; y: number } {
+  const picture = control.querySelector("svg");
+  if (picture === null) {
+    throw new Error("The control shows no picture");
+  }
+  const box = picture.getBoundingClientRect();
+  return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+}
+
+test("moves none of its pictures when it collapses and expands", async () => {
+  // A user with Administration, the last entry, and every other control.
+  const { screen } = await renderApp("/tickets", ["manage_users"]);
+  const controls = () => [
+    sidebarOf(screen).getByRole("link", { name: "Sentinel" }),
+    ...[...ENTRIES.map(([name]) => name), "Administration"].map((name) =>
+      sidebarOf(screen).getByRole("link", { name, exact: true }),
+    ),
+    sidebarOf(screen).getByRole("button", { name: /navigation$/ }),
+    sidebarOf(screen).getByRole("button", { name: "John Doe" }),
+  ];
+  const centers = () =>
+    controls().map((control) => pictureCenter(control.element()));
+  const expanded = centers();
+
+  await sidebarOf(screen)
+    .getByRole("button", { name: "Collapse navigation" })
+    .click();
+  await expect
+    .element(
+      sidebarOf(screen).getByRole("button", { name: "Expand navigation" }),
+    )
+    .toBeVisible();
+
+  expect(centers()).toEqual(expanded);
+  // On the axis of the collapsed sidebar, 28 px from its left edge.
+  for (const { x } of expanded) {
+    expect(x).toBe(28);
+  }
 });
 
 describe("in a window narrower than 1024 px", () => {

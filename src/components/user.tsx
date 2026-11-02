@@ -62,9 +62,9 @@ interface UserProps {
   // Small in text, table rows, and the options of a field; medium in other
   // lists of users; large in the heading of a user's screen.
   size?: AvatarSize;
-  // Whether the username follows the display name when the two differ, as @
-  // and the username in fg-muted, where users must be told apart exactly,
-  // such as in a user picker.
+  // Whether the username follows the display name, as @ and the username in
+  // fg-muted, also when it is the display name, where users must be told
+  // apart exactly, such as in a user picker.
   withUsername?: boolean;
 }
 
@@ -87,7 +87,7 @@ export function User({
         className={`min-w-0 truncate ${user.active ? "" : "text-fg-muted"}`}
       >
         {name}
-        {withUsername && user.username !== name && (
+        {withUsername && (
           <span className="font-normal text-fg-muted"> @{user.username}</span>
         )}
       </span>
@@ -104,8 +104,7 @@ interface StackedUserProps {
 // A user with the username on a line of its own, as the account menu shows
 // the signed-in user (docs/design-system.md, Account Menu): the avatar, then
 // the display name in the style of the surrounding text with its labels, and
-// below them, always, also when it is the display name, @ and the username in
-// text-13, fg-muted, at weight 400. The name and the username wrap where the
+// below them @ and the username in text-13, fg-muted, at weight 400. The name and the username wrap where the
 // place is too narrow, instead of ending with an ellipsis.
 export function StackedUser({ user, size }: StackedUserProps) {
   return (

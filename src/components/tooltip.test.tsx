@@ -93,6 +93,27 @@ test("inverts the colors of text", async () => {
   expect(style.fontSize).toBe("13px");
 });
 
+test("never shows when disabled, as where the control shows its name", async () => {
+  const screen = await render(
+    <>
+      <Button>Before</Button>
+      <Tooltip text="Tickets" placement="end" isDisabled>
+        <Button>Tickets</Button>
+      </Tooltip>
+    </>,
+  );
+  await screen.getByRole("button", { name: "Before" }).click();
+  await userEvent.keyboard("{Tab}");
+  await expect
+    .element(screen.getByRole("button", { name: "Tickets" }))
+    .toHaveFocus();
+  await screen.getByRole("button", { name: "Tickets" }).hover();
+
+  await wait(500);
+
+  expect(screen.getByRole("tooltip").query()).toBeNull();
+});
+
 test("shows after the control, to its right, as in the sidebar", async () => {
   const { control, tooltip } = await renderTooltip("end");
 

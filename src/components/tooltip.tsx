@@ -12,6 +12,9 @@ interface TooltipProps {
   // Where the tooltip shows: above the control, or after it, as to the right
   // of the controls of the sidebar.
   placement: "top" | "end";
+  // Whether the tooltip never shows, as where the control shows its name
+  // itself.
+  isDisabled?: boolean;
   // The control: one focusable element of React Aria, such as a button or a
   // link.
   children: ReactNode;
@@ -22,9 +25,14 @@ interface TooltipProps {
 // on keyboard focus. It stays while the pointer is over it, and Escape hides
 // it (WCAG 2.2, 1.4.13 Content on Hover or Focus). It never holds the only
 // means to act: the control has its own accessible name.
-export function Tooltip({ text, placement, children }: TooltipProps) {
+export function Tooltip({
+  text,
+  placement,
+  isDisabled = false,
+  children,
+}: TooltipProps) {
   return (
-    <TooltipTrigger delay={TOOLTIP_DELAY_MS}>
+    <TooltipTrigger delay={TOOLTIP_DELAY_MS} isDisabled={isDisabled}>
       {children}
       <AriaTooltip
         placement={placement}

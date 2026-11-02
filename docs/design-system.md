@@ -478,37 +478,43 @@ height, on `sidebar`, with a `border` line on its right edge, and
 stays in place while the content scrolls. When the window is shorter than
 the sidebar, the sidebar scrolls within itself.
 
+**One axis.** The pictures of the sidebar, the Sentinel mark, the icons, and
+the avatar, are centered on one vertical axis, 28 px from its left edge, the
+middle of the collapsed sidebar, and every part keeps its height and place in
+both states. Collapsing or expanding the sidebar only changes its width and
+hides or shows the names, so that nothing that stays moves.
+
 **Expanded, 216 px wide,** from top to bottom:
 
 - the product name, a link to the landing: the Sentinel mark at 20 px and
   "Sentinel" in `text-16`, weight 600, in a row 56 px high;
-- the search field, 36 px high with 12 px margins, on `canvas` with a
-  `border-strong` boundary, the `search` icon at its start, and the
-  placeholder "Search";
+- the search field, 36 px high with 8 px margins, on `canvas` with a
+  `border-strong` boundary, the `search` icon at its start on the axis, and
+  the placeholder "Search";
 - the navigation entries, 36 px high with 8 px margins and a 6 px radius:
-  the icon at 18 px and the name in `text-15`, in `fg-muted`, on
+  the icon at 18 px on the axis and the name in `text-15`, in `fg-muted`, on
   `sidebar-active` under the pointer. The current entry has the
   `sidebar-active` background, its name in `fg` at weight 600, its icon in
   `link`, and a 3 px bar in `link` along its left edge;
 - at the bottom, the collapse button: `panel-left-close` at 18 px in a 32 px
-  target, aligned right, without a visible label, named "Collapse
-  navigation", which its tooltip shows; and
+  target on the axis, without a visible label, named "Collapse navigation",
+  which its tooltip shows; and
 - below a `border` line, the account button, 44 px high: the signed-in user's
-  avatar at the medium size, the display name at weight 500, cut with an
-  ellipsis when it is longer than its place, followed by its labels, as
-  Representation of a User shows them, and `chevrons-up-down` at 16 px in
+  avatar at the medium size on the axis, the display name at weight 500, cut
+  with an ellipsis when it is longer than its place, followed by its labels,
+  as Representation of a User shows them, and `chevrons-up-down` at 16 px in
   `fg-muted`. It opens the account menu.
 
-**Collapsed, 56 px wide,** the same parts, centered, as icon buttons of 40 px:
-the product name as the Sentinel mark at 20 px, as in the expanded sidebar,
-named "Sentinel"; the search as the `search` button, which opens the search
-field in a popover beside the sidebar; each entry as its icon at 18 px, named
-by its entry, the current one with the `sidebar-active` background, its icon
-in `link`, and the 3 px bar in `link` along the left edge of the sidebar; the
-expand button, `panel-left-open` at 18 px in a 32 px target, named "Expand
-navigation"; and the account button as the avatar alone, the compact form of
-the user. Each shows its name in a tooltip to its right, on hover and on
-keyboard focus.
+**Collapsed, 56 px wide,** the same parts at the same places, each narrowed to
+40 px around the axis, without their names: the product name as the Sentinel
+mark, named "Sentinel"; the search as the `search` button, 36 px high, which
+opens the search field in a popover beside the sidebar; each entry as its
+icon, named by its entry, the current one with the `sidebar-active`
+background, its icon in `link`, and the 3 px bar along its left edge; the
+expand button, `panel-left-open`, named "Expand navigation"; and the account
+button as the avatar alone, the compact form of the user. Each shows its name
+in a tooltip to its right, on hover and on keyboard focus; in the expanded
+sidebar, where the names show, only the collapse button has a tooltip.
 
 **Over the content:** below the breakpoint, the expand button opens the
 expanded sidebar over the content, on `overlay`, with a shadow; its collapse
@@ -521,8 +527,7 @@ account button, 256 px wide (Menus, Popovers, and Tooltips). It starts with
 the signed-in user: the avatar at the medium size, 6 px of space, and two
 lines, the display name at weight 600 followed by its labels, and below them
 the username, as `@` and the username, such as `@jdoe`, in `text-13`,
-`fg-muted`, at weight 400. The username shows always, also when it is the
-display name, so that the menu looks the same for every user
+`fg-muted`, at weight 400, also when it is the display name
 (`docs/behaviors.md`, Representation of a User). The name and the username
 wrap where the menu is too narrow, instead of ending with an ellipsis, so
 that the menu shows whole the name that the account button cuts. Its items
