@@ -69,7 +69,9 @@ document that do not take effect yet.
   to Sign in when the path requires a session (`docs/screen-map.md`, Contract
   URLs), and shows the screen of the URL otherwise. Any other failure shows
   its error in place of the screen (Errors) and does not lead to Sign in: it
-  does not tell whether a session exists.
+  does not tell whether a session exists. That error offers Try again whatever
+  the failure, not the link to the landing, because no screen, the landing
+  included, shows without the read.
 - A `401` response to any request other than sign-in and sign-out (Sentinel
   `docs/features/identity/local-authentication.md`, Login; Sentinel
   `docs/features/identity/authentication.md`, Logout) means that the browser
@@ -77,8 +79,9 @@ document that do not take effect yet.
   session alike (Sentinel `docs/features/identity/authentication.md`,
   Frontend session behavior; Sentinel `docs/api-spec.md`, Global Responses).
   The UI then discards all the data that it read from the API, so that the
-  next user of the browser cannot see it, and leads to Sign in. On Sign in, a
-  `401` changes nothing.
+  next user of the browser cannot see it, and leads to Sign in. On a path that
+  requires no session, Sign in or `/auth/callback`, a `401` discards nothing
+  and leads nowhere.
 - A navigation that the session forces, to Sign in or to the landing of
   another user (The Signed-in User), asks nothing and discards the input not
   yet submitted.
@@ -134,6 +137,9 @@ document that do not take effect yet.
   `docs/features/identity/rbac.md`, Permission Checking), so these reads keep
   current the elements that depend on the roles and on the capabilities of
   the user (`docs/screen-map.md`, Roles; Capabilities of the Signed-in User).
+  While the error of a read of the signed-in user shows in place of the
+  screen (Session State), it is read again only with Try again, as a screen's
+  read whose error shows in place of content is (Loading).
 - A later read that fails other than with a `401` changes nothing: the tab
   keeps the user that it shows, without a message.
 - When a read returns a user other than the one that the tab shows, for
@@ -209,7 +215,9 @@ message follows Wording.
   next to data that stays shown, offer an action that tries again after a
   network failure, a `429`, a `5xx`, or a successful response that the UI
   cannot read. In place of the content of a screen, every other error links
-  to the landing instead, with "Go to the start page".
+  to the landing instead, with "Go to the start page", except the error of
+  the read of the signed-in user as the UI loads, which offers Try again
+  whatever the failure (Session State).
 - A count, such as the count of a view or of the attention summary, has no
   room for a message or an action: when a read of it fails, even after it
   showed a number, it shows as not available, read as "Not available", and
@@ -570,8 +578,8 @@ also meets these requirements, which they cannot check:
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus (4.1.3 Status Messages). After a form is submitted with errors,
-  the focus moves to the message at the top of the form, or to the field when
-  only one field has an error (3.3.1 Error Identification).
+  the focus moves to the message at the top of the form, or, when only fields
+  have errors, to the first of them (3.3.1 Error Identification).
 - **Reflow and text size.** Screens work at a width of 320 CSS pixels without
   scrolling in two directions, except data tables, which scroll within
   themselves, and text enlarged to 200 % loses no content or function (1.4.4

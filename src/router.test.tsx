@@ -1,14 +1,15 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
   RouterProvider,
+  type AnyRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { Link } from "react-aria-components";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { z } from "zod";
@@ -16,6 +17,26 @@ import { App } from "./app";
 import { Button } from "./components/button";
 import { createAppRouter, routerDefaults } from "./router";
 import { RootLayout } from "./routes/root";
+import { FICTIONAL_USER, jsonResponse, stubApi } from "./test-api";
+
+// Every screen of these tests shows to a signed-in user (src/session-gate.tsx).
+beforeEach(() => {
+  stubApi(() => jsonResponse(200, FICTIONAL_USER));
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+// Renders a router of the test with the root layout of the application,
+// which reads the signed-in user.
+function renderRouter(router: AnyRouter) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+}
 
 test("shows the home page at /", async () => {
   const router = createAppRouter({
@@ -56,7 +77,7 @@ test("navigates through the router when a React Aria link is pressed", async () 
     routeTree: root.addChildren([start, home]),
     history: createMemoryHistory({ initialEntries: ["/start"] }),
   });
-  const screen = await render(<RouterProvider router={router} />);
+  const screen = await renderRouter(router);
 
   await screen.getByRole("link", { name: "Home" }).click();
 
@@ -126,7 +147,7 @@ test("shows the page of a failure of the UI when a screen fails", async () => {
     history: createMemoryHistory({ initialEntries: ["/"] }),
     ...routerDefaults,
   });
-  const screen = await render(<RouterProvider router={router} />);
+  const screen = await renderRouter(router);
 
   await expect
     .element(
@@ -175,7 +196,7 @@ test("moves the focus to the heading of the page of a failure of the UI when the
     history: createMemoryHistory({ initialEntries: ["/"] }),
     ...routerDefaults,
   });
-  const screen = await render(<RouterProvider router={router} />);
+  const screen = await renderRouter(router);
   await expect
     .element(screen.getByRole("button", { name: "Break" }))
     .toBeVisible();
@@ -222,7 +243,7 @@ test("starts a screen again when it opens with other path parameters, but not wi
     history: createMemoryHistory({ initialEntries: ["/records/1"] }),
     ...routerDefaults,
   });
-  const screen = await render(<RouterProvider router={router} />);
+  const screen = await renderRouter(router);
   await expect
     .element(screen.getByText("Record 1, page 1, start 1", { exact: true }))
     .toBeVisible();

@@ -1,10 +1,13 @@
-import { expect, test } from "./fixtures";
+import { expect, signIn, test } from "./fixtures";
 
 // Not found (docs/behaviors.md, Missing and Inaccessible Records): the UI's
 // image serves the entry document for a path that matches no file of the
 // build, and the application shows Not found for a path that matches no
-// screen.
+// screen, which requires a session like every path but Sign in and
+// /auth/callback (docs/screen-map.md, Contract URLs).
 test("a path that matches no screen shows Not found", async ({ page }) => {
+  await signIn(page);
+
   await page.goto("/fictional/path");
 
   await expect(

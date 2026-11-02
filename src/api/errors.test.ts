@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
   isRequestFailure,
   presentFailure,
+  presentSignInFailure,
+  validationErrorFields,
   type FailurePresentation,
   type RequestFailure,
 } from "./errors";
@@ -279,6 +281,137 @@ describe("presentFailure", () => {
       },
     );
   });
+});
+
+// A VALIDATION_ERROR response with its field errors.
+function validationError(errors: unknown): ApiError {
+  return new ApiError(
+    422,
+    "VALIDATION_ERROR",
+    { code: "VALIDATION_ERROR", detail: "A fictional detail", errors },
+    REQUEST_ID,
+  );
+}
+
+// A field error at the location.
+function entry(loc: unknown) {
+  return { loc, msg: "A fictional message", type: "string_type" };
+}
+
+describe("validationErrorFields", () => {
+  const FIELDS = ["username", "password"] as const;
+
+  test("finds the fields that the errors locate in the request body, each once, in the order of the form", () => {
+    const failure = validationError([
+      entry(["body", "password"]),
+      entry(["body", "username"]),
+      entry(["body", "password"]),
+    ]);
+
+    expect(validationErrorFields(failure, FIELDS)).toEqual({
+      fields: ["username", "password"],
+      unmatched: false,
+    });
+  });
+
+  test.each([
+    ["the body as a whole", ["body"]],
+    ["a member that the form does not have", ["body", "full_name"]],
+    ["a member under a field", ["body", "username", 0]],
+    ["a query parameter", ["query", "username"]],
+    ["a malformed location", "body.username"],
+  ])("makes an error of %s an error of the form", (_, loc) => {
+    const failure = validationError([entry(["body", "username"]), entry(loc)]);
+
+    expect(validationErrorFields(failure, FIELDS)).toEqual({
+      fields: ["username"],
+      unmatched: true,
+    });
+  });
+
+  test.each([
+    ["without errors", validationError(undefined)],
+    ["with an empty list of errors", validationError([])],
+    ["with an entry that is not an object", validationError(["username"])],
+    [
+      "of another code that locates its errors",
+      new ApiError(
+        422,
+        "FETCHER_SETTING_INVALID",
+        {
+          code: "FETCHER_SETTING_INVALID",
+          detail: "A fictional detail",
+          errors: [entry(["body", "username"])],
+        },
+        REQUEST_ID,
+      ),
+    ],
+    ["of another status", errorResponse(400)],
+    [
+      "that receives no response",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("locates no field for a failure %s", (_, failure) => {
+    expect(validationErrorFields(failure, FIELDS)).toEqual({
+      fields: [],
+      unmatched: true,
+    });
+  });
+});
+
+describe("presentSignInFailure", () => {
+  test.each([
+    [
+      "AUTH_INVALID_CREDENTIALS",
+      errorResponse(401, "AUTH_INVALID_CREDENTIALS"),
+    ],
+    ["no code", errorResponse(401)],
+  ])(
+    "presents a 401 of sign-in with %s as rejected credentials",
+    (_, failure) => {
+      expect(presentSignInFailure(failure, "sign-in")).toEqual({
+        message: "The username or password isn't correct.",
+        reference: undefined,
+      });
+    },
+  );
+
+  test("presents a 401 of the read of the signed-in user after a sign-in as a session that the browser did not keep", () => {
+    expect(
+      presentSignInFailure(
+        errorResponse(401, "AUTH_NOT_AUTHENTICATED"),
+        "signed-in user",
+      ),
+    ).toEqual({
+      message:
+        "Sentinel signed you in, but this browser didn't keep the session. Allow cookies for Sentinel, then sign in again.",
+      reference: undefined,
+    });
+  });
+
+  test.each([
+    ["sign-in", "sign-in"],
+    ["the read of the signed-in user", "signed-in user"],
+  ] as const)(
+    "presents every other failure of %s as for sign-in",
+    (_, request) => {
+      expect(
+        presentSignInFailure(
+          errorResponse(429, "AUTH_ACCOUNT_LOCKED"),
+          request,
+        ),
+      ).toEqual({ message: TOO_MANY, reference: undefined });
+      expect(
+        presentSignInFailure(errorResponse(503, "REDIS_UNAVAILABLE"), request),
+      ).toEqual({ message: UNAVAILABLE, reference: REQUEST_ID });
+      expect(
+        presentSignInFailure(
+          new NetworkError({ cause: new TypeError("Failed to fetch") }),
+          request,
+        ),
+      ).toEqual({ message: NETWORK, reference: undefined });
+    },
+  );
 });
 
 describe("isRequestFailure", () => {

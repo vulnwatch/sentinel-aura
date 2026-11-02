@@ -123,6 +123,8 @@ test.describe("the checks of every test", () => {
   }) => {
     test.fail();
     await page.goto("/");
+    // Without a session, the UI shows Sign in once it has read the session.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await page.evaluate(() => {
       document.styleSheets[0]?.insertRule(
         "@media (prefers-color-scheme: dark) { h1 { font-size: 20px; font-weight: 600; color: #1f6feb; background-color: #151b23; } }",

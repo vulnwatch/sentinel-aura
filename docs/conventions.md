@@ -171,11 +171,14 @@ rules; review enforces the rest.
 | `src/favicon.svg` | The favicon, which the entry document links: the Sentinel mark in its own colors (`docs/design-system.md`, Sentinel Mark) |
 | `src/app.tsx` | The providers that every screen shares |
 | `src/query-client.ts` | The query client, with the defaults of every read and change (`docs/behaviors.md`, Retries and Unconfirmed Changes; Loading) |
+| `src/session.ts` | What the UI keeps of the session in the origin's browser storage: the session record, and the saved URL with its check (`docs/behaviors.md`, Return After Sign-in; Session Expiration Message) |
+| `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, and the return from Sign in (`docs/behaviors.md`, Session) |
 | `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
 | `src/routes/` | One module per route: its definition and its page component |
 | `src/components/` | The components that several routes share |
-| `src/api/` | The shared request function (`request.ts`) and the mapping of error codes to messages (`errors.ts`) |
+| `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
+| `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` beneath the shared request function (Tests) |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
 | `test/e2e/screenshots/` | The reference screenshots of the end-to-end tests (End-to-End Tests) |
@@ -211,6 +214,12 @@ that needs it; content of another kind needs a new row first.
   hooks (`docs/architecture.md`, Backend Contract and API Client Generation).
   No other module under `src/` calls `fetch` or `XMLHttpRequest` or builds an
   API URL.
+- Every request goes through the query client, as a read of a hook or of
+  `fetchQuery`, or as a change: a generated request function is called
+  directly only inside a query or mutation function. The UI learns of every
+  response there, so that a behavior that applies to a response of any
+  operation, such as the end of the session after a `401`, reaches every
+  request (Error Codes and Messages).
 - The generated code is never edited by hand, and its types are the API
   types: no module declares an API type itself. A change comes from the
   pinned OpenAPI document, from the generator's configuration,
@@ -347,8 +356,8 @@ that needs it; content of another kind needs a new row first.
   Tests).
 - Tests find elements as users do: by role and accessible name, or by
   visible text, never by CSS class or document structure.
-- Component tests replace the shared request function with prepared
-  responses and make no network request.
+- Component tests replace the shared request function, or the browser's
+  `fetch` beneath it, with prepared responses and make no network request.
 - A test checks the outcome of the behavior that it covers, as a user or a
   caller observes it, so that it fails when the behavior breaks. A test that
   runs code without checking its outcome proves nothing, and the minimum
@@ -968,6 +977,9 @@ description and acceptance criteria agreed with the repository owner; the pull
 request implements the feature, shows screenshots, and creates or updates the
 screen document with what was built; the owner approves by looking at the
 result.
+
+The screen documents are in `docs/screens/`, one for each screen or area,
+named after it in kebab-case, such as `docs/screens/sign-in.md`.
 
 A screen document is short. It states what a reader needs to understand and
 verify the screen, references the foundations instead of restating their

@@ -44,6 +44,10 @@ interface ErrorInPlaceProps {
   placement: "screen" | "part";
   // Sends the read again.
   onRetry: () => void;
+  // Whether Try again follows every failure, for a read without which no
+  // screen shows, the landing included, such as the read of the signed-in
+  // user as the UI loads (docs/behaviors.md, Session State).
+  retryAlways?: boolean;
 }
 
 // The failure of a read in place of what it would show, with Try again after
@@ -52,7 +56,12 @@ interface ErrorInPlaceProps {
 // the landing. A 401 shows nothing, because the session has ended
 // (docs/behaviors.md, Session State). Any other error is a failure of the UI
 // itself, which the router shows (src/router.ts).
-export function ErrorInPlace({ error, placement, onRetry }: ErrorInPlaceProps) {
+export function ErrorInPlace({
+  error,
+  placement,
+  onRetry,
+  retryAlways = false,
+}: ErrorInPlaceProps) {
   // The focus on Try again passes to the screen's heading when the error
   // disappears.
   const ref = useRef<HTMLDivElement>(null);
@@ -65,7 +74,7 @@ export function ErrorInPlace({ error, placement, onRetry }: ErrorInPlaceProps) {
     return null;
   }
   let action: ReactNode;
-  if (presentation.retry) {
+  if (presentation.retry || retryAlways) {
     action = <Button onPress={onRetry}>Try again</Button>;
   } else if (placement === "screen") {
     action = <Link href="/">Go to the start page</Link>;

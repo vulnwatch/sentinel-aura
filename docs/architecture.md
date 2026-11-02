@@ -746,7 +746,7 @@ accessibility requirements of the UI foundations cover the rest
 |---|---|
 | Jest or Vitest with a simulated DOM (jsdom) | Faster startup, but focus, layout, and the accessibility tree are approximations, which matters for a UI with accessibility as a primary criterion |
 | **Vitest in browser mode** (chosen) | Tests run in the browser engines of the users and of the end-to-end tests. Istanbul measures coverage in every browser, while V8 coverage supports Chromium only |
-| Mock Service Worker for API responses | About 46 packages; component tests replace the shared request function instead, and the end-to-end tests use a real backend |
+| Mock Service Worker for API responses | About 46 packages; component tests replace the shared request function, or the browser's `fetch` beneath it, instead, and the end-to-end tests use a real backend |
 
 | Option | Impact |
 |---|---|

@@ -82,6 +82,31 @@ export async function expectAccessible(page: Page) {
   expectNoViolations(await accessibilityViolations(page));
 }
 
+// The published password of every user of Sentinel's example dataset
+// (Sentinel docs/features/platform/example-dataset.md, Credentials).
+export const DATASET_PASSWORD = "example-dataset-password";
+
+// Fills in Sign in and submits it.
+export async function submitSignIn(
+  page: Page,
+  username: string,
+  password: string,
+) {
+  await page.getByRole("textbox", { name: "Username" }).fill(username);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+}
+
+// Signs in on Sign in, opened directly, as a user of the dataset, jdoe by
+// default (same document, Users), and waits for the landing, to which Sign in
+// then leads (docs/behaviors.md, Return After Sign-in). Each path but Sign in
+// and /auth/callback requires a session (docs/screen-map.md, Contract URLs).
+export async function signIn(page: Page, username = "jdoe") {
+  await page.goto("/login");
+  await submitSignIn(page, username, DATASET_PASSWORD);
+  await page.waitForURL("/");
+}
+
 export const test = base.extend<{ pageChecks: undefined }>({
   pageChecks: [
     async ({ context, page }, use, testInfo) => {
