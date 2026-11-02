@@ -65,9 +65,11 @@ They are configured in `opencode.json`. The built-in Build agent is disabled.
 - **Code** — implements the UI from its issue, the foundation documents, and
   Sentinel's contract, writes tests, and maintains all executable artifacts.
   Must signal unresolved behavioral or contract gaps, while retaining freedom
-  over compliant internal technical choices and interface details. May
-  delegate parts of an approved plan to built-in `general` tasks that run
-  sequentially, and must verify their diffs itself. Prompt:
+  over compliant internal technical choices and interface details. Delegates
+  by default the break checks of its new and changed tests to a built-in
+  `general` task and its questions about installed dependencies to built-in
+  `explore` tasks, may delegate other parts of an approved plan to `general`
+  tasks that run sequentially, and must verify their results itself. Prompt:
   `.opencode/prompts/code.md`
 
 Plan and Code take the delegated decisions defined in `AGENTS.md` (Delegated

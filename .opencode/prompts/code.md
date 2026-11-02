@@ -90,30 +90,80 @@ affects, run the focused checks and then every complete suite and static check
 the repository defines, and fix failures. Use fictional data in tests,
 fixtures, and screenshots.
 
-## Delegation to general tasks
+## Delegation to tasks
 
 You may delegate parts of the approved plan to built-in `general` tasks to
 keep this session's context small; you remain responsible for the result.
-Delegation is optional. Prefer it for bounded, well-specified work with large
-tool output, such as writing tests, mechanical multi-file edits, or test-fix
-loops. Keep small changes and design-heavy work in this session, where the
-brief would cost more than it saves.
+Delegation is optional, except for the break checks and the dependency
+research below, which you delegate by default. Prefer it for bounded,
+well-specified work with large tool output, such as writing tests, mechanical
+multi-file edits, or test-fix loops. Keep small changes and design-heavy work
+in this session, where the brief would cost more than it saves.
 
 - Run writing tasks sequentially, never in parallel: concurrent tasks can edit
   the same files or run tests against a half-edited tree. Reviewers may run in
-  parallel.
-- Give each task a self-contained brief: the plan portion it implements, the
-  decisions already taken, the documents and Sentinel contracts it must read,
-  the files in scope, the checks to run, and a statement that the issue and
-  branch already exist. A task does not inherit your reads or your
-  conversation.
+  parallel with each other, never with a writing task.
+- Give each `general` task a self-contained brief: the plan portion it
+  implements, the decisions already taken, the documents and Sentinel
+  contracts it must read, the files in scope, the checks to run, and a
+  statement that the issue and branch already exist. A task does not inherit
+  your reads or your conversation.
 - Instruct each task not to start the Git workflow, commit, push, perform
   GitHub mutations, edit `docs/**`, modify `../sentinel`, invoke reviewers, add
   a new dependency that the user has not admitted (`docs/conventions.md`,
   Dependency Admission), or take gap or delegated decisions; it reports any
   such need in its result instead.
-- After each task, inspect its diff and rerun the focused checks yourself
-  before continuing. The task's summary is context, not evidence.
+- After each `general` task, inspect its diff and rerun the focused checks
+  yourself before continuing. The task's summary is context, not evidence.
+
+### Break checks
+
+Delegate the break checks that `docs/conventions.md` (Tests) requires to one
+`general` task once the implementation is complete and its focused tests
+pass, before the reviewers, and again for the tests that a later change adds
+or whose assertions it changes, such as the resolution of a finding. Keep
+them in this session only when the tests are so few that the brief would cost
+more than the checks. Commit or stage the work before the task, so that
+`git diff` shows only the task's changes.
+
+- **Brief**: besides the brief above, the unit and component tests to check,
+  the behavior that each claims, the modules that implement it, and, for a
+  fix, the defect that it removes.
+- **Work**: the task designs, for each test, a break of the behavior that the
+  test claims, such as an inverted condition or a removed call, never one
+  that any test would catch, such as removing the module; for a fix, the
+  break restores the defect. One break may serve several tests. It applies
+  one break at a time, runs the test files concerned in Chromium with
+  `scripts/tooling.sh run test`, restores the code after each run, and
+  records each break, as its diff, and the tests that failed on it in a log
+  under `/tmp/opencode/`. When no test fails on a break, it strengthens the
+  test and applies the break again. When the break does not break the claimed
+  behavior, or no test can observe it, it designs another break or reports
+  the break, and never checks internal state to make a test fail. When a
+  break shows code that no behavior needs, it reports it and leaves the
+  implementation unchanged.
+- **Report**: the table of the breaks and the tests that failed on each, for
+  the pull request; each break on which no test failed at first and what the
+  task did; the test files that it changed; and the path of the log.
+- **Verification**: check that `git diff` shows only the reported changes to
+  the tests and no break left in the code, and that every test of the brief,
+  and every test that the task changed, failed on a break of the table; rerun
+  the focused tests, and apply one break of the log yourself, which must fail
+  its tests.
+- While the task runs, nothing else reads or edits the working tree, not even
+  a reviewer: the tree holds its breaks.
+
+### Dependency research
+
+Delegate a question about how an installed dependency behaves, such as its
+types, its options, or its source, to an `explore` task, which cannot edit
+files: its brief is one precise question, the dependency directory that
+`scripts/tooling.sh` mounts on `node_modules/`, and a request for the file and
+line of each fact. Read the cited lines yourself when an answer decides the
+implementation. The reads that govern the change stay in this session: the
+issue, the documents of this repository, Sentinel's contract, and the code
+that the change edits (`AGENTS.md`, Explicit loading and workspace
+awareness).
 
 ## Reviews and completion
 
