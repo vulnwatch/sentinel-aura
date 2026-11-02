@@ -1,5 +1,10 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { test as base, expect, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 // The checks of every end-to-end test (docs/conventions.md, End-to-End
 // Tests): a test fails on any Content Security Policy violation, on any
@@ -105,6 +110,16 @@ export async function signIn(page: Page, username = "jdoe") {
   await page.goto("/login");
   await submitSignIn(page, username, DATASET_PASSWORD);
   await page.waitForURL("/");
+}
+
+// The avatars that the page shows, which the reference screenshots mask: the
+// dataset does not fix the users' ids, from which the avatars are generated
+// (docs/conventions.md, End-to-End Tests). An avatar is hidden from assistive
+// technologies, so it has no role or name to find it by; it is the only
+// picture of the page with the view box of 6 by 6 units that
+// src/components/avatar.tsx draws it in.
+export function avatars(page: Page): Locator {
+  return page.locator('svg[viewBox="0 0 6 6"]');
 }
 
 export const test = base.extend<{ pageChecks: undefined }>({

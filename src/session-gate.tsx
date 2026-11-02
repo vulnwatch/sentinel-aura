@@ -25,8 +25,12 @@ import { ApiError } from "./api/request";
 import {
   getLoginMutationKey,
   getLogoutMutationKey,
+  useLogout,
 } from "./api/generated/authentication";
-import type { CurrentUserResponse } from "./api/generated/model";
+import type {
+  CurrentUserData,
+  CurrentUserResponse,
+} from "./api/generated/model";
 import {
   getCurrentUserProfile,
   getGetCurrentUserProfileQueryKey,
@@ -36,14 +40,19 @@ import { ErrorInPlace } from "./components/error-in-place";
 import { Loading } from "./components/loading";
 import { focusScreenHeading } from "./components/screen-heading";
 import { SignInColumn } from "./components/sign-in-column";
-import { rememberSession, saveReturnUrl, takeReturnUrl } from "./session";
+import {
+  forgetSession,
+  rememberSession,
+  saveReturnUrl,
+  takeReturnUrl,
+} from "./session";
 
 // The session of the UI (docs/behaviors.md, Session State; Return After
-// Sign-in; The Signed-in User): the read of the signed-in user before any
-// screen, Sign in when the browser has no valid session, and the return from
-// Sign in once a session exists. The UI cannot read the session cookie, so it
-// learns the state of the session only from the API's responses
-// (docs/architecture.md, Session Cookie).
+// Sign-in; The Signed-in User; Sign-out): the read of the signed-in user
+// before any screen, Sign in when the browser has no valid session, the
+// return from Sign in once a session exists, and Sign out. The UI cannot
+// read the session cookie, so it learns the state of the session only from
+// the API's responses (docs/architecture.md, Session Cookie).
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -168,14 +177,76 @@ export function readSignedInUser(
   };
 }
 
-interface SessionGateProps {
-  // The screen of the URL.
-  children: ReactNode;
+// Whether a sign-out is in progress.
+function isSigningOut(client: QueryClient): boolean {
+  return client.isMutating({ mutationKey: getLogoutMutationKey() }) > 0;
 }
 
-// Shows the screen of the URL once the session allows it. The screen starts
-// again when another user signs in, so that it keeps nothing of the previous
-// one, such as input not yet submitted (docs/behaviors.md, Session State).
+// Ends the session of this browser after a sign-out that Sentinel confirmed,
+// or after a 401 of the sign-out or of another request while the sign-out is
+// in progress, which means that no valid session remained
+// (docs/behaviors.md, Sign-out): forgets the session, so that Sign in shows
+// no message, opens Sign in without a saved URL in place of the screen in the
+// browser history (docs/screen-map.md, Browser History), and discards all the
+// data read from the API, the signed-in user included. The navigation sets
+// the router's latest location at once, before the discarded read of the
+// signed-in user is sent again, so that the 401 of that read finds Sign in.
+function endSignedOutSession(client: QueryClient, router: AnyRouter) {
+  forgetSession();
+  void router.navigate({ to: "/login", replace: true });
+  discardApiData(client, () => false);
+}
+
+export interface SignOut {
+  // Sends the sign-out, unless one is in progress (docs/behaviors.md,
+  // Loading).
+  start: () => void;
+  // Whether the sign-out is in progress.
+  busy: boolean;
+}
+
+// Sign out (docs/behaviors.md, Sign-out), which the account menu offers. On
+// any outcome other than 204 or 401 the user stays signed in, unless a 401 of
+// another request has ended the session meanwhile, and onFailure receives the
+// failure, which the screen shows. The outcome applies also when the
+// component that started it has left the page (docs/behaviors.md, Loading).
+export function useSignOut(onFailure: (failure: unknown) => void): SignOut {
+  const client = useQueryClient();
+  const router = useRouter();
+  const signOut = useLogout({
+    mutation: {
+      onSuccess: () => {
+        endSignedOutSession(client, router);
+      },
+      onError: (error) => {
+        if (isUnauthorized(error)) {
+          endSignedOutSession(client, router);
+        } else {
+          onFailure(error);
+        }
+      },
+    },
+  });
+  return {
+    start: () => {
+      if (!signOut.isPending) {
+        signOut.mutate();
+      }
+    },
+    busy: signOut.isPending,
+  };
+}
+
+interface SessionGateProps {
+  // The screen of the URL, given the signed-in user, or undefined while no
+  // signed-in user is known, as on Sign in, which shows without a session.
+  children: (user: CurrentUserData | undefined) => ReactNode;
+}
+
+// Shows the screen of the URL once the session allows it, with the signed-in
+// user when one is known. The screen starts again when another user signs in,
+// so that it keeps nothing of the previous one, such as input not yet
+// submitted (docs/behaviors.md, Session State).
 export function SessionGate({ children }: SessionGateProps) {
   const router = useRouter();
   const client = useQueryClient();
@@ -203,9 +274,15 @@ export function SessionGate({ children }: SessionGateProps) {
   // saves the URL of the screen. The read of the signed-in user is kept only
   // when it holds no user, as after a 401 as the UI loads. It leads there
   // once, however many responses end the session: the navigation sets the
-  // router's latest location at once.
+  // router's latest location at once. While a sign-out is in progress, the
+  // session ends as the sign-out ends it, so that Sign in does not tell that
+  // the session has expired after the user signed out.
   const endSession = useCallback(() => {
     if (latestRequirement(router) !== "required") {
+      return;
+    }
+    if (isSigningOut(client)) {
+      endSignedOutSession(client, router);
       return;
     }
     saveReturnUrl(router.state.location.href);
@@ -337,5 +414,9 @@ export function SessionGate({ children }: SessionGateProps) {
     // Leading to Sign in, or away from it.
     return null;
   }
-  return <Fragment key={user.data?.data.id ?? ""}>{children}</Fragment>;
+  return (
+    <Fragment key={user.data?.data.id ?? ""}>
+      {children(signedIn ? user.data?.data : undefined)}
+    </Fragment>
+  );
 }

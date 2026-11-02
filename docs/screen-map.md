@@ -191,13 +191,23 @@ follows the user's preference (`docs/behaviors.md`, Preferences). Below that
 width it is always collapsed, so that the content keeps its room, and its
 expand button opens the expanded sidebar over the content, as a dialog that
 takes the focus. Escape, its close button, or a click outside it closes it
-and returns the focus to the expand button; a navigation from it, such as an
-entry, the search, or an item of the account menu, closes it, and the focus
-follows the navigation (`docs/behaviors.md`, Accessibility). Opening it
-changes no preference, and a window that grows past that width closes it.
+and returns the focus to the expand button, and so does a new message in the
+message area, such as the failure of a Sign out from it, so that the message
+shows (`docs/behaviors.md`, Outcome of a Change). A navigation from it, such
+as an entry, the search, or an item of the account menu, closes it, also to
+the URL that shows, and the focus follows the navigation
+(`docs/behaviors.md`, Accessibility). Opening it changes no preference, and a
+window that grows past that width closes it, with the focus on the screen's
+heading. Once it closes, in any of these ways, only the expand button opens
+it again.
 
-The Tickets entry opens the Ticket list in its New view for a user who holds
-the `vulnerability_analyst` role (Roles), and in its All view for every other
+An entry is marked as current while the path of the URL is the path under
+which every screen of its area lies (Areas and Screens), `/tickets`, `/cves`,
+`/packages`, `/products`, `/my-packages`, `/data-sources`, or `/admin`, or a
+path under it, such as Tickets at `/tickets/SNTL-42`. The Home, Search
+results, and the screens of Account belong to no entry. The Tickets entry
+opens the Ticket list in its New view for a user who holds the
+`vulnerability_analyst` role (Roles), and in its All view for every other
 user. The Administration entry opens Users for a user who holds
 `manage_users`, and Settings for every other user who sees it; from each of
 its screens, the others that the user can use are one step away.

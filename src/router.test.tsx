@@ -47,7 +47,7 @@ test("shows the home page at /", async () => {
   );
 
   await expect
-    .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+    .element(screen.getByRole("heading", { level: 1, name: "Home" }))
     .toBeVisible();
 });
 
@@ -125,9 +125,9 @@ describe("Not found", () => {
     await screen.getByRole("link", { name: "Go to the start page" }).click();
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
       .toBeVisible();
-    expect(document.title).toBe("Sentinel");
+    expect(document.title).toBe("Home – Sentinel");
   });
 });
 
@@ -197,14 +197,11 @@ test("moves the focus to the heading of the page of a failure of the UI when the
     ...routerDefaults,
   });
   const screen = await renderRouter(router);
-  await expect
-    .element(screen.getByRole("button", { name: "Break" }))
-    .toBeVisible();
+  const control = screen.getByRole("button", { name: "Break" });
+  await expect.element(control).toBeVisible();
 
-  await userEvent.keyboard("{Tab}");
-  await expect
-    .element(screen.getByRole("button", { name: "Break" }))
-    .toHaveFocus();
+  control.element().focus();
+  await expect.element(control).toHaveFocus();
   await userEvent.keyboard("{Enter}");
 
   await expect

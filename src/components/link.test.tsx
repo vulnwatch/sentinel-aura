@@ -9,7 +9,7 @@ import {
 import { expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { RouterLinks } from "../routes/root";
+import { RouterLinks } from "./router-links";
 import { Link } from "./link";
 
 test("leads to its screen through the router, underlined as a link of running text", async () => {

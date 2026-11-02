@@ -50,7 +50,7 @@ test("mounts the application in the #root element", async () => {
     .element(
       page
         .elementLocator(container)
-        .getByRole("heading", { level: 1, name: "Sentinel Aura" }),
+        .getByRole("heading", { level: 1, name: "Home" }),
     )
     .toBeVisible();
 });

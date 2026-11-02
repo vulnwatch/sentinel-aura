@@ -144,7 +144,7 @@ describe("as the UI loads", () => {
     answer(jsonResponse(200, FICTIONAL_USER));
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
       .toBeVisible();
     await expect
       .element(screen.getByRole("progressbar"))
@@ -156,7 +156,7 @@ describe("as the UI loads", () => {
     const { screen } = await renderApp("/");
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
       .toBeVisible();
     expect(hasSessionRecord()).toBe(true);
   });
@@ -282,7 +282,7 @@ describe("as the UI loads", () => {
         .element(
           screen.getByRole("heading", {
             level: 1,
-            name: path === "/login" ? "Sentinel Aura" : "Not found",
+            name: path === "/login" ? "Home" : "Not found",
           }),
         )
         .toBeVisible();
@@ -593,7 +593,7 @@ describe("the signed-in user", () => {
     returnToForeground();
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
       .toBeVisible();
     expect(router.state.location.pathname).toBe("/");
     expect(router.history.length).toBe(1);
@@ -609,7 +609,7 @@ describe("the signed-in user", () => {
 function CountingScreen() {
   const [count, setCount] = useState(0);
   return (
-    <main>
+    <>
       <h1>Counter</h1>
       <Button
         onPress={() => {
@@ -618,7 +618,7 @@ function CountingScreen() {
       >
         {`Pressed ${count} times`}
       </Button>
-    </main>
+    </>
   );
 }
 
@@ -684,7 +684,7 @@ describe("Sign in, once a session exists", () => {
     const { router, screen } = await renderApp("/login");
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
       .toBeVisible();
     expect(router.state.location.pathname).toBe("/");
     expect(router.history.length).toBe(1);

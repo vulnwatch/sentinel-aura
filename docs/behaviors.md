@@ -81,7 +81,9 @@ document that do not take effect yet.
   The UI then discards all the data that it read from the API, so that the
   next user of the browser cannot see it, and leads to Sign in. On a path that
   requires no session, Sign in or `/auth/callback`, a `401` discards nothing
-  and leads nowhere.
+  and leads nowhere. While a sign-out is in progress, a `401` ends the session
+  as the sign-out does, without the message of an expired session
+  (Sign-out).
 - A navigation that the session forces, to Sign in or to the landing of
   another user (The Signed-in User), asks nothing and discards the input not
   yet submitted.
@@ -94,7 +96,8 @@ document that do not take effect yet.
 - When the UI leads from a screen to Sign in, as it loads or after a `401`, it
   saves the URL of that screen, its path, search, and fragment, in the tab's
   session storage, where it survives a reload of Sign in. Opening Sign in
-  directly saves nothing.
+  directly saves nothing, and neither does a sign-out, nor a `401` while a
+  sign-out is in progress (Sign-out).
 - Sign in is shown only without a session. Whenever it learns that a session
   exists, after its own sign-in, as it loads, or from a read of the signed-in
   user (The Signed-in User), it reads and removes the saved URL. It opens that
@@ -157,7 +160,10 @@ document that do not take effect yet.
 - On `204`, or on `401`, which means that no valid session remained, the UI
   removes the session record (Session Expiration Message), discards all the
   data that it read from the API, and opens Sign in without a message and
-  without a saved URL.
+  without a saved URL. A `401` of another request while the sign-out is in
+  progress, which tells that no valid session remains, ends the session in
+  the same way at once, whatever the outcome of the sign-out (Session
+  State).
 - On any other outcome, such as a network failure or a `5xx`, the user stays
   signed in: the screen stays as it was and shows the message of the status
   (Default Presentation by Status).
@@ -550,21 +556,26 @@ also meets these requirements, which they cannot check:
   always visible, and no fixed element, such as the sidebar, hides it (2.1.1
   Keyboard; 2.1.2 No Keyboard Trap; 2.4.3 Focus Order; 2.4.7 Focus Visible;
   2.4.11 Focus Not Obscured (Minimum)).
-- **Structure.** The first element that takes the focus is a link that skips
-  to the main content. Every screen has its main content as a landmark, every
-  screen with a sidebar (`docs/screen-map.md`, Sidebar) also its navigation,
-  and every screen one level-one heading that names it (2.4.1 Bypass Blocks;
-  1.3.1 Info and Relationships).
+- **Structure.** On every screen with a sidebar (`docs/screen-map.md`,
+  Sidebar), the first element that takes the focus is a link that skips to
+  the main content; a screen in the column of the Sign In Page has no block
+  to skip (`docs/design-system.md`, Main Content). Every screen has its main
+  content as a landmark, every screen with a sidebar also its navigation, and
+  every screen one level-one heading that names it (2.4.1 Bypass Blocks; 1.3.1
+  Info and Relationships).
 - **Page title.** The title of the page is the screen's heading followed by
   "– Sentinel", such as "SNTL-42 – Sentinel", "Tickets – Sentinel", or "Not
   found – Sentinel" (2.4.2 Page Titled).
 - **Focus after a navigation.** When the screen changes, the focus moves to
-  its level-one heading. A heading that depends on the screen's data names the
-  kind of screen, such as "Fetcher run", until the data arrives, then takes
-  the name from the data without moving the focus, or the name of the error
-  when the read fails. A change of the state that a screen keeps in its URL,
-  such as its view, filters, sorting, or page, leaves the focus where it was
-  and announces the number of results.
+  its level-one heading. The first screen that the page shows as it loads
+  leaves the focus where the browser starts it, at the top of the page, also
+  when the UI leads to it at once from the URL that the page loaded, such as
+  to Sign in without a session (Session State). A heading that depends on the
+  screen's data names the kind of screen, such as "Fetcher run", until the
+  data arrives, then takes the name from the data without moving the focus,
+  or the name of the error when the read fails. A change of the state that a
+  screen keeps in its URL, such as its view, filters, sorting, or page,
+  leaves the focus where it was and announces the number of results.
 - **Focus after an action.** When the element that has the focus disappears
   after an action, the focus moves to the element that takes its place, such
   as the action that reverses it, or otherwise to the screen's heading. When
@@ -678,8 +689,11 @@ complete profile and its manager, and the signed-in user alike: `id`,
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the
   access grants of a Ticket, or Administration, the username follows the
-  display name when the two differ, as `@` and the username, such as
-  `@jdoe`, before the labels.
+  display name, as `@` and the username, such as `@jdoe`, before the labels;
+  the account menu shows it on a line of its own, below the name and its
+  labels (`docs/design-system.md`, Account Menu). In these places it shows
+  also when it is the display name, so that it is always found in the same
+  place and never taken for a name.
 - **Compact form.** The avatar alone, in a link, a button, or another
   interactive element without room for the name. The display name is its
   accessible name and shows in a tooltip on hover and on keyboard focus. Every

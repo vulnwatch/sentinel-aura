@@ -189,7 +189,7 @@ describe("Sign in", () => {
     await userEvent.keyboard("{Enter}");
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
       .toBeVisible();
     expect(router.state.location.pathname).toBe("/");
   });
@@ -223,9 +223,7 @@ describe("Sign in", () => {
       );
 
       await expect
-        .element(
-          screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }),
-        )
+        .element(screen.getByRole("heading", { level: 1, name: "Home" }))
         .toBeVisible();
       expect(requestsTo(fetch, LOGIN)).toBe(1);
     },
@@ -504,7 +502,7 @@ describe("Sign in, after a failure", () => {
     await expect.element(message).not.toBeInTheDocument();
     answer(signedIn());
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
       .toBeVisible();
   });
 });

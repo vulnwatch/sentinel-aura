@@ -457,8 +457,11 @@ that it sits with the icons around it.
 ## Focus and Motion
 
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
-  following its radius, or inside it for a row or a cell of a table (Tables),
-  shown on keyboard focus. No element removes it (`docs/behaviors.md`,
+  following its radius, or inside it for an element whose edges would cut
+  it: a row or a cell of a table (Tables), a menu item (Menus, Popovers, and
+  Tooltips), the main content after the link that skips to it (Main
+  Content), and the sidebar opened over the content (Sidebar). It shows on
+  keyboard focus, and no element removes it (`docs/behaviors.md`,
   Accessibility).
 - **Motion:** only loading indicators move: the spinner turns and the progress
   bar runs (Loading). When the browser reports a preference for reduced
@@ -475,35 +478,47 @@ height, on `sidebar`, with a `border` line on its right edge, and
 stays in place while the content scrolls. When the window is shorter than
 the sidebar, the sidebar scrolls within itself.
 
+**One axis.** The pictures of the sidebar, the Sentinel mark, the icons, and
+the avatar, are centered on one vertical axis, 28 px from its left edge, the
+middle of the collapsed sidebar, and every part keeps its height and place in
+both states. Collapsing or expanding the sidebar only changes its width and
+hides or shows the names, so that nothing that stays moves. The axis decides
+where each picture sits inside its part, before the spacing grid (Spacing and
+Sizes): an 18 px icon sits 11 px into its entry, and the 20 px mark 10 px
+into its link.
+
 **Expanded, 216 px wide,** from top to bottom:
 
 - the product name, a link to the landing: the Sentinel mark at 20 px and
   "Sentinel" in `text-16`, weight 600, in a row 56 px high;
-- the search field, 36 px high with 12 px margins, on `canvas` with a
-  `border-strong` boundary, the `search` icon at its start, and the
-  placeholder "Search";
+- the search field, 36 px high with 8 px margins, on `canvas` with a
+  `border-strong` boundary, the `search` icon at its start on the axis, and
+  the placeholder "Search";
 - the navigation entries, 36 px high with 8 px margins and a 6 px radius:
-  the icon at 18 px and the name in `text-15`, in `fg-muted`, on
+  the icon at 18 px on the axis and the name in `text-15`, in `fg-muted`, on
   `sidebar-active` under the pointer. The current entry has the
   `sidebar-active` background, its name in `fg` at weight 600, its icon in
   `link`, and a 3 px bar in `link` along its left edge;
 - at the bottom, the collapse button: `panel-left-close` at 18 px in a 32 px
-  target, aligned right, without a visible label, named "Collapse
-  navigation", which its tooltip shows; and
+  target on the axis, without a visible label, named "Collapse navigation",
+  which its tooltip shows; and
 - below a `border` line, the account button, 44 px high: the signed-in user's
-  avatar at the medium size, the display name at weight 500, cut with an
-  ellipsis when it is longer than its place, and `chevrons-up-down` at 16 px
-  in `fg-muted`. It opens the account menu.
+  avatar at the medium size on the axis, the display name at weight 500, cut
+  with an ellipsis when it is longer than its place, followed by its labels,
+  as Representation of a User shows them, and `chevrons-up-down` at 16 px in
+  `fg-muted`. It opens the account menu.
 
-**Collapsed, 56 px wide,** the same parts, centered, as icon buttons of 40 px:
-the product name as the Sentinel mark at 22 px, named "Sentinel"; the search as
-the `search` button, which opens the search field in a popover beside the
-sidebar; each entry as its icon at 18 px, named by its entry, the current one
-with the `sidebar-active` background, its icon in `link`, and the 3 px bar in
-`link` along the left edge of the sidebar; the expand button,
-`panel-left-open` at 18 px in a 32 px target, named "Expand navigation"; and
-the account button as the avatar alone, the compact form of the user. Each
-shows its name in a tooltip to its right, on hover and on keyboard focus.
+**Collapsed, 56 px wide,** the same parts at the same places, each row
+narrowed to 40 px around the axis, without their names, while the toggle
+keeps its 32 px target: the product name as the Sentinel mark, named
+"Sentinel"; the search as the `search` button, 36 px high, which opens the
+search field in a popover beside the sidebar; each entry as its icon, named
+by its entry, the current one with the `sidebar-active` background, its icon
+in `link`, and the 3 px bar along its left edge; the expand button,
+`panel-left-open`, named "Expand navigation"; and the account button as the
+avatar alone, the compact form of the user. Each shows its name in a tooltip
+to its right, on hover and on keyboard focus; in the expanded sidebar, where
+the names show, only the collapse button has a tooltip.
 
 **Over the content:** below the breakpoint, the expand button opens the
 expanded sidebar over the content, on `overlay`, with a shadow; its collapse
@@ -513,14 +528,25 @@ button is named "Close navigation" there (`docs/screen-map.md`, Sidebar).
 
 The account menu (`docs/screen-map.md`, Sidebar) opens upward from the
 account button, 256 px wide (Menus, Popovers, and Tooltips). It starts with
-the signed-in user: the avatar at the medium size, the display name at
-weight 600, and, when it differs from the display name, the username as
-Representation of a User shows it, such as `@jdoe`. Its items follow,
-separated by `border` lines into three groups: Profile, API keys, and
-Identity audit log; the section Theme (`docs/behaviors.md`, Preferences),
-with its heading in `text-12`, weight 500, `fg-muted`, and the items System,
-Light, and Dark, of which the selected one ends with `check`; and Sign out,
-an ordinary item.
+the signed-in user: the avatar at the medium size, 6 px of space, and two
+lines, the display name at weight 600 followed by its labels, and below them
+the username, as `@` and the username, such as `@jdoe`, in `text-13`,
+`fg-muted`, at weight 400, also when it is the display name
+(`docs/behaviors.md`, Representation of a User). The name and the username
+wrap where the menu is too narrow, instead of ending with an ellipsis, so
+that the menu shows whole the name that the account button cuts. Its items
+follow, below a `border` line and separated by `border` lines into three
+groups: Profile, API keys, and Identity audit log; the section Theme
+(`docs/behaviors.md`, Preferences), with its heading in `text-12`, weight
+500, `fg-muted`, and the items System, Light, and Dark, of which the selected
+one ends with `check`; and Sign out, an ordinary item. While Sign
+out is in progress, the menu stays open, and the item keeps the focus, shows
+`loader-circle` in place of its icon, has the description "Signing out" for
+assistive technologies, and cannot start the sign-out again
+(`docs/behaviors.md`, Loading); when it fails, the menu closes, and the
+message area shows its error (`docs/behaviors.md`, Where Errors Appear), which
+also closes the sidebar opened over the content (`docs/screen-map.md`,
+Sidebar).
 
 ### Main Content
 
@@ -535,7 +561,9 @@ an ordinary item.
   appears is always in view. It takes at most a third of the window's height,
   beyond which its messages scroll within it, and the content scrolls so that
   the element with the focus never lies under it (`docs/behaviors.md`,
-  Accessibility).
+  Accessibility). While it holds a message, the area is on `canvas`, with
+  8 px of space above and below its messages, and the heading follows 16 px
+  below the last message; without one, it takes no room.
 - The heading row holds the level-one heading of the screen in `text-20`,
   weight 600, then what accompanies it, such as the attention summary, and
   the main action of the screen at its end. It wraps when the width runs
@@ -874,7 +902,8 @@ A list screen, such as the Ticket list, shows from top to bottom:
 - A menu or a popover is on `surface`, with a `border` line, an 8 px radius,
   a shadow, and 4 px of padding. A menu item is 36 px high with a 6 px radius
   and 10 px of side padding, its icon at 16 px in `fg-muted` before its label
-  in `text-15`, and `surface-hover` under the pointer and on focus. The
+  in `text-15`, and `surface-hover` under the pointer and on focus, with the
+  focus ring inside it on keyboard focus (Focus and Motion). The
   heading of a section is in `text-12`, weight 500, `fg-muted`; groups are
   separated by `border` lines; and an item of a single selection ends with
   `check` at 16 px when it is selected.
@@ -900,15 +929,18 @@ and how the labels look.
 - **Full form:** the avatar, 6 px of space, and the display name in the
   surrounding text's style; where the username follows, as `@` and the
   username (`docs/behaviors.md`, Representation of a User), it comes after a
-  space, in `fg-muted`. The `@` sets it apart from the name without relying
-  on color, also for an inactive user, whose name is in `fg-muted` too.
+  space, in `fg-muted` at weight 400, or, in the account menu, on a line of
+  its own below the name and its labels (Account Menu). The `@` sets it
+  apart from the name without relying on color, also for an inactive user,
+  whose name is in `fg-muted` too.
 - **Inactive and Bot:** the label follows the name, or the username where it
   follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
   1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a
   second label follows the first, 6 px later. An inactive user's name is in
   `fg-muted`, and its avatar is gray (Avatar). Where the place is too narrow,
   only the name, with the username that follows it, ends with an ellipsis,
-  unless a table wraps it (Tables); the labels always show.
+  unless a table or the account menu wraps it (Tables; Account Menu); the
+  labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name.
 - **No recorded actor:** a square of the avatar's size, on `neutral-soft`

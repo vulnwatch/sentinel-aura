@@ -35,6 +35,23 @@ export function rememberSession() {
   }
 }
 
+// Forgets the session after the user signs out (docs/behaviors.md, Sign-out):
+// removes the session record, for every tab of the browser, so that Sign in
+// tells no tab that a session has expired, and the URL saved in this tab, so
+// that Sign in opens the landing after the next sign-in.
+export function forgetSession() {
+  try {
+    window.localStorage.removeItem(SESSION_RECORD_KEY);
+  } catch {
+    // The browser blocks the storage: it holds no record.
+  }
+  try {
+    window.sessionStorage.removeItem(RETURN_URL_KEY);
+  } catch {
+    // The browser blocks the storage: it holds no saved URL.
+  }
+}
+
 // Whether the browser has had a session, as the record states it.
 export function hasSessionRecord(): boolean {
   try {

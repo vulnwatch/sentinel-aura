@@ -1,12 +1,11 @@
 import { createRoute } from "@tanstack/react-router";
+import { ScreenHeading } from "../components/screen-heading";
 import { rootRoute } from "./root";
 
+// The Home, the landing (docs/screen-map.md, Landing): its heading, and the
+// page title "Home – Sentinel".
 export function HomePage() {
-  return (
-    <main className="p-6">
-      <h1 className="text-20 font-semibold">Sentinel Aura</h1>
-    </main>
-  );
+  return <ScreenHeading>Home</ScreenHeading>;
 }
 
 export const homeRoute = createRoute({

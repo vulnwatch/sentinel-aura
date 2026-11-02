@@ -52,7 +52,7 @@ test.describe("Sign in", () => {
     page,
   }) => {
     await signIn(page);
-    await expect(heading(page, "Sentinel Aura")).toBeVisible();
+    await expect(heading(page, "Home")).toBeVisible();
     // The session ends without a sign-out, as when it expires.
     await context.clearCookies();
 

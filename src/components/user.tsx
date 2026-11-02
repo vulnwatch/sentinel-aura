@@ -43,23 +43,37 @@ function Label({ children }: LabelProps) {
   );
 }
 
+interface LabelsProps {
+  user: UserFields;
+}
+
+// The labels of a user: Bot, then Inactive.
+function Labels({ user }: LabelsProps) {
+  return (
+    <>
+      {user.bot && <Label>Bot</Label>}
+      {!user.active && <Label>Inactive</Label>}
+    </>
+  );
+}
+
 interface UserProps {
   user: UserFields;
   // Small in text, table rows, and the options of a field; medium in other
   // lists of users; large in the heading of a user's screen.
   size?: AvatarSize;
-  // Whether the username follows the display name when the two differ, as @
-  // and the username in fg-muted, where users must be told apart exactly,
-  // such as in a user picker.
+  // Whether the username follows the display name, as @ and the username in
+  // fg-muted, also when it is the display name, where users must be told
+  // apart exactly, such as in a user picker.
   withUsername?: boolean;
 }
 
 // A user in the full form: the avatar, then the display name in the style of
-// the surrounding text, the username when asked, and the labels Bot, then
-// Inactive. An inactive user's name is in fg-muted, and the @ sets its
-// username apart from it. Where the place is too narrow, only the name, with
-// its username, ends with an ellipsis, and assistive technologies read it
-// whole.
+// the surrounding text, the username when asked, at weight 400, and the labels
+// Bot, then Inactive. An inactive user's name is in fg-muted, and the @ sets
+// its username apart from it. Where the place is too narrow, only the name,
+// with its username, ends with an ellipsis, and assistive technologies read
+// it whole.
 export function User({
   user,
   size = "small",
@@ -73,12 +87,43 @@ export function User({
         className={`min-w-0 truncate ${user.active ? "" : "text-fg-muted"}`}
       >
         {name}
-        {withUsername && user.username !== name && (
-          <span className="text-fg-muted"> @{user.username}</span>
+        {withUsername && (
+          <span className="font-normal text-fg-muted"> @{user.username}</span>
         )}
       </span>
-      {user.bot && <Label>Bot</Label>}
-      {!user.active && <Label>Inactive</Label>}
+      <Labels user={user} />
+    </span>
+  );
+}
+
+interface StackedUserProps {
+  user: UserFields;
+  size: AvatarSize;
+}
+
+// A user with the username on a line of its own, as the account menu shows
+// the signed-in user (docs/design-system.md, Account Menu): the avatar, then
+// the display name in the style of the surrounding text with its labels, and
+// below them @ and the username in text-13, fg-muted, at weight 400. The name
+// and the username wrap where the place is too narrow, instead of ending with
+// an ellipsis.
+export function StackedUser({ user, size }: StackedUserProps) {
+  return (
+    <span className="flex max-w-full items-center gap-1.5">
+      <Avatar user={user} size={size} />
+      <span className="flex min-w-0 flex-col">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span
+            className={`min-w-0 wrap-anywhere ${user.active ? "" : "text-fg-muted"}`}
+          >
+            {displayName(user)}
+          </span>
+          <Labels user={user} />
+        </span>
+        <span className="text-13 font-normal wrap-anywhere text-fg-muted">
+          @{user.username}
+        </span>
+      </span>
     </span>
   );
 }

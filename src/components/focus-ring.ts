@@ -3,3 +3,9 @@
 // keyboard focus.
 export const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+
+// The focus ring inside the element, for an element that fills its place,
+// such as a menu item, the main content, or the sidebar opened over the
+// content, whose edges would cut the ring outside it.
+export const INSIDE_FOCUS_RING =
+  "outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-focus";

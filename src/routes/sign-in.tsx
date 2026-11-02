@@ -20,7 +20,6 @@ import { Button } from "../components/button";
 import { FOCUS_RING } from "../components/focus-ring";
 import { Message } from "../components/message";
 import { ScreenHeading } from "../components/screen-heading";
-import { SignInColumn } from "../components/sign-in-column";
 import { TextField } from "../components/text-field";
 import { hasSessionRecord } from "../session";
 import { readSignedInUser } from "../session-gate";
@@ -226,14 +225,16 @@ export function SignInPage() {
     }
   }, [search, navigate]);
 
+  // In the card of the column of the Sign In Page, which the root layout
+  // shows while no signed-in user is known (src/routes/root.tsx).
   return (
-    <SignInColumn>
+    <>
       <ScreenHeading>Sign in</ScreenHeading>
       {expired && (
         <Message tone="info">Your session has expired. Sign in again.</Message>
       )}
       <SignInForm />
-    </SignInColumn>
+    </>
   );
 }
 

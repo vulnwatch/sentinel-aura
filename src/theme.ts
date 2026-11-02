@@ -1,3 +1,5 @@
+import { storedPreference } from "./preferences";
+
 // The theme that the page shows (docs/behaviors.md, Preferences;
 // docs/design-system.md, Themes). The stylesheet shows the theme of the color
 // scheme that the browser reports, the System theme, unless the root element
@@ -18,13 +20,16 @@ export function parseThemePreference(value: string | null): ThemePreference {
   return value === "light" || value === "dark" ? value : "system";
 }
 
+// The theme preference, which the account menu sets (docs/screen-map.md,
+// Sidebar).
+export const themePreference = storedPreference(
+  THEME_STORAGE_KEY,
+  parseThemePreference,
+);
+
 // The stored preference, or System when the browser blocks the storage.
 export function readThemePreference(): ThemePreference {
-  try {
-    return parseThemePreference(window.localStorage.getItem(THEME_STORAGE_KEY));
-  } catch {
-    return "system";
-  }
+  return themePreference.get();
 }
 
 // Shows the theme of the preference on the page: marks it on the root element,
@@ -47,19 +52,12 @@ export function applyThemePreference(
   }
 }
 
-// Applies the stored preference now and again whenever another tab of the
-// browser changes it, so that a change applies at once in every open tab.
-// Returns the function that stops following it.
+// Applies the stored preference now and again whenever it changes, in this
+// tab or in another one of the browser, so that a change applies at once in
+// every open tab. Returns the function that stops following it.
 export function followThemePreference(): () => void {
   applyThemePreference(readThemePreference());
-  const onStorage = (event: StorageEvent) => {
-    // A null key: the other tab cleared the storage.
-    if (event.key === THEME_STORAGE_KEY || event.key === null) {
-      applyThemePreference(readThemePreference());
-    }
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    window.removeEventListener("storage", onStorage);
-  };
+  return themePreference.subscribe(() => {
+    applyThemePreference(readThemePreference());
+  });
 }
