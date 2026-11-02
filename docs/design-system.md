@@ -357,8 +357,9 @@ wins.
 - **Widths:** a width that this document gives, such as that of a dialog, is
   a maximum: an element takes the width of its place when that is narrower,
   so that every screen works at 320 CSS pixels (Main Content).
-- **Radii:** 4, 6, or 8 px, or round, as each pattern states, and 20 % of its
-  size for the avatar.
+- **Radii:** 4, 6, or 8 px, or round, as each pattern states; for the
+  avatar, round for a person and 20 % of its size for a bot account and for a
+  recorded action without an actor (Avatar; Representation of a User).
 - **Shadows:** only floating elements have one: Tailwind's `shadow-lg` under
   menus, popovers, and tooltips, and `shadow-xl` under dialogs and the
   sidebar opened over the content.
@@ -416,7 +417,7 @@ that the code imports ship.
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
 | A deadline that has passed, an overdue milestone | `clock-alert` |
 | A confidential Ticket | `lock` |
-| A recorded action without an actor | `server-cog` |
+| A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy | `loader-circle` |
 | A Ticket status that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
@@ -426,8 +427,9 @@ and the change adds its row.
 
 ### Sentinel Mark
 
-The Sentinel mark is the icon of the product name and the favicon of every
-page. It is drawn after Sentinel's logo, a shield whose outline two cuts open
+The Sentinel mark is the icon of the product name, the favicon of every page,
+and the picture of a recorded action without an actor (Representation of a
+User). It is drawn after Sentinel's logo, a shield whose outline two cuts open
 into an S (Sentinel `.github/assets/logo.svg`), in the style of Lucide, so
 that it sits with the icons around it.
 
@@ -440,7 +442,8 @@ that it sits with the icons around it.
   the left side: these two openings, the only parts that break the symmetry
   of the shield, make the S.
 - In the page it follows the rules of the other icons (Icon Set), in the
-  color of the text.
+  color of the text, or at the size and in the color that Representation of a
+  User gives it for an action without an actor.
 - As the favicon it has a stroke of 2.5, because the browser shows it alone at
   16 px, where a stroke of 2 draws a line thinner than 1.5 px. It is drawn in
   `#213661`, the lighter blue of Sentinel's logo, and, when the browser
@@ -511,12 +514,13 @@ button is named "Close navigation" there (`docs/screen-map.md`, Sidebar).
 The account menu (`docs/screen-map.md`, Sidebar) opens upward from the
 account button, 256 px wide (Menus, Popovers, and Tooltips). It starts with
 the signed-in user: the avatar at the medium size, the display name at
-weight 600, and, when it differs from the display name, the username in
-`fg-muted`. Its items follow, separated by `border` lines into three groups:
-Profile, API keys, and Identity audit log; the section Theme
-(`docs/behaviors.md`, Preferences), with its heading in `text-12`, weight
-500, `fg-muted`, and the items System, Light, and Dark, of which the
-selected one ends with `check`; and Sign out, an ordinary item.
+weight 600, and, when it differs from the display name, the username as
+Representation of a User shows it, such as `@jdoe`. Its items follow,
+separated by `border` lines into three groups: Profile, API keys, and
+Identity audit log; the section Theme (`docs/behaviors.md`, Preferences),
+with its heading in `text-12`, weight 500, `fg-muted`, and the items System,
+Light, and Dark, of which the selected one ends with `check`; and Sign out,
+an ordinary item.
 
 ### Main Content
 
@@ -894,24 +898,39 @@ and how the labels look.
 | Large | 64 px | The heading of a user's screen |
 
 - **Full form:** the avatar, 6 px of space, and the display name in the
-  surrounding text's style; where the username follows, it is in `fg-muted`.
-- **Inactive and Bot:** the label follows the name, 6 px later, in `text-12`,
-  weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a 4 px radius,
-  and 4 px of side padding. An inactive user's name is in `fg-muted`. Where
-  the place is too narrow, only the name ends with an ellipsis, unless a
-  table wraps it (Tables); the labels always show.
+  surrounding text's style; where the username follows, as `@` and the
+  username (`docs/behaviors.md`, Representation of a User), it comes after a
+  space, in `fg-muted`. The `@` sets it apart from the name without relying
+  on color, also for an inactive user, whose name is in `fg-muted` too.
+- **Inactive and Bot:** the label follows the name, or the username where it
+  follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
+  1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a
+  second label follows the first, 6 px later. An inactive user's name is in
+  `fg-muted`, and its avatar is gray (Avatar). Where the place is too narrow,
+  only the name, with the username that follows it, ends with an ellipsis,
+  unless a table wraps it (Tables); the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name.
-- **No recorded actor:** "System" after a square of the avatar's size, on
-  `neutral-soft` with a corner radius of 20 %, holding `server-cog` at 70 % of
-  that size in `neutral-on-soft`.
+- **No recorded actor:** a square of the avatar's size, on `neutral-soft`
+  with a corner radius of 20 %, holding the Sentinel mark (Sentinel Mark) at
+  70 % of that size in `neutral-on-soft`, then, 6 px later, "System" in the
+  surrounding text's style. It is square like the avatar of a bot account,
+  because neither stands for a person, and differs from it by the Sentinel
+  mark in place of the cells (Avatar).
 
 ## Avatar
 
-The avatar is a picture that the UI generates from the user's `id`, which is
-stable and never changes (Sentinel `docs/api-spec.md`, User References in
-Responses). The definition is exact, so that any implementation, in any
+The avatar is a square picture that the UI generates from the user's `id`,
+which is stable and never changes (Sentinel `docs/api-spec.md`, User
+References in Responses), in the colors that the user's `bot` and `active`
+select. The definition is exact, so that any implementation, in any
 language, draws the same picture.
+
+The UI shows the picture through a shape, as a mask that hides what lies
+outside it: for a person, a circle that touches the sides of the square,
+which hides part of the cells in the corners; for a bot account, the square
+with its corners rounded at 20 % of its size. The shape belongs to how the UI
+shows the picture, not to its definition.
 
 ### Definition, Version 1
 
@@ -929,13 +948,17 @@ language, draws the same picture.
    0, which about one id in 32,768 gives, column 2 is filled instead.
 4. **Color:** bits 16, 17, and 18, read as an unsigned number with bit 16 the
    most significant, that is the three most significant bits of byte 2,
-   select the color of the Palette by its index. Bit 15 is not used.
-5. **Drawing:** a square of 6 by 6 units filled with `#F0F0F0`, with corners
-   rounded at a radius of 1.2 units, and for each filled cell a square of 1 by
-   1 unit, in the color, at `(0.5 + column, 0.5 + row)`; the filled cells form
-   one shape, so that no seam shows between neighbors at any size. The
-   picture has no border and is the same in both themes; it scales to the
-   size of its use, and until it is drawn its place stays empty at that size.
+   select the color of the Palette by its index. Bit 15 is not used. The
+   avatar of an inactive user, whose `active` is `false`, takes the gray of
+   the Palette instead, whatever the index.
+5. **Drawing:** a square of 6 by 6 units, and for each filled cell a square
+   of 1 by 1 unit at `(0.5 + column, 0.5 + row)`; the filled cells form one
+   shape, so that no seam shows between neighbors at any size. For a person,
+   the square is filled with `#F0F0F0` and the cells with the color; for a
+   bot account, whose `bot` is `true`, the colors are inverted: the square
+   takes the color and the cells `#F0F0F0`. The picture has no border and is
+   the same in both themes; it scales to the size of its use, and until it is
+   drawn its place stays empty at that size.
 
 The `id` is the input because it never changes: a username and an email
 address can change, and a digest of an email address could identify its user
@@ -945,11 +968,19 @@ do, still look different. SHA-256 is available in the browser's Web Crypto
 API in the secure contexts in which the UI runs and in the standard library
 of most languages.
 
+A bot account differs from a person by two cues that do not depend on hue,
+its shape and its lightness, in both themes and at every size. The shape
+alone would not suffice: `#F0F0F0` differs little from the page and the
+surfaces of the light theme, where the outline of a person's avatar shows
+only through its cells. The gray of an inactive user shows the state on the
+avatar itself, also where no label follows it (`docs/behaviors.md`,
+Representation of a User), and a bot account keeps its shape.
+
 ### Palette
 
 | Index | Color | Contrast with `#F0F0F0` |
 |---|---|---|
-| 0 | `#B91C1C` | 5.67 |
+| 0 | `#65730F` | 4.59 |
 | 1 | `#C2410C` | 4.54 |
 | 2 | `#A16207` | 4.32 |
 | 3 | `#15803D` | 4.40 |
@@ -957,11 +988,14 @@ of most languages.
 | 5 | `#0369A1` | 5.20 |
 | 6 | `#4338CA` | 6.93 |
 | 7 | `#A21CAF` | 5.54 |
+| Gray, for an inactive user | `#6E6E6E` | 4.47 |
 
-Every color has a contrast of at least 3:1 with the background of the avatar
-(WCAG 2.2, 1.4.11 Non-text Contrast). The colors and the background are
-tokens, `avatar-0` to `avatar-7` and `avatar-bg`, with one value for both
-themes.
+Every color has a contrast of at least 3:1 with `#F0F0F0` (WCAG 2.2, 1.4.11
+Non-text Contrast), also in the picture of a bot account, which swaps the
+two. The Palette has no red, which is kept for what needs attention at once
+(Principles): the square of a bot account in red would look like the P1
+mark. The colors and `#F0F0F0` are tokens, `avatar-0` to `avatar-7`,
+`avatar-inactive`, and `avatar-bg`, with one value for both themes.
 
 ### Versions
 
@@ -999,8 +1033,17 @@ in position `5c + r`, 1 for a filled cell; the grids show filled cells as
 .....     .###.     .....     .###.     ##.##     ..#..
 ```
 
+The colors of vector 1 for each kind of user, whose cells stay the same:
+
+| User | Square | Cells |
+|---|---|---|
+| A person | `#F0F0F0` | `#A21CAF`, color 7 |
+| A bot account | `#A21CAF` | `#F0F0F0` |
+| An inactive person | `#F0F0F0` | `#6E6E6E` |
+| An inactive bot account | `#6E6E6E` | `#F0F0F0` |
+
 An implementation is correct when it gives these cells and colors for every
-vector, and the mirrored grids above.
+vector, the mirrored grids above, and these colors for each kind of user.
 
 ## Open Decisions
 

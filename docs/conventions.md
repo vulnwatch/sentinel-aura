@@ -173,6 +173,7 @@ rules; review enforces the rest.
 | `src/query-client.ts` | The query client, with the defaults of every read and change (`docs/behaviors.md`, Retries and Unconfirmed Changes; Loading) |
 | `src/session.ts` | What the UI keeps of the session in the origin's browser storage: the session record, and the saved URL with its check (`docs/behaviors.md`, Return After Sign-in; Session Expiration Message) |
 | `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, and the return from Sign in (`docs/behaviors.md`, Session) |
+| `src/avatar.ts` | The pattern and the color of the avatar (`docs/design-system.md`, Avatar, Definition, Version 1): the SHA-256 digest of a user's `id`, and the cells and the index of the color in the Palette that it selects |
 | `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
 | `src/routes/` | One module per route: its definition and its page component |
 | `src/components/` | The components that several routes share |

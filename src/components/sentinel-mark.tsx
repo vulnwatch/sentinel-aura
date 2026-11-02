@@ -5,8 +5,9 @@ interface SentinelMarkProps {
 
 // The Sentinel mark in the page (docs/design-system.md, Sentinel Mark): one
 // line on Lucide's 24-unit grid, with its stroke of 2 and round ends and
-// joins, in the color of the text. It accompanies the product name, which
-// names it, so it is hidden from assistive technologies.
+// joins, in the color of the text. It accompanies the product name, or
+// "System" for a recorded action without an actor (src/components/user.tsx),
+// which names it, so it is hidden from assistive technologies.
 export function SentinelMark({ className }: SentinelMarkProps) {
   return (
     <svg

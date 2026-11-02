@@ -86,7 +86,7 @@
 
   /* Avatar, Palette */
   --color-avatar-bg: #f0f0f0;
-  --color-avatar-0: #b91c1c;
+  --color-avatar-0: #65730f;
   --color-avatar-1: #c2410c;
   --color-avatar-2: #a16207;
   --color-avatar-3: #15803d;
@@ -94,6 +94,7 @@
   --color-avatar-5: #0369a1;
   --color-avatar-6: #4338ca;
   --color-avatar-7: #a21caf;
+  --color-avatar-inactive: #6e6e6e;
 
   /* Type Scale, relative to the text size of the browser: 16 px by default */
   --text-12: 0.75rem;

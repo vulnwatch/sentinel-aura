@@ -54,7 +54,7 @@ const COLOR_TOKENS: [className: string, light: string, dark: string][] = [
   ["bg-mark-low", "#3B82F6", "#3B82F6"],
   ["bg-mark-none", "#8B949E", "#8B949E"],
   ["bg-avatar-bg", "#F0F0F0", "#F0F0F0"],
-  ["bg-avatar-0", "#B91C1C", "#B91C1C"],
+  ["bg-avatar-0", "#65730F", "#65730F"],
   ["bg-avatar-1", "#C2410C", "#C2410C"],
   ["bg-avatar-2", "#A16207", "#A16207"],
   ["bg-avatar-3", "#15803D", "#15803D"],
@@ -62,6 +62,7 @@ const COLOR_TOKENS: [className: string, light: string, dark: string][] = [
   ["bg-avatar-5", "#0369A1", "#0369A1"],
   ["bg-avatar-6", "#4338CA", "#4338CA"],
   ["bg-avatar-7", "#A21CAF", "#A21CAF"],
+  ["bg-avatar-inactive", "#6E6E6E", "#6E6E6E"],
 ];
 
 // Each type size (Type Scale): its size, line height, and letter spacing.
