@@ -672,7 +672,7 @@ complete profile and its manager, and the signed-in user alike: `id`,
   presentation (Sentinel `docs/features/identity/user-management.md`, Get
   User).
 - **Avatar.** A picture that the UI generates from the user's `id`, which
-  never changes (`docs/design-system.md`, Avatar).
+  never changes, round for a person (`docs/design-system.md`, Avatar).
 - **Full form.** The avatar followed by the display name. The avatar is
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the
@@ -683,16 +683,21 @@ complete profile and its manager, and the signed-in user alike: `id`,
   accessible name and shows in a tooltip on hover and on keyboard focus. Every
   other place shows the full form.
 - **Inactive user** (`active` is `false`). The label "Inactive" follows the
-  name; in the compact form, the accessible name and the tooltip end with
-  "(inactive)".
+  name, and the avatar is gray, so that the compact form shows the state at a
+  glance too; in the compact form, the accessible name and the tooltip end
+  with "(inactive)".
 - **Bot account** (`bot` is `true`), an account that an automation operates
   instead of a person. The label "Bot" follows the name; in the compact form,
-  "(bot)". A bot account is still a user, with its own avatar, and an
-  inactive bot account shows both labels.
+  the accessible name and the tooltip end with "(bot)". A bot account is
+  still a user, with its own avatar, which is square and in inverted colors,
+  so that a list of avatars shows at a glance which actions are automated.
+  An inactive bot account shows "Bot", then "Inactive", and in the compact
+  form ends with "(bot) (inactive)".
 - **No recorded actor.** A recorded action whose actor is `null`, such as one
   of a system task or of an external provisioning sync (Sentinel
-  `docs/features/identity/rbac.md`, Actor Identities), shows "System" with an
-  icon of its own instead of an avatar, so that it differs from a bot account.
+  `docs/features/identity/rbac.md`, Actor Identities), shows "System" with the
+  Sentinel mark instead of an avatar, so that it differs from a person and
+  from a bot account.
   Only the actor of a recorded action is "System": another field without a
   user, such as the assignee of an unassigned Ticket, is an absent value
   (Absent Values).
