@@ -103,7 +103,9 @@ test.describe("the account menu", () => {
     await sidebar(page).getByRole("button", { name: "John Doe" }).click();
 
     const menu = page.getByRole("menu", { name: "John Doe" });
-    await expect(page.getByText("John Doe @jdoe")).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "John Doe" }).getByText("@jdoe"),
+    ).toBeVisible();
     await expect(menu.getByRole("menuitem")).toHaveText([
       "Profile",
       "API keys",

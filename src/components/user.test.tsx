@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { Actor, compactName, displayName, User, type UserFields } from "./user";
+import {
+  Actor,
+  compactName,
+  displayName,
+  StackedUser,
+  User,
+  type UserFields,
+} from "./user";
 
 // The representation of a user (docs/behaviors.md, Representation of a User;
 // docs/design-system.md, Representation of a User), at the browser's default
@@ -159,20 +166,97 @@ test("cuts only the name, with its username, when the place is too narrow, and k
   }
 });
 
-test("wraps the name, with its username, when asked, instead of cutting it", async () => {
-  const longName = "Alice Fictional Smith-Wilson-Brown";
-  const screen = await render(
-    <section aria-label="Narrow place" className="w-40">
-      <User user={{ ...SCANNER, full_name: longName }} withUsername wrap />
-    </section>,
-  );
-  const place = screen.getByRole("region").element().getBoundingClientRect();
-  const name = screen.getByText(`${longName} @security-scanner`).element();
+describe("with the username on a line of its own", () => {
+  test.each([
+    ["a user with a full name", ALICE, "Alice Smith", "@asmith"],
+    [
+      "a user whose display name is the username",
+      { ...ALICE, full_name: null },
+      "asmith",
+      "@asmith",
+    ],
+  ])(
+    "shows the username below the name, always: %s",
+    async (_, user, name, username) => {
+      const screen = await render(
+        <p className="font-semibold">
+          <StackedUser user={user} size="medium" />
+        </p>,
+      );
+      const nameText = screen.getByText(name, { exact: true });
+      const usernameText = screen.getByText(username, { exact: true });
 
-  await expect.element(screen.getByText("Bot")).toBeVisible();
-  expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
-  expect(name.getBoundingClientRect().height).toBeGreaterThan(24);
-  expect(name.getBoundingClientRect().right).toBeLessThanOrEqual(place.right);
+      await expect.element(usernameText).toBeVisible();
+      expect(
+        usernameText.element().getBoundingClientRect().top,
+      ).toBeGreaterThanOrEqual(
+        nameText.element().getBoundingClientRect().bottom,
+      );
+      const style = getComputedStyle(usernameText.element());
+      expect([style.fontSize, style.fontWeight, style.color]).toEqual([
+        "13px",
+        "400",
+        FG_MUTED,
+      ]);
+      expect(getComputedStyle(nameText.element()).fontWeight).toBe("600");
+      expect(screen.getByRole("img").query()).toBeNull();
+    },
+  );
+
+  test("shows the labels after the name, on its line", async () => {
+    const screen = await render(
+      <StackedUser user={{ ...SCANNER, active: false }} size="medium" />,
+    );
+    const name = screen.getByText("Security Scanner", { exact: true });
+    const bot = screen.getByText("Bot", { exact: true });
+    const inactive = screen.getByText("Inactive", { exact: true });
+
+    await expect.element(inactive).toBeVisible();
+    const nameBox = name.element().getBoundingClientRect();
+    expect(bot.element().getBoundingClientRect().left).toBeGreaterThan(
+      nameBox.right,
+    );
+    expect(inactive.element().getBoundingClientRect().left).toBeGreaterThan(
+      bot.element().getBoundingClientRect().right,
+    );
+    expect(
+      screen.getByText("@security-scanner").element().getBoundingClientRect()
+        .top,
+    ).toBeGreaterThanOrEqual(nameBox.bottom);
+    expect(getComputedStyle(name.element()).color).toBe(FG_MUTED);
+  });
+
+  test("wraps the name and the username where the place is too narrow, instead of cutting them", async () => {
+    const longName = "Alice Fictional Smith-Wilson-Brown";
+    const screen = await render(
+      <section aria-label="Narrow place" className="w-40">
+        <StackedUser
+          user={{
+            ...SCANNER,
+            full_name: longName,
+            username: "security-scanner-of-the-fictional-pipelines",
+          }}
+          size="medium"
+        />
+      </section>,
+    );
+    const place = screen.getByRole("region").element().getBoundingClientRect();
+
+    await expect.element(screen.getByText("Bot")).toBeVisible();
+    for (const text of [
+      longName,
+      "@security-scanner-of-the-fictional-pipelines",
+    ]) {
+      const element = screen.getByText(text, { exact: true }).element();
+      expect(element.scrollWidth, text).toBeLessThanOrEqual(
+        element.clientWidth,
+      );
+      expect(element.getBoundingClientRect().height, text).toBeGreaterThan(24);
+      expect(element.getBoundingClientRect().right, text).toBeLessThanOrEqual(
+        place.right,
+      );
+    }
+  });
 });
 
 test("shows the username at weight 400 after a name at another weight", async () => {

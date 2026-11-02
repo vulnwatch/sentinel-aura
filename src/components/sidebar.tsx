@@ -260,7 +260,7 @@ function CollapsedContent({
             aria-label="Sentinel"
             className={`flex size-10 items-center justify-center rounded-md data-hovered:bg-sidebar-active ${FOCUS_RING}`}
           >
-            <SentinelMark className="size-5.5" />
+            <SentinelMark className="size-5" />
           </AriaLink>
         </Tooltip>
       </div>

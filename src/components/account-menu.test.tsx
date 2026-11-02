@@ -226,7 +226,18 @@ describe("the account menu", () => {
     expect(popover.bottom).toBeLessThanOrEqual(
       button.element().getBoundingClientRect().top,
     );
-    await expect.element(screen.getByText("John Doe @jdoe")).toBeVisible();
+    // The signed-in user, with the username on a line of its own.
+    const popoverElement = screen.getByRole("dialog", { name: "John Doe" });
+    const username = popoverElement.getByText("@jdoe", { exact: true });
+    await expect.element(username).toBeVisible();
+    expect(
+      username.element().getBoundingClientRect().top,
+    ).toBeGreaterThanOrEqual(
+      popoverElement
+        .getByText("John Doe", { exact: true })
+        .element()
+        .getBoundingClientRect().bottom,
+    );
     const items = menu.getByRole("menuitem").all();
     expect(items.map((item) => item.element().textContent)).toEqual([
       "Profile",
@@ -281,12 +292,31 @@ describe("the account menu", () => {
     await openMenu(screen, "Security Scanner of the Fictional Pipelines Bot");
 
     const name = screen
-      .getByText(
-        "Security Scanner of the Fictional Pipelines @security-scanner",
-      )
+      .getByRole("dialog")
+      .getByText("Security Scanner of the Fictional Pipelines", {
+        exact: true,
+      })
       .element();
     expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
     expect(name.getBoundingClientRect().height).toBeGreaterThan(24);
+    await expect
+      .element(
+        screen
+          .getByRole("dialog")
+          .getByText("@security-scanner", { exact: true }),
+      )
+      .toBeVisible();
+  });
+
+  test("shows the username also when it is the display name", async () => {
+    stubSession({ data: { ...FICTIONAL_USER.data, full_name: null } });
+    const { screen } = await renderApp();
+
+    await openMenu(screen, "jdoe");
+
+    await expect
+      .element(screen.getByRole("dialog").getByText("@jdoe", { exact: true }))
+      .toBeVisible();
   });
 
   test("leads to a screen of the account, and closes", async () => {

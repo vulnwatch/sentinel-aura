@@ -34,7 +34,7 @@ import { Avatar } from "./avatar";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { useShowMessage } from "./message-area";
 import { Tooltip } from "./tooltip";
-import { compactName, User } from "./user";
+import { compactName, StackedUser, User } from "./user";
 
 // The account button of the sidebar and the account menu that it opens
 // (docs/screen-map.md, Sidebar; docs/design-system.md, Sidebar; Account
@@ -163,9 +163,10 @@ interface AccountMenuProps {
 }
 
 // The account button, which opens the account menu upward, 256 px wide,
-// named by the button. The menu starts with the signed-in user, whose name
-// and username wrap rather than end with an ellipsis, so that it shows whole
-// the name that the button cuts. Its items follow in three groups: the
+// named by the button. The menu starts with the signed-in user, with the
+// username always on a line of its own, and the name and the username wrap
+// rather than end with an ellipsis, so that the menu shows whole the name
+// that the button cuts. Its items follow in three groups: the
 // screens of the user's own account; the theme, which applies at once in
 // every open tab; and Sign out, which asks for no confirmation and stays in
 // the open menu, busy, until it ends. When it fails, the menu closes and the
@@ -207,7 +208,7 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
         className="w-64 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
       >
         <div className="px-2.5 py-2 font-semibold">
-          <User user={user} size="medium" withUsername wrap />
+          <StackedUser user={user} size="medium" />
         </div>
         <div className={SEPARATOR} />
         <Menu className="outline-none">

@@ -500,7 +500,8 @@ the sidebar, the sidebar scrolls within itself.
   `fg-muted`. It opens the account menu.
 
 **Collapsed, 56 px wide,** the same parts, centered, as icon buttons of 40 px:
-the product name as the Sentinel mark at 22 px, named "Sentinel"; the search as
+the product name as the Sentinel mark at 20 px, as in the expanded sidebar,
+named "Sentinel"; the search as
 the `search` button, which opens the search field in a popover beside the
 sidebar; each entry as its icon at 18 px, named by its entry, the current one
 with the `sidebar-active` background, its icon in `link`, and the 3 px bar in
@@ -517,16 +518,19 @@ button is named "Close navigation" there (`docs/screen-map.md`, Sidebar).
 
 The account menu (`docs/screen-map.md`, Sidebar) opens upward from the
 account button, 256 px wide (Menus, Popovers, and Tooltips). It starts with
-the signed-in user: the avatar at the medium size, the display name at
-weight 600, and, when it differs from the display name, the username as
-Representation of a User shows it, such as `@jdoe`, then the labels. The name
-and the username wrap where the menu is too narrow, instead of ending with an
-ellipsis, so that the menu shows whole the name that the account button
-cuts. Its items follow, below a `border` line and separated by `border` lines
-into three groups: Profile, API keys, and Identity audit log; the section
-Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
-weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
-selected one ends with `check`; and Sign out, an ordinary item. While Sign
+the signed-in user: the avatar at the medium size, 6 px of space, and two
+lines, the display name at weight 600 followed by its labels, and below them
+the username, as `@` and the username, such as `@jdoe`, in `text-13`,
+`fg-muted`, at weight 400. The username shows always, also when it is the
+display name, so that the menu looks the same for every user
+(`docs/behaviors.md`, Representation of a User). The name and the username
+wrap where the menu is too narrow, instead of ending with an ellipsis, so
+that the menu shows whole the name that the account button cuts. Its items
+follow, below a `border` line and separated by `border` lines into three
+groups: Profile, API keys, and Identity audit log; the section Theme
+(`docs/behaviors.md`, Preferences), with its heading in `text-12`, weight
+500, `fg-muted`, and the items System, Light, and Dark, of which the selected
+one ends with `check`; and Sign out, an ordinary item. While Sign
 out is in progress, the menu stays open, and the item keeps the focus, shows
 `loader-circle` in place of its icon, has the description "Signing out" for
 assistive technologies, and cannot start the sign-out again
@@ -916,9 +920,10 @@ and how the labels look.
 - **Full form:** the avatar, 6 px of space, and the display name in the
   surrounding text's style; where the username follows, as `@` and the
   username (`docs/behaviors.md`, Representation of a User), it comes after a
-  space, in `fg-muted` at weight 400. The `@` sets it apart from the name
-  without relying on color, also for an inactive user, whose name is in
-  `fg-muted` too.
+  space, in `fg-muted` at weight 400, or, in the account menu, on a line of
+  its own below the name and its labels (Account Menu). The `@` sets it
+  apart from the name without relying on color, also for an inactive user,
+  whose name is in `fg-muted` too.
 - **Inactive and Bot:** the label follows the name, or the username where it
   follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
   1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a
