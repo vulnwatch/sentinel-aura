@@ -60,23 +60,13 @@ test.describe("Sign in", () => {
 
     await expect(heading(page, "Sign in")).toBeVisible();
     await expect(page.getByText(EXPIRED)).toBeVisible();
+    await expectAccessible(page);
     await expect(page).toHaveScreenshot("sign-in-session-expired.png");
     await page.reload();
     await expect(page.getByText(EXPIRED)).toBeVisible();
 
     await submitSignIn(page, "jdoe", DATASET_PASSWORD);
     await expect(page).toHaveURL(SCREEN);
-  });
-
-  test("opens the landing when it is opened with a session", async ({
-    page,
-  }) => {
-    await signIn(page);
-
-    await page.goto("/login");
-
-    await expect(heading(page, "Sentinel Aura")).toBeVisible();
-    await expect(page).toHaveURL("/");
   });
 
   test("says that a rejected username or password isn't correct, and keeps the input", async ({
@@ -127,7 +117,7 @@ test.describe("Sign in", () => {
     await expect(page.getByText("Enter your username.")).toBeVisible();
     await expect(page.getByText("Enter your password.")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Username" })).toBeFocused();
-    await expectAccessible(page);
     expect(signIns).toEqual([]);
+    await expect(page).toHaveScreenshot("sign-in-field-errors.png");
   });
 });

@@ -10,16 +10,23 @@ import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { RETURN_URL_KEY, SESSION_RECORD_KEY } from "../session";
 import {
+  errorResponse,
   FICTIONAL_USER,
   jsonResponse,
   requestsTo,
+  signedIn,
   stubApi,
   unauthorized,
+  validationError,
   type ApiRequest,
 } from "../test-api";
 
 const LOGIN = "/api/v1/auth/login";
+const ME = "/api/v1/users/me";
 const REQUEST_ID = "01890a5d-ac96-774b-bcce-b302099a8057";
+const INTERNAL =
+  "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.";
+const REJECTED = "The username or password isn't correct.";
 
 let client: QueryClient;
 
@@ -42,7 +49,8 @@ afterEach(() => {
 // signed-in user returns the user when the sign-in succeeded.
 function stubSignIn(
   respond: (request: ApiRequest) => Response | Promise<Response>,
-  me: () => Response = () => jsonResponse(200, FICTIONAL_USER),
+  me: () => Response | Promise<Response> = () =>
+    jsonResponse(200, FICTIONAL_USER),
 ) {
   let session = false;
   return stubApi(async (request) => {
@@ -55,14 +63,13 @@ function stubSignIn(
   });
 }
 
-function signedIn(): Response {
-  return jsonResponse(200, {
-    data: {
-      access_token: "fictional.access.token",
-      token_type: "bearer",
-      expires_at: "2026-10-09T14:05:09Z",
-    },
+// A response that the test gives when it chooses.
+function later() {
+  let answer!: (response: Response) => void;
+  const response = new Promise<Response>((resolve) => {
+    answer = resolve;
   });
+  return { response, answer };
 }
 
 async function renderSignIn(path = "/login") {
@@ -76,17 +83,40 @@ async function renderSignIn(path = "/login") {
   return { router, screen };
 }
 
-async function fillIn(
-  screen: Awaited<ReturnType<typeof renderSignIn>>["screen"],
-  username: string,
-  password: string,
-) {
+type Screen = Awaited<ReturnType<typeof renderSignIn>>["screen"];
+
+async function fillIn(screen: Screen, username: string, password: string) {
   if (username !== "") {
     await screen.getByRole("textbox", { name: "Username" }).fill(username);
   }
   if (password !== "") {
     await screen.getByLabelText("Password").fill(password);
   }
+}
+
+// Expects the focus on the message at the top of the form that holds the
+// text.
+async function expectFocusOnMessage(text: string) {
+  await expect
+    .poll(() => document.activeElement?.textContent ?? "")
+    .toContain(text);
+}
+
+// Expects the input of the test kept, the button no longer busy, and Sign in
+// still shown.
+async function expectFormKept(screen: Screen) {
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole("textbox", { name: "Username" }))
+    .toHaveValue("jdoe");
+  await expect
+    .element(screen.getByLabelText("Password"))
+    .toHaveValue("fictional password");
+  await expect
+    .element(screen.getByRole("button", { name: "Sign in" }))
+    .not.toHaveAttribute("aria-disabled");
 }
 
 describe("Sign in", () => {
@@ -164,31 +194,42 @@ describe("Sign in", () => {
     expect(router.state.location.pathname).toBe("/");
   });
 
-  test("is busy until the session is known, and sends the sign-in once", async () => {
-    let answer!: (response: Response) => void;
-    const fetch = stubSignIn(
-      () =>
-        new Promise<Response>((resolve) => {
-          answer = resolve;
-        }),
-    );
-    const { screen } = await renderSignIn();
-    await fillIn(screen, "jdoe", "fictional password");
-    const button = screen.getByRole("button", { name: "Sign in" });
+  test.each([
+    ["the sign-in", "sign-in"],
+    ["the read of the signed-in user that follows it", "read"],
+  ] as const)(
+    "is busy while %s is in progress, and sends the sign-in once",
+    async (_, waiting) => {
+      const { response, answer } = later();
+      const fetch = stubSignIn(
+        () => (waiting === "sign-in" ? response : signedIn()),
+        () =>
+          waiting === "read" ? response : jsonResponse(200, FICTIONAL_USER),
+      );
+      const { screen } = await renderSignIn();
+      await fillIn(screen, "jdoe", "fictional password");
+      const button = screen.getByRole("button", { name: "Sign in" });
 
-    await button.click();
-    await expect.poll(() => requestsTo(fetch, LOGIN)).toBe(1);
-    await expect.element(button).toHaveAttribute("aria-disabled", "true");
-    await button.click({ force: true });
-    await screen.getByLabelText("Password").click();
-    await userEvent.keyboard("{Enter}");
-    answer(signedIn());
+      await button.click();
+      await expect
+        .poll(() => requestsTo(fetch, waiting === "sign-in" ? LOGIN : ME))
+        .toBe(waiting === "sign-in" ? 1 : 2);
+      await expect.element(button).toHaveAttribute("aria-disabled", "true");
+      await button.click({ force: true });
+      await screen.getByLabelText("Password").click();
+      await userEvent.keyboard("{Enter}");
+      answer(
+        waiting === "sign-in" ? signedIn() : jsonResponse(200, FICTIONAL_USER),
+      );
 
-    await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }))
-      .toBeVisible();
-    expect(requestsTo(fetch, LOGIN)).toBe(1);
-  });
+      await expect
+        .element(
+          screen.getByRole("heading", { level: 1, name: "Sentinel Aura" }),
+        )
+        .toBeVisible();
+      expect(requestsTo(fetch, LOGIN)).toBe(1);
+    },
+  );
 });
 
 describe("Sign in, before sending", () => {
@@ -240,64 +281,44 @@ describe("Sign in, before sending", () => {
   });
 });
 
+// A 429 of Sentinel, with the time that remains until the lockout expires.
+function locked() {
+  const response = errorResponse(429, "AUTH_ACCOUNT_LOCKED");
+  response.headers.set("Retry-After", "540");
+  return response;
+}
+
 describe("Sign in, after a failure", () => {
   test.each([
     [
       "rejected credentials",
-      () =>
-        jsonResponse(401, {
-          code: "AUTH_INVALID_CREDENTIALS",
-          detail: "Invalid username or password.",
-        }),
-      "The username or password isn't correct.",
+      () => errorResponse(401, "AUTH_INVALID_CREDENTIALS"),
+      REJECTED,
       false,
     ],
     [
       "a 401 without a code",
       () => new Response("Unauthorized", { status: 401 }),
-      "The username or password isn't correct.",
+      REJECTED,
       false,
     ],
-    [
-      "a locked account",
-      () =>
-        new Response(
-          JSON.stringify({
-            code: "AUTH_ACCOUNT_LOCKED",
-            detail: "Account temporarily locked. Try again later.",
-          }),
-          {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json",
-              "Retry-After": "540",
-            },
-          },
-        ),
-      "Too many attempts. Try again later.",
-      false,
-    ],
-    [
-      "a 500",
-      () => jsonResponse(500, { code: "INTERNAL_ERROR" }),
-      "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.",
-      true,
-    ],
+    ["a locked account", locked, "Too many attempts. Try again later.", false],
+    ["a 500", () => errorResponse(500, "INTERNAL_ERROR"), INTERNAL, true],
     [
       "a 503",
-      () => jsonResponse(503, { code: "DATABASE_UNAVAILABLE" }),
+      () => errorResponse(503, "DATABASE_UNAVAILABLE"),
       "Sentinel isn't available right now. Try again later.",
       true,
     ],
     [
       "403 AUTH_CROSS_ORIGIN_REJECTED",
-      () => jsonResponse(403, { code: "AUTH_CROSS_ORIGIN_REJECTED" }),
-      "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.",
+      () => errorResponse(403, "AUTH_CROSS_ORIGIN_REJECTED"),
+      INTERNAL,
       true,
     ],
     [
       "a status that the pinned contract does not list",
-      () => jsonResponse(418, { code: "FICTIONAL_UNLISTED_CODE" }),
+      () => errorResponse(418, "FICTIONAL_UNLISTED_CODE"),
       "Sentinel didn't accept this request.",
       false,
     ],
@@ -316,37 +337,41 @@ describe("Sign in, after a failure", () => {
 
       await screen.getByRole("button", { name: "Sign in" }).click();
 
-      const text = screen.getByText(message);
-      await expect.element(text).toBeVisible();
-      expect(text.element().closest("[tabindex='-1']")).toBe(
-        document.activeElement,
-      );
+      await expect.element(screen.getByText(message)).toBeVisible();
+      await expectFocusOnMessage(message);
       if (reference) {
         await expect.element(screen.getByText(REQUEST_ID)).toBeVisible();
       }
-      await expect
-        .element(screen.getByRole("textbox", { name: "Username" }))
-        .toHaveValue("jdoe");
-      await expect
-        .element(screen.getByLabelText("Password"))
-        .toHaveValue("fictional password");
-      await expect
-        .element(screen.getByRole("button", { name: "Sign in" }))
-        .not.toHaveAttribute("aria-disabled");
+      await expectFormKept(screen);
       expect(router.state.location.pathname).toBe("/login");
     },
   );
 
-  test("shows the field errors of a VALIDATION_ERROR at their fields, and moves the focus to the first", async () => {
+  test("shows the field errors of a VALIDATION_ERROR at their fields, and moves the focus to the first of the form", async () => {
     stubSignIn(() =>
-      jsonResponse(422, {
-        code: "VALIDATION_ERROR",
-        detail: "Request validation failed",
-        errors: [
-          { loc: ["body", "password"], msg: "Fictional", type: "string_type" },
-        ],
-      }),
+      validationError([
+        ["body", "password"],
+        ["body", "username"],
+      ]),
     );
+    const { screen } = await renderSignIn();
+    await fillIn(screen, "jdoe", "fictional password");
+
+    await screen.getByRole("button", { name: "Sign in" }).click();
+
+    await expect
+      .element(screen.getByLabelText("Password"))
+      .toHaveAccessibleDescription("This value isn't valid.");
+    await expect
+      .element(screen.getByRole("textbox", { name: "Username" }))
+      .toHaveAccessibleDescription("This value isn't valid.");
+    await expect
+      .element(screen.getByRole("textbox", { name: "Username" }))
+      .toHaveFocus();
+  });
+
+  test("clears a field error of a VALIDATION_ERROR once its value changes, and only that one", async () => {
+    stubSignIn(() => validationError([["body", "password"]]));
     const { screen } = await renderSignIn();
     await fillIn(screen, "jdoe", "fictional password");
 
@@ -374,14 +399,8 @@ describe("Sign in, after a failure", () => {
       .not.toBeInTheDocument();
   });
 
-  test("shows a field error of a VALIDATION_ERROR that matches no field as an error of the form", async () => {
-    stubSignIn(() =>
-      jsonResponse(422, {
-        code: "VALIDATION_ERROR",
-        detail: "Request validation failed",
-        errors: [{ loc: ["body"], msg: "Fictional", type: "json_invalid" }],
-      }),
-    );
+  test("shows a field error of a VALIDATION_ERROR that matches no field as an error of the form, with the others at their fields", async () => {
+    stubSignIn(() => validationError([["body"], ["body", "password"]]));
     const { screen } = await renderSignIn();
     await fillIn(screen, "jdoe", "fictional password");
 
@@ -390,26 +409,38 @@ describe("Sign in, after a failure", () => {
     await expect
       .element(screen.getByText("Sentinel didn't accept this request."))
       .toBeVisible();
-  });
-
-  test("shows the failure of the read of the signed-in user that follows a sign-in", async () => {
-    stubSignIn(signedIn, () =>
-      jsonResponse(503, { code: "DATABASE_UNAVAILABLE" }),
-    );
-    const { router, screen } = await renderSignIn();
-    await fillIn(screen, "jdoe", "fictional password");
-
-    await screen.getByRole("button", { name: "Sign in" }).click();
-
     await expect
-      .element(
-        screen.getByText(
-          "Sentinel isn't available right now. Try again later.",
-        ),
-      )
-      .toBeVisible();
-    expect(router.state.location.pathname).toBe("/login");
+      .element(screen.getByLabelText("Password"))
+      .toHaveAccessibleDescription("This value isn't valid.");
+    await expectFocusOnMessage("Sentinel didn't accept this request.");
   });
+
+  test.each([
+    [
+      "a 503",
+      () => errorResponse(503, "DATABASE_UNAVAILABLE"),
+      "Sentinel isn't available right now. Try again later.",
+    ],
+    [
+      "a 401, after which the browser has no session",
+      unauthorized,
+      "Sentinel signed you in, but this browser didn't keep the session. Allow cookies for Sentinel, then sign in again.",
+    ],
+  ])(
+    "shows %s of the read of the signed-in user that follows a sign-in, and stays",
+    async (_, me, message) => {
+      stubSignIn(signedIn, me);
+      const { router, screen } = await renderSignIn();
+      await fillIn(screen, "jdoe", "fictional password");
+
+      await screen.getByRole("button", { name: "Sign in" }).click();
+
+      await expect.element(screen.getByText(message)).toBeVisible();
+      await expectFocusOnMessage(message);
+      await expectFormKept(screen);
+      expect(router.state.location.pathname).toBe("/login");
+    },
+  );
 
   test("leaves a failure of the UI itself to the page of a failure of the UI", async () => {
     stubSignIn(signedIn);
@@ -431,20 +462,18 @@ describe("Sign in, after a failure", () => {
   });
 
   test("clears the message of a failure when the form is sent again", async () => {
-    let answer!: (response: Response) => void;
+    const { response, answer } = later();
     let attempts = 0;
     stubSignIn(() => {
       attempts += 1;
       return attempts === 1
-        ? jsonResponse(401, { code: "AUTH_INVALID_CREDENTIALS" })
-        : new Promise<Response>((resolve) => {
-            answer = resolve;
-          });
+        ? errorResponse(401, "AUTH_INVALID_CREDENTIALS")
+        : response;
     });
     const { screen } = await renderSignIn();
     await fillIn(screen, "jdoe", "fictional password");
     await screen.getByRole("button", { name: "Sign in" }).click();
-    const message = screen.getByText("The username or password isn't correct.");
+    const message = screen.getByText(REJECTED);
     await expect.element(message).toBeVisible();
 
     await screen.getByRole("button", { name: "Sign in" }).click();

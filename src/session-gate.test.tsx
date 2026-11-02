@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "./styles.css";
 import { App } from "./app";
@@ -29,6 +30,7 @@ import {
   SESSION_RECORD_KEY,
 } from "./session";
 import {
+  errorResponse,
   FICTIONAL_USER,
   jsonResponse,
   OTHER_USER,
@@ -111,6 +113,14 @@ function savedUrl() {
   return window.sessionStorage.getItem(RETURN_URL_KEY);
 }
 
+// Resolves once the pending callbacks of the timers have run, for a test that
+// checks that nothing more happens.
+function settle() {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+}
+
 describe("as the UI loads", () => {
   test("shows only the loading indicator until the signed-in user arrives, then the screen", async () => {
     let answer!: (response: Response) => void;
@@ -121,11 +131,16 @@ describe("as the UI loads", () => {
         }),
     );
     const { screen } = await renderApp("/");
+    const indicator = screen.getByRole("progressbar", { name: "Loading" });
 
-    await expect
-      .element(screen.getByRole("progressbar", { name: "Loading" }))
-      .toBeVisible();
+    await expect.element(indicator).toBeVisible();
     await expect.element(screen.getByRole("heading")).not.toBeInTheDocument();
+    // Centered in the window.
+    const box = indicator.element().getBoundingClientRect();
+    expect(Math.abs(box.left + box.width / 2 - window.innerWidth / 2)).toBe(0);
+    expect(
+      Math.abs(box.top + box.height / 2 - window.innerHeight / 2),
+    ).toBeLessThanOrEqual(1);
     answer(jsonResponse(200, FICTIONAL_USER));
 
     await expect
@@ -211,9 +226,7 @@ describe("as the UI loads", () => {
   ])(
     "shows another failure on %s in place of the screen, with Try again, without leading to Sign in",
     async (_, path) => {
-      const fetch = stubApi(() =>
-        jsonResponse(503, { code: "DATABASE_UNAVAILABLE" }),
-      );
+      const fetch = stubApi(() => errorResponse(503, "DATABASE_UNAVAILABLE"));
       const { router, screen } = await renderApp(path);
 
       await expect
@@ -262,63 +275,129 @@ describe("as the UI loads", () => {
     },
   );
 
-  test("links to the landing after a failure that Try again does not follow", async () => {
-    stubApi(() => jsonResponse(403, { code: "AUTH_INSUFFICIENT_PERMISSION" }));
+  test("moves the focus to the screen's heading when the read succeeds after Try again", async () => {
+    const fetch = stubApi(() => errorResponse(503, "DATABASE_UNAVAILABLE"));
     const { screen } = await renderApp(SCREEN);
+    const tryAgain = screen.getByRole("button", { name: "Try again" });
+    await expect.element(tryAgain).toBeVisible();
+    fetch.mockImplementation(() =>
+      Promise.resolve(jsonResponse(200, FICTIONAL_USER)),
+    );
+
+    await userEvent.keyboard("{Tab}");
+    await expect.element(tryAgain).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "No access" }))
-      .toBeVisible();
-    await expect
-      .element(screen.getByRole("link", { name: "Go to the start page" }))
-      .toBeVisible();
-    await expect
-      .element(screen.getByRole("button", { name: "Try again" }))
-      .not.toBeInTheDocument();
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
+      .toHaveFocus();
   });
 
+  test("moves the focus to the heading of the failure when the read fails again after Try again", async () => {
+    stubApi(() => errorResponse(503, "DATABASE_UNAVAILABLE"));
+    const { screen } = await renderApp(SCREEN);
+    const tryAgain = screen.getByRole("button", { name: "Try again" });
+    await expect.element(tryAgain).toBeVisible();
+
+    await userEvent.keyboard("{Tab}");
+    await expect.element(tryAgain).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "This page couldn't be loaded",
+        }),
+      )
+      .toHaveFocus();
+  });
+
+  test.each([
+    [
+      "a 403",
+      () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
+      "No access",
+    ],
+    [
+      "a 404 without a code",
+      () => new Response("", { status: 404 }),
+      "Not found",
+    ],
+    [
+      "a status that the pinned contract does not list",
+      () => errorResponse(418, "FICTIONAL_UNLISTED_CODE"),
+      "This page couldn't be loaded",
+    ],
+  ])(
+    "offers Try again after %s, not the link to the landing, and reads the user once",
+    async (_, respond, heading) => {
+      const fetch = stubApi(respond);
+      const { screen } = await renderApp(SCREEN);
+
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: heading }))
+        .toBeVisible();
+      await expect
+        .element(screen.getByRole("button", { name: "Try again" }))
+        .toBeVisible();
+      await expect.element(screen.getByRole("link")).not.toBeInTheDocument();
+      await settle();
+      expect(requestsTo(fetch, ME)).toBe(1);
+    },
+  );
+
   test("does not read the signed-in user again when the tab returns to the foreground while its failure shows", async () => {
-    const fetch = stubApi(() => jsonResponse(404, { code: "ROUTE_NOT_FOUND" }));
+    const fetch = stubApi(() => errorResponse(404, "ROUTE_NOT_FOUND"));
     const { screen } = await renderApp(SCREEN);
     await expect
-      .element(screen.getByRole("link", { name: "Go to the start page" }))
+      .element(screen.getByRole("button", { name: "Try again" }))
       .toBeVisible();
 
     returnToForeground();
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    await settle();
 
     expect(requestsTo(fetch, ME)).toBe(1);
   });
 });
 
 describe("a 401 of another request", () => {
-  test("of a read discards the data read from the API and leads to Sign in", async () => {
-    const { session } = stubSession("signed-in", () => unauthorized());
-    const { router, screen } = await renderApp(`${SCREEN}?view=all`);
-    await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
-      .toBeVisible();
-    client.setQueryData(["records"], { data: ["fictional"] });
+  test.each([
+    ["AUTH_NOT_AUTHENTICATED", unauthorized],
+    ["without a code", () => new Response("Unauthorized", { status: 401 })],
+  ])(
+    "of a read, %s, discards the data and the changes and leads to Sign in",
+    async (_, respond) => {
+      const { session } = stubSession("signed-in", respond);
+      const { router, screen } = await renderApp(`${SCREEN}?view=all`);
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
+        .toBeVisible();
+      client.setQueryData(["records"], { data: ["fictional"] });
+      await new MutationObserver(client, {
+        mutationFn: () => Promise.resolve("A fictional change"),
+      }).mutate();
+      expect(client.getMutationCache().getAll()).toHaveLength(1);
 
-    session.user = undefined;
-    await readTickets();
+      session.user = undefined;
+      await readTickets();
 
-    await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
-      .toBeVisible();
-    expect(router.state.location.pathname).toBe("/login");
-    expect(router.history.length).toBe(1);
-    expect(savedUrl()).toBe(`${SCREEN}?view=all`);
-    expect(client.getQueryData(["records"])).toBeUndefined();
-    expect(client.getQueryData(getGetCurrentUserProfileQueryKey())).toBe(
-      undefined,
-    );
-    await expect
-      .element(screen.getByText("Your session has expired. Sign in again."))
-      .toBeVisible();
-  });
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+        .toBeVisible();
+      expect(router.state.location.pathname).toBe("/login");
+      expect(router.history.length).toBe(1);
+      expect(savedUrl()).toBe(`${SCREEN}?view=all`);
+      expect(client.getQueryData(["records"])).toBeUndefined();
+      expect(client.getQueryData(getGetCurrentUserProfileQueryKey())).toBe(
+        undefined,
+      );
+      expect(client.getMutationCache().getAll()).toEqual([]);
+      await expect
+        .element(screen.getByText("Your session has expired. Sign in again."))
+        .toBeVisible();
+    },
+  );
 
   test("of a change leads to Sign in", async () => {
     const { session } = stubSession("signed-in", () => unauthorized());
@@ -417,20 +496,32 @@ describe("a 401 of another request", () => {
 
 describe("the signed-in user", () => {
   test.each([
-    ["a 403", "AUTH_INSUFFICIENT_PERMISSION", 2],
-    ["403 AUTH_CROSS_ORIGIN_REJECTED", "AUTH_CROSS_ORIGIN_REJECTED", 1],
-  ])("is read %s", async (_, code, reads) => {
-    const { spy } = stubSession("signed-in", () => jsonResponse(403, { code }));
+    [
+      "again after a 403",
+      () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
+      2,
+    ],
+    [
+      "again after a 403 without a code",
+      () => new Response("Forbidden", { status: 403 }),
+      2,
+    ],
+    [
+      "once after 403 AUTH_CROSS_ORIGIN_REJECTED",
+      () => errorResponse(403, "AUTH_CROSS_ORIGIN_REJECTED"),
+      1,
+    ],
+  ])("is read %s", async (_, respond, reads) => {
+    const { spy } = stubSession("signed-in", respond);
     const { screen } = await renderApp(SCREEN);
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toBeVisible();
 
     await readTickets();
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
 
+    await expect.poll(() => requestsTo(spy, ME)).toBe(reads);
+    await settle();
     expect(requestsTo(spy, ME)).toBe(reads);
   });
 
@@ -442,11 +533,12 @@ describe("the signed-in user", () => {
       .toBeVisible();
 
     fetch.mockImplementation(() =>
-      Promise.resolve(jsonResponse(500, { code: "INTERNAL_ERROR" })),
+      Promise.resolve(errorResponse(500, "INTERNAL_ERROR")),
     );
     returnToForeground();
 
     await expect.poll(() => requestsTo(fetch, ME)).toBe(4);
+    await expect.poll(() => client.isFetching()).toBe(0);
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toBeVisible();
@@ -569,6 +661,7 @@ describe("Sign in, once a session exists", () => {
     ["no URL is saved", undefined],
     ["the saved URL leads to another origin", "https://attacker.example.com/"],
     ["the saved URL is Sign in", "/login"],
+    ["the saved URL is under /api/", "/api/v1/users/me"],
   ])("opens the landing as it loads when %s", async (_, saved) => {
     if (saved !== undefined) {
       window.sessionStorage.setItem(RETURN_URL_KEY, saved);

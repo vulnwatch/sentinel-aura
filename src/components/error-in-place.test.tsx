@@ -122,6 +122,25 @@ describe("in place of the content of a screen", () => {
       .element(screen.getByRole("link", { name: "Go to the start page" }))
       .toBeVisible();
   });
+
+  test("offers Try again after every failure, instead of the link to the landing, for a read without which no screen shows", async () => {
+    const onRetry = vi.fn();
+    const screen = await render(
+      <ErrorInPlace
+        error={FORBIDDEN}
+        placement="screen"
+        onRetry={onRetry}
+        retryAlways
+      />,
+    );
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "No access" }))
+      .toBeVisible();
+    expect(screen.getByRole("link").query()).toBeNull();
+    await screen.getByRole("button", { name: "Try again" }).click();
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
 });
 
 describe("in place of a part of a screen", () => {

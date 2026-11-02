@@ -53,16 +53,6 @@ export function saveReturnUrl(url: string) {
   }
 }
 
-// Whether a URL is saved, which shows that the UI led to Sign in: Sign in
-// opened directly saves nothing, and Sign in removes the URL when it leaves.
-export function hasSavedReturnUrl(): boolean {
-  try {
-    return window.sessionStorage.getItem(RETURN_URL_KEY) !== null;
-  } catch {
-    return false;
-  }
-}
-
 // Reads and removes the saved URL, and returns the path, search, and fragment
 // that Sign in opens, or undefined when the value counts as absent
 // (returnPath).

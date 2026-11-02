@@ -153,7 +153,8 @@ function presentErrorResponse(
 export const MESSAGE_INVALID_VALUE = "This value isn't valid.";
 
 export interface ValidationErrorFields<TField extends string> {
-  // The fields of the form that an error of the response locates.
+  // The fields of the form that an error of the response locates, in the
+  // order of the form.
   fields: TField[];
   // Whether an error of the response matches no field of the form, or the
   // response locates none, which makes it an error of the form.
@@ -169,7 +170,7 @@ export function validationErrorFields<TField extends string>(
   failure: RequestFailure,
   fields: readonly TField[],
 ): ValidationErrorFields<TField> {
-  const located: TField[] = [];
+  const located = new Set<TField>();
   let unmatched = false;
   const errors =
     failure instanceof ApiError &&
@@ -180,17 +181,58 @@ export function validationErrorFields<TField extends string>(
       ? failure.body.errors
       : undefined;
   if (!Array.isArray(errors) || errors.length === 0) {
-    return { fields: located, unmatched: true };
+    return { fields: [], unmatched: true };
   }
   for (const error of errors) {
     const field = fieldOf(error, fields);
     if (field === undefined) {
       unmatched = true;
-    } else if (!located.includes(field)) {
-      located.push(field);
+    } else {
+      located.add(field);
     }
   }
-  return { fields: located, unmatched };
+  return { fields: fields.filter((field) => located.has(field)), unmatched };
+}
+
+// The messages of Sign in, which handles a 401 itself (docs/screens/sign-in.md,
+// States): Sentinel answers every credential failure of local sign-in with a
+// 401 (Sentinel docs/features/identity/local-authentication.md, Login), and the
+// read of the signed-in user that follows a successful sign-in answers one
+// when the session cookie did not reach Sentinel (Sentinel
+// docs/features/identity/authentication.md, Frontend session behavior).
+const MESSAGE_SIGN_IN_REJECTED = "The username or password isn't correct.";
+const MESSAGE_SESSION_NOT_KEPT =
+  "Sentinel signed you in, but this browser didn't keep the session. Allow cookies for Sentinel, then sign in again.";
+
+export interface MessagePresentation {
+  message: string;
+  // The request identifier, shown after "Reference:", when the message has a
+  // reference and the response carried an identifier.
+  reference: string | undefined;
+}
+
+// The message at the top of the Sign in form after a failure of the sign-in,
+// or of the read of the signed-in user that follows it: a 401 as Sign in
+// handles it, and every other failure as for sign-in (presentFailure).
+export function presentSignInFailure(
+  failure: RequestFailure,
+  request: "sign-in" | "signed-in user",
+): MessagePresentation {
+  const presentation = presentFailure(failure, "session");
+  if (presentation !== undefined) {
+    return {
+      message: presentation.message,
+      reference: presentation.reference,
+    };
+  }
+  // A 401, whatever its code: the only failure without a presentation.
+  return {
+    message:
+      request === "sign-in"
+        ? MESSAGE_SIGN_IN_REJECTED
+        : MESSAGE_SESSION_NOT_KEPT,
+    reference: undefined,
+  };
 }
 
 function fieldOf<TField extends string>(

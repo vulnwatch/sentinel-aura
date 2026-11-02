@@ -4,6 +4,7 @@ import {
   type Mutation,
   type Query,
   type QueryClient,
+  type QueryFunction,
   type QueryState,
 } from "@tanstack/react-query";
 import {
@@ -16,6 +17,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -32,6 +34,7 @@ import {
 } from "./api/generated/users";
 import { ErrorInPlace } from "./components/error-in-place";
 import { Loading } from "./components/loading";
+import { focusScreenHeading } from "./components/screen-heading";
 import { SignInColumn } from "./components/sign-in-column";
 import { rememberSession, saveReturnUrl, takeReturnUrl } from "./session";
 
@@ -48,6 +51,13 @@ declare module "@tanstack/react-router" {
     // one, or optional, as for /auth/callback. A route without it requires a
     // session (docs/screen-map.md, Contract URLs).
     session?: "sign-in" | "optional";
+  }
+
+  interface HistoryState {
+    // Whether the UI led to Sign in, which the entry of Sign in in the
+    // browser history keeps across a reload, and which Sign in opened
+    // directly lacks (docs/behaviors.md, Session Expiration Message).
+    ledToSignIn?: boolean;
   }
 }
 
@@ -135,24 +145,27 @@ function discardApiData(client: QueryClient, keep: (query: Query) => boolean) {
   client.getMutationCache().clear();
 }
 
-// The read of the signed-in user. A read that returns another user than the
-// one that the tab shows, for example after another account signed in in
-// another tab, discards all the data read from the API except that user's,
-// and opens the landing of that user (docs/behaviors.md, The Signed-in User).
-async function readSignedInUser(
+// The read of the signed-in user, which every caller that reads it uses, so
+// that each read checks the user that it returns, whoever sends it. A read
+// that returns another user than the one that the tab shows, for example
+// after another account signed in in another tab, discards all the data read
+// from the API except that user's, and opens the landing of that user
+// (docs/behaviors.md, The Signed-in User).
+export function readSignedInUser(
   client: QueryClient,
   router: AnyRouter,
-  signal: AbortSignal,
-): Promise<CurrentUserResponse> {
-  const shown = client.getQueryData<CurrentUserResponse>(
-    getGetCurrentUserProfileQueryKey(),
-  );
-  const read = await getCurrentUserProfile({ signal });
-  if (shown !== undefined && shown.data.id !== read.data.id) {
-    discardApiData(client, isUserQuery);
-    void router.navigate({ to: "/", replace: true });
-  }
-  return read;
+): QueryFunction<CurrentUserResponse> {
+  return async ({ signal }) => {
+    const shown = client.getQueryData<CurrentUserResponse>(
+      getGetCurrentUserProfileQueryKey(),
+    );
+    const read = await getCurrentUserProfile({ signal });
+    if (shown !== undefined && shown.data.id !== read.data.id) {
+      discardApiData(client, isUserQuery);
+      void router.navigate({ to: "/", replace: true });
+    }
+    return read;
+  };
 }
 
 interface SessionGateProps {
@@ -174,7 +187,7 @@ export function SessionGate({ children }: SessionGateProps) {
   const [known, setKnown] = useState(false);
   const user = useGetCurrentUserProfile({
     query: {
-      queryFn: ({ signal }) => readSignedInUser(client, router, signal),
+      queryFn: readSignedInUser(client, router),
       refetchOnWindowFocus: (query) =>
         !failsInPlace(query.state, known, requirement),
     },
@@ -200,7 +213,11 @@ export function SessionGate({ children }: SessionGateProps) {
       client,
       (query) => isUserQuery(query) && query.state.data === undefined,
     );
-    void router.navigate({ to: "/login", replace: true });
+    void router.navigate({
+      to: "/login",
+      replace: true,
+      state: { ledToSignIn: true },
+    });
   }, [client, router]);
 
   useEffect(() => {
@@ -270,20 +287,40 @@ export function SessionGate({ children }: SessionGateProps) {
     };
   }, [client, endSession]);
 
-  if (failsInPlace(user, known, requirement)) {
+  const failed = failsInPlace(user, known, requirement);
+  const waiting =
+    !failed &&
+    (!known || (requirement === "required" && !signedIn && !noSession));
+
+  // Try again replaces its error with the loading indicator, which has no
+  // heading, so the focus that it held moves to the heading of what shows
+  // once the read ends: its error again, or the screen, after the navigation
+  // that leaves Sign in when it applies (docs/behaviors.md, Accessibility,
+  // Focus after an action).
+  const retried = useRef(false);
+  useEffect(() => {
+    if (retried.current && !waiting && document.querySelector("h1") !== null) {
+      retried.current = false;
+      focusScreenHeading();
+    }
+  });
+
+  if (failed) {
     return (
       <SignInColumn>
         <ErrorInPlace
           error={user.error}
           placement="screen"
+          retryAlways
           onRetry={() => {
+            retried.current = true;
             void user.refetch();
           }}
         />
       </SignInColumn>
     );
   }
-  if (!known || (requirement === "required" && !signedIn && !noSession)) {
+  if (waiting) {
     // As the UI loads, it shows only the loading indicator, centered in the
     // window, until it knows whether a session exists (docs/design-system.md,
     // Loading).

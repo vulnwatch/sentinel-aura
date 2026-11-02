@@ -177,8 +177,8 @@ rules; review enforces the rest.
 | `src/routes/` | One module per route: its definition and its page component |
 | `src/components/` | The components that several routes share |
 | `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
-| `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` under the shared request function (Tests) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
+| `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` beneath the shared request function (Tests) |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
 | `test/e2e/screenshots/` | The reference screenshots of the end-to-end tests (End-to-End Tests) |
@@ -214,6 +214,12 @@ that needs it; content of another kind needs a new row first.
   hooks (`docs/architecture.md`, Backend Contract and API Client Generation).
   No other module under `src/` calls `fetch` or `XMLHttpRequest` or builds an
   API URL.
+- Every request goes through the query client, as a read of a hook or of
+  `fetchQuery`, or as a change: a generated request function is called
+  directly only inside a query or mutation function. The UI learns of every
+  response there, so that a behavior that applies to a response of any
+  operation, such as the end of the session after a `401`, reaches every
+  request (Error Codes and Messages).
 - The generated code is never edited by hand, and its types are the API
   types: no module declares an API type itself. A change comes from the
   pinned OpenAPI document, from the generator's configuration,

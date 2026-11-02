@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
-  hasSavedReturnUrl,
   hasSessionRecord,
   rememberSession,
   RETURN_URL_KEY,
@@ -71,6 +70,7 @@ describe("the URL to which Sign in returns", () => {
     ["Sign in in another case, with a trailing slash", "/Login/"],
     ["/auth/callback", "/auth/callback?code=fictional"],
     ["a path that cannot be decoded", "/tickets/%E0%A4%A"],
+    ["a URL that cannot be parsed", "https://[fictional"],
   ])("counts %s as absent", (_, value) => {
     expect(returnPath(value, ORIGIN)).toBeUndefined();
   });
@@ -78,9 +78,8 @@ describe("the URL to which Sign in returns", () => {
   test("is read and removed once", () => {
     saveReturnUrl("/tickets?view=new#top");
 
-    expect(hasSavedReturnUrl()).toBe(true);
     expect(takeReturnUrl()).toBe("/tickets?view=new#top");
-    expect(hasSavedReturnUrl()).toBe(false);
+    expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBeNull();
     expect(takeReturnUrl()).toBeUndefined();
   });
 
@@ -91,7 +90,7 @@ describe("the URL to which Sign in returns", () => {
     );
 
     expect(takeReturnUrl()).toBeUndefined();
-    expect(hasSavedReturnUrl()).toBe(false);
+    expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBeNull();
   });
 
   test("is kept in the tab's session storage", () => {
@@ -107,7 +106,6 @@ describe("the URL to which Sign in returns", () => {
     expect(() => {
       saveReturnUrl("/cves");
     }).not.toThrow();
-    expect(hasSavedReturnUrl()).toBe(false);
     expect(takeReturnUrl()).toBeUndefined();
   });
 });

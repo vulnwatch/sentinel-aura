@@ -32,11 +32,13 @@ const SIZES = { medium: "h-9 px-3", large: "h-10 px-4" } as const;
 
 // A button (docs/design-system.md, Buttons and Links). While the change that
 // it started is in progress, it is busy: it shows loader-circle before its
-// label, which it keeps, and cannot be pressed, nor submit its form, but it
-// keeps the focus (docs/behaviors.md, Loading). The spinner stands still
-// under reduced motion (Focus and Motion). React Aria's own pending state is
-// not used: it announces the button through a reference to it, which stays
-// behind in the page when the button leaves it, as Sign in does once it
+// label, which it keeps, and cannot be pressed, but it keeps the focus
+// (docs/behaviors.md, Loading). A busy submit button does not submit its
+// form; Enter in a field of a form with a single field still does, so such a
+// form guards its submission itself. The spinner stands still under reduced
+// motion (docs/design-system.md, Focus and Motion). React Aria's own pending
+// state is not used: it announces the button through a reference to it, which
+// stays behind in the page when the button leaves it, as Sign in does once it
 // succeeds.
 export function Button({
   children,

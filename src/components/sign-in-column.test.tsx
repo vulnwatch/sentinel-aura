@@ -25,22 +25,19 @@ test("shows the product name above its content, in the main landmark, without a 
   await expect.element(main.getByRole("link")).not.toBeInTheDocument();
 });
 
-test("draws the Sentinel mark at 24 px, in the color of the text, hidden from assistive technologies", async () => {
+// The mark itself, its size and color, shows in the reference screenshots of
+// Sign in (test/e2e/screenshots/sign-in.png).
+test("hides the Sentinel mark from assistive technologies", async () => {
   const screen = await render(
     <SignInColumn>
       <h1>Fictional screen</h1>
     </SignInColumn>,
   );
-  const name = screen.getByRole("main").getByText("Sentinel", { exact: true });
-  await expect.element(name).toBeVisible();
-  // The mark has no role or name: it is decorative.
-  const mark = name.element().querySelector("svg");
+  await expect
+    .element(screen.getByRole("main").getByText("Sentinel", { exact: true }))
+    .toBeVisible();
 
-  expect(mark?.getAttribute("aria-hidden")).toBe("true");
-  expect(mark?.getBoundingClientRect().width).toBe(24);
-  expect(mark === null ? "" : getComputedStyle(mark).stroke).toBe(
-    getComputedStyle(name.element()).color,
-  );
+  expect(screen.getByRole("img").query()).toBeNull();
 });
 
 test("is at most 400 px wide, centered in the window", async () => {

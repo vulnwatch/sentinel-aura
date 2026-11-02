@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   isRequestFailure,
   presentFailure,
+  presentSignInFailure,
   validationErrorFields,
   type FailurePresentation,
   type RequestFailure,
@@ -300,7 +301,7 @@ function entry(loc: unknown) {
 describe("validationErrorFields", () => {
   const FIELDS = ["username", "password"] as const;
 
-  test("finds the fields that the errors locate in the request body, each once", () => {
+  test("finds the fields that the errors locate in the request body, each once, in the order of the form", () => {
     const failure = validationError([
       entry(["body", "password"]),
       entry(["body", "username"]),
@@ -308,7 +309,7 @@ describe("validationErrorFields", () => {
     ]);
 
     expect(validationErrorFields(failure, FIELDS)).toEqual({
-      fields: ["password", "username"],
+      fields: ["username", "password"],
       unmatched: false,
     });
   });
@@ -356,6 +357,61 @@ describe("validationErrorFields", () => {
       unmatched: true,
     });
   });
+});
+
+describe("presentSignInFailure", () => {
+  test.each([
+    [
+      "AUTH_INVALID_CREDENTIALS",
+      errorResponse(401, "AUTH_INVALID_CREDENTIALS"),
+    ],
+    ["no code", errorResponse(401)],
+  ])(
+    "presents a 401 of sign-in with %s as rejected credentials",
+    (_, failure) => {
+      expect(presentSignInFailure(failure, "sign-in")).toEqual({
+        message: "The username or password isn't correct.",
+        reference: undefined,
+      });
+    },
+  );
+
+  test("presents a 401 of the read of the signed-in user after a sign-in as a session that the browser did not keep", () => {
+    expect(
+      presentSignInFailure(
+        errorResponse(401, "AUTH_NOT_AUTHENTICATED"),
+        "signed-in user",
+      ),
+    ).toEqual({
+      message:
+        "Sentinel signed you in, but this browser didn't keep the session. Allow cookies for Sentinel, then sign in again.",
+      reference: undefined,
+    });
+  });
+
+  test.each([
+    ["sign-in", "sign-in"],
+    ["the read of the signed-in user", "signed-in user"],
+  ] as const)(
+    "presents every other failure of %s as for sign-in",
+    (_, request) => {
+      expect(
+        presentSignInFailure(
+          errorResponse(429, "AUTH_ACCOUNT_LOCKED"),
+          request,
+        ),
+      ).toEqual({ message: TOO_MANY, reference: undefined });
+      expect(
+        presentSignInFailure(errorResponse(503, "REDIS_UNAVAILABLE"), request),
+      ).toEqual({ message: UNAVAILABLE, reference: REQUEST_ID });
+      expect(
+        presentSignInFailure(
+          new NetworkError({ cause: new TypeError("Failed to fetch") }),
+          request,
+        ),
+      ).toEqual({ message: NETWORK, reference: undefined });
+    },
+  );
 });
 
 describe("isRequestFailure", () => {

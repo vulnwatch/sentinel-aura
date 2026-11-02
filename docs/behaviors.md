@@ -69,7 +69,9 @@ document that do not take effect yet.
   to Sign in when the path requires a session (`docs/screen-map.md`, Contract
   URLs), and shows the screen of the URL otherwise. Any other failure shows
   its error in place of the screen (Errors) and does not lead to Sign in: it
-  does not tell whether a session exists.
+  does not tell whether a session exists. That error offers Try again whatever
+  the failure, not the link to the landing, because no screen, the landing
+  included, shows without the read.
 - A `401` response to any request other than sign-in and sign-out (Sentinel
   `docs/features/identity/local-authentication.md`, Login; Sentinel
   `docs/features/identity/authentication.md`, Logout) means that the browser
@@ -77,8 +79,8 @@ document that do not take effect yet.
   session alike (Sentinel `docs/features/identity/authentication.md`,
   Frontend session behavior; Sentinel `docs/api-spec.md`, Global Responses).
   The UI then discards all the data that it read from the API, so that the
-  next user of the browser cannot see it, and leads to Sign in. On Sign in, a
-  `401` changes nothing.
+  next user of the browser cannot see it, and leads to Sign in. On a path that
+  requires no session, Sign in or `/auth/callback`, a `401` changes nothing.
 - A navigation that the session forces, to Sign in or to the landing of
   another user (The Signed-in User), asks nothing and discards the input not
   yet submitted.
@@ -212,7 +214,9 @@ message follows Wording.
   next to data that stays shown, offer an action that tries again after a
   network failure, a `429`, a `5xx`, or a successful response that the UI
   cannot read. In place of the content of a screen, every other error links
-  to the landing instead, with "Go to the start page".
+  to the landing instead, with "Go to the start page", except the error of
+  the read of the signed-in user as the UI loads, which offers Try again
+  whatever the failure (Session State).
 - A count, such as the count of a view or of the attention summary, has no
   room for a message or an action: when a read of it fails, even after it
   showed a number, it shows as not available, read as "Not available", and

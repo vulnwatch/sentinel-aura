@@ -1,5 +1,10 @@
 import { vi } from "vitest";
-import type { CurrentUserResponse } from "./api/generated/model";
+import type {
+  CurrentUserResponse,
+  ErrorResponse,
+  LoginResponse,
+  ValidationErrorResponse,
+} from "./api/generated/model";
 
 // What several unit and component tests share (docs/conventions.md, Tests):
 // fictional responses of Sentinel's API, which replace the browser's fetch
@@ -43,13 +48,42 @@ export function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
+// An error response of Sentinel, with its code.
+export function errorResponse(status: number, code: string): Response {
+  const body: ErrorResponse = { code, detail: "A fictional detail" };
+  return jsonResponse(status, body);
+}
+
 // The response with which Sentinel answers a request without a valid
 // session.
 export function unauthorized(): Response {
-  return jsonResponse(401, {
-    code: "AUTH_NOT_AUTHENTICATED",
-    detail: "Authentication required",
-  });
+  return errorResponse(401, "AUTH_NOT_AUTHENTICATED");
+}
+
+// A VALIDATION_ERROR response with the locations of its errors.
+export function validationError(locations: (string | number)[][]): Response {
+  const body: ValidationErrorResponse = {
+    code: "VALIDATION_ERROR",
+    detail: "Request validation failed",
+    errors: locations.map((loc) => ({
+      loc,
+      msg: "A fictional message",
+      type: "string_type",
+    })),
+  };
+  return jsonResponse(422, body);
+}
+
+// A successful sign-in, whose token the UI does not use.
+export function signedIn(): Response {
+  const body: LoginResponse = {
+    data: {
+      access_token: "fictional.access.token",
+      token_type: "bearer",
+      expires_at: "2026-10-09T14:05:09Z",
+    },
+  };
+  return jsonResponse(200, body);
 }
 
 // A request that a test answers.
