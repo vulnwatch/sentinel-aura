@@ -678,7 +678,8 @@ complete profile and its manager, and the signed-in user alike: `id`,
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the
   access grants of a Ticket, or Administration, the username follows the
-  display name when the two differ.
+  display name when the two differ, as `@` and the username, such as
+  `@jdoe`, before the labels.
 - **Compact form.** The avatar alone, in a link, a button, or another
   interactive element without room for the name. The display name is its
   accessible name and shows in a tooltip on hover and on keyboard focus. Every

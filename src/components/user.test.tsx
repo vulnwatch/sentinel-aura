@@ -134,15 +134,18 @@ test("shows Bot after a bot account's name, and Inactive after Bot", async () =>
   );
 });
 
-test("cuts only the name when the place is too narrow, and keeps it whole for assistive technologies", async () => {
+test("cuts only the name, with its username, when the place is too narrow, and keeps it whole for assistive technologies", async () => {
   const longName = "Alice Fictional Smith-Wilson-Brown";
   const screen = await render(
     <section aria-label="Narrow place" className="w-40">
-      <User user={{ ...SCANNER, full_name: longName, active: false }} />
+      <User
+        user={{ ...SCANNER, full_name: longName, active: false }}
+        withUsername
+      />
     </section>,
   );
   const place = screen.getByRole("region").element().getBoundingClientRect();
-  const name = screen.getByText(longName).element();
+  const name = screen.getByText(`${longName} @security-scanner`).element();
 
   await expect.element(screen.getByText("Inactive")).toBeVisible();
   expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);

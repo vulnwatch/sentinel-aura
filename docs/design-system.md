@@ -514,8 +514,8 @@ button is named "Close navigation" there (`docs/screen-map.md`, Sidebar).
 The account menu (`docs/screen-map.md`, Sidebar) opens upward from the
 account button, 256 px wide (Menus, Popovers, and Tooltips). It starts with
 the signed-in user: the avatar at the medium size, the display name at
-weight 600, and, when it differs from the display name, the username in
-`fg-muted`. Its items follow, separated by `border` lines into three groups:
+weight 600, and, when it differs from the display name, the username as
+Representation of a User shows it, such as `@jdoe`. Its items follow, separated by `border` lines into three groups:
 Profile, API keys, and Identity audit log; the section Theme
 (`docs/behaviors.md`, Preferences), with its heading in `text-12`, weight
 500, `fg-muted`, and the items System, Light, and Dark, of which the
@@ -897,10 +897,10 @@ and how the labels look.
 | Large | 64 px | The heading of a user's screen |
 
 - **Full form:** the avatar, 6 px of space, and the display name in the
-  surrounding text's style; where the username follows, it comes after a
-  space as `@` and the username, such as `@jdoe`, in `fg-muted`, before the
-  labels. The `@` sets the username apart from the name without relying on
-  color, also for an inactive user, whose name is in `fg-muted` too.
+  surrounding text's style; where the username follows, as `@` and the
+  username (`docs/behaviors.md`, Representation of a User), it comes after a
+  space, in `fg-muted`. The `@` sets it apart from the name without relying
+  on color, also for an inactive user, whose name is in `fg-muted` too.
 - **Inactive and Bot:** the label follows the name, or the username where it
   follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
   1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a

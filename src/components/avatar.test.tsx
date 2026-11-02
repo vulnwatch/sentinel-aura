@@ -228,10 +228,13 @@ test("draws the Sentinel mark on neutral-soft, with rounded corners, for no acto
   expect(picture.at(...CORNER)).toBe(NEUTRAL_SOFT);
   expect(picture.at(0.05, 0.05)).toBe(CANVAS_LIGHT);
   expect(onSoft).toBeGreaterThan(50);
-  // The mark is 70 % of the size, centered: within 0.9 units of each side.
+  // The mark is 70 % of the size, centered: within 0.9 units of each side,
+  // and about 3.85 units high, its 22 units of 24 with the stroke.
+  const heights = mark.map(([, y]) => y);
   expect(mark.filter(([x, y]) => Math.min(x, y, 6 - x, 6 - y) < 0.9)).toEqual(
     [],
   );
+  expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(3.5);
 });
 
 test.each([
