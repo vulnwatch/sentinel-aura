@@ -39,7 +39,7 @@ async function pointerAway(page: Page) {
 }
 
 test.describe("for an analyst", () => {
-  test("lands on the New view, sorted by priority, with the counts of the views", async ({
+  test("lands on the New view, sorted by priority, then deadline, with the counts of the views", async ({
     page,
   }) => {
     // asmith holds the vulnerability_analyst role and sees every Ticket.
@@ -58,21 +58,27 @@ test.describe("for an analyst", () => {
       "All 26",
     ]);
     await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
-    // P1, P2, the P3 Tickets newest first, the P4 Tickets newest first, and
-    // the Ticket without a priority last (Sentinel
-    // docs/features/tickets/ticket-priority.md, Decision Table).
+    // P1, P2, P3, P4, and the Ticket without a priority last (Sentinel
+    // docs/features/tickets/ticket-priority.md, Decision Table); within one
+    // priority by the triage due date, earliest first, and SNTL-5, which has
+    // no deadline, last. Each due date follows from the SLA tier and the
+    // creation time, so within a tier the Ticket created first, the lower
+    // number, comes first (Sentinel docs/features/tickets/ticket-deadlines.md,
+    // Due Dates; Current Due Date; Sentinel
+    // docs/features/platform/example-dataset.md, Steps and Transactions;
+    // Tickets).
     await expect(identifiers(page)).toHaveText([
       "SNTL-1",
       "SNTL-7",
+      "SNTL-2",
       "SNTL-24",
       "SNTL-10",
-      "SNTL-2",
-      "SNTL-25",
-      "SNTL-23",
-      "SNTL-20",
-      "SNTL-5",
-      "SNTL-4",
       "SNTL-3",
+      "SNTL-20",
+      "SNTL-25",
+      "SNTL-4",
+      "SNTL-23",
+      "SNTL-5",
       "SNTL-6",
     ]);
     await expect(
@@ -127,11 +133,13 @@ test.describe("for an analyst", () => {
     await views(page).filter({ hasText: "Assigned to me" }).click();
 
     await expect(page).toHaveURL("/tickets?view=assigned-to-me");
+    // Among the P3 Tickets, SNTL-13, past its UM due date (Aged Tickets),
+    // before SNTL-21, whose triage due date is still ahead.
     await expect(identifiers(page)).toHaveText([
       "SNTL-12",
       "SNTL-18",
-      "SNTL-21",
       "SNTL-13",
+      "SNTL-21",
     ]);
   });
 

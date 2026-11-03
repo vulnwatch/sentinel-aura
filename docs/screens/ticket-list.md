@@ -81,26 +81,32 @@ Tasks; Landing).
 
 | View | Filters | Sorted by | Columns |
 |---|---|---|---|
-| New | `status=new` | Priority | Ticket, CVE, Title, Severity, Priority, Deadline |
-| Assigned to me | `assignee` with the `id` of the signed-in user, `status=analysis`, `status=analyzed` | Priority | Ticket, CVE, Title, Status, Severity, Priority, Deadline |
-| Analysis | `status=analysis` | Priority | Ticket, CVE, Title, Severity, Priority, Deadline, Assignee |
-| Analyzed | `status=analyzed` | Priority | Ticket, CVE, Title, Severity, Priority, Deadline, Assignee |
-| Orphaned | `status=analysis`, `status=analyzed`, `assignee=none` | Priority | Ticket, CVE, Title, Status, Severity, Priority, Deadline |
+| New | `status=new` | Priority, then deadline | Ticket, CVE, Title, Severity, Priority, Deadline |
+| Assigned to me | `assignee` with the `id` of the signed-in user, `status=analysis`, `status=analyzed` | Priority, then deadline | Ticket, CVE, Title, Status, Severity, Priority, Deadline |
+| Analysis | `status=analysis` | Priority, then deadline | Ticket, CVE, Title, Severity, Priority, Deadline, Assignee |
+| Analyzed | `status=analyzed` | Priority, then deadline | Ticket, CVE, Title, Severity, Priority, Deadline, Assignee |
+| Orphaned | `status=analysis`, `status=analyzed`, `assignee=none` | Priority, then deadline | Ticket, CVE, Title, Status, Severity, Priority, Deadline |
 | All | None | Last modified | Ticket, CVE, Title, Status, Severity, Priority, Deadline, Assignee, Last modified |
 
 - A view omits a column whose value its filters fix: Status where the view
   has one status, Assignee where it has none or only the signed-in user.
 - Assigned to me filters by the user's `id`, which never changes, rather than
   by the username (Sentinel `docs/api-spec.md`, User Identifier Resolution).
-- **Sorting.** Priority is `sort_by=priority`: P1 first, then P2 to P4, and a
-  Ticket without a priority last (Sentinel `docs/api-spec.md`, Semantic Sort
-  Fields; Nullable Sort Field Ordering). List Tickets sorts by one field, and
-  orders the Tickets of the same priority by their internal `id`, in the same
-  direction (Sentinel `docs/api-spec.md`, Sort Parameter Validation;
-  Deterministic Pagination Ordering), which is a UUIDv7 (Sentinel
+- **Sorting.** Priority, then deadline, is
+  `sort_by=priority_then_current_due`: by effective priority, P1 first, then
+  P2 to P4, and a Ticket without a priority last; within one priority by the
+  due date of the current phase, the deadline that the row's badge names
+  (`docs/behaviors.md`, Deadlines), earliest first, so that a past deadline
+  comes before one still ahead, and a Ticket without a deadline last
+  (Sentinel `docs/features/tickets/ticket-deadlines.md`, Current Due Date;
+  Sentinel `docs/api-spec.md`, Semantic Sort Fields; Nullable Sort Field
+  Ordering). Tickets that both keys leave equal follow their internal `id`,
+  in the same direction (Sentinel `docs/api-spec.md`, Deterministic
+  Pagination Ordering), which is a UUIDv7 (Sentinel
   `docs/features/tickets/tickets.md`, Ticket Identification), so the newest
   Ticket comes first. Last modified is `sort_by=updated_at`, the most recent
-  first. The sorted column shows `arrow-down` after its name, and assistive
+  first. Only the column of the first key, Priority or Last modified, is
+  marked as sorted: it shows `arrow-down` after its name, and assistive
   technologies read its name followed by "(sorted descending)".
 - **Ticket**: the identifier, which names the row, as a link to the Ticket at
   weight 500, followed by `lock` when the Ticket is confidential
@@ -191,8 +197,8 @@ Tasks; Landing).
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Persistence and Effective Priority
-- Sentinel `docs/features/tickets/ticket-deadlines.md` — Sorting; Ticket
-  Current Phase
+- Sentinel `docs/features/tickets/ticket-deadlines.md` — Sorting (Current Due
+  Date); Ticket Current Phase
 - Sentinel `docs/features/identity/authentication.md` — Get Current User
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility

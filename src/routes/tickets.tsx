@@ -88,9 +88,11 @@ interface TicketView {
   // Its columns, in their order: a view omits a column whose value it fixes.
   columns: readonly ColumnId[];
   // The field by which its Tickets are sorted, in descending order: the
-  // queues by effective priority, P1 first and null last, and the All view by
-  // last modification, newest first.
-  sortBy: "priority" | "updated_at";
+  // queues by effective priority, P1 first and null last, then by the due
+  // date of the current phase, the deadline of the row, earliest first and
+  // null last (Sentinel docs/features/tickets/ticket-deadlines.md, Current Due
+  // Date); the All view by last modification, newest first.
+  sortBy: "priority_then_current_due" | "updated_at";
 }
 
 const ALL_VIEW: TicketView = {
@@ -121,7 +123,7 @@ const VIEWS: readonly TicketView[] = [
     analystsOnly: false,
     filters: () => ({ status: ["new"] }),
     columns: ["ticket", "cve", "title", "severity", "priority", "deadline"],
-    sortBy: "priority",
+    sortBy: "priority_then_current_due",
   },
   {
     id: "assigned-to-me",
@@ -142,7 +144,7 @@ const VIEWS: readonly TicketView[] = [
       "priority",
       "deadline",
     ],
-    sortBy: "priority",
+    sortBy: "priority_then_current_due",
   },
   {
     id: "analysis",
@@ -158,7 +160,7 @@ const VIEWS: readonly TicketView[] = [
       "deadline",
       "assignee",
     ],
-    sortBy: "priority",
+    sortBy: "priority_then_current_due",
   },
   {
     id: "analyzed",
@@ -174,7 +176,7 @@ const VIEWS: readonly TicketView[] = [
       "deadline",
       "assignee",
     ],
-    sortBy: "priority",
+    sortBy: "priority_then_current_due",
   },
   {
     id: "orphaned",
@@ -190,7 +192,7 @@ const VIEWS: readonly TicketView[] = [
       "priority",
       "deadline",
     ],
-    sortBy: "priority",
+    sortBy: "priority_then_current_due",
   },
   ALL_VIEW,
 ];
@@ -283,7 +285,9 @@ function columnsOf(
     priority: {
       id: "priority",
       name: "Priority",
-      isSorted: view.sortBy === "priority",
+      // The first key of the queues' sorting: the column of the second,
+      // Deadline, shows no sort indicator.
+      isSorted: view.sortBy === "priority_then_current_due",
       render: (row) => <Priority priority={row.priority} />,
     },
     deadline: {

@@ -44,6 +44,10 @@ const FILTERS = {
   All: "",
 };
 
+// The sorting of the queues: by priority, then by the due date of the
+// current phase.
+const QUEUE_SORT = "sort_by=priority_then_current_due";
+
 // The number of Tickets of each view in the tests, by its filters.
 const TOTALS = new Map([
   [FILTERS.New, 12],
@@ -263,15 +267,15 @@ describe("the views", () => {
   });
 
   test.each([
-    ["New", "?view=new", `${FILTERS.New}&sort_by=priority`],
+    ["New", "?view=new", `${FILTERS.New}&${QUEUE_SORT}`],
     [
       "Assigned to me",
       "?view=assigned-to-me",
-      `${FILTERS["Assigned to me"]}&sort_by=priority`,
+      `${FILTERS["Assigned to me"]}&${QUEUE_SORT}`,
     ],
-    ["Analysis", "?view=analysis", `${FILTERS.Analysis}&sort_by=priority`],
-    ["Analyzed", "?view=analyzed", `${FILTERS.Analyzed}&sort_by=priority`],
-    ["Orphaned", "?view=orphaned", `${FILTERS.Orphaned}&sort_by=priority`],
+    ["Analysis", "?view=analysis", `${FILTERS.Analysis}&${QUEUE_SORT}`],
+    ["Analyzed", "?view=analyzed", `${FILTERS.Analyzed}&${QUEUE_SORT}`],
+    ["Orphaned", "?view=orphaned", `${FILTERS.Orphaned}&${QUEUE_SORT}`],
     ["All", "", "sort_by=updated_at"],
   ])(
     "read %s with its filters, its sorting, in descending order, and its page of 20",
@@ -644,7 +648,7 @@ describe("while the list changes", () => {
 
 describe("the URL", () => {
   // The read of the first page of the New view, and of the All view.
-  const NEW = `${FILTERS.New}&sort_by=priority&sort_order=desc&page=1&per_page=20`;
+  const NEW = `${FILTERS.New}&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`;
   const ALL = "sort_by=updated_at&sort_order=desc&page=1&per_page=20";
 
   test.each([
@@ -1007,7 +1011,7 @@ describe("the pagination", () => {
       .toEqual(["21–26 of 26 Tickets"]);
     expect(router.state.location.href).toBe("/tickets?view=new&page=2");
     expect(queriesOf(spy, "list").at(-1)).toBe(
-      `${FILTERS.New}&sort_by=priority&sort_order=desc&page=2&per_page=20`,
+      `${FILTERS.New}&${QUEUE_SORT}&sort_order=desc&page=2&per_page=20`,
     );
     await expect.element(next).toHaveAttribute("aria-disabled", "true");
     await expect.element(previous).toHaveAttribute("href", "/tickets?view=new");
