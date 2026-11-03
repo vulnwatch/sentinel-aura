@@ -624,9 +624,9 @@ the Tickets to remediate at once stand out among many.
 - P1 shows as a square mark of 14 px in `danger-solid` with an exclamation
   mark in `on-danger-solid`, followed, 6 px later, by "P1" in `fg` at weight
   600.
-- P2, P3, and P4 show as three rising bars of 14 px, of which the first
-  three, two, or one are filled in `fg-muted` and the others in `border`,
-  followed, 6 px later, by the level in `fg-muted`.
+- P2, P3, and P4 show as a mark of 14 px of three rising bars, of which the
+  first three, two, or one are filled in `fg-muted` and the others in
+  `border`, followed, 6 px later, by the level in `fg-muted`.
 - `null` is an absent value. A value that the pinned contract does not list
   shows as received, in `fg`, without a mark.
 

@@ -43,9 +43,13 @@ async function renderValue(node: ReactNode, scale = 1) {
 }
 
 // Points of the dot of 8 units, from the top left corner of its box: its
-// center, inside its edge on the left and at the top, and beyond it, in its
-// corner, below it, and in the space before the name.
-const CENTER: [number, number] = [4, 4];
+// center, and a point within the inner side of an edge of 1 unit; inside
+// that edge on the left and at the top; and beyond the dot, in its corner,
+// below it, and in the space before the name.
+const INSIDE: [number, number][] = [
+  [4, 4],
+  [1.5, 4],
+];
 const INSIDE_EDGE: [number, number][] = [
   [0.5, 4],
   [4, 0.5],
@@ -64,7 +68,7 @@ async function dotColors(figure: Locator) {
   const at = ([x, y]: [number, number]) =>
     picture.at(x * SCALE, top + y * SCALE);
   return {
-    center: at(CENTER),
+    inside: INSIDE.map(at),
     edge: INSIDE_EDGE.map(at),
     outside: OUTSIDE.map(at),
   };
@@ -92,7 +96,7 @@ test.each([
     expect(
       getComputedStyle(figure.getByText(name, { exact: true }).element()).color,
     ).toBe(FG);
-    expect(dot.center).toBe(mark);
+    expect(dot.inside).toEqual([mark, mark]);
     expect(dot.edge).toEqual([mark, mark]);
     expect(dot.outside).toEqual([CANVAS, CANVAS, CANVAS]);
   },
@@ -134,7 +138,7 @@ test.each(["catastrophic", "constructor"])(
         .color,
     ).toBe(FG);
     // The edge is 1 px, 3 px here, around the page.
-    expect(dot.center).toBe(CANVAS);
+    expect(dot.inside).toEqual([CANVAS, CANVAS]);
     expect(dot.edge).toEqual([NEUTRAL_ICON, NEUTRAL_ICON]);
     expect(dot.outside).toEqual([CANVAS, CANVAS, CANVAS]);
   },

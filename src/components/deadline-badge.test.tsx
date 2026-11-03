@@ -34,7 +34,7 @@ const TICKET: DeadlineTicket = {
   release_due_at: "2026-11-04T09:30:00.123456Z",
 };
 
-// The Ticket in the current phase phase.
+// The Ticket whose current phase is phase.
 function inPhase(phase: string | null): DeadlineTicket {
   return { ...TICKET, current_phase: phase };
 }

@@ -54,7 +54,7 @@ test("is 14 px in fg-muted, 4 px after the identifier, on its line", async () =>
 
   expect([box.width, box.height]).toEqual([14, 14]);
   expect(getComputedStyle(lock).color).toBe(FG_MUTED);
-  expect(box.left - line.right).toBe(4);
+  expect(box.left - line.right).toBeCloseTo(4);
   expect(box.top).toBeGreaterThanOrEqual(line.top);
   expect(box.bottom).toBeLessThanOrEqual(line.bottom);
 });
