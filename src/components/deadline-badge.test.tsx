@@ -147,21 +147,37 @@ describe("deadline", () => {
   // the SLA of 30 days, and the Release badge counts the whole 30 days: the
   // same days show in the same tone in each of them.
   test.each([
-    ["triage", TRIAGE_DUE],
-    ["submission", SUBMISSION_DUE],
-    ["um", UM_DUE],
-    ["qa", QA_DUE],
-    [null, QA_DUE],
+    ["triage", "Triage", TRIAGE_DUE],
+    ["submission", "Submission", SUBMISSION_DUE],
+    ["um", "UM", UM_DUE],
+    ["qa", "QA", QA_DUE],
+    [null, "Release", QA_DUE],
   ])(
     "for %s, is green until its last day, yellow in its last day, and red once the date is past",
-    (phase, due) => {
+    (phase, name, due) => {
       const ticket = inPhase(phase);
+      const shown = [
+        due - 2 * DAY,
+        due - DAY,
+        due - DAY + 1,
+        due,
+        due + 1,
+        due + DAY,
+        due + DAY + 1,
+      ].map((now) => {
+        const badge = deadline(ticket, now);
+        return [badge?.tone, badge?.text];
+      });
 
-      expect(deadline(ticket, due - 2 * DAY)?.tone).toBe("success");
-      expect(deadline(ticket, due - DAY)?.tone).toBe("success");
-      expect(deadline(ticket, due - DAY + 1)?.tone).toBe("warning");
-      expect(deadline(ticket, due)?.tone).toBe("warning");
-      expect(deadline(ticket, due + 1)?.tone).toBe("danger");
+      expect(shown).toEqual([
+        ["success", `${name} 2d`],
+        ["success", `${name} 1d`],
+        ["warning", `${name} 0d`],
+        ["warning", `${name} 0d`],
+        ["danger", `${name} -1d`],
+        ["danger", `${name} -1d`],
+        ["danger", `${name} -2d`],
+      ]);
     },
   );
 });
