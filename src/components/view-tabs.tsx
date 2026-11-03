@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import type { ScreenHref } from "./router-links";
@@ -89,18 +89,34 @@ interface ViewTabsProps {
 // focus to it, so that the arrow keys read the tabs without opening each
 // view. The panel of the selected view follows the tabs, 16 px below.
 export function ViewTabs({ label, views, selected, children }: ViewTabsProps) {
-  // The tabs start again when their views change, such as when a role
-  // decides a view, so that they do not move the focus of a tab that left to
-  // another tab (TabLabel).
-  const key = views.map((view) => view.id).join(" ");
+  // The view whose tab holds the focus, and how many times a tab left the
+  // page while it held it, such as a view that a role decides after the role
+  // was removed. The tabs then start again, so that they do not move the
+  // focus to another tab while TabLabel moves it to the screen's heading;
+  // every other change of the views keeps them, and the focus where it is.
+  const [focused, setFocused] = useState<string>();
+  const [left, setLeft] = useState(0);
+  if (focused !== undefined && !views.some((view) => view.id === focused)) {
+    setFocused(undefined);
+    setLeft(left + 1);
+  }
   return (
-    <Tabs key={key} selectedKey={selected} keyboardActivation="manual">
+    <Tabs key={left} selectedKey={selected} keyboardActivation="manual">
       <TabList aria-label={label} className="flex flex-wrap gap-2">
         {views.map((view) => (
           <Tab
             key={view.id}
             id={view.id}
             href={view.href}
+            onFocusChange={(isFocused) => {
+              if (isFocused) {
+                setFocused(view.id);
+              } else {
+                setFocused((current) =>
+                  current === view.id ? undefined : current,
+                );
+              }
+            }}
             className={`inline-flex h-8 cursor-default items-center rounded-md border border-border px-3 text-14 text-fg data-hovered:bg-surface-hover data-selected:border-border-strong data-selected:bg-neutral-soft data-selected:font-semibold ${FOCUS_RING}`}
           >
             <TabLabel>

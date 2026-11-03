@@ -739,6 +739,44 @@ describe("the URL", () => {
   });
 });
 
+describe("a change of the role", () => {
+  test("keeps the focus on a tab that stays when a read of the signed-in user tells that the role was added", async () => {
+    const { stub } = stubTickets({ user: READER });
+    const { router, screen } = await renderApp("/tickets?view=new");
+    const fresh = screen.getByRole("tab", { name: "New 12" });
+    await expect.element(fresh).toBeVisible();
+    fresh.element().focus();
+
+    // The same user, who now holds the role.
+    stub.user = {
+      data: { ...READER.data, roles: ["vulnerability_analyst"] },
+    };
+    returnToForeground();
+
+    await expect
+      .element(screen.getByRole("tab", { name: /^Assigned to me/ }))
+      .toBeVisible();
+    await expect.element(fresh).toHaveFocus();
+    expect(router.state.location.href).toBe("/tickets?view=new");
+  });
+
+  test("keeps the focus on a row that stays when a read of the signed-in user tells that the role was removed", async () => {
+    const { stub } = stubTickets();
+    const { screen } = await renderApp("/tickets");
+    const link = tableOf(screen).getByRole("link", { name: "SNTL-1" });
+    await expect.element(link).toBeVisible();
+    link.element().focus();
+
+    stub.user = { data: { ...ANALYST.data, roles: [] } };
+    returnToForeground();
+
+    await expect
+      .element(screen.getByRole("tab", { name: /^Assigned to me/ }))
+      .not.toBeInTheDocument();
+    await expect.element(link).toHaveFocus();
+  });
+});
+
 describe("the table", () => {
   // The names of the columns that every view shows first.
   const FIRST = ["Ticket", "CVE", "Title"];

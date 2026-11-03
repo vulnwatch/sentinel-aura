@@ -69,8 +69,8 @@ Tasks; Landing).
   `GET /api/v1/tickets`, with the filters of the view and `per_page=1`, as
   `meta.total` (Sentinel `docs/features/tickets/tickets.md`, List Tickets),
   without the page and the sorting of the list. The number of the view that
-  the list shows is read again when the list shows the view and with each
-  read of the list, such as another page, so that the tab and the list agree;
+  the list shows is read again when its view opens and with each read of the
+  list, such as another page, so that the tab and the list agree;
   the others are read again as the screen's data is, such as when the tab of
   the browser returns to the foreground (`docs/behaviors.md`, Loading).
 - The table of the Tickets of the view, "Tickets" for assistive

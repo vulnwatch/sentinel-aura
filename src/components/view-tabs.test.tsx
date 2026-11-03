@@ -215,3 +215,18 @@ test("moves the focus to the screen's heading when a tab leaves the page while i
     .element(screen.getByRole("heading", { level: 1, name: "Records" }))
     .toHaveFocus();
 });
+
+test("keeps the focus on a tab that stays when another tab leaves the page", async () => {
+  const { router, rendered } = renderList("/tickets");
+  const screen = await rendered;
+  const all = screen.getByRole("tab", { name: "All 1,250" });
+  await expect.element(all).toBeVisible();
+  all.element().focus();
+
+  router.history.push("/tickets?without-new");
+
+  await expect
+    .element(screen.getByRole("tab", { name: /^New/ }))
+    .not.toBeInTheDocument();
+  await expect.element(all).toHaveFocus();
+});
