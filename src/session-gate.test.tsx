@@ -14,7 +14,7 @@ import {
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { cleanup, render } from "vitest-browser-react";
 import "./styles.css";
 import { App } from "./app";
 import { Button } from "./components/button";
@@ -62,7 +62,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // Before the responses go, so that the screen of the test reads nothing
+  // more.
+  await cleanup();
   client.clear();
   vi.restoreAllMocks();
   focusManager.setFocused(undefined);

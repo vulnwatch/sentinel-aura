@@ -2,7 +2,7 @@ import { focusManager, type QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
 import type {
@@ -86,6 +86,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // Before the responses go, so that the screen of the test reads nothing
+  // more.
+  await cleanup();
   client.clear();
   vi.restoreAllMocks();
   focusManager.setFocused(undefined);
