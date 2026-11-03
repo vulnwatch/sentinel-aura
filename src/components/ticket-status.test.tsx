@@ -49,12 +49,12 @@ async function renderValue(node: ReactNode, scale = 1) {
 type Point = [x: number, y: number];
 
 // The colors of points of the mark, in its box of 16 units, which the mark
-// fills, enlarged three times.
-async function markColors(figure: Locator, points: Point[]) {
+// fills, enlarged scale times.
+async function markColors(figure: Locator, points: Point[], scale = SCALE) {
   const picture = await screenshot(figure);
   // The mark is centered on the line of the name.
-  const top = (picture.height - 16 * SCALE) / 2;
-  return points.map(([x, y]) => picture.at(x * SCALE, top + y * SCALE));
+  const top = (picture.height - 16 * scale) / 2;
+  return points.map(([x, y]) => picture.at(x * scale, top + y * scale));
 }
 
 // The point of the ring of radius 6.25 at an angle, in degrees clockwise
@@ -92,11 +92,13 @@ const MARKS: [
     // The ring, where New has gaps, and the right half of the disc.
     [onRing(0), onRing(22.5), onRing(202.5), [9.5, 6.5], [9.5, 9.5]],
     [],
+    // The last point just beyond the ring.
     [
       [6.5, 6.5],
       [6.5, 9.5],
       [12.5, 8],
       [0.5, 0.5],
+      [15.6, 8],
     ],
   ],
   [
@@ -106,20 +108,24 @@ const MARKS: [
     // The ring and three quarters of the disc, without the upper left one.
     [onRing(0), onRing(22.5), [9.5, 6.5], [9.5, 9.5], [6.5, 9.5]],
     [],
+    // The last point just beyond the ring.
     [
       [6.5, 6.5],
       [12.5, 8],
       [0.5, 0.5],
+      [15.6, 8],
     ],
   ],
   [
     "resolved",
     "Resolved",
     SUCCESS,
+    // The disc, the last point near its edge.
     [
       [12.5, 8],
       [8, 3.5],
       [3, 8],
+      [14.5, 8],
     ],
     // The check: its ends, its corner, and the middle of its short line.
     [
@@ -138,10 +144,12 @@ const MARKS: [
     "ignored",
     "Ignored",
     NEUTRAL,
+    // The disc, the last point near its edge.
     [
       [12.5, 8],
       [8, 3.5],
       [3.5, 8],
+      [14.5, 8],
     ],
     // The slash: its ends and its middle.
     [
@@ -158,10 +166,12 @@ const MARKS: [
     "duplicated",
     "Duplicated",
     NEUTRAL,
+    // The disc, the last point near its edge.
     [
       [8, 3.5],
       [12.5, 8],
       [8, 12.5],
+      [14.5, 8],
     ],
     // The arrow: the ends of its line and of its head.
     [
@@ -206,6 +216,34 @@ test.each(MARKS)(
   },
 );
 
+test("centers the dashes of New on the axes and the diagonals", async () => {
+  // At a text size of 96 px, six times the default, so that each point lies
+  // well inside a dash or a gap.
+  const scale = 6;
+  const { figure } = await renderValue(<TicketStatus status="new" />, scale);
+  // Each dash, with its round ends, reaches 13.8 degrees on each side of its
+  // axis or diagonal: points inside both of its ends, and beyond them, in the
+  // gaps. Dashes moved along the ring leave a point of one side out and cover
+  // a point of the other. The dashes at the bottom and the top, where the
+  // ring runs across, so that the figure, whose top can fall between two
+  // pixels, does not move the points along the ring.
+  const centers = [90, 270];
+  const inDashes = centers.flatMap((center) => [
+    onRing(center - 10.2),
+    onRing(center + 10.2),
+  ]);
+  const inGaps = centers.flatMap((center) => [
+    onRing(center - 17.4),
+    onRing(center + 17.4),
+  ]);
+  const colors = await markColors(figure, [...inDashes, ...inGaps], scale);
+
+  expect(colors).toEqual([
+    ...inDashes.map(() => INFO),
+    ...inGaps.map(() => CANVAS),
+  ]);
+});
+
 test.each([
   ["analyzed", "Analyzed"],
   ["review", "review"],
@@ -227,13 +265,16 @@ test.each(["review", "constructor"])(
       SCALE,
     );
     // In the 24 units of the icon: its circle on the right and on the left,
-    // and inside the circle, beside the question mark.
+    // the hook of the question mark at its top and on its right, and inside
+    // the circle, beside the question mark.
     const colors = await markColors(
       figure,
       (
         [
           [22, 12],
           [2, 12],
+          [12, 7],
+          [14.5, 9.5],
           [7, 12],
         ] satisfies Point[]
       ).map(([x, y]) => [(x * 16) / 24, (y * 16) / 24]),
@@ -247,6 +288,6 @@ test.each(["review", "constructor"])(
       getComputedStyle(figure.getByText(value, { exact: true }).element())
         .color,
     ).toBe(FG);
-    expect(colors).toEqual([NEUTRAL, NEUTRAL, CANVAS]);
+    expect(colors).toEqual([NEUTRAL, NEUTRAL, NEUTRAL, NEUTRAL, CANVAS]);
   },
 );

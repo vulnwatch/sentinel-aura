@@ -63,14 +63,17 @@ test("shows P1 as a red square with an exclamation mark, then P1 in fg at weight
     SCALE,
   );
   const level = figure.getByText("P1", { exact: true });
-  // Inside the square, around the exclamation mark and between its line and
-  // its dot; on the line and the dot; outside the rounded corner of the
-  // square, and in the space before the level.
+  // Inside the square, around the exclamation mark, above its line and
+  // between its line and its dot, and inside its corner, which a radius
+  // larger than 3 would leave out; on the line and the dot; outside the
+  // rounded corner of the square, and in the space before the level.
   const square: Point[] = [
     [2, 7],
     [4, 5],
+    [7, 1.8],
     [7, 8.95],
     [12, 12],
+    [1.2, 1.2],
   ];
   const sign: Point[] = [
     [7, 3.5],
@@ -97,8 +100,9 @@ test("shows P1 as a red square with an exclamation mark, then P1 in fg at weight
   ]);
 });
 
-// The center of each bar, from the first, and a point above each, between
-// the first two, and below the line on which they stand.
+// The center of each bar, from the first, and a point above each, before the
+// first, between each two, after the last, and below the line on which they
+// stand.
 const BAR_CENTERS: Point[] = [
   [2.5, 11],
   [7, 9.25],
@@ -108,7 +112,10 @@ const AROUND_BARS: Point[] = [
   [2.5, 7.5],
   [7, 4],
   [11.5, 0.75],
+  [0.5, 11],
   [4.75, 11],
+  [9.25, 11],
+  [13.5, 11],
   [7, 13.75],
 ];
 

@@ -91,36 +91,36 @@ describe("deadline", () => {
 
   // Counted from the triage due date.
   test.each([
-    ["three days before", -3 * DAY, "Triage 3d", "Triage due in 3 days"],
-    ["a day before", -DAY, "Triage 1d", "Triage due in 1 day"],
+    ["three days before", "Triage 3d", "Triage due in 3 days", -3 * DAY],
+    ["a day before", "Triage 1d", "Triage due in 1 day", -DAY],
     [
       "less than a day before",
-      -DAY + 1,
       "Triage 0d",
       "Triage due in less than a day",
+      -DAY + 1,
     ],
-    ["at the date", 0, "Triage 0d", "Triage due in less than a day"],
-    ["just after the date", 1, "Triage -1d", "Triage overdue by 1 day"],
-    ["a day after", DAY, "Triage -1d", "Triage overdue by 1 day"],
+    ["at the date", "Triage 0d", "Triage due in less than a day", 0],
+    ["just after the date", "Triage -1d", "Triage overdue by 1 day", 1],
+    ["a day after", "Triage -1d", "Triage overdue by 1 day", DAY],
     [
       "just after a day after",
-      DAY + 1,
       "Triage -2d",
       "Triage overdue by 2 days",
+      DAY + 1,
     ],
     [
       "1,250 days before",
-      -1250 * DAY,
       "Triage 1,250d",
       "Triage due in 1,250 days",
+      -1250 * DAY,
     ],
     [
       "1,250 days after",
-      1250 * DAY,
       "Triage -1,250d",
       "Triage overdue by 1,250 days",
+      1250 * DAY,
     ],
-  ])("%s, shows %j, read as %j", (_, offset, text, description) => {
+  ])("%s, shows %j, read as %j", (_, text, description, offset) => {
     expect(deadline(TICKET, TRIAGE_DUE + offset)).toMatchObject({
       text,
       description,
@@ -279,6 +279,30 @@ describe("badge", () => {
 
     expect(shown.getBoundingClientRect().left - badge.left).toBe(24);
     expect(icon).toBeGreaterThan(20);
+  });
+
+  test("shows clock-alert, a clock open on the right onto an exclamation mark, in the color of its text", async () => {
+    // At a text size of 48 px, the badge is three times larger: the icon is
+    // 36 px, after 24 px of side padding, and centered on the height of the
+    // badge, so that each point that the test reads lies well inside a line
+    // or away from every line.
+    document.documentElement.style.fontSize = "48px";
+    const { figure } = await renderBadge(
+      <DeadlineBadge ticket={inPhase("qa")} now={QA_DUE + 1} />,
+    );
+    const picture = await screenshot(figure);
+    const top = (picture.height - 36) / 2;
+    // In the 24 units of the icon: the circle on the left, the line of the
+    // exclamation mark, and the opening of the circle on the right.
+    const points: [x: number, y: number][] = [
+      [2, 12],
+      [20, 14.5],
+      [22, 12],
+    ];
+
+    expect(
+      points.map(([x, y]) => picture.at(24 + x * 1.5, top + y * 1.5)),
+    ).toEqual(["#a40e26", "#a40e26", "#ffebe9"]);
   });
 
   test.each([

@@ -71,14 +71,14 @@ async function dotColors(figure: Locator) {
 }
 
 test.each([
-  ["critical", "Critical", "#e5252a"],
-  ["high", "High", "#f76b15"],
-  ["medium", "Medium", "#f5c400"],
-  ["low", "Low", "#3b82f6"],
-  ["none", "None", "#8b949e"],
+  ["critical", "#e5252a", "Critical"],
+  ["high", "#f76b15", "High"],
+  ["medium", "#f5c400", "Medium"],
+  ["low", "#3b82f6", "Low"],
+  ["none", "#8b949e", "None"],
 ])(
   "shows %s as a dot of 8 px in its mark, %s, then its name %s in fg",
-  async (value, name, mark) => {
+  async (value, mark, name) => {
     const { screen, figure } = await renderValue(
       <Severity severity={value} />,
       SCALE,
