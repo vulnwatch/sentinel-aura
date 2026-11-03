@@ -13,6 +13,9 @@
  * sorts by the numeric `sequence_id`, and the five due dates sort by
  * the Ticket-level date with `NULL` last
  * (`docs/features/tickets/ticket-deadlines.md`, Sorting).
+ * `current_due_at` sorts by the current due date and
+ * `priority_then_current_due` by the effective priority, then the
+ * current due date (same document, Current Due Date).
  */
 export type TicketSortField =
   (typeof TicketSortField)[keyof typeof TicketSortField];
@@ -29,4 +32,6 @@ export const TicketSortField = {
   um_due_at: "um_due_at",
   qa_due_at: "qa_due_at",
   release_due_at: "release_due_at",
+  current_due_at: "current_due_at",
+  priority_then_current_due: "priority_then_current_due",
 } as const;
