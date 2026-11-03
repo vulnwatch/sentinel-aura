@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.15.0"
+    "version": "0.16.0"
   },
   "paths": {
     "/health": {
@@ -4226,11 +4226,11 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/TicketSortField",
-              "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), or a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`). `null` values sort last in both directions.",
+              "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), or `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys). `null` values sort last in both directions, for each key.",
               "default": "created_at",
               "maxLength": 500
             },
-            "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), or a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`). `null` values sort last in both directions."
+            "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), or `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys). `null` values sort last in both directions, for each key."
           },
           {
             "name": "sort_order",
@@ -16662,10 +16662,12 @@
           "submission_due_at",
           "um_due_at",
           "qa_due_at",
-          "release_due_at"
+          "release_due_at",
+          "current_due_at",
+          "priority_then_current_due"
         ],
         "title": "TicketSortField",
-        "description": "Sortable fields for the Ticket list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/tickets/tickets.md` (List Tickets) and\n`docs/features/tickets/ticket-service.md` (`list_tickets()`):\n`severity`, `priority`, and `status` use semantic ranks, `ticket_id`\nsorts by the numeric `sequence_id`, and the five due dates sort by\nthe Ticket-level date with `NULL` last\n(`docs/features/tickets/ticket-deadlines.md`, Sorting)."
+        "description": "Sortable fields for the Ticket list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/tickets/tickets.md` (List Tickets) and\n`docs/features/tickets/ticket-service.md` (`list_tickets()`):\n`severity`, `priority`, and `status` use semantic ranks, `ticket_id`\nsorts by the numeric `sequence_id`, and the five due dates sort by\nthe Ticket-level date with `NULL` last\n(`docs/features/tickets/ticket-deadlines.md`, Sorting).\n`current_due_at` sorts by the current due date and\n`priority_then_current_due` by the effective priority, then the\ncurrent due date (same document, Current Due Date)."
       },
       "TicketStatusValue": {
         "type": "string",
