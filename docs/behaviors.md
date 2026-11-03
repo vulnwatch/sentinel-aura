@@ -512,7 +512,9 @@ Ticket Current Phase):
   Release, then the number of whole days that remain, followed by `d`, such
   as `Submission 3d`, and `0d` in the last day. Once the date is past, it
   shows the number of days begun since, as a negative number, such as
-  `UM -2d`.
+  `UM -2d`. A day is 24 hours, counted from the time of the date, not a
+  calendar day: the last day is the 24 hours before the date, and the
+  days do not depend on the time zone of the browser.
 - The badge is red once the date is past, which Sentinel defines as a date
   before the current instant (same document, Evaluation Instant); yellow
   while less than a third of the window of its deadline remains; and green
