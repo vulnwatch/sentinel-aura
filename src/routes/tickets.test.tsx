@@ -526,6 +526,34 @@ describe("while the list changes", () => {
     expect(countsOf(FILTERS.Analysis)).toBe(1);
   });
 
+  test("reads the count of a view that opens while the list of another view loads", async () => {
+    const pending = later();
+    const { spy } = stubTickets({
+      list: (query) =>
+        filtersOf(query) === FILTERS.Analysis
+          ? pending.promise
+          : ticketPage([ROW]),
+    });
+    const { screen } = await renderApp("/tickets?view=new");
+    await expect
+      .element(screen.getByRole("tab", { name: "Analyzed 3" }))
+      .toBeVisible();
+    const countsOf = (filters: string) =>
+      queriesOf(spy, "count").filter(
+        (query) => query === `${filters}&per_page=1`,
+      ).length;
+
+    await screen.getByRole("tab", { name: /^Analysis/ }).click();
+    await expect
+      .element(screen.getByRole("progressbar", { name: "Updating" }))
+      .toBeVisible();
+    await screen.getByRole("tab", { name: /^Analyzed/ }).click();
+
+    await expect.poll(() => countsOf(FILTERS.Analyzed)).toBe(2);
+    expect(countsOf(FILTERS.Unassigned)).toBe(1);
+    pending.resolve(ticketPage([ROW]));
+  });
+
   test("keeps the columns, the sorting, and the pages of the rows that show while another view loads", async () => {
     const pending = later();
     stubTickets({
@@ -688,12 +716,12 @@ describe("the URL", () => {
     ]);
   });
 
-  test("drops Assigned to me when a read of the signed-in user tells that the role was removed", async () => {
+  test("drops Assigned to me when a read of the signed-in user tells that the role was removed, and moves the focus from its tab to the heading", async () => {
     const { stub } = stubTickets();
     const { router, screen } = await renderApp("/tickets?view=assigned-to-me");
-    await expect
-      .element(screen.getByRole("tab", { name: "Assigned to me 4" }))
-      .toHaveAttribute("aria-selected", "true");
+    const tab = screen.getByRole("tab", { name: "Assigned to me 4" });
+    await expect.element(tab).toHaveAttribute("aria-selected", "true");
+    tab.element().focus();
 
     stub.user = { data: { ...ANALYST.data, roles: [] } };
     returnToForeground();
@@ -705,6 +733,9 @@ describe("the URL", () => {
     await expect
       .element(screen.getByRole("tab", { name: /^All/ }))
       .toHaveAttribute("aria-selected", "true");
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toHaveFocus();
   });
 });
 

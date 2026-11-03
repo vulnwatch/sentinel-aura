@@ -371,20 +371,23 @@ interface ViewCountProps {
 // The count of a view: the total of its Tickets, without the page, the
 // sorting, and the filters and search that the user adds
 // (docs/screen-map.md, Ticket List Views), from a read of one Ticket. The
-// count of the view that the list shows is read again with each read of the
-// list, so that the tab and the list agree; the others, as the screen's data
-// is (docs/behaviors.md, Loading). When its read fails, it is not available,
-// and the screen's next read of the list tries it again (docs/behaviors.md,
-// Where Errors Appear).
+// count of the view that the list shows is read again when the list shows
+// the view and with each read of the list, so that the tab and the list
+// agree; the others, as the screen's data is (docs/behaviors.md, Loading).
+// When its read fails, it is not available, and the screen's next read of
+// the list tries it again (docs/behaviors.md, Where Errors Appear).
 function ViewCount({ filters, selected, listFetching }: ViewCountProps) {
   const count = useListTickets({ ...filters, per_page: 1 });
   const failed = count.status === "error";
   const { refetch } = count;
   const wasFetching = useRef(listFetching);
+  const wasSelected = useRef(selected);
   useEffect(() => {
     const started = listFetching && !wasFetching.current;
+    const opened = selected && !wasSelected.current;
     wasFetching.current = listFetching;
-    if (started && (selected || failed)) {
+    wasSelected.current = selected;
+    if ((started && (selected || failed)) || opened) {
       void refetch({ cancelRefetch: false });
     }
   }, [listFetching, selected, failed, refetch]);

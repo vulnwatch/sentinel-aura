@@ -14,6 +14,7 @@ import { render } from "vitest-browser-react";
 import { z } from "zod";
 import "../styles.css";
 import { RouterLinks } from "./router-links";
+import { ScreenHeading } from "./screen-heading";
 import { Count, ViewTabs } from "./view-tabs";
 
 // The views of a list as tabs (docs/design-system.md, Lists), in the light
@@ -56,33 +57,39 @@ describe("Count", () => {
   });
 });
 
-// The list, with the views of the tests.
+// The views of the tests.
+const VIEWS = [
+  {
+    id: "new",
+    label: "New",
+    href: linkOptions({ to: "/tickets", search: { view: "new" } }),
+    count: <Count value={12} failed={false} />,
+  },
+  {
+    id: "all",
+    label: "All",
+    href: "/tickets",
+    count: <Count value={1250} failed={false} />,
+  },
+] as const;
+
+// The list, with the views of the tests, and without New when its URL has
+// the fictional parameter without-new, as a view that a role decides.
 function List() {
-  const search = useRouterState({
-    select: (state) => state.location.searchStr,
-  });
-  const selected = new URLSearchParams(search).get("view") ?? "all";
+  const search = new URLSearchParams(
+    useRouterState({ select: (state) => state.location.searchStr }),
+  );
+  const selected = search.get("view") ?? "all";
+  const views = search.has("without-new")
+    ? VIEWS.filter((view) => view.id !== "new")
+    : VIEWS;
   return (
-    <ViewTabs
-      label="Views"
-      selected={selected}
-      views={[
-        {
-          id: "new",
-          label: "New",
-          href: linkOptions({ to: "/tickets", search: { view: "new" } }),
-          count: <Count value={12} failed={false} />,
-        },
-        {
-          id: "all",
-          label: "All",
-          href: "/tickets",
-          count: <Count value={1250} failed={false} />,
-        },
-      ]}
-    >
-      <p>{`The records of ${selected}`}</p>
-    </ViewTabs>
+    <>
+      <ScreenHeading>Records</ScreenHeading>
+      <ViewTabs label="Views" selected={selected} views={views}>
+        <p>{`The records of ${selected}`}</p>
+      </ViewTabs>
+    </>
   );
 }
 
@@ -192,4 +199,19 @@ describe("ViewTabs", () => {
     expect(router.state.location.href).toBe("/tickets");
     await expect.element(all).toHaveFocus();
   });
+});
+
+test("moves the focus to the screen's heading when a tab leaves the page while it holds the focus", async () => {
+  const { router, rendered } = renderList("/tickets");
+  const screen = await rendered;
+  const fresh = screen.getByRole("tab", { name: "New 12" });
+  await expect.element(fresh).toBeVisible();
+  fresh.element().focus();
+
+  router.history.push("/tickets?without-new");
+
+  await expect.element(fresh).not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "Records" }))
+    .toHaveFocus();
 });

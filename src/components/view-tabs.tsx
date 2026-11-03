@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import type { ScreenHref } from "./router-links";
+import { focusScreenHeading } from "./screen-heading";
 
 // The views of a list as tabs (docs/design-system.md, Lists;
 // docs/screen-map.md, Ticket List Views).
@@ -49,6 +50,27 @@ export interface View {
   count: ReactNode;
 }
 
+interface TabLabelProps {
+  children: ReactNode;
+}
+
+// The label of a tab. When the tab leaves the page while it holds the
+// focus, because a read replaced what the screen shows, such as a view that
+// a role decides after the role was removed, the focus moves to the screen's
+// heading (docs/behaviors.md, Accessibility, Focus after an action).
+function TabLabel({ children }: TabLabelProps) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const tab = ref.current?.closest('[role="tab"]');
+    return () => {
+      if (tab !== null && tab !== undefined && tab === document.activeElement) {
+        queueMicrotask(focusScreenHeading);
+      }
+    };
+  }, []);
+  return <span ref={ref}>{children}</span>;
+}
+
 interface ViewTabsProps {
   // The accessible name of the tabs.
   label: string;
@@ -67,8 +89,12 @@ interface ViewTabsProps {
 // focus to it, so that the arrow keys read the tabs without opening each
 // view. The panel of the selected view follows the tabs, 16 px below.
 export function ViewTabs({ label, views, selected, children }: ViewTabsProps) {
+  // The tabs start again when their views change, such as when a role
+  // decides a view, so that they do not move the focus of a tab that left to
+  // another tab (TabLabel).
+  const key = views.map((view) => view.id).join(" ");
   return (
-    <Tabs selectedKey={selected} keyboardActivation="manual">
+    <Tabs key={key} selectedKey={selected} keyboardActivation="manual">
       <TabList aria-label={label} className="flex flex-wrap gap-2">
         {views.map((view) => (
           <Tab
@@ -77,9 +103,9 @@ export function ViewTabs({ label, views, selected, children }: ViewTabsProps) {
             href={view.href}
             className={`inline-flex h-8 cursor-default items-center rounded-md border border-border px-3 text-14 text-fg data-hovered:bg-surface-hover data-selected:border-border-strong data-selected:bg-neutral-soft data-selected:font-semibold ${FOCUS_RING}`}
           >
-            <span>
+            <TabLabel>
               {view.label} {view.count}
-            </span>
+            </TabLabel>
           </Tab>
         ))}
       </TabList>

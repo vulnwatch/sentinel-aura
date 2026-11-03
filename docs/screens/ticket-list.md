@@ -69,10 +69,10 @@ Tasks; Landing).
   `GET /api/v1/tickets`, with the filters of the view and `per_page=1`, as
   `meta.total` (Sentinel `docs/features/tickets/tickets.md`, List Tickets),
   without the page and the sorting of the list. The number of the view that
-  the list shows is read again with each read of the list, such as another
-  page, so that the tab and the list agree; the others are read again as the
-  screen's data is, such as when the tab of the browser returns to the
-  foreground (`docs/behaviors.md`, Loading).
+  the list shows is read again when the list shows the view and with each
+  read of the list, such as another page, so that the tab and the list agree;
+  the others are read again as the screen's data is, such as when the tab of
+  the browser returns to the foreground (`docs/behaviors.md`, Loading).
 - The table of the Tickets of the view, "Tickets" for assistive
   technologies, from List Tickets with the filters and the sorting of the
   view, `sort_order=desc`, the page, and `per_page=20`. A filter with several
@@ -153,10 +153,12 @@ Tasks; Landing).
   change of the view or the page is (`docs/behaviors.md`, Accessibility,
   Focus after a navigation).
 - **The focus.** When the rows, the table without rows, the action of an
-  empty state, or the pagination leaves the page while it holds the focus,
-  such as "Go to the first page" once the rows arrive, or the pagination when
-  an error takes the place of the rows, the focus moves to the screen's
-  heading (`docs/behaviors.md`, Accessibility, Focus after an action).
+  empty state, the pagination, or a tab leaves the page while it holds the
+  focus, such as "Go to the first page" once the rows arrive, the pagination
+  when an error takes the place of the rows, or Assigned to me when a read of
+  the signed-in user tells that the role was removed, the focus moves to the
+  screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
+  action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
   page. A page beyond the last of a view with Tickets says "There are no
   Tickets on this page." and offers "Go to the first page", a link that looks
