@@ -14,12 +14,13 @@ import {
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { cleanup, render } from "vitest-browser-react";
 import "./styles.css";
 import { App } from "./app";
 import { Button } from "./components/button";
 import { RootLayout } from "./routes/root";
 import { getLogoutMutationOptions } from "./api/generated/authentication";
+import type { CurrentUserResponse } from "./api/generated/model";
 import { getGetCurrentUserProfileQueryKey } from "./api/generated/users";
 import { apiRequest } from "./api/request";
 import { createQueryClient } from "./query-client";
@@ -36,6 +37,7 @@ import {
   OTHER_USER,
   requestsTo,
   stubApi,
+  ticketPage,
   unauthorized,
   type ApiResponder,
 } from "./test-api";
@@ -45,6 +47,10 @@ const TICKETS = "/api/v1/tickets";
 // A path that requires a session and matches no screen, so that it shows Not
 // found to a signed-in user without reading anything else.
 const SCREEN = "/fictional/path";
+// Another user, who holds no role.
+const READER: CurrentUserResponse = {
+  data: { ...OTHER_USER.data, roles: [], capabilities: [] },
+};
 
 let client: QueryClient;
 
@@ -56,7 +62,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // Before the responses go, so that the screen of the test reads nothing
+  // more.
+  await cleanup();
   client.clear();
   vi.restoreAllMocks();
   focusManager.setFocused(undefined);
@@ -581,27 +590,43 @@ describe("the signed-in user", () => {
       .toBeVisible();
   });
 
-  test("discards the data and opens the landing when it is another user", async () => {
-    const { session } = stubSession("signed-in");
-    const { router, screen } = await renderApp(SCREEN);
-    await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
-      .toBeVisible();
-    client.setQueryData(["records"], { data: ["fictional"] });
-
-    session.user = OTHER_USER;
-    returnToForeground();
-
-    await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
-      .toBeVisible();
-    expect(router.state.location.pathname).toBe("/");
-    expect(router.history.length).toBe(1);
-    expect(client.getQueryData(["records"])).toBeUndefined();
-    expect(client.getQueryData(getGetCurrentUserProfileQueryKey())).toEqual(
+  test.each([
+    [
+      "the Home for a user without the vulnerability_analyst role",
+      READER,
+      "Home",
+      "/",
+    ],
+    [
+      "the Ticket list in its New view for a user who holds the vulnerability_analyst role",
       OTHER_USER,
-    );
-  });
+      "Tickets",
+      "/tickets?view=new",
+    ],
+  ])(
+    "discards the data and opens the landing when it is another user: %s",
+    async (_, other, heading, landing) => {
+      const { session } = stubSession("signed-in", () => ticketPage([]));
+      const { router, screen } = await renderApp(SCREEN);
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
+        .toBeVisible();
+      client.setQueryData(["records"], { data: ["fictional"] });
+
+      session.user = other;
+      returnToForeground();
+
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: heading }))
+        .toBeVisible();
+      expect(router.state.location.href).toBe(landing);
+      expect(router.history.length).toBe(1);
+      expect(client.getQueryData(["records"])).toBeUndefined();
+      expect(client.getQueryData(getGetCurrentUserProfileQueryKey())).toEqual(
+        other,
+      );
+    },
+  );
 });
 
 // A screen at / whose state the user changes, such as input not yet

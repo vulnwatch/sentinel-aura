@@ -11,7 +11,7 @@ test("ends the session and opens Sign in without telling that it expired", async
   page,
 }) => {
   await signIn(page);
-  await page.goto("/tickets?page=2");
+  await page.goto("/cves?page=2");
   await expect(
     page.getByRole("heading", { level: 1, name: "Not found" }),
   ).toBeVisible();

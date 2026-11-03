@@ -1,4 +1,4 @@
-import { useRouterState, type ToOptions } from "@tanstack/react-router";
+import { linkOptions, useRouterState } from "@tanstack/react-router";
 import {
   Boxes,
   Database,
@@ -20,11 +20,12 @@ import {
 } from "react-aria-components";
 import type { CurrentUserData } from "../api/generated/model";
 import { sidebarPreference } from "../preferences";
+import { holdsAnalystRole } from "../session-gate";
 import { AccountMenu } from "./account-menu";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { IconButton } from "./icon-button";
 import { useNewestMessage } from "./message-area";
-import { RouterLinks } from "./router-links";
+import { RouterLinks, type ScreenHref } from "./router-links";
 import { focusScreenHeading } from "./screen-heading";
 import { SentinelMark } from "./sentinel-mark";
 import { Tooltip } from "./tooltip";
@@ -60,7 +61,7 @@ export function useWideWindow(): boolean {
 // (docs/design-system.md, Icons by Need).
 interface Entry {
   name: string;
-  href: ToOptions["to"];
+  href: ScreenHref;
   area: string;
   icon: LucideIcon;
 }
@@ -86,19 +87,31 @@ const ENTRIES: readonly Entry[] = [
   },
 ];
 
-// The entries of the user, from the capabilities of Get Current User, which
-// only guide what the UI shows (docs/screen-map.md, Roles; Capabilities of
-// the Signed-in User): Administration appears last, only to a user who holds
-// manage_users or manage_settings, and opens Users for a user who holds
-// manage_users, Settings otherwise. A capability that the pinned contract
-// does not list changes nothing.
+// The entries of the user, from the roles and the capabilities of Get
+// Current User, which only guide what the UI shows (docs/screen-map.md,
+// Roles; Capabilities of the Signed-in User): Tickets opens the Ticket list
+// in its New view for a user who holds the vulnerability_analyst role, and in
+// its All view for every other user; Administration appears last, only to a
+// user who holds manage_users or manage_settings, and opens Users for a user
+// who holds manage_users, Settings otherwise. A role or a capability that the
+// pinned contract does not list changes nothing.
 function entriesOf(user: CurrentUserData): readonly Entry[] {
+  const entries = holdsAnalystRole(user)
+    ? ENTRIES.map((entry) =>
+        entry.area === "/tickets"
+          ? {
+              ...entry,
+              href: linkOptions({ to: "/tickets", search: { view: "new" } }),
+            }
+          : entry,
+      )
+    : ENTRIES;
   const users = user.capabilities.includes("manage_users");
   if (!users && !user.capabilities.includes("manage_settings")) {
-    return ENTRIES;
+    return entries;
   }
   return [
-    ...ENTRIES,
+    ...entries,
     {
       name: "Administration",
       href: users ? "/admin/users" : "/admin/settings",

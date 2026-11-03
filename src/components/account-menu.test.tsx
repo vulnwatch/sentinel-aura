@@ -403,7 +403,7 @@ describe("Sign out", () => {
         return respond();
       });
       window.sessionStorage.setItem(RETURN_URL_KEY, "/cves");
-      const { router, screen } = await renderApp("/tickets?page=2");
+      const { router, screen } = await renderApp("/fictional/path?page=2");
       expect(hasSessionRecord()).toBe(true);
       client.setQueryData(["records"], { data: ["fictional"] });
       const menu = await openMenu(screen);
@@ -485,7 +485,7 @@ describe("Sign out", () => {
           answer = resolve;
         }),
     );
-    const { router, screen } = await renderApp("/tickets");
+    const { router, screen } = await renderApp("/fictional/path");
     const menu = await openMenu(screen);
     await menu.getByRole("menuitem", { name: "Sign out" }).click();
 
@@ -523,7 +523,7 @@ describe("Sign out", () => {
           answer = resolve;
         }),
     );
-    const { router, screen } = await renderApp("/tickets");
+    const { router, screen } = await renderApp("/fictional/path");
     const menu = await openMenu(screen);
     await menu.getByRole("menuitem", { name: "Sign out" }).click();
 
@@ -548,7 +548,7 @@ describe("Sign out", () => {
     const { session } = stubSession(FICTIONAL_USER, () =>
       errorResponse(503, "DATABASE_UNAVAILABLE"),
     );
-    const { router, screen } = await renderApp("/tickets");
+    const { router, screen } = await renderApp("/fictional/path");
     const menu = await openMenu(screen);
     await menu.getByRole("menuitem", { name: "Sign out" }).click();
     await expect
@@ -567,7 +567,9 @@ describe("Sign out", () => {
       .toBeVisible();
     await expect.element(screen.getByText(EXPIRED)).toBeVisible();
     expect(router.state.location.pathname).toBe("/login");
-    expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBe("/tickets");
+    expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBe(
+      "/fictional/path",
+    );
   });
 
   test("shows the failure of a sign-out that ends after the account menu has left the page", async () => {
@@ -580,7 +582,7 @@ describe("Sign out", () => {
         }),
     );
     await page.viewport(800, 700);
-    const { screen } = await renderApp("/tickets");
+    const { screen } = await renderApp("/fictional/path");
     await screen
       .getByRole("navigation", { name: "Main" })
       .getByRole("button", { name: "Expand navigation" })
@@ -641,7 +643,7 @@ describe("Sign out", () => {
     "after %s, keeps the user signed in, closes the menu, and shows the message of its status",
     async (_, respond, message, withReference) => {
       stubSession(FICTIONAL_USER, respond);
-      const { router, screen } = await renderApp("/tickets");
+      const { router, screen } = await renderApp("/fictional/path");
       const menu = await openMenu(screen);
 
       await menu.getByRole("menuitem", { name: "Sign out" }).click();
@@ -664,7 +666,7 @@ describe("Sign out", () => {
           .element(screen.getByText(/Reference/))
           .not.toBeInTheDocument();
       }
-      expect(router.state.location.pathname).toBe("/tickets");
+      expect(router.state.location.pathname).toBe("/fictional/path");
       expect(hasSessionRecord()).toBe(true);
       await expect
         .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
@@ -677,7 +679,7 @@ describe("Sign out", () => {
     stubSession(FICTIONAL_USER, () =>
       errorResponse(503, "DATABASE_UNAVAILABLE"),
     );
-    const { screen } = await renderApp("/tickets");
+    const { screen } = await renderApp("/fictional/path");
     const expand = screen
       .getByRole("navigation", { name: "Main" })
       .getByRole("button", { name: "Expand navigation" });

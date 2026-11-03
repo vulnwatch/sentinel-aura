@@ -289,7 +289,7 @@ them, as tabs in this order:
 | Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who holds the `vulnerability_analyst` role (Roles) |
 | Analysis | Status Analysis | Every user |
 | Analyzed | Status Analyzed | Every user |
-| Unassigned | Status Analysis or Analyzed without an assignee, such as the Tickets of an analyst who was deactivated or lost the role (Sentinel `docs/features/tickets/tickets.md`, Reassignment) | Every user |
+| Orphaned | Status Analysis or Analyzed without an assignee: the orphaned Tickets awaiting reassignment, such as the Tickets of an analyst who was deactivated or lost the role, which Sentinel unassigns, and an unassigned Ticket that a user without that role brought back from Ignored or Duplicated, or that Sentinel reopened from Ignored. The API offers no way to unassign a Ticket (Sentinel `docs/features/tickets/tickets.md`, Architectural Invariant; Reassignment; Ignored; Assign Ticket; Reopen Ticket; Revert Duplicate Status) | Every user |
 | All | Every status | Every user |
 
 - Each tab shows the number of Tickets of its view as this table defines it,

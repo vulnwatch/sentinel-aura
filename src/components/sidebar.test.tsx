@@ -2,14 +2,14 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
 import { createQueryClient } from "../query-client";
 import { SIDEBAR_STORAGE_KEY } from "../preferences";
 import { createAppRouter } from "../router";
 import { SESSION_RECORD_KEY } from "../session";
-import { FICTIONAL_USER, jsonResponse, stubApi } from "../test-api";
+import { FICTIONAL_USER, jsonResponse, stubApi, ticketPage } from "../test-api";
 
 // The sidebar (docs/screen-map.md, Sidebar; docs/design-system.md, Sidebar),
 // at the browser's default text size, in the light theme.
@@ -34,6 +34,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // Before the responses go, so that the screen of the test reads nothing
+  // more.
+  await cleanup();
   client.clear();
   vi.restoreAllMocks();
   window.localStorage.removeItem(SIDEBAR_STORAGE_KEY);
@@ -42,15 +45,20 @@ afterEach(async () => {
   await page.viewport(414, 896);
 });
 
-// Signs in the fictional user with the capabilities, as Get Current User
-// returns them, an unlisted one included, and shows the screen at the path.
-async function renderApp(path: string, capabilities: string[] = []) {
+// Signs in the fictional user with the capabilities and the roles, as Get
+// Current User returns them, an unlisted one included, and shows the screen
+// at the path.
+async function renderApp(
+  path: string,
+  capabilities: string[] = [],
+  roles: string[] = [],
+) {
   stubApi((request) =>
     request.path === ME
       ? jsonResponse(200, {
-          data: { ...FICTIONAL_USER.data, capabilities },
+          data: { ...FICTIONAL_USER.data, capabilities, roles },
         })
-      : jsonResponse(200, { data: [] }),
+      : ticketPage([]),
   );
   const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -173,6 +181,31 @@ describe("expanded", () => {
     expect(
       sidebarOf(screen).element().querySelectorAll('[aria-current="page"]'),
     ).toHaveLength(1);
+  });
+
+  test.each([
+    [
+      "the New view of the Ticket list for a user who holds the vulnerability_analyst role",
+      ["vulnerability_analyst", "fictional_role"],
+      "/tickets?view=new",
+    ],
+    [
+      "the All view for a user with every other role",
+      ["admin", "restricted_analyst", "fictional_role"],
+      "/tickets",
+    ],
+  ])("leads with Tickets to %s", async (_, roles, href) => {
+    const { router, screen } = await renderApp("/cves", [], roles);
+    const tickets = sidebarOf(screen).getByRole("link", { name: "Tickets" });
+
+    await expect.element(tickets).toHaveAttribute("href", href);
+    await tickets.click();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toHaveFocus();
+    expect(router.state.location.href).toBe(href);
+    await expect.element(tickets).toHaveAttribute("aria-current", "page");
   });
 
   test.each([

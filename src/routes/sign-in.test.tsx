@@ -172,10 +172,18 @@ describe("Sign in", () => {
       .toBeVisible();
     expect(router.state.location.href).toBe("/fictional/path?view=all");
     expect(router.history.length).toBe(1);
-    expect(signIns).toEqual([
+    expect(
+      signIns.map(({ method, path, query, body }) => ({
+        method,
+        path,
+        query: query.toString(),
+        body,
+      })),
+    ).toEqual([
       {
         method: "POST",
         path: LOGIN,
+        query: "",
         body: { username: " JDoe ", password: "fictional password" },
       },
     ]);

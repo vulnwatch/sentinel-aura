@@ -126,6 +126,26 @@ function DetailScreen() {
   );
 }
 
+// A screen of a list that gives the place of its data itself, given its
+// read, as the frame of a table does.
+function OwnPlaceScreen() {
+  const read = useRecord(1);
+  return (
+    <ScreenRead
+      read={read}
+      renderFrame={(place) => (
+        <main>
+          <ScreenHeading>Records</ScreenHeading>
+          {place}
+        </main>
+      )}
+      renderPlace={(given) => (
+        <p>{`Place of a read in status ${given.status}: ${given.data?.title ?? "none"}`}</p>
+      )}
+    />
+  );
+}
+
 // A part of a screen under its own heading.
 function PartScreen() {
   const read = useRecord(1);
@@ -562,6 +582,41 @@ describe("ScreenRead", () => {
         ),
       )
       .toBeVisible();
+  });
+
+  test("shows the place that the screen gives itself, given the read", async () => {
+    const { promise, resolve } = later();
+    respond.mockReturnValueOnce(promise);
+    const screen = await renderWithClient(<OwnPlaceScreen />);
+
+    await expect
+      .element(screen.getByText("Place of a read in status pending: none"))
+      .toBeVisible();
+    resolve({ title: "Fictional record" });
+
+    await expect
+      .element(
+        screen.getByText("Place of a read in status success: Fictional record"),
+      )
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Records" }))
+      .toBeVisible();
+  });
+
+  test("replaces also a screen that gives its place itself when its first read fails", async () => {
+    respond.mockRejectedValue(UNAVAILABLE);
+    const screen = await renderWithClient(<OwnPlaceScreen />);
+
+    await expect
+      .element(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "This page couldn't be loaded",
+        }),
+      )
+      .toBeVisible();
+    expect(screen.getByText(/Place of a read/).query()).toBeNull();
   });
 });
 

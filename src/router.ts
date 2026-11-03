@@ -5,12 +5,14 @@ import { authCallbackRoute } from "./routes/auth-callback";
 import { homeRoute } from "./routes/home";
 import { rootRoute } from "./routes/root";
 import { signInRoute } from "./routes/sign-in";
+import { ticketListRoute } from "./routes/tickets";
 import { unbuiltScreenRoutes } from "./routes/unbuilt";
 
 const routeTree = rootRoute.addChildren([
   homeRoute,
   signInRoute,
   authCallbackRoute,
+  ticketListRoute,
   ...unbuiltScreenRoutes,
 ]);
 

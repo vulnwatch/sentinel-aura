@@ -113,6 +113,8 @@ describe("with a signed-in user", () => {
     const box = skip.element().getBoundingClientRect();
     expect([box.left, box.top]).toEqual([8, 8]);
     expect(box.height).toBe(36);
+    // Away from the pointer, which an earlier test can leave over it.
+    await userEvent.unhover(skip);
     // A primary button, over the sidebar: accent of the light theme.
     expect(getComputedStyle(skip.element()).backgroundColor).toBe(
       "rgb(9, 105, 218)",
@@ -205,7 +207,7 @@ describe("the focus after a navigation", () => {
   test("stays at the top of the page when the UI leads at once from the URL that the page loaded to Sign in", async () => {
     stubSession("none");
     const router = createAppRouter({
-      history: createMemoryHistory({ initialEntries: ["/tickets"] }),
+      history: createMemoryHistory({ initialEntries: ["/fictional/path"] }),
     });
     const screen = await render(
       <StrictMode>
@@ -222,7 +224,7 @@ describe("the focus after a navigation", () => {
 
   test("moves to the heading of Sign in when the UI leads there, and to the screen after the sign-in", async () => {
     const session = stubSession("signed-in");
-    const { screen } = await renderApp("/tickets");
+    const { screen } = await renderApp("/fictional/path");
     session.active = false;
     await client
       .fetchQuery({
@@ -247,13 +249,13 @@ describe("the focus after a navigation", () => {
 
   test("stays where it was when only the search of the screen changes", async () => {
     stubSession("signed-in");
-    const { router, screen } = await renderApp("/tickets");
+    const { router, screen } = await renderApp("/fictional/path");
     const entry = screen
       .getByRole("navigation", { name: "Main" })
       .getByRole("link", { name: "CVEs" });
     entry.element().focus();
 
-    router.history.push("/tickets?page=2");
+    router.history.push("/fictional/path?page=2");
 
     await expect.poll(() => router.state.location.searchStr).toBe("?page=2");
     await expect.element(entry).toHaveFocus();
