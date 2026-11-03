@@ -816,6 +816,11 @@ describe("the table", () => {
       .element(row.getByRole("link", { name: "CVE-2099-0018" }))
       .toHaveAttribute("href", "/cves/CVE-2099-0018");
     expect(
+      getComputedStyle(
+        row.getByRole("link", { name: "CVE-2099-0018" }).element(),
+      ).fontWeight,
+    ).toBe("500");
+    expect(
       row
         .getByRole("gridcell")
         .elements()
