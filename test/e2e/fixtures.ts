@@ -102,14 +102,21 @@ export async function submitSignIn(
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
+// The users of the dataset who hold the vulnerability_analyst role and can
+// sign in (same document, Users), whose landing is the Ticket list in its New
+// view; the landing of every other user is the Home (docs/screen-map.md,
+// Landing).
+const ANALYSTS = new Set(["asmith", "bwilson"]);
+
 // Signs in on Sign in, opened directly, as a user of the dataset, jdoe by
-// default (same document, Users), and waits for the landing, to which Sign in
-// then leads (docs/behaviors.md, Return After Sign-in). Each path but Sign in
-// and /auth/callback requires a session (docs/screen-map.md, Contract URLs).
+// default (same document, Users), and waits for the landing of the user, to
+// which Sign in then leads (docs/behaviors.md, Return After Sign-in). Each
+// path but Sign in and /auth/callback requires a session
+// (docs/screen-map.md, Contract URLs).
 export async function signIn(page: Page, username = "jdoe") {
   await page.goto("/login");
   await submitSignIn(page, username, DATASET_PASSWORD);
-  await page.waitForURL("/");
+  await page.waitForURL(ANALYSTS.has(username) ? "/tickets?view=new" : "/");
 }
 
 // The avatars that the page shows, which the reference screenshots mask: the
@@ -120,6 +127,13 @@ export async function signIn(page: Page, username = "jdoe") {
 // src/components/avatar.tsx draws it in.
 export function avatars(page: Page): Locator {
   return page.locator('svg[viewBox="0 0 6 6"]');
+}
+
+// The dates and times that the page shows, which the reference screenshots
+// mask: the dataset computes them from the instant of its load (same
+// document, Time Base). A date and time shows in a time element.
+export function dateTimes(page: Page): Locator {
+  return page.locator("time");
 }
 
 export const test = base.extend<{ pageChecks: undefined }>({

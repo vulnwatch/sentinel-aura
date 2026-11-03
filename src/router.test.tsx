@@ -4,6 +4,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  linkOptions,
   RouterProvider,
   type AnyRouter,
 } from "@tanstack/react-router";
@@ -85,6 +86,39 @@ test("navigates through the router when a React Aria link is pressed", async () 
     .element(screen.getByRole("heading", { name: "Home page" }))
     .toBeVisible();
   expect(router.state.location.pathname).toBe("/");
+});
+
+test("navigates through the router to the search parameters of a link, which its address shows", async () => {
+  const root = createRootRoute({ component: RootLayout });
+  const start = createRoute({
+    getParentRoute: () => root,
+    path: "/",
+    component: () => (
+      <Link href={linkOptions({ to: "/tickets", search: { view: "new" } })}>
+        New Tickets
+      </Link>
+    ),
+  });
+  const tickets = createRoute({
+    getParentRoute: () => root,
+    path: "/tickets",
+    component: () => <h1>Tickets page</h1>,
+  });
+  const router = createRouter({
+    routeTree: root.addChildren([start, tickets]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  const screen = await renderRouter(router);
+  const link = screen.getByRole("link", { name: "New Tickets" });
+
+  await expect.element(link).toHaveAttribute("href", "/tickets?view=new");
+  await link.click();
+
+  await expect
+    .element(screen.getByRole("heading", { name: "Tickets page" }))
+    .toBeVisible();
+  expect(router.state.location.href).toBe("/tickets?view=new");
+  expect(router.history.length).toBe(2);
 });
 
 function renderApp(path: string) {

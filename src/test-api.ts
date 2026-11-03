@@ -3,6 +3,8 @@ import type {
   CurrentUserResponse,
   ErrorResponse,
   LoginResponse,
+  TicketListResponse,
+  TicketSummary,
   ValidationErrorResponse,
 } from "./api/generated/model";
 
@@ -26,7 +28,8 @@ export const FICTIONAL_USER: CurrentUserResponse = {
   },
 };
 
-// Another user, who signs in in another tab.
+// Another user, who signs in in another tab, and who holds the
+// vulnerability_analyst role.
 export const OTHER_USER: CurrentUserResponse = {
   data: {
     id: "00000000-0000-0000-0000-000000000002",
@@ -86,11 +89,58 @@ export function signedIn(): Response {
   return jsonResponse(200, body);
 }
 
+// A fictional Ticket, as List Tickets returns it: SNTL-1, New, with a CVE,
+// unassigned, and a triage deadline, with the fields that a test sets.
+export function fictionalTicket(
+  fields: Partial<TicketSummary> = {},
+): TicketSummary {
+  return {
+    ticket_id: "SNTL-1",
+    status: "new",
+    severity: "high",
+    priority: "p2",
+    assignee: null,
+    cve: {
+      cve_id: "CVE-2099-0001",
+      title: "Fictional buffer overflow in fictional-curl",
+      description: "A fictional description.",
+    },
+    duplicate_of_ticket_id: null,
+    is_confidential: false,
+    coordinated_release_at: null,
+    triage_due_at: "2099-10-12T14:05:09Z",
+    submission_due_at: "2099-10-27T14:05:09Z",
+    um_due_at: "2099-10-30T14:05:09Z",
+    qa_due_at: "2099-11-08T14:05:09Z",
+    release_due_at: "2099-11-08T14:05:09Z",
+    current_phase: "triage",
+    current_phase_milestone: "pending",
+    package_names: [],
+    created_at: "2099-10-09T14:05:09Z",
+    updated_at: "2099-10-09T14:05:09Z",
+    ...fields,
+  };
+}
+
+// A page of List Tickets: the Tickets, of a list of total Tickets.
+export function ticketPage(
+  tickets: TicketSummary[],
+  { total = tickets.length, page = 1, perPage = 20 } = {},
+): Response {
+  const body: TicketListResponse = {
+    data: tickets,
+    meta: { total, page, per_page: perPage },
+  };
+  return jsonResponse(200, body);
+}
+
 // A request that a test answers.
 export interface ApiRequest {
   method: string;
   // The path of the URL, such as /api/v1/users/me.
   path: string;
+  // The query parameters of the URL.
+  query: URLSearchParams;
   // The parsed JSON body, or undefined.
   body: unknown;
 }
@@ -99,10 +149,15 @@ export type ApiResponder = (
   request: ApiRequest,
 ) => Response | Promise<Response>;
 
+// The URL of a request.
+export function urlOf(input: RequestInfo | URL): URL {
+  const url = input instanceof Request ? input.url : input.toString();
+  return new URL(url, window.location.origin);
+}
+
 // The path of the URL of a request.
 function pathOf(input: RequestInfo | URL): string {
-  const url = input instanceof Request ? input.url : input.toString();
-  return new URL(url, window.location.origin).pathname;
+  return urlOf(input).pathname;
 }
 
 // Answers every request of the page with the responder, and returns the spy,
@@ -114,6 +169,7 @@ export function stubApi(respond: ApiResponder) {
       respond({
         method: init?.method ?? "GET",
         path: pathOf(input),
+        query: urlOf(input).searchParams,
         body: typeof body === "string" ? JSON.parse(body) : undefined,
       }),
     );

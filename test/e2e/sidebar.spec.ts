@@ -35,6 +35,20 @@ test.describe("the sidebar", () => {
     await expect(links.last()).toHaveAttribute("href", "/admin/users");
   });
 
+  test("leads an analyst with Tickets to the New view of the Ticket list", async ({
+    page,
+  }) => {
+    // asmith holds the vulnerability_analyst role.
+    await signIn(page, "asmith");
+    const tickets = sidebar(page).getByRole("link", {
+      name: "Tickets",
+      exact: true,
+    });
+
+    await expect(tickets).toHaveAttribute("href", "/tickets?view=new");
+    await expect(tickets).toHaveAttribute("aria-current", "page");
+  });
+
   test("shows no Administration to a user without a role", async ({ page }) => {
     await signIn(page, "dbrown");
 

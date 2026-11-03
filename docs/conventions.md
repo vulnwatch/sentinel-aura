@@ -174,11 +174,11 @@ rules; review enforces the rest.
 | `src/app.tsx` | The providers that every screen shares |
 | `src/query-client.ts` | The query client, with the defaults of every read and change (`docs/behaviors.md`, Retries and Unconfirmed Changes; Loading) |
 | `src/session.ts` | What the UI keeps of the session in the origin's browser storage: the session record, and the saved URL with its check, both forgotten after a sign-out (`docs/behaviors.md`, Return After Sign-in; Session Expiration Message; Sign-out) |
-| `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, the return from Sign in, and Sign out (`docs/behaviors.md`, Session) |
+| `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, the return from Sign in, and Sign out (`docs/behaviors.md`, Session); and the signed-in user for the screens that depend on it, with the role that decides the landing (`docs/screen-map.md`, Landing; Roles) |
 | `src/avatar.ts` | The pattern and the color of the avatar (`docs/design-system.md`, Avatar, Definition, Version 1): the SHA-256 digest of a user's `id`, and the cells and the index of the color in the Palette that it selects |
 | `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
 | `src/routes/` | One module per route: its definition and its page component |
-| `src/routes/unbuilt.ts` | The routes of the screens of `docs/screen-map.md` (Areas and Screens) to which the sidebar and the account menu lead before those screens are built: each shows Not found, and the change that builds a screen replaces its route |
+| `src/routes/unbuilt.ts` | The routes of the screens of `docs/screen-map.md` (Areas and Screens) to which the sidebar, the account menu, and the screens lead before those screens are built: each shows Not found, and the change that builds a screen replaces its route |
 | `src/components/` | The components that several routes share |
 | `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
@@ -209,11 +209,28 @@ that needs it; content of another kind needs a new row first.
   pagination, lives in the route's path and search parameters. A Zod schema
   in the route definition validates the search parameters, and the screen
   reads them through the router's typed hooks.
+- The schema gives each search parameter `.catch(undefined)`, so that a
+  value that the screen does not accept counts as absent. When the URL
+  carries a parameter or a value that the schema does not accept, the route's
+  `beforeLoad` redirects to the parameters that it accepts, replacing the URL
+  (`docs/behaviors.md`, Invalid Search Parameters). The router's search of a
+  route also passes on the parameters of the URL that its schema does not
+  declare, so `beforeLoad` compares the URL with the schema's own result. A
+  parameter that the screen accepts only for some users, such as a view that
+  a role decides, is removed by the screen in the same way, once it knows the
+  user.
 - Links between the UI's screens use the router's typed paths: React Aria's
   links, and the components that contain links, navigate through the router,
-  which the root route connects to React Aria. A link to an address that the
-  API returns, or to an address of another site that the UI composes from a
-  value of the API, follows Links from the API instead.
+  which the root route connects to React Aria. A link with path or search
+  parameters takes as its address the options that the router's
+  `linkOptions` checks against the route tree, such as
+  `linkOptions({ to: "/tickets/$ticketId", params: { ticketId } })`: the
+  type check rejects a path, a parameter, or a value that the route does not
+  declare, the router encodes the parameters, and the link shows the address
+  that it leads to. No code interpolates a value into the path of a link.
+  A link to an address that the API returns, or to an address of another
+  site that the UI composes from a value of the API, follows Links from the
+  API instead.
 
 ### API Access
 

@@ -177,6 +177,28 @@ export function readSignedInUser(
   };
 }
 
+// The signed-in user, for a screen that depends on the user, such as on
+// their roles or their id: the read that SessionGate keeps, which this hook
+// never sends itself. A screen shows only with a signed-in user, so this is
+// undefined only while the session ends, before the screen leaves the page.
+export function useSignedInUser(): CurrentUserData | undefined {
+  const client = useQueryClient();
+  const router = useRouter();
+  const user = useGetCurrentUserProfile({
+    query: { queryFn: readSignedInUser(client, router), enabled: false },
+  });
+  return user.data?.data;
+}
+
+// Whether the user holds the vulnerability_analyst role, the only role on
+// which the UI depends, because only its holders can be assigned a Ticket:
+// it decides the landing, the view that the Tickets entry opens, and the
+// Assigned to me view (docs/screen-map.md, Roles, Principles; Sentinel
+// docs/features/identity/rbac.md, Business Rules).
+export function holdsAnalystRole(user: Pick<CurrentUserData, "roles">) {
+  return user.roles.includes("vulnerability_analyst");
+}
+
 // Whether a sign-out is in progress.
 function isSigningOut(client: QueryClient): boolean {
   return client.isMutating({ mutationKey: getLogoutMutationKey() }) > 0;

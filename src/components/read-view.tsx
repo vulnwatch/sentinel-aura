@@ -70,6 +70,58 @@ function UpdateFailed({ error, onRetry }: UpdateFailedProps) {
   );
 }
 
+// The data that the place of a read shows: the data that has arrived, also
+// while other data loads, but none after a 403 or a 404, which replaces it.
+function dataShown<TData>(read: Read<TData>): TData | undefined {
+  return read.status === "error" && replacesShownData(read.error)
+    ? undefined
+    : read.data;
+}
+
+// What the place of the data of a read shows, which a place arranges, such as
+// Data or the frame of a table (src/components/data-table.tsx).
+export interface DataPlace<TData> {
+  // The data that shows (dataShown), or undefined.
+  data: TData | undefined;
+  // In place of the data: the error of a read that failed without data to
+  // show, or null.
+  failure: ReactNode;
+  // Above the data that stays shown: the warning of a new read of it that
+  // failed, which goes while the data is read again, or null.
+  warning: ReactNode;
+  // Whether the place waits for its data, and so shows the loading
+  // indicator.
+  waiting: boolean;
+  // Whether the data that shows is marked as being updated: while other data
+  // loads, and while it is read again after a read of it failed.
+  updating: boolean;
+}
+
+// What the place of the data of a read shows (docs/behaviors.md, Where Errors
+// Appear; Loading).
+export function dataPlace<TData>(read: Read<TData>): DataPlace<TData> {
+  const failed = read.status === "error";
+  const data = dataShown(read);
+  const onRetry = () => {
+    retry(read);
+  };
+  return {
+    data,
+    failure:
+      failed && data === undefined ? (
+        <ErrorInPlace error={read.error} placement="part" onRetry={onRetry} />
+      ) : null,
+    warning:
+      failed && data !== undefined && !read.isFetching ? (
+        <UpdateFailed error={read.error} onRetry={onRetry} />
+      ) : null,
+    waiting: data === undefined && !failed,
+    updating:
+      data !== undefined &&
+      (read.isPlaceholderData || (failed && read.isFetching)),
+  };
+}
+
 interface DataProps<TData> {
   read: Read<TData>;
   children: (data: TData) => ReactNode;
@@ -84,36 +136,21 @@ interface DataProps<TData> {
 // Announcements). When the data leaves the page while it holds the focus,
 // such as data that a 403 replaces, the focus moves to the screen's heading.
 function Data<TData>({ read, children }: DataProps<TData>) {
-  const failed = read.status === "error";
-  const data = failed && replacesShownData(read.error) ? undefined : read.data;
-  const onRetry = () => {
-    retry(read);
-  };
-  let status: ReactNode;
-  if (failed && data === undefined) {
-    status = (
-      <ErrorInPlace error={read.error} placement="part" onRetry={onRetry} />
-    );
-  } else if (failed && !read.isFetching) {
-    status = <UpdateFailed error={read.error} onRetry={onRetry} />;
-  }
+  const place = dataPlace(read);
   return (
     <div className="relative">
-      {data !== undefined &&
-        (read.isPlaceholderData || (failed && read.isFetching)) && (
-          <UpdatingBar />
-        )}
-      <output className="block">{status}</output>
-      {data === undefined ? (
-        !failed && <Loading />
+      {place.updating && <UpdatingBar />}
+      <output className="block">{place.failure ?? place.warning}</output>
+      {place.data === undefined ? (
+        place.waiting && <Loading />
       ) : (
-        <FocusHandOff>{children(data)}</FocusHandOff>
+        <FocusHandOff>{children(place.data)}</FocusHandOff>
       )}
     </div>
   );
 }
 
-interface ScreenReadProps<TData> {
+type ScreenReadProps<TData> = {
   // The read without which the screen shows nothing, such as the record of a
   // detail screen or the list of a list screen.
   read: Read<TData>;
@@ -122,8 +159,20 @@ interface ScreenReadProps<TData> {
   // (docs/behaviors.md, Loading). A heading that depends on the data names
   // the kind of screen until the data arrives.
   renderFrame: (place: ReactNode, data: TData | undefined) => ReactNode;
-  children: (data: TData) => ReactNode;
-}
+} & (
+  | {
+      // The data in its place, as Data shows it.
+      children: (data: TData) => ReactNode;
+      renderPlace?: never;
+    }
+  | {
+      // The place of the data itself, given the read, for a place that
+      // arranges what it shows otherwise (dataPlace), such as the frame of a
+      // table.
+      renderPlace: (read: Read<TData>) => ReactNode;
+      children?: never;
+    }
+);
 
 // A screen that shows the data of one read (docs/behaviors.md, Where Errors
 // Appear). When its first read fails, or a new read fails with a 403 or a
@@ -133,11 +182,8 @@ interface ScreenReadProps<TData> {
 // The screen starts again when it opens with other path parameters, such as
 // another Ticket (src/router.ts). When an error replaces the screen while one
 // of its elements holds the focus, the focus moves to the error's heading.
-export function ScreenRead<TData>({
-  read,
-  renderFrame,
-  children,
-}: ScreenReadProps<TData>) {
+export function ScreenRead<TData>(props: ScreenReadProps<TData>) {
+  const { read, renderFrame } = props;
   const [shownData, setShownData] = useState(false);
   if (read.status === "success" && !read.isPlaceholderData && !shownData) {
     setShownData(true);
@@ -156,11 +202,13 @@ export function ScreenRead<TData>({
       />
     );
   }
-  return (
-    <FocusHandOff>
-      {renderFrame(<Data read={read}>{children}</Data>, read.data)}
-    </FocusHandOff>
-  );
+  const place =
+    props.renderPlace === undefined ? (
+      <Data read={read}>{props.children}</Data>
+    ) : (
+      props.renderPlace(read)
+    );
+  return <FocusHandOff>{renderFrame(place, read.data)}</FocusHandOff>;
 }
 
 interface PartReadProps<TData> {
