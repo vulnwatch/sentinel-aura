@@ -610,8 +610,8 @@ The resolved severity of a Ticket or a CVE is `critical`, `high`, `medium`,
   followed, 6 px later, by its name in `fg`: Critical, High, Medium, Low, or
   None.
 - `null` is an absent value (`docs/behaviors.md`, Absent Values).
-- A value that the pinned contract does not list shows as received, after a
-  hollow dot of 8 px with a 1 px edge in `neutral-icon`
+- A value that the pinned contract does not list shows as received, in
+  `fg`, 6 px after a hollow dot of 8 px with a 1 px edge in `neutral-icon`
   (`docs/behaviors.md`, Unknown Values).
 
 ### Priority
@@ -622,12 +622,13 @@ Priority Levels; Persistence and Effective Priority). Only P1 is red, so that
 the Tickets to remediate at once stand out among many.
 
 - P1 shows as a square mark of 14 px in `danger-solid` with an exclamation
-  mark in `on-danger-solid`, followed by "P1" in `fg` at weight 600.
-- P2, P3, and P4 show as three rising bars, of which the first three, two, or
-  one are filled in `fg-muted` and the others in `border`, followed by the
-  level in `fg-muted`.
+  mark in `on-danger-solid`, followed, 6 px later, by "P1" in `fg` at weight
+  600.
+- P2, P3, and P4 show as a mark of 14 px of three rising bars, of which the
+  first three, two, or one are filled in `fg-muted` and the others in
+  `border`, followed, 6 px later, by the level in `fg-muted`.
 - `null` is an absent value. A value that the pinned contract does not list
-  shows as received, without a mark.
+  shows as received, in `fg`, without a mark.
 
 The marks, in a box of 14 by 14 units:
 
@@ -652,15 +653,15 @@ a disc are in `surface`:
 
 | Status | Shapes |
 |---|---|
-| New | A circle of radius 6.25, drawn as a dashed line of 2.6 with gaps of 1.9 |
+| New | A circle of radius 6.25, drawn as eight dashes of equal length with round ends, centered on the axes and the diagonals, with gaps of 1.9 between their ends |
 | Analysis | A circle of radius 6.25, and the right half of a disc of radius 3.5: the path `M8 8V4.5A3.5 3.5 0 0 1 8 11.5Z` |
 | Analyzed | A circle of radius 6.25, and three quarters of a disc of radius 3.5, without its upper-left quarter: the path `M8 8V4.5A3.5 3.5 0 1 1 4.5 8Z` |
 | Resolved | A disc of radius 7, and a check: the path `M4.9 8.2 7 10.2l4.1-4.3` |
 | Ignored | A disc of radius 7, and a slash: the path `M5.2 10.8 10.8 5.2` |
 | Duplicated | A disc of radius 7, and an arrow to the right: the path `M4.6 8h6.1M8.4 5.6 10.8 8l-2.4 2.4` |
 
-A status that the pinned contract does not list shows as received, after
-`circle-question-mark` at 16 px in `neutral-icon`.
+A status that the pinned contract does not list shows as received, in `fg`,
+6 px after `circle-question-mark` at 16 px in `neutral-icon`.
 
 ### Deadline Badge
 
@@ -668,15 +669,15 @@ A status that the pinned contract does not list shows as received, after
 It is 24 px high, with a 4 px radius and 8 px of side padding, in `text-13`,
 weight 500, with tabular figures: the name of the deadline, a space, and the
 days. It is green as the `success` tone, yellow as the `warning` tone, and
-red as the `danger` tone, with `clock-alert` at 12 px, 4 px before the name
-of the deadline. A current phase that the pinned contract does not list
-shows in the same shape in the `neutral` tone, without an icon. Another due
-date with an overdue milestone status shows `clock-alert` at 14 px in
-`danger-icon` before that status.
+red as the `danger` tone, with `clock-alert` at 12 px in the color of its
+text, 4 px before the name of the deadline. A current phase that the pinned
+contract does not list shows in the same shape in the `neutral` tone,
+without an icon. Another due date with an overdue milestone status shows
+`clock-alert` at 14 px in `danger-icon` before that status.
 
 ### Confidential Tickets
 
-A confidential Ticket shows `lock` at 14 px in `fg-muted` after its
+A confidential Ticket shows `lock` at 14 px in `fg-muted`, 4 px after its
 identifier, with the accessible name "Confidential". A detail screen also
 writes "Confidential" next to it.
 
@@ -690,7 +691,8 @@ writes "Confidential" next to it.
   name. A value that the pinned contract does not list shows as Severity
   shows one (`docs/behaviors.md`, Unknown Values). Red, the `danger` tone, is
   kept for failure, lateness, and errors (Principles).
-- An absent value shows as an en dash, "–", in `fg-muted`, read as "Not set"
+- An absent value shows as an en dash, "–", in `fg-muted`, read as "Not
+  set", or as the word that names the absence precisely, also in `fg-muted`
   (`docs/behaviors.md`, Absent Values).
 - The count of a view follows its label in `fg-muted`. A number of the
   attention summary is at weight 600, in `danger-on-soft` when it is above

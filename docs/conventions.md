@@ -183,6 +183,7 @@ rules; review enforces the rest.
 | `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
 | `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` beneath the shared request function (Tests) |
+| `src/test-screenshot.ts` | What several component tests share: the colors of the pixels of a screenshot of an element, such as a mark that is hidden from assistive technologies (Tests) |
 | `src/test-setup.ts` | The setup that Vitest runs in the document of every unit and component test file before its tests: it gives that document the focus, which Playwright's Firefox does not reliably move into it |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
