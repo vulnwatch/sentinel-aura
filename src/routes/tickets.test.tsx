@@ -40,7 +40,7 @@ const FILTERS = {
   "Assigned to me": `assignee=${ANALYST.data.id}&status=analysis&status=analyzed`,
   Analysis: "status=analysis",
   Analyzed: "status=analyzed",
-  Unassigned: "status=analysis&status=analyzed&assignee=none",
+  Orphaned: "status=analysis&status=analyzed&assignee=none",
   All: "",
 };
 
@@ -50,7 +50,7 @@ const TOTALS = new Map([
   [FILTERS["Assigned to me"], 4],
   [FILTERS.Analysis, 5],
   [FILTERS.Analyzed, 3],
-  [FILTERS.Unassigned, 1],
+  [FILTERS.Orphaned, 1],
   [FILTERS.All, 1250],
 ]);
 
@@ -234,7 +234,7 @@ describe("the views", () => {
       "Assigned to me 4",
       "Analysis 5",
       "Analyzed 3",
-      "Unassigned 1",
+      "Orphaned 1",
       "All 1,250",
     ]);
     expect(document.title).toBe("Tickets – Sentinel");
@@ -254,7 +254,7 @@ describe("the views", () => {
       "New 12",
       "Analysis 5",
       "Analyzed 3",
-      "Unassigned 1",
+      "Orphaned 1",
       "All 1,250",
     ]);
     await expect
@@ -271,11 +271,7 @@ describe("the views", () => {
     ],
     ["Analysis", "?view=analysis", `${FILTERS.Analysis}&sort_by=priority`],
     ["Analyzed", "?view=analyzed", `${FILTERS.Analyzed}&sort_by=priority`],
-    [
-      "Unassigned",
-      "?view=unassigned",
-      `${FILTERS.Unassigned}&sort_by=priority`,
-    ],
+    ["Orphaned", "?view=orphaned", `${FILTERS.Orphaned}&sort_by=priority`],
     ["All", "", "sort_by=updated_at"],
   ])(
     "read %s with its filters, its sorting, in descending order, and its page of 20",
@@ -297,7 +293,7 @@ describe("the views", () => {
       "Assigned to me 4",
       "Analysis 5",
       "Analyzed 3",
-      "Unassigned 1",
+      "Orphaned 1",
       "All 1,250",
     ]);
 
@@ -370,7 +366,7 @@ describe("the views", () => {
       "Assigned to me 4",
       "Analysis 5",
       "Analyzed 3",
-      "Unassigned 1",
+      "Orphaned 1",
       "All 1,250",
     ]);
 
@@ -395,9 +391,9 @@ describe("the views", () => {
     await userEvent.keyboard(" ");
     await expect
       .poll(() => router.state.location.href)
-      .toBe("/tickets?view=unassigned");
+      .toBe("/tickets?view=orphaned");
     await expect
-      .element(screen.getByRole("tab", { name: "Unassigned 1" }))
+      .element(screen.getByRole("tab", { name: "Orphaned 1" }))
       .toHaveFocus();
     // Each view is an entry of the browser history.
     expect(router.history.length).toBe(4);
@@ -416,7 +412,7 @@ describe("the views", () => {
       "/tickets?view=assigned-to-me",
       "/tickets?view=analysis",
       "/tickets?view=analyzed",
-      "/tickets?view=unassigned",
+      "/tickets?view=orphaned",
       "/tickets",
     ]);
   });
@@ -553,7 +549,7 @@ describe("while the list changes", () => {
     await screen.getByRole("tab", { name: /^Analyzed/ }).click();
 
     await expect.poll(() => countsOf(FILTERS.Analyzed)).toBe(2);
-    expect(countsOf(FILTERS.Unassigned)).toBe(1);
+    expect(countsOf(FILTERS.Orphaned)).toBe(1);
     pending.resolve(ticketPage([ROW]));
   });
 
@@ -632,7 +628,7 @@ describe("while the list changes", () => {
       .toEqual(["No Tickets in this view."]);
     const first = announced();
 
-    router.history.push("/tickets?view=unassigned");
+    router.history.push("/tickets?view=orphaned");
 
     // A new node, which assistive technologies announce although its words
     // are the same.
@@ -803,8 +799,8 @@ describe("the table", () => {
       [...FIRST, "Severity", SORTED, "Deadline", "Assignee"],
     ],
     [
-      "Unassigned",
-      "?view=unassigned",
+      "Orphaned",
+      "?view=orphaned",
       [...FIRST, "Status", "Severity", SORTED, "Deadline"],
     ],
     [
@@ -1096,8 +1092,8 @@ describe("the pagination", () => {
   });
 
   test.each([
-    ["on its first page", "?view=unassigned", 1],
-    ["on any other page", "?view=unassigned&page=3", 3],
+    ["on its first page", "?view=orphaned", 1],
+    ["on any other page", "?view=orphaned&page=3", 3],
   ])("shows that a view has no Tickets %s", async (_, search, pageNumber) => {
     stubTickets({ list: () => ticketPage([], { page: pageNumber }) });
     const { screen } = await renderApp(`/tickets${search}`);

@@ -54,7 +54,7 @@ test.describe("for an analyst", () => {
       "Assigned to me 4",
       "Analysis 5",
       "Analyzed 3",
-      "Unassigned 1",
+      "Orphaned 1",
       "All 26",
     ]);
     await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
@@ -221,7 +221,7 @@ test("shows a user without the role the views of every user, and the All view fr
     "New 12",
     "Analysis 4",
     "Analyzed 3",
-    "Unassigned 1",
+    "Orphaned 1",
     "All 25",
   ]);
   await expect(views(page).last()).toHaveAttribute("aria-selected", "true");

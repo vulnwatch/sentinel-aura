@@ -37,7 +37,7 @@ Tasks; Landing).
 
   | Parameter | Values | Without it |
   |---|---|---|
-  | `view` | `new`, `assigned-to-me`, `analysis`, `analyzed`, `unassigned` | The All view |
+  | `view` | `new`, `assigned-to-me`, `analysis`, `analyzed`, `orphaned` | The All view |
   | `page` | A whole number from 1 to 2147483647, the largest page that Sentinel accepts (Sentinel `docs/api-spec.md`, Pagination) | The first page |
 
   A link to a view leads to its first page and omits `page`, and so does a
@@ -85,7 +85,7 @@ Tasks; Landing).
 | Assigned to me | `assignee` with the `id` of the signed-in user, `status=analysis`, `status=analyzed` | Priority | Ticket, CVE, Title, Status, Severity, Priority, Deadline |
 | Analysis | `status=analysis` | Priority | Ticket, CVE, Title, Severity, Priority, Deadline, Assignee |
 | Analyzed | `status=analyzed` | Priority | Ticket, CVE, Title, Severity, Priority, Deadline, Assignee |
-| Unassigned | `status=analysis`, `status=analyzed`, `assignee=none` | Priority | Ticket, CVE, Title, Status, Severity, Priority, Deadline |
+| Orphaned | `status=analysis`, `status=analyzed`, `assignee=none` | Priority | Ticket, CVE, Title, Status, Severity, Priority, Deadline |
 | All | None | Last modified | Ticket, CVE, Title, Status, Severity, Priority, Deadline, Assignee, Last modified |
 
 - A view omits a column whose value its filters fix: Status where the view

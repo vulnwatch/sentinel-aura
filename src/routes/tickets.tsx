@@ -52,7 +52,7 @@ const QUEUES = [
   "assigned-to-me",
   "analysis",
   "analyzed",
-  "unassigned",
+  "orphaned",
 ] as const;
 type Queue = (typeof QUEUES)[number];
 
@@ -177,8 +177,8 @@ const VIEWS: readonly TicketView[] = [
     sortBy: "priority",
   },
   {
-    id: "unassigned",
-    name: "Unassigned",
+    id: "orphaned",
+    name: "Orphaned",
     analystsOnly: false,
     filters: () => ({ status: ["analysis", "analyzed"], assignee: "none" }),
     columns: [
