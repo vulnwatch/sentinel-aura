@@ -14,10 +14,11 @@ afterEach(() => {
 
 const DAY = 24 * 60 * 60 * 1000;
 
-// A fictional Ticket of the SLA of 30 days, with the due dates that Sentinel
-// gives its phases (Sentinel docs/features/tickets/ticket-deadlines.md, Due
-// Dates), in microseconds, as Sentinel writes them. The instants of the
-// tests are the same dates, in milliseconds.
+// A fictional Ticket of the SLA of 30 days, created on 5 October 2026 at
+// 09:30:00.123456 UTC, with the due dates that Sentinel gives its phases
+// (Sentinel docs/features/tickets/ticket-deadlines.md, Due Dates), in
+// microseconds, as Sentinel writes them. The instants of the tests are the
+// same dates, in milliseconds.
 const CREATED = Date.UTC(2026, 9, 5, 9, 30, 0, 123);
 const TRIAGE_DUE = CREATED + 3 * DAY;
 const SUBMISSION_DUE = CREATED + 18 * DAY;
@@ -26,7 +27,6 @@ const QA_DUE = CREATED + 30 * DAY;
 
 const TICKET: DeadlineTicket = {
   current_phase: "triage",
-  created_at: "2026-10-05T09:30:00.123456Z",
   triage_due_at: "2026-10-08T09:30:00.123456Z",
   submission_due_at: "2026-10-23T09:30:00.123456Z",
   um_due_at: "2026-10-26T09:30:00.123456Z",
@@ -70,10 +70,6 @@ describe("deadline", () => {
       },
     ],
     ["um without its due date", { ...inPhase("um"), um_due_at: null }],
-    [
-      "submission without the date that starts its window",
-      { ...inPhase("submission"), triage_due_at: null },
-    ],
   ])("is none for %s", (_, ticket) => {
     expect(deadline(ticket, TRIAGE_DUE - DAY)).toBeUndefined();
   });
@@ -91,59 +87,79 @@ describe("deadline", () => {
 
   // Counted from the triage due date.
   test.each([
-    ["three days before", "Triage 3d", "Triage due in 3 days", -3 * DAY],
-    ["a day before", "Triage 1d", "Triage due in 1 day", -DAY],
+    [
+      "three days before",
+      "Triage 3d",
+      "Triage due in 3 days",
+      "success",
+      -3 * DAY,
+    ],
+    ["a day before", "Triage 1d", "Triage due in 1 day", "success", -DAY],
     [
       "less than a day before",
       "Triage 0d",
       "Triage due in less than a day",
+      "warning",
       -DAY + 1,
     ],
-    ["at the date", "Triage 0d", "Triage due in less than a day", 0],
-    ["just after the date", "Triage -1d", "Triage overdue by 1 day", 1],
-    ["a day after", "Triage -1d", "Triage overdue by 1 day", DAY],
+    ["at the date", "Triage 0d", "Triage due in less than a day", "warning", 0],
+    [
+      "just after the date",
+      "Triage -1d",
+      "Triage overdue by 1 day",
+      "danger",
+      1,
+    ],
+    ["a day after", "Triage -1d", "Triage overdue by 1 day", "danger", DAY],
     [
       "just after a day after",
       "Triage -2d",
       "Triage overdue by 2 days",
+      "danger",
       DAY + 1,
     ],
     [
       "1,250 days before",
       "Triage 1,250d",
       "Triage due in 1,250 days",
+      "success",
       -1250 * DAY,
     ],
     [
       "1,250 days after",
       "Triage -1,250d",
       "Triage overdue by 1,250 days",
+      "danger",
       1250 * DAY,
     ],
-  ])("%s, shows %j, read as %j", (_, text, description, offset) => {
-    expect(deadline(TICKET, TRIAGE_DUE + offset)).toMatchObject({
-      text,
-      description,
-    });
-  });
-
-  // The window of each deadline, from the date that starts it to its due
-  // date.
-  test.each([
-    ["triage", CREATED, TRIAGE_DUE],
-    ["submission", TRIAGE_DUE, SUBMISSION_DUE],
-    ["um", SUBMISSION_DUE, UM_DUE],
-    ["qa", UM_DUE, QA_DUE],
-    [null, CREATED, QA_DUE],
   ])(
-    "for %s, is green while a third of its window remains, then yellow, then red once the date is past",
-    (phase, start, due) => {
-      const ticket = inPhase(phase);
-      const third = (due - start) / 3;
+    "%s, shows %j, read as %j, in the tone %s",
+    (_, text, description, tone, offset) => {
+      expect(deadline(TICKET, TRIAGE_DUE + offset)).toEqual({
+        tone,
+        text,
+        description,
+      });
+    },
+  );
 
-      expect(deadline(ticket, start)?.tone).toBe("success");
-      expect(deadline(ticket, due - third)?.tone).toBe("success");
-      expect(deadline(ticket, due - third + 1)?.tone).toBe("warning");
+  // The phases last from 3 days, triage and UM, to 15 days, submission, in
+  // the SLA of 30 days, and the Release badge counts the whole 30 days: the
+  // same days show in the same tone in each of them.
+  test.each([
+    ["triage", TRIAGE_DUE],
+    ["submission", SUBMISSION_DUE],
+    ["um", UM_DUE],
+    ["qa", QA_DUE],
+    [null, QA_DUE],
+  ])(
+    "for %s, is green until its last day, yellow in its last day, and red once the date is past",
+    (phase, due) => {
+      const ticket = inPhase(phase);
+
+      expect(deadline(ticket, due - 2 * DAY)?.tone).toBe("success");
+      expect(deadline(ticket, due - DAY)?.tone).toBe("success");
+      expect(deadline(ticket, due - DAY + 1)?.tone).toBe("warning");
       expect(deadline(ticket, due)?.tone).toBe("warning");
       expect(deadline(ticket, due + 1)?.tone).toBe("danger");
     },

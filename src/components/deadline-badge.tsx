@@ -19,27 +19,20 @@ type DueDate =
 // and TicketDetail carry. current_phase takes every string: a later Sentinel
 // release can return a phase that the pinned contract does not list (Sentinel
 // docs/api-spec.md, Response Enums).
-export type DeadlineTicket = Pick<TicketSummary, "created_at" | DueDate> & {
+export type DeadlineTicket = Pick<TicketSummary, DueDate> & {
   current_phase: string | null;
 };
 
 interface Phase {
   name: string;
   due: DueDate;
-  // Where the window of the deadline starts: the due date of the phase
-  // before it, or the creation of the Ticket for Triage and Release.
-  start: "created_at" | DueDate;
 }
 
 // The final release deadline, which a Ticket shows when its current phase is
 // null and it has due dates: no phase that Sentinel observes is open, but a
 // track may still have work in a phase that Sentinel cannot observe (Sentinel
 // docs/features/tickets/ticket-deadlines.md, Observability of Later Phases).
-const RELEASE: Phase = {
-  name: "Release",
-  due: "release_due_at",
-  start: "created_at",
-};
+const RELEASE: Phase = { name: "Release", due: "release_due_at" };
 
 // The current phases that the pinned contract lists, by their value; done,
 // which leaves no deadline, is null. A Map, so that a value that a later
@@ -48,14 +41,10 @@ const RELEASE: Phase = {
 // API).
 const PHASES = new Map<string, Phase | null>(
   Object.entries({
-    triage: { name: "Triage", due: "triage_due_at", start: "created_at" },
-    submission: {
-      name: "Submission",
-      due: "submission_due_at",
-      start: "triage_due_at",
-    },
-    um: { name: "UM", due: "um_due_at", start: "submission_due_at" },
-    qa: { name: "QA", due: "qa_due_at", start: "um_due_at" },
+    triage: { name: "Triage", due: "triage_due_at" },
+    submission: { name: "Submission", due: "submission_due_at" },
+    um: { name: "UM", due: "um_due_at" },
+    qa: { name: "QA", due: "qa_due_at" },
     done: null,
   } satisfies Record<CurrentPhaseValue, Phase | null>),
 );
@@ -87,14 +76,15 @@ function dayCount(days: number): string {
 // The deadline that the badge of a Ticket shows at the instant now, in
 // milliseconds since the epoch, or undefined when it shows no badge: for done,
 // for a current phase of null without due dates, and for a phase without its
-// dates. A day is 24 hours: the badge shows the whole days that remain to the
-// date, 0 in the last day, and once the date is past, which Sentinel defines
-// as before the current instant (Sentinel
+// due date. A day is 24 hours: the badge shows the whole days that remain to
+// the date, 0 in the last day, and once the date is past, which Sentinel
+// defines as before the current instant (Sentinel
 // docs/features/tickets/ticket-deadlines.md, Evaluation Instant), the days
 // begun since, as a negative number. It is red once the date is past, yellow
-// while less than a third of its window remains, and green otherwise. A
-// phase that the pinned contract does not list shows as received, in the
-// neutral tone, without days (docs/behaviors.md, Unknown Values).
+// in the last day, and green otherwise, so that the same days show in the
+// same color in every row. A phase that the pinned contract does not list
+// shows as received, in the neutral tone, without days (docs/behaviors.md,
+// Unknown Values).
 export function deadline(
   ticket: DeadlineTicket,
   now: number,
@@ -114,12 +104,10 @@ export function deadline(
     return undefined;
   }
   const due = instant(ticket[phase.due]);
-  const start = instant(ticket[phase.start]);
-  if (Number.isNaN(due) || Number.isNaN(start)) {
+  if (Number.isNaN(due)) {
     return undefined;
   }
-  const remaining = due - now;
-  const days = Math.floor(remaining / DAY_MS);
+  const days = Math.floor((due - now) / DAY_MS);
   if (due < now) {
     return {
       tone: "danger",
@@ -127,13 +115,17 @@ export function deadline(
       description: `${phase.name} overdue by ${dayCount(-days)}`,
     };
   }
+  if (days === 0) {
+    return {
+      tone: "warning",
+      text: `${phase.name} 0d`,
+      description: `${phase.name} due in less than a day`,
+    };
+  }
   return {
-    tone: 3 * remaining < due - start ? "warning" : "success",
+    tone: "success",
     text: `${phase.name} ${COUNT.format(days)}d`,
-    description:
-      days === 0
-        ? `${phase.name} due in less than a day`
-        : `${phase.name} due in ${dayCount(days)}`,
+    description: `${phase.name} due in ${dayCount(days)}`,
   };
 }
 
