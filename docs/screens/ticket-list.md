@@ -101,8 +101,8 @@ Tasks; Landing).
   (Sentinel `docs/features/tickets/ticket-deadlines.md`, Current Due Date;
   Sentinel `docs/api-spec.md`, Semantic Sort Fields; Nullable Sort Field
   Ordering). Tickets that both keys leave equal follow their internal `id`,
-  in the same direction (Sentinel `docs/api-spec.md`, Deterministic
-  Pagination Ordering), which is a UUIDv7 (Sentinel
+  in the direction of `sort_order` (Sentinel `docs/api-spec.md`,
+  Deterministic Pagination Ordering), which is a UUIDv7 (Sentinel
   `docs/features/tickets/tickets.md`, Ticket Identification), so the newest
   Ticket comes first. Last modified is `sort_by=updated_at`, the most recent
   first. Only the column of the first key, Priority or Last modified, is
@@ -197,8 +197,8 @@ Tasks; Landing).
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Persistence and Effective Priority
-- Sentinel `docs/features/tickets/ticket-deadlines.md` — Sorting (Current Due
-  Date); Ticket Current Phase
+- Sentinel `docs/features/tickets/ticket-deadlines.md` — Sorting, Current Due
+  Date; Ticket Current Phase
 - Sentinel `docs/features/identity/authentication.md` — Get Current User
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility
