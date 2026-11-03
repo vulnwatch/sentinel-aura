@@ -121,6 +121,54 @@ test("navigates through the router to the search parameters of a link, which its
   expect(router.history.length).toBe(2);
 });
 
+test("writes the search parameters of a link as text, and a parameter with several values once for each", async () => {
+  const root = createRootRoute({ component: RootLayout });
+  const start = createRoute({
+    getParentRoute: () => root,
+    path: "/",
+    component: () => (
+      <Link
+        href={linkOptions({
+          to: "/tickets",
+          search: { search: "42", status: ["new", "analysis"], page: 2 },
+        })}
+      >
+        Refined Tickets
+      </Link>
+    ),
+  });
+  const tickets = createRoute({
+    getParentRoute: () => root,
+    path: "/tickets",
+    component: () => <h1>Tickets page</h1>,
+  });
+  const router = createRouter({
+    routeTree: root.addChildren([start, tickets]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+    ...routerDefaults,
+  });
+  const screen = await renderRouter(router);
+  const link = screen.getByRole("link", { name: "Refined Tickets" });
+
+  await expect
+    .element(link)
+    .toHaveAttribute(
+      "href",
+      "/tickets?search=42&status=new&status=analysis&page=2",
+    );
+  await link.click();
+
+  await expect
+    .element(screen.getByRole("heading", { name: "Tickets page" }))
+    .toBeVisible();
+  // The router reads each value as its text.
+  expect(router.state.location.search).toEqual({
+    search: "42",
+    status: ["new", "analysis"],
+    page: "2",
+  });
+});
+
 function renderApp(path: string) {
   const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -250,7 +298,7 @@ test("starts a screen again when it opens with other path parameters, but not wi
   const record = createRoute({
     getParentRoute: () => root,
     path: "/records/$recordId",
-    validateSearch: z.object({ page: z.number().optional() }),
+    validateSearch: z.object({ page: z.string().optional() }),
     component: RecordScreen,
   });
   // How many times the screen has started.

@@ -1,50 +1,74 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import {
   createRoute,
-  deepEqual,
   linkOptions,
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
+import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import type {
   CurrentUserData,
+  ListTicketsCurrentPhaseItem,
+  ListTicketsOverdueItem,
   ListTicketsParams,
+  ListTicketsPriorityItem,
+  ListTicketsSeverityItem,
+  ListTicketsStatusItem,
+  SortOrder,
   TicketListResponse,
+  TicketSortField,
   TicketSummary,
 } from "../api/generated/model";
 import { useListTickets } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
+import { Button } from "../components/button";
 import { ButtonLink } from "../components/button-link";
 import { ConfidentialMark } from "../components/confidential-mark";
+import { CountLink } from "../components/count-link";
 import {
   DataTable,
   EmptyState,
   type TableColumn,
+  type TableSort,
 } from "../components/data-table";
 import { DateTime } from "../components/date-time";
 import { DeadlineBadge } from "../components/deadline-badge";
+import { FilterGroup, Filters, type FilterOption } from "../components/filters";
 import { Link } from "../components/link";
 import { Pagination } from "../components/pagination";
 import { Priority } from "../components/priority";
 import { ScreenRead } from "../components/read-view";
-import { ScreenHeading } from "../components/screen-heading";
+import { FocusHandOff, ScreenHeading } from "../components/screen-heading";
+import { SearchField } from "../components/search-field";
 import { Severity } from "../components/severity";
+import { SeveralValues } from "../components/several-values";
 import { TicketStatus } from "../components/ticket-status";
 import { User } from "../components/user";
 import { Count, ViewTabs } from "../components/view-tabs";
+import {
+  sameSearch,
+  stringifySearch,
+  valueListParam,
+  wholeNumberParam,
+} from "../search-params";
 import { holdsAnalystRole, useSignedInUser } from "../session-gate";
 import { rootRoute } from "./root";
 
 // The Ticket list (docs/screens/ticket-list.md): the Tickets in the views of
-// docs/screen-map.md (Ticket List Views), from List Tickets (Sentinel
+// docs/screen-map.md (Ticket List Views), which the user refines with a
+// search, filters, and sorting, and the attention summary of analysts
+// (docs/screen-map.md, Attention Summary), from List Tickets (Sentinel
 // docs/features/tickets/tickets.md, List Tickets).
 
 // The rows of a page (Sentinel docs/api-spec.md, Pagination).
 const PER_PAGE = 20;
 // The last page that Sentinel accepts (same section).
 const LAST_PAGE = 2_147_483_647;
+// The longest search term that Sentinel accepts (Sentinel docs/api-spec.md,
+// Query Parameter Length Limit).
+const SEARCH_MAX_LENGTH = 500;
 
 // The views that the view search parameter names; the All view has none.
 const QUEUES = [
@@ -56,25 +80,127 @@ const QUEUES = [
 ] as const;
 type Queue = (typeof QUEUES)[number];
 
+// The values of the filters, in the order of the pinned contract (List
+// Tickets): the statuses, the resolved severities and the effective
+// priorities, each with unresolved for none, the current phases, and the
+// phases whose milestones can be overdue (Sentinel
+// docs/features/tickets/ticket-deadlines.md, Ticket-Level Overdue Filter;
+// Current Phase Filter).
+const STATUSES = [
+  "new",
+  "analysis",
+  "analyzed",
+  "resolved",
+  "ignored",
+  "duplicated",
+] as const satisfies readonly ListTicketsStatusItem[];
+const SEVERITIES = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+  "none",
+  "unresolved",
+] as const satisfies readonly ListTicketsSeverityItem[];
+const PRIORITIES = [
+  "p1",
+  "p2",
+  "p3",
+  "p4",
+  "unresolved",
+] as const satisfies readonly ListTicketsPriorityItem[];
+const PHASES = [
+  "triage",
+  "submission",
+  "um",
+  "qa",
+  "done",
+] as const satisfies readonly ListTicketsCurrentPhaseItem[];
+const OVERDUE_PHASES = [
+  "triage",
+  "submission",
+  "um",
+  "qa",
+] as const satisfies readonly ListTicketsOverdueItem[];
+
+// The columns by which the user can sort, as the sort search parameter names
+// them.
+const SORT_COLUMNS = [
+  "ticket",
+  "status",
+  "severity",
+  "priority",
+  "deadline",
+  "last-modified",
+] as const;
+type SortColumn = (typeof SORT_COLUMNS)[number];
+
+// The field of List Tickets by which each column sorts, and the direction in
+// which pressing its header first sorts (docs/screens/ticket-list.md): the
+// queues are sorted by priority, by effective priority, P1 first, then by
+// the due date of the current phase, the deadline of the row, earliest first
+// (Sentinel docs/features/tickets/ticket-deadlines.md, Current Due Date).
+const SORTING: Record<
+  SortColumn,
+  { sortBy: TicketSortField; first: SortOrder }
+> = {
+  ticket: { sortBy: "ticket_id", first: "desc" },
+  status: { sortBy: "status", first: "asc" },
+  severity: { sortBy: "severity", first: "desc" },
+  priority: { sortBy: "priority_then_current_due", first: "desc" },
+  deadline: { sortBy: "current_due_at", first: "asc" },
+  "last-modified": { sortBy: "updated_at", first: "desc" },
+};
+
+function isSortColumn(column: string): column is SortColumn {
+  return SORT_COLUMNS.some((known) => known === column);
+}
+
+// The search term, without its surrounding whitespace: at most the length
+// that Sentinel accepts and without U+0000, which Sentinel rejects (Sentinel
+// docs/api-spec.md, Query Parameter Length Limit; Inadmissible Characters in
+// Request Input). An empty term counts as absent.
+const searchTermParam = z
+  .string()
+  .trim()
+  .max(SEARCH_MAX_LENGTH)
+  .refine((term) => !term.includes("\u0000"))
+  .transform((term) => (term === "" ? undefined : term))
+  .optional()
+  .catch(undefined);
+
 // The search parameters that the Ticket list accepts: a value that it does
 // not accept counts as absent (docs/behaviors.md, Invalid Search Parameters).
-const ticketListSearch = z.object({
+// A sorting that it does not accept reads as null until acceptedInView
+// removes it, so that it removes its order too.
+const ticketListParams = z.object({
   view: z.enum(QUEUES).optional().catch(undefined),
-  page: z.int().min(1).max(LAST_PAGE).optional().catch(undefined),
+  search: searchTermParam,
+  status: valueListParam(STATUSES),
+  severity: valueListParam(SEVERITIES),
+  priority: valueListParam(PRIORITIES),
+  phase: valueListParam(PHASES),
+  overdue: valueListParam(OVERDUE_PHASES),
+  sort: z.enum(SORT_COLUMNS).nullable().optional().catch(null),
+  order: z.enum(["asc", "desc"]).optional().catch(undefined),
+  page: wholeNumberParam(LAST_PAGE),
 });
 
-type TicketListSearch = z.infer<typeof ticketListSearch>;
+type TicketListSearch = Omit<z.output<typeof ticketListParams>, "sort"> & {
+  sort?: SortColumn | undefined;
+};
 
 type ColumnId =
   | "ticket"
   | "cve"
   | "title"
+  | "packages"
   | "status"
   | "severity"
   | "priority"
   | "deadline"
   | "assignee"
-  | "updated";
+  | "last-modified";
 
 interface TicketView {
   // The key of its tab.
@@ -87,12 +213,9 @@ interface TicketView {
   filters: (user: CurrentUserData) => ListTicketsParams;
   // Its columns, in their order: a view omits a column whose value it fixes.
   columns: readonly ColumnId[];
-  // The field by which its Tickets are sorted, in descending order: the
-  // queues by effective priority, P1 first and null last, then by the due
-  // date of the current phase, the deadline of the row, earliest first and
-  // null last (Sentinel docs/features/tickets/ticket-deadlines.md, Current Due
-  // Date); the All view by last modification, newest first.
-  sortBy: "priority_then_current_due" | "updated_at";
+  // The column by which its Tickets are sorted until the user sorts them:
+  // the queues by priority, the All view by last modification.
+  sort: SortColumn;
 }
 
 const ALL_VIEW: TicketView = {
@@ -104,14 +227,15 @@ const ALL_VIEW: TicketView = {
     "ticket",
     "cve",
     "title",
+    "packages",
     "status",
     "severity",
     "priority",
     "deadline",
     "assignee",
-    "updated",
+    "last-modified",
   ],
-  sortBy: "updated_at",
+  sort: "last-modified",
 };
 
 // The views, in the order of their tabs (docs/screen-map.md, Ticket List
@@ -122,8 +246,16 @@ const VIEWS: readonly TicketView[] = [
     name: "New",
     analystsOnly: false,
     filters: () => ({ status: ["new"] }),
-    columns: ["ticket", "cve", "title", "severity", "priority", "deadline"],
-    sortBy: "priority_then_current_due",
+    columns: [
+      "ticket",
+      "cve",
+      "title",
+      "packages",
+      "severity",
+      "priority",
+      "deadline",
+    ],
+    sort: "priority",
   },
   {
     id: "assigned-to-me",
@@ -139,12 +271,13 @@ const VIEWS: readonly TicketView[] = [
       "ticket",
       "cve",
       "title",
+      "packages",
       "status",
       "severity",
       "priority",
       "deadline",
     ],
-    sortBy: "priority_then_current_due",
+    sort: "priority",
   },
   {
     id: "analysis",
@@ -155,12 +288,13 @@ const VIEWS: readonly TicketView[] = [
       "ticket",
       "cve",
       "title",
+      "packages",
       "severity",
       "priority",
       "deadline",
       "assignee",
     ],
-    sortBy: "priority_then_current_due",
+    sort: "priority",
   },
   {
     id: "analyzed",
@@ -171,12 +305,13 @@ const VIEWS: readonly TicketView[] = [
       "ticket",
       "cve",
       "title",
+      "packages",
       "severity",
       "priority",
       "deadline",
       "assignee",
     ],
-    sortBy: "priority_then_current_due",
+    sort: "priority",
   },
   {
     id: "orphaned",
@@ -187,15 +322,54 @@ const VIEWS: readonly TicketView[] = [
       "ticket",
       "cve",
       "title",
+      "packages",
       "status",
       "severity",
       "priority",
       "deadline",
     ],
-    sortBy: "priority_then_current_due",
+    sort: "priority",
   },
   ALL_VIEW,
 ];
+
+// The view that the view search parameter names, whoever the user is.
+function viewNamed(id: Queue | undefined): TicketView {
+  return VIEWS.find((view) => view.id === id) ?? ALL_VIEW;
+}
+
+// The column of a sorting that the view accepts: one that the view shows.
+// Any other, null included, is undefined.
+function sortShownIn(
+  view: TicketView,
+  sort: SortColumn | null | undefined,
+): SortColumn | undefined {
+  return sort !== null && sort !== undefined && view.columns.includes(sort)
+    ? sort
+    : undefined;
+}
+
+// The search parameters that the view accepts: the status filter only in
+// the All view, whose Tickets have every status, and the sorting by a column
+// that the view shows; a sorting that it does not accept removes its order
+// too.
+function acceptedInView(
+  search: z.output<typeof ticketListParams>,
+): TicketListSearch {
+  const view = viewNamed(search.view);
+  const sort = sortShownIn(view, search.sort);
+  return {
+    ...search,
+    status: view === ALL_VIEW ? search.status : undefined,
+    sort,
+    order:
+      sort === undefined && search.sort !== undefined
+        ? undefined
+        : search.order,
+  };
+}
+
+const ticketListSearch = ticketListParams.transform(acceptedInView);
 
 // The views that the user is shown.
 function viewsOf(user: CurrentUserData): readonly TicketView[] {
@@ -208,12 +382,123 @@ function searchOf(view: TicketView): Queue | undefined {
   return view.id === "all" ? undefined : view.id;
 }
 
-// The address of the list in a view at a page; the first page omits it.
-function listHref(view: TicketView, page: number) {
+// The address of a view as its tab opens it: at its first page, without the
+// search, the filters, and the sorting that the user applied.
+function viewHref(view: TicketView) {
+  return linkOptions({ to: "/tickets", search: { view: searchOf(view) } });
+}
+
+// The address of the list in a view at a page, with the search, the filters,
+// and the sorting that apply; the first page omits it.
+function pageHref(view: TicketView, search: TicketListSearch, page: number) {
   return linkOptions({
     to: "/tickets",
-    search: { view: searchOf(view), page: page === 1 ? undefined : page },
+    search: {
+      ...search,
+      view: searchOf(view),
+      page: page === 1 ? undefined : page,
+    },
   });
+}
+
+// The sorting of the Tickets: by the column of the sort search parameter or
+// of the view, in the direction of the order search parameter or the first
+// direction of the column.
+interface Sorting {
+  column: SortColumn;
+  order: SortOrder;
+}
+
+function sortingOf(search: TicketListSearch, view: TicketView): Sorting {
+  const column = search.sort ?? view.sort;
+  return { column, order: search.order ?? SORTING[column].first };
+}
+
+function tableSortOf({ column, order }: Sorting): TableSort {
+  return { column, direction: order === "asc" ? "ascending" : "descending" };
+}
+
+// The search and the filters that the user applied, as List Tickets receives
+// them, and as they read the Tickets of a count of the attention summary.
+// Only the All view accepts the status filter, so it never replaces the
+// statuses of a queue.
+function refinementOf(search: TicketListSearch): ListTicketsParams {
+  return {
+    search: search.search,
+    severity: search.severity,
+    priority: search.priority,
+    current_phase: search.phase,
+    overdue: search.overdue,
+    ...(search.status === undefined ? {} : { status: search.status }),
+  };
+}
+
+// The number of the filters that apply.
+function filtersApplied(search: TicketListSearch): number {
+  return [
+    search.status,
+    search.severity,
+    search.priority,
+    search.phase,
+    search.overdue,
+  ].filter((values) => values !== undefined).length;
+}
+
+// What the user refined the view with: the search alone, filters, with or
+// without the search, or nothing.
+function refinedBy(search: TicketListSearch): "search" | "filters" | undefined {
+  if (filtersApplied(search) > 0) {
+    return "filters";
+  }
+  return search.search === undefined ? undefined : "search";
+}
+
+// The options of the filters (docs/design-system.md, Values; docs/behaviors.md,
+// Domain Terms): a status, a severity, or a priority with its mark, and
+// "Not set" for the absence that unresolved filters.
+const STATUS_OPTIONS: readonly FilterOption<(typeof STATUSES)[number]>[] =
+  STATUSES.map((status) => ({
+    value: status,
+    label: <TicketStatus status={status} />,
+  }));
+
+const SEVERITY_OPTIONS: readonly FilterOption<(typeof SEVERITIES)[number]>[] =
+  SEVERITIES.map((severity) => ({
+    value: severity,
+    label:
+      severity === "unresolved" ? "Not set" : <Severity severity={severity} />,
+  }));
+
+const PRIORITY_OPTIONS: readonly FilterOption<(typeof PRIORITIES)[number]>[] =
+  PRIORITIES.map((priority) => ({
+    value: priority,
+    label:
+      priority === "unresolved" ? "Not set" : <Priority priority={priority} />,
+  }));
+
+// The names of the phases (Sentinel docs/features/tickets/ticket-deadlines.md,
+// Actors and Phases; docs/behaviors.md, Deadlines).
+const PHASE_NAMES: Record<(typeof PHASES)[number], string> = {
+  triage: "Triage",
+  submission: "Submission",
+  um: "UM",
+  qa: "QA",
+  done: "Done",
+};
+
+const PHASE_OPTIONS: readonly FilterOption<(typeof PHASES)[number]>[] =
+  PHASES.map((phase) => ({ value: phase, label: PHASE_NAMES[phase] }));
+
+const OVERDUE_OPTIONS: readonly FilterOption<
+  (typeof OVERDUE_PHASES)[number]
+>[] = OVERDUE_PHASES.map((phase) => ({
+  value: phase,
+  label: PHASE_NAMES[phase],
+}));
+
+// The values of a filter that the user selected, or none.
+function selectedOrNone<T>(values: T[]): T[] | undefined {
+  return values.length === 0 ? undefined : values;
 }
 
 // The columns of the table, with the cell of each column in a row. The
@@ -228,6 +513,7 @@ function columnsOf(
       id: "ticket",
       name: "Ticket",
       isRowHeader: true,
+      allowsSorting: true,
       render: (row) => (
         <>
           <span className="font-medium">
@@ -272,27 +558,38 @@ function columnsOf(
       render: (row) =>
         row.cve?.title == null ? <AbsentValue /> : row.cve.title,
     },
+    packages: {
+      id: "packages",
+      name: "Packages",
+      render: (row) => (
+        <SeveralValues
+          values={row.package_names}
+          noun={{ one: "package", other: "packages" }}
+        />
+      ),
+    },
     status: {
       id: "status",
       name: "Status",
+      allowsSorting: true,
       render: (row) => <TicketStatus status={row.status} />,
     },
     severity: {
       id: "severity",
       name: "Severity",
+      allowsSorting: true,
       render: (row) => <Severity severity={row.severity} />,
     },
     priority: {
       id: "priority",
       name: "Priority",
-      // The first key of the queues' sorting: the column of the second,
-      // Deadline, shows no sort indicator.
-      isSorted: view.sortBy === "priority_then_current_due",
+      allowsSorting: true,
       render: (row) => <Priority priority={row.priority} />,
     },
     deadline: {
       id: "deadline",
       name: "Deadline",
+      allowsSorting: true,
       render: (row) => <DeadlineBadge ticket={row} now={now} />,
     },
     assignee: {
@@ -305,10 +602,10 @@ function columnsOf(
           <User user={row.assignee} />
         ),
     },
-    updated: {
-      id: "updated",
+    "last-modified": {
+      id: "last-modified",
       name: "Last modified",
-      isSorted: view.sortBy === "updated_at",
+      allowsSorting: true,
       render: (row) => <DateTime value={row.updated_at} />,
     },
   };
@@ -318,22 +615,33 @@ function columnsOf(
 const COUNT = new Intl.NumberFormat("en-US");
 
 // The empty state of a page of the list without Tickets: a view without
-// Tickets, on any page, or a page beyond the last (docs/behaviors.md, Empty
-// States).
-function emptyMessage({ meta }: TicketListResponse): string {
-  return meta.total === 0
-    ? "No Tickets in this view."
-    : "There are no Tickets on this page.";
+// Tickets, or a view that the user refined without Tickets that match, on
+// any page, or a page beyond the last (docs/behaviors.md, Empty States).
+function emptyMessage(
+  { meta }: TicketListResponse,
+  search: TicketListSearch,
+): string {
+  if (meta.total > 0) {
+    return "There are no Tickets on this page.";
+  }
+  switch (refinedBy(search)) {
+    case "search":
+      return "No Tickets match the search.";
+    case "filters":
+      return "No Tickets match the filters.";
+    default:
+      return "No Tickets in this view.";
+  }
 }
 
 // What the list shows, in words, which assistive technologies announce after
-// another view or page (docs/behaviors.md, Accessibility, Focus after a
-// navigation): the number of its Tickets, with the range of the page when
-// they take more than one, or its empty state.
-function resultText(list: TicketListResponse): string {
+// another view, page, search, filter, or sorting (docs/behaviors.md,
+// Accessibility, Focus after a navigation): the number of its Tickets, with
+// the range of the page when they take more than one, or its empty state.
+function resultText(list: TicketListResponse, search: TicketListSearch) {
   const { data, meta } = list;
   if (data.length === 0) {
-    return emptyMessage(list);
+    return emptyMessage(list, search);
   }
   if (meta.total <= meta.per_page) {
     return `${COUNT.format(meta.total)} ${meta.total === 1 ? "Ticket" : "Tickets"}`;
@@ -363,24 +671,26 @@ function useShownView(search: TicketListSearch, view: TicketView) {
   }, [hidden, navigate]);
 }
 
-interface ViewCountProps {
-  // The filters of the view.
-  filters: ListTicketsParams;
-  // Whether the list shows the view.
-  selected: boolean;
-  // Whether the screen reads its list.
-  listFetching: boolean;
+interface CountRead {
+  // The number, or undefined while it loads.
+  value: number | undefined;
+  // Whether its read failed, even after it showed a number.
+  failed: boolean;
 }
 
-// The count of a view: the total of its Tickets, without the page, the
-// sorting, and the filters and search that the user adds
-// (docs/screen-map.md, Ticket List Views), from a read of one Ticket. The
-// count of the view that the list shows is read again when the list shows
-// the view and with each read of the list, so that the tab and the list
-// agree; the others, as the screen's data is (docs/behaviors.md, Loading).
-// When its read fails, it is not available, and the screen's next read of
-// the list tries it again (docs/behaviors.md, Where Errors Appear).
-function ViewCount({ filters, selected, listFetching }: ViewCountProps) {
+// The count of the Tickets that the filters match, the total of a read of
+// one Ticket, without the search and the filters that the user adds
+// (docs/screen-map.md, Ticket List Views; Attention Summary). The count of
+// the view that the list shows is read again when the list shows the view
+// and with each read of the list, so that the tab and the list agree; the
+// others, as the screen's data is (docs/behaviors.md, Loading). When its
+// read fails, it is not available, and the screen's next read of the list
+// tries it again (docs/behaviors.md, Where Errors Appear).
+function useTicketCount(
+  filters: ListTicketsParams,
+  selected: boolean,
+  listFetching: boolean,
+): CountRead {
   const count = useListTickets({ ...filters, per_page: 1 });
   const failed = count.status === "error";
   const { refetch } = count;
@@ -395,7 +705,104 @@ function ViewCount({ filters, selected, listFetching }: ViewCountProps) {
       void refetch({ cancelRefetch: false });
     }
   }, [listFetching, selected, failed, refetch]);
-  return <Count value={count.data?.meta.total} failed={failed} />;
+  return { value: count.data?.meta.total, failed };
+}
+
+interface ViewCountProps {
+  // The filters of the view.
+  filters: ListTicketsParams;
+  // Whether the list shows the view.
+  selected: boolean;
+  // Whether the screen reads its list.
+  listFetching: boolean;
+}
+
+// The count of a view, after the label of its tab.
+function ViewCount({ filters, selected, listFetching }: ViewCountProps) {
+  return <Count {...useTicketCount(filters, selected, listFetching)} />;
+}
+
+// A count of the attention summary (docs/screen-map.md, Attention Summary).
+interface AttentionCount {
+  id: string;
+  label: string;
+  // The filters of the All view that hold its Tickets, which the count reads
+  // and to which it links.
+  search: TicketListSearch;
+}
+
+// A count of the Tickets whose current phase is past due: those whose
+// current_phase and overdue filters both name the phase (Sentinel
+// docs/features/tickets/ticket-deadlines.md, Relation to the Overdue Filter).
+function overdueCount(
+  phase: (typeof OVERDUE_PHASES)[number],
+  label: string,
+): AttentionCount {
+  return {
+    id: `${phase}-overdue`,
+    label,
+    search: { phase: [phase], overdue: [phase] },
+  };
+}
+
+const ATTENTION_COUNTS: readonly AttentionCount[] = [
+  {
+    // Effective priority P1 in an active status (Sentinel
+    // docs/features/tickets/ticket-priority.md, Persistence and Effective
+    // Priority).
+    id: "active-p1",
+    label: "Active P1",
+    search: { status: ["new", "analysis", "analyzed"], priority: ["p1"] },
+  },
+  overdueCount("triage", "Triage overdue"),
+  overdueCount("submission", "Submission overdue"),
+  overdueCount("um", "UM overdue"),
+  overdueCount("qa", "QA overdue"),
+];
+
+interface AttentionCountLinkProps {
+  count: AttentionCount;
+  // Whether the screen reads its list.
+  listFetching: boolean;
+}
+
+function AttentionCountLink({ count, listFetching }: AttentionCountLinkProps) {
+  const read = useTicketCount(refinementOf(count.search), false, listFetching);
+  return (
+    <CountLink
+      label={count.label}
+      {...read}
+      href={linkOptions({ to: "/tickets", search: count.search })}
+    />
+  );
+}
+
+interface AttentionSummaryProps {
+  // Whether the screen reads its list.
+  listFetching: boolean;
+}
+
+// The attention summary of an analyst, in the heading row after the heading:
+// five counts, 8 px apart, each a link to the All view refined to its
+// Tickets (docs/screen-map.md, Attention Summary; docs/design-system.md,
+// Lists). When it leaves the page while one of its counts holds the focus,
+// as when a read of the signed-in user tells that the role was removed, the
+// focus moves to the screen's heading.
+function AttentionSummary({ listFetching }: AttentionSummaryProps) {
+  return (
+    <FocusHandOff>
+      <ul
+        aria-label="Tickets that need attention"
+        className="flex flex-wrap gap-2"
+      >
+        {ATTENTION_COUNTS.map((count) => (
+          <li key={count.id}>
+            <AttentionCountLink count={count} listFetching={listFetching} />
+          </li>
+        ))}
+      </ul>
+    </FocusHandOff>
+  );
 }
 
 // The data of the list that shows.
@@ -404,22 +811,31 @@ interface Shown {
   at: number;
   // Its view.
   view: TicketView;
+  // Its search parameters, and the URL that they give.
+  search: TicketListSearch;
+  key: string;
 }
 
-// The data of the list that shows, which stays while the data of another
-// view or page loads (docs/behaviors.md, Loading): its rows keep the columns,
-// the sorting, and the pages of their view until the new rows arrive, and
-// their deadlines the instant at which they arrived.
+// The data of the list that shows, which stays while other data loads, of
+// another view, page, search, filter, or sorting (docs/behaviors.md,
+// Loading): its rows keep the columns and the pages of their view, and
+// their links the search, the filters, and the sorting of their data, until
+// the new rows arrive, and their deadlines the instant at which they
+// arrived.
 function useShown(
   read: { dataUpdatedAt: number; isPlaceholderData: boolean },
   view: TicketView,
+  search: TicketListSearch,
+  key: string,
 ): Shown {
-  const [shown, setShown] = useState<Shown>({ at: 0, view });
+  const [shown, setShown] = useState<Shown>({ at: 0, view, search, key });
   if (
     !read.isPlaceholderData &&
-    (read.dataUpdatedAt !== shown.at || view !== shown.view)
+    (read.dataUpdatedAt !== shown.at ||
+      view !== shown.view ||
+      key !== shown.key)
   ) {
-    setShown({ at: read.dataUpdatedAt, view });
+    setShown({ at: read.dataUpdatedAt, view, search, key });
   }
   return shown;
 }
@@ -430,35 +846,84 @@ interface TicketListProps {
 
 function TicketList({ user }: TicketListProps) {
   const search = ticketListRoute.useSearch();
+  const navigate = useNavigate();
   const views = viewsOf(user);
   // A view that the user is not shown counts as absent, and opens the All
   // view (docs/screen-map.md, Ticket List Views).
   const view = views.find((shown) => shown.id === search.view) ?? ALL_VIEW;
   const page = search.page ?? 1;
   useShownView(search, view);
+  const sorting = sortingOf(search, view);
+  const refined = refinedBy(search);
 
   const list = useListTickets(
     {
       ...view.filters(user),
-      sort_by: view.sortBy,
-      sort_order: "desc",
+      ...refinementOf(search),
+      sort_by: SORTING[sorting.column].sortBy,
+      sort_order: sorting.order,
       page,
       per_page: PER_PAGE,
     },
     { query: { placeholderData: keepPreviousData } },
   );
-  const shown = useShown(list, view);
+  // The URL of what the list shows, which changes with each view, page,
+  // search, filter, and sorting.
+  const key = stringifySearch({ ...search, view: searchOf(view) });
+  const shown = useShown(list, view, search, key);
   const columns = useMemo(
     () => columnsOf(shown.view, shown.at),
     [shown.view, shown.at],
   );
+  // The header shows the sorting that the user chose at once, as the tabs,
+  // the search, and the filters do, while the rows of the same view stay;
+  // the rows of another view keep the sorting of their own.
+  const sort = tableSortOf(
+    shown.view === view ? sorting : sortingOf(shown.search, shown.view),
+  );
 
-  // A change of the view or the page announces what the list shows, once it
-  // shows it, and the screen as it opens does not (docs/behaviors.md,
-  // Accessibility, Focus after a navigation). Each change gives the
-  // announcement a node of its own, so that the same words as before are
-  // announced too.
-  const key = `${view.id}/${page}`;
+  // A change of the search, a filter, or the sorting opens the first page,
+  // as a new entry of the browser history (docs/screen-map.md, Browser
+  // History).
+  const refine = (change: Partial<TicketListSearch>) => {
+    void navigate({
+      to: "/tickets",
+      search: (previous) => ({ ...previous, ...change, page: undefined }),
+    });
+  };
+  // Clear filters removes the search and the filters, and keeps the view and
+  // the sorting.
+  const clearFilters = () => {
+    void navigate({
+      to: "/tickets",
+      search: (previous) => ({
+        view: previous.view,
+        sort: previous.sort,
+        order: previous.order,
+      }),
+    });
+  };
+  // Pressing the header of a column sorts by it in its first direction, and
+  // pressing it again reverses the direction. A sorting that is the view's,
+  // or a direction that is the column's first, leaves the URL.
+  const sortBy = (id: string) => {
+    if (!isSortColumn(id)) {
+      return;
+    }
+    const { first } = SORTING[id];
+    const order =
+      id !== sorting.column ? first : sorting.order === "asc" ? "desc" : "asc";
+    refine({
+      sort: id === view.sort ? undefined : id,
+      order: order === first ? undefined : order,
+    });
+  };
+
+  // A change of the view, the page, the search, a filter, or the sorting
+  // announces what the list shows, once it shows it, and the screen as it
+  // opens does not (docs/behaviors.md, Accessibility, Focus after a
+  // navigation). Each change gives the announcement a node of its own, so
+  // that the same words as before are announced too.
   const [openedAt] = useState(key);
   const [changed, setChanged] = useState(false);
   if (!changed && key !== openedAt) {
@@ -466,7 +931,7 @@ function TicketList({ user }: TicketListProps) {
   }
   const announcement =
     changed && list.status === "success" && !list.isPlaceholderData
-      ? resultText(list.data)
+      ? resultText(list.data, search)
       : "";
 
   return (
@@ -474,7 +939,12 @@ function TicketList({ user }: TicketListProps) {
       read={list}
       renderFrame={(place, data) => (
         <>
-          <ScreenHeading>Tickets</ScreenHeading>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <ScreenHeading>Tickets</ScreenHeading>
+            {holdsAnalystRole(user) && (
+              <AttentionSummary listFetching={list.isFetching} />
+            )}
+          </div>
           <div className="mt-4">
             <ViewTabs
               label="Views"
@@ -482,7 +952,7 @@ function TicketList({ user }: TicketListProps) {
               views={views.map((tab) => ({
                 id: tab.id,
                 label: tab.name,
-                href: listHref(tab, 1),
+                href: viewHref(tab),
                 count: (
                   <ViewCount
                     filters={tab.filters(user)}
@@ -491,6 +961,77 @@ function TicketList({ user }: TicketListProps) {
                   />
                 ),
               }))}
+              toolbar={
+                <>
+                  <SearchField
+                    placeholder="Search Tickets"
+                    applied={search.search ?? ""}
+                    maxLength={SEARCH_MAX_LENGTH}
+                    onApply={(term) => {
+                      refine({ search: term === "" ? undefined : term });
+                    }}
+                  />
+                  <Filters applied={filtersApplied(search)}>
+                    {view === ALL_VIEW && (
+                      <FilterGroup
+                        label="Status"
+                        options={STATUS_OPTIONS}
+                        selected={search.status ?? []}
+                        onChange={(values) => {
+                          refine({ status: selectedOrNone(values) });
+                        }}
+                      />
+                    )}
+                    <FilterGroup
+                      label="Severity"
+                      options={SEVERITY_OPTIONS}
+                      selected={search.severity ?? []}
+                      onChange={(values) => {
+                        refine({ severity: selectedOrNone(values) });
+                      }}
+                    />
+                    <FilterGroup
+                      label="Priority"
+                      options={PRIORITY_OPTIONS}
+                      selected={search.priority ?? []}
+                      onChange={(values) => {
+                        refine({ priority: selectedOrNone(values) });
+                      }}
+                    />
+                    <FilterGroup
+                      label="Current phase"
+                      options={PHASE_OPTIONS}
+                      selected={search.phase ?? []}
+                      onChange={(values) => {
+                        refine({ phase: selectedOrNone(values) });
+                      }}
+                    />
+                    <FilterGroup
+                      label="Overdue"
+                      options={OVERDUE_OPTIONS}
+                      selected={search.overdue ?? []}
+                      onChange={(values) => {
+                        refine({ overdue: selectedOrNone(values) });
+                      }}
+                    />
+                  </Filters>
+                  {refined !== undefined && (
+                    // When it leaves the page with the search and the
+                    // filters that it removed, the focus moves to the
+                    // screen's heading.
+                    <FocusHandOff>
+                      <Button
+                        variant="quiet"
+                        size="small"
+                        onPress={clearFilters}
+                      >
+                        <X aria-hidden className="size-4" />
+                        Clear filters
+                      </Button>
+                    </FocusHandOff>
+                  )}
+                </>
+              }
             >
               {place}
               {data !== undefined && (
@@ -498,7 +1039,7 @@ function TicketList({ user }: TicketListProps) {
                   page={data.meta.page}
                   perPage={data.meta.per_page}
                   total={data.meta.total}
-                  href={(target) => listHref(shown.view, target)}
+                  href={(target) => pageHref(shown.view, shown.search, target)}
                 />
               )}
             </ViewTabs>
@@ -515,14 +1056,21 @@ function TicketList({ user }: TicketListProps) {
           columns={columns}
           rows={(data) => data.data}
           rowId={(row) => row.ticket_id}
+          sort={sort}
+          onSort={sortBy}
           renderEmpty={(data) => (
             <EmptyState
-              message={emptyMessage(data)}
+              message={emptyMessage(data, shown.search)}
               action={
-                data.meta.total === 0 ? undefined : (
-                  <ButtonLink href={listHref(shown.view, 1)}>
+                data.meta.total > 0 ? (
+                  <ButtonLink href={pageHref(shown.view, shown.search, 1)}>
                     Go to the first page
                   </ButtonLink>
+                ) : refinedBy(shown.search) === undefined ? undefined : (
+                  <Button onPress={clearFilters}>
+                    <X aria-hidden className="size-4" />
+                    Clear filters
+                  </Button>
                 )
               }
             />
@@ -543,8 +1091,11 @@ function TicketListPage() {
 // does not accept, or with a value that it does not accept, leads to the URL
 // without it, in place of the URL in the browser history, so that back,
 // reload, and a bookmark show what the list shows (docs/behaviors.md, Invalid
-// Search Parameters; docs/screen-map.md, Browser History). The redirect comes
-// before the screen shows, so no request carries the parameter.
+// Search Parameters; docs/screen-map.md, Browser History). So does a URL
+// whose search term has surrounding whitespace, or whose filter repeats a
+// value or gives its values in another order, which leads to the one URL of
+// what it shows. The redirect comes before the screen shows, so no request
+// carries the parameter.
 export const ticketListRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/tickets",
@@ -552,9 +1103,10 @@ export const ticketListRoute = createRoute({
   beforeLoad: ({ location }) => {
     // The router's search of the route also passes on every parameter of the
     // URL that the schema does not declare, so the schema reads the URL
-    // itself.
+    // itself. The URL gives every value as text, such as the page, which
+    // the schema reads as a number, so the two compare as URLs.
     const accepted = ticketListSearch.parse(location.search);
-    if (!deepEqual(location.search, accepted)) {
+    if (!sameSearch(location.search, accepted)) {
       throw redirect({
         to: "/tickets",
         search: accepted,

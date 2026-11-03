@@ -737,10 +737,12 @@ writes "Confidential" next to it.
 
 A list screen, such as the Ticket list, shows from top to bottom:
 
-1. The heading row (Main Content): the heading; its companions, such as the
-   counts of the attention summary as links 32 px high, on `surface` with a
-   `border` line and a 6 px radius, each the number followed by its label; and
-   the main action as a primary button, such as "Create Ticket".
+1. The heading row (Main Content): the heading; its companions, 16 px after
+   it, such as the counts of the attention summary as links 32 px high and
+   8 px apart, on `surface` with a `border` line and a 6 px radius, each the
+   number followed by its label in `text-14`, with `surface-hover` under the
+   pointer; and the main action as a primary button, such as "Create
+   Ticket".
 2. The toolbar, 16 px below: the views (`docs/screen-map.md`, Ticket List
    Views) as tabs 32 px high with a `border` line and a 6 px radius, each its
    label followed by its count; the selected tab has a `border-strong`
@@ -749,17 +751,27 @@ A list screen, such as the Ticket list, shows from top to bottom:
    arrow keys move the focus to it. At the end of the toolbar come the search
    field, 224 px wide and 32 px high, with the placeholder "Search
    {records}", such as "Search Tickets", which applies its term when the user
-   presses Enter and removes it with its clear button; Filters, a secondary
-   button with `list-filter`, which opens a popover with the filter fields
-   and shows the number of the filters that apply after its label. A filter
-   applies as soon as its field changes; a combobox, when the user chooses an
-   option; and a field that the user types into, such as a text or a date
-   field, when the user presses Enter, which in either field of a range, such
-   as two dates, applies both. A typed value that is not applied returns to
-   the applied one when the focus leaves its field, or, for a range, both of
-   its fields. While a filter or a search
-   applies, Clear filters, a quiet button with `x`, follows Filters. The
-   toolbar wraps when the width runs short.
+   presses Enter and removes it with its clear button or Escape; Filters, a
+   secondary button 32 px high with `list-filter`, which opens a popover with
+   the filter fields and shows the number of the filters that apply after its
+   label, in `fg-muted`. A filter applies as soon as its field changes; a
+   combobox, when the user chooses an option; and a field that the user types
+   into, such as a text or a date field, when the user presses Enter, which
+   in either field of a range, such as two dates, applies both. A typed value
+   that is not applied returns to the applied one when the focus leaves its
+   field, or, for a range, both of its fields. While a filter or a search
+   applies, Clear filters, a quiet button 32 px high with `x`, follows
+   Filters. The tabs and the controls are 8 px apart, and the toolbar wraps
+   when the width runs short, the controls at the end of their row.
+   The popover of Filters opens below Filters, aligned to its end, at most
+   448 px wide, with 16 px of padding (Menus, Popovers, and Tooltips); it
+   holds the filters 16 px apart, and its first field takes the focus as it
+   opens (`docs/behaviors.md`, Accessibility, Dialogs). A filter whose values
+   the contract lists, such as a status, is a group of checkboxes (Forms):
+   its name in `text-12`, weight 500, `fg-muted`, and 4 px below it its
+   checkboxes in a row that wraps, 16 px apart, each its box then, 6 px
+   later, its label in `text-14`, the name of the value with its mark
+   (Values).
 3. The table (Tables), 16 px below.
 4. The pagination, 16 px below, at the end of the line, when the list has
    more than one page: the range, such as "1–20 of 25", in `text-14` and
@@ -776,6 +788,12 @@ A list screen, such as the Ticket list, shows from top to bottom:
 - The header row is 36 px high, on `surface-2`, with the column names in
   `text-13`, weight 500, `fg-muted`. The sorted column shows `arrow-up` or
   `arrow-down` at 14 px after its name.
+- The user sorts by a sortable column, which the screen document names, by
+  pressing its header, with a click, Enter, or Space: the first press sorts
+  in the first direction of the column, which the screen document states,
+  and the next reverses it. Under the pointer, a sortable header is on
+  `surface-hover` with its name in `fg`. Assistive technologies read whether
+  and in which direction each sortable column sorts the rows.
 - Each row is at least 36 px high, in `text-14`, with a `border` line below
   it and `surface-hover` under the pointer, which helps to follow the row.
   Cells have 10 px of side padding, the first and the last 16 px at the outer
@@ -787,11 +805,11 @@ A list screen, such as the Ticket list, shows from top to bottom:
 - The focus ring of a row or a cell is drawn inside it, so that the frame
   does not cut it.
 - A cell with several values, such as the packages of a Ticket, shows the
-  first, then "+N", the number of the others, as a button 24 px high in
-  `text-13`, weight 500, `neutral-on-soft` on `neutral-soft`, with a 4 px
-  radius. Its tooltip lists every value under the count, such as "3
-  packages", and its accessible name states the others, such as "2 more
-  packages: fictional-curl-mini, fictional-libcurl4".
+  first, then, 6 px later, "+N", the number of the others, as a button 24 px
+  high in `text-13`, weight 500, `neutral-on-soft` on `neutral-soft`, with a
+  4 px radius. Its tooltip lists every value under the count, one a line,
+  such as "3 packages", and its accessible name states the others, such as
+  "2 more packages: fictional-curl-mini, fictional-libcurl4".
 - A text longer than its column, such as a title, ends with an ellipsis when
   the screen of its record shows it whole, and assistive technologies read it
   whole; in a table whose records have no screen of their own, such as an
@@ -912,7 +930,8 @@ A list screen, such as the Ticket list, shows from top to bottom:
 ### Menus, Popovers, and Tooltips
 
 - A menu or a popover is on `surface`, with a `border` line, an 8 px radius,
-  a shadow, and 4 px of padding. A menu item is 36 px high with a 6 px radius
+  a shadow, and 4 px of padding, or 16 px for a popover that holds fields,
+  such as that of Filters (Lists). A menu item is 36 px high with a 6 px radius
   and 10 px of side padding, its icon at 16 px in `fg-muted` before its label
   in `text-15`, and `surface-hover` under the pointer and on focus, with the
   focus ring inside it on keyboard focus (Focus and Motion). The

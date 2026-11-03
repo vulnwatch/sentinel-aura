@@ -301,7 +301,10 @@ a page below 1 or an unknown sort, is dropped: the screen uses its default for
 it and removes it from the URL (`docs/screen-map.md`, Browser History). The UI
 sends no request with it, so the user never sees the API's validation error.
 A Ticket list URL with a view that the user is not shown is such a case
-(`docs/screen-map.md`, Ticket List Views).
+(`docs/screen-map.md`, Ticket List Views). A value that the screen accepts in
+another form than its own, such as a search term with surrounding whitespace
+or the values of a filter in another order, is replaced in the URL by the
+form that the screen uses, so that one URL shows each state.
 
 ### Retries and Unconfirmed Changes
 

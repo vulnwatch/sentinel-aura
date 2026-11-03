@@ -7,8 +7,9 @@ import { Tooltip as AriaTooltip, TooltipTrigger } from "react-aria-components";
 export const TOOLTIP_DELAY_MS = 300;
 
 interface TooltipProps {
-  // The text of the tooltip, such as the name of an icon alone in a control.
-  text: string;
+  // The text of the tooltip, such as the name of an icon alone in a control,
+  // or its lines, such as the values of a "+N".
+  text: ReactNode;
   // Where the tooltip shows: above the control, or after it, as to the right
   // of the controls of the sidebar.
   placement: "top" | "end";
