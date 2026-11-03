@@ -362,31 +362,33 @@ function useShownView(search: TicketListSearch, view: TicketView) {
 interface ViewCountProps {
   // The filters of the view.
   filters: ListTicketsParams;
-  // Whether the screen reads its list, with which the count is read again.
+  // Whether the list shows the view.
+  selected: boolean;
+  // Whether the screen reads its list.
   listFetching: boolean;
 }
 
 // The count of a view: the total of its Tickets, without the page, the
 // sorting, and the filters and search that the user adds
-// (docs/screen-map.md, Ticket List Views), from a read of one Ticket. It is
-// read again with every read of the list, such as another view or page, so
-// that it shows the size of the queue as the list does. When its read fails,
-// it is not available until a read of it succeeds (docs/behaviors.md, Where
-// Errors Appear).
-function ViewCount({ filters, listFetching }: ViewCountProps) {
+// (docs/screen-map.md, Ticket List Views), from a read of one Ticket. The
+// count of the view that the list shows is read again with each read of the
+// list, so that the tab and the list agree; the others, as the screen's data
+// is (docs/behaviors.md, Loading). When its read fails, it is not available,
+// and the screen's next read of the list tries it again (docs/behaviors.md,
+// Where Errors Appear).
+function ViewCount({ filters, selected, listFetching }: ViewCountProps) {
   const count = useListTickets({ ...filters, per_page: 1 });
+  const failed = count.status === "error";
   const { refetch } = count;
   const wasFetching = useRef(listFetching);
   useEffect(() => {
     const started = listFetching && !wasFetching.current;
     wasFetching.current = listFetching;
-    if (started) {
+    if (started && (selected || failed)) {
       void refetch({ cancelRefetch: false });
     }
-  }, [listFetching, refetch]);
-  return (
-    <Count value={count.data?.meta.total} failed={count.status === "error"} />
-  );
+  }, [listFetching, selected, failed, refetch]);
+  return <Count value={count.data?.meta.total} failed={failed} />;
 }
 
 // The data of the list that shows.
@@ -477,6 +479,7 @@ function TicketList({ user }: TicketListProps) {
                 count: (
                   <ViewCount
                     filters={tab.filters(user)}
+                    selected={tab === view}
                     listFetching={list.isFetching}
                   />
                 ),

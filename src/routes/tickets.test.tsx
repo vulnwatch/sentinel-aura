@@ -496,27 +496,34 @@ describe("the views", () => {
 });
 
 describe("while the list changes", () => {
-  test("reads every count again with each read of the list, so that a count follows the list", async () => {
+  test("reads the count of the view that shows again with each read of its list, so that the tab and the list agree", async () => {
     const totals = new Map(TOTALS);
-    stubTickets({
+    const { spy } = stubTickets({
       count: (query) =>
         ticketPage([], {
           total: totals.get(filtersOf(query)) ?? 0,
           perPage: 1,
         }),
     });
-    const { screen } = await renderApp("/tickets?view=new");
+    const { router, screen } = await renderApp("/tickets?view=new");
     await expect
       .element(screen.getByRole("tab", { name: "New 12" }))
       .toBeVisible();
     // Another Ticket arrives in the meantime.
     totals.set(FILTERS.New, 13);
+    const countsOf = (filters: string) =>
+      queriesOf(spy, "count").filter(
+        (query) => query === `${filters}&per_page=1`,
+      ).length;
 
-    await screen.getByRole("tab", { name: /^Analysis/ }).click();
+    router.history.push("/tickets?view=new&page=2");
 
     await expect
       .element(screen.getByRole("tab", { name: "New 13" }))
       .toBeVisible();
+    expect(countsOf(FILTERS.New)).toBe(2);
+    // The counts of the other views are not read again.
+    expect(countsOf(FILTERS.Analysis)).toBe(1);
   });
 
   test("keeps the columns, the sorting, and the pages of the rows that show while another view loads", async () => {
@@ -536,6 +543,10 @@ describe("while the list changes", () => {
     await expect
       .element(screen.getByRole("progressbar", { name: "Updating" }))
       .toBeVisible();
+    // The tab of the new view is selected at once.
+    await expect
+      .element(screen.getByRole("tab", { name: /^New/ }))
+      .toHaveAttribute("aria-selected", "true");
     // The rows of the All view, under its columns and its sorting.
     await expect
       .element(
@@ -1012,9 +1023,12 @@ describe("the pagination", () => {
       .toHaveFocus();
   });
 
-  test("shows that a view has no Tickets", async () => {
-    stubTickets({ list: () => ticketPage([]) });
-    const { screen } = await renderApp("/tickets?view=unassigned");
+  test.each([
+    ["on its first page", "?view=unassigned", 1],
+    ["on any other page", "?view=unassigned&page=3", 3],
+  ])("shows that a view has no Tickets %s", async (_, search, pageNumber) => {
+    stubTickets({ list: () => ticketPage([], { page: pageNumber }) });
+    const { screen } = await renderApp(`/tickets${search}`);
 
     await expect
       .element(screen.getByText("No Tickets in this view."))

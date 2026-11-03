@@ -432,9 +432,10 @@ returns, whatever Sentinel guarantees for its field:
 - A list whose records do not match the user's filters or search says so,
   such as "No Tickets match the filters.", and offers an action that clears
   them.
-- A page beyond the last page of a list, which Sentinel answers with no
-  records (Sentinel `docs/api-spec.md`, Pagination), says so, such as "There
-  are no Tickets on this page.", and links to the first page.
+- A page beyond the last page of a list that has records, which Sentinel
+  answers with no records (Sentinel `docs/api-spec.md`, Pagination), says so,
+  such as "There are no Tickets on this page.", and links to the first page.
+  A list without records says that it has none on every page.
 - A part of a screen without items, such as the references of a Ticket that
   has none, shows a short line in their place, such as "No references.".
 - An empty state keeps the controls that led to it, such as tabs, filters,

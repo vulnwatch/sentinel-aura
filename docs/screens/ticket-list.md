@@ -68,9 +68,11 @@ Tasks; Landing).
   followed by the number of its Tickets. The number comes from List Tickets,
   `GET /api/v1/tickets`, with the filters of the view and `per_page=1`, as
   `meta.total` (Sentinel `docs/features/tickets/tickets.md`, List Tickets),
-  without the page and the sorting of the list. Every number is read again
-  with each read of the list, such as another view or page, so that the tabs
-  show the size of each queue as the list does.
+  without the page and the sorting of the list. The number of the view that
+  the list shows is read again with each read of the list, such as another
+  page, so that the tab and the list agree; the others are read again as the
+  screen's data is, such as when the tab of the browser returns to the
+  foreground (`docs/behaviors.md`, Loading).
 - The table of the Tickets of the view, "Tickets" for assistive
   technologies, from List Tickets with the filters and the sorting of the
   view, `sort_order=desc`, the page, and `per_page=20`. A filter with several
@@ -150,10 +152,11 @@ Tasks; Landing).
   the previous view. The list as the screen opens is not announced: only a
   change of the view or the page is (`docs/behaviors.md`, Accessibility,
   Focus after a navigation).
-- **The focus.** When the control that holds the focus leaves the page, such
-  as "Go to the first page" once the rows arrive, or the pagination when an
-  error takes the place of the rows, the focus moves to the screen's heading
-  (`docs/behaviors.md`, Accessibility, Focus after an action).
+- **The focus.** When the rows, the table without rows, the action of an
+  empty state, or the pagination leaves the page while it holds the focus,
+  such as "Go to the first page" once the rows arrive, or the pagination when
+  an error takes the place of the rows, the focus moves to the screen's
+  heading (`docs/behaviors.md`, Accessibility, Focus after an action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
   page. A page beyond the last of a view with Tickets says "There are no
   Tickets on this page." and offers "Go to the first page", a link that looks
@@ -165,11 +168,11 @@ Tasks; Landing).
   replaces the screen; the error of a read of another view or page shows in
   place of the rows, inside the frame, and keeps the tabs; and the error of a
   new read of the rows that show shows above the frame, with the rows. A
-  count whose read fails shows an en dash, read as "Not available", until
-  its next read, with the next read of the list, succeeds. The screen
-  handles no error code
-  specifically: List Tickets documents only the global responses (Sentinel
-  `docs/features/tickets/tickets.md`, List Tickets).
+  count whose read fails shows an en dash, read as "Not available", until a
+  later read of it succeeds; each read of the list reads it again. The
+  screen handles no error code specifically: List Tickets documents only the
+  global responses (Sentinel `docs/features/tickets/tickets.md`, List
+  Tickets).
 
 ## Cross-references
 
