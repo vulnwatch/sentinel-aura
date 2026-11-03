@@ -340,9 +340,10 @@ TypeScript lets the API types be generated from the pinned OpenAPI document
 (Backend Contract). The native compiler, stable since July 2026, type-checks
 about ten times faster than TypeScript 6. It ships without a programmatic API
 until a later minor version, so tools that need that API, such as
-typescript-eslint and openapi-typescript, cannot run on it; the chosen static
-checks and API client generator do not need it. Should a required tool need
-the API, TypeScript 6 can run beside TypeScript 7, as Microsoft documents.
+typescript-eslint and openapi-typescript, cannot run on it. The chosen static
+checks do not need it, and the API client generator takes it from its own
+copy of TypeScript 6, which npm installs beside TypeScript 7 (API Client
+Generation): TypeScript 6 can run beside TypeScript 7, as Microsoft documents.
 
 #### Build Tool, Package Manager, and Node.js
 
@@ -704,7 +705,7 @@ the response provides one (Sentinel `docs/api-spec.md`, Response Format).
 
 | Option | Impact |
 |---|---|
-| **Orval** (chosen) | Generates the types, the requests, and the query hooks, and runs with the native TypeScript compiler because it does not use the TypeScript API. Released several times a month by several maintainers. Adds no runtime dependency besides TanStack Query; used only at build time, where it brings about 110 packages, published without provenance attestations |
+| **Orval** (chosen) | Generates the types, the requests, and the query hooks, and runs beside the native TypeScript compiler: its package that uses the TypeScript API depends on its own copy of TypeScript 6, which npm installs beside the project's TypeScript 7. Released several times a month by several maintainers. Adds no runtime dependency besides TanStack Query; used only at build time, where it brings about 110 packages, published without provenance attestations |
 | openapi-typescript with openapi-fetch | Types and a minimal client, the smallest footprint. Requires the TypeScript 5 API and cannot be installed with TypeScript 7; no release since February 2026 |
 | Hey API | Pre-1.0, with breaking changes in minor releases, and one main maintainer |
 | Kubb | Active, with smaller adoption and one main maintainer |
