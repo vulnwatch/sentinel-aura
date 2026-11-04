@@ -155,6 +155,29 @@ test.each([
   }
 });
 
+test("sets the count of its tooltip apart from the values: at weight 600, 4 px above the values at weight 400", async () => {
+  const { screen } = await renderCell(packages(12));
+  await screen.getByRole("button", { name: "Before" }).click();
+
+  await screen.getByRole("button", { name: /more packages/ }).hover();
+
+  const tooltip = screen.getByRole("tooltip");
+  await expect.element(tooltip).toBeVisible();
+  const count = tooltip.getByText("12 packages", { exact: true }).element();
+  const lines = tooltip.getByRole("listitem");
+  const more = tooltip.getByText("and 2 more", { exact: true }).element();
+  expect(getComputedStyle(count).fontWeight).toBe("600");
+  expect(
+    [...lines.elements(), more].map(
+      (line) => getComputedStyle(line).fontWeight,
+    ),
+  ).toEqual(Array.from({ length: 11 }, () => "400"));
+  expect(
+    lines.first().element().getBoundingClientRect().top -
+      count.getBoundingClientRect().bottom,
+  ).toBe(4);
+});
+
 test("draws +N 24 px high in text-13, weight 500, neutral-on-soft on neutral-soft, with a 4 px radius", async () => {
   const { cell } = await renderCell(THREE);
   const more = cell.getByRole("button");

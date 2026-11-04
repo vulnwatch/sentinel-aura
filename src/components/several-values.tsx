@@ -36,7 +36,8 @@ function listed(values: readonly string[]) {
 // (docs/design-system.md, Tables): the first value, then, 6 px later, "+N",
 // the number of the others, as a button 24 px high in text-13, weight 500,
 // neutral-on-soft on neutral-soft, with a 4 px radius. Its tooltip lists
-// the values, one a line, under their count, such as "3 packages", and its
+// the values, one a line at weight 400, 4 px under their count, such as "3
+// packages", at weight 600, so that the count is not taken for a value; its
 // accessible name states the others, such as "2 more packages:
 // fictional-openssl, fictional-zlib". Each names at most 10 values, then
 // "and N more", such as "and 42 more". Without values, an absent value.
@@ -55,13 +56,17 @@ export function SeveralValues({ values, noun }: SeveralValuesProps) {
           placement="top"
           text={
             <>
-              <p>{counted(values.length, noun)}</p>
-              <ul>
+              <p className="mb-1 font-semibold">
+                {counted(values.length, noun)}
+              </p>
+              <ul className="font-normal">
                 {all.named.map((value) => (
                   <li key={value}>{value}</li>
                 ))}
               </ul>
-              {all.more !== undefined && <p>{all.more}</p>}
+              {all.more !== undefined && (
+                <p className="font-normal">{all.more}</p>
+              )}
             </>
           }
         >

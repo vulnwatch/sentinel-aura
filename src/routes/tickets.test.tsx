@@ -2056,6 +2056,79 @@ describe("the attention summary", () => {
     expect(first.top).toBeLessThan(heading.bottom);
   });
 
+  test("sets the overdue counts apart from Active P1: a line, then the name Overdue, hidden from assistive technologies, then each count with its phase alone", async () => {
+    stubTickets();
+    const { screen } = await renderApp("/tickets?view=new");
+    const active = summaryOf(screen).getByRole("link", { name: "2 Active P1" });
+    const triage = summaryOf(screen).getByRole("link", {
+      name: "1 Triage overdue",
+    });
+    const label = summaryOf(screen).getByText("Overdue", { exact: true });
+    await expect.element(triage).toBeVisible();
+
+    // The counts show their phase, and the name of the group once.
+    await expect
+      .element(triage.getByText("Triage", { exact: true }))
+      .toBeVisible();
+    await expect.element(label).toBeVisible();
+    expect(label.element().closest('[aria-hidden="true"]')).not.toBeNull();
+    const style = getComputedStyle(label.element());
+    expect([style.fontSize, style.color]).toEqual(["14px", "rgb(89, 99, 110)"]);
+    // A line of 1 px in border, 20 px high, 12 px from Active P1 and from the
+    // name, which is 8 px before the first count.
+    const first = active.element().getBoundingClientRect();
+    const line = document.elementFromPoint(
+      first.right + 12.5,
+      first.top + first.height / 2,
+    )!;
+    const box = line.getBoundingClientRect();
+    expect([
+      Math.round(box.left - first.right),
+      Math.round(box.width),
+      Math.round(box.height),
+      getComputedStyle(line).backgroundColor,
+    ]).toEqual([12, 1, 20, "rgb(216, 222, 228)"]);
+    const name = label.element().getBoundingClientRect();
+    expect(Math.round(name.left - box.right)).toBe(12);
+    expect(
+      Math.round(triage.element().getBoundingClientRect().left - name.right),
+    ).toBe(8);
+    // On one line in a wide window.
+    expect(
+      summaryOf(screen)
+        .getByRole("link")
+        .elements()
+        .map((link) => link.getBoundingClientRect().top),
+    ).toEqual(Array.from({ length: 5 }, () => first.top));
+  });
+
+  test("wraps the group of the overdue counts to the next line as a whole, and its counts after its name, in a narrow window", async () => {
+    await page.viewport(320, 800);
+    stubTickets();
+    const { screen } = await renderApp("/tickets?view=new");
+    const rect = (name: string) =>
+      summaryOf(screen)
+        .getByRole("link", { name })
+        .element()
+        .getBoundingClientRect();
+    await expect
+      .element(summaryOf(screen).getByRole("link", { name: "3 QA overdue" }))
+      .toBeVisible();
+
+    const active = rect("2 Active P1");
+    const triage = rect("1 Triage overdue");
+    const qa = rect("3 QA overdue");
+    const name = summaryOf(screen)
+      .getByText("Overdue", { exact: true })
+      .element()
+      .getBoundingClientRect();
+    expect(triage.top).toBeGreaterThan(active.bottom);
+    expect(name.top).toBe(triage.top);
+    expect(qa.top).toBeGreaterThan(triage.top);
+    expect(qa.left).toBeGreaterThanOrEqual(name.right);
+    expect(qa.right).toBeLessThanOrEqual(window.innerWidth);
+  });
+
   test("reads each count with its filters alone, from a read of one Ticket, whatever the user refined", async () => {
     const { spy } = stubTickets();
     const { screen } = await renderApp(

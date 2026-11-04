@@ -5,8 +5,13 @@ import type { ScreenHref } from "./router-links";
 const COUNT = new Intl.NumberFormat("en-US");
 
 interface CountLinkProps {
-  // The name of what it counts, such as "Active P1".
+  // The name of what it counts, such as "Active P1", or, in a group of
+  // counts, what sets it apart from the others, such as "Triage".
   label: string;
+  // The name of the group of the count, such as "overdue", which shows once
+  // before the group and which assistive technologies read after the label
+  // of each of its counts, as "1 Triage overdue".
+  groupName?: string | undefined;
   // The number, or undefined while it loads.
   value: number | undefined;
   // Whether its read failed, even after it showed a number.
@@ -50,8 +55,15 @@ function CountValue({
 // fg-muted, with surface-hover under the pointer. While the number loads,
 // the label shows alone; when its read failed, an en dash in fg-muted takes
 // the place of the number, and assistive technologies read the label
-// followed by "not available" (docs/behaviors.md, Where Errors Appear).
-export function CountLink({ label, value, failed, href }: CountLinkProps) {
+// followed by "not available" (docs/behaviors.md, Where Errors Appear). The
+// name of its group follows the label for assistive technologies alone.
+export function CountLink({
+  label,
+  groupName,
+  value,
+  failed,
+  href,
+}: CountLinkProps) {
   return (
     <AriaLink
       href={href}
@@ -60,6 +72,9 @@ export function CountLink({ label, value, failed, href }: CountLinkProps) {
       <span>
         <CountValue value={value} failed={failed} />
         <span className="text-fg-muted">{label}</span>
+        {groupName !== undefined && (
+          <span className="sr-only">{` ${groupName}`}</span>
+        )}
         {failed && <span className="sr-only"> not available</span>}
       </span>
     </AriaLink>

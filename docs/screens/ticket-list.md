@@ -92,7 +92,11 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   attention" for assistive technologies: the five counts of
   `docs/screen-map.md` (Attention Summary), in this order, each read from List
   Tickets, `GET /api/v1/tickets`, with its filters and `per_page=1`, as
-  `meta.total`, and each a link to the All view with the same filters:
+  `meta.total`, and each a link to the All view with the same filters.
+  Active P1 measures priority, and the four overdue counts, which never count
+  the same Ticket, form the group "Overdue" after it (`docs/design-system.md`,
+  Lists): each shows its phase, as "1 Triage", and is read with the name of
+  the group, as "1 Triage overdue".
 
   | Count | Filters of List Tickets | Link |
   |---|---|---|

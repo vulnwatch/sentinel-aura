@@ -36,8 +36,16 @@ const ACTIVE_P1_SEARCH: { status: ("new" | "analysis")[]; priority: "p1"[] } = {
 const ACTIVE_P1 = linkOptions({ to: "/tickets", search: ACTIVE_P1_SEARCH });
 
 // The count at /, which links to /tickets, through a router that writes the
-// search parameters as the UI's router does.
-function renderCount(value: number | undefined, failed = false) {
+// search parameters as the UI's router does: Active P1, or a count of the
+// group named overdue.
+function renderCount(
+  value: number | undefined,
+  failed = false,
+  {
+    label = "Active P1",
+    groupName,
+  }: { label?: string; groupName?: string } = {},
+) {
   const root = createRootRoute({
     component: () => (
       <RouterLinks>
@@ -50,7 +58,8 @@ function renderCount(value: number | undefined, failed = false) {
     path: "/",
     component: () => (
       <CountLink
-        label="Active P1"
+        label={label}
+        groupName={groupName}
         value={value}
         failed={failed}
         href={ACTIVE_P1}
@@ -179,3 +188,29 @@ test("is 32 px high, in text-14, on surface with a border line and a 6 px radius
     .poll(() => getComputedStyle(link.element()).backgroundColor)
     .toBe(SURFACE_HOVER);
 });
+
+test.each([
+  ["with its number", 1, false, "1 Triage overdue"],
+  ["while its number loads", undefined, false, "Triage overdue"],
+  ["when its read failed", undefined, true, "Triage overdue not available"],
+])(
+  "shows in a group only its label, and is read with the name of the group %s",
+  async (_, value, failed, name) => {
+    const { rendered } = renderCount(value, failed, {
+      label: "Triage",
+      groupName: "overdue",
+    });
+    const screen = await rendered;
+    const link = screen.getByRole("link", { name, exact: true });
+
+    await expect.element(link).toBeVisible();
+    await expect
+      .element(link.getByText("Triage", { exact: true }))
+      .toBeVisible();
+    // The name of the group takes no room on the screen, so the link shows
+    // only its number and its label.
+    expect(
+      link.getByText("overdue").element().getBoundingClientRect().width,
+    ).toBeLessThanOrEqual(1);
+  },
+);

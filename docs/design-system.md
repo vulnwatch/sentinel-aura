@@ -742,7 +742,14 @@ A list screen, such as the Ticket list, shows from top to bottom:
    8 px apart, on `surface` with a `border` line and a 6 px radius, each the
    number followed by its label in `text-14`, with `surface-hover` under the
    pointer; and the main action as a primary button, such as "Create
-   Ticket".
+   Ticket". Counts of one kind can form a group after the others: a vertical
+   line of 1 px in `border`, 20 px high, 12 px from what precedes and follows
+   it, then the name of the group in `text-14`, `fg-muted`, 8 px before its
+   counts, such as "Overdue". Each count of the group shows only what sets it
+   apart, such as "1 Triage". The line and the name are hidden from assistive
+   technologies, which read the name of the group after the label of each
+   count, as "1 Triage overdue". The group wraps to the next line as a whole,
+   and its counts wrap after its name when it is wider than its line.
 2. The toolbar, 16 px below: the views (`docs/screen-map.md`, Ticket List
    Views) as tabs 32 px high with a `border` line and a 6 px radius, each its
    label followed by its count; the selected tab has a `border-strong`
@@ -830,8 +837,9 @@ keep the search, the filters, and the sorting.
 - A cell with several values, such as the packages of a Ticket, shows the
   first, then, 6 px later, "+N", the number of the others, as a button 24 px
   high in `text-13`, weight 500, `neutral-on-soft` on `neutral-soft`, with a
-  4 px radius. Its tooltip lists the values under their count, one a line,
-  such as "3 packages", and its accessible name states the others, such as
+  4 px radius. Its tooltip lists the values, one a line at weight 400, 4 px
+  under their count at weight 600, such as "3 packages", so that the count is
+  not taken for a value, and its accessible name states the others, such as
   "2 more packages: fictional-curl-mini, fictional-libcurl4". Each names at
   most 10 values, then how many more, such as "and 42 more", so that the
   tooltip of a record with many values fits in the window.
@@ -968,7 +976,7 @@ keep the search, the filters, and the sorting.
   shows after 300 ms of hover and at once on keyboard focus, stays while the
   pointer is over it, and Escape hides it (WCAG 2.2, 1.4.13 Content on Hover
   or Focus). It names an icon alone or a compact avatar, or lists the values
-  of a "+N"; it never holds the only means to act.
+  of a "+N" (Tables); it never holds the only means to act.
 
 ## Representation of a User
 

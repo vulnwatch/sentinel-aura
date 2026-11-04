@@ -726,52 +726,54 @@ function ViewCount({ filters, selected, listFetching }: ViewCountProps) {
 // A count of the attention summary (docs/screen-map.md, Attention Summary).
 interface AttentionCount {
   id: string;
+  // Its label after its number: what it counts, or, among the overdue
+  // counts, its phase.
   label: string;
   // The filters of the All view that hold its Tickets, which the count reads
   // and to which it links.
   search: TicketListSearch;
 }
 
-// A count of the Tickets whose current phase is past due: those whose
-// current_phase and overdue filters both name the phase (Sentinel
-// docs/features/tickets/ticket-deadlines.md, Relation to the Overdue Filter).
-function overdueCount(
-  phase: (typeof OVERDUE_PHASES)[number],
-  label: string,
-): AttentionCount {
-  return {
-    id: `${phase}-overdue`,
-    label,
-    search: { phase: [phase], overdue: [phase] },
-  };
-}
+// The Tickets of effective priority P1 in an active status (Sentinel
+// docs/features/tickets/ticket-priority.md, Persistence and Effective
+// Priority).
+const ACTIVE_P1: AttentionCount = {
+  id: "active-p1",
+  label: "Active P1",
+  search: { status: ["new", "analysis", "analyzed"], priority: ["p1"] },
+};
 
-const ATTENTION_COUNTS: readonly AttentionCount[] = [
-  {
-    // Effective priority P1 in an active status (Sentinel
-    // docs/features/tickets/ticket-priority.md, Persistence and Effective
-    // Priority).
-    id: "active-p1",
-    label: "Active P1",
-    search: { status: ["new", "analysis", "analyzed"], priority: ["p1"] },
-  },
-  overdueCount("triage", "Triage overdue"),
-  overdueCount("submission", "Submission overdue"),
-  overdueCount("um", "UM overdue"),
-  overdueCount("qa", "QA overdue"),
-];
+// The Tickets whose current phase is past due, a count for each phase, in
+// the order of the phases: those whose current_phase and overdue filters
+// both name the phase (Sentinel docs/features/tickets/ticket-deadlines.md,
+// Relation to the Overdue Filter).
+const OVERDUE_COUNTS: readonly AttentionCount[] = OVERDUE_PHASES.map(
+  (phase) => ({
+    id: `${phase}-overdue`,
+    label: PHASE_NAMES[phase],
+    search: { phase: [phase], overdue: [phase] },
+  }),
+);
 
 interface AttentionCountLinkProps {
   count: AttentionCount;
+  // The name of its group, which assistive technologies read after its
+  // label (CountLink).
+  groupName?: string;
   // Whether the screen reads its list.
   listFetching: boolean;
 }
 
-function AttentionCountLink({ count, listFetching }: AttentionCountLinkProps) {
+function AttentionCountLink({
+  count,
+  groupName,
+  listFetching,
+}: AttentionCountLinkProps) {
   const read = useTicketCount(refinementOf(count.search), false, listFetching);
   return (
     <CountLink
       label={count.label}
+      groupName={groupName}
       {...read}
       href={linkOptions({ to: "/tickets", search: count.search })}
     />
@@ -784,23 +786,50 @@ interface AttentionSummaryProps {
 }
 
 // The attention summary of an analyst, in the heading row after the heading:
-// five counts, 8 px apart, each a link to the All view refined to its
-// Tickets (docs/screen-map.md, Attention Summary; docs/design-system.md,
-// Lists). When it leaves the page while one of its counts holds the focus,
-// as when a read of the signed-in user tells that the role was removed, the
-// focus moves to the screen's heading.
+// five counts, each a link to the All view refined to its Tickets
+// (docs/screen-map.md, Attention Summary; docs/design-system.md, Lists).
+// Active P1 measures priority, and the four overdue counts, which never count
+// the same Ticket, form a group after it: a vertical line, the name
+// "Overdue", and the counts, 8 px apart, each showing its phase, as
+// "1 Triage", and read whole, as "1 Triage overdue". The line and the name
+// are hidden from assistive technologies, which read the name with each
+// count. The group wraps to the next line as a whole, and its counts after
+// its name when it is wider than its line. When the summary leaves the page
+// while one of its counts holds the focus, as when a read of the signed-in
+// user tells that the role was removed, the focus moves to the screen's
+// heading.
 function AttentionSummary({ listFetching }: AttentionSummaryProps) {
   return (
     <FocusHandOff>
       <ul
         aria-label="Tickets that need attention"
-        className="flex flex-wrap gap-2"
+        className="flex flex-wrap items-start gap-y-2"
       >
-        {ATTENTION_COUNTS.map((count) => (
-          <li key={count.id}>
-            <AttentionCountLink count={count} listFetching={listFetching} />
-          </li>
-        ))}
+        <li>
+          <AttentionCountLink count={ACTIVE_P1} listFetching={listFetching} />
+        </li>
+        <li className="flex items-start">
+          <span aria-hidden className="flex h-8 items-center px-3">
+            <span className="h-5 w-px bg-border" />
+          </span>
+          <span
+            aria-hidden
+            className="me-2 flex h-8 items-center text-14 text-fg-muted"
+          >
+            Overdue
+          </span>
+          <ul className="flex flex-wrap gap-2">
+            {OVERDUE_COUNTS.map((count) => (
+              <li key={count.id}>
+                <AttentionCountLink
+                  count={count}
+                  groupName="overdue"
+                  listFetching={listFetching}
+                />
+              </li>
+            ))}
+          </ul>
+        </li>
       </ul>
     </FocusHandOff>
   );
