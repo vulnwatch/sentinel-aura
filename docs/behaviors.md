@@ -301,7 +301,12 @@ a page below 1 or an unknown sort, is dropped: the screen uses its default for
 it and removes it from the URL (`docs/screen-map.md`, Browser History). The UI
 sends no request with it, so the user never sees the API's validation error.
 A Ticket list URL with a view that the user is not shown is such a case
-(`docs/screen-map.md`, Ticket List Views).
+(`docs/screen-map.md`, Ticket List Views). A value that the screen accepts in
+another form than its own, such as a search term with surrounding whitespace
+or the values of a filter in another order, is replaced in the URL by the
+form that the screen uses, and a parameter that names the screen's default,
+such as the first page, is removed, so that the same state always gives the
+same parameters and values, in whatever order the URL lists them.
 
 ### Retries and Unconfirmed Changes
 
@@ -430,8 +435,8 @@ returns, whatever Sentinel guarantees for its field:
   in this view.", and offers the action that creates such a record to a user
   who can take it (`docs/screen-map.md`, Roles).
 - A list whose records do not match the user's filters or search says so,
-  such as "No Tickets match the filters.", and offers an action that clears
-  them.
+  such as "No Tickets in this view match the filters.", and offers an action
+  that clears them.
 - A page beyond the last page of a list that has records to show, which
   Sentinel answers with no records (Sentinel `docs/api-spec.md`, Pagination),
   says so, such as "There are no Tickets on this page.", and links to the

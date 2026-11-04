@@ -240,7 +240,9 @@ A screen links each record that it shows to the screen of that record:
   screen from which the user signed out; the saved URL or the landing in place
   of Sign in; the landing in place of `/`; the landing of another user who
   signed in; and a screen's default in place of a search parameter that it
-  does not accept (`docs/behaviors.md`, Session; Invalid Search Parameters).
+  does not accept or that names that default, or its own form of a value in
+  place of another form (`docs/behaviors.md`, Session; Invalid Search
+  Parameters).
 
 ### Search
 

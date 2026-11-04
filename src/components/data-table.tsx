@@ -1,4 +1,4 @@
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   Cell,
@@ -21,13 +21,19 @@ export interface TableColumn<TRow> {
   name: string;
   // Whether its cells name their row, such as the identifier of a record.
   isRowHeader?: boolean;
-  // Whether the rows are sorted by it, in descending order.
-  isSorted?: boolean;
+  // Whether the user can sort the rows by it, by pressing its header.
+  allowsSorting?: boolean;
   // Whether it takes the width that the other columns leave, at least
   // 100 px, its text cut with an ellipsis where it is longer.
   grows?: boolean;
   // The content of its cell in the row.
   render: (row: TRow) => ReactNode;
+}
+
+// The column by which the rows are sorted, by its id, and the direction.
+export interface TableSort {
+  column: string;
+  direction: "ascending" | "descending";
 }
 
 interface TableProps<TRow> {
@@ -38,16 +44,31 @@ interface TableProps<TRow> {
   // row alone.
   rows: readonly TRow[];
   rowId: (row: TRow) => string;
+  // The sorting of the rows, which shows in the header of its column.
+  sort?: TableSort | undefined;
+  // Called with the id of a column that allows sorting when the user presses
+  // its header.
+  onSort?: ((column: string) => void) | undefined;
 }
 
 // The header row is 36 px high, on surface-2, its names in text-13, weight
-// 500, fg-muted, the sorted column with arrow-down at 14 px after its name.
-// Each row is at least 36 px high, in text-14, with a border line below it
-// and surface-hover under the pointer; its cells hold one line, centered
-// vertically, with 10 px of side padding, the first and the last 16 px at the
-// outer side. A row or a cell has its focus ring inside it, so that the frame
-// does not cut it.
-function DataRows<TRow>({ label, columns, rows, rowId }: TableProps<TRow>) {
+// 500, fg-muted, the sorted column with arrow-up or arrow-down at 14 px after
+// its name. A column that allows sorting sorts when the user presses its
+// header, with a click, Enter, or Space; under the pointer, its header is on
+// surface-hover with its name in fg; and assistive technologies read whether
+// and in which direction the rows are sorted by it. Each row is at least
+// 36 px high, in text-14, with a border line below it and surface-hover under
+// the pointer; its cells hold one line, centered vertically, with 10 px of
+// side padding, the first and the last 16 px at the outer side. A row or a
+// cell has its focus ring inside it, so that the frame does not cut it.
+function DataRows<TRow>({
+  label,
+  columns,
+  rows,
+  rowId,
+  sort,
+  onSort,
+}: TableProps<TRow>) {
   const padding = "px-2.5 first:pl-4 last:pr-4";
   // A growing column takes the width that the others leave, in its header
   // as in its cells, so that the header row keeps its columns when the rows
@@ -55,25 +76,31 @@ function DataRows<TRow>({ label, columns, rows, rowId }: TableProps<TRow>) {
   const width = (column: TableColumn<TRow>) =>
     column.grows === true ? "w-full max-w-0 min-w-25" : "";
   return (
-    <Table aria-label={label} className="w-full border-collapse">
+    <Table
+      aria-label={label}
+      sortDescriptor={sort}
+      onSortChange={({ column }) => {
+        onSort?.(String(column));
+      }}
+      className="w-full border-collapse"
+    >
       <TableHeader columns={columns}>
         {(column) => (
           <Column
             id={column.id}
             isRowHeader={column.isRowHeader === true}
-            className={`h-9 bg-surface-2 text-start align-middle text-13 font-medium whitespace-nowrap text-fg-muted ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
+            allowsSorting={column.allowsSorting === true}
+            className={`h-9 cursor-default bg-surface-2 text-start align-middle text-13 font-medium whitespace-nowrap text-fg-muted data-hovered:bg-surface-hover data-hovered:text-fg ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
           >
-            {column.isSorted === true ? (
-              <>
-                <span aria-hidden className="inline-flex items-center gap-1">
-                  {column.name}
-                  <ArrowDown className="size-3.5 shrink-0" />
-                </span>
-                <span className="sr-only">{`${column.name} (sorted descending)`}</span>
-              </>
-            ) : (
-              column.name
-            )}
+            <span className="inline-flex items-center gap-1">
+              {column.name}
+              {sort?.column === column.id &&
+                (sort.direction === "ascending" ? (
+                  <ArrowUp aria-hidden className="size-3.5 shrink-0" />
+                ) : (
+                  <ArrowDown aria-hidden className="size-3.5 shrink-0" />
+                ))}
+            </span>
           </Column>
         )}
       </TableHeader>
@@ -114,6 +141,9 @@ interface DataTableProps<TData, TRow> {
   // What shows in place of the rows when the data has none, such as an empty
   // state (docs/design-system.md, Empty States).
   renderEmpty: (data: TData) => ReactNode;
+  // The sorting of the rows, and what sorts them by another column.
+  sort?: TableSort | undefined;
+  onSort?: ((column: string) => void) | undefined;
 }
 
 // The data of a read as a table in its frame, on surface with a border line
@@ -139,10 +169,12 @@ export function DataTable<TData, TRow>({
   rows,
   rowId,
   renderEmpty,
+  sort,
+  onSort,
 }: DataTableProps<TData, TRow>) {
   const place = dataPlace(read);
   const shownRows = place.data === undefined ? [] : rows(place.data);
-  const table = { label, columns, rowId };
+  const table = { label, columns, rowId, sort, onSort };
   return (
     <>
       <output className="block">{place.warning}</output>

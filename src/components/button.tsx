@@ -13,11 +13,13 @@ export type ButtonProps = Omit<
   // The label of the button.
   children: ReactNode;
   // Primary for the main action of a screen, a form, or a dialog, one per
-  // screen part; secondary for every other action, such as Try again
+  // screen part; secondary for every other action, such as Try again; quiet,
+  // without a fill or a boundary, for Cancel in a form and Clear filters
   // (docs/design-system.md, Buttons and Links).
-  variant?: "primary" | "secondary";
-  // Large in forms and dialogs, 40 px high; medium elsewhere, 36 px high.
-  size?: "medium" | "large";
+  variant?: "primary" | "secondary" | "quiet";
+  // Large in forms and dialogs, 40 px high; small in the toolbar of a list,
+  // 32 px high, in text-14; medium elsewhere, 36 px high.
+  size?: "small" | "medium" | "large";
   // Whether the change that the button started is in progress.
   isBusy?: boolean;
 };
@@ -26,9 +28,14 @@ const VARIANTS = {
   primary: "bg-accent text-on-accent data-hovered:bg-accent-hover",
   secondary:
     "border border-border-strong bg-surface text-fg data-hovered:bg-surface-hover",
+  quiet: "text-fg data-hovered:bg-surface-hover",
 } as const;
 
-const SIZES = { medium: "h-9 px-3", large: "h-10 px-4" } as const;
+const SIZES = {
+  small: "h-8 px-3 text-14",
+  medium: "h-9 px-3 text-15",
+  large: "h-10 px-4 text-15",
+} as const;
 
 // A button (docs/design-system.md, Buttons and Links). While the change that
 // it started is in progress, it is busy: it shows loader-circle before its
@@ -55,7 +62,7 @@ export function Button({
       type={isBusy && type === "submit" ? "button" : type}
       onPress={isBusy ? undefined : onPress}
       aria-disabled={isBusy || undefined}
-      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-15 font-medium data-disabled:opacity-60 ${VARIANTS[variant]} ${SIZES[size]} ${FOCUS_RING}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium data-disabled:opacity-60 ${VARIANTS[variant]} ${SIZES[size]} ${FOCUS_RING}`}
     >
       {isBusy && (
         <LoaderCircle

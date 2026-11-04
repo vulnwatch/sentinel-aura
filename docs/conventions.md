@@ -177,6 +177,7 @@ rules; review enforces the rest.
 | `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, the return from Sign in, and Sign out (`docs/behaviors.md`, Session); and the signed-in user for the screens that depend on it, with the role that decides the landing (`docs/screen-map.md`, Landing; Roles) |
 | `src/avatar.ts` | The pattern and the color of the avatar (`docs/design-system.md`, Avatar, Definition, Version 1): the SHA-256 digest of a user's `id`, and the cells and the index of the color in the Palette that it selects |
 | `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
+| `src/search-params.ts` | How the router reads and writes the search parameters of a URL, as text (Routes), and the schemas of the parameters whose value is a whole number or a list |
 | `src/routes/` | One module per route: its definition and its page component |
 | `src/routes/unbuilt.ts` | The routes of the screens of `docs/screen-map.md` (Areas and Screens) to which the sidebar, the account menu, and the screens lead before those screens are built: each shows Not found, and the change that builds a screen replaces its route |
 | `src/components/` | The components that several routes share |
@@ -209,16 +210,31 @@ that needs it; content of another kind needs a new row first.
   pagination, lives in the route's path and search parameters. A Zod schema
   in the route definition validates the search parameters, and the screen
   reads them through the router's typed hooks.
+- The router reads and writes the search parameters as the browser's
+  `URLSearchParams` do, never as JSON (`src/search-params.ts`): each value is
+  its text, such as `page=2` or `search=42`, and a parameter with several
+  values is given once for each, such as `status=new&status=analysis`, as
+  Sentinel's repeatable filters are (Sentinel `docs/api-spec.md`, Enum Filter
+  Validation). A schema therefore reads a number or a list from that text.
 - The schema gives each search parameter `.catch(undefined)`, so that a
-  value that the screen does not accept counts as absent. When the URL
-  carries a parameter or a value that the schema does not accept, the route's
-  `beforeLoad` redirects to the parameters that it accepts, replacing the URL
-  (`docs/behaviors.md`, Invalid Search Parameters). The router's search of a
-  route also passes on the parameters of the URL that its schema does not
-  declare, so `beforeLoad` compares the URL with the schema's own result. A
-  parameter that the screen accepts only for some users, such as a view that
-  a role decides, is removed by the screen in the same way, once it knows the
-  user.
+  value that the screen does not accept counts as absent; a parameter whose
+  rejection also removes another one, such as a sorting with its order,
+  catches it as `null`, which the schema's transform removes with the other.
+  The schema gives each value the screen's form and leaves out a parameter
+  that names the screen's default, such as the first page, so that
+  navigations need not; a link leaves it out itself, because the router
+  builds the address of a link without the schema. When the URL carries a
+  parameter or a value that the schema does not accept, a value in another
+  form than the one that the schema gives, such as a search term with
+  surrounding whitespace, or a parameter that names the default, the route's
+  `beforeLoad` redirects to the parameters that the schema gives, replacing
+  the URL (`docs/behaviors.md`, Invalid Search Parameters). The router's
+  search of a route also passes on the parameters of the URL that its schema
+  does not declare, and gives every value as text, so `beforeLoad` compares
+  the URL with the schema's own result as the URLs that they give, whichever
+  parameter comes first. A parameter that the screen accepts only for some
+  users, such as a view that a role decides, is removed by the screen in the
+  same way, once it knows the user.
 - Links between the UI's screens use the router's typed paths: React Aria's
   links, and the components that contain links, navigate through the router,
   which the root route connects to React Aria. A link with path or search

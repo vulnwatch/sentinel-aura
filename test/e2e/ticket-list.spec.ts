@@ -13,6 +13,44 @@ import {
 // rely on as loaded (Sentinel docs/features/platform/example-dataset.md,
 // Users; CVEs; Tickets; Aged Tickets).
 
+// The counts of the attention summary.
+function attention(page: Page) {
+  return page
+    .getByRole("list", { name: "Tickets that need attention" })
+    .getByRole("link");
+}
+
+// Whether a response body is a page of Tickets.
+function isTicketPage(
+  body: unknown,
+): body is { data: { ticket_id: string }[] } {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "data" in body &&
+    Array.isArray(body.data) &&
+    body.data.every(
+      (ticket: unknown) =>
+        typeof ticket === "object" &&
+        ticket !== null &&
+        "ticket_id" in ticket &&
+        typeof ticket.ticket_id === "string",
+    )
+  );
+}
+
+// The identifiers of the Tickets that List Tickets returns for a query, in
+// their order, as the signed-in user of the page.
+async function ticketsOf(page: Page, query: string): Promise<string[]> {
+  const response = await page.request.get(`/api/v1/tickets?${query}`);
+  expect(response.ok()).toBe(true);
+  const body: unknown = await response.json();
+  if (!isTicketPage(body)) {
+    throw new Error("List Tickets returned no page of Tickets");
+  }
+  return body.data.map((ticket) => ticket.ticket_id);
+}
+
 function views(page: Page) {
   return page.getByRole("tablist", { name: "Views" }).getByRole("tab");
 }
@@ -82,10 +120,8 @@ test.describe("for an analyst", () => {
       "SNTL-6",
     ]);
     await expect(
-      table(page).getByRole("columnheader", {
-        name: "Priority (sorted descending)",
-      }),
-    ).toBeVisible();
+      table(page).getByRole("columnheader", { name: "Priority" }),
+    ).toHaveAttribute("aria-sort", "descending");
     // SNTL-7 is past its triage due date (Aged Tickets).
     await expect(
       table(page).getByRole("row", { name: /SNTL-7/ }),
@@ -154,10 +190,8 @@ test.describe("for an analyst", () => {
     await expect(page).toHaveURL("/tickets");
     await expect(identifiers(page)).toHaveCount(20);
     await expect(
-      table(page).getByRole("columnheader", {
-        name: "Last modified (sorted descending)",
-      }),
-    ).toBeVisible();
+      table(page).getByRole("columnheader", { name: "Last modified" }),
+    ).toHaveAttribute("aria-sort", "descending");
     const pagination = page.getByRole("navigation", { name: "Pagination" });
     await expect(pagination).toContainText("1–20 of 26");
     await expectAccessible(page);
@@ -211,6 +245,185 @@ test.describe("for an analyst", () => {
   });
 });
 
+test.describe("refined by an analyst", () => {
+  test("shows the attention summary, whose counts open the All view refined to their Tickets", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    const active = await ticketsOf(
+      page,
+      "priority=p1&status=new&status=analysis&status=analyzed&per_page=100",
+    );
+
+    // Right after a load, each aged Ticket is the only one past due in its
+    // current phase (Aged Tickets).
+    await expect(attention(page)).toHaveText([
+      `${active.length} Active P1`,
+      "1 Triage overdue",
+      "1 Submission overdue",
+      "1 UM overdue",
+      "1 QA overdue",
+    ]);
+
+    for (const [count, url, ticket] of [
+      ["1 Triage overdue", "/tickets?phase=triage&overdue=triage", "SNTL-7"],
+      [
+        "1 Submission overdue",
+        "/tickets?phase=submission&overdue=submission",
+        "SNTL-12",
+      ],
+      ["1 UM overdue", "/tickets?phase=um&overdue=um", "SNTL-13"],
+      ["1 QA overdue", "/tickets?phase=qa&overdue=qa", "SNTL-26"],
+    ] as const) {
+      await attention(page).filter({ hasText: count }).click();
+      await expect(page).toHaveURL(url);
+      await expect(identifiers(page)).toHaveText([ticket]);
+      await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
+    }
+
+    await attention(page).filter({ hasText: "Active P1" }).click();
+    await expect(page).toHaveURL(
+      "/tickets?status=new&status=analysis&status=analyzed&priority=p1",
+    );
+    await expect(identifiers(page)).toHaveCount(active.length);
+  });
+
+  test("searches the Tickets, and tells when none match", async ({ page }) => {
+    await signIn(page, "asmith");
+    const search = page.getByRole("searchbox", { name: "Search Tickets" });
+
+    // fictional-curl is a package of SNTL-11, in Analysis (Packages, Tracks,
+    // and Maintainers), so the New view has none.
+    await search.fill("fictional-curl");
+    await search.press("Enter");
+
+    await expect(page).toHaveURL("/tickets?view=new&search=fictional-curl");
+    await expect(
+      page
+        .getByRole("tabpanel")
+        .getByText("No Tickets in this view match the search."),
+    ).toBeVisible();
+    await expectAccessible(page);
+    await pointerAway(page);
+
+    await expect(page).toHaveScreenshot(
+      "ticket-list-no-match.png",
+      masked(page),
+    );
+
+    await page.goto("/tickets?search=fictional-curl");
+    await expect(identifiers(page)).toHaveText(["SNTL-11"]);
+    await expect(
+      table(page).getByRole("row", { name: /SNTL-11/ }),
+    ).toContainText("fictional-curl");
+
+    await page.getByRole("button", { name: "Clear filters" }).first().click();
+    await expect(page).toHaveURL("/tickets");
+    await expect(identifiers(page)).toHaveCount(20);
+  });
+
+  test("filters and sorts the Tickets, and shows their packages", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    // Once the counts have arrived, which widen the tabs and the summary, so
+    // that the popover opens below Filters where it stays.
+    await expect(views(page)).toHaveText([
+      "New 12",
+      "Assigned to me 4",
+      "Analysis 5",
+      "Analyzed 3",
+      "Orphaned 1",
+      "All 26",
+    ]);
+    await expect(attention(page).last()).toHaveText("1 QA overdue");
+
+    // In the New view, whose columns hold no avatar and no date, so that no
+    // mask of the reference lies over the popover.
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filters
+      .getByRole("group", { name: "Severity" })
+      .getByText("Critical", { exact: true })
+      .click();
+
+    await expect(page).toHaveURL("/tickets?view=new&severity=critical");
+    await expect(identifiers(page)).toHaveText(["SNTL-1", "SNTL-7"]);
+    await expectAccessible(page);
+
+    await expect(page).toHaveScreenshot(
+      "ticket-list-filters.png",
+      masked(page),
+    );
+
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Filters 1 applied" }),
+    ).toBeFocused();
+
+    // A tab opens its view without the filters.
+    await views(page).filter({ hasText: "All" }).click();
+    await expect(page).toHaveURL("/tickets");
+    await page.getByRole("button", { name: "Filters", exact: true }).click();
+    await filters
+      .getByRole("group", { name: "Status" })
+      .getByText("Analyzed", { exact: true })
+      .click();
+
+    await expect(page).toHaveURL("/tickets?status=analyzed");
+    await expect(identifiers(page)).toHaveCount(3);
+    // SNTL-12 has two packages (Packages, Tracks, and Maintainers).
+    const packages = table(page)
+      .getByRole("row", { name: /SNTL-12/ })
+      .getByRole("button", { name: "1 more package: fictional-zlib" });
+    await expect(packages).toBeVisible();
+    await expect(
+      table(page).getByRole("row", { name: /SNTL-12/ }),
+    ).toContainText("fictional-openssl+1");
+    // The popover with the Status filter of the All view.
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+
+    // By the due date of the current phase, earliest first, then latest
+    // first, as List Tickets sorts them. The latest first differs from the
+    // order of the last modification, which shows before.
+    const deadline = table(page).getByRole("columnheader", {
+      name: "Deadline",
+    });
+    for (const [order, url, direction] of [
+      ["asc", "/tickets?status=analyzed&sort=deadline", "ascending"],
+      [
+        "desc",
+        "/tickets?status=analyzed&sort=deadline&order=desc",
+        "descending",
+      ],
+    ] as const) {
+      const sorted = page.waitForResponse(
+        (response) =>
+          response.url().includes("sort_by=current_due_at") &&
+          response.url().includes(`sort_order=${order}`),
+      );
+      await deadline.click();
+      await sorted;
+
+      await expect(page).toHaveURL(url);
+      await expect(deadline).toHaveAttribute("aria-sort", direction);
+      await expect(identifiers(page)).toHaveText(
+        await ticketsOf(
+          page,
+          `status=analyzed&sort_by=current_due_at&sort_order=${order}`,
+        ),
+      );
+    }
+    await expect(identifiers(page)).not.toHaveText(
+      await ticketsOf(
+        page,
+        "status=analyzed&sort_by=updated_at&sort_order=desc",
+      ),
+    );
+  });
+});
+
 test("shows a user without the role the views of every user, and the All view from the Tickets entry", async ({
   page,
 }) => {
@@ -233,6 +446,10 @@ test("shows a user without the role the views of every user, and the All view fr
     "All 25",
   ]);
   await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
+  // The attention summary is for analysts.
+  await expect(
+    page.getByRole("list", { name: "Tickets that need attention" }),
+  ).toHaveCount(0);
 
   // A view that the user is not shown opens the All view, and leaves the URL.
   await page.goto("/tickets?view=assigned-to-me");

@@ -1,7 +1,7 @@
 import { focusManager, type QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { page, userEvent, type Locator } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
@@ -44,11 +44,25 @@ const FILTERS = {
   All: "",
 };
 
+// The filters of the counts of the attention summary, as the requests send
+// them.
+const ATTENTION = {
+  "Active P1": "priority=p1&status=new&status=analysis&status=analyzed",
+  "Triage overdue": "current_phase=triage&overdue=triage",
+  "Submission overdue": "current_phase=submission&overdue=submission",
+  "UM overdue": "current_phase=um&overdue=um",
+  "QA overdue": "current_phase=qa&overdue=qa",
+};
+
 // The sorting of the queues: by priority, then by the due date of the
 // current phase.
 const QUEUE_SORT = "sort_by=priority_then_current_due";
+// The sorting of the All view, and the read of its first page.
+const ALL_SORT = "sort_by=updated_at&sort_order=desc";
+const ALL_PAGE = `${ALL_SORT}&page=1&per_page=20`;
 
-// The number of Tickets of each view in the tests, by its filters.
+// The number of Tickets of each view and of each count of the attention
+// summary in the tests, by its filters.
 const TOTALS = new Map([
   [FILTERS.New, 12],
   [FILTERS["Assigned to me"], 4],
@@ -56,7 +70,17 @@ const TOTALS = new Map([
   [FILTERS.Analyzed, 3],
   [FILTERS.Orphaned, 1],
   [FILTERS.All, 1250],
+  [ATTENTION["Active P1"], 2],
+  [ATTENTION["Triage overdue"], 1],
+  [ATTENTION["Submission overdue"], 0],
+  [ATTENTION["UM overdue"], 1],
+  [ATTENTION["QA overdue"], 3],
 ]);
+
+// The request of a count, by its filters.
+function countQuery(filters: string): string {
+  return filters === "" ? "per_page=1" : `${filters}&per_page=1`;
+}
 
 // The read of a list, without its page.
 function filtersOf(query: URLSearchParams): string {
@@ -289,9 +313,11 @@ describe("the views", () => {
     },
   );
 
-  test("count each view with its filters alone, from a read of one Ticket", async () => {
+  test("count each view with its filters alone, from a read of one Ticket, whatever the user refined", async () => {
     const { spy } = stubTickets();
-    const { screen } = await renderApp("/tickets?view=analysis&page=2");
+    const { screen } = await renderApp(
+      "/tickets?view=analysis&search=curl&severity=high&sort=deadline&page=2",
+    );
     await expectTabs(screen, [
       "New 12",
       "Assigned to me 4",
@@ -301,10 +327,11 @@ describe("the views", () => {
       "All 1,250",
     ]);
 
-    expect(queriesOf(spy, "count")).toEqual(
-      Object.values(FILTERS).map((filters) =>
-        filters === "" ? "per_page=1" : `${filters}&per_page=1`,
-      ),
+    // With the counts of the attention summary, once each.
+    expect(queriesOf(spy, "count").toSorted()).toEqual(
+      [...Object.values(FILTERS), ...Object.values(ATTENTION)]
+        .map(countQuery)
+        .toSorted(),
     );
   });
 
@@ -581,11 +608,9 @@ describe("while the list changes", () => {
     // The rows of the All view, under its columns and its sorting.
     await expect
       .element(
-        tableOf(screen).getByRole("columnheader", {
-          name: "Last modified (sorted descending)",
-        }),
+        tableOf(screen).getByRole("columnheader", { name: "Last modified" }),
       )
-      .toBeVisible();
+      .toHaveAttribute("aria-sort", "descending");
     await expect
       .element(tableOf(screen).getByRole("columnheader", { name: "Status" }))
       .toBeVisible();
@@ -599,12 +624,8 @@ describe("while the list changes", () => {
       .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
       .toBeVisible();
     await expect
-      .element(
-        tableOf(screen).getByRole("columnheader", {
-          name: "Priority (sorted descending)",
-        }),
-      )
-      .toBeVisible();
+      .element(tableOf(screen).getByRole("columnheader", { name: "Priority" }))
+      .toHaveAttribute("aria-sort", "descending");
     await expect
       .element(tableOf(screen).getByRole("columnheader", { name: "Status" }))
       .not.toBeInTheDocument();
@@ -649,7 +670,7 @@ describe("while the list changes", () => {
 describe("the URL", () => {
   // The read of the first page of the New view, and of the All view.
   const NEW = `${FILTERS.New}&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`;
-  const ALL = "sort_by=updated_at&sort_order=desc&page=1&per_page=20";
+  const ALL = ALL_PAGE;
 
   test.each([
     ["an unknown view", "?view=fictional", "/tickets", ALL],
@@ -675,6 +696,43 @@ describe("the URL", () => {
       NEW,
     ],
     ["a repeated view", "?view=new&view=analysis", "/tickets", ALL],
+    ["a page with a leading zero", "?page=02", "/tickets", ALL],
+    [
+      "a status filter outside the All view",
+      "?view=new&status=resolved",
+      "/tickets?view=new",
+      NEW,
+    ],
+    [
+      "a sorting by a column that the view does not show, with its order",
+      "?view=new&sort=last-modified&order=asc",
+      "/tickets?view=new",
+      NEW,
+    ],
+    [
+      "an unknown sorting, with its order",
+      "?sort=created_at&order=asc",
+      "/tickets",
+      ALL,
+    ],
+    ["an unknown order", "?order=up", "/tickets", ALL],
+    ["a repeated sorting", "?sort=ticket&sort=status", "/tickets", ALL],
+    ["a repeated order", "?order=asc&order=desc", "/tickets", ALL],
+    ["a repeated search", "?search=curl&search=ssl", "/tickets", ALL],
+    [
+      "a search of more than 500 characters",
+      `?search=${"a".repeat(501)}`,
+      "/tickets",
+      ALL,
+    ],
+    ["a search with U+0000", "?search=cu%00rl", "/tickets", ALL],
+    ["a search of whitespace", "?search=%20%20", "/tickets", ALL],
+    [
+      "the values of a filter that it does not know",
+      "?severity=fictional&priority=P1",
+      "/tickets",
+      ALL,
+    ],
   ])(
     "drops %s, in place of the URL, and sends no request with it",
     async (_, search, accepted, read) => {
@@ -693,6 +751,98 @@ describe("the URL", () => {
       expect(queriesOf(spy, "list")).toEqual([read]);
     },
   );
+
+  test.each([
+    [
+      "a search without its surrounding whitespace",
+      "?search=%20fictional-curl%20",
+      "/tickets?search=fictional-curl",
+      `search=fictional-curl&${ALL}`,
+    ],
+    [
+      "the values of a filter once each, in the order of the contract, without those that it does not know",
+      "?severity=high&severity=fictional&severity=critical&severity=high",
+      "/tickets?severity=critical&severity=high",
+      `severity=critical&severity=high&${ALL}`,
+    ],
+    [
+      "the list without the first page",
+      "?view=new&page=1",
+      "/tickets?view=new",
+      NEW,
+    ],
+    [
+      "the list without the sorting of the view",
+      "?view=new&sort=priority",
+      "/tickets?view=new",
+      NEW,
+    ],
+    [
+      "the list without the first direction of the sorting of the view",
+      "?order=desc",
+      "/tickets",
+      ALL,
+    ],
+    [
+      "the list without the first direction of a sorting",
+      "?sort=deadline&order=asc",
+      "/tickets?sort=deadline",
+      "sort_by=current_due_at&sort_order=asc&page=1&per_page=20",
+    ],
+    [
+      "the list with the other direction of the sorting of the view alone",
+      "?view=new&sort=priority&order=asc",
+      "/tickets?view=new&order=asc",
+      `${FILTERS.New}&${QUEUE_SORT}&sort_order=asc&page=1&per_page=20`,
+    ],
+  ])("leads to %s, in place of the URL", async (_, search, accepted, read) => {
+    const { spy } = stubTickets();
+    const { router } = await renderApp(`/tickets${search}`);
+
+    await expect.poll(() => router.state.location.href).toBe(accepted);
+    expect(router.history.length).toBe(1);
+    expect(queriesOf(spy, "list")).toEqual([read]);
+  });
+
+  test("keeps every parameter that it accepts, in their order, and sends them to List Tickets", async () => {
+    const { spy } = stubTickets();
+    const search =
+      "?page=2&order=desc&sort=deadline&overdue=um&phase=um&phase=qa&priority=p1&severity=high&search=fictional-curl&view=analysis";
+    const { router } = await renderApp(`/tickets${search}`);
+
+    await expect
+      .poll(() => queriesOf(spy, "list"))
+      .toEqual([
+        `${FILTERS.Analysis}&search=fictional-curl&severity=high&priority=p1&current_phase=um&current_phase=qa&overdue=um&sort_by=current_due_at&sort_order=desc&page=2&per_page=20`,
+      ]);
+    expect(router.state.location.href).toBe(`/tickets${search}`);
+    expect(router.history.length).toBe(1);
+  });
+
+  test("keeps a search of 500 characters", async () => {
+    const { spy } = stubTickets();
+    const term = "a".repeat(500);
+    const { router } = await renderApp(`/tickets?search=${term}`);
+
+    await expect
+      .poll(() => queriesOf(spy, "list"))
+      .toEqual([`search=${term}&${ALL}`]);
+    expect(router.state.location.href).toBe(`/tickets?search=${term}`);
+  });
+
+  test("keeps the status filter in the All view", async () => {
+    const { spy } = stubTickets();
+    const { router } = await renderApp(
+      "/tickets?status=resolved&status=ignored",
+    );
+
+    await expect
+      .poll(() => queriesOf(spy, "list"))
+      .toEqual([`status=resolved&status=ignored&${ALL}`]);
+    expect(router.state.location.href).toBe(
+      "/tickets?status=resolved&status=ignored",
+    );
+  });
 
   test("keeps a page and the fragment that it accepts", async () => {
     stubTickets();
@@ -782,8 +932,8 @@ describe("a change of the role", () => {
 
 describe("the table", () => {
   // The names of the columns that every view shows first.
-  const FIRST = ["Ticket", "CVE", "Title"];
-  const SORTED = "Priority (sorted descending)";
+  const FIRST = ["Ticket", "CVE", "Title", "Packages"];
+  const SORTED = "Priority";
 
   test.each([
     ["New", "?view=new", [...FIRST, "Severity", SORTED, "Deadline"]],
@@ -817,7 +967,7 @@ describe("the table", () => {
         "Priority",
         "Deadline",
         "Assignee",
-        "Last modified (sorted descending)",
+        "Last modified",
       ],
     ],
   ])(
@@ -842,10 +992,10 @@ describe("the table", () => {
     stubTickets();
     const { screen } = await renderApp(`/tickets${search}`);
     const header = tableOf(screen).getByRole("columnheader", {
-      name: `${column} (sorted descending)`,
+      name: column,
     });
 
-    await expect.element(header).toBeVisible();
+    await expect.element(header).toHaveAttribute("aria-sort", "descending");
     expect(header.element().querySelector("svg")).not.toBeNull();
     expect(
       tableOf(screen)
@@ -876,6 +1026,7 @@ describe("the table", () => {
         description: null,
       },
       triage_due_at: new Date(Date.now() + 3.5 * DAY).toISOString(),
+      package_names: ["fictional-curl", "fictional-libcurl4"],
       updated_at: updated.toISOString(),
     });
     stubTickets({ list: () => ticketPage([ticket]) });
@@ -911,6 +1062,7 @@ describe("the table", () => {
     ).toEqual([
       "CVE-2099-0018",
       "Fictional authentication bypass",
+      "fictional-curl+1",
       "Analysis",
       "Critical",
       "P1",
@@ -920,7 +1072,7 @@ describe("the table", () => {
     ]);
   });
 
-  test("shows a Ticket without a CVE, a title, or an assignee with absent values", async () => {
+  test("shows a Ticket without a CVE, a title, packages, or an assignee with absent values", async () => {
     stubTickets({
       list: () =>
         ticketPage([
@@ -941,8 +1093,8 @@ describe("the table", () => {
         .map((cell) => cell.textContent);
 
     await expect.element(rows.nth(2)).toBeVisible();
-    expect(cells(1).slice(0, 2)).toEqual(["–Not set", "–Not set"]);
-    expect(cells(1)[6]).toBe("Unassigned");
+    expect(cells(1).slice(0, 3)).toEqual(["–Not set", "–Not set", "–Not set"]);
+    expect(cells(1)[7]).toBe("Unassigned");
     expect(cells(2).slice(0, 2)).toEqual(["CVE-2099-0006", "–Not set"]);
   });
 
@@ -1220,5 +1372,905 @@ describe("loading and errors", () => {
     await expect
       .element(screen.getByRole("button", { name: "Try again" }))
       .toBeVisible();
+  });
+});
+
+function searchFieldOf(screen: Screen) {
+  return screen.getByRole("searchbox", { name: "Search Tickets" });
+}
+
+describe("the search", () => {
+  test("applies a term with Enter, without its surrounding whitespace, at the first page of the view, as a new entry of the browser history", async () => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp("/tickets?view=new&page=2");
+    const field = searchFieldOf(screen);
+
+    await field.fill("  fictional-curl ");
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new&search=fictional-curl");
+    expect(router.history.length).toBe(2);
+    await expect.element(field).toHaveValue("fictional-curl");
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(
+        `${FILTERS.New}&search=fictional-curl&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`,
+      );
+  });
+
+  test.each([
+    [
+      "its clear button",
+      async (screen: Screen) => {
+        await screen.getByRole("button", { name: "Clear search" }).click();
+      },
+    ],
+    [
+      "Escape",
+      async (screen: Screen) => {
+        // Away from the clear button, where an earlier test can leave the
+        // pointer: Escape would first hide its tooltip.
+        await screen
+          .getByRole("heading", { level: 1, name: "Tickets" })
+          .hover();
+        await expect
+          .element(screen.getByRole("tooltip"))
+          .not.toBeInTheDocument();
+        searchFieldOf(screen).element().focus();
+        await userEvent.keyboard("{Escape}");
+      },
+    ],
+  ])("removes the term with %s", async (_, remove) => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp(
+      "/tickets?view=new&search=curl&page=2",
+    );
+    await expect.element(searchFieldOf(screen)).toHaveValue("curl");
+
+    await remove(screen);
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new");
+    await expect.element(searchFieldOf(screen)).toHaveValue("");
+    expect(queriesOf(spy, "list").at(-1)).toBe(
+      `${FILTERS.New}&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`,
+    );
+  });
+
+  test("shows the term that applies when the URL changes, as with back", async () => {
+    stubTickets();
+    const { router, screen } = await renderApp("/tickets");
+    const field = searchFieldOf(screen);
+    await expect.element(field).toHaveValue("");
+
+    router.history.push("/tickets?search=curl");
+    await expect.element(field).toHaveValue("curl");
+
+    router.history.back();
+    await expect.element(field).toHaveValue("");
+  });
+
+  test("accepts at most 500 characters", async () => {
+    stubTickets();
+    const { screen } = await renderApp("/tickets");
+
+    await expect
+      .element(searchFieldOf(screen))
+      .toHaveAttribute("maxlength", "500");
+  });
+});
+
+// Opens the popover of the filters, and returns it.
+async function openFilters(screen: Screen) {
+  await screen.getByRole("button", { name: /^Filters/ }).click();
+  const dialog = screen.getByRole("dialog", { name: "Filters" });
+  await expect.element(dialog).toBeVisible();
+  return dialog;
+}
+
+// The checkbox of a value of a filter in the popover of the filters.
+function optionOf(dialog: Locator, filter: string, value: string) {
+  return dialog
+    .getByRole("group", { name: filter })
+    .getByRole("checkbox", { name: value });
+}
+
+// Checks or unchecks a value of a filter, with a click on its name, as its
+// box covers its input.
+async function toggle(dialog: Locator, filter: string, value: string) {
+  await dialog
+    .getByRole("group", { name: filter })
+    .getByText(value, { exact: true })
+    .click();
+}
+
+describe("the filters", () => {
+  // The filters of every view, with the names of their values.
+  const FILTER_VALUES = [
+    ["Severity", ["Critical", "High", "Medium", "Low", "None", "Not set"]],
+    ["Priority", ["P1", "P2", "P3", "P4", "Not set"]],
+    ["Current phase", ["Triage", "Submission", "UM", "QA", "Done"]],
+    ["Overdue", ["Triage", "Submission", "UM", "QA"]],
+  ] as const;
+  const STATUS_VALUES = [
+    "Status",
+    ["New", "Analysis", "Analyzed", "Resolved", "Ignored", "Duplicated"],
+  ] as const;
+
+  test.each([
+    ["the All view", "", [STATUS_VALUES, ...FILTER_VALUES], "New"],
+    [
+      "a queue, without the status filter",
+      "?view=new",
+      FILTER_VALUES,
+      "Critical",
+    ],
+  ])(
+    "offer in %s their values, and move the focus to the first",
+    async (_, search, filters, first) => {
+      stubTickets();
+      const { screen } = await renderApp(`/tickets${search}`);
+
+      const dialog = await openFilters(screen);
+
+      const groups = dialog.getByRole("group");
+      expect(groups.elements()).toHaveLength(filters.length);
+      for (const [index, [name, values]] of filters.entries()) {
+        await expect.element(groups.nth(index)).toHaveAccessibleName(name);
+        const boxes = groups.nth(index).getByRole("checkbox");
+        expect(boxes.elements()).toHaveLength(values.length);
+        for (const [position, value] of values.entries()) {
+          await expect.element(boxes.nth(position)).toHaveAccessibleName(value);
+          await expect.element(boxes.nth(position)).not.toBeChecked();
+        }
+      }
+      await expect
+        .element(groups.first().getByRole("checkbox", { name: first }))
+        .toHaveFocus();
+    },
+  );
+
+  test.each([
+    ["Status", "Resolved", "status=resolved", "status=resolved"],
+    ["Severity", "Not set", "severity=unresolved", "severity=unresolved"],
+    ["Priority", "P1", "priority=p1", "priority=p1"],
+    ["Current phase", "UM", "phase=um", "current_phase=um"],
+    ["Overdue", "QA", "overdue=qa", "overdue=qa"],
+  ])(
+    "apply %s %s at once, at the first page, as a new entry of the browser history",
+    async (filter, value, parameter, read) => {
+      const { spy } = stubTickets();
+      const { router, screen } = await renderApp("/tickets?page=2");
+      const dialog = await openFilters(screen);
+
+      await toggle(dialog, filter, value);
+
+      await expect
+        .poll(() => router.state.location.href)
+        .toBe(`/tickets?${parameter}`);
+      expect(router.history.length).toBe(2);
+      await expect
+        .poll(() => queriesOf(spy, "list").at(-1))
+        .toBe(`${read}&${ALL_PAGE}`);
+      // The popover stays, with the value checked.
+      await expect.element(optionOf(dialog, filter, value)).toBeChecked();
+    },
+  );
+
+  test("keep the values of a filter in the order of the contract, count the filters that apply, and remove a filter without values", async () => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp("/tickets?view=new");
+    const dialog = await openFilters(screen);
+
+    await toggle(dialog, "Severity", "High");
+    await toggle(dialog, "Severity", "Critical");
+    await toggle(dialog, "Priority", "P2");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new&severity=critical&severity=high&priority=p2");
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(
+        `${FILTERS.New}&severity=critical&severity=high&priority=p2&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`,
+      );
+
+    await toggle(dialog, "Severity", "High");
+    await toggle(dialog, "Severity", "Critical");
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new&priority=p2");
+
+    // Escape closes the popover, and the focus returns to Filters.
+    await userEvent.keyboard("{Escape}");
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("button", { name: "Filters 1 applied" }))
+      .toHaveFocus();
+  });
+
+  test("show the values that apply as checked", async () => {
+    stubTickets();
+    const { screen } = await renderApp(
+      "/tickets?status=new&severity=none&phase=done&overdue=triage",
+    );
+    await expect
+      .element(screen.getByRole("button", { name: "Filters 4 applied" }))
+      .toBeVisible();
+
+    const dialog = await openFilters(screen);
+
+    expect(
+      dialog
+        .getByRole("checkbox")
+        .elements()
+        .filter((box) => box instanceof HTMLInputElement && box.checked),
+    ).toHaveLength(4);
+    for (const [filter, value] of [
+      ["Status", "New"],
+      ["Severity", "None"],
+      ["Current phase", "Done"],
+      ["Overdue", "Triage"],
+    ] as const) {
+      await expect.element(optionOf(dialog, filter, value)).toBeChecked();
+    }
+  });
+});
+
+describe("Clear filters", () => {
+  test.each([
+    ["without a search or a filter", "?view=new", false],
+    ["with a search", "?view=new&search=curl", true],
+    ["with a filter", "?view=new&overdue=triage", true],
+    ["with a sorting alone", "?view=new&sort=deadline", false],
+  ])("shows %s: %s", async (_, search, shown) => {
+    stubTickets();
+    const { screen } = await renderApp(`/tickets${search}`);
+    await expect.element(searchFieldOf(screen)).toBeVisible();
+
+    const clear = screen.getByRole("button", { name: "Clear filters" });
+    if (shown) {
+      await expect.element(clear).toBeVisible();
+    } else {
+      await expect.element(clear).not.toBeInTheDocument();
+    }
+  });
+
+  test("removes the search and the filters, keeps the view and the sorting, and moves the focus to the heading", async () => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp(
+      "/tickets?view=new&search=curl&severity=high&phase=triage&sort=deadline&order=desc&page=2",
+    );
+    const clear = screen.getByRole("button", { name: "Clear filters" });
+    await expect.element(clear).toBeVisible();
+    clear.element().focus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new&sort=deadline&order=desc");
+    expect(router.history.length).toBe(2);
+    await expect.element(searchFieldOf(screen)).toHaveValue("");
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toHaveFocus();
+    expect(queriesOf(spy, "list").at(-1)).toBe(
+      `${FILTERS.New}&sort_by=current_due_at&sort_order=desc&page=1&per_page=20`,
+    );
+  });
+});
+
+// The direction of a sort order, as aria-sort names it.
+function directionOf(order: string): string {
+  return order === "asc" ? "ascending" : "descending";
+}
+
+describe("the sorting", () => {
+  test.each([
+    ["Ticket", "ticket", "ticket_id", "desc", "asc"],
+    ["Status", "status", "status", "asc", "desc"],
+    ["Severity", "severity", "severity", "desc", "asc"],
+    ["Priority", "priority", "priority_then_current_due", "desc", "asc"],
+    ["Deadline", "deadline", "current_due_at", "asc", "desc"],
+  ])(
+    "sorts by %s in its first direction, at the first page, then reverses it",
+    async (name, column, field, first, second) => {
+      const { spy } = stubTickets();
+      const { router, screen } = await renderApp("/tickets?page=2");
+      const header = tableOf(screen).getByRole("columnheader", { name });
+
+      await header.click();
+
+      await expect
+        .poll(() => router.state.location.href)
+        .toBe(`/tickets?sort=${column}`);
+      await expect
+        .element(header)
+        .toHaveAttribute("aria-sort", directionOf(first));
+      await expect
+        .poll(() => queriesOf(spy, "list").at(-1))
+        .toBe(`sort_by=${field}&sort_order=${first}&page=1&per_page=20`);
+      await expect
+        .element(
+          tableOf(screen).getByRole("columnheader", { name: "Last modified" }),
+        )
+        .toHaveAttribute("aria-sort", "none");
+
+      await header.click();
+
+      await expect
+        .poll(() => router.state.location.href)
+        .toBe(`/tickets?sort=${column}&order=${second}`);
+      await expect
+        .element(header)
+        .toHaveAttribute("aria-sort", directionOf(second));
+      await expect
+        .poll(() => queriesOf(spy, "list").at(-1))
+        .toBe(`sort_by=${field}&sort_order=${second}&page=1&per_page=20`);
+      expect(router.history.length).toBe(3);
+    },
+  );
+
+  test("reverses the sorting of the view, and returns to it, which leaves the URL", async () => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp("/tickets?view=new");
+    const priority = tableOf(screen).getByRole("columnheader", {
+      name: "Priority",
+    });
+    await expect.element(priority).toHaveAttribute("aria-sort", "descending");
+
+    await priority.click();
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new&order=asc");
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(`${FILTERS.New}&${QUEUE_SORT}&sort_order=asc&page=1&per_page=20`);
+
+    await tableOf(screen)
+      .getByRole("columnheader", { name: "Deadline" })
+      .click();
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new&sort=deadline");
+
+    await priority.click();
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=new");
+    await expect.element(priority).toHaveAttribute("aria-sort", "descending");
+  });
+
+  test("reverses the sorting of the All view by last modification", async () => {
+    stubTickets();
+    const { router, screen } = await renderApp("/tickets");
+    const modified = tableOf(screen).getByRole("columnheader", {
+      name: "Last modified",
+    });
+    await expect.element(modified).toHaveAttribute("aria-sort", "descending");
+
+    await modified.click();
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?order=asc");
+    await expect.element(modified).toHaveAttribute("aria-sort", "ascending");
+  });
+
+  test("offers no sorting by the CVE, the title, the packages, or the assignee", async () => {
+    stubTickets();
+    const { router, screen } = await renderApp("/tickets");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
+      .toBeVisible();
+
+    for (const name of ["CVE", "Title", "Packages", "Assignee"]) {
+      const header = tableOf(screen).getByRole("columnheader", { name });
+      await expect.element(header).not.toHaveAttribute("aria-sort");
+      await header.click();
+    }
+
+    expect(router.state.location.href).toBe("/tickets");
+  });
+
+  test("shows the new sorting in the header at once, while the rows of the previous one stay", async () => {
+    const pending = later();
+    stubTickets({
+      list: (query) =>
+        query.get("sort_by") === "current_due_at"
+          ? pending.promise
+          : ticketPage([ROW]),
+    });
+    const { screen } = await renderApp("/tickets?view=new");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
+      .toBeVisible();
+    const deadline = tableOf(screen).getByRole("columnheader", {
+      name: "Deadline",
+    });
+
+    await deadline.click();
+
+    await expect
+      .element(screen.getByRole("progressbar", { name: "Updating" }))
+      .toBeVisible();
+    await expect.element(deadline).toHaveAttribute("aria-sort", "ascending");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
+      .toBeVisible();
+
+    pending.resolve(ticketPage([fictionalTicket({ ticket_id: "SNTL-7" })]));
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-7" }))
+      .toBeVisible();
+    // The header that the user pressed keeps the focus once the rows arrive.
+    await expect.element(deadline).toHaveFocus();
+  });
+});
+
+describe("the links of the list", () => {
+  test("of the tabs open each view without the search, the filters, and the sorting", async () => {
+    stubTickets();
+    const { screen } = await renderApp(
+      "/tickets?view=analysis&search=curl&severity=high&sort=deadline",
+    );
+
+    expect(
+      tabsOf(screen)
+        .elements()
+        .map((tab) => tab.getAttribute("href")),
+    ).toEqual([
+      "/tickets?view=new",
+      "/tickets?view=assigned-to-me",
+      "/tickets?view=analysis",
+      "/tickets?view=analyzed",
+      "/tickets?view=orphaned",
+      "/tickets",
+    ]);
+  });
+
+  test("of the pagination keep the search, the filters, and the sorting", async () => {
+    stubTickets({ list: pageOf });
+    const { screen } = await renderApp(
+      "/tickets?search=curl&priority=p1&order=asc",
+    );
+    const pagination = screen.getByRole("navigation", { name: "Pagination" });
+
+    await expect
+      .element(pagination.getByRole("link", { name: "Next" }))
+      .toHaveAttribute(
+        "href",
+        "/tickets?search=curl&priority=p1&order=asc&page=2",
+      );
+  });
+
+  test("to the first page from a page beyond the last keeps the search, the filters, and the sorting", async () => {
+    stubTickets({ list: pageOf });
+    const { screen } = await renderApp(
+      "/tickets?view=new&overdue=um&sort=ticket&page=5",
+    );
+
+    // A page beyond the last of a refined list that has Tickets.
+    await expect
+      .element(
+        screen
+          .getByRole("tabpanel")
+          .getByText("There are no Tickets on this page."),
+      )
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("link", { name: "Go to the first page" }))
+      .toHaveAttribute("href", "/tickets?view=new&overdue=um&sort=ticket");
+  });
+});
+
+describe("a list that the user refined", () => {
+  test("announces in the popover of the filters what the list shows after a change of a filter, or the failure of its read", async () => {
+    stubTickets({
+      list: (query) =>
+        query.has("priority")
+          ? errorResponse(503, "DATABASE_UNAVAILABLE")
+          : query.has("severity")
+            ? ticketPage([ROW])
+            : ticketPage([ROW, fictionalTicket({ ticket_id: "SNTL-2" })]),
+    });
+    const { screen } = await renderApp("/tickets?view=new");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
+      .toBeVisible();
+    const dialog = await openFilters(screen);
+    const status = dialog.getByRole("status");
+    await expect.element(status).toHaveTextContent("");
+
+    await toggle(dialog, "Severity", "High");
+    await expect.element(status).toHaveTextContent("1 Ticket");
+    const first = status.element().firstElementChild;
+
+    // A new node, which assistive technologies announce although its words
+    // are the same.
+    await toggle(dialog, "Severity", "Critical");
+    await expect
+      .poll(() => {
+        const node = status.element().firstElementChild;
+        return node !== first && node?.textContent === "1 Ticket";
+      })
+      .toBe(true);
+
+    await toggle(dialog, "Priority", "P1");
+    await expect
+      .element(status)
+      .toHaveTextContent(
+        "Sentinel isn't available right now. Try again later.",
+      );
+  });
+
+  test("announces in the popover of the filters the failure of a new read of the rows that show, also before any change", async () => {
+    const { stub } = stubTickets();
+    const { screen } = await renderApp("/tickets?view=new");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
+      .toBeVisible();
+    const dialog = await openFilters(screen);
+    const status = dialog.getByRole("status");
+    await expect.element(status).toHaveTextContent("");
+
+    stub.list = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+    returnToForeground();
+
+    await expect
+      .element(status)
+      .toHaveTextContent(
+        "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+      );
+    await expect.element(dialog).toBeVisible();
+  });
+
+  test.each([
+    [
+      "a search alone",
+      "?search=curl",
+      "No Tickets in this view match the search.",
+    ],
+    [
+      "a filter",
+      "?severity=high",
+      "No Tickets in this view match the filters.",
+    ],
+    [
+      "a search and a filter",
+      "?search=curl&severity=high",
+      "No Tickets in this view match the filters.",
+    ],
+    [
+      "a filter, on another page",
+      "?view=new&priority=p4&page=3",
+      "No Tickets in this view match the filters.",
+    ],
+  ])(
+    "says without Tickets that none match %s, and offers Clear filters, which moves the focus to the heading",
+    async (_, search, message) => {
+      stubTickets({
+        list: (query) =>
+          query.has("search") || query.has("severity") || query.has("priority")
+            ? ticketPage([])
+            : ticketPage([ROW]),
+      });
+      const { router, screen } = await renderApp(`/tickets${search}`);
+
+      await expect.element(screen.getByText(message)).toBeVisible();
+      await expect
+        .element(screen.getByText("No Tickets in this view.", { exact: true }))
+        .not.toBeInTheDocument();
+      const clear = screen.getByRole("button", { name: "Clear filters" });
+      // The one of the toolbar, and the one of the empty state, inside the
+      // frame of the table.
+      expect(clear.elements()).toHaveLength(2);
+      const inFrame = clear
+        .elements()
+        .filter((button) => frameOf(screen).contains(button));
+      expect(inFrame).toHaveLength(1);
+      inFrame[0]!.focus();
+
+      await userEvent.keyboard("{Enter}");
+
+      await expect
+        .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
+        .toBeVisible();
+      expect(router.state.location.search).not.toHaveProperty("search");
+      expect(router.state.location.href).not.toMatch(
+        /search=|severity=|priority=/,
+      );
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+        .toHaveFocus();
+    },
+  );
+
+  test.each([
+    ["a search", "?view=new&search=curl"],
+    ["a filter", "?view=new&severity=high"],
+    ["a sorting", "?view=new&sort=deadline"],
+  ])(
+    "announces the Tickets that the list shows after %s, and leaves the focus where it was",
+    async (_, search) => {
+      stubTickets({
+        list: (query) =>
+          query.get("sort_by") === "priority_then_current_due" &&
+          !query.has("search") &&
+          !query.has("severity")
+            ? ticketPage([ROW, fictionalTicket({ ticket_id: "SNTL-2" })])
+            : ticketPage([ROW]),
+      });
+      const { router, screen } = await renderApp("/tickets?view=new");
+      await expect
+        .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
+        .toBeVisible();
+      const tab = screen.getByRole("tab", { name: /^New/ });
+      tab.element().focus();
+
+      router.history.push(`/tickets${search}`);
+
+      await expect.poll(() => announcementsOf(screen)).toEqual(["1 Ticket"]);
+      await expect.element(tab).toHaveFocus();
+    },
+  );
+});
+
+function summaryOf(screen: Screen) {
+  return screen.getByRole("list", { name: "Tickets that need attention" });
+}
+
+// Waits until every count of the attention summary has arrived.
+async function expectSummary(screen: Screen) {
+  await expect
+    .poll(() =>
+      summaryOf(screen)
+        .getByRole("link")
+        .elements()
+        .map((link) => link.textContent),
+    )
+    .toEqual([
+      "2 Active P1",
+      "1 Triage overdue",
+      "0 Submission overdue",
+      "1 UM overdue",
+      "3 QA overdue",
+    ]);
+}
+
+describe("the attention summary", () => {
+  test("shows an analyst five counts in the heading row, each a link to the All view refined to its Tickets", async () => {
+    stubTickets();
+    const { screen } = await renderApp("/tickets?view=new");
+    const links = summaryOf(screen).getByRole("link");
+
+    await expect
+      .poll(() => links.elements().map((link) => link.textContent))
+      .toEqual([
+        "2 Active P1",
+        "1 Triage overdue",
+        "0 Submission overdue",
+        "1 UM overdue",
+        "3 QA overdue",
+      ]);
+    expect(links.elements().map((link) => link.getAttribute("href"))).toEqual([
+      "/tickets?status=new&status=analysis&status=analyzed&priority=p1",
+      "/tickets?phase=triage&overdue=triage",
+      "/tickets?phase=submission&overdue=submission",
+      "/tickets?phase=um&overdue=um",
+      "/tickets?phase=qa&overdue=qa",
+    ]);
+    // After the heading, on its row.
+    const heading = screen
+      .getByRole("heading", { level: 1, name: "Tickets" })
+      .element()
+      .getBoundingClientRect();
+    const first = links.first().element().getBoundingClientRect();
+    expect(first.left).toBeGreaterThan(heading.right);
+    expect(first.top).toBeLessThan(heading.bottom);
+  });
+
+  test("sets the overdue counts apart from Active P1: a line, then the name Overdue, hidden from assistive technologies, then each count with its phase alone", async () => {
+    stubTickets();
+    const { screen } = await renderApp("/tickets?view=new");
+    const active = summaryOf(screen).getByRole("link", { name: "2 Active P1" });
+    const triage = summaryOf(screen).getByRole("link", {
+      name: "1 Triage overdue",
+    });
+    const label = summaryOf(screen).getByText("Overdue", { exact: true });
+    await expectSummary(screen);
+
+    // The counts show their phase, and the name of the group once.
+    await expect
+      .element(triage.getByText("Triage", { exact: true }))
+      .toBeVisible();
+    await expect.element(label).toBeVisible();
+    expect(label.element().closest('[aria-hidden="true"]')).not.toBeNull();
+    const style = getComputedStyle(label.element());
+    expect([style.fontSize, style.color]).toEqual(["14px", "rgb(89, 99, 110)"]);
+    // A line of 1 px in border, 20 px high, 12 px from Active P1 and from the
+    // name, which is 8 px before the first count.
+    const first = active.element().getBoundingClientRect();
+    const line = document.elementFromPoint(
+      first.right + 12.5,
+      first.top + first.height / 2,
+    )!;
+    const box = line.getBoundingClientRect();
+    expect([
+      Math.round(box.left - first.right),
+      Math.round(box.width),
+      Math.round(box.height),
+      getComputedStyle(line).backgroundColor,
+    ]).toEqual([12, 1, 20, "rgb(216, 222, 228)"]);
+    const name = label.element().getBoundingClientRect();
+    expect(Math.round(name.left - box.right)).toBe(12);
+    expect(
+      Math.round(triage.element().getBoundingClientRect().left - name.right),
+    ).toBe(8);
+    // On one line in a wide window.
+    expect(
+      summaryOf(screen)
+        .getByRole("link")
+        .elements()
+        .map((link) => link.getBoundingClientRect().top),
+    ).toEqual(Array.from({ length: 5 }, () => first.top));
+  });
+
+  test("wraps the group of the overdue counts to the next line as a whole, and its counts after its name, in a narrow window", async () => {
+    await page.viewport(320, 800);
+    stubTickets();
+    const { screen } = await renderApp("/tickets?view=new");
+    const rect = (name: string) =>
+      summaryOf(screen)
+        .getByRole("link", { name })
+        .element()
+        .getBoundingClientRect();
+    await expectSummary(screen);
+
+    const active = rect("2 Active P1");
+    const triage = rect("1 Triage overdue");
+    const qa = rect("3 QA overdue");
+    const name = summaryOf(screen)
+      .getByText("Overdue", { exact: true })
+      .element()
+      .getBoundingClientRect();
+    expect(triage.top).toBeGreaterThan(active.bottom);
+    expect(name.top).toBe(triage.top);
+    expect(qa.top).toBeGreaterThan(triage.top);
+    expect(qa.left).toBeGreaterThanOrEqual(name.right);
+    expect(qa.right).toBeLessThanOrEqual(window.innerWidth);
+  });
+
+  test("reads each count with its filters alone, from a read of one Ticket, whatever the user refined", async () => {
+    const { spy } = stubTickets();
+    const { screen } = await renderApp(
+      "/tickets?view=new&search=curl&severity=high&sort=deadline",
+    );
+    await expect
+      .element(summaryOf(screen).getByRole("link", { name: "3 QA overdue" }))
+      .toBeVisible();
+
+    const counts = queriesOf(spy, "count");
+    for (const filters of Object.values(ATTENTION)) {
+      expect(
+        counts.filter((query) => query === countQuery(filters)),
+      ).toHaveLength(1);
+    }
+  });
+
+  test("shows the label of a count alone while it loads", async () => {
+    const pending = later();
+    stubTickets({
+      count: (query) =>
+        filtersOf(query) === ATTENTION["UM overdue"]
+          ? pending.promise
+          : countOf(query),
+    });
+    const { screen } = await renderApp("/tickets?view=new");
+
+    await expect
+      .element(summaryOf(screen).getByRole("link", { name: "3 QA overdue" }))
+      .toBeVisible();
+    await expect
+      .element(
+        summaryOf(screen).getByRole("link", {
+          name: "UM overdue",
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+
+    pending.resolve(ticketPage([], { total: 1, perPage: 1 }));
+    await expect
+      .element(summaryOf(screen).getByRole("link", { name: "1 UM overdue" }))
+      .toBeVisible();
+  });
+
+  test("shows a count as not available when its read fails, and reads it again with the next read of the list", async () => {
+    const { stub, spy } = stubTickets({
+      count: (query) =>
+        filtersOf(query) === ATTENTION["Active P1"]
+          ? errorResponse(503, "DATABASE_UNAVAILABLE")
+          : countOf(query),
+    });
+    const { router, screen } = await renderApp("/tickets?view=new");
+    const failed = summaryOf(screen).getByRole("link", {
+      name: "Active P1 not available",
+    });
+
+    await expect.element(failed).toBeVisible();
+    expect(failed.element().textContent).toBe("– Active P1 not available");
+    const reads = () =>
+      queriesOf(spy, "count").filter(
+        (query) => query === countQuery(ATTENTION["Active P1"]),
+      ).length;
+    // The read and its two retries.
+    expect(reads()).toBe(3);
+
+    stub.count = countOf;
+    router.history.push("/tickets?view=new&page=2");
+
+    await expect
+      .element(summaryOf(screen).getByRole("link", { name: "2 Active P1" }))
+      .toBeVisible();
+    expect(reads()).toBe(4);
+    // A count that loaded is not read again with the list.
+    expect(
+      queriesOf(spy, "count").filter(
+        (query) => query === countQuery(ATTENTION["QA overdue"]),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("opens the All view refined to the Tickets of a count", async () => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp("/tickets?view=new");
+
+    await summaryOf(screen).getByRole("link", { name: "1 UM overdue" }).click();
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?phase=um&overdue=um");
+    await expect
+      .element(screen.getByRole("tab", { name: /^All/ }))
+      .toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(`current_phase=um&overdue=um&${ALL_PAGE}`);
+  });
+
+  test("shows no attention summary to a user without the vulnerability_analyst role", async () => {
+    const { spy } = stubTickets({ user: READER });
+    const { screen } = await renderApp("/tickets");
+    await expectTabs(screen, [
+      "New 12",
+      "Analysis 5",
+      "Analyzed 3",
+      "Orphaned 1",
+      "All 1,250",
+    ]);
+
+    await expect.element(summaryOf(screen)).not.toBeInTheDocument();
+    expect(queriesOf(spy, "count")).toHaveLength(5);
+  });
+
+  test("goes when a read of the signed-in user tells that the role was removed, and moves the focus from a count to the heading", async () => {
+    const { stub } = stubTickets();
+    const { screen } = await renderApp("/tickets");
+    const count = summaryOf(screen).getByRole("link", { name: "2 Active P1" });
+    await expect.element(count).toBeVisible();
+    count.element().focus();
+
+    stub.user = { data: { ...ANALYST.data, roles: [] } };
+    returnToForeground();
+
+    await expect.element(summaryOf(screen)).not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toHaveFocus();
   });
 });

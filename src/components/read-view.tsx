@@ -34,6 +34,12 @@ function retry(read: Read<unknown>) {
   void read.refetch();
 }
 
+// The warning above data that stays shown after a new read of it failed,
+// with the message of the failure.
+function updateFailedText(message: string): string {
+  return `This couldn't be updated. ${message}`;
+}
+
 interface UpdateFailedProps {
   error: unknown;
   // Sends the read again.
@@ -59,7 +65,7 @@ function UpdateFailed({ error, onRetry }: UpdateFailedProps) {
   return (
     <div ref={ref} className="mb-4">
       <Message tone="warning" reference={presentation.reference}>
-        {`This couldn't be updated. ${presentation.message}`}
+        {updateFailedText(presentation.message)}
       </Message>
       {presentation.retry && (
         <div className="mt-2">
@@ -95,6 +101,26 @@ export interface DataPlace<TData> {
   // Whether the data that shows is marked as being updated: while other data
   // loads, and while it is read again after a read of it failed.
   updating: boolean;
+}
+
+// What the place of the data of a read says of the failure of the read, as
+// the status region of the place announces it: the message of the error in
+// place of the data, or the warning above data that stays shown, or "" when
+// it shows neither (dataPlace). A screen whose status regions are out of
+// reach of assistive technologies, such as behind a modal popover, announces
+// it there instead.
+export function placeMessage<TData>(read: Read<TData>): string {
+  if (read.status !== "error" || !isRequestFailure(read.error)) {
+    return "";
+  }
+  const message = presentFailure(read.error, "part")?.message;
+  if (message === undefined) {
+    return "";
+  }
+  if (dataShown(read) === undefined) {
+    return message;
+  }
+  return read.isFetching ? "" : updateFailedText(message);
 }
 
 // What the place of the data of a read shows (docs/behaviors.md, Where Errors

@@ -8,11 +8,13 @@ import {
   RouterProvider,
   useRouterState,
 } from "@tanstack/react-router";
-import { describe, expect, test } from "vitest";
-import { userEvent } from "vitest/browser";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { z } from "zod";
 import "../styles.css";
+import { Button } from "./button";
 import { RouterLinks } from "./router-links";
 import { ScreenHeading } from "./screen-heading";
 import { Count, ViewTabs } from "./view-tabs";
@@ -73,9 +75,14 @@ const VIEWS = [
   },
 ] as const;
 
+interface ListProps {
+  // The controls of the toolbar of the list, if it has any.
+  toolbar?: ReactNode;
+}
+
 // The list, with the views of the tests, and without New when its URL has
 // the fictional parameter without-new, as a view that a role decides.
-function List() {
+function List({ toolbar }: ListProps) {
   const search = new URLSearchParams(
     useRouterState({ select: (state) => state.location.searchStr }),
   );
@@ -86,7 +93,12 @@ function List() {
   return (
     <>
       <ScreenHeading>Records</ScreenHeading>
-      <ViewTabs label="Views" selected={selected} views={views}>
+      <ViewTabs
+        label="Views"
+        selected={selected}
+        views={views}
+        toolbar={toolbar}
+      >
         <p>{`The records of ${selected}`}</p>
       </ViewTabs>
     </>
@@ -94,7 +106,7 @@ function List() {
 }
 
 // A list at /tickets whose view is in the search parameter of its URL.
-function renderList(path: string) {
+function renderList(path: string, toolbar?: ReactNode) {
   const root = createRootRoute({
     component: () => (
       <RouterLinks>
@@ -106,7 +118,7 @@ function renderList(path: string) {
     getParentRoute: () => root,
     path: "/tickets",
     validateSearch: z.object({ view: z.string().optional() }),
-    component: List,
+    component: () => <List toolbar={toolbar} />,
   });
   const router = createRouter({
     routeTree: root.addChildren([list]),
@@ -198,6 +210,176 @@ describe("ViewTabs", () => {
     await expect.element(all).toHaveAttribute("aria-selected", "true");
     expect(router.state.location.href).toBe("/tickets");
     await expect.element(all).toHaveFocus();
+  });
+});
+
+// The width of an element.
+function widthOf(element: Element): number {
+  return element.getBoundingClientRect().width;
+}
+
+// The widths of the tabs and of the controls at 1280 px, where they share
+// one row, and the left edge of the toolbar, to set a window in which the
+// row holds only some of them.
+async function widthsOf(screen: Awaited<ReturnType<typeof render>>) {
+  const clear = screen.getByRole("button", { name: "Clear filters" });
+  await expect.element(clear).toBeVisible();
+  const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+  return {
+    left: tabs.getBoundingClientRect().left,
+    tabs: widthOf(tabs),
+    filters: widthOf(screen.getByRole("button", { name: "Filters" }).element()),
+    clear: widthOf(clear.element()),
+  };
+}
+
+// The window whose toolbar is the given width.
+async function toolbarOf(left: number, width: number) {
+  await page.viewport(Math.floor(2 * left + width), 640);
+}
+
+describe("the toolbar", () => {
+  beforeEach(async () => {
+    await page.viewport(1280, 800);
+  });
+
+  afterEach(async () => {
+    await page.viewport(414, 896);
+  });
+
+  // The controls of the toolbar of the tests.
+  const TOOLBAR = (
+    <>
+      <Button size="small">Filters</Button>
+      <Button size="small" variant="quiet">
+        Clear filters
+      </Button>
+    </>
+  );
+
+  test("shows its controls after the tabs, on their row, at its end, with the panel 16 px below", async () => {
+    const { rendered } = renderList("/tickets?view=new", TOOLBAR);
+    const screen = await rendered;
+    const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+    const all = screen.getByRole("tab", { name: "All 1,250" }).element();
+    const filters = screen.getByRole("button", { name: "Filters" }).element();
+    const clear = screen
+      .getByRole("button", { name: "Clear filters" })
+      .element();
+    const panel = screen.getByRole("tabpanel", { name: "New 12" }).element();
+
+    await expect.element(clear).toBeVisible();
+    expect(filters.getBoundingClientRect().left).toBeGreaterThan(
+      all.getBoundingClientRect().right,
+    );
+    expect(clear.getBoundingClientRect().left).toBeGreaterThan(
+      filters.getBoundingClientRect().right,
+    );
+    expect(filters.getBoundingClientRect().top).toBe(
+      tabs.getBoundingClientRect().top,
+    );
+    expect(clear.getBoundingClientRect().right).toBeCloseTo(
+      panel.getBoundingClientRect().right,
+    );
+    expect(
+      panel.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
+    ).toBe(16);
+  });
+
+  test("wraps the last control alone when only it runs out of room, at the end of the next row, 8 px below, and moves no other", async () => {
+    const { rendered } = renderList("/tickets?view=new", TOOLBAR);
+    const screen = await rendered;
+    const widths = await widthsOf(screen);
+
+    await toolbarOf(
+      widths.left,
+      widths.tabs + 8 + widths.filters + 8 + widths.clear - 4,
+    );
+
+    const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+    const filters = screen.getByRole("button", { name: "Filters" }).element();
+    const clear = screen
+      .getByRole("button", { name: "Clear filters" })
+      .element();
+    const panel = screen.getByRole("tabpanel", { name: "New 12" }).element();
+    await expect
+      .poll(() => clear.getBoundingClientRect().top)
+      .toBeGreaterThan(tabs.getBoundingClientRect().top);
+    expect(filters.getBoundingClientRect().top).toBe(
+      tabs.getBoundingClientRect().top,
+    );
+    expect(filters.getBoundingClientRect().right).toBeCloseTo(
+      panel.getBoundingClientRect().right,
+    );
+    expect(
+      clear.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
+    ).toBe(8);
+    expect(clear.getBoundingClientRect().right).toBeCloseTo(
+      panel.getBoundingClientRect().right,
+    );
+    expect(
+      panel.getBoundingClientRect().top - clear.getBoundingClientRect().bottom,
+    ).toBe(16);
+  });
+
+  test("wraps its controls together below the tabs, 8 px apart, at the end of the row, when none fits after the tabs", async () => {
+    const { rendered } = renderList("/tickets?view=new", TOOLBAR);
+    const screen = await rendered;
+    const widths = await widthsOf(screen);
+
+    await toolbarOf(widths.left, widths.tabs + 8 + widths.filters - 4);
+
+    const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+    const filters = screen.getByRole("button", { name: "Filters" }).element();
+    const clear = screen
+      .getByRole("button", { name: "Clear filters" })
+      .element();
+    const panel = screen.getByRole("tabpanel", { name: "New 12" }).element();
+    await expect
+      .poll(() => filters.getBoundingClientRect().top)
+      .toBeGreaterThan(tabs.getBoundingClientRect().top);
+    expect(tabs.getBoundingClientRect().left).toBe(widths.left);
+    expect(
+      filters.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
+    ).toBe(8);
+    expect(clear.getBoundingClientRect().top).toBe(
+      filters.getBoundingClientRect().top,
+    );
+    expect(
+      clear.getBoundingClientRect().left -
+        filters.getBoundingClientRect().right,
+    ).toBeCloseTo(8);
+    expect(clear.getBoundingClientRect().right).toBeCloseTo(
+      panel.getBoundingClientRect().right,
+    );
+    expect(
+      panel.getBoundingClientRect().top - clear.getBoundingClientRect().bottom,
+    ).toBe(16);
+  });
+
+  test("adds nothing after the tabs without controls", async () => {
+    const { rendered } = renderList("/tickets?view=new");
+    const screen = await rendered;
+
+    await expect
+      .element(screen.getByRole("tabpanel", { name: "New 12" }))
+      .toBeVisible();
+    expect(screen.getByRole("button").query()).toBeNull();
+    expect(screen.container.textContent).toBe(
+      "RecordsNew 12All 1,250The records of new",
+    );
+
+    // Not even room below the tabs where they take their whole line, as in a
+    // window too narrow for them: the panel stays 16 px below them.
+    await page.viewport(140, 640);
+    const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+    const panel = screen.getByRole("tabpanel", { name: "New 12" }).element();
+    await expect
+      .poll(() => tabs.getBoundingClientRect().height)
+      .toBeGreaterThan(32);
+    expect(
+      panel.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
+    ).toBe(16);
   });
 });
 

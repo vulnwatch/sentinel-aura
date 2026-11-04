@@ -77,6 +77,9 @@ interface ViewTabsProps {
   views: readonly View[];
   // The key of the view that shows.
   selected: string;
+  // The controls at the end of the toolbar, after the tabs, such as the
+  // search field and Filters, each an element of its own in the row.
+  toolbar?: ReactNode;
   // What the view that shows shows, its panel.
   children: ReactNode;
 }
@@ -87,8 +90,18 @@ interface ViewTabsProps {
 // neutral-soft background, and its label at weight 600. A tab opens when the
 // user clicks it or presses Enter or Space, not when the arrow keys move the
 // focus to it, so that the arrow keys read the tabs without opening each
-// view. The panel of the selected view follows the tabs, 16 px below.
-export function ViewTabs({ label, views, selected, children }: ViewTabsProps) {
+// view. The tabs and the controls of the toolbar, at its end, are 8 px apart.
+// When the width runs short, the toolbar wraps one control at a time, the
+// last first, so that a control that appears, such as Clear filters, moves
+// no other control to another row; a row of controls alone keeps them at its
+// end. The panel of the selected view follows the toolbar, 16 px below.
+export function ViewTabs({
+  label,
+  views,
+  selected,
+  toolbar,
+  children,
+}: ViewTabsProps) {
   // The view whose tab holds the focus, and how many times a tab left the
   // page while it held it, such as a view that a role decides after the role
   // was removed. The tabs then start again, so that they do not move the
@@ -102,29 +115,32 @@ export function ViewTabs({ label, views, selected, children }: ViewTabsProps) {
   }
   return (
     <Tabs key={left} selectedKey={selected} keyboardActivation="manual">
-      <TabList aria-label={label} className="flex flex-wrap gap-2">
-        {views.map((view) => (
-          <Tab
-            key={view.id}
-            id={view.id}
-            href={view.href}
-            onFocusChange={(isFocused) => {
-              if (isFocused) {
-                setFocused(view.id);
-              } else {
-                setFocused((current) =>
-                  current === view.id ? undefined : current,
-                );
-              }
-            }}
-            className={`inline-flex h-8 cursor-default items-center rounded-md border border-border px-3 text-14 text-fg data-hovered:bg-surface-hover data-selected:border-border-strong data-selected:bg-neutral-soft data-selected:font-semibold ${FOCUS_RING}`}
-          >
-            <TabLabel>
-              {view.label} {view.count}
-            </TabLabel>
-          </Tab>
-        ))}
-      </TabList>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <TabList aria-label={label} className="me-auto flex flex-wrap gap-2">
+          {views.map((view) => (
+            <Tab
+              key={view.id}
+              id={view.id}
+              href={view.href}
+              onFocusChange={(isFocused) => {
+                if (isFocused) {
+                  setFocused(view.id);
+                } else {
+                  setFocused((current) =>
+                    current === view.id ? undefined : current,
+                  );
+                }
+              }}
+              className={`inline-flex h-8 cursor-default items-center rounded-md border border-border px-3 text-14 text-fg data-hovered:bg-surface-hover data-selected:border-border-strong data-selected:bg-neutral-soft data-selected:font-semibold ${FOCUS_RING}`}
+            >
+              <TabLabel>
+                {view.label} {view.count}
+              </TabLabel>
+            </Tab>
+          ))}
+        </TabList>
+        {toolbar}
+      </div>
       {/* A panel of its own for each view, which the tabs then name, rather
           than one panel whose view changes. */}
       <TabPanel

@@ -4,6 +4,8 @@ import {
   useQuery,
   type QueryClient,
 } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
@@ -11,7 +13,12 @@ import "../styles.css";
 import { ApiError } from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
-import { DataTable, EmptyState, type TableColumn } from "./data-table";
+import {
+  DataTable,
+  EmptyState,
+  type TableColumn,
+  type TableSort,
+} from "./data-table";
 import { ScreenHeading } from "./screen-heading";
 
 // The table of the data of a read (docs/design-system.md, Tables), at the
@@ -40,7 +47,7 @@ const COLUMNS: readonly TableColumn<FictionalRecord>[] = [
   {
     id: "state",
     name: "State",
-    isSorted: true,
+    allowsSorting: true,
     render: () => "A fictional state of the record",
   },
 ];
@@ -77,7 +84,13 @@ function pageOf(...ids: string[]): FictionalPage {
   return { records: ids.map((id) => ({ id, title: `Fictional ${id}` })) };
 }
 
-function Records({ page: number }: { page: number }) {
+interface RecordsProps {
+  page: number;
+  sort?: TableSort;
+  onSort?: (column: string) => void;
+}
+
+function Records({ page: number, sort, onSort }: RecordsProps) {
   const read = useQuery({
     queryKey: ["records", number],
     queryFn: () => respond(number),
@@ -93,6 +106,8 @@ function Records({ page: number }: { page: number }) {
         columns={COLUMNS}
         rows={(data) => data.records}
         rowId={(record) => record.id}
+        sort={sort}
+        onSort={onSort}
         renderEmpty={() => (
           <EmptyState
             message="No records."
@@ -104,19 +119,30 @@ function Records({ page: number }: { page: number }) {
   );
 }
 
-async function renderRecords(number = 1) {
+async function renderRecords(
+  number = 1,
+  sorting: Omit<RecordsProps, "page"> = {},
+) {
   const screen = await render(
     <QueryClientProvider client={client}>
-      <Records page={number} />
+      <Records page={number} {...sorting} />
     </QueryClientProvider>,
   );
-  const rerender = (next: number) =>
+  const rerender = (next: number, nextSorting = sorting) =>
     screen.rerender(
       <QueryClientProvider client={client}>
-        <Records page={next} />
+        <Records page={next} {...nextSorting} />
       </QueryClientProvider>,
     );
   return { screen, rerender };
+}
+
+// The shapes of an icon, which tell one icon from another.
+async function shapesOf(icon: ReactNode): Promise<string> {
+  const screen = await render(<div data-icon>{icon}</div>);
+  const shapes = screen.container.querySelector("[data-icon] svg")!.innerHTML;
+  await screen.unmount();
+  return shapes;
 }
 
 type Screen = Awaited<ReturnType<typeof renderRecords>>["screen"];
@@ -183,22 +209,79 @@ describe("the table", () => {
       .toBeVisible();
   });
 
-  test("marks the sorted column with arrow-down after its name, and names it as sorted", async () => {
-    respond.mockResolvedValue(pageOf("R-1"));
-    const { screen } = await renderRecords();
-    const sorted = tableOf(screen).getByRole("columnheader", {
-      name: "State (sorted descending)",
-    });
+  test.each([
+    ["descending", <ArrowDown key="down" />],
+    ["ascending", <ArrowUp key="up" />],
+  ] as const)(
+    "marks the column sorted in %s order with its arrow at 14 px after its name, and tells assistive technologies the direction",
+    async (direction, icon) => {
+      const shapes = await shapesOf(icon);
+      respond.mockResolvedValue(pageOf("R-1"));
+      const { screen } = await renderRecords(1, {
+        sort: { column: "state", direction },
+      });
+      const sorted = tableOf(screen).getByRole("columnheader", {
+        name: "State",
+      });
 
-    await expect.element(sorted).toBeVisible();
-    const arrow = sorted.element().querySelector("svg")!;
-    expect(arrow.getBoundingClientRect().width).toBe(14);
-    expect(
-      tableOf(screen)
-        .getByRole("columnheader", { name: "Title", exact: true })
-        .element()
-        .querySelector("svg"),
-    ).toBeNull();
+      await expect.element(sorted).toHaveAttribute("aria-sort", direction);
+      const arrow = sorted.element().querySelector("svg")!;
+      expect(arrow.getBoundingClientRect().width).toBe(14);
+      expect(arrow.innerHTML).toBe(shapes);
+      const title = tableOf(screen).getByRole("columnheader", {
+        name: "Title",
+        exact: true,
+      });
+      expect(title.element().querySelector("svg")).toBeNull();
+      // A column that does not allow sorting tells nothing of it.
+      await expect.element(title).not.toHaveAttribute("aria-sort");
+    },
+  );
+
+  test("sorts by a column that allows sorting when the user presses its header with a click, Enter, or Space", async () => {
+    const onSort = vi.fn<(column: string) => void>();
+    respond.mockResolvedValue(pageOf("R-1"));
+    const { screen } = await renderRecords(1, {
+      sort: { column: "state", direction: "descending" },
+      onSort,
+    });
+    const state = tableOf(screen).getByRole("columnheader", { name: "State" });
+    await expect.element(state).toBeVisible();
+
+    await state.click();
+    expect(onSort).toHaveBeenLastCalledWith("state");
+    await expect.element(state).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard(" ");
+    expect(onSort).toHaveBeenCalledTimes(3);
+
+    await tableOf(screen)
+      .getByRole("columnheader", { name: "Title", exact: true })
+      .click();
+    expect(onSort).toHaveBeenCalledTimes(3);
+  });
+
+  test("shows the header of a column that allows sorting on surface-hover with its name in fg under the pointer", async () => {
+    respond.mockResolvedValue(pageOf("R-1"));
+    const { screen } = await renderRecords(1, { onSort: vi.fn() });
+    const state = tableOf(screen).getByRole("columnheader", { name: "State" });
+    const title = tableOf(screen).getByRole("columnheader", {
+      name: "Title",
+      exact: true,
+    });
+    await expect.element(state).toBeVisible();
+
+    await userEvent.hover(state);
+    await expect
+      .poll(() => getComputedStyle(state.element()).backgroundColor)
+      .toBe("rgb(243, 245, 248)");
+    expect(getComputedStyle(state.element()).color).toBe("rgb(31, 35, 40)");
+
+    await userEvent.hover(title);
+    await expect
+      .poll(() => getComputedStyle(title.element()).backgroundColor)
+      .toBe("rgb(246, 248, 250)");
+    expect(getComputedStyle(title.element()).color).toBe("rgb(89, 99, 110)");
   });
 
   test("shows the header row at once, and the loading indicator inside the frame while the data loads", async () => {
