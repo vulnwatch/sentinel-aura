@@ -98,6 +98,63 @@ test("groups the thousands of the number of the others", async () => {
     .toHaveTextContent("+1,250");
 });
 
+// Fictional package names, from fictional-package-0.
+function packages(count: number): string[] {
+  return Array.from(
+    { length: count },
+    (_, index) => `fictional-package-${index}`,
+  );
+}
+
+test.each([
+  [
+    "names at most 10 of the others, then how many more",
+    52,
+    `51 more packages: ${packages(11).slice(1).join(", ")}, and 41 more`,
+  ],
+  [
+    "names 10 others whole",
+    11,
+    `10 more packages: ${packages(11).slice(1).join(", ")}`,
+  ],
+])("%s in the name of +N", async (_, count, name) => {
+  const { cell } = await renderCell(packages(count));
+
+  await expect
+    .element(cell.getByRole("button", { name, exact: true }))
+    .toHaveTextContent(`+${count - 1}`);
+});
+
+test.each([
+  ["at most 10 values, then how many more", 52, 10, "and 42 more"],
+  ["10 values whole", 10, 10, undefined],
+  ["the 11th value as one more", 11, 10, "and 1 more"],
+])("lists %s in its tooltip", async (_, count, listed, more) => {
+  const { screen } = await renderCell(packages(count));
+  await screen.getByRole("button", { name: "Before" }).click();
+
+  await screen.getByRole("button", { name: /more packages/ }).hover();
+
+  const tooltip = screen.getByRole("tooltip");
+  await expect.element(tooltip).toBeVisible();
+  await expect
+    .element(tooltip.getByText(`${count} packages`, { exact: true }))
+    .toBeVisible();
+  const lines = tooltip.getByRole("listitem");
+  expect(lines.elements().map((line) => line.textContent)).toEqual(
+    packages(listed),
+  );
+  const end = tooltip.getByText(/^and \d+ more$/);
+  if (more === undefined) {
+    await expect.element(end).not.toBeInTheDocument();
+  } else {
+    await expect.element(end).toHaveTextContent(more);
+    expect(end.element().getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      lines.last().element().getBoundingClientRect().bottom,
+    );
+  }
+});
+
 test("draws +N 24 px high in text-13, weight 500, neutral-on-soft on neutral-soft, with a 4 px radius", async () => {
   const { cell } = await renderCell(THREE);
   const more = cell.getByRole("button");

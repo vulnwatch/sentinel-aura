@@ -8,7 +8,6 @@ import {
 import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { isRequestFailure, presentFailure } from "../api/errors";
 import type {
   CurrentUserData,
   ListTicketsCurrentPhaseItem,
@@ -40,7 +39,7 @@ import { FilterGroup, Filters, type FilterOption } from "../components/filters";
 import { Link } from "../components/link";
 import { Pagination } from "../components/pagination";
 import { Priority } from "../components/priority";
-import { ScreenRead } from "../components/read-view";
+import { placeMessage, ScreenRead } from "../components/read-view";
 import { FocusHandOff, ScreenHeading } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { Severity } from "../components/severity";
@@ -350,23 +349,29 @@ function sortShownIn(
     : undefined;
 }
 
-// The search parameters that the view accepts: the status filter only in
-// the All view, whose Tickets have every status, and the sorting by a column
-// that the view shows; a sorting that it does not accept removes its order
-// too.
+// The search parameters that the view accepts, in the form that the list
+// gives them (docs/behaviors.md, Invalid Search Parameters): the status
+// filter only in the All view, whose Tickets have every status; the sorting
+// by a column that the view shows, left out when it is the view's own; its
+// order, left out when it is the first direction of the column, and when the
+// list does not accept the sorting; and the page, left out when it is the
+// first. So the same state always gives the same parameters.
 function acceptedInView(
   search: z.output<typeof ticketListParams>,
 ): TicketListSearch {
   const view = viewNamed(search.view);
-  const sort = sortShownIn(view, search.sort);
+  const shown = sortShownIn(view, search.sort);
+  const rejected = shown === undefined && search.sort !== undefined;
+  const column = shown ?? view.sort;
   return {
     ...search,
     status: view === ALL_VIEW ? search.status : undefined,
-    sort,
+    sort: shown === view.sort ? undefined : shown,
     order:
-      sort === undefined && search.sort !== undefined
+      rejected || search.order === SORTING[column].first
         ? undefined
         : search.order,
+    page: search.page === 1 ? undefined : search.page,
   };
 }
 
@@ -622,9 +627,9 @@ function emptyMessage(
   }
   switch (refinedBy(search)) {
     case "search":
-      return "No Tickets match the search.";
+      return "No Tickets in this view match the search.";
     case "filters":
-      return "No Tickets match the filters.";
+      return "No Tickets in this view match the filters.";
     default:
       return "No Tickets in this view.";
   }
@@ -645,14 +650,6 @@ function resultText(list: TicketListResponse, search: TicketListSearch) {
   const first = (meta.page - 1) * meta.per_page + 1;
   const last = first + data.length - 1;
   return `${COUNT.format(first)}–${COUNT.format(last)} of ${COUNT.format(meta.total)} Tickets`;
-}
-
-// The message of the failure of a read of the list, as it shows in place of
-// the rows (docs/behaviors.md, Default Presentation by Status).
-function failureText(error: unknown): string {
-  return isRequestFailure(error)
-    ? (presentFailure(error, "part")?.message ?? "")
-    : "";
 }
 
 // Removes from the URL the view that the user is not shown, which opens the
@@ -908,20 +905,22 @@ function TicketList({ user }: TicketListProps) {
       }),
     });
   };
-  // Pressing the header of a column sorts by it in its first direction, and
-  // pressing it again reverses the direction. A sorting that is the view's,
-  // or a direction that is the column's first, leaves the URL.
+  // Pressing the header of another column sorts by it in its first
+  // direction, and pressing the header of the column that sorts the rows, the
+  // view's own included, reverses the direction. The schema leaves out of the
+  // URL a sorting that is the view's and a direction that is the column's
+  // first (acceptedInView).
   const sortBy = (id: string) => {
     if (!isSortColumn(id)) {
       return;
     }
-    const { first } = SORTING[id];
     const order =
-      id !== sorting.column ? first : sorting.order === "asc" ? "desc" : "asc";
-    refine({
-      sort: id === view.sort ? undefined : id,
-      order: order === first ? undefined : order,
-    });
+      id !== sorting.column
+        ? SORTING[id].first
+        : sorting.order === "asc"
+          ? "desc"
+          : "asc";
+    refine({ sort: id, order });
   };
 
   // A change of the view, the page, the search, a filter, or the sorting
@@ -939,12 +938,10 @@ function TicketList({ user }: TicketListProps) {
       ? resultText(list.data, search)
       : "";
   // While the popover of the filters is open, it announces what the list
-  // shows, or the failure of its read, which the screen's status regions
-  // cannot announce then.
+  // shows, or what the place of the rows says of the failure of its read,
+  // which the screen's status regions cannot announce then.
   const filtersStatus =
-    changed && list.status === "error" && !list.isFetching
-      ? failureText(list.error)
-      : announcement;
+    changed && list.status === "error" ? placeMessage(list) : announcement;
 
   return (
     <ScreenRead
@@ -1107,10 +1104,11 @@ function TicketListPage() {
 // without it, in place of the URL in the browser history, so that back,
 // reload, and a bookmark show what the list shows (docs/behaviors.md, Invalid
 // Search Parameters; docs/screen-map.md, Browser History). So does a URL
-// whose search term has surrounding whitespace, or whose filter repeats a
-// value or gives its values in another order, which leads to the one URL of
-// what it shows. The redirect comes before the screen shows, so no request
-// carries the parameter.
+// whose search term has surrounding whitespace, whose filter repeats a value
+// or gives its values in another order, or that names a default, such as the
+// first page, which leads to the parameters that the list gives that state.
+// The redirect comes before the screen shows, so no request carries the
+// parameter.
 export const ticketListRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/tickets",

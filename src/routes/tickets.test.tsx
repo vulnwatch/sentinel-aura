@@ -765,6 +765,36 @@ describe("the URL", () => {
       "/tickets?severity=critical&severity=high",
       `severity=critical&severity=high&${ALL}`,
     ],
+    [
+      "the list without the first page",
+      "?view=new&page=1",
+      "/tickets?view=new",
+      NEW,
+    ],
+    [
+      "the list without the sorting of the view",
+      "?view=new&sort=priority",
+      "/tickets?view=new",
+      NEW,
+    ],
+    [
+      "the list without the first direction of the sorting of the view",
+      "?order=desc",
+      "/tickets",
+      ALL,
+    ],
+    [
+      "the list without the first direction of a sorting",
+      "?sort=deadline&order=asc",
+      "/tickets?sort=deadline",
+      "sort_by=current_due_at&sort_order=asc&page=1&per_page=20",
+    ],
+    [
+      "the list with the other direction of the sorting of the view alone",
+      "?view=new&sort=priority&order=asc",
+      "/tickets?view=new&order=asc",
+      `${FILTERS.New}&${QUEUE_SORT}&sort_order=asc&page=1&per_page=20`,
+    ],
   ])("leads to %s, in place of the URL", async (_, search, accepted, read) => {
     const { spy } = stubTickets();
     const { router } = await renderApp(`/tickets${search}`);
@@ -777,13 +807,13 @@ describe("the URL", () => {
   test("keeps every parameter that it accepts, in their order, and sends them to List Tickets", async () => {
     const { spy } = stubTickets();
     const search =
-      "?page=2&order=asc&sort=deadline&overdue=um&phase=um&phase=qa&priority=p1&severity=high&search=fictional-curl&view=analysis";
+      "?page=2&order=desc&sort=deadline&overdue=um&phase=um&phase=qa&priority=p1&severity=high&search=fictional-curl&view=analysis";
     const { router } = await renderApp(`/tickets${search}`);
 
     await expect
       .poll(() => queriesOf(spy, "list"))
       .toEqual([
-        `${FILTERS.Analysis}&search=fictional-curl&severity=high&priority=p1&current_phase=um&current_phase=qa&overdue=um&sort_by=current_due_at&sort_order=asc&page=2&per_page=20`,
+        `${FILTERS.Analysis}&search=fictional-curl&severity=high&priority=p1&current_phase=um&current_phase=qa&overdue=um&sort_by=current_due_at&sort_order=desc&page=2&per_page=20`,
       ]);
     expect(router.state.location.href).toBe(`/tickets${search}`);
     expect(router.history.length).toBe(1);
@@ -1858,6 +1888,17 @@ describe("a list that the user refined", () => {
 
     await toggle(dialog, "Severity", "High");
     await expect.element(status).toHaveTextContent("1 Ticket");
+    const first = status.element().firstElementChild;
+
+    // A new node, which assistive technologies announce although its words
+    // are the same.
+    await toggle(dialog, "Severity", "Critical");
+    await expect
+      .poll(() => {
+        const node = status.element().firstElementChild;
+        return node !== first && node?.textContent === "1 Ticket";
+      })
+      .toBe(true);
 
     await toggle(dialog, "Priority", "P1");
     await expect
@@ -1868,17 +1909,25 @@ describe("a list that the user refined", () => {
   });
 
   test.each([
-    ["a search alone", "?search=curl", "No Tickets match the search."],
-    ["a filter", "?severity=high", "No Tickets match the filters."],
+    [
+      "a search alone",
+      "?search=curl",
+      "No Tickets in this view match the search.",
+    ],
+    [
+      "a filter",
+      "?severity=high",
+      "No Tickets in this view match the filters.",
+    ],
     [
       "a search and a filter",
       "?search=curl&severity=high",
-      "No Tickets match the filters.",
+      "No Tickets in this view match the filters.",
     ],
     [
       "a filter, on another page",
       "?view=new&priority=p4&page=3",
-      "No Tickets match the filters.",
+      "No Tickets in this view match the filters.",
     ],
   ])(
     "says without Tickets that none match %s, and offers Clear filters, which moves the focus to the heading",
@@ -1893,7 +1942,7 @@ describe("a list that the user refined", () => {
 
       await expect.element(screen.getByText(message)).toBeVisible();
       await expect
-        .element(screen.getByText("No Tickets in this view."))
+        .element(screen.getByText("No Tickets in this view.", { exact: true }))
         .not.toBeInTheDocument();
       const clear = screen.getByRole("button", { name: "Clear filters" });
       // The one of the toolbar, and the one of the empty state, inside the

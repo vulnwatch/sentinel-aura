@@ -50,18 +50,20 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   | `order` | `asc` or `desc` | The first direction of the column |
   | `page` | A whole number from 1 to 2147483647, the largest page that Sentinel accepts (Sentinel `docs/api-spec.md`, Pagination) | The first page |
 
-  A link to a view leads to its first page and omits `page`, and so does a
-  link to the first page of a view. A sorting that is the view's, and a
-  direction that is the first of its column, are omitted too.
+  The URL leaves out a parameter whose value is the one of the last column,
+  such as the first page, the sorting of the view, or the first direction of
+  the column that sorts the rows.
 - Any other search parameter, a value that the list does not accept, and a
   parameter other than a filter that the URL gives more than once are
   removed from the URL in place of the URL in the browser history, before the
   list reads anything (`docs/behaviors.md`, Invalid Search Parameters). So
   are a status filter outside the All view, whose statuses the view fixes,
-  and a sorting by a column that the view does not show, with its order. A
-  filter keeps the values that it knows, once each, in the order of the table
-  above, and a search term loses its surrounding whitespace, both in place of
-  the URL in the browser history. A user who is not shown Assigned to me sees
+  and a sorting that the list does not accept, such as by a column that the
+  view does not show, with its order. A filter keeps the values that it
+  knows, once each, in the order of the table above, a search term loses its
+  surrounding whitespace, and a parameter that names the value of the last
+  column, such as `page=1`, is left out, all in place of the URL in the
+  browser history. A user who is not shown Assigned to me sees
   the All view for `view=assigned-to-me`, and the list removes the parameter
   in the same way once it knows the user, also when a read of the signed-in
   user tells that the role was removed during the session
@@ -73,13 +75,11 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   `/` in the browser history, from every way to the landing, and so does the
   Home when a read of the signed-in user tells that the role was added
   while it shows (`docs/screen-map.md`, Sidebar; Landing; Browser History).
-- A view, a page, a search, a change of the filters, and a sorting are each
-  an entry of the browser history. A tab opens its view at its first page,
+- A view and a page are each an entry of the browser history, and so are a
+  search, a change of the filters, and a sorting, which keep the view
+  (`docs/design-system.md`, Lists). A tab opens its view at its first page,
   without the search, the filters, and the sorting that the user applied, so
-  that the list agrees with the count of the tab. A change of the search, the
-  filters, or the sorting opens the first page and keeps the view; Previous,
-  Next, and "Go to the first page" keep the search, the filters, and the
-  sorting.
+  that the list agrees with the count of the tab.
 - Each row links to its Ticket, `/tickets/{ticket_id}`, and to its CVE,
   `/cves/{cve_id}` (`docs/screen-map.md`, Links Between Areas). Each count of
   the attention summary links to the All view refined to its Tickets.
@@ -104,8 +104,7 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
 
   The counts do not depend on the view, the search, the filters, or the
   sorting. They are read again as the screen's data is, such as when the tab
-  of the browser returns to the foreground (`docs/behaviors.md`, Loading),
-  and a count that is not available is read again with each read of the list.
+  of the browser returns to the foreground (`docs/behaviors.md`, Loading).
 - The views as tabs, named "Views" for assistive technologies, each its name
   followed by the number of its Tickets. The number comes from List Tickets
   with the filters of the view and `per_page=1`, as `meta.total` (Sentinel
@@ -114,24 +113,14 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   that the list shows is read again when its view opens and with each read of
   the list, such as another page, so that the tab and the list agree;
   the others are read again as the screen's data is.
-- **The toolbar**, after the tabs, at the end of their row; when the width
-  runs short, its last controls wrap to a row below, Clear filters first
-  (`docs/design-system.md`, Lists):
-  - the search field, "Search Tickets", which is also its name for
-    assistive technologies. Enter applies the term without its surrounding
-    whitespace, and its clear button, "Clear search", and Escape remove it. It
-    takes at most 500 characters. List Tickets matches the term against the
+- **The toolbar**, after the tabs (`docs/design-system.md`, Lists):
+  - the search field, "Search Tickets", which takes at most 500 characters,
+    the longest term that Sentinel accepts (Sentinel `docs/api-spec.md`,
+    Query Parameter Length Limit). List Tickets matches the term against the
     identifier, the CVE ID, the package names, and the external identifiers
     of each Ticket (Sentinel `docs/features/tickets/tickets.md`, Search);
-  - Filters, followed by the number of the filters that apply, which
-    assistive technologies read as "2 applied". It opens a popover named
-    "Filters" with a group of checkboxes for each filter below, and a change
-    applies at once. While it is open, it announces itself what the list
-    shows after a change, or the failure of its read, since the rest of the
-    screen is then out of reach of assistive technologies. Its filters scroll
-    within it in a window shorter than they are;
-  - Clear filters, while a search or a filter applies, which removes them and
-    keeps the view and the sorting.
+  - Filters, whose popover holds a group of checkboxes for each filter below;
+  - Clear filters.
 
   | Filter | Values | Of List Tickets |
   |---|---|---|
@@ -164,13 +153,9 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   has one status, Assignee where it has none or only the signed-in user.
 - Assigned to me filters by the user's `id`, which never changes, rather than
   by the username (Sentinel `docs/api-spec.md`, User Identifier Resolution).
-- **Sorting.** The user sorts by a column by pressing its header, with a
-  click, Enter, or Space: the first press sorts in the first direction of the
-  column, and the next reverses it. The sorted column shows `arrow-up` or
-  `arrow-down` after its name, and assistive technologies read whether and in
-  which direction each sortable column sorts the rows. The header shows the
-  new sorting at once, while the rows of the previous one stay until the new
-  rows arrive.
+- **Sorting.** The user sorts by these columns by pressing their headers
+  (`docs/design-system.md`, Tables), the first press on another column in its
+  first direction:
 
   | Column | `sort_by` | First direction |
   |---|---|---|
@@ -257,7 +242,9 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   or the message of an empty state, also when the words are those of the
   previous list. The list as the screen opens is not announced: only a
   change of the view, the page, the search, the filters, or the sorting is
-  (`docs/behaviors.md`, Accessibility, Focus after a navigation).
+  (`docs/behaviors.md`, Accessibility, Focus after a navigation), and while
+  the popover of Filters is open, it announces the same itself
+  (`docs/design-system.md`, Lists).
 - **The focus.** When the rows, the table without rows, the action of an
   empty state, the pagination, a tab, a count of the attention summary, or
   Clear filters leaves the page while it holds the focus, such as "Go to the
@@ -266,17 +253,16 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   filters, or Assigned to me and the attention summary when a read of the
   signed-in user tells that the role was removed, the focus moves to the
   screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
-  action). The popover of the filters takes the focus on its first checkbox
-  as it opens; Escape or a click outside closes it, and the focus returns to
-  Filters (`docs/behaviors.md`, Accessibility, Dialogs).
+  action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
-  page. A list that the user refined without Tickets that match says "No
-  Tickets match the search." when only a search applies and "No Tickets match
-  the filters." otherwise, on any page, and offers Clear filters as a
-  secondary button. A page beyond the last of a list with Tickets says "There
-  are no Tickets on this page." and offers "Go to the first page", a link that
-  looks like a secondary button, in place of the pagination
-  (`docs/behaviors.md`, Empty States). Each shows inside the frame, below the
+  page. A view that the user refined without Tickets that match says "No
+  Tickets in this view match the search." when only a search applies and "No
+  Tickets in this view match the filters." otherwise, on any page, and offers
+  Clear filters as a secondary button: the search of the list searches the
+  view alone, as a tab opens its view without it. A page beyond the last of a
+  list with Tickets says "There are no Tickets on this page." and offers "Go
+  to the first page", a link that looks like a secondary button, in place of
+  the pagination (`docs/behaviors.md`, Empty States). Each shows inside the frame, below the
   header row, and keeps the tabs and the toolbar.
 - **Errors.** The default presentation applies to every failure
   (`docs/behaviors.md`, Errors): the error of the first read of the list

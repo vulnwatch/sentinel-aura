@@ -304,7 +304,9 @@ A Ticket list URL with a view that the user is not shown is such a case
 (`docs/screen-map.md`, Ticket List Views). A value that the screen accepts in
 another form than its own, such as a search term with surrounding whitespace
 or the values of a filter in another order, is replaced in the URL by the
-form that the screen uses, so that one URL shows each state.
+form that the screen uses, and a parameter that names the screen's default,
+such as the first page, is removed, so that the same state always gives the
+same parameters and values, in whatever order the URL lists them.
 
 ### Retries and Unconfirmed Changes
 

@@ -17,7 +17,7 @@ import {
 } from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
-import { PartRead, ScreenRead } from "./read-view";
+import { PartRead, placeMessage, ScreenRead, type Read } from "./read-view";
 import { ScreenHeading } from "./screen-heading";
 
 // A fictional record of a detail screen, or a page of a list.
@@ -758,4 +758,72 @@ describe("when a new read replaces what holds the focus", () => {
         .toHaveFocus();
     },
   );
+});
+
+// A read of the tests, in a state that a test sets.
+function readOf(fields: Partial<Read<FictionalRecord>>): Read<FictionalRecord> {
+  return {
+    data: undefined,
+    error: null,
+    status: "pending",
+    isPlaceholderData: false,
+    isFetching: false,
+    refetch: () => undefined,
+    ...fields,
+  };
+}
+
+describe("placeMessage", () => {
+  const RECORD = { title: "A fictional record" };
+
+  test.each([
+    [
+      "a read that has not failed",
+      readOf({ status: "success", data: RECORD }),
+      "",
+    ],
+    ["a read that loads", readOf({ isFetching: true }), ""],
+    [
+      "the error in place of the data",
+      readOf({ status: "error", error: UNAVAILABLE }),
+      "Sentinel isn't available right now. Try again later.",
+    ],
+    [
+      "the error in place of the data, also while the read is sent again",
+      readOf({ status: "error", error: UNAVAILABLE, isFetching: true }),
+      "Sentinel isn't available right now. Try again later.",
+    ],
+    [
+      "the warning above data that stays shown",
+      readOf({ status: "error", error: UNAVAILABLE, data: RECORD }),
+      "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+    ],
+    [
+      "nothing while data that stays shown is read again",
+      readOf({
+        status: "error",
+        error: UNAVAILABLE,
+        data: RECORD,
+        isFetching: true,
+      }),
+      "",
+    ],
+    [
+      "the error that replaces data that stayed shown",
+      readOf({ status: "error", error: NOT_FOUND, data: RECORD }),
+      "This no longer exists, or you no longer have access to it.",
+    ],
+    [
+      "nothing for the end of the session",
+      readOf({ status: "error", error: ENDED }),
+      "",
+    ],
+    [
+      "nothing for a failure of the UI itself",
+      readOf({ status: "error", error: new TypeError("A fictional failure") }),
+      "",
+    ],
+  ])("gives %s", (_, read, message) => {
+    expect(placeMessage(read)).toBe(message);
+  });
 });

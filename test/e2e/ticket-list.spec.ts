@@ -299,7 +299,9 @@ test.describe("refined by an analyst", () => {
 
     await expect(page).toHaveURL("/tickets?view=new&search=fictional-curl");
     await expect(
-      page.getByRole("tabpanel").getByText("No Tickets match the search."),
+      page
+        .getByRole("tabpanel")
+        .getByText("No Tickets in this view match the search."),
     ).toBeVisible();
     await expectAccessible(page);
     await pointerAway(page);
@@ -325,6 +327,17 @@ test.describe("refined by an analyst", () => {
   }) => {
     await signIn(page, "asmith");
     await page.goto("/tickets");
+    // Once the counts have arrived, which widen the tabs and the summary, so
+    // that the popover opens below Filters where it stays.
+    await expect(views(page)).toHaveText([
+      "New 12",
+      "Assigned to me 4",
+      "Analysis 5",
+      "Analyzed 3",
+      "Orphaned 1",
+      "All 26",
+    ]);
+    await expect(attention(page).last()).toHaveText("1 QA overdue");
 
     await page.getByRole("button", { name: "Filters" }).click();
     const filters = page.getByRole("dialog", { name: "Filters" });

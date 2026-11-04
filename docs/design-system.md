@@ -409,7 +409,7 @@ that the code imports ship.
 | Collapse and expand the sidebar | `panel-left-close`, `panel-left-open` |
 | The account button | `chevrons-up-down` |
 | Profile, API keys, Identity audit log, Sign out | `user`, `key-round`, `scroll-text`, `log-out` |
-| Theme System, Light, Dark; the selected item of a menu | `monitor`, `sun`, `moon`; `check` |
+| Theme System, Light, Dark; the selected item of a menu, a selected checkbox | `monitor`, `sun`, `moon`; `check` |
 | Create | `plus` |
 | Filters | `list-filter` |
 | The sort of a column, ascending and descending | `arrow-up`, `arrow-down` |
@@ -749,31 +749,46 @@ A list screen, such as the Ticket list, shows from top to bottom:
    boundary, the `neutral-soft` background, and its label at weight 600. A
    tab opens when the user clicks it or presses Enter or Space, not when the
    arrow keys move the focus to it. At the end of the toolbar come the search
-   field, 224 px wide and 32 px high, with the placeholder "Search
-   {records}", such as "Search Tickets", which applies its term when the user
-   presses Enter and removes it with its clear button or Escape; Filters, a
-   secondary button 32 px high with `list-filter`, which opens a popover with
-   the filter fields and shows the number of the filters that apply after its
-   label, in `fg-muted`. A filter applies as soon as its field changes; a
-   combobox, when the user chooses an option; and a field that the user types
-   into, such as a text or a date field, when the user presses Enter, which
-   in either field of a range, such as two dates, applies both. A typed value
-   that is not applied returns to the applied one when the focus leaves its
-   field, or, for a range, both of its fields. While a filter or a search
-   applies, Clear filters, a quiet button 32 px high with `x`, follows
-   Filters. The tabs and the controls are 8 px apart. When the width runs
-   short, the toolbar wraps one control at a time, the last first, and a row
-   of controls keeps them at its end, so that a control that appears, such as
-   Clear filters, moves no other.
-   The popover of Filters opens below Filters, aligned to its end, at most
-   448 px wide, with 16 px of padding (Menus, Popovers, and Tooltips); it
-   holds the filters 16 px apart, and its first field takes the focus as it
-   opens (`docs/behaviors.md`, Accessibility, Dialogs). A filter whose values
-   the contract lists, such as a status, is a group of checkboxes (Forms):
-   its name in `text-12`, weight 500, `fg-muted`, and 4 px below it its
-   checkboxes in a row that wraps, 16 px apart, each its box then, 6 px
-   later, its label in `text-14`, the name of the value with its mark
-   (Values).
+   field, Filters, and, while a filter or a search applies, Clear filters.
+   The tabs and the controls are 8 px apart. When the width runs short, the
+   toolbar wraps one control at a time, the last first, and a row of controls
+   keeps them at its end, so that a control that appears, such as Clear
+   filters, moves no other control to another row.
+   - The search field, 224 px wide and 32 px high (Forms), has the
+     placeholder "Search {records}", such as "Search Tickets", which is also
+     its accessible name, and takes at most the longest term that the API
+     accepts. Enter applies the term that the user typed, without its
+     surrounding whitespace, or removes the search when the field is empty.
+     Its clear button, an icon button with `x` named "Clear search", and
+     Escape empty the field and remove the search that applies. A typed term
+     that is not applied returns to the applied one when the focus leaves the
+     field.
+   - Filters is a secondary button 32 px high with `list-filter`. While
+     filters apply, their number follows its label in `fg-muted`, which
+     assistive technologies read as "2 applied". It opens below it, aligned
+     to its end, a popover named "Filters", at most 448 px wide (Menus,
+     Popovers, and Tooltips), with the filter fields 16 px apart. Its first
+     field takes the focus as it opens, and its content scrolls within it in
+     a window shorter than it is. Escape or a click outside closes it, and the
+     focus returns to Filters (`docs/behaviors.md`, Accessibility, Dialogs).
+     While it is open, the rest of the page is out of reach of assistive
+     technologies, so it announces in a status region of its own what the
+     list shows after a change, as the list does after a change of its state
+     (`docs/behaviors.md`, Accessibility, Focus after a navigation), or what
+     the place of the data says of the failure of its read.
+   - A filter applies as soon as its field changes; a combobox, when the user
+     chooses an option; and a field that the user types into, such as a text
+     or a date field, when the user presses Enter, which in either field of a
+     range, such as two dates, applies both. A typed value that is not applied
+     returns to the applied one when the focus leaves its field, or, for a
+     range, both of its fields. A filter whose values the contract lists, such
+     as a status, is a group of checkboxes (Forms): its name in `text-12`,
+     weight 500, `fg-muted`, and 4 px below it its checkboxes in a row that
+     wraps, 16 px apart, each its box then, 6 px later, its label in
+     `text-14`, the name of the value with its mark (Values).
+   - Clear filters, a quiet button 32 px high with `x`, removes the search and
+     the filters, and keeps the rest of the state of the list, such as its
+     view and its sorting.
 3. The table (Tables), 16 px below.
 4. The pagination, 16 px below, at the end of the line, when the list has
    more than one page: the range, such as "1–20 of 25", in `text-14` and
@@ -781,6 +796,11 @@ A list screen, such as the Ticket list, shows from top to bottom:
    Previous is disabled on the first page, and Next on the last. On a page
    beyond the last, the empty state takes the place of the rows and of the
    pagination (`docs/behaviors.md`, Empty States).
+
+A change of the search, a filter, or the sorting of a list opens its first
+page, as a new entry of the browser history (`docs/screen-map.md`, Browser
+History); Previous, Next, and the link to the first page of an empty state
+keep the search, the filters, and the sorting.
 
 ### Tables
 
@@ -791,11 +811,13 @@ A list screen, such as the Ticket list, shows from top to bottom:
   `text-13`, weight 500, `fg-muted`. The sorted column shows `arrow-up` or
   `arrow-down` at 14 px after its name.
 - The user sorts by a sortable column, which the screen document names, by
-  pressing its header, with a click, Enter, or Space: the first press sorts
-  in the first direction of the column, which the screen document states,
-  and the next reverses it. Under the pointer, a sortable header is on
-  `surface-hover` with its name in `fg`. Assistive technologies read whether
-  and in which direction each sortable column sorts the rows.
+  pressing its header, with a click, Enter, or Space. Pressing the header of
+  another column sorts by it in its first direction, which the screen
+  document states; pressing the header of the column that sorts the rows,
+  the screen's default sorting included, reverses the direction. Under the
+  pointer, a sortable header is on `surface-hover` with its name in `fg`.
+  Assistive technologies read whether and in which direction each sortable
+  column sorts the rows.
 - Each row is at least 36 px high, in `text-14`, with a `border` line below
   it and `surface-hover` under the pointer, which helps to follow the row.
   Cells have 10 px of side padding, the first and the last 16 px at the outer
@@ -809,9 +831,11 @@ A list screen, such as the Ticket list, shows from top to bottom:
 - A cell with several values, such as the packages of a Ticket, shows the
   first, then, 6 px later, "+N", the number of the others, as a button 24 px
   high in `text-13`, weight 500, `neutral-on-soft` on `neutral-soft`, with a
-  4 px radius. Its tooltip lists every value under the count, one a line,
+  4 px radius. Its tooltip lists the values under their count, one a line,
   such as "3 packages", and its accessible name states the others, such as
-  "2 more packages: fictional-curl-mini, fictional-libcurl4".
+  "2 more packages: fictional-curl-mini, fictional-libcurl4". Each names at
+  most 10 values, then how many more, such as "and 42 more", so that the
+  tooltip of a record with many values fits in the window.
 - A text longer than its column, such as a title, ends with an ellipsis when
   the screen of its record shows it whole, and assistive technologies read it
   whole; in a table whose records have no screen of their own, such as an
