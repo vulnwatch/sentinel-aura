@@ -496,11 +496,6 @@ const OVERDUE_OPTIONS: readonly FilterOption<
   label: PHASE_NAMES[phase],
 }));
 
-// The values of a filter that the user selected, or none.
-function selectedOrNone<T>(values: T[]): T[] | undefined {
-  return values.length === 0 ? undefined : values;
-}
-
 // The columns of the table, with the cell of each column in a row. The
 // deadline badge compares with now, the instant at which the list's data
 // arrived, the same for every row.
@@ -884,7 +879,8 @@ function TicketList({ user }: TicketListProps) {
 
   // A change of the search, a filter, or the sorting opens the first page,
   // as a new entry of the browser history (docs/screen-map.md, Browser
-  // History).
+  // History). An empty search term, or a filter without values, reads as
+  // absent (ticketListParams), so it leaves the URL.
   const refine = (change: Partial<TicketListSearch>) => {
     void navigate({
       to: "/tickets",
@@ -968,7 +964,7 @@ function TicketList({ user }: TicketListProps) {
                     applied={search.search ?? ""}
                     maxLength={SEARCH_MAX_LENGTH}
                     onApply={(term) => {
-                      refine({ search: term === "" ? undefined : term });
+                      refine({ search: term });
                     }}
                   />
                   <Filters applied={filtersApplied(search)}>
@@ -978,7 +974,7 @@ function TicketList({ user }: TicketListProps) {
                         options={STATUS_OPTIONS}
                         selected={search.status ?? []}
                         onChange={(values) => {
-                          refine({ status: selectedOrNone(values) });
+                          refine({ status: values });
                         }}
                       />
                     )}
@@ -987,7 +983,7 @@ function TicketList({ user }: TicketListProps) {
                       options={SEVERITY_OPTIONS}
                       selected={search.severity ?? []}
                       onChange={(values) => {
-                        refine({ severity: selectedOrNone(values) });
+                        refine({ severity: values });
                       }}
                     />
                     <FilterGroup
@@ -995,7 +991,7 @@ function TicketList({ user }: TicketListProps) {
                       options={PRIORITY_OPTIONS}
                       selected={search.priority ?? []}
                       onChange={(values) => {
-                        refine({ priority: selectedOrNone(values) });
+                        refine({ priority: values });
                       }}
                     />
                     <FilterGroup
@@ -1003,7 +999,7 @@ function TicketList({ user }: TicketListProps) {
                       options={PHASE_OPTIONS}
                       selected={search.phase ?? []}
                       onChange={(values) => {
-                        refine({ phase: selectedOrNone(values) });
+                        refine({ phase: values });
                       }}
                     />
                     <FilterGroup
@@ -1011,7 +1007,7 @@ function TicketList({ user }: TicketListProps) {
                       options={OVERDUE_OPTIONS}
                       selected={search.overdue ?? []}
                       onChange={(values) => {
-                        refine({ overdue: selectedOrNone(values) });
+                        refine({ overdue: values });
                       }}
                     />
                   </Filters>

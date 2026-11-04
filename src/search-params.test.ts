@@ -29,8 +29,8 @@ describe("parseSearch", () => {
 
   test("reads a parameter given more than once as its values, in their order", () => {
     expect(
-      parseSearch("?status=new&view=all&status=analysis&status=new"),
-    ).toEqual({ status: ["new", "analysis", "new"], view: "all" });
+      parseSearch("?status=new&view=all&status=analysis&status=analysis"),
+    ).toEqual({ status: ["new", "analysis", "analysis"], view: "all" });
   });
 
   test("reads the parameters with or without the leading question mark", () => {

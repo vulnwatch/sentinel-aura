@@ -295,6 +295,18 @@ describe("the toolbar", () => {
     expect(screen.container.textContent).toBe(
       "RecordsNew 12All 1,250The records of new",
     );
+
+    // Not even room below the tabs where they take their whole line, as in a
+    // window too narrow for them: the panel stays 16 px below them.
+    await page.viewport(140, 640);
+    const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+    const panel = screen.getByRole("tabpanel", { name: "New 12" }).element();
+    await expect
+      .poll(() => tabs.getBoundingClientRect().height)
+      .toBeGreaterThan(32);
+    expect(
+      panel.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
+    ).toBe(16);
   });
 });
 
