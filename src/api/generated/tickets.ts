@@ -240,7 +240,7 @@ export const getCreateTicketUrl = () => {
 };
 
 /**
- * Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential). An active vulnerability analyst creator is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.
+ * Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential). A creator eligible to be the assignee of the new Ticket (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential) is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.
  * @summary Create Ticket
  */
 export const createTicket = async (
@@ -511,7 +511,7 @@ export const getSetTicketSeverityUrl = (ticketId: string) => {
 };
 
 /**
- * Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes the automatic priority, and re-evaluates the Ticket status; an unchanged severity returns the current Ticket with no side effect. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An effective change auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, refreshes the automatic priority, and re-evaluates the Ticket status; an unchanged severity returns the current Ticket with no side effect. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Set Severity Manual
  */
 export const setTicketSeverity = async (
@@ -634,7 +634,7 @@ export const getAssociateTicketCveUrl = (ticketId: string) => {
 };
 
 /**
- * Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to the caller when the caller is eligible to be its assignee. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Associate CVE
  */
 export const associateTicketCve = async (
@@ -764,7 +764,7 @@ export const getSetTicketPriorityUrl = (ticketId: string) => {
 };
 
 /**
- * Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Set Priority Override
  */
 export const setTicketPriority = async (
@@ -887,7 +887,7 @@ export const getAssignTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Assigns or reassigns a Ticket to an active vulnerability analyst, identified by UUID or exact username. A Ticket cannot be unassigned through the API. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Assigns or reassigns a Ticket to a user eligible to be its assignee (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential), identified by UUID or exact username. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. JSON `null` instead unassigns the caller, who must be the current assignee: the Ticket keeps its status, and a Ticket without an assignee is an idempotent success. Another user's assignment cannot be cleared, only reassigned. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Assign Ticket
  */
 export const assignTicket = async (
@@ -1009,7 +1009,7 @@ export const getIgnoreTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Ignore Ticket
  */
 export const ignoreTicket = async (
@@ -1101,7 +1101,7 @@ export const getMarkTicketAsDuplicateUrl = (ticketId: string) => {
 };
 
 /**
- * Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Mark Ticket as Duplicate
  */
 export const markTicketAsDuplicate = async (
@@ -1230,7 +1230,7 @@ export const getReopenTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Reopens an `ignored` Ticket. No request body. An active vulnerability analyst caller becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Reopens an `ignored` Ticket. No request body. A caller eligible to be its assignee becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Reopen Ticket
  */
 export const reopenTicket = async (
@@ -1322,7 +1322,7 @@ export const getRevertTicketDuplicateUrl = (ticketId: string) => {
 };
 
 /**
- * Reverts a `duplicated` Ticket into the gate zone and clears its duplicate link. No request body. Tickets previously repointed away from this Ticket keep their current target. An active vulnerability analyst caller becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Reverts a `duplicated` Ticket into the gate zone and clears its duplicate link. No request body. Tickets previously repointed away from this Ticket keep their current target. A caller eligible to be its assignee becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Revert Duplicate Status
  */
 export const revertTicketDuplicate = async (
@@ -1520,7 +1520,7 @@ export const getSetTicketConfidentialityUrl = (ticketId: string) => {
 };
 
 /**
- * Sets whether a Ticket is confidential. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. Making a confidential Ticket non-confidential deletes every explicit access grant; making it confidential again does not recreate them. Package-maintainer visibility and the Coordinated Release Date are unchanged. An unchanged request is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.
+ * Sets whether a Ticket is confidential. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. Making a `new`, `analysis`, or `analyzed` Ticket confidential unassigns an assignee who is not eligible to be the assignee of a confidential Ticket, such as a restricted analyst, even one with an access grant or package maintainership; the Ticket then appears unassigned. Making a confidential Ticket non-confidential deletes every explicit access grant; making it confidential again does not recreate them. Package-maintainer visibility and the Coordinated Release Date are unchanged. An unchanged request is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.
  * @summary Set Confidentiality
  */
 export const setTicketConfidentiality = async (

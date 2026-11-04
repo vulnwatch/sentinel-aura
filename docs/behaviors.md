@@ -139,8 +139,9 @@ document that do not take effect yet.
   `403 AUTH_CROSS_ORIGIN_REJECTED` (Default Presentation by Status). Sentinel
   applies a change of a user's roles from the user's next request (Sentinel
   `docs/features/identity/rbac.md`, Permission Checking), so these reads keep
-  current the elements that depend on the roles and on the capabilities of
-  the user (`docs/screen-map.md`, Roles; Capabilities of the Signed-in User).
+  current the elements that depend on the capabilities and on the assignment
+  eligibility of the user (`docs/screen-map.md`, Roles; Capabilities of the
+  Signed-in User).
   While the error of a read of the signed-in user shows in place of the
   screen (Session State), it is read again only with Try again, as a screen's
   read whose error shows in place of content is (Loading).

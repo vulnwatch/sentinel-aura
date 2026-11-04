@@ -102,11 +102,11 @@ export async function submitSignIn(
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
-// The users of the dataset who hold the vulnerability_analyst role and can
-// sign in (same document, Users), whose landing is the Ticket list in its New
-// view; the landing of every other user is the Home (docs/screen-map.md,
-// Landing).
-const ANALYSTS = new Set(["asmith", "bwilson"]);
+// The users of the dataset who hold triage_ticket, through the
+// vulnerability_analyst or the restricted_analyst role, and can sign in (same
+// document, Users), whose landing is the Ticket list in its New view; the
+// landing of every other user is the Home (docs/screen-map.md, Landing).
+const TRIAGERS = new Set(["asmith", "bwilson", "cwhite", "security-scanner"]);
 
 // Signs in on Sign in, opened directly, as a user of the dataset, jdoe by
 // default (same document, Users), and waits for the landing of the user, to
@@ -116,7 +116,7 @@ const ANALYSTS = new Set(["asmith", "bwilson"]);
 export async function signIn(page: Page, username = "jdoe") {
   await page.goto("/login");
   await submitSignIn(page, username, DATASET_PASSWORD);
-  await page.waitForURL(ANALYSTS.has(username) ? "/tickets?view=new" : "/");
+  await page.waitForURL(TRIAGERS.has(username) ? "/tickets?view=new" : "/");
 }
 
 // The avatars that the page shows, which the reference screenshots mask: the

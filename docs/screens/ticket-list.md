@@ -13,10 +13,12 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 The Ticket list shows the Tickets in the views of `docs/screen-map.md`
 (Ticket List Views), which the user refines with a search, filters, and the
-sorting of its columns. Vulnerability analysts work their queues in it,
-starting from the queue of new Tickets, their landing, with the attention
-summary above the views; every other user finds a Ticket in it, starting
-from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
+sorting of its columns. Vulnerability and restricted analysts work their
+queues in it, starting from the queue of new Tickets, their landing; every
+other user finds a Ticket in it, starting from all of them. The attention
+summary above the views shows every user the Tickets that need attention
+(`docs/screen-map.md`, Users and Frequent Tasks; Landing; Attention
+Summary).
 
 ## Access
 
@@ -26,10 +28,12 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   (Sentinel `docs/features/tickets/tickets.md`, List Tickets; Sentinel
   `docs/features/identity/rbac.md`, Scope and Confidential Ticket
   Visibility).
-- The Assigned to me view and the attention summary show only to a user
-  whose roles include `vulnerability_analyst`, as Get Current User returns
-  them (Sentinel `docs/features/identity/authentication.md`, Get Current
-  User; `docs/screen-map.md`, Roles, Principles).
+- The Assigned to me view shows only to a user who can be the assignee of a
+  Ticket: one whose `assignment_eligibility`, as Get Current User returns it,
+  is `all` or `non_confidential` (Sentinel
+  `docs/features/identity/authentication.md`, Get Current User; Sentinel
+  `docs/features/identity/rbac.md`, Assignment Eligibility Wire Format;
+  `docs/screen-map.md`, Roles, Principles).
 
 ## Navigation
 
@@ -63,18 +67,18 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   knows, once each, in the order of the table above, a search term loses its
   surrounding whitespace, and a parameter that names the value of the last
   column, such as `page=1`, is left out, all in place of the URL in the
-  browser history. A user who is not shown Assigned to me sees
-  the All view for `view=assigned-to-me`, and the list removes the parameter
-  in the same way once it knows the user, also when a read of the signed-in
-  user tells that the role was removed during the session
+  browser history. A user who is not shown Assigned to me sees the All view
+  for `view=assigned-to-me`, and the list removes the parameter in the same
+  way once it knows the user, also when a read of the signed-in user tells
+  during the session that the user can no longer be the assignee of a Ticket
   (`docs/behaviors.md`, The Signed-in User); no request carries it. The other
   parameters and the fragment stay.
 - The Tickets entry of the sidebar leads to `/tickets?view=new` for a user
-  who holds the `vulnerability_analyst` role, and to `/tickets` for every
-  other user. For such a user, `/` leads to `/tickets?view=new`, in place of
-  `/` in the browser history, from every way to the landing, and so does the
-  Home when a read of the signed-in user tells that the role was added
-  while it shows (`docs/screen-map.md`, Sidebar; Landing; Browser History).
+  who holds `triage_ticket`, and to `/tickets` for every other user. For
+  such a user, `/` leads to `/tickets?view=new`, in place of `/` in the
+  browser history, from every way to the landing, and so does the Home when a
+  read of the signed-in user tells that the capability was added while it
+  shows (`docs/screen-map.md`, Sidebar; Landing; Browser History).
 - A view and a page are each an entry of the browser history, and so are a
   search, a change of the filters, and a sorting, which keep the view
   (`docs/design-system.md`, Lists). A tab opens its view at its first page,
@@ -87,12 +91,12 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
 ## Content
 
 - The heading "Tickets", and the page title "Tickets – Sentinel".
-- **Attention summary**, for a user who holds the `vulnerability_analyst`
-  role, in the heading row after the heading, named "Tickets that need
-  attention" for assistive technologies: the five counts of
-  `docs/screen-map.md` (Attention Summary), in this order, each read from List
-  Tickets, `GET /api/v1/tickets`, with its filters and `per_page=1`, as
-  `meta.total`, and each a link to the All view with the same filters.
+- **Attention summary**, in the heading row after the heading, named
+  "Tickets that need attention" for assistive technologies: the five counts
+  of `docs/screen-map.md` (Attention Summary), in this order, each read from
+  List Tickets, `GET /api/v1/tickets`, with its filters and `per_page=1`, as
+  `meta.total`, so that it counts the Tickets that the user sees, and each a
+  link to the All view with the same filters.
   Active P1 measures priority, and the four overdue counts, which never count
   the same Ticket, form the group "Overdue" after it (`docs/design-system.md`,
   Lists): each shows its phase, as "1 Triage", and is read with the name of
@@ -250,14 +254,13 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   the popover of Filters is open, it announces the same itself
   (`docs/design-system.md`, Lists).
 - **The focus.** When the rows, the table without rows, the action of an
-  empty state, the pagination, a tab, a count of the attention summary, or
-  Clear filters leaves the page while it holds the focus, such as "Go to the
-  first page" once the rows arrive, the pagination when an error takes the
-  place of the rows, Clear filters once it removed the search and the
-  filters, or Assigned to me and the attention summary when a read of the
-  signed-in user tells that the role was removed, the focus moves to the
-  screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
-  action).
+  empty state, the pagination, a tab, or Clear filters leaves the page while
+  it holds the focus, such as "Go to the first page" once the rows arrive,
+  the pagination when an error takes the place of the rows, Clear filters
+  once it removed the search and the filters, or Assigned to me when a read
+  of the signed-in user tells that the user can no longer be the assignee of
+  a Ticket, the focus moves to the screen's heading (`docs/behaviors.md`,
+  Accessibility, Focus after an action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
   page. A view that the user refined without Tickets that match says "No
   Tickets in this view match the search." when only a search applies and "No
@@ -303,7 +306,7 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   Filter); Sorting, Current Due Date
 - Sentinel `docs/features/identity/authentication.md` — Get Current User
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
-  Visibility
+  Visibility; Assignment Eligibility Wire Format
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Pagination; Filtering; Enum Filter
   Validation; Sorting; User Identifier Resolution

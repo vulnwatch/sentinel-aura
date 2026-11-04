@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
-import type { CurrentUserResponse } from "../api/generated/model";
+import { Capability, type CurrentUserResponse } from "../api/generated/model";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import {
@@ -16,8 +16,7 @@ import {
 } from "../test-api";
 
 // The landing at / (docs/screen-map.md, Landing): the Ticket list in its New
-// view for a user who holds the vulnerability_analyst role, the Home for
-// every other user.
+// view for a user who holds triage_ticket, the Home for every other user.
 
 const ME = "/api/v1/users/me";
 
@@ -49,12 +48,16 @@ async function renderApp(user: CurrentUserResponse, path: string) {
   return { router, screen };
 }
 
-test("shows the Home to a user without the vulnerability_analyst role", async () => {
-  // A user with every other role.
+test("shows the Home to a user without triage_ticket", async () => {
+  // A user with every other capability, and with roles, which decide
+  // nothing.
   const user: CurrentUserResponse = {
     data: {
       ...FICTIONAL_USER.data,
-      roles: ["admin", "restricted_analyst"],
+      roles: ["admin", "vulnerability_analyst"],
+      capabilities: Object.values(Capability).filter(
+        (capability) => capability !== "triage_ticket",
+      ),
     },
   };
   const { router, screen } = await renderApp(user, "/");
@@ -66,7 +69,7 @@ test("shows the Home to a user without the vulnerability_analyst role", async ()
   expect(router.state.location.href).toBe("/");
 });
 
-test("leads a user who holds the vulnerability_analyst role to the New view of the Ticket list, in place of / in the browser history", async () => {
+test("leads a user who holds triage_ticket to the New view of the Ticket list, in place of / in the browser history", async () => {
   const { router, screen } = await renderApp(OTHER_USER, "/");
 
   await expect
@@ -102,7 +105,7 @@ test("is where Sign in leads an analyst without a saved URL", async () => {
   expect(router.history.length).toBe(1);
 });
 
-test("leads to the New view of the Ticket list when a read of the signed-in user tells that the role was added while the Home shows", async () => {
+test("leads to the New view of the Ticket list when a read of the signed-in user tells that triage_ticket was added while the Home shows", async () => {
   const session = { user: FICTIONAL_USER };
   stubApi((request) =>
     request.path === ME ? jsonResponse(200, session.user) : ticketPage([]),
@@ -116,7 +119,7 @@ test("leads to the New view of the Ticket list when a read of the signed-in user
     .toBeVisible();
 
   session.user = {
-    data: { ...FICTIONAL_USER.data, roles: ["vulnerability_analyst"] },
+    data: { ...FICTIONAL_USER.data, capabilities: ["triage_ticket"] },
   };
   // The tab returns to the foreground, and reads the signed-in user again.
   focusManager.setFocused(false);

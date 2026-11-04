@@ -6,6 +6,8 @@ import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
 import type {
+  AssignmentEligibility,
+  CurrentUserData,
   CurrentUserResponse,
   TicketSummary,
 } from "../api/generated/model";
@@ -30,9 +32,30 @@ const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
 const DAY = 24 * 60 * 60 * 1000;
 
-// A user who holds the vulnerability_analyst role, and one who holds none.
+// A user who holds the vulnerability_analyst role and can be the assignee of
+// every Ticket, and one who holds no role and can be the assignee of none.
 const ANALYST: CurrentUserResponse = OTHER_USER;
 const READER: CurrentUserResponse = FICTIONAL_USER;
+
+// An assignment eligibility that the pinned contract does not list, which a
+// later Sentinel release can return.
+const UNLISTED_ELIGIBILITY = "fictional_eligibility";
+
+// Get Current User's response, with a listed assignment eligibility or the
+// unlisted one.
+interface UserResponse {
+  data: Omit<CurrentUserData, "assignment_eligibility"> & {
+    assignment_eligibility: AssignmentEligibility | typeof UNLISTED_ELIGIBILITY;
+  };
+}
+
+// The user with another assignment eligibility.
+function withEligibility(
+  user: CurrentUserResponse,
+  eligibility: AssignmentEligibility | typeof UNLISTED_ELIGIBILITY,
+): UserResponse {
+  return { data: { ...user.data, assignment_eligibility: eligibility } };
+}
 
 // The filters of the views, as the requests send them, for the analyst.
 const FILTERS = {
@@ -126,7 +149,7 @@ afterEach(async () => {
 
 interface Stub {
   // The signed-in user, which a test can change.
-  user: CurrentUserResponse;
+  user: UserResponse;
   // The response to the read of a list, other than a count.
   list: Responder;
   // The response to the read of the count of a view.
@@ -274,8 +297,32 @@ describe("the views", () => {
       .toBeVisible();
   });
 
-  test("show no Assigned to me to a user without the vulnerability_analyst role", async () => {
-    stubTickets({ user: READER });
+  test("show Assigned to me to a user who can be the assignee of the non-confidential Tickets alone", async () => {
+    stubTickets({ user: withEligibility(READER, "non_confidential") });
+    const { screen } = await renderApp("/tickets");
+
+    await expectTabs(screen, [
+      "New 12",
+      "Assigned to me 0",
+      "Analysis 5",
+      "Analyzed 3",
+      "Orphaned 1",
+      "All 1,250",
+    ]);
+  });
+
+  test.each([
+    ["holds no role and can be the assignee of no Ticket", READER],
+    [
+      "holds the vulnerability_analyst role as a bot account, which can be the assignee of no Ticket",
+      withEligibility({ data: { ...ANALYST.data, bot: true } }, "none"),
+    ],
+    [
+      "has an assignment eligibility that the pinned contract does not list",
+      withEligibility(ANALYST, UNLISTED_ELIGIBILITY),
+    ],
+  ])("show no Assigned to me to a user who %s", async (_, user) => {
+    stubTickets({ user });
     const { screen } = await renderApp("/tickets");
 
     await expectTabs(screen, [
@@ -869,14 +916,14 @@ describe("the URL", () => {
     ]);
   });
 
-  test("drops Assigned to me when a read of the signed-in user tells that the role was removed, and moves the focus from its tab to the heading", async () => {
+  test("drops Assigned to me when a read of the signed-in user tells that the user can no longer be the assignee of a Ticket, and moves the focus from its tab to the heading", async () => {
     const { stub } = stubTickets();
     const { router, screen } = await renderApp("/tickets?view=assigned-to-me");
     const tab = screen.getByRole("tab", { name: "Assigned to me 4" });
     await expect.element(tab).toHaveAttribute("aria-selected", "true");
     tab.element().focus();
 
-    stub.user = { data: { ...ANALYST.data, roles: [] } };
+    stub.user = withEligibility(ANALYST, "none");
     returnToForeground();
 
     await expect.poll(() => router.state.location.href).toBe("/tickets");
@@ -892,18 +939,17 @@ describe("the URL", () => {
   });
 });
 
-describe("a change of the role", () => {
-  test("keeps the focus on a tab that stays when a read of the signed-in user tells that the role was added", async () => {
+describe("a change of the assignment eligibility", () => {
+  test("keeps the focus on a tab that stays when a read of the signed-in user tells that the user can be the assignee of a Ticket", async () => {
     const { stub } = stubTickets({ user: READER });
     const { router, screen } = await renderApp("/tickets?view=new");
     const fresh = screen.getByRole("tab", { name: "New 12" });
     await expect.element(fresh).toBeVisible();
     fresh.element().focus();
 
-    // The same user, who now holds the role.
-    stub.user = {
-      data: { ...READER.data, roles: ["vulnerability_analyst"] },
-    };
+    // The same user, who can now be the assignee of the non-confidential
+    // Tickets.
+    stub.user = withEligibility(READER, "non_confidential");
     returnToForeground();
 
     await expect
@@ -913,14 +959,14 @@ describe("a change of the role", () => {
     expect(router.state.location.href).toBe("/tickets?view=new");
   });
 
-  test("keeps the focus on a row that stays when a read of the signed-in user tells that the role was removed", async () => {
+  test("keeps the focus on a row that stays when a read of the signed-in user tells that the user can no longer be the assignee of a Ticket", async () => {
     const { stub } = stubTickets();
     const { screen } = await renderApp("/tickets");
     const link = tableOf(screen).getByRole("link", { name: "SNTL-1" });
     await expect.element(link).toBeVisible();
     link.element().focus();
 
-    stub.user = { data: { ...ANALYST.data, roles: [] } };
+    stub.user = withEligibility(ANALYST, "none");
     returnToForeground();
 
     await expect
@@ -2043,7 +2089,7 @@ async function expectSummary(screen: Screen) {
 }
 
 describe("the attention summary", () => {
-  test("shows an analyst five counts in the heading row, each a link to the All view refined to its Tickets", async () => {
+  test("shows five counts in the heading row, each a link to the All view refined to its Tickets", async () => {
     stubTickets();
     const { screen } = await renderApp("/tickets?view=new");
     const links = summaryOf(screen).getByRole("link");
@@ -2243,7 +2289,7 @@ describe("the attention summary", () => {
       .toBe(`current_phase=um&overdue=um&${ALL_PAGE}`);
   });
 
-  test("shows no attention summary to a user without the vulnerability_analyst role", async () => {
+  test("shows the same counts to a user who holds no capability and can be the assignee of no Ticket", async () => {
     const { spy } = stubTickets({ user: READER });
     const { screen } = await renderApp("/tickets");
     await expectTabs(screen, [
@@ -2254,23 +2300,28 @@ describe("the attention summary", () => {
       "All 1,250",
     ]);
 
-    await expect.element(summaryOf(screen)).not.toBeInTheDocument();
-    expect(queriesOf(spy, "count")).toHaveLength(5);
+    await expectSummary(screen);
+    // The counts of the five views, and those of the summary.
+    expect(queriesOf(spy, "count")).toHaveLength(10);
   });
 
-  test("goes when a read of the signed-in user tells that the role was removed, and moves the focus from a count to the heading", async () => {
+  test("stays, with the focus on its count, when a read of the signed-in user tells that the user lost every capability and can be the assignee of no Ticket", async () => {
     const { stub } = stubTickets();
     const { screen } = await renderApp("/tickets");
     const count = summaryOf(screen).getByRole("link", { name: "2 Active P1" });
     await expect.element(count).toBeVisible();
     count.element().focus();
 
-    stub.user = { data: { ...ANALYST.data, roles: [] } };
+    stub.user = withEligibility(
+      { data: { ...ANALYST.data, roles: [], capabilities: [] } },
+      "none",
+    );
     returnToForeground();
 
-    await expect.element(summaryOf(screen)).not.toBeInTheDocument();
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
-      .toHaveFocus();
+      .element(screen.getByRole("tab", { name: /^Assigned to me/ }))
+      .not.toBeInTheDocument();
+    await expectSummary(screen);
+    await expect.element(count).toHaveFocus();
   });
 });

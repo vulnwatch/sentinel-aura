@@ -6,15 +6,16 @@
 /**
  * Request body of `PATCH /api/v1/tickets/{ticket_id}/assignee`.
  *
- * See `docs/features/tickets/tickets.md` (Assign Ticket). `user_id` is a
- * required, non-nullable UUID-or-username string (`docs/api-spec.md`,
- * User Identifier Resolution): a Ticket cannot be unassigned through the
- * API. The service locks the target before the Ticket but reports its
- * absence only after locked-current Ticket accessibility. An omitted,
- * `null`, or non-string field fails with the global
- * `422 VALIDATION_ERROR`.
+ * See `docs/features/tickets/tickets.md` (Assign Ticket). `user_id` is
+ * required and nullable (`docs/api-spec.md`, Partial Update Semantics:
+ * single-field PATCH). A UUID-or-username string (User Identifier
+ * Resolution) assigns or reassigns the Ticket; the service locks the
+ * target before the Ticket but reports its absence only after
+ * locked-current Ticket accessibility. JSON `null` clears the caller's
+ * own assignment (tickets.md, Self-Unassignment). An omitted field or a
+ * value of another type fails with the global `422 VALIDATION_ERROR`.
  */
 export interface TicketAssigneeUpdateRequest {
-  /** Target user: UUID or exact username. The user must be active and hold the `vulnerability_analyst` role. Required; `null` is rejected (no unassignment through the API). */
-  user_id: string;
+  /** Target user: UUID or exact username. The user must be eligible to be the assignee of the Ticket: active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential. JSON `null` unassigns the caller, who must be the current assignee. Required. */
+  user_id: string | null;
 }

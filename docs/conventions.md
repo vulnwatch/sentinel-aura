@@ -174,7 +174,7 @@ rules; review enforces the rest.
 | `src/app.tsx` | The providers that every screen shares |
 | `src/query-client.ts` | The query client, with the defaults of every read and change (`docs/behaviors.md`, Retries and Unconfirmed Changes; Loading) |
 | `src/session.ts` | What the UI keeps of the session in the origin's browser storage: the session record, and the saved URL with its check, both forgotten after a sign-out (`docs/behaviors.md`, Return After Sign-in; Session Expiration Message; Sign-out) |
-| `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, the return from Sign in, and Sign out (`docs/behaviors.md`, Session); and the signed-in user for the screens that depend on it, with the role that decides the landing (`docs/screen-map.md`, Landing; Roles) |
+| `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, the return from Sign in, and Sign out (`docs/behaviors.md`, Session); and the signed-in user for the screens that depend on it, with the capability that decides the landing (`docs/screen-map.md`, Landing; Roles) |
 | `src/avatar.ts` | The pattern and the color of the avatar (`docs/design-system.md`, Avatar, Definition, Version 1): the SHA-256 digest of a user's `id`, and the cells and the index of the color in the Palette that it selects |
 | `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
 | `src/search-params.ts` | How the router reads and writes the search parameters of a URL, as text (Routes), and the schemas of the parameters whose value is a whole number or a list |
@@ -233,8 +233,8 @@ that needs it; content of another kind needs a new row first.
   does not declare, and gives every value as text, so `beforeLoad` compares
   the URL with the schema's own result as the URLs that they give, whichever
   parameter comes first. A parameter that the screen accepts only for some
-  users, such as a view that a role decides, is removed by the screen in the
-  same way, once it knows the user.
+  users, such as a view that the assignment eligibility decides, is removed
+  by the screen in the same way, once it knows the user.
 - Links between the UI's screens use the router's typed paths: React Aria's
   links, and the components that contain links, navigate through the router,
   which the root route connects to React Aria. A link with path or search

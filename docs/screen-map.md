@@ -46,9 +46,10 @@ to its screen document (`docs/conventions.md`, Screen Documents).
 Sentinel Aura is for internal use (`docs/architecture.md`, Scope and System
 Boundary). Two groups do most of the work in it: a small team of
 vulnerability analysts, who work in it all day, and many package maintainers,
-who open it when work is pending for them. Every other employee with an
-account reads it occasionally. The screens are designed for the tasks below,
-grouped by the profiles of Roles.
+who open it when work is pending for them. Administrators and restricted
+analysts have tasks of their own, and every other employee with an account
+reads it occasionally. The screens are designed for the tasks below, grouped
+by the profiles of Roles.
 
 ### Vulnerability Analysts
 
@@ -104,10 +105,19 @@ role too. Besides the tasks of an analyst, they occasionally:
 
 ### Restricted Analysts
 
-Mostly automation: bot accounts with the `restricted_analyst` role that work
-through API keys (Sentinel `docs/features/identity/rbac.md`, Business Rules;
-Sentinel `docs/features/identity/user-management.md`, Bot Accounts). Their
-operators sign in to the UI to create and rotate those keys.
+Users with the `restricted_analyst` role, which grants the capabilities of
+Ticket work without access to embargoed data (Sentinel
+`docs/features/identity/rbac.md`, Business Rule 14; Role Origins and
+Coexistence):
+
+- people, such as the members of an external group mapped to the role, who
+  work the non-confidential Tickets as vulnerability analysts do: they take
+  them from the queue of new Tickets and own them. A confidential Ticket that
+  an access grant or package maintainership shows them they can work on, but
+  never own (same document, Business Rule 10);
+- bot accounts, which work through API keys and own no Ticket (Sentinel
+  `docs/features/identity/user-management.md`, Bot Accounts). Their
+  operators sign in to the UI to create and rotate those keys.
 
 ### Every User
 
@@ -123,7 +133,7 @@ under the path of the screen, and its screen document records it.
 | Area | Screen | Path | Content |
 |---|---|---|---|
 | Sign-in | Sign in | `/login` | Local sign-in (Sentinel `docs/features/identity/local-authentication.md`, Login) |
-| Home | Home | `/` | The landing of the users without the `vulnerability_analyst` role: the search and a summary of their package work (Landing) |
+| Home | Home | `/` | The landing of the users without the `triage_ticket` capability: the search and a summary of their package work (Landing) |
 | Search | Search results | `/search` | The Tickets and CVEs that match a search term (Search) |
 | Tickets | Ticket list | `/tickets` | The Tickets, in the views of Ticket List Views |
 | Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, package tree, references, IBS requests, and audit log, and, with `manage_confidentiality`, its access grants |
@@ -148,8 +158,9 @@ under the path of the screen, and its screen document records it.
 
 - A Ticket is created from the Ticket list.
 - The UI has no screen of the user directory. The directory serves the
-  pickers and filters of other screens, such as the assignee and the access
-  grants of a Ticket; the complete profile of a user appears only in
+  pickers and filters of other screens, such as the assignee of a Ticket,
+  which offers only the users who can be its assignee (Roles, Principles),
+  and its access grants; the complete profile of a user appears only in
   Administration (Sentinel `docs/features/identity/user-management.md`, Access
   Level Requirements).
 - My packages is there for every user: Sentinel serves the workbench to every
@@ -206,11 +217,11 @@ which every screen of its area lies (Areas and Screens), `/tickets`, `/cves`,
 `/packages`, `/products`, `/my-packages`, `/data-sources`, or `/admin`, or a
 path under it, such as Tickets at `/tickets/SNTL-42`. The Home, Search
 results, and the screens of Account belong to no entry. The Tickets entry
-opens the Ticket list in its New view for a user who holds the
-`vulnerability_analyst` role (Roles), and in its All view for every other
-user. The Administration entry opens Users for a user who holds
-`manage_users`, and Settings for every other user who sees it; from each of
-its screens, the others that the user can use are one step away.
+opens the Ticket list in its New view for a user who holds `triage_ticket`
+(Roles), and in its All view for every other user. The Administration entry
+opens Users for a user who holds `manage_users`, and Settings for every other
+user who sees it; from each of its screens, the others that the user can use
+are one step away.
 
 ### Links Between Areas
 
@@ -267,14 +278,13 @@ sidebar does, and which Sign in opens after a sign-in when it has no saved URL
 to return to (`docs/behaviors.md`, Return After Sign-in). It depends on the
 user:
 
-- for a user who holds the `vulnerability_analyst` role, `/` leads to the URL
-  of the Ticket list in its New view, the queue of new Tickets, with the
-  attention summary (Ticket List Views; Browser History). Such a user does not
-  see the Home;
+- for a user who holds `triage_ticket`, `/` leads to the URL of the Ticket
+  list in its New view, the queue of new Tickets (Ticket List Views; Browser
+  History). Such a user does not see the Home;
 - every other user sees the Home at `/`.
 
-The landing depends on the role (Roles) and not on data, so the landing of a
-user does not change from one day to the next.
+The landing depends on a capability (Roles) and not on data, so the landing
+of a user does not change from one day to the next.
 
 The Home leads with the search, followed by a summary of the user's pending
 and in-progress work in My packages, which links to its lists. A user without
@@ -288,10 +298,10 @@ them, as tabs in this order:
 | View | Tickets | Shown to |
 |---|---|---|
 | New | Status New: the Tickets that no analyst has taken yet, because the first assignment moves a Ticket to Analysis (Sentinel `docs/features/tickets/tickets.md`, Status Transitions) | Every user |
-| Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who holds the `vulnerability_analyst` role (Roles) |
+| Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who can be the assignee of a Ticket (Roles) |
 | Analysis | Status Analysis | Every user |
 | Analyzed | Status Analyzed | Every user |
-| Orphaned | Status Analysis or Analyzed without an assignee: the orphaned Tickets awaiting reassignment, such as the Tickets of an analyst who was deactivated or lost the role, which Sentinel unassigns, and an unassigned Ticket that a user without that role brought back from Ignored or Duplicated, or that Sentinel reopened from Ignored. The API offers no way to unassign a Ticket (Sentinel `docs/features/tickets/tickets.md`, Architectural Invariant; Reassignment; Ignored; Assign Ticket; Reopen Ticket; Revert Duplicate Status) | Every user |
+| Orphaned | Status Analysis or Analyzed without an assignee: the Tickets awaiting an assignee. Their assignee returned them; Sentinel unassigned them because their assignee could no longer own them, after a deactivation, a marking as a bot account, a role removal, or the Ticket becoming confidential; or they came back from Resolved, Ignored, or Duplicated without an assignee who can own them, such as an unassigned Ticket that a user who cannot be its assignee reopened or reverted, or that Sentinel reopened from Ignored (Sentinel `docs/features/tickets/tickets.md`, Architectural Invariant; Reassignment; Self-Unassignment; Ignored; Assign Ticket; Reopen Ticket; Revert Duplicate Status; Set Confidentiality) | Every user |
 | All | Every status | Every user |
 
 - Each tab shows the number of Tickets of its view as this table defines it,
@@ -307,8 +317,9 @@ them, as tabs in this order:
 
 ### Attention Summary
 
-For a user who holds the `vulnerability_analyst` role, the Ticket list shows
-above its views five counts of the Tickets that need attention:
+The Ticket list shows every user, above its views, five counts of the Tickets
+that need attention, among the Tickets that the API returns to the user
+(Roles, Principles):
 
 | Count | Tickets |
 |---|---|
@@ -414,14 +425,37 @@ users bookmark and share them, and changing one changes this document first.
   user who can use its area (Sidebar). A user who opens the path of a screen
   without the capability that its operations require sees the API's refusal
   (`docs/behaviors.md`, Default Presentation by Status).
-- **A role decides only where Sentinel's rule is about a role.** Only holders
-  of the `vulnerability_analyst` role can be assigned a Ticket (Sentinel
-  `docs/features/identity/rbac.md`, Business Rules), so that role decides the
-  landing (Landing), the view that the Tickets entry opens, the Assigned to me
-  view, the attention summary, and whether the action that assigns a Ticket to
-  the signed-in user is offered, which also needs the capability of its
-  operation (Sentinel `docs/features/tickets/tickets.md`, Assign Ticket).
-  Everything else depends on capabilities.
+- **No element depends on a role.** Elements follow capabilities, and an
+  element that concerns the ownership of a Ticket follows the user's
+  assignment eligibility, as Sentinel reports it (Capabilities of the
+  Signed-in User). The eligibility is a rule that names no role: a user can
+  be the assignee of a Ticket when active, not a bot account, holding
+  `triage_ticket`, and, for a confidential Ticket, with scope `all`; an
+  access grant or package maintainership never makes a user the assignee
+  (Sentinel `docs/features/identity/rbac.md`, Business Rule 10). So:
+  - the landing (Landing) and the view that the Tickets entry opens
+    (Sidebar) follow `triage_ticket`, the capability with which the queue of
+    new Tickets is worked;
+  - the Assigned to me view (Ticket List Views) shows to a user who can be
+    the assignee of a Ticket: one whose assignment eligibility is `all` or
+    `non_confidential`;
+  - the action that assigns a Ticket to the signed-in user is offered to a
+    user who holds `triage_ticket`, the capability of its operation (Sentinel
+    `docs/features/tickets/tickets.md`, Assign Ticket), and whose assignment
+    eligibility admits the Ticket: `all` for a confidential Ticket, `all` or
+    `non_confidential` for every other Ticket;
+  - the assignee picker of a Ticket offers the users that List Users returns
+    with `assignment_eligibility=all` for a confidential Ticket, and with
+    `assignment_eligibility=all&assignment_eligibility=non_confidential` for
+    every other Ticket (Sentinel `docs/features/identity/user-management.md`,
+    List Users), so it never offers a bot account, nor, for a confidential
+    Ticket, a user who sees it only through an access grant or package
+    maintainership.
+
+  A value of the assignment eligibility that the pinned contract does not
+  list admits no Ticket (`docs/behaviors.md`, Unknown Values). The
+  eligibility only guides what the UI shows: the API decides each assignment
+  (The API decides).
 
 ### Profiles
 
@@ -437,32 +471,40 @@ below only summarizes them.
 |---|---|---|
 | Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the Home |
 | Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
-| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all` | The queue of new Tickets as landing, with the attention summary and the Assigned to me view, and the actions of its capabilities on Tickets and CVEs |
-| Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential` | The actions of its capabilities on the Tickets that the user sees. Lands on the Home; its users are mostly bot accounts, which use the UI for their API keys |
-| Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the fetcher management of Data sources, and the actions of its other capabilities; Ticket work needs the analyst role too. Lands on the Home unless the user also holds the `vulnerability_analyst` role |
+| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
+| Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same rule) | The queue of new Tickets as landing, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
+| Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the fetcher management of Data sources, and the actions of its other capabilities; Ticket work needs an analyst role too. Lands on the Home unless the user also holds an analyst role |
 
 ### Capabilities of the Signed-in User
 
-The UI reads the roles and the capabilities of the signed-in user from Get
-Current User (Sentinel `docs/features/identity/authentication.md`, Get Current
-User): the roles are the source of every element that depends on the
-`vulnerability_analyst` role, and the capabilities of every element that
-depends on a capability (Principles). Sentinel resolves the capabilities from
-the roles with the union rule of its role definitions, so the UI does not
-derive them, which would copy those definitions. The UI reads the signed-in
-user again during a session as `docs/behaviors.md` (The Signed-in User)
-defines, so that a change of the user's roles reaches an open tab.
+The UI reads the capabilities and the assignment eligibility of the
+signed-in user from Get Current User (Sentinel
+`docs/features/identity/authentication.md`, Get Current User): the
+capabilities are the source of every element that depends on a capability,
+and the assignment eligibility of every element that depends on whether the
+user can be the assignee of a Ticket (Principles). Sentinel resolves the
+capabilities from the roles with the union rule of its role definitions, and
+the assignment eligibility from the roles, the active status, and the bot
+marker with its rule of who can be an assignee, so the UI derives neither,
+which would copy those definitions and that rule (Sentinel
+`docs/features/identity/rbac.md`, Assignment Eligibility Wire Format). The
+UI reads the signed-in user again during a session as `docs/behaviors.md`
+(The Signed-in User) defines, so that a change of the user's roles or bot
+marker reaches an open tab.
 
-The capabilities only guide what the UI shows (Principles). They grant
-nothing, and a list read earlier can be out of date: every operation still
-checks its own authorization, and Sentinel applies a change of the user's
-roles from the user's next request, so the API can refuse an action that the
-UI shows (Sentinel `docs/features/identity/authentication.md`, Get Current
-User). The refusal shows as `docs/behaviors.md` (Default Presentation by
-Status) defines, and the UI then reads the signed-in user again
-(`docs/behaviors.md`, The Signed-in User). The capabilities state neither the
-user's scope nor a permission that depends on a record, such as an access
-grant or package maintainership (same Sentinel section).
+The capabilities and the assignment eligibility only guide what the UI shows
+(Principles). They grant nothing, and a value read earlier can be out of
+date: every operation still checks its own authorization, and every
+assignment the eligibility of its assignee, and Sentinel applies a change of
+the user's roles from the user's next request, so the API can refuse an
+action that the UI shows (Sentinel `docs/features/identity/authentication.md`,
+Get Current User). The refusal shows as `docs/behaviors.md` (Default
+Presentation by Status) defines, and after a `403` the UI reads the signed-in
+user again (`docs/behaviors.md`, The Signed-in User). The capabilities state
+neither the user's scope nor a permission that depends on a record, such as
+an access grant or package maintainership, and the assignment eligibility
+states only for which Tickets the user can be the assignee (same Sentinel
+section).
 
 ## Open Decisions
 

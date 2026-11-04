@@ -20,7 +20,7 @@ import {
 } from "react-aria-components";
 import type { CurrentUserData } from "../api/generated/model";
 import { sidebarPreference } from "../preferences";
-import { holdsAnalystRole } from "../session-gate";
+import { triagesTickets } from "../session-gate";
 import { AccountMenu } from "./account-menu";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { IconButton } from "./icon-button";
@@ -87,16 +87,16 @@ const ENTRIES: readonly Entry[] = [
   },
 ];
 
-// The entries of the user, from the roles and the capabilities of Get
-// Current User, which only guide what the UI shows (docs/screen-map.md,
-// Roles; Capabilities of the Signed-in User): Tickets opens the Ticket list
-// in its New view for a user who holds the vulnerability_analyst role, and in
-// its All view for every other user; Administration appears last, only to a
-// user who holds manage_users or manage_settings, and opens Users for a user
-// who holds manage_users, Settings otherwise. A role or a capability that the
-// pinned contract does not list changes nothing.
+// The entries of the user, from the capabilities of Get Current User, which
+// only guide what the UI shows (docs/screen-map.md, Roles; Capabilities of
+// the Signed-in User): Tickets opens the Ticket list in its New view for a
+// user who holds triage_ticket, and in its All view for every other user;
+// Administration appears last, only to a user who holds manage_users or
+// manage_settings, and opens Users for a user who holds manage_users,
+// Settings otherwise. A capability that the pinned contract does not list
+// changes nothing.
 function entriesOf(user: CurrentUserData): readonly Entry[] {
-  const entries = holdsAnalystRole(user)
+  const entries = triagesTickets(user)
     ? ENTRIES.map((entry) =>
         entry.area === "/tickets"
           ? {

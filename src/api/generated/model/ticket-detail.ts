@@ -32,7 +32,7 @@ export interface TicketDetail {
   priority_automatic: TicketPriorityValue | null;
   /** Manual priority override: `p1`-`p4`, or `null` when no override is set. */
   priority_override: TicketPriorityValue | null;
-  /** Assigned Vulnerability Analyst, or `null` if unassigned. */
+  /** Current assignee, or `null` if unassigned. */
   assignee: UserReference | null;
   /** Expanded data of the associated CVE, or `null` if no CVE. */
   cve: CVEDetail | null;

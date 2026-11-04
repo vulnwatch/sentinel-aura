@@ -56,8 +56,9 @@ interface TabLabelProps {
 
 // The label of a tab. When the tab leaves the page while it holds the
 // focus, because a read replaced what the screen shows, such as a view that
-// a role decides after the role was removed, the focus moves to the screen's
-// heading (docs/behaviors.md, Accessibility, Focus after an action).
+// a read of the signed-in user tells that the user is no longer shown, the
+// focus moves to the screen's heading (docs/behaviors.md, Accessibility,
+// Focus after an action).
 function TabLabel({ children }: TabLabelProps) {
   const ref = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -103,8 +104,8 @@ export function ViewTabs({
   children,
 }: ViewTabsProps) {
   // The view whose tab holds the focus, and how many times a tab left the
-  // page while it held it, such as a view that a role decides after the role
-  // was removed. The tabs then start again, so that they do not move the
+  // page while it held it, such as a view that the signed-in user is no
+  // longer shown. The tabs then start again, so that they do not move the
   // focus to another tab while TabLabel moves it to the screen's heading;
   // every other change of the views keeps them, and the focus where it is.
   const [focused, setFocused] = useState<string>();

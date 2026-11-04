@@ -14,7 +14,8 @@ import type {
 
 const REQUEST_ID = "01890a5d-ac96-774b-bcce-b302099a8057";
 
-// The signed-in user of the tests, as Get Current User returns it.
+// The signed-in user of the tests, as Get Current User returns it, who holds
+// no role, and so can be the assignee of no Ticket.
 export const FICTIONAL_USER: CurrentUserResponse = {
   data: {
     id: "00000000-0000-0000-0000-000000000001",
@@ -25,11 +26,13 @@ export const FICTIONAL_USER: CurrentUserResponse = {
     capabilities: [],
     active: true,
     bot: false,
+    assignment_eligibility: "none",
   },
 };
 
 // Another user, who signs in in another tab, and who holds the
-// vulnerability_analyst role.
+// vulnerability_analyst role, with triage_ticket, and can be the assignee of
+// every Ticket.
 export const OTHER_USER: CurrentUserResponse = {
   data: {
     id: "00000000-0000-0000-0000-000000000002",
@@ -40,6 +43,7 @@ export const OTHER_USER: CurrentUserResponse = {
     capabilities: ["triage_ticket"],
     active: true,
     bot: false,
+    assignment_eligibility: "all",
   },
 };
 

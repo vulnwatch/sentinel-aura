@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.16.0"
+    "version": "0.17.0"
   },
   "paths": {
     "/health": {
@@ -755,7 +755,7 @@
           "Users"
         ],
         "summary": "List users",
-        "description": "Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, and role values. Supports search across username, email, and full name; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).",
+        "description": "Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).",
         "operationId": "list_users_api_v1_users_get",
         "parameters": [
           {
@@ -812,6 +812,26 @@
               "title": "Has Role"
             },
             "description": "true for users with at least one role, false for none."
+          },
+          {
+            "name": "assignment_eligibility",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "non_confidential",
+                  "none"
+                ],
+                "maxLength": 500
+              },
+              "description": "One or more of 'all', 'non_confidential', 'none': the users whose assignment_eligibility is one of the values. Repeatable; OR semantics. The users eligible to be the assignee of a confidential Ticket are 'all'; those of a non-confidential Ticket are 'all' and 'non_confidential'. Invalid values are ignored; only invalid values yield an empty page.",
+              "title": "Assignment Eligibility"
+            },
+            "description": "One or more of 'all', 'non_confidential', 'none': the users whose assignment_eligibility is one of the values. Repeatable; OR semantics. The users eligible to be the assignee of a confidential Ticket are 'all'; those of a non-confidential Ticket are 'all' and 'non_confidential'. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "page",
@@ -916,7 +936,7 @@
           "Users"
         ],
         "summary": "Get my profile",
-        "description": "Returns the concise profile of the currently authenticated user, including current role values and the capabilities that those roles grant. The capabilities are informational: every operation still checks its own authorization. Requires authentication (JWT session or API key).",
+        "description": "Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).",
         "operationId": "get_current_user_profile_api_v1_users_me_get",
         "responses": {
           "200": {
@@ -1041,7 +1061,7 @@
           "Users"
         ],
         "summary": "List users (admin)",
-        "description": "Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.",
+        "description": "Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.",
         "operationId": "list_users_admin_api_v1_admin_users_get",
         "parameters": [
           {
@@ -1114,6 +1134,26 @@
               "title": "Has Role"
             },
             "description": "true for users with at least one role, false for none."
+          },
+          {
+            "name": "assignment_eligibility",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "non_confidential",
+                  "none"
+                ],
+                "maxLength": 500
+              },
+              "description": "One or more of 'all', 'non_confidential', 'none': the users whose assignment_eligibility is one of the values. Repeatable; OR semantics. The users eligible to be the assignee of a confidential Ticket are 'all'; those of a non-confidential Ticket are 'all' and 'non_confidential'. Invalid values are ignored; only invalid values yield an empty page.",
+              "title": "Assignment Eligibility"
+            },
+            "description": "One or more of 'all', 'non_confidential', 'none': the users whose assignment_eligibility is one of the values. Repeatable; OR semantics. The users eligible to be the assignee of a confidential Ticket are 'all'; those of a non-confidential Ticket are 'all' and 'non_confidential'. Invalid values are ignored; only invalid values yield an empty page."
           },
           {
             "name": "page",
@@ -1397,7 +1437,7 @@
           "Users"
         ],
         "summary": "Update user (admin)",
-        "description": "Updates a local user's email, full name, and bot marker. At least one field must be provided. Requires the 'manage_users' capability.",
+        "description": "Updates a local user's email, full name, and bot marker. At least one field must be provided. Marking a user as a bot account also unassigns the user from every `new`, `analysis`, and `analyzed` Ticket, because a bot account is never a Ticket assignee. Requires the 'manage_users' capability.",
         "operationId": "update_user_admin_api_v1_admin_users__user__patch",
         "parameters": [
           {
@@ -4293,7 +4333,7 @@
           "Tickets"
         ],
         "summary": "Create Ticket",
-        "description": "Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential). An active vulnerability analyst creator is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.",
+        "description": "Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential). A creator eligible to be the assignee of the new Ticket (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential) is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.",
         "operationId": "create_ticket_api_v1_tickets_post",
         "requestBody": {
           "required": true,
@@ -4469,7 +4509,7 @@
           "Tickets"
         ],
         "summary": "Set Severity Manual",
-        "description": "Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes the automatic priority, and re-evaluates the Ticket status; an unchanged severity returns the current Ticket with no side effect. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An effective change auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, refreshes the automatic priority, and re-evaluates the Ticket status; an unchanged severity returns the current Ticket with no side effect. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "set_ticket_severity_api_v1_tickets__ticket_id__severity_patch",
         "parameters": [
           {
@@ -4577,7 +4617,7 @@
           "Tickets"
         ],
         "summary": "Associate CVE",
-        "description": "Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to the caller when the caller is eligible to be its assignee. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "associate_ticket_cve_api_v1_tickets__ticket_id__associate_cve_post",
         "parameters": [
           {
@@ -4711,7 +4751,7 @@
           "Tickets"
         ],
         "summary": "Set Priority Override",
-        "description": "Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "set_ticket_priority_api_v1_tickets__ticket_id__priority_patch",
         "parameters": [
           {
@@ -4819,7 +4859,7 @@
           "Tickets"
         ],
         "summary": "Assign Ticket",
-        "description": "Assigns or reassigns a Ticket to an active vulnerability analyst, identified by UUID or exact username. A Ticket cannot be unassigned through the API. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Assigns or reassigns a Ticket to a user eligible to be its assignee (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential), identified by UUID or exact username. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. JSON `null` instead unassigns the caller, who must be the current assignee: the Ticket keeps its status, and a Ticket without an assignee is an idempotent success. Another user's assignment cannot be cleared, only reassigned. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "assign_ticket_api_v1_tickets__ticket_id__assignee_patch",
         "parameters": [
           {
@@ -4859,7 +4899,7 @@
             }
           },
           "400": {
-            "description": "`TICKET_ASSIGNEE_NOT_VA`: the target user does not hold the `vulnerability_analyst` role.",
+            "description": "`TICKET_ASSIGNEE_NOT_ELIGIBLE`: the active target user is not eligible to be the assignee of the Ticket: a bot account, without the `triage_ticket` capability, or without scope `all` when the Ticket is confidential.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4899,7 +4939,7 @@
             }
           },
           "409": {
-            "description": "`TICKET_ASSIGNEE_INACTIVE`: the target user is inactive. `TICKET_NOT_MUTABLE`: the Ticket is Ignored or Duplicated.",
+            "description": "`TICKET_ASSIGNEE_INACTIVE`: the target user is inactive. `TICKET_ASSIGNEE_NOT_CALLER`: `user_id` is `null` and another user is the current assignee. `TICKET_NOT_MUTABLE`: the Ticket is Ignored or Duplicated.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4937,7 +4977,7 @@
           "Tickets"
         ],
         "summary": "Ignore Ticket",
-        "description": "Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "ignore_ticket_api_v1_tickets__ticket_id__ignore_post",
         "parameters": [
           {
@@ -5035,7 +5075,7 @@
           "Tickets"
         ],
         "summary": "Mark Ticket as Duplicate",
-        "description": "Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to the caller when the caller is an active vulnerability analyst. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "mark_ticket_as_duplicate_api_v1_tickets__ticket_id__duplicate_post",
         "parameters": [
           {
@@ -5153,7 +5193,7 @@
           "Tickets"
         ],
         "summary": "Reopen Ticket",
-        "description": "Reopens an `ignored` Ticket. No request body. An active vulnerability analyst caller becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Reopens an `ignored` Ticket. No request body. A caller eligible to be its assignee becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "reopen_ticket_api_v1_tickets__ticket_id__reopen_post",
         "parameters": [
           {
@@ -5251,7 +5291,7 @@
           "Tickets"
         ],
         "summary": "Revert Duplicate Status",
-        "description": "Reverts a `duplicated` Ticket into the gate zone and clears its duplicate link. No request body. Tickets previously repointed away from this Ticket keep their current target. An active vulnerability analyst caller becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Reverts a `duplicated` Ticket into the gate zone and clears its duplicate link. No request body. Tickets previously repointed away from this Ticket keep their current target. A caller eligible to be its assignee becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "revert_ticket_duplicate_api_v1_tickets__ticket_id__revert_duplicate_post",
         "parameters": [
           {
@@ -5457,7 +5497,7 @@
           "Tickets"
         ],
         "summary": "Set Confidentiality",
-        "description": "Sets whether a Ticket is confidential. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. Making a confidential Ticket non-confidential deletes every explicit access grant; making it confidential again does not recreate them. Package-maintainer visibility and the Coordinated Release Date are unchanged. An unchanged request is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.",
+        "description": "Sets whether a Ticket is confidential. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. Making a `new`, `analysis`, or `analyzed` Ticket confidential unassigns an assignee who is not eligible to be the assignee of a confidential Ticket, such as a restricted analyst, even one with an access grant or package maintainership; the Ticket then appears unassigned. Making a confidential Ticket non-confidential deletes every explicit access grant; making it confidential again does not recreate them. Package-maintainer visibility and the Coordinated Release Date are unchanged. An unchanged request is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.",
         "operationId": "set_ticket_confidentiality_api_v1_tickets__ticket_id__confidentiality_patch",
         "parameters": [
           {
@@ -6058,7 +6098,7 @@
           "Ticket Packages"
         ],
         "summary": "Add Package to Ticket",
-        "description": "Adds a source package to a Ticket. Sentinel resolves every currently maintained track and Product of the package through SMELT, matches the Products against the current Product catalog snapshot, acquires package-wide maintainership, and creates the missing package, track, and Product records. Existing records, included or excluded, are skipped, so a repeated request is safe and reports zero created records. An effective addition records a `package_added` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. Requires `manage_packages`. Error rows are not ordered by status: the endpoint applies, in order, Ticket accessibility, SMELT availability, catalog readiness, package-not-found, target resolution, then the locked Ticket checks (accessibility, `TICKET_NOT_MUTABLE`, `PACKAGE_ALREADY_EXCLUDED`).",
+        "description": "Adds a source package to a Ticket. Sentinel resolves every currently maintained track and Product of the package through SMELT, matches the Products against the current Product catalog snapshot, acquires package-wide maintainership, and creates the missing package, track, and Product records. Existing records, included or excluded, are skipped, so a repeated request is safe and reports zero created records. An effective addition records a `package_added` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. Requires `manage_packages`. Error rows are not ordered by status: the endpoint applies, in order, Ticket accessibility, SMELT availability, catalog readiness, package-not-found, target resolution, then the locked Ticket checks (accessibility, `TICKET_NOT_MUTABLE`, `PACKAGE_ALREADY_EXCLUDED`).",
         "operationId": "add_ticket_package_api_v1_tickets__ticket_id__packages_post",
         "parameters": [
           {
@@ -6337,7 +6377,7 @@
           "Ticket Packages"
         ],
         "summary": "Change Track Status",
-        "description": "Changes the affectedness status of one track. An effective change records a `track_status_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged status returns the current track with no side effect. `fixed` requires `admin_ticket_ops` (any Ticket) or `manage_packages` (only a Ticket without a CVE); every other status requires `manage_packages`. Returns the track and all its Products with their current eligibility and actionability.",
+        "description": "Changes the affectedness status of one track. An effective change records a `track_status_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status; an unchanged status returns the current track with no side effect. `fixed` requires `admin_ticket_ops` (any Ticket) or `manage_packages` (only a Ticket without a CVE); every other status requires `manage_packages`. Returns the track and all its Products with their current eligibility and actionability.",
         "operationId": "change_track_status_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__patch",
         "parameters": [
           {
@@ -6469,7 +6509,7 @@
           "Ticket Packages"
         ],
         "summary": "Override Product Eligibility",
-        "description": "Sets, changes, or clears the eligibility override of one Product occurrence. `eligible: true` or `false` sets or changes the manual override; `eligible: null` removes it and immediately recalculates eligibility from the current CVSS threshold and lifecycle rules (the SUSE assessment of the default CVSS version, otherwise the 10.0 fallback, including for a Ticket without a CVE). An effective change records a `product_eligibility_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged request returns the current Product with no side effect. Excluded and end-of-life Products remain editable. Requires `manage_packages`. Returns the Product with its current eligibility and actionability.",
+        "description": "Sets, changes, or clears the eligibility override of one Product occurrence. `eligible: true` or `false` sets or changes the manual override; `eligible: null` removes it and immediately recalculates eligibility from the current CVSS threshold and lifecycle rules (the SUSE assessment of the default CVSS version, otherwise the 10.0 fallback, including for a Ticket without a CVE). An effective change records a `product_eligibility_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status; an unchanged request returns the current Product with no side effect. Excluded and end-of-life Products remain editable. Requires `manage_packages`. Returns the Product with its current eligibility and actionability.",
         "operationId": "override_product_eligibility_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__products__ticket_package_product_id__patch",
         "parameters": [
           {
@@ -6613,7 +6653,7 @@
           "Ticket Packages"
         ],
         "summary": "Soft-Delete Package from Ticket",
-        "description": "Directly excludes one package. Its tracks and Products become effectively excluded without being modified. Excluding the caller's last included maintained package may remove the caller's access to a confidential Ticket after this request. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Directly excludes one package. Its tracks and Products become effectively excluded without being modified. Excluding the caller's last included maintained package may remove the caller's access to a confidential Ticket after this request. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "exclude_package_api_v1_tickets__ticket_id__packages__package_id__exclude_post",
         "parameters": [
           {
@@ -6723,7 +6763,7 @@
           "Ticket Packages"
         ],
         "summary": "Restore Package",
-        "description": "Restores one directly excluded package. Child markers are not modified, so the package may remain non-actionable (`no_actionable_tracks`). Restoring a maintained package reactivates maintainer visibility. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Restores one directly excluded package. Child markers are not modified, so the package may remain non-actionable (`no_actionable_tracks`). Restoring a maintained package reactivates maintainer visibility. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "restore_package_api_v1_tickets__ticket_id__packages__package_id__restore_post",
         "parameters": [
           {
@@ -6841,7 +6881,7 @@
           "Ticket Packages"
         ],
         "summary": "Soft-Delete Track",
-        "description": "Directly excludes one track, also beneath an excluded package (the response reason is then `package_excluded`). Its Products become effectively excluded without being modified. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Directly excludes one track, also beneath an excluded package (the response reason is then `package_excluded`). Its Products become effectively excluded without being modified. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "exclude_track_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__exclude_post",
         "parameters": [
           {
@@ -6963,7 +7003,7 @@
           "Ticket Packages"
         ],
         "summary": "Restore Track",
-        "description": "Restores one directly excluded track. Product markers are not modified, so the track may remain non-actionable (`no_actionable_products`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Restores one directly excluded track. Product markers are not modified, so the track may remain non-actionable (`no_actionable_products`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "restore_track_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__restore_post",
         "parameters": [
           {
@@ -7093,7 +7133,7 @@
           "Ticket Packages"
         ],
         "summary": "Soft-Delete Product",
-        "description": "Directly excludes one Product occurrence, also beneath an excluded package or track and while the Product is end-of-life (ancestor reasons take precedence over `product_excluded`, which takes precedence over `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Directly excludes one Product occurrence, also beneath an excluded package or track and while the Product is end-of-life (ancestor reasons take precedence over `product_excluded`, which takes precedence over `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "exclude_product_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__products__ticket_package_product_id__exclude_post",
         "parameters": [
           {
@@ -7227,7 +7267,7 @@
           "Ticket Packages"
         ],
         "summary": "Restore Product",
-        "description": "Restores one directly excluded Product occurrence. No ancestor or lifecycle pre-check applies, so the Product may remain non-actionable (for example `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
+        "description": "Restores one directly excluded Product occurrence. No ancestor or lifecycle pre-check applies, so the Product may remain non-actionable (for example `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.",
         "operationId": "restore_product_api_v1_tickets__ticket_id__packages__package_id__tracks__track_id__products__ticket_package_product_id__restore_post",
         "parameters": [
           {
@@ -8862,7 +8902,7 @@
           "CVEs"
         ],
         "summary": "Set or update the SUSE CVSS assessment",
-        "description": "Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. An effective change re-resolves the CVE severity; for a CVE with a Ticket, it auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes automatic Product eligibility and priority, and re-evaluates the Ticket status. Requires `manage_cvss`.",
+        "description": "Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. An effective change re-resolves the CVE severity; for a CVE with a Ticket, it auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, refreshes automatic Product eligibility and priority, and re-evaluates the Ticket status. Requires `manage_cvss`.",
         "operationId": "upsert_suse_cvss_assessment_api_v1_cves__cve_id__cvss_suse_post",
         "parameters": [
           {
@@ -8988,7 +9028,7 @@
           "CVEs"
         ],
         "summary": "Delete the SUSE CVSS assessment",
-        "description": "Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.",
+        "description": "Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to the caller when the caller is eligible to be its assignee, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.",
         "operationId": "delete_suse_cvss_assessment_api_v1_cves__cve_id__cvss_suse__cvss_version__delete",
         "parameters": [
           {
@@ -10373,6 +10413,16 @@
         ],
         "title": "ApiKeyStatus",
         "description": "Derived, non-persisted lifecycle status of an `ApiKey`.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase \u2014 status is computed at read time from `revoked_at` and\n`expires_at`). See `docs/features/identity/api-key-management.md`\n(Derived Status) for the exclusive precedence rule:\n`revoked` > `expired` > `active`."
+      },
+      "AssignmentEligibility": {
+        "type": "string",
+        "enum": [
+          "all",
+          "non_confidential",
+          "none"
+        ],
+        "title": "AssignmentEligibility",
+        "description": "For which Tickets a user is eligible to be the assignee.\n\nCategory B \u2014 classification (Python Enum only, never stored in the\ndatabase; derived per request from the user's active status, bot\nmarker, and roles). The values are the wire values. See\n`docs/features/identity/rbac.md` (Assignment Eligibility Wire Format)."
       },
       "CVEAffectedVersionEntry": {
         "properties": {
@@ -12457,6 +12507,9 @@
           "bot": {
             "type": "boolean",
             "title": "Bot"
+          },
+          "assignment_eligibility": {
+            "$ref": "#/components/schemas/AssignmentEligibility"
           }
         },
         "type": "object",
@@ -12468,10 +12521,11 @@
           "roles",
           "capabilities",
           "active",
-          "bot"
+          "bot",
+          "assignment_eligibility"
         ],
         "title": "CurrentUserData",
-        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe complete user profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Role Wire Format, Deterministic\nordering). `capabilities` is the distinct, alphabetically\nwire-sorted union of the capabilities of those roles (see `rbac.md`,\nCapability Wire Format). Both are typed with their value sets, so\nthe OpenAPI document publishes each as an `enum`. `capabilities` is\ninformational and grants nothing."
+        "description": "The concise current-user profile object for `GET /api/v1/users/me`\n(`authentication.md`, Get Current User). Deliberately narrower than\nthe complete user profile (`app.schemas.user.UserData`): no `source`,\n`external_id`, `manager`, or role assignment metadata \u2014 only the\nfields needed to render the authenticated user's own identity.\n`roles` is the distinct, alphabetically wire-sorted set of current\nrole values (see `rbac.md`, Role Wire Format, Deterministic\nordering). `capabilities` is the distinct, alphabetically\nwire-sorted union of the capabilities of those roles (see `rbac.md`,\nCapability Wire Format). Both are typed with their value sets, so\nthe OpenAPI document publishes each as an `enum`. `capabilities` is\ninformational and grants nothing. `assignment_eligibility` states for\nwhich Tickets the user is eligible to be the assignee (`rbac.md`,\nAssignment Eligibility Wire Format); it is derived from the same\nroles and the user's `active` and `bot`, and is informational too."
       },
       "CurrentUserResponse": {
         "properties": {
@@ -15623,11 +15677,19 @@
       "TicketAssigneeUpdateRequest": {
         "properties": {
           "user_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "User Id",
-            "description": "Target user: UUID or exact username. The user must be active and hold the `vulnerability_analyst` role. Required; `null` is rejected (no unassignment through the API).",
+            "description": "Target user: UUID or exact username. The user must be eligible to be the assignee of the Ticket: active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential. JSON `null` unassigns the caller, who must be the current assignee. Required.",
             "examples": [
-              "jdoe"
+              "jdoe",
+              null
             ]
           }
         },
@@ -15636,7 +15698,7 @@
           "user_id"
         ],
         "title": "TicketAssigneeUpdateRequest",
-        "description": "Request body of `PATCH /api/v1/tickets/{ticket_id}/assignee`.\n\nSee `docs/features/tickets/tickets.md` (Assign Ticket). `user_id` is a\nrequired, non-nullable UUID-or-username string (`docs/api-spec.md`,\nUser Identifier Resolution): a Ticket cannot be unassigned through the\nAPI. The service locks the target before the Ticket but reports its\nabsence only after locked-current Ticket accessibility. An omitted,\n`null`, or non-string field fails with the global\n`422 VALIDATION_ERROR`."
+        "description": "Request body of `PATCH /api/v1/tickets/{ticket_id}/assignee`.\n\nSee `docs/features/tickets/tickets.md` (Assign Ticket). `user_id` is\nrequired and nullable (`docs/api-spec.md`, Partial Update Semantics:\nsingle-field PATCH). A UUID-or-username string (User Identifier\nResolution) assigns or reassigns the Ticket; the service locks the\ntarget before the Ticket but reports its absence only after\nlocked-current Ticket accessibility. JSON `null` clears the caller's\nown assignment (tickets.md, Self-Unassignment). An omitted field or a\nvalue of another type fails with the global `422 VALIDATION_ERROR`."
       },
       "TicketAssociateCVERequest": {
         "properties": {
@@ -16055,7 +16117,7 @@
                 "type": "null"
               }
             ],
-            "description": "Assigned Vulnerability Analyst, or `null` if unassigned."
+            "description": "Current assignee, or `null` if unassigned."
           },
           "cve": {
             "anyOf": [
@@ -16725,7 +16787,7 @@
                 "type": "null"
               }
             ],
-            "description": "Assigned Vulnerability Analyst, or `null` if unassigned."
+            "description": "Current assignee, or `null` if unassigned."
           },
           "cve": {
             "anyOf": [
@@ -17519,6 +17581,9 @@
             "type": "array",
             "title": "Roles"
           },
+          "assignment_eligibility": {
+            "$ref": "#/components/schemas/AssignmentEligibility"
+          },
           "last_login_at": {
             "anyOf": [
               {
@@ -17554,12 +17619,13 @@
           "external_id",
           "manager",
           "roles",
+          "assignment_eligibility",
           "last_login_at",
           "created_at",
           "updated_at"
         ],
         "title": "UserData",
-        "description": "The complete user profile returned by `GET /api/v1/admin/users`\n(list items), `GET /api/v1/admin/users/{user}`, and the admin\nmutation endpoints (`user-management.md`, Get User (Admin)).\n`full_name` and `manager.full_name` are nullable \u2014 the API returns\n`null` verbatim with no fallback substitution. `source` is `local` or\n`external`. `last_login_at` is `null` until the user's first login."
+        "description": "The complete user profile returned by `GET /api/v1/admin/users`\n(list items), `GET /api/v1/admin/users/{user}`, and the admin\nmutation endpoints (`user-management.md`, Get User (Admin)).\n`full_name` and `manager.full_name` are nullable \u2014 the API returns\n`null` verbatim with no fallback substitution. `source` is `local` or\n`external`. `assignment_eligibility` is derived from the profile's\n`active`, `bot`, and the roles of every origin in `roles` (`rbac.md`,\nAssignment Eligibility Wire Format). `last_login_at` is `null` until\nthe user's first login."
       },
       "UserDirectoryData": {
         "properties": {
@@ -17601,6 +17667,9 @@
             },
             "type": "array",
             "title": "Roles"
+          },
+          "assignment_eligibility": {
+            "$ref": "#/components/schemas/AssignmentEligibility"
           }
         },
         "type": "object",
@@ -17611,10 +17680,11 @@
           "full_name",
           "active",
           "bot",
-          "roles"
+          "roles",
+          "assignment_eligibility"
         ],
         "title": "UserDirectoryData",
-        "description": "The user directory entry returned by `GET /api/v1/users` (list\nitems) and `GET /api/v1/users/{user}` (`user-management.md`, Get\nUser). It has the fields of the caller's own profile\n(`app.schemas.auth.CurrentUserData`) except `capabilities`, which\nonly the own profile returns, and none of the fields that only the\ncomplete user profile (`UserData`) returns. `roles` is the\ndistinct, alphabetically wire-sorted set of current role values\n(`rbac.md`, Role Wire Format, Deterministic ordering); `full_name`\nis returned `null` verbatim with no fallback substitution."
+        "description": "The user directory entry returned by `GET /api/v1/users` (list\nitems) and `GET /api/v1/users/{user}` (`user-management.md`, Get\nUser). It has the fields of the caller's own profile\n(`app.schemas.auth.CurrentUserData`) except `capabilities`, which\nonly the own profile returns, and none of the fields that only the\ncomplete user profile (`UserData`) returns. `roles` is the\ndistinct, alphabetically wire-sorted set of current role values\n(`rbac.md`, Role Wire Format, Deterministic ordering); `full_name`\nis returned `null` verbatim with no fallback substitution.\n`assignment_eligibility` is derived from the entry's `active`, `bot`,\nand `roles` (`rbac.md`, Assignment Eligibility Wire Format)."
       },
       "UserDirectoryListResponse": {
         "properties": {
