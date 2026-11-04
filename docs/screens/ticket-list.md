@@ -114,8 +114,9 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   that the list shows is read again when its view opens and with each read of
   the list, such as another page, so that the tab and the list agree;
   the others are read again as the screen's data is.
-- **The toolbar**, after the tabs, at the end of their row, or of a row of
-  its own when the width runs short (`docs/design-system.md`, Lists):
+- **The toolbar**, after the tabs, at the end of their row; when the width
+  runs short, its last controls wrap to a row below, Clear filters first
+  (`docs/design-system.md`, Lists):
   - the search field, "Search Tickets", which is also its name for
     assistive technologies. Enter applies the term without its surrounding
     whitespace, and its clear button, "Clear search", and Escape remove it. It
@@ -125,7 +126,10 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   - Filters, followed by the number of the filters that apply, which
     assistive technologies read as "2 applied". It opens a popover named
     "Filters" with a group of checkboxes for each filter below, and a change
-    applies at once;
+    applies at once. While it is open, it announces itself what the list
+    shows after a change, or the failure of its read, since the rest of the
+    screen is then out of reach of assistive technologies. Its filters scroll
+    within it in a window shorter than they are;
   - Clear filters, while a search or a filter applies, which removes them and
     keeps the view and the sorting.
 

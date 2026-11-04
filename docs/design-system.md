@@ -761,8 +761,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
    that is not applied returns to the applied one when the focus leaves its
    field, or, for a range, both of its fields. While a filter or a search
    applies, Clear filters, a quiet button 32 px high with `x`, follows
-   Filters. The tabs and the controls are 8 px apart, and the toolbar wraps
-   when the width runs short, the controls at the end of their row.
+   Filters. The tabs and the controls are 8 px apart. When the width runs
+   short, the toolbar wraps one control at a time, the last first, and a row
+   of controls keeps them at its end, so that a control that appears, such as
+   Clear filters, moves no other.
    The popover of Filters opens below Filters, aligned to its end, at most
    448 px wide, with 16 px of padding (Menus, Popovers, and Tooltips); it
    holds the filters 16 px apart, and its first field takes the focus as it
