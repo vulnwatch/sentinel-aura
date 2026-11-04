@@ -81,7 +81,8 @@ interface ListProps {
 }
 
 // The list, with the views of the tests, and without New when its URL has
-// the fictional parameter without-new, as a view that a role decides.
+// the fictional parameter without-new, as a view that not every user is
+// shown.
 function List({ toolbar }: ListProps) {
   const search = new URLSearchParams(
     useRouterState({ select: (state) => state.location.searchStr }),

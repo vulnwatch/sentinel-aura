@@ -30,11 +30,10 @@ Summary).
   Visibility).
 - The Assigned to me view shows only to a user who can be the assignee of a
   Ticket: one whose `assignment_eligibility`, as Get Current User returns it,
-  is `all` or `non_confidential`; `none` and a value that the pinned contract
-  does not list hide it (Sentinel `docs/features/identity/authentication.md`,
-  Get Current User; Sentinel `docs/features/identity/rbac.md`, Assignment
-  Eligibility Wire Format; `docs/screen-map.md`, Roles, Principles). The
-  attention summary shows to every user.
+  is `all` or `non_confidential` (Sentinel
+  `docs/features/identity/authentication.md`, Get Current User; Sentinel
+  `docs/features/identity/rbac.md`, Assignment Eligibility Wire Format;
+  `docs/screen-map.md`, Roles, Principles).
 
 ## Navigation
 
@@ -92,12 +91,12 @@ Summary).
 ## Content
 
 - The heading "Tickets", and the page title "Tickets – Sentinel".
-- **Attention summary**, for every user, in the heading row after the
-  heading, named "Tickets that need attention" for assistive technologies:
-  the five counts of `docs/screen-map.md` (Attention Summary), in this order,
-  each read from List Tickets, `GET /api/v1/tickets`, with its filters and
-  `per_page=1`, as `meta.total`, so that it counts the Tickets that the user
-  sees, and each a link to the All view with the same filters.
+- **Attention summary**, in the heading row after the heading, named
+  "Tickets that need attention" for assistive technologies: the five counts
+  of `docs/screen-map.md` (Attention Summary), in this order, each read from
+  List Tickets, `GET /api/v1/tickets`, with its filters and `per_page=1`, as
+  `meta.total`, so that it counts the Tickets that the user sees, and each a
+  link to the All view with the same filters.
   Active P1 measures priority, and the four overdue counts, which never count
   the same Ticket, form the group "Overdue" after it (`docs/design-system.md`,
   Lists): each shows its phase, as "1 Triage", and is read with the name of
@@ -255,14 +254,13 @@ Summary).
   the popover of Filters is open, it announces the same itself
   (`docs/design-system.md`, Lists).
 - **The focus.** When the rows, the table without rows, the action of an
-  empty state, the pagination, a tab, a count of the attention summary, or
-  Clear filters leaves the page while it holds the focus, such as "Go to the
-  first page" once the rows arrive, the pagination when an error takes the
-  place of the rows, Clear filters once it removed the search and the
-  filters, or Assigned to me when a read of the signed-in user tells that
-  the user can no longer be the assignee of a Ticket, the focus moves to the
-  screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
-  action).
+  empty state, the pagination, a tab, or Clear filters leaves the page while
+  it holds the focus, such as "Go to the first page" once the rows arrive,
+  the pagination when an error takes the place of the rows, Clear filters
+  once it removed the search and the filters, or Assigned to me when a read
+  of the signed-in user tells that the user can no longer be the assignee of
+  a Ticket, the focus moves to the screen's heading (`docs/behaviors.md`,
+  Accessibility, Focus after an action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
   page. A view that the user refined without Tickets that match says "No
   Tickets in this view match the search." when only a search applies and "No

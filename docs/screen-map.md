@@ -46,9 +46,10 @@ to its screen document (`docs/conventions.md`, Screen Documents).
 Sentinel Aura is for internal use (`docs/architecture.md`, Scope and System
 Boundary). Two groups do most of the work in it: a small team of
 vulnerability analysts, who work in it all day, and many package maintainers,
-who open it when work is pending for them. Every other employee with an
-account reads it occasionally. The screens are designed for the tasks below,
-grouped by the profiles of Roles.
+who open it when work is pending for them. Administrators and restricted
+analysts have tasks of their own, and every other employee with an account
+reads it occasionally. The screens are designed for the tasks below, grouped
+by the profiles of Roles.
 
 ### Vulnerability Analysts
 
@@ -277,10 +278,9 @@ sidebar does, and which Sign in opens after a sign-in when it has no saved URL
 to return to (`docs/behaviors.md`, Return After Sign-in). It depends on the
 user:
 
-- for a user who holds `triage_ticket`, the capability with which the queue
-  of new Tickets is worked, `/` leads to the URL of the Ticket list in its New
-  view, that queue (Ticket List Views; Browser History). Such a user does not
-  see the Home;
+- for a user who holds `triage_ticket`, `/` leads to the URL of the Ticket
+  list in its New view, the queue of new Tickets (Ticket List Views; Browser
+  History). Such a user does not see the Home;
 - every other user sees the Home at `/`.
 
 The landing depends on a capability (Roles) and not on data, so the landing
@@ -471,8 +471,8 @@ below only summarizes them.
 |---|---|---|
 | Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the Home |
 | Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
-| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, the Assigned to me view, and the actions of its capabilities on Tickets and CVEs |
-| Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same section) | The queue of new Tickets as landing, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
+| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
+| Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same rule) | The queue of new Tickets as landing, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
 | Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the fetcher management of Data sources, and the actions of its other capabilities; Ticket work needs an analyst role too. Lands on the Home unless the user also holds an analyst role |
 
 ### Capabilities of the Signed-in User

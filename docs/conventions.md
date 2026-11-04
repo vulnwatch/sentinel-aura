@@ -233,8 +233,8 @@ that needs it; content of another kind needs a new row first.
   does not declare, and gives every value as text, so `beforeLoad` compares
   the URL with the schema's own result as the URLs that they give, whichever
   parameter comes first. A parameter that the screen accepts only for some
-  users, such as a view that a role decides, is removed by the screen in the
-  same way, once it knows the user.
+  users, such as a view that the assignment eligibility decides, is removed
+  by the screen in the same way, once it knows the user.
 - Links between the UI's screens use the router's typed paths: React Aria's
   links, and the components that contain links, navigate through the router,
   which the root route connects to React Aria. A link with path or search

@@ -6,6 +6,7 @@ import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
 import type {
+  AssignmentEligibility,
   CurrentUserData,
   CurrentUserResponse,
   TicketSummary,
@@ -36,18 +37,22 @@ const DAY = 24 * 60 * 60 * 1000;
 const ANALYST: CurrentUserResponse = OTHER_USER;
 const READER: CurrentUserResponse = FICTIONAL_USER;
 
-// Get Current User's response, in which a later Sentinel release can return
-// an assignment eligibility that the pinned contract does not list.
+// An assignment eligibility that the pinned contract does not list, which a
+// later Sentinel release can return.
+const UNLISTED_ELIGIBILITY = "fictional_eligibility";
+
+// Get Current User's response, with a listed assignment eligibility or the
+// unlisted one.
 interface UserResponse {
   data: Omit<CurrentUserData, "assignment_eligibility"> & {
-    assignment_eligibility: string;
+    assignment_eligibility: AssignmentEligibility | typeof UNLISTED_ELIGIBILITY;
   };
 }
 
 // The user with another assignment eligibility.
 function withEligibility(
   user: CurrentUserResponse,
-  eligibility: string,
+  eligibility: AssignmentEligibility | typeof UNLISTED_ELIGIBILITY,
 ): UserResponse {
   return { data: { ...user.data, assignment_eligibility: eligibility } };
 }
@@ -314,7 +319,7 @@ describe("the views", () => {
     ],
     [
       "has an assignment eligibility that the pinned contract does not list",
-      withEligibility(ANALYST, "fictional_eligibility"),
+      withEligibility(ANALYST, UNLISTED_ELIGIBILITY),
     ],
   ])("show no Assigned to me to a user who %s", async (_, user) => {
     stubTickets({ user });
