@@ -63,7 +63,7 @@ export const getListUsersUrl = (params?: ListUsersParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["role"];
+    const explodeParameters = ["role", "assignment_eligibility"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
@@ -85,7 +85,7 @@ export const getListUsersUrl = (params?: ListUsersParams) => {
 };
 
 /**
- * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, and role values. Supports search across username, email, and full name; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
+ * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
  * @summary List users
  */
 export const listUsers = async (
@@ -231,7 +231,7 @@ export const getGetCurrentUserProfileUrl = () => {
 };
 
 /**
- * Returns the concise profile of the currently authenticated user, including current role values and the capabilities that those roles grant. The capabilities are informational: every operation still checks its own authorization. Requires authentication (JWT session or API key).
+ * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
  * @summary Get my profile
  */
 export const getCurrentUserProfile = async (
@@ -537,7 +537,7 @@ export const getListUsersAdminUrl = (params?: ListUsersAdminParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["role"];
+    const explodeParameters = ["role", "assignment_eligibility"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
@@ -559,7 +559,7 @@ export const getListUsersAdminUrl = (params?: ListUsersAdminParams) => {
 };
 
 /**
- * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
+ * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
  * @summary List users (admin)
  */
 export const listUsersAdmin = async (
@@ -974,7 +974,7 @@ export const getUpdateUserAdminUrl = (user: string) => {
 };
 
 /**
- * Updates a local user's email, full name, and bot marker. At least one field must be provided. Requires the 'manage_users' capability.
+ * Updates a local user's email, full name, and bot marker. At least one field must be provided. Marking a user as a bot account also unassigns the user from every `new`, `analysis`, and `analyzed` Ticket, because a bot account is never a Ticket assignee. Requires the 'manage_users' capability.
  * @summary Update user (admin)
  */
 export const updateUserAdmin = async (

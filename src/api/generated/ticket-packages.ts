@@ -239,7 +239,7 @@ export const getAddTicketPackageUrl = (ticketId: string) => {
 };
 
 /**
- * Adds a source package to a Ticket. Sentinel resolves every currently maintained track and Product of the package through SMELT, matches the Products against the current Product catalog snapshot, acquires package-wide maintainership, and creates the missing package, track, and Product records. Existing records, included or excluded, are skipped, so a repeated request is safe and reports zero created records. An effective addition records a `package_added` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. Requires `manage_packages`. Error rows are not ordered by status: the endpoint applies, in order, Ticket accessibility, SMELT availability, catalog readiness, package-not-found, target resolution, then the locked Ticket checks (accessibility, `TICKET_NOT_MUTABLE`, `PACKAGE_ALREADY_EXCLUDED`).
+ * Adds a source package to a Ticket. Sentinel resolves every currently maintained track and Product of the package through SMELT, matches the Products against the current Product catalog snapshot, acquires package-wide maintainership, and creates the missing package, track, and Product records. Existing records, included or excluded, are skipped, so a repeated request is safe and reports zero created records. An effective addition records a `package_added` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. Requires `manage_packages`. Error rows are not ordered by status: the endpoint applies, in order, Ticket accessibility, SMELT availability, catalog readiness, package-not-found, target resolution, then the locked Ticket checks (accessibility, `TICKET_NOT_MUTABLE`, `PACKAGE_ALREADY_EXCLUDED`).
  * @summary Add Package to Ticket
  */
 export const addTicketPackage = async (
@@ -533,7 +533,7 @@ export const getChangeTrackStatusUrl = (
 };
 
 /**
- * Changes the affectedness status of one track. An effective change records a `track_status_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged status returns the current track with no side effect. `fixed` requires `admin_ticket_ops` (any Ticket) or `manage_packages` (only a Ticket without a CVE); every other status requires `manage_packages`. Returns the track and all its Products with their current eligibility and actionability.
+ * Changes the affectedness status of one track. An effective change records a `track_status_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status; an unchanged status returns the current track with no side effect. `fixed` requires `admin_ticket_ops` (any Ticket) or `manage_packages` (only a Ticket without a CVE); every other status requires `manage_packages`. Returns the track and all its Products with their current eligibility and actionability.
  * @summary Change Track Status
  */
 export const changeTrackStatus = async (
@@ -674,7 +674,7 @@ export const getOverrideProductEligibilityUrl = (
 };
 
 /**
- * Sets, changes, or clears the eligibility override of one Product occurrence. `eligible: true` or `false` sets or changes the manual override; `eligible: null` removes it and immediately recalculates eligibility from the current CVSS threshold and lifecycle rules (the SUSE assessment of the default CVSS version, otherwise the 10.0 fallback, including for a Ticket without a CVE). An effective change records a `product_eligibility_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status; an unchanged request returns the current Product with no side effect. Excluded and end-of-life Products remain editable. Requires `manage_packages`. Returns the Product with its current eligibility and actionability.
+ * Sets, changes, or clears the eligibility override of one Product occurrence. `eligible: true` or `false` sets or changes the manual override; `eligible: null` removes it and immediately recalculates eligibility from the current CVSS threshold and lifecycle rules (the SUSE assessment of the default CVSS version, otherwise the 10.0 fallback, including for a Ticket without a CVE). An effective change records a `product_eligibility_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status; an unchanged request returns the current Product with no side effect. Excluded and end-of-life Products remain editable. Requires `manage_packages`. Returns the Product with its current eligibility and actionability.
  * @summary Override Product Eligibility
  */
 export const overrideProductEligibility = async (
@@ -823,7 +823,7 @@ export const getExcludePackageUrl = (ticketId: string, packageId: string) => {
 };
 
 /**
- * Directly excludes one package. Its tracks and Products become effectively excluded without being modified. Excluding the caller's last included maintained package may remove the caller's access to a confidential Ticket after this request. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
+ * Directly excludes one package. Its tracks and Products become effectively excluded without being modified. Excluding the caller's last included maintained package may remove the caller's access to a confidential Ticket after this request. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Soft-Delete Package from Ticket
  */
 export const excludePackage = async (
@@ -922,7 +922,7 @@ export const getRestorePackageUrl = (ticketId: string, packageId: string) => {
 };
 
 /**
- * Restores one directly excluded package. Child markers are not modified, so the package may remain non-actionable (`no_actionable_tracks`). Restoring a maintained package reactivates maintainer visibility. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
+ * Restores one directly excluded package. Child markers are not modified, so the package may remain non-actionable (`no_actionable_tracks`). Restoring a maintained package reactivates maintainer visibility. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Restore Package
  */
 export const restorePackage = async (
@@ -1025,7 +1025,7 @@ export const getExcludeTrackUrl = (
 };
 
 /**
- * Directly excludes one track, also beneath an excluded package (the response reason is then `package_excluded`). Its Products become effectively excluded without being modified. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
+ * Directly excludes one track, also beneath an excluded package (the response reason is then `package_excluded`). Its Products become effectively excluded without being modified. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Soft-Delete Track
  */
 export const excludeTrack = async (
@@ -1130,7 +1130,7 @@ export const getRestoreTrackUrl = (
 };
 
 /**
- * Restores one directly excluded track. Product markers are not modified, so the track may remain non-actionable (`no_actionable_products`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
+ * Restores one directly excluded track. Product markers are not modified, so the track may remain non-actionable (`no_actionable_products`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Restore Track
  */
 export const restoreTrack = async (
@@ -1236,7 +1236,7 @@ export const getExcludeProductUrl = (
 };
 
 /**
- * Directly excludes one Product occurrence, also beneath an excluded package or track and while the Product is end-of-life (ancestor reasons take precedence over `product_excluded`, which takes precedence over `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
+ * Directly excludes one Product occurrence, also beneath an excluded package or track and while the Product is end-of-life (ancestor reasons take precedence over `product_excluded`, which takes precedence over `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Soft-Delete Product
  */
 export const excludeProduct = async (
@@ -1351,7 +1351,7 @@ export const getRestoreProductUrl = (
 };
 
 /**
- * Restores one directly excluded Product occurrence. No ancestor or lifecycle pre-check applies, so the Product may remain non-actionable (for example `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
+ * Restores one directly excluded Product occurrence. No ancestor or lifecycle pre-check applies, so the Product may remain non-actionable (for example `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Restore Product
  */
 export const restoreProduct = async (

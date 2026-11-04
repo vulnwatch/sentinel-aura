@@ -1059,7 +1059,7 @@ export const getUpsertSuseCvssAssessmentUrl = (cveId: string) => {
 };
 
 /**
- * Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. An effective change re-resolves the CVE severity; for a CVE with a Ticket, it auto-assigns an unassigned Ticket to the caller when the caller is an active vulnerability analyst, refreshes automatic Product eligibility and priority, and re-evaluates the Ticket status. Requires `manage_cvss`.
+ * Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. An effective change re-resolves the CVE severity; for a CVE with a Ticket, it auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, refreshes automatic Product eligibility and priority, and re-evaluates the Ticket status. Requires `manage_cvss`.
  * @summary Set or update the SUSE CVSS assessment
  */
 export const upsertSuseCvssAssessment = async (
@@ -1191,7 +1191,7 @@ export const getDeleteSuseCvssAssessmentUrl = (
 };
 
 /**
- * Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to the caller when the caller is an active vulnerability analyst, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.
+ * Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to the caller when the caller is eligible to be its assignee, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.
  * @summary Delete the SUSE CVSS assessment
  */
 export const deleteSuseCvssAssessment = async (

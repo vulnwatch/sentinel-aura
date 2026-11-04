@@ -25,7 +25,7 @@ export interface TicketSummary {
   severity: SeverityValue | null;
   /** Effective priority: `priority_override` when set, otherwise `priority_automatic`. `p1`-`p4`, or `null` when not yet prioritizable. */
   priority: TicketPriorityValue | null;
-  /** Assigned Vulnerability Analyst, or `null` if unassigned. */
+  /** Current assignee, or `null` if unassigned. */
   assignee: UserReference | null;
   /** Summary of the associated CVE, or `null` if no CVE. */
   cve: CVESummary | null;
