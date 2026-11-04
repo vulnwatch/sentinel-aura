@@ -94,8 +94,7 @@ interface ViewTabsProps {
 // When the width runs short, the toolbar wraps one control at a time, the
 // last first, so that a control that appears, such as Clear filters, moves
 // no other control to another row; a row of controls alone keeps them at its
-// end. The panel of the
-// selected view follows the toolbar, 16 px below.
+// end. The panel of the selected view follows the toolbar, 16 px below.
 export function ViewTabs({
   label,
   views,

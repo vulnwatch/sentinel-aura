@@ -380,6 +380,8 @@ test.describe("refined by an analyst", () => {
     await expect(
       table(page).getByRole("row", { name: /SNTL-12/ }),
     ).toContainText("fictional-openssl+1");
+    // The popover with the Status filter of the All view.
+    await expectAccessible(page);
     await page.keyboard.press("Escape");
 
     // By the due date of the current phase, earliest first, then latest

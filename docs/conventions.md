@@ -228,11 +228,10 @@ that needs it; content of another kind needs a new row first.
   form than the one that the schema gives, such as a search term with
   surrounding whitespace, or a parameter that names the default, the route's
   `beforeLoad` redirects to the parameters that the schema gives, replacing
-  the URL
-  (`docs/behaviors.md`, Invalid Search Parameters). The router's search of a
-  route also passes on the parameters of the URL that its schema does not
-  declare, and gives every value as text, so `beforeLoad` compares the URL
-  with the schema's own result as the URLs that they give, whichever
+  the URL (`docs/behaviors.md`, Invalid Search Parameters). The router's
+  search of a route also passes on the parameters of the URL that its schema
+  does not declare, and gives every value as text, so `beforeLoad` compares
+  the URL with the schema's own result as the URLs that they give, whichever
   parameter comes first. A parameter that the screen accepts only for some
   users, such as a view that a role decides, is removed by the screen in the
   same way, once it knows the user.
