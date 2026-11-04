@@ -78,7 +78,7 @@ interface ViewTabsProps {
   // The key of the view that shows.
   selected: string;
   // The controls at the end of the toolbar, after the tabs, such as the
-  // search field and Filters.
+  // search field and Filters, each an element of its own in the row.
   toolbar?: ReactNode;
   // What the view that shows shows, its panel.
   children: ReactNode;
@@ -90,9 +90,11 @@ interface ViewTabsProps {
 // neutral-soft background, and its label at weight 600. A tab opens when the
 // user clicks it or presses Enter or Space, not when the arrow keys move the
 // focus to it, so that the arrow keys read the tabs without opening each
-// view. The tabs and the controls of the toolbar, at its end, are 8 px apart,
-// and the toolbar wraps when the width runs short. The panel of the selected
-// view follows the toolbar, 16 px below.
+// view. The tabs and the controls of the toolbar, at its end, are 8 px apart.
+// When the width runs short, the toolbar wraps one control at a time, the
+// last first, so that a control that appears, such as Clear filters, moves
+// no other; a row of controls alone keeps them at its end. The panel of the
+// selected view follows the toolbar, 16 px below.
 export function ViewTabs({
   label,
   views,
@@ -113,8 +115,8 @@ export function ViewTabs({
   }
   return (
     <Tabs key={left} selectedKey={selected} keyboardActivation="manual">
-      <div className="flex flex-wrap items-center gap-2">
-        <TabList aria-label={label} className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <TabList aria-label={label} className="me-auto flex flex-wrap gap-2">
           {views.map((view) => (
             <Tab
               key={view.id}
@@ -137,11 +139,7 @@ export function ViewTabs({
             </Tab>
           ))}
         </TabList>
-        {toolbar !== undefined && (
-          <div className="ms-auto flex flex-wrap items-center gap-2">
-            {toolbar}
-          </div>
-        )}
+        {toolbar}
       </div>
       {/* A panel of its own for each view, which the tabs then name, rather
           than one panel whose view changes. */}

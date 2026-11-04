@@ -278,3 +278,45 @@ test("names each filter in text-12, weight 500, fg-muted, and shows the filters 
         .getBoundingClientRect().bottom,
   ).toBe(16);
 });
+
+test("announces its status in a status region of its own, which stays within reach while it is open", async () => {
+  const screen = await render(
+    <Filters applied={1} status="3 Tickets">
+      <FilterGroup
+        label="Severity"
+        options={SEVERITIES}
+        selected={["high"]}
+        onChange={() => {}}
+      />
+    </Filters>,
+  );
+
+  const dialog = await openFilters(
+    screen.getByRole("button", { name: "Filters 1 applied" }),
+  );
+
+  await expect
+    .element(dialog.getByRole("status"))
+    .toHaveTextContent("3 Tickets");
+});
+
+test("scrolls its filters within it in a window shorter than they are, as at a high zoom", async () => {
+  await page.viewport(1280, 160);
+  const screen = await render(<ListFilters />);
+
+  const dialog = await openFilters(
+    screen.getByRole("button", { name: "Filters" }),
+  );
+
+  const popover = popoverOf(dialog);
+  expect(getComputedStyle(popover).overflowY).toBe("auto");
+  expect(popover.scrollHeight).toBeGreaterThan(popover.clientHeight);
+  // The label of the last value, which scrolling brings into the popover,
+  // within the window.
+  const last = dialog.getByText("P2", { exact: true });
+  last.element().scrollIntoView({ block: "nearest" });
+  await expect
+    .poll(() => last.element().getBoundingClientRect().bottom)
+    .toBeLessThanOrEqual(popover.getBoundingClientRect().bottom);
+  expect(popover.getBoundingClientRect().bottom).toBeLessThanOrEqual(160);
+});

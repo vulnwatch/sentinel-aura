@@ -85,6 +85,11 @@ function FirstFieldFocus({ children }: FirstFieldFocusProps) {
 interface FiltersProps {
   // The number of the filters that apply, which follows the label.
   applied: number;
+  // What the list shows after a change, in words, which a status region of
+  // the popover holds: while the popover is open, the rest of the page is out
+  // of reach of assistive technologies, the status regions of the screen
+  // included, so the popover announces it itself.
+  status?: ReactNode;
   // The filters, each a FilterGroup, in their order.
   children: ReactNode;
 }
@@ -94,9 +99,10 @@ interface FiltersProps {
 // "2 applied". It opens below it, aligned to its end, a popover named
 // "Filters" with the filters 16 px apart, at most 448 px wide, on surface
 // with a border line, an 8 px radius, a shadow, and 16 px of padding, whose
-// first checkbox takes the focus. Escape or a click outside closes it, and
-// the focus returns to Filters.
-export function Filters({ applied, children }: FiltersProps) {
+// first checkbox takes the focus. Its content scrolls within it when the
+// window is shorter, such as at a high zoom. Escape or a click outside closes
+// it, and the focus returns to Filters.
+export function Filters({ applied, status, children }: FiltersProps) {
   return (
     <DialogTrigger>
       <Button size="small">
@@ -115,13 +121,14 @@ export function Filters({ applied, children }: FiltersProps) {
       <Popover
         placement="bottom end"
         offset={4}
-        className="w-112 max-w-[calc(100vw-1rem)] rounded-lg border border-border bg-surface p-4 shadow-lg outline-none"
+        className="w-112 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-4 shadow-lg outline-none"
       >
         <Dialog
           aria-label="Filters"
           className="flex flex-col gap-4 outline-none"
         >
           <FirstFieldFocus>{children}</FirstFieldFocus>
+          <output className="sr-only">{status}</output>
         </Dialog>
       </Popover>
     </DialogTrigger>

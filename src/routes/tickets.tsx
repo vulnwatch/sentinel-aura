@@ -8,6 +8,7 @@ import {
 import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
+import { isRequestFailure, presentFailure } from "../api/errors";
 import type {
   CurrentUserData,
   ListTicketsCurrentPhaseItem,
@@ -646,6 +647,14 @@ function resultText(list: TicketListResponse, search: TicketListSearch) {
   return `${COUNT.format(first)}–${COUNT.format(last)} of ${COUNT.format(meta.total)} Tickets`;
 }
 
+// The message of the failure of a read of the list, as it shows in place of
+// the rows (docs/behaviors.md, Default Presentation by Status).
+function failureText(error: unknown): string {
+  return isRequestFailure(error)
+    ? (presentFailure(error, "part")?.message ?? "")
+    : "";
+}
+
 // Removes from the URL the view that the user is not shown, which opens the
 // All view, as the search parameters that the list does not accept are
 // (ticketListRoute), in place of the URL in the browser history, and keeps
@@ -929,6 +938,13 @@ function TicketList({ user }: TicketListProps) {
     changed && list.status === "success" && !list.isPlaceholderData
       ? resultText(list.data, search)
       : "";
+  // While the popover of the filters is open, it announces what the list
+  // shows, or the failure of its read, which the screen's status regions
+  // cannot announce then.
+  const filtersStatus =
+    changed && list.status === "error" && !list.isFetching
+      ? failureText(list.error)
+      : announcement;
 
   return (
     <ScreenRead
@@ -967,7 +983,10 @@ function TicketList({ user }: TicketListProps) {
                       refine({ search: term });
                     }}
                   />
-                  <Filters applied={filtersApplied(search)}>
+                  <Filters
+                    applied={filtersApplied(search)}
+                    status={<span key={key}>{filtersStatus}</span>}
+                  >
                     {view === ALL_VIEW && (
                       <FilterGroup
                         label="Status"

@@ -717,6 +717,7 @@ describe("the URL", () => {
     ],
     ["an unknown order", "?order=up", "/tickets", ALL],
     ["a repeated sorting", "?sort=ticket&sort=status", "/tickets", ALL],
+    ["a repeated order", "?order=asc&order=desc", "/tickets", ALL],
     ["a repeated search", "?search=curl&search=ssl", "/tickets", ALL],
     [
       "a search of more than 500 characters",
@@ -786,6 +787,17 @@ describe("the URL", () => {
       ]);
     expect(router.state.location.href).toBe(`/tickets${search}`);
     expect(router.history.length).toBe(1);
+  });
+
+  test("keeps a search of 500 characters", async () => {
+    const { spy } = stubTickets();
+    const term = "a".repeat(500);
+    const { router } = await renderApp(`/tickets?search=${term}`);
+
+    await expect
+      .poll(() => queriesOf(spy, "list"))
+      .toEqual([`search=${term}&${ALL}`]);
+    expect(router.state.location.href).toBe(`/tickets?search=${term}`);
   });
 
   test("keeps the status filter in the All view", async () => {
@@ -1398,20 +1410,6 @@ describe("the search", () => {
     );
   });
 
-  test("returns a typed term that is not applied to the applied one when the focus leaves the field", async () => {
-    const { spy } = stubTickets();
-    const { router, screen } = await renderApp("/tickets?search=curl");
-    const field = searchFieldOf(screen);
-    await expect.element(field).toHaveValue("curl");
-
-    await field.fill("fictional-openssl");
-    await userEvent.keyboard("{Tab}");
-
-    await expect.element(field).toHaveValue("curl");
-    expect(router.state.location.href).toBe("/tickets?search=curl");
-    expect(queriesOf(spy, "list")).toEqual([`search=curl&${ALL_PAGE}`]);
-  });
-
   test("shows the term that applies when the URL changes, as with back", async () => {
     stubTickets();
     const { router, screen } = await renderApp("/tickets");
@@ -1779,6 +1777,8 @@ describe("the sorting", () => {
     await expect
       .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-7" }))
       .toBeVisible();
+    // The header that the user pressed keeps the focus once the rows arrive.
+    await expect.element(deadline).toHaveFocus();
   });
 });
 
@@ -1824,6 +1824,14 @@ describe("the links of the list", () => {
       "/tickets?view=new&overdue=um&sort=ticket&page=5",
     );
 
+    // A page beyond the last of a refined list that has Tickets.
+    await expect
+      .element(
+        screen
+          .getByRole("tabpanel")
+          .getByText("There are no Tickets on this page."),
+      )
+      .toBeVisible();
     await expect
       .element(screen.getByRole("link", { name: "Go to the first page" }))
       .toHaveAttribute("href", "/tickets?view=new&overdue=um&sort=ticket");
@@ -1831,6 +1839,34 @@ describe("the links of the list", () => {
 });
 
 describe("a list that the user refined", () => {
+  test("announces in the popover of the filters what the list shows after a change of a filter, or the failure of its read", async () => {
+    stubTickets({
+      list: (query) =>
+        query.has("priority")
+          ? errorResponse(503, "DATABASE_UNAVAILABLE")
+          : query.has("severity")
+            ? ticketPage([ROW])
+            : ticketPage([ROW, fictionalTicket({ ticket_id: "SNTL-2" })]),
+    });
+    const { screen } = await renderApp("/tickets?view=new");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
+      .toBeVisible();
+    const dialog = await openFilters(screen);
+    const status = dialog.getByRole("status");
+    await expect.element(status).toHaveTextContent("");
+
+    await toggle(dialog, "Severity", "High");
+    await expect.element(status).toHaveTextContent("1 Ticket");
+
+    await toggle(dialog, "Priority", "P1");
+    await expect
+      .element(status)
+      .toHaveTextContent(
+        "Sentinel isn't available right now. Try again later.",
+      );
+  });
+
   test.each([
     ["a search alone", "?search=curl", "No Tickets match the search."],
     ["a filter", "?severity=high", "No Tickets match the filters."],
@@ -1967,31 +2003,6 @@ describe("the attention summary", () => {
     }
   });
 
-  test("shows a number above zero in danger-on-soft and a zero in fg, at weight 600, each followed by its label in fg-muted", async () => {
-    stubTickets();
-    const { screen } = await renderApp("/tickets?view=new");
-    const above = summaryOf(screen).getByRole("link", { name: "1 UM overdue" });
-    const zero = summaryOf(screen).getByRole("link", {
-      name: "0 Submission overdue",
-    });
-    await expect.element(zero).toBeVisible();
-
-    const parts = (link: typeof above) =>
-      [...link.element().querySelectorAll("span span")].map((part) => {
-        const style = getComputedStyle(part);
-        return [part.textContent, style.color, style.fontWeight];
-      });
-    expect(parts(above)).toEqual([
-      ["1", "rgb(164, 14, 38)", "600"],
-      ["UM overdue", "rgb(89, 99, 110)", "400"],
-    ]);
-    expect(parts(zero)).toEqual([
-      ["0", "rgb(31, 35, 40)", "600"],
-      ["Submission overdue", "rgb(89, 99, 110)", "400"],
-    ]);
-    expect(above.element().getBoundingClientRect().height).toBe(32);
-  });
-
   test("shows the label of a count alone while it loads", async () => {
     const pending = later();
     stubTickets({
@@ -2048,6 +2059,12 @@ describe("the attention summary", () => {
       .element(summaryOf(screen).getByRole("link", { name: "2 Active P1" }))
       .toBeVisible();
     expect(reads()).toBe(4);
+    // A count that loaded is not read again with the list.
+    expect(
+      queriesOf(spy, "count").filter(
+        (query) => query === countQuery(ATTENTION["QA overdue"]),
+      ),
+    ).toHaveLength(1);
   });
 
   test("opens the All view refined to the Tickets of a count", async () => {

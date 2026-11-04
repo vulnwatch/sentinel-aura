@@ -113,6 +113,22 @@ test.each([
   },
 );
 
+test.each([
+  ["emptied", ""],
+  ["of whitespace alone", "   "],
+])(
+  "removes the term that applies with Enter in a field %s",
+  async (_, typed) => {
+    const { input, onApply } = await renderField("fictional-curl");
+
+    await input.fill(typed);
+    await userEvent.keyboard("{Enter}");
+
+    expect(onApply).toHaveBeenCalledExactlyOnceWith("");
+    await expect.element(input).toHaveValue("");
+  },
+);
+
 test("shows its clear button only with a value", async () => {
   const { input, clear } = await renderField();
   await expect.element(input).toBeVisible();

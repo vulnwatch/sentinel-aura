@@ -355,19 +355,41 @@ test.describe("refined by an analyst", () => {
       page.getByRole("button", { name: "Filters 1 applied" }),
     ).toBeFocused();
 
-    // By the due date of the current phase, earliest first, as List Tickets
-    // sorts it.
+    // By the due date of the current phase, earliest first, then latest
+    // first, as List Tickets sorts them. The latest first differs from the
+    // order of the last modification, which shows before.
     const deadline = table(page).getByRole("columnheader", {
       name: "Deadline",
     });
-    await deadline.click();
+    for (const [order, url, direction] of [
+      ["asc", "/tickets?status=analyzed&sort=deadline", "ascending"],
+      [
+        "desc",
+        "/tickets?status=analyzed&sort=deadline&order=desc",
+        "descending",
+      ],
+    ] as const) {
+      const sorted = page.waitForResponse(
+        (response) =>
+          response.url().includes("sort_by=current_due_at") &&
+          response.url().includes(`sort_order=${order}`),
+      );
+      await deadline.click();
+      await sorted;
 
-    await expect(page).toHaveURL("/tickets?status=analyzed&sort=deadline");
-    await expect(deadline).toHaveAttribute("aria-sort", "ascending");
-    await expect(identifiers(page)).toHaveText(
+      await expect(page).toHaveURL(url);
+      await expect(deadline).toHaveAttribute("aria-sort", direction);
+      await expect(identifiers(page)).toHaveText(
+        await ticketsOf(
+          page,
+          `status=analyzed&sort_by=current_due_at&sort_order=${order}`,
+        ),
+      );
+    }
+    await expect(identifiers(page)).not.toHaveText(
       await ticketsOf(
         page,
-        "status=analyzed&sort_by=current_due_at&sort_order=asc",
+        "status=analyzed&sort_by=updated_at&sort_order=desc",
       ),
     );
   });

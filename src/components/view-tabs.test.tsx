@@ -213,6 +213,31 @@ describe("ViewTabs", () => {
   });
 });
 
+// The width of an element.
+function widthOf(element: Element): number {
+  return element.getBoundingClientRect().width;
+}
+
+// The widths of the tabs and of the controls at 1280 px, where they share
+// one row, and the left edge of the toolbar, to set a window in which the
+// row holds only some of them.
+async function widthsOf(screen: Awaited<ReturnType<typeof render>>) {
+  const clear = screen.getByRole("button", { name: "Clear filters" });
+  await expect.element(clear).toBeVisible();
+  const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+  return {
+    left: tabs.getBoundingClientRect().left,
+    tabs: widthOf(tabs),
+    filters: widthOf(screen.getByRole("button", { name: "Filters" }).element()),
+    clear: widthOf(clear.element()),
+  };
+}
+
+// The window whose toolbar is the given width.
+async function toolbarOf(left: number, width: number) {
+  await page.viewport(Math.floor(2 * left + width), 640);
+}
+
 describe("the toolbar", () => {
   beforeEach(async () => {
     await page.viewport(1280, 800);
@@ -261,21 +286,69 @@ describe("the toolbar", () => {
     ).toBe(16);
   });
 
-  test("wraps its controls below the tabs, 8 px apart, at the end of the line, when the width runs short", async () => {
-    await page.viewport(320, 640);
+  test("wraps the last control alone when only it runs out of room, at the end of the next row, 8 px below, and moves no other", async () => {
     const { rendered } = renderList("/tickets?view=new", TOOLBAR);
     const screen = await rendered;
+    const widths = await widthsOf(screen);
+
+    await toolbarOf(
+      widths.left,
+      widths.tabs + 8 + widths.filters + 8 + widths.clear - 4,
+    );
+
     const tabs = screen.getByRole("tablist", { name: "Views" }).element();
     const filters = screen.getByRole("button", { name: "Filters" }).element();
     const clear = screen
       .getByRole("button", { name: "Clear filters" })
       .element();
     const panel = screen.getByRole("tabpanel", { name: "New 12" }).element();
+    await expect
+      .poll(() => clear.getBoundingClientRect().top)
+      .toBeGreaterThan(tabs.getBoundingClientRect().top);
+    expect(filters.getBoundingClientRect().top).toBe(
+      tabs.getBoundingClientRect().top,
+    );
+    expect(filters.getBoundingClientRect().right).toBeCloseTo(
+      panel.getBoundingClientRect().right,
+    );
+    expect(
+      clear.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
+    ).toBe(8);
+    expect(clear.getBoundingClientRect().right).toBeCloseTo(
+      panel.getBoundingClientRect().right,
+    );
+    expect(
+      panel.getBoundingClientRect().top - clear.getBoundingClientRect().bottom,
+    ).toBe(16);
+  });
 
-    await expect.element(clear).toBeVisible();
+  test("wraps its controls together below the tabs, 8 px apart, at the end of the row, when none fits after the tabs", async () => {
+    const { rendered } = renderList("/tickets?view=new", TOOLBAR);
+    const screen = await rendered;
+    const widths = await widthsOf(screen);
+
+    await toolbarOf(widths.left, widths.tabs + 8 + widths.filters - 4);
+
+    const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+    const filters = screen.getByRole("button", { name: "Filters" }).element();
+    const clear = screen
+      .getByRole("button", { name: "Clear filters" })
+      .element();
+    const panel = screen.getByRole("tabpanel", { name: "New 12" }).element();
+    await expect
+      .poll(() => filters.getBoundingClientRect().top)
+      .toBeGreaterThan(tabs.getBoundingClientRect().top);
+    expect(tabs.getBoundingClientRect().left).toBe(widths.left);
     expect(
       filters.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
     ).toBe(8);
+    expect(clear.getBoundingClientRect().top).toBe(
+      filters.getBoundingClientRect().top,
+    );
+    expect(
+      clear.getBoundingClientRect().left -
+        filters.getBoundingClientRect().right,
+    ).toBeCloseTo(8);
     expect(clear.getBoundingClientRect().right).toBeCloseTo(
       panel.getBoundingClientRect().right,
     );
