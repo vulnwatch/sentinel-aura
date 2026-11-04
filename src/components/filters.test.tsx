@@ -48,7 +48,7 @@ function ListFilters({ initial = [], onChange }: ListFiltersProps) {
   const [severities, setSeverities] = useState<readonly Severity[]>(initial);
   return (
     <div className="flex justify-end p-8">
-      <Filters applied={severities.length > 0 ? 1 : 0}>
+      <Filters applied={severities.length > 0 ? 1 : 0} status="">
         <FilterGroup
           label="Severity"
           options={SEVERITIES}
@@ -108,7 +108,7 @@ test("is a secondary button 32 px high named Filters while no filter applies", a
 
 test("shows the number of the filters that apply after its label, which assistive technologies read as applied", async () => {
   const screen = await render(
-    <Filters applied={2}>
+    <Filters applied={2} status="">
       <FilterGroup
         label="Severity"
         options={SEVERITIES}

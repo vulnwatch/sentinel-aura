@@ -435,8 +435,8 @@ returns, whatever Sentinel guarantees for its field:
   in this view.", and offers the action that creates such a record to a user
   who can take it (`docs/screen-map.md`, Roles).
 - A list whose records do not match the user's filters or search says so,
-  such as "No Tickets match the filters.", and offers an action that clears
-  them.
+  such as "No Tickets in this view match the filters.", and offers an action
+  that clears them.
 - A page beyond the last page of a list that has records to show, which
   Sentinel answers with no records (Sentinel `docs/api-spec.md`, Pagination),
   says so, such as "There are no Tickets on this page.", and links to the

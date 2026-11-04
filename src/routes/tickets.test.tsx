@@ -1908,6 +1908,27 @@ describe("a list that the user refined", () => {
       );
   });
 
+  test("announces in the popover of the filters the failure of a new read of the rows that show, also before any change", async () => {
+    const { stub } = stubTickets();
+    const { screen } = await renderApp("/tickets?view=new");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
+      .toBeVisible();
+    const dialog = await openFilters(screen);
+    const status = dialog.getByRole("status");
+    await expect.element(status).toHaveTextContent("");
+
+    stub.list = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+    returnToForeground();
+
+    await expect
+      .element(status)
+      .toHaveTextContent(
+        "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+      );
+    await expect.element(dialog).toBeVisible();
+  });
+
   test.each([
     [
       "a search alone",

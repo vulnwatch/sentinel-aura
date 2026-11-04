@@ -787,8 +787,7 @@ A list screen, such as the Ticket list, shows from top to bottom:
      wraps, 16 px apart, each its box then, 6 px later, its label in
      `text-14`, the name of the value with its mark (Values).
    - Clear filters, a quiet button 32 px high with `x`, removes the search and
-     the filters, and keeps the rest of the state of the list, such as its
-     view and its sorting.
+     the filters, and keeps the view and the sorting of the list.
 3. The table (Tables), 16 px below.
 4. The pagination, 16 px below, at the end of the line, when the list has
    more than one page: the range, such as "1–20 of 25", in `text-14` and

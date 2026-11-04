@@ -939,9 +939,12 @@ function TicketList({ user }: TicketListProps) {
       : "";
   // While the popover of the filters is open, it announces what the list
   // shows, or what the place of the rows says of the failure of its read,
-  // which the screen's status regions cannot announce then.
+  // which the screen's status regions cannot announce then. A failure is
+  // announced also before any change, such as that of a new read when the
+  // tab returns to the foreground: the first read's failure replaces the
+  // screen, so no popover is open then.
   const filtersStatus =
-    changed && list.status === "error" ? placeMessage(list) : announcement;
+    list.status === "error" ? placeMessage(list) : announcement;
 
   return (
     <ScreenRead

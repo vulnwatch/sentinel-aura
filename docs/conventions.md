@@ -221,12 +221,14 @@ that needs it; content of another kind needs a new row first.
   rejection also removes another one, such as a sorting with its order,
   catches it as `null`, which the schema's transform removes with the other.
   The schema gives each value the screen's form and leaves out a parameter
-  that names the screen's default, such as the first page, so that links and
-  navigations need not. When the URL carries a parameter or a value that the
-  schema does not accept, a value in another form than the one that the
-  schema gives, such as a search term with surrounding whitespace, or a
-  parameter that names the default, the route's `beforeLoad` redirects to the
-  parameters that the schema gives, replacing the URL
+  that names the screen's default, such as the first page, so that
+  navigations need not; a link leaves it out itself, because the router
+  builds the address of a link without the schema. When the URL carries a
+  parameter or a value that the schema does not accept, a value in another
+  form than the one that the schema gives, such as a search term with
+  surrounding whitespace, or a parameter that names the default, the route's
+  `beforeLoad` redirects to the parameters that the schema gives, replacing
+  the URL
   (`docs/behaviors.md`, Invalid Search Parameters). The router's search of a
   route also passes on the parameters of the URL that its schema does not
   declare, and gives every value as text, so `beforeLoad` compares the URL

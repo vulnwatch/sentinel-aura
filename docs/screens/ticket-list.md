@@ -200,7 +200,7 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   with the others (`docs/design-system.md`, Tables), such as "1 more package:
   fictional-zlib" for assistive technologies, or an absent value for a Ticket
   without packages. The search matches package names, so the column shows
-  why a row matches.
+  why a row matches when the name that matches is among those that it names.
 - **Status**, **Severity**, and **Priority**: as `docs/design-system.md`
   (Ticket Status; Severity; Priority) shows them, the effective priority
   included.
@@ -262,8 +262,8 @@ from all of them (`docs/screen-map.md`, Users and Frequent Tasks; Landing).
   view alone, as a tab opens its view without it. A page beyond the last of a
   list with Tickets says "There are no Tickets on this page." and offers "Go
   to the first page", a link that looks like a secondary button, in place of
-  the pagination (`docs/behaviors.md`, Empty States). Each shows inside the frame, below the
-  header row, and keeps the tabs and the toolbar.
+  the pagination (`docs/behaviors.md`, Empty States). Each shows inside the
+  frame, below the header row, and keeps the tabs and the toolbar.
 - **Errors.** The default presentation applies to every failure
   (`docs/behaviors.md`, Errors): the error of the first read of the list
   replaces the screen; the error of a read of another view, page, search,

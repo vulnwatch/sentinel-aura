@@ -326,7 +326,6 @@ test.describe("refined by an analyst", () => {
     page,
   }) => {
     await signIn(page, "asmith");
-    await page.goto("/tickets");
     // Once the counts have arrived, which widen the tabs and the summary, so
     // that the popover opens below Filters where it stays.
     await expect(views(page)).toHaveText([
@@ -339,8 +338,33 @@ test.describe("refined by an analyst", () => {
     ]);
     await expect(attention(page).last()).toHaveText("1 QA overdue");
 
+    // In the New view, whose columns hold no avatar and no date, so that no
+    // mask of the reference lies over the popover.
     await page.getByRole("button", { name: "Filters" }).click();
     const filters = page.getByRole("dialog", { name: "Filters" });
+    await filters
+      .getByRole("group", { name: "Severity" })
+      .getByText("Critical", { exact: true })
+      .click();
+
+    await expect(page).toHaveURL("/tickets?view=new&severity=critical");
+    await expect(identifiers(page)).toHaveText(["SNTL-1", "SNTL-7"]);
+    await expectAccessible(page);
+
+    await expect(page).toHaveScreenshot(
+      "ticket-list-filters.png",
+      masked(page),
+    );
+
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Filters 1 applied" }),
+    ).toBeFocused();
+
+    // A tab opens its view without the filters.
+    await views(page).filter({ hasText: "All" }).click();
+    await expect(page).toHaveURL("/tickets");
+    await page.getByRole("button", { name: "Filters", exact: true }).click();
     await filters
       .getByRole("group", { name: "Status" })
       .getByText("Analyzed", { exact: true })
@@ -356,17 +380,7 @@ test.describe("refined by an analyst", () => {
     await expect(
       table(page).getByRole("row", { name: /SNTL-12/ }),
     ).toContainText("fictional-openssl+1");
-    await expectAccessible(page);
-
-    await expect(page).toHaveScreenshot(
-      "ticket-list-filters.png",
-      masked(page),
-    );
-
     await page.keyboard.press("Escape");
-    await expect(
-      page.getByRole("button", { name: "Filters 1 applied" }),
-    ).toBeFocused();
 
     // By the due date of the current phase, earliest first, then latest
     // first, as List Tickets sorts them. The latest first differs from the

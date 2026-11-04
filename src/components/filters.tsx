@@ -88,8 +88,9 @@ interface FiltersProps {
   // What the list shows after a change, in words, which a status region of
   // the popover holds: while the popover is open, the rest of the page is out
   // of reach of assistive technologies, the status regions of the screen
-  // included, so the popover announces it itself.
-  status?: ReactNode;
+  // included, so the popover announces it itself, which every list that
+  // offers filters gives (docs/design-system.md, Lists).
+  status: ReactNode;
   // The filters, each a FilterGroup, in their order.
   children: ReactNode;
 }
