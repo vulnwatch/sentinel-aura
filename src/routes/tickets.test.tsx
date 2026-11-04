@@ -2024,6 +2024,24 @@ function summaryOf(screen: Screen) {
   return screen.getByRole("list", { name: "Tickets that need attention" });
 }
 
+// Waits until every count of the attention summary has arrived.
+async function expectSummary(screen: Screen) {
+  await expect
+    .poll(() =>
+      summaryOf(screen)
+        .getByRole("link")
+        .elements()
+        .map((link) => link.textContent),
+    )
+    .toEqual([
+      "2 Active P1",
+      "1 Triage overdue",
+      "0 Submission overdue",
+      "1 UM overdue",
+      "3 QA overdue",
+    ]);
+}
+
 describe("the attention summary", () => {
   test("shows an analyst five counts in the heading row, each a link to the All view refined to its Tickets", async () => {
     stubTickets();
@@ -2064,7 +2082,7 @@ describe("the attention summary", () => {
       name: "1 Triage overdue",
     });
     const label = summaryOf(screen).getByText("Overdue", { exact: true });
-    await expect.element(triage).toBeVisible();
+    await expectSummary(screen);
 
     // The counts show their phase, and the name of the group once.
     await expect
@@ -2111,9 +2129,7 @@ describe("the attention summary", () => {
         .getByRole("link", { name })
         .element()
         .getBoundingClientRect();
-    await expect
-      .element(summaryOf(screen).getByRole("link", { name: "3 QA overdue" }))
-      .toBeVisible();
+    await expectSummary(screen);
 
     const active = rect("2 Active P1");
     const triage = rect("1 Triage overdue");
