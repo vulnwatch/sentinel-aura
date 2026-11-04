@@ -178,7 +178,7 @@ export function readSignedInUser(
 }
 
 // The signed-in user, for a screen that depends on the user, such as on
-// their roles or their id: the read that SessionGate keeps, which this hook
+// their capabilities or their id: the read that SessionGate keeps, which this hook
 // never sends itself. A screen shows only with a signed-in user, so this is
 // undefined only while the session ends, before the screen leaves the page.
 export function useSignedInUser(): CurrentUserData | undefined {
@@ -190,13 +190,13 @@ export function useSignedInUser(): CurrentUserData | undefined {
   return user.data?.data;
 }
 
-// Whether the user holds the vulnerability_analyst role, the only role on
-// which the UI depends, because only its holders can be assigned a Ticket:
-// it decides the landing, the view that the Tickets entry opens, and the
-// Assigned to me view (docs/screen-map.md, Roles, Principles; Sentinel
-// docs/features/identity/rbac.md, Business Rules).
-export function holdsAnalystRole(user: Pick<CurrentUserData, "roles">) {
-  return user.roles.includes("vulnerability_analyst");
+// Whether the user holds triage_ticket, the capability with which the queue
+// of new Tickets is worked: it decides the landing and the view that the
+// Tickets entry opens (docs/screen-map.md, Landing; Sidebar; Roles,
+// Principles). A capability that the pinned contract does not list changes
+// nothing.
+export function triagesTickets(user: Pick<CurrentUserData, "capabilities">) {
+  return user.capabilities.includes("triage_ticket");
 }
 
 // Whether a sign-out is in progress.

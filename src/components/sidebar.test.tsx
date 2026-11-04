@@ -5,6 +5,7 @@ import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
+import { Capability } from "../api/generated/model";
 import { createQueryClient } from "../query-client";
 import { SIDEBAR_STORAGE_KEY } from "../preferences";
 import { createAppRouter } from "../router";
@@ -185,17 +186,24 @@ describe("expanded", () => {
 
   test.each([
     [
-      "the New view of the Ticket list for a user who holds the vulnerability_analyst role",
-      ["vulnerability_analyst", "fictional_role"],
+      "the New view of the Ticket list for a user who holds triage_ticket",
+      ["triage_ticket", "fictional_capability"],
+      [],
       "/tickets?view=new",
     ],
     [
-      "the All view for a user with every other role",
-      ["admin", "restricted_analyst", "fictional_role"],
+      "the All view for a user with every other capability, whatever the roles",
+      [
+        ...Object.values(Capability).filter(
+          (capability) => capability !== "triage_ticket",
+        ),
+        "fictional_capability",
+      ],
+      ["admin", "vulnerability_analyst", "fictional_role"],
       "/tickets",
     ],
-  ])("leads with Tickets to %s", async (_, roles, href) => {
-    const { router, screen } = await renderApp("/cves", [], roles);
+  ])("leads with Tickets to %s", async (_, capabilities, roles, href) => {
+    const { router, screen } = await renderApp("/cves", capabilities, roles);
     const tickets = sidebarOf(screen).getByRole("link", { name: "Tickets" });
 
     await expect.element(tickets).toHaveAttribute("href", href);

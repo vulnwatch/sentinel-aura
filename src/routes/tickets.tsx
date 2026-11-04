@@ -53,12 +53,12 @@ import {
   valueListParam,
   wholeNumberParam,
 } from "../search-params";
-import { holdsAnalystRole, useSignedInUser } from "../session-gate";
+import { useSignedInUser } from "../session-gate";
 import { rootRoute } from "./root";
 
 // The Ticket list (docs/screens/ticket-list.md): the Tickets in the views of
 // docs/screen-map.md (Ticket List Views), which the user refines with a
-// search, filters, and sorting, and the attention summary of analysts
+// search, filters, and sorting, and the attention summary
 // (docs/screen-map.md, Attention Summary), from List Tickets (Sentinel
 // docs/features/tickets/tickets.md, List Tickets).
 
@@ -207,8 +207,8 @@ interface TicketView {
   id: Queue | "all";
   // Its name, the label of its tab.
   name: string;
-  // Whether only a user who holds the vulnerability_analyst role sees it.
-  analystsOnly: boolean;
+  // Whether only a user who can be the assignee of a Ticket sees it.
+  assigneesOnly: boolean;
   // The filters of its Tickets, for the signed-in user.
   filters: (user: CurrentUserData) => ListTicketsParams;
   // Its columns, in their order: a view omits a column whose value it fixes.
@@ -221,7 +221,7 @@ interface TicketView {
 const ALL_VIEW: TicketView = {
   id: "all",
   name: "All",
-  analystsOnly: false,
+  assigneesOnly: false,
   filters: () => ({}),
   columns: [
     "ticket",
@@ -244,7 +244,7 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "new",
     name: "New",
-    analystsOnly: false,
+    assigneesOnly: false,
     filters: () => ({ status: ["new"] }),
     columns: [
       "ticket",
@@ -260,7 +260,7 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "assigned-to-me",
     name: "Assigned to me",
-    analystsOnly: true,
+    assigneesOnly: true,
     // By the user's id, which never changes, unlike the username (Sentinel
     // docs/api-spec.md, User Identifier Resolution).
     filters: (user) => ({
@@ -282,7 +282,7 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "analysis",
     name: "Analysis",
-    analystsOnly: false,
+    assigneesOnly: false,
     filters: () => ({ status: ["analysis"] }),
     columns: [
       "ticket",
@@ -299,7 +299,7 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "analyzed",
     name: "Analyzed",
-    analystsOnly: false,
+    assigneesOnly: false,
     filters: () => ({ status: ["analyzed"] }),
     columns: [
       "ticket",
@@ -316,7 +316,7 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "orphaned",
     name: "Orphaned",
-    analystsOnly: false,
+    assigneesOnly: false,
     filters: () => ({ status: ["analysis", "analyzed"], assignee: "none" }),
     columns: [
       "ticket",
@@ -377,10 +377,23 @@ function acceptedInView(
 
 const ticketListSearch = ticketListParams.transform(acceptedInView);
 
+// Whether the user can be the assignee of a Ticket, of every Ticket or of
+// the non-confidential ones, as Get Current User reports the outcome of
+// Sentinel's rule, which the UI does not derive (docs/screen-map.md, Roles,
+// Principles; Sentinel docs/features/identity/rbac.md, Assignment
+// Eligibility Wire Format). none, and a value that the pinned contract does
+// not list, admit no Ticket (docs/behaviors.md, Unknown Values).
+function canBeAssignee(user: CurrentUserData): boolean {
+  return (
+    user.assignment_eligibility === "all" ||
+    user.assignment_eligibility === "non_confidential"
+  );
+}
+
 // The views that the user is shown.
 function viewsOf(user: CurrentUserData): readonly TicketView[] {
-  const analyst = holdsAnalystRole(user);
-  return VIEWS.filter((view) => analyst || !view.analystsOnly);
+  const assignee = canBeAssignee(user);
+  return VIEWS.filter((view) => assignee || !view.assigneesOnly);
 }
 
 // The value of the view search parameter of a view.
@@ -785,53 +798,48 @@ interface AttentionSummaryProps {
   listFetching: boolean;
 }
 
-// The attention summary of an analyst, in the heading row after the heading:
-// five counts, each a link to the All view refined to its Tickets
-// (docs/screen-map.md, Attention Summary; docs/design-system.md, Lists).
-// Active P1 measures priority, and the four overdue counts, which never count
-// the same Ticket, form a group after it: a vertical line, the name
-// "Overdue", and the counts, 8 px apart, each showing its phase, as
-// "1 Triage", and read whole, as "1 Triage overdue". The line and the name
-// are hidden from assistive technologies, which read the name with each
-// count. The group wraps to the next line as a whole, and its counts after
-// its name when it is wider than its line. When the summary leaves the page
-// while one of its counts holds the focus, as when a read of the signed-in
-// user tells that the role was removed, the focus moves to the screen's
-// heading.
+// The attention summary of every user, in the heading row after the heading:
+// five counts of the Tickets that List Tickets returns to the user, each a
+// link to the All view refined to its Tickets (docs/screen-map.md, Attention
+// Summary; docs/design-system.md, Lists). Active P1 measures priority, and
+// the four overdue counts, which never count the same Ticket, form a group
+// after it: a vertical line, the name "Overdue", and the counts, 8 px apart,
+// each showing its phase, as "1 Triage", and read whole, as "1 Triage
+// overdue". The line and the name are hidden from assistive technologies,
+// which read the name with each count. The group wraps to the next line as a
+// whole, and its counts after its name when it is wider than its line.
 function AttentionSummary({ listFetching }: AttentionSummaryProps) {
   return (
-    <FocusHandOff>
-      <ul
-        aria-label="Tickets that need attention"
-        className="flex flex-wrap items-start gap-y-2"
-      >
-        <li>
-          <AttentionCountLink count={ACTIVE_P1} listFetching={listFetching} />
-        </li>
-        <li className="flex items-start">
-          <span aria-hidden className="flex h-8 items-center px-3">
-            <span className="h-5 w-px bg-border" />
-          </span>
-          <span
-            aria-hidden
-            className="me-2 flex h-8 items-center text-14 text-fg-muted"
-          >
-            Overdue
-          </span>
-          <ul className="flex flex-wrap gap-2">
-            {OVERDUE_COUNTS.map((count) => (
-              <li key={count.id}>
-                <AttentionCountLink
-                  count={count}
-                  groupName="overdue"
-                  listFetching={listFetching}
-                />
-              </li>
-            ))}
-          </ul>
-        </li>
-      </ul>
-    </FocusHandOff>
+    <ul
+      aria-label="Tickets that need attention"
+      className="flex flex-wrap items-start gap-y-2"
+    >
+      <li>
+        <AttentionCountLink count={ACTIVE_P1} listFetching={listFetching} />
+      </li>
+      <li className="flex items-start">
+        <span aria-hidden className="flex h-8 items-center px-3">
+          <span className="h-5 w-px bg-border" />
+        </span>
+        <span
+          aria-hidden
+          className="me-2 flex h-8 items-center text-14 text-fg-muted"
+        >
+          Overdue
+        </span>
+        <ul className="flex flex-wrap gap-2">
+          {OVERDUE_COUNTS.map((count) => (
+            <li key={count.id}>
+              <AttentionCountLink
+                count={count}
+                groupName="overdue"
+                listFetching={listFetching}
+              />
+            </li>
+          ))}
+        </ul>
+      </li>
+    </ul>
   );
 }
 
@@ -982,9 +990,7 @@ function TicketList({ user }: TicketListProps) {
         <>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <ScreenHeading>Tickets</ScreenHeading>
-            {holdsAnalystRole(user) && (
-              <AttentionSummary listFetching={list.isFetching} />
-            )}
+            <AttentionSummary listFetching={list.isFetching} />
           </div>
           <div className="mt-4">
             <ViewTabs

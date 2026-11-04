@@ -80,7 +80,8 @@ test.describe("for an analyst", () => {
   test("lands on the New view, sorted by priority, then deadline, with the counts of the views", async ({
     page,
   }) => {
-    // asmith holds the vulnerability_analyst role and sees every Ticket.
+    // asmith holds the vulnerability_analyst role, sees every Ticket, and can
+    // be the assignee of every Ticket.
     await signIn(page, "asmith");
 
     await expect(
@@ -88,9 +89,9 @@ test.describe("for an analyst", () => {
     ).toBeVisible();
     await expect(page).toHaveTitle("Tickets – Sentinel");
     await expect(views(page)).toHaveText([
-      "New 12",
+      "New 11",
       "Assigned to me 4",
-      "Analysis 5",
+      "Analysis 6",
       "Analyzed 3",
       "Orphaned 1",
       "All 26",
@@ -112,7 +113,6 @@ test.describe("for an analyst", () => {
       "SNTL-24",
       "SNTL-10",
       "SNTL-3",
-      "SNTL-20",
       "SNTL-25",
       "SNTL-4",
       "SNTL-23",
@@ -139,7 +139,7 @@ test.describe("for an analyst", () => {
     await views(page).filter({ hasText: "Analysis" }).first().click();
 
     await expect(page).toHaveURL("/tickets?view=analysis");
-    await expect(identifiers(page)).toHaveCount(5);
+    await expect(identifiers(page)).toHaveCount(6);
     // The confidential Tickets that asmith sees (Tickets).
     for (const ticket of ["SNTL-18", "SNTL-19"]) {
       await expect(
@@ -329,9 +329,9 @@ test.describe("refined by an analyst", () => {
     // Once the counts have arrived, which widen the tabs and the summary, so
     // that the popover opens below Filters where it stays.
     await expect(views(page)).toHaveText([
-      "New 12",
+      "New 11",
       "Assigned to me 4",
-      "Analysis 5",
+      "Analysis 6",
       "Analyzed 3",
       "Orphaned 1",
       "All 26",
@@ -424,7 +424,51 @@ test.describe("refined by an analyst", () => {
   });
 });
 
-test("shows a user without the role the views of every user, and the All view from the Tickets entry", async ({
+test.describe("for a restricted analyst", () => {
+  test("lands on the New view, and shows the Tickets assigned to the analyst", async ({
+    page,
+  }) => {
+    // cwhite holds the restricted_analyst role and is not a bot account, so
+    // can be the assignee of the non-confidential Tickets, such as SNTL-20,
+    // which cwhite created; cwhite sees the confidential SNTL-18 through an
+    // access grant, without owning it (Users; Tickets).
+    await signIn(page, "cwhite");
+
+    await expect(views(page)).toHaveText([
+      "New 11",
+      "Assigned to me 1",
+      "Analysis 5",
+      "Analyzed 3",
+      "Orphaned 1",
+      "All 25",
+    ]);
+    await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
+
+    await views(page).filter({ hasText: "Assigned to me" }).click();
+
+    await expect(page).toHaveURL("/tickets?view=assigned-to-me");
+    await expect(identifiers(page)).toHaveText(["SNTL-20"]);
+  });
+});
+
+test("lands a bot account on the New view, without Assigned to me", async ({
+  page,
+}) => {
+  // security-scanner holds the restricted_analyst role, with triage_ticket,
+  // and is a bot account, which can be the assignee of no Ticket (Users).
+  await signIn(page, "security-scanner");
+
+  await expect(views(page)).toHaveText([
+    "New 11",
+    "Analysis 4",
+    "Analyzed 3",
+    "Orphaned 1",
+    "All 24",
+  ]);
+  await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
+});
+
+test("shows a user without a role the views of every user, the attention summary, and the All view from the Tickets entry", async ({
   page,
 }) => {
   // dbrown holds no role, and sees the non-confidential Tickets and the
@@ -439,17 +483,26 @@ test("shows a user without the role the views of every user, and the All view fr
 
   await expect(page).toHaveURL("/tickets");
   await expect(views(page)).toHaveText([
-    "New 12",
-    "Analysis 4",
+    "New 11",
+    "Analysis 5",
     "Analyzed 3",
     "Orphaned 1",
     "All 25",
   ]);
   await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
-  // The attention summary is for analysts.
-  await expect(
-    page.getByRole("list", { name: "Tickets that need attention" }),
-  ).toHaveCount(0);
+  // The attention summary is for every user: each aged Ticket is
+  // non-confidential (Aged Tickets).
+  const active = await ticketsOf(
+    page,
+    "priority=p1&status=new&status=analysis&status=analyzed&per_page=100",
+  );
+  await expect(attention(page)).toHaveText([
+    `${active.length} Active P1`,
+    "1 Triage overdue",
+    "1 Submission overdue",
+    "1 UM overdue",
+    "1 QA overdue",
+  ]);
 
   // A view that the user is not shown opens the All view, and leaves the URL.
   await page.goto("/tickets?view=assigned-to-me");

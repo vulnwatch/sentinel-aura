@@ -47,9 +47,15 @@ const TICKETS = "/api/v1/tickets";
 // A path that requires a session and matches no screen, so that it shows Not
 // found to a signed-in user without reading anything else.
 const SCREEN = "/fictional/path";
-// Another user, who holds no role.
+// Another user, who holds no role, and so no capability, and can be the
+// assignee of no Ticket.
 const READER: CurrentUserResponse = {
-  data: { ...OTHER_USER.data, roles: [], capabilities: [] },
+  data: {
+    ...OTHER_USER.data,
+    roles: [],
+    capabilities: [],
+    assignment_eligibility: "none",
+  },
 };
 
 let client: QueryClient;
@@ -591,14 +597,9 @@ describe("the signed-in user", () => {
   });
 
   test.each([
+    ["the Home for a user without triage_ticket", READER, "Home", "/"],
     [
-      "the Home for a user without the vulnerability_analyst role",
-      READER,
-      "Home",
-      "/",
-    ],
-    [
-      "the Ticket list in its New view for a user who holds the vulnerability_analyst role",
+      "the Ticket list in its New view for a user who holds triage_ticket",
       OTHER_USER,
       "Tickets",
       "/tickets?view=new",
