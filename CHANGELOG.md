@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.4.0...v0.5.0) (2026-11-04)
+
+
+### Features
+
+* add Sign in and the session handling ([#127](https://github.com/vulnwatch/sentinel-aura/issues/127)) ([7d55d62](https://github.com/vulnwatch/sentinel-aura/commit/7d55d62c5d7a433f319b69a752e5e89dd1e0fbae))
+* add the design tokens, the themes, Inter, and Lucide ([#114](https://github.com/vulnwatch/sentinel-aura/issues/114)) ([8406325](https://github.com/vulnwatch/sentinel-aura/commit/8406325d0e37d44a818bba751312fabcd7a9d70e)), closes [#113](https://github.com/vulnwatch/sentinel-aura/issues/113)
+* add the sidebar, the account menu, and Sign out ([#135](https://github.com/vulnwatch/sentinel-aura/issues/135)) ([402968f](https://github.com/vulnwatch/sentinel-aura/commit/402968fecd394bedbc8e522a531a7c9f7dc4eea5))
+* **deps:** pin Sentinel 0.16.0 and sort the queues by deadline ([#148](https://github.com/vulnwatch/sentinel-aura/issues/148)) ([755bcca](https://github.com/vulnwatch/sentinel-aura/commit/755bcca484ab9739aadd8ab9b95c8ec0b648ae88))
+* **deps:** pin Sentinel 0.17.0 and follow assignment eligibility ([#153](https://github.com/vulnwatch/sentinel-aura/issues/153)) ([956dc07](https://github.com/vulnwatch/sentinel-aura/commit/956dc07da71bbea67ffb31ace96e4eec4f312c6d))
+* list Tickets in their views, with their counts and pages ([#146](https://github.com/vulnwatch/sentinel-aura/issues/146)) ([82f088f](https://github.com/vulnwatch/sentinel-aura/commit/82f088f82b93b3b02a56d29272a1b44e6f823d0f))
+* present errors and loading, and show Not found ([#121](https://github.com/vulnwatch/sentinel-aura/issues/121)) ([d280750](https://github.com/vulnwatch/sentinel-aura/commit/d28075056f980020464ae5ffe04c08aa020d0597))
+* present the severity, priority, status, and deadline of Tickets ([#144](https://github.com/vulnwatch/sentinel-aura/issues/144)) ([89d74dd](https://github.com/vulnwatch/sentinel-aura/commit/89d74ddfc73f140cf031e7bed040050387f4e6ad))
+* represent every user with a generated avatar ([#133](https://github.com/vulnwatch/sentinel-aura/issues/133)) ([71679f4](https://github.com/vulnwatch/sentinel-aura/commit/71679f428fc9ccde5d7952f5be8cc76bd65afc2a))
+* search, filter, and sort Tickets, with the attention summary ([#150](https://github.com/vulnwatch/sentinel-aura/issues/150)) ([7225fc1](https://github.com/vulnwatch/sentinel-aura/commit/7225fc167fe182c4b11b60e02ed35cac508f1241))
+
 ## [0.4.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.3.0...v0.4.0) (2026-11-01)
 
 
