@@ -753,14 +753,20 @@ A list screen, such as the Ticket list, shows from top to bottom:
 2. The toolbar, 16 px below: the views (`docs/screen-map.md`, Ticket List
    Views) as tabs 32 px high with a `border` line and a 6 px radius, each its
    label followed by its count; the selected tab has a `border-strong`
-   boundary, the `neutral-soft` background, and its label at weight 600. A
-   tab opens when the user clicks it or presses Enter or Space, not when the
-   arrow keys move the focus to it. At the end of the toolbar come the search
-   field, Filters, and, while a filter or a search applies, Clear filters.
-   The tabs and the controls are 8 px apart. When the width runs short, the
-   toolbar wraps one control at a time, the last first, and a row of controls
-   keeps them at its end, so that a control that appears, such as Clear
-   filters, moves no other control to another row.
+   boundary, the `neutral-soft` background, and its label at weight 600. The
+   line of a group of counts (item 1), without a name, can set the views
+   before it apart from the views after it, such as New and Unassigned from
+   the other views of `docs/screen-map.md` (Ticket List Views). It is hidden
+   from assistive technologies, which perceive the groups through the order
+   of the tabs. When the toolbar wraps, it stays before the tab after it,
+   also when that tab starts a row, where the line stands 4 px after the
+   start of the row. A tab opens when the user clicks it or presses Enter or
+   Space, not when the arrow keys move the focus to it. At the end of the
+   toolbar come the search field, Filters, and, while a filter or a search
+   applies, Clear filters. The tabs and the controls are 8 px apart. When the
+   width runs short, the toolbar wraps one control at a time, the last first,
+   and a row of controls keeps them at its end, so that a control that
+   appears, such as Clear filters, moves no other control to another row.
    - The search field, 224 px wide and 32 px high (Forms), has the
      placeholder "Search {records}", such as "Search Tickets", which is also
      its accessible name, and takes at most the longest term that the API

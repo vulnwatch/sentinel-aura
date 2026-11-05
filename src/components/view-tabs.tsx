@@ -48,7 +48,19 @@ export interface View {
   href: ScreenHref;
   // Its count, which follows the label, such as Count.
   count: ReactNode;
+  // Whether it starts a group of views, which a line sets apart from the
+  // views before it.
+  startsGroup?: boolean;
 }
+
+// The line before the tab of a view that starts a group, the line of a group
+// of counts (docs/design-system.md, Lists): 1 px in border, 20 px high, and
+// 12 px from the tabs before and after it, so that the tab stands 25 px
+// after the one before it. The tab draws it 13 px before its edge, 14 px
+// before the inside of its border; the line has no text, so assistive
+// technologies do not perceive it, and the pointer passes through it.
+const GROUP_LINE =
+  "relative ms-4.25 before:pointer-events-none before:absolute before:inset-y-0 before:-start-3.5 before:my-auto before:h-5 before:w-px before:bg-border";
 
 interface TabLabelProps {
   children: ReactNode;
@@ -91,7 +103,9 @@ interface ViewTabsProps {
 // neutral-soft background, and its label at weight 600. A tab opens when the
 // user clicks it or presses Enter or Space, not when the arrow keys move the
 // focus to it, so that the arrow keys read the tabs without opening each
-// view. The tabs and the controls of the toolbar, at its end, are 8 px apart.
+// view. The tabs and the controls of the toolbar, at its end, are 8 px apart,
+// and a line sets a group of views apart from the views before it
+// (GROUP_LINE), also when its first tab starts a row.
 // When the width runs short, the toolbar wraps one control at a time, the
 // last first, so that a control that appears, such as Clear filters, moves
 // no other control to another row; a row of controls alone keeps them at its
@@ -132,7 +146,7 @@ export function ViewTabs({
                   );
                 }
               }}
-              className={`inline-flex h-8 cursor-default items-center rounded-md border border-border px-3 text-14 text-fg data-hovered:bg-surface-hover data-selected:border-border-strong data-selected:bg-neutral-soft data-selected:font-semibold ${FOCUS_RING}`}
+              className={`inline-flex h-8 cursor-default items-center rounded-md border border-border px-3 text-14 text-fg data-hovered:bg-surface-hover data-selected:border-border-strong data-selected:bg-neutral-soft data-selected:font-semibold ${FOCUS_RING} ${view.startsGroup === true ? GROUP_LINE : ""}`}
             >
               <TabLabel>
                 {view.label} {view.count}
