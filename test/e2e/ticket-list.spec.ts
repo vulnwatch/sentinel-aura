@@ -190,6 +190,54 @@ test.describe("for an analyst", () => {
     await expect(identifiers(page)).toHaveText(["SNTL-9"]);
   });
 
+  test("names at most 10 packages of a Ticket, then how many more", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    // With a click, after which React Aria shows a tooltip on hover.
+    await views(page).filter({ hasText: "Analysis" }).first().click();
+    await expect(page).toHaveURL("/tickets?view=analysis");
+
+    // SNTL-11, in Analysis, has 12 packages: fictional-curl first, then the
+    // others in the order of their names (Packages, Tracks, and Maintainers;
+    // Sentinel docs/features/tickets/tickets.md, TicketSummary).
+    const others = [
+      "fictional-expat",
+      "fictional-gzip",
+      "fictional-jq",
+      "fictional-libpng",
+      "fictional-libssh",
+      "fictional-libtiff",
+      "fictional-ncurses",
+      "fictional-pcre",
+      "fictional-rsync",
+      "fictional-sqlite",
+      "fictional-xz",
+    ];
+    const row = table(page).getByRole("row", { name: /SNTL-11/ });
+    const more = row.getByRole("button", {
+      name: `11 more packages: ${others.slice(0, 10).join(", ")}, and 1 more`,
+      exact: true,
+    });
+    await expect(more).toHaveText("+11");
+    await expect(row).toContainText("fictional-curl+11");
+
+    await more.hover();
+
+    const tooltip = page.getByRole("tooltip");
+    await expect(
+      tooltip.getByText("12 packages", { exact: true }),
+    ).toBeVisible();
+    await expect(tooltip.getByRole("listitem")).toHaveText([
+      "fictional-curl",
+      ...others.slice(0, 9),
+    ]);
+    await expect(
+      tooltip.getByText("…and 2 more", { exact: true }),
+    ).toBeVisible();
+    await expectAccessible(page);
+  });
+
   test("pages the All view, sorted by last modification", async ({ page }) => {
     await signIn(page, "asmith");
     await page

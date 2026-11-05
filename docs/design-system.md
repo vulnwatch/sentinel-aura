@@ -129,6 +129,7 @@ sidebar is the one exception (Spacing and Sizes).
 | `sidebar-active` | `#EAEEF2` | `#1E2630` | The current entry of the sidebar, and an entry under the pointer |
 | `fg` | `#1F2328` | `#E6EDF3` | Text |
 | `fg-muted` | `#59636E` | `#9198A1` | Secondary text and icons: terms of a description list, column headers, counts, captions, placeholders, and the icons beside a text |
+| `muted-on-fg` | `#9198A1` | `#59636E` | How many more values a "+N" has than its tooltip lists (Tables): `fg-muted` of the other theme, as a tooltip inverts the colors |
 | `border` | `#D8DEE4` | `#2F3742` | Lines that separate: between rows, around cards and tables, in menus, and at the edge of the sidebar |
 | `border-strong` | `#818B98` | `#6E7681` | Boundaries that identify a control: fields, secondary buttons, checkboxes, and the selected view |
 | `accent` | `#0969DA` | `#1F6FEB` | The fill of a primary button and of a selected checkbox or radio button |
@@ -244,6 +245,7 @@ Text, minimum 4.5:1:
 | `danger-on-soft` | `surface` | 7.86 | 8.90 |
 | `danger-on-soft` | `canvas` | 7.38 | 9.73 |
 | `surface` (tooltip text) | `fg` (tooltip) | 15.79 | 14.65 |
+| `muted-on-fg` (tooltip text) | `fg` (tooltip) | 5.42 | 5.17 |
 | `neutral-on-soft` | `neutral-soft` | 8.94 | 9.09 |
 | `info-on-soft` | `info-soft` | 11.25 | 9.29 |
 | `success-on-soft` | `success-soft` | 8.26 | 8.81 |
@@ -848,7 +850,10 @@ keep the search, the filters, and the sorting.
   not taken for a value, and its accessible name states the others, such as
   "2 more packages: fictional-curl-mini, fictional-libcurl4". Each names at
   most 10 values, then how many more, such as "and 42 more", so that the
-  tooltip of a record with many values fits in the window.
+  tooltip of a record with many values fits in the window. The tooltip shows
+  how many more as "…and 42 more", in `muted-on-fg` at weight 400 right under
+  the values, so that it is not taken for a value either; the ellipsis is
+  hidden from assistive technologies.
 - A text longer than its column, such as a title, ends with an ellipsis when
   the screen of its record shows it whole, and assistive technologies read it
   whole; in a table whose records have no screen of their own, such as an
@@ -978,11 +983,12 @@ keep the search, the filters, and the sorting.
   separated by `border` lines; and an item of a single selection ends with
   `check` at 16 px when it is selected.
 - A tooltip inverts the colors of text: `surface` on an `fg` background, in
-  `text-13`, weight 500, with a 6 px radius and 6 px by 10 px of padding. It
-  shows after 300 ms of hover and at once on keyboard focus, stays while the
-  pointer is over it, and Escape hides it (WCAG 2.2, 1.4.13 Content on Hover
-  or Focus). It names an icon alone or a compact avatar, or lists the values
-  of a "+N" (Tables); it never holds the only means to act.
+  `text-13`, weight 500, with a 6 px radius and 6 px by 10 px of padding; how
+  many more values a "+N" has than its tooltip lists is in `muted-on-fg`
+  (Tables). It shows after 300 ms of hover and at once on keyboard focus,
+  stays while the pointer is over it, and Escape hides it (WCAG 2.2, 1.4.13
+  Content on Hover or Focus). It names an icon alone or a compact avatar, or
+  lists the values of a "+N" (Tables); it never holds the only means to act.
 
 ## Representation of a User
 
