@@ -148,6 +148,6 @@ jobs:
           disable_search: true
           fail_ci_if_error: ${{ github.event_name == 'pull_request' }}
           # renovate: datasource=github-releases depName=codecov/codecov-cli
-          version: "v11.3.1"
+          version: "v11.3.2"
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
