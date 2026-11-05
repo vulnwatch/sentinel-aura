@@ -4,6 +4,7 @@ import {
   dateTimes,
   expect,
   expectAccessible,
+  expectViewCounts,
   signIn,
   test,
 } from "./fixtures";
@@ -135,6 +136,7 @@ test.describe("for an analyst", () => {
     page,
   }) => {
     await signIn(page, "asmith");
+    await expectViewCounts(page);
 
     await views(page).filter({ hasText: "Analysis" }).first().click();
 
@@ -165,6 +167,7 @@ test.describe("for an analyst", () => {
 
   test("shows the Tickets assigned to the analyst", async ({ page }) => {
     await signIn(page, "asmith");
+    await expectViewCounts(page);
 
     await views(page).filter({ hasText: "Assigned to me" }).click();
 
@@ -181,6 +184,7 @@ test.describe("for an analyst", () => {
 
   test("shows the Tickets awaiting an assignee", async ({ page }) => {
     await signIn(page, "asmith");
+    await expectViewCounts(page);
 
     await views(page).filter({ hasText: "Unassigned" }).click();
 
@@ -194,6 +198,7 @@ test.describe("for an analyst", () => {
     page,
   }) => {
     await signIn(page, "asmith");
+    await expectViewCounts(page);
     // With a click, after which React Aria shows a tooltip on hover.
     await views(page).filter({ hasText: "Analysis" }).first().click();
     await expect(page).toHaveURL("/tickets?view=analysis");
@@ -240,10 +245,7 @@ test.describe("for an analyst", () => {
 
   test("pages the All view, sorted by last modification", async ({ page }) => {
     await signIn(page, "asmith");
-    await page
-      .getByRole("navigation", { name: "Main" })
-      .getByRole("link", { name: "Tickets", exact: true })
-      .click();
+    await expectViewCounts(page);
     await views(page).filter({ hasText: "All" }).click();
 
     await expect(page).toHaveURL("/tickets");
@@ -379,6 +381,9 @@ test.describe("refined by an analyst", () => {
       table(page).getByRole("row", { name: /SNTL-11/ }),
     ).toContainText("fictional-curl");
 
+    // Once the counts have arrived, which can move Clear filters to the next
+    // row of the toolbar.
+    await expectViewCounts(page);
     await page.getByRole("button", { name: "Clear filters" }).first().click();
     await expect(page).toHaveURL("/tickets");
     await expect(identifiers(page)).toHaveCount(20);
@@ -390,14 +395,7 @@ test.describe("refined by an analyst", () => {
     await signIn(page, "asmith");
     // Once the counts have arrived, which widen the tabs and the summary, so
     // that the popover opens below Filters where it stays.
-    await expect(views(page)).toHaveText([
-      "New 11",
-      "Unassigned 1",
-      "Analysis 6",
-      "Analyzed 3",
-      "All 26",
-      "Assigned to me 4",
-    ]);
+    await expectViewCounts(page);
     await expect(attention(page).last()).toHaveText("1 QA overdue");
 
     // In the New view, whose columns hold no avatar and no date, so that no

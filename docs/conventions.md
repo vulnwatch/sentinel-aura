@@ -472,6 +472,16 @@ that needs it; content of another kind needs a new row first.
 - Tests find elements as users do (Tests), and sign in as a user of the
   dataset, with its published password (Sentinel
   `docs/features/platform/example-dataset.md`, Credentials).
+- A test points at an element, as with a click or a hover, only once the
+  data that can move it has arrived: Playwright presses an element at the
+  point where it shows when the action starts, and when data that arrives
+  before the press ends moves the element away from that point, the press
+  ends outside it and is cancelled. The counts of the views of a list are
+  such data: they show after the tabs and widen them, which moves the tabs
+  and the controls after them (`docs/behaviors.md`, Loading;
+  `docs/design-system.md`, Lists), and `expectViewCounts` of `fixtures.ts`
+  waits until each view shows its count. A test waits for a state that the
+  user sees, never for a fixed time.
 - Each browser runs the tests one at a time against its own backend, newly
   loaded with the dataset (`docs/architecture.md`, Development Environment).
   A test relies only on the dataset as loaded and on the data that it
