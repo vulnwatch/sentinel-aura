@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.5.0...v0.6.0) (2026-11-05)
+
+
+### Features
+
+* **deps:** pin Sentinel 0.18.0 and mute the rest of a +N tooltip ([#163](https://github.com/vulnwatch/sentinel-aura/issues/163)) ([000cb2b](https://github.com/vulnwatch/sentinel-aura/commit/000cb2b97586ab97013a11ae925e1264ef21ed00)), closes [#162](https://github.com/vulnwatch/sentinel-aura/issues/162)
+* rename the Orphaned view to Unassigned and group the queues ([#160](https://github.com/vulnwatch/sentinel-aura/issues/160)) ([4f5af39](https://github.com/vulnwatch/sentinel-aura/commit/4f5af3921eec5cf116c76dcb1870f3bc0a60f5ab))
+
 ## [0.5.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.4.0...v0.5.0) (2026-11-04)
 
 
