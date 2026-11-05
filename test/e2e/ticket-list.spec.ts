@@ -90,11 +90,11 @@ test.describe("for an analyst", () => {
     await expect(page).toHaveTitle("Tickets – Sentinel");
     await expect(views(page)).toHaveText([
       "New 11",
-      "Assigned to me 4",
+      "Unassigned 1",
       "Analysis 6",
       "Analyzed 3",
-      "Orphaned 1",
       "All 26",
+      "Assigned to me 4",
     ]);
     await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
     // P1, P2, P3, P4, and the Ticket without a priority last (Sentinel
@@ -177,6 +177,17 @@ test.describe("for an analyst", () => {
       "SNTL-13",
       "SNTL-21",
     ]);
+  });
+
+  test("shows the Tickets awaiting an assignee", async ({ page }) => {
+    await signIn(page, "asmith");
+
+    await views(page).filter({ hasText: "Unassigned" }).click();
+
+    await expect(page).toHaveURL("/tickets?view=unassigned");
+    // SNTL-9, in Analysis, which the deactivation of eblack unassigned
+    // (Tickets).
+    await expect(identifiers(page)).toHaveText(["SNTL-9"]);
   });
 
   test("pages the All view, sorted by last modification", async ({ page }) => {
@@ -278,7 +289,10 @@ test.describe("refined by an analyst", () => {
       await attention(page).filter({ hasText: count }).click();
       await expect(page).toHaveURL(url);
       await expect(identifiers(page)).toHaveText([ticket]);
-      await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
+      await expect(views(page).filter({ hasText: "All" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
     }
 
     await attention(page).filter({ hasText: "Active P1" }).click();
@@ -330,11 +344,11 @@ test.describe("refined by an analyst", () => {
     // that the popover opens below Filters where it stays.
     await expect(views(page)).toHaveText([
       "New 11",
-      "Assigned to me 4",
+      "Unassigned 1",
       "Analysis 6",
       "Analyzed 3",
-      "Orphaned 1",
       "All 26",
+      "Assigned to me 4",
     ]);
     await expect(attention(page).last()).toHaveText("1 QA overdue");
 
@@ -436,11 +450,11 @@ test.describe("for a restricted analyst", () => {
 
     await expect(views(page)).toHaveText([
       "New 11",
-      "Assigned to me 1",
+      "Unassigned 1",
       "Analysis 5",
       "Analyzed 3",
-      "Orphaned 1",
       "All 25",
+      "Assigned to me 1",
     ]);
     await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
 
@@ -460,9 +474,9 @@ test("lands a bot account on the New view, without Assigned to me", async ({
 
   await expect(views(page)).toHaveText([
     "New 11",
+    "Unassigned 1",
     "Analysis 4",
     "Analyzed 3",
-    "Orphaned 1",
     "All 24",
   ]);
   await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
@@ -484,9 +498,9 @@ test("shows a user without a role the views of every user, the attention summary
   await expect(page).toHaveURL("/tickets");
   await expect(views(page)).toHaveText([
     "New 11",
+    "Unassigned 1",
     "Analysis 5",
     "Analyzed 3",
-    "Orphaned 1",
     "All 25",
   ]);
   await expect(views(page).last()).toHaveAttribute("aria-selected", "true");

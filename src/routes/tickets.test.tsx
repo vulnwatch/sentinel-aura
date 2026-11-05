@@ -14,6 +14,7 @@ import type {
 import { getListTicketsQueryKey } from "../api/generated/tickets";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
+import { screenshot, type Screenshot } from "../test-screenshot";
 import {
   errorResponse,
   FICTIONAL_USER,
@@ -60,11 +61,11 @@ function withEligibility(
 // The filters of the views, as the requests send them, for the analyst.
 const FILTERS = {
   New: "status=new",
-  "Assigned to me": `assignee=${ANALYST.data.id}&status=analysis&status=analyzed`,
+  Unassigned: "status=analysis&status=analyzed&assignee=none",
   Analysis: "status=analysis",
   Analyzed: "status=analyzed",
-  Orphaned: "status=analysis&status=analyzed&assignee=none",
   All: "",
+  "Assigned to me": `assignee=${ANALYST.data.id}&status=analysis&status=analyzed`,
 };
 
 // The filters of the counts of the attention summary, as the requests send
@@ -88,11 +89,11 @@ const ALL_PAGE = `${ALL_SORT}&page=1&per_page=20`;
 // summary in the tests, by its filters.
 const TOTALS = new Map([
   [FILTERS.New, 12],
-  [FILTERS["Assigned to me"], 4],
+  [FILTERS.Unassigned, 1],
   [FILTERS.Analysis, 5],
   [FILTERS.Analyzed, 3],
-  [FILTERS.Orphaned, 1],
   [FILTERS.All, 1250],
+  [FILTERS["Assigned to me"], 4],
   [ATTENTION["Active P1"], 2],
   [ATTENTION["Triage overdue"], 1],
   [ATTENTION["Submission overdue"], 0],
@@ -275,6 +276,27 @@ function returnToForeground() {
   focusManager.setFocused(true);
 }
 
+// The gap between two tabs: the right edge of one, the left edge of the next,
+// and the middle of their height.
+interface Gap {
+  from: number;
+  to: number;
+  middle: number;
+}
+
+// The number of columns in border, the color of the line of a group of views
+// in the light theme, along the middle of a gap of a screenshot of the tabs
+// whose box is origin, away from the borders of the tabs.
+function borderColumnsIn(
+  picture: Screenshot,
+  origin: DOMRect,
+  { from, to, middle }: Gap,
+): number {
+  return Array.from({ length: Math.round(to - from) - 4 }, (_, offset) =>
+    picture.at(from + 2 - origin.left + offset + 0.5, middle - origin.top),
+  ).filter((color) => color === "#d8dee4").length;
+}
+
 describe("the views", () => {
   test("show to an analyst the heading and the six views, in their order, with their counts", async () => {
     stubTickets();
@@ -282,11 +304,11 @@ describe("the views", () => {
 
     await expectTabs(screen, [
       "New 12",
-      "Assigned to me 4",
+      "Unassigned 1",
       "Analysis 5",
       "Analyzed 3",
-      "Orphaned 1",
       "All 1,250",
+      "Assigned to me 4",
     ]);
     expect(document.title).toBe("Tickets – Sentinel");
     await expect
@@ -303,11 +325,11 @@ describe("the views", () => {
 
     await expectTabs(screen, [
       "New 12",
-      "Assigned to me 0",
+      "Unassigned 1",
       "Analysis 5",
       "Analyzed 3",
-      "Orphaned 1",
       "All 1,250",
+      "Assigned to me 0",
     ]);
   });
 
@@ -327,9 +349,9 @@ describe("the views", () => {
 
     await expectTabs(screen, [
       "New 12",
+      "Unassigned 1",
       "Analysis 5",
       "Analyzed 3",
-      "Orphaned 1",
       "All 1,250",
     ]);
     await expect
@@ -339,15 +361,15 @@ describe("the views", () => {
 
   test.each([
     ["New", "?view=new", `${FILTERS.New}&${QUEUE_SORT}`],
+    ["Unassigned", "?view=unassigned", `${FILTERS.Unassigned}&${QUEUE_SORT}`],
+    ["Analysis", "?view=analysis", `${FILTERS.Analysis}&${QUEUE_SORT}`],
+    ["Analyzed", "?view=analyzed", `${FILTERS.Analyzed}&${QUEUE_SORT}`],
+    ["All", "", "sort_by=updated_at"],
     [
       "Assigned to me",
       "?view=assigned-to-me",
       `${FILTERS["Assigned to me"]}&${QUEUE_SORT}`,
     ],
-    ["Analysis", "?view=analysis", `${FILTERS.Analysis}&${QUEUE_SORT}`],
-    ["Analyzed", "?view=analyzed", `${FILTERS.Analyzed}&${QUEUE_SORT}`],
-    ["Orphaned", "?view=orphaned", `${FILTERS.Orphaned}&${QUEUE_SORT}`],
-    ["All", "", "sort_by=updated_at"],
   ])(
     "read %s with its filters, its sorting, in descending order, and its page of 20",
     async (_, search, query) => {
@@ -367,11 +389,11 @@ describe("the views", () => {
     );
     await expectTabs(screen, [
       "New 12",
-      "Assigned to me 4",
+      "Unassigned 1",
       "Analysis 5",
       "Analyzed 3",
-      "Orphaned 1",
       "All 1,250",
+      "Assigned to me 4",
     ]);
 
     // With the counts of the attention summary, once each.
@@ -441,37 +463,38 @@ describe("the views", () => {
     const { router, screen } = await renderApp("/tickets?view=new");
     await expectTabs(screen, [
       "New 12",
-      "Assigned to me 4",
+      "Unassigned 1",
       "Analysis 5",
       "Analyzed 3",
-      "Orphaned 1",
       "All 1,250",
+      "Assigned to me 4",
     ]);
 
-    await screen.getByRole("tab", { name: "Analysis 5" }).click();
+    await screen.getByRole("tab", { name: "Unassigned 1" }).click();
     await expect
-      .element(screen.getByRole("tab", { name: "Analysis 5" }))
+      .element(screen.getByRole("tab", { name: "Unassigned 1" }))
       .toHaveAttribute("aria-selected", "true");
-    expect(router.state.location.href).toBe("/tickets?view=analysis");
+    expect(router.state.location.href).toBe("/tickets?view=unassigned");
 
+    // The arrow keys cross the line that sets the views apart.
     await userEvent.keyboard("{ArrowRight}");
-    const analyzed = screen.getByRole("tab", { name: "Analyzed 3" });
-    await expect.element(analyzed).toHaveFocus();
-    expect(router.state.location.href).toBe("/tickets?view=analysis");
+    const analysis = screen.getByRole("tab", { name: "Analysis 5" });
+    await expect.element(analysis).toHaveFocus();
+    expect(router.state.location.href).toBe("/tickets?view=unassigned");
 
     await userEvent.keyboard("{Enter}");
     await expect
       .poll(() => router.state.location.href)
-      .toBe("/tickets?view=analyzed");
-    await expect.element(analyzed).toHaveAttribute("aria-selected", "true");
+      .toBe("/tickets?view=analysis");
+    await expect.element(analysis).toHaveAttribute("aria-selected", "true");
 
     await userEvent.keyboard("{ArrowRight}");
     await userEvent.keyboard(" ");
     await expect
       .poll(() => router.state.location.href)
-      .toBe("/tickets?view=orphaned");
+      .toBe("/tickets?view=analyzed");
     await expect
-      .element(screen.getByRole("tab", { name: "Orphaned 1" }))
+      .element(screen.getByRole("tab", { name: "Analyzed 3" }))
       .toHaveFocus();
     // Each view is an entry of the browser history.
     expect(router.history.length).toBe(4);
@@ -487,13 +510,66 @@ describe("the views", () => {
         .map((tab) => tab.getAttribute("href")),
     ).toEqual([
       "/tickets?view=new",
-      "/tickets?view=assigned-to-me",
+      "/tickets?view=unassigned",
       "/tickets?view=analysis",
       "/tickets?view=analyzed",
-      "/tickets?view=orphaned",
       "/tickets",
+      "/tickets?view=assigned-to-me",
     ]);
   });
+
+  test.each([
+    [
+      "an analyst",
+      ANALYST,
+      [
+        "New 12",
+        "Unassigned 1",
+        "Analysis 5",
+        "Analyzed 3",
+        "All 1,250",
+        "Assigned to me 4",
+      ],
+    ],
+    [
+      "a user who is not shown Assigned to me",
+      READER,
+      ["New 12", "Unassigned 1", "Analysis 5", "Analyzed 3", "All 1,250"],
+    ],
+  ])(
+    "set New and Unassigned apart from the other views for %s, with a line before Analysis alone",
+    async (_, user, names) => {
+      stubTickets({ user });
+      const { screen } = await renderApp("/tickets?view=new");
+      // Once every count has arrived, which widens the tabs.
+      await expectTabs(screen, names);
+      const boxes = tabsOf(screen)
+        .elements()
+        .map((tab) => tab.getBoundingClientRect());
+      // The gaps between the tabs, each after the tab of its index.
+      const gaps = boxes.slice(1).map((box, index) => ({
+        from: boxes[index]!.right,
+        to: box.left,
+        middle: box.top + box.height / 2,
+      }));
+      // Only the gap before Analysis, the third tab, holds the line.
+      const lined = [...gaps.keys()].map((index) => index === 1);
+
+      // 25 px between Unassigned and Analysis, around the line, and 8 px
+      // between the other tabs.
+      expect(gaps.map(({ from, to }) => Math.round(to - from))).toEqual(
+        lined.map((line) => (line ? 25 : 8)),
+      );
+      // The columns of border within each gap, away from the borders of the
+      // tabs: one for the line, none elsewhere.
+      const tabs = screen.getByRole("tablist", { name: "Views" });
+      const picture = await screenshot(tabs);
+      const origin = tabs.element().getBoundingClientRect();
+      expect(gaps.map((gap) => borderColumnsIn(picture, origin, gap))).toEqual(
+        lined.map((line) => (line ? 1 : 0)),
+      );
+    },
+  );
 
   test("leave the focus on the tab, and announce the number of Tickets of the view once it shows", async () => {
     const pending = later();
@@ -627,7 +703,7 @@ describe("while the list changes", () => {
     await screen.getByRole("tab", { name: /^Analyzed/ }).click();
 
     await expect.poll(() => countsOf(FILTERS.Analyzed)).toBe(2);
-    expect(countsOf(FILTERS.Orphaned)).toBe(1);
+    expect(countsOf(FILTERS.Unassigned)).toBe(1);
     pending.resolve(ticketPage([ROW]));
   });
 
@@ -700,7 +776,7 @@ describe("while the list changes", () => {
       .toEqual(["No Tickets in this view."]);
     const first = announced();
 
-    router.history.push("/tickets?view=orphaned");
+    router.history.push("/tickets?view=unassigned");
 
     // A new node, which assistive technologies announce although its words
     // are the same.
@@ -984,8 +1060,8 @@ describe("the table", () => {
   test.each([
     ["New", "?view=new", [...FIRST, "Severity", SORTED, "Deadline"]],
     [
-      "Assigned to me",
-      "?view=assigned-to-me",
+      "Unassigned",
+      "?view=unassigned",
       [...FIRST, "Status", "Severity", SORTED, "Deadline"],
     ],
     [
@@ -999,11 +1075,6 @@ describe("the table", () => {
       [...FIRST, "Severity", SORTED, "Deadline", "Assignee"],
     ],
     [
-      "Orphaned",
-      "?view=orphaned",
-      [...FIRST, "Status", "Severity", SORTED, "Deadline"],
-    ],
-    [
       "All",
       "",
       [
@@ -1015,6 +1086,11 @@ describe("the table", () => {
         "Assignee",
         "Last modified",
       ],
+    ],
+    [
+      "Assigned to me",
+      "?view=assigned-to-me",
+      [...FIRST, "Status", "Severity", SORTED, "Deadline"],
     ],
   ])(
     "shows in %s the columns whose value the view does not fix",
@@ -1294,8 +1370,8 @@ describe("the pagination", () => {
   });
 
   test.each([
-    ["on its first page", "?view=orphaned", 1],
-    ["on any other page", "?view=orphaned&page=3", 3],
+    ["on its first page", "?view=unassigned", 1],
+    ["on any other page", "?view=unassigned&page=3", 3],
   ])("shows that a view has no Tickets %s", async (_, search, pageNumber) => {
     stubTickets({ list: () => ticketPage([], { page: pageNumber }) });
     const { screen } = await renderApp(`/tickets${search}`);
@@ -1871,11 +1947,11 @@ describe("the links of the list", () => {
         .map((tab) => tab.getAttribute("href")),
     ).toEqual([
       "/tickets?view=new",
-      "/tickets?view=assigned-to-me",
+      "/tickets?view=unassigned",
       "/tickets?view=analysis",
       "/tickets?view=analyzed",
-      "/tickets?view=orphaned",
       "/tickets",
+      "/tickets?view=assigned-to-me",
     ]);
   });
 
@@ -2294,9 +2370,9 @@ describe("the attention summary", () => {
     const { screen } = await renderApp("/tickets");
     await expectTabs(screen, [
       "New 12",
+      "Unassigned 1",
       "Analysis 5",
       "Analyzed 3",
-      "Orphaned 1",
       "All 1,250",
     ]);
 

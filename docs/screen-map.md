@@ -298,12 +298,21 @@ them, as tabs in this order:
 | View | Tickets | Shown to |
 |---|---|---|
 | New | Status New: the Tickets that no analyst has taken yet, because the first assignment moves a Ticket to Analysis (Sentinel `docs/features/tickets/tickets.md`, Status Transitions) | Every user |
-| Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who can be the assignee of a Ticket (Roles) |
+| Unassigned | Status Analysis or Analyzed without an assignee: the Tickets awaiting an assignee. Their assignee returned them; Sentinel unassigned them because their assignee could no longer own them, after a deactivation, a marking as a bot account, a role removal, or the Ticket becoming confidential; or they came back from Resolved, Ignored, or Duplicated without an assignee who can own them, such as an unassigned Ticket that a user who cannot be its assignee reopened or reverted, or that Sentinel reopened from Ignored (Sentinel `docs/features/tickets/tickets.md`, Architectural Invariant; Reassignment; Self-Unassignment; Ignored; Assign Ticket; Reopen Ticket; Revert Duplicate Status; Set Confidentiality) | Every user |
 | Analysis | Status Analysis | Every user |
 | Analyzed | Status Analyzed | Every user |
-| Orphaned | Status Analysis or Analyzed without an assignee: the Tickets awaiting an assignee. Their assignee returned them; Sentinel unassigned them because their assignee could no longer own them, after a deactivation, a marking as a bot account, a role removal, or the Ticket becoming confidential; or they came back from Resolved, Ignored, or Duplicated without an assignee who can own them, such as an unassigned Ticket that a user who cannot be its assignee reopened or reverted, or that Sentinel reopened from Ignored (Sentinel `docs/features/tickets/tickets.md`, Architectural Invariant; Reassignment; Self-Unassignment; Ignored; Assign Ticket; Reopen Ticket; Revert Duplicate Status; Set Confidentiality) | Every user |
 | All | Every status | Every user |
+| Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who can be the assignee of a Ticket (Roles) |
 
+- New and Unassigned are the queues of the Tickets that wait for someone to
+  take them, which analysts work until they are empty. A line sets them apart
+  from the views that follow, which are not expected to be empty
+  (`docs/design-system.md`, Lists); Assigned to me is among them, because its
+  Tickets stay assigned through Analysis and Analyzed. Assigned to me, the
+  only view that not every user is shown, comes last, so that every other
+  view keeps its place for every user, also when a read of the signed-in user
+  adds or removes it during a session (`docs/behaviors.md`, The Signed-in
+  User).
 - Each tab shows the number of Tickets of its view as this table defines it,
   without the filters and search that the user adds, so that it always shows
   the size of the queue. A view without Tickets keeps its tab and shows an

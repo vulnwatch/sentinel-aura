@@ -43,7 +43,7 @@ Summary).
 
   | Parameter | Values | Without it |
   |---|---|---|
-  | `view` | `new`, `assigned-to-me`, `analysis`, `analyzed`, `orphaned` | The All view |
+  | `view` | `new`, `unassigned`, `analysis`, `analyzed`, `assigned-to-me` | The All view |
   | `search` | The search term, at most 500 characters, without surrounding whitespace and without U+0000, which Sentinel rejects (Sentinel `docs/api-spec.md`, Query Parameter Length Limit; Inadmissible Characters in Request Input) | No search |
   | `status` | One or more of `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`, in the All view only | No filter by status |
   | `severity` | One or more of `critical`, `high`, `medium`, `low`, `none`, `unresolved` | No filter by severity |
@@ -114,13 +114,16 @@ Summary).
   sorting. They are read again as the screen's data is, such as when the tab
   of the browser returns to the foreground (`docs/behaviors.md`, Loading).
 - The views as tabs, named "Views" for assistive technologies, each its name
-  followed by the number of its Tickets. The number comes from List Tickets
-  with the filters of the view and `per_page=1`, as `meta.total` (Sentinel
-  `docs/features/tickets/tickets.md`, List Tickets), without the page, the
-  sorting, the search, and the filters of the list. The number of the view
-  that the list shows is read again when its view opens and with each read of
-  the list, such as another page, so that the tab and the list agree;
-  the others are read again as the screen's data is.
+  followed by the number of its Tickets, with the line that sets New and
+  Unassigned apart before Analysis, the first view after them
+  (`docs/screen-map.md`, Ticket List Views; `docs/design-system.md`, Lists).
+  The number comes from List Tickets with the filters of the view and
+  `per_page=1`, as `meta.total` (Sentinel `docs/features/tickets/tickets.md`,
+  List Tickets), without the page, the sorting, the search, and the filters of
+  the list. The number of the view that the list shows is read again when its
+  view opens and with each read of the list, such as another page, so that
+  the tab and the list agree; the others are read again as the screen's data
+  is.
 - **The toolbar**, after the tabs (`docs/design-system.md`, Lists):
   - the search field, "Search Tickets", which takes at most 500 characters,
     the longest term that Sentinel accepts (Sentinel `docs/api-spec.md`,
@@ -151,11 +154,11 @@ Summary).
 | View | Filters | Sorted by | Columns |
 |---|---|---|---|
 | New | `status=new` | Priority, then deadline | Ticket, CVE, Title, Packages, Severity, Priority, Deadline |
-| Assigned to me | `assignee` with the `id` of the signed-in user, `status=analysis`, `status=analyzed` | Priority, then deadline | Ticket, CVE, Title, Packages, Status, Severity, Priority, Deadline |
+| Unassigned | `status=analysis`, `status=analyzed`, `assignee=none` | Priority, then deadline | Ticket, CVE, Title, Packages, Status, Severity, Priority, Deadline |
 | Analysis | `status=analysis` | Priority, then deadline | Ticket, CVE, Title, Packages, Severity, Priority, Deadline, Assignee |
 | Analyzed | `status=analyzed` | Priority, then deadline | Ticket, CVE, Title, Packages, Severity, Priority, Deadline, Assignee |
-| Orphaned | `status=analysis`, `status=analyzed`, `assignee=none` | Priority, then deadline | Ticket, CVE, Title, Packages, Status, Severity, Priority, Deadline |
 | All | None | Last modified | Ticket, CVE, Title, Packages, Status, Severity, Priority, Deadline, Assignee, Last modified |
+| Assigned to me | `assignee` with the `id` of the signed-in user, `status=analysis`, `status=analyzed` | Priority, then deadline | Ticket, CVE, Title, Packages, Status, Severity, Priority, Deadline |
 
 - A view omits a column whose value its filters fix: Status where the view
   has one status, Assignee where it has none or only the signed-in user.

@@ -73,10 +73,10 @@ const SEARCH_MAX_LENGTH = 500;
 // The views that the view search parameter names; the All view has none.
 const QUEUES = [
   "new",
-  "assigned-to-me",
+  "unassigned",
   "analysis",
   "analyzed",
-  "orphaned",
+  "assigned-to-me",
 ] as const;
 type Queue = (typeof QUEUES)[number];
 
@@ -209,6 +209,10 @@ interface TicketView {
   name: string;
   // Whether only a user who can be the assignee of a Ticket sees it.
   assigneesOnly: boolean;
+  // Whether each of its Tickets waits for someone to take it: the queues
+  // that analysts empty, which a line sets apart from the other views
+  // (docs/screen-map.md, Ticket List Views).
+  waiting: boolean;
   // The filters of its Tickets, for the signed-in user.
   filters: (user: CurrentUserData) => ListTicketsParams;
   // Its columns, in their order: a view omits a column whose value it fixes.
@@ -222,6 +226,7 @@ const ALL_VIEW: TicketView = {
   id: "all",
   name: "All",
   assigneesOnly: false,
+  waiting: false,
   filters: () => ({}),
   columns: [
     "ticket",
@@ -245,6 +250,7 @@ const VIEWS: readonly TicketView[] = [
     id: "new",
     name: "New",
     assigneesOnly: false,
+    waiting: true,
     filters: () => ({ status: ["new"] }),
     columns: [
       "ticket",
@@ -258,9 +264,65 @@ const VIEWS: readonly TicketView[] = [
     sort: "priority",
   },
   {
+    id: "unassigned",
+    name: "Unassigned",
+    assigneesOnly: false,
+    waiting: true,
+    filters: () => ({ status: ["analysis", "analyzed"], assignee: "none" }),
+    columns: [
+      "ticket",
+      "cve",
+      "title",
+      "packages",
+      "status",
+      "severity",
+      "priority",
+      "deadline",
+    ],
+    sort: "priority",
+  },
+  {
+    id: "analysis",
+    name: "Analysis",
+    assigneesOnly: false,
+    waiting: false,
+    filters: () => ({ status: ["analysis"] }),
+    columns: [
+      "ticket",
+      "cve",
+      "title",
+      "packages",
+      "severity",
+      "priority",
+      "deadline",
+      "assignee",
+    ],
+    sort: "priority",
+  },
+  {
+    id: "analyzed",
+    name: "Analyzed",
+    assigneesOnly: false,
+    waiting: false,
+    filters: () => ({ status: ["analyzed"] }),
+    columns: [
+      "ticket",
+      "cve",
+      "title",
+      "packages",
+      "severity",
+      "priority",
+      "deadline",
+      "assignee",
+    ],
+    sort: "priority",
+  },
+  ALL_VIEW,
+  {
     id: "assigned-to-me",
     name: "Assigned to me",
     assigneesOnly: true,
+    waiting: false,
     // By the user's id, which never changes, unlike the username (Sentinel
     // docs/api-spec.md, User Identifier Resolution).
     filters: (user) => ({
@@ -279,58 +341,6 @@ const VIEWS: readonly TicketView[] = [
     ],
     sort: "priority",
   },
-  {
-    id: "analysis",
-    name: "Analysis",
-    assigneesOnly: false,
-    filters: () => ({ status: ["analysis"] }),
-    columns: [
-      "ticket",
-      "cve",
-      "title",
-      "packages",
-      "severity",
-      "priority",
-      "deadline",
-      "assignee",
-    ],
-    sort: "priority",
-  },
-  {
-    id: "analyzed",
-    name: "Analyzed",
-    assigneesOnly: false,
-    filters: () => ({ status: ["analyzed"] }),
-    columns: [
-      "ticket",
-      "cve",
-      "title",
-      "packages",
-      "severity",
-      "priority",
-      "deadline",
-      "assignee",
-    ],
-    sort: "priority",
-  },
-  {
-    id: "orphaned",
-    name: "Orphaned",
-    assigneesOnly: false,
-    filters: () => ({ status: ["analysis", "analyzed"], assignee: "none" }),
-    columns: [
-      "ticket",
-      "cve",
-      "title",
-      "packages",
-      "status",
-      "severity",
-      "priority",
-      "deadline",
-    ],
-    sort: "priority",
-  },
-  ALL_VIEW,
 ];
 
 // The view that the view search parameter names, whoever the user is.
@@ -996,10 +1006,13 @@ function TicketList({ user }: TicketListProps) {
             <ViewTabs
               label="Views"
               selected={view.id}
-              views={views.map((tab) => ({
+              views={views.map((tab, index) => ({
                 id: tab.id,
                 label: tab.name,
                 href: viewHref(tab),
+                // The first view after the queues of the Tickets that wait
+                // for someone to take them starts the group of the others.
+                startsGroup: views[index - 1]?.waiting === true && !tab.waiting,
                 count: (
                   <ViewCount
                     filters={tab.filters(user)}

@@ -14,10 +14,11 @@ import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { z } from "zod";
 import "../styles.css";
+import { screenshot } from "../test-screenshot";
 import { Button } from "./button";
 import { RouterLinks } from "./router-links";
 import { ScreenHeading } from "./screen-heading";
-import { Count, ViewTabs } from "./view-tabs";
+import { Count, ViewTabs, type View } from "./view-tabs";
 
 // The views of a list as tabs (docs/design-system.md, Lists), in the light
 // theme.
@@ -75,22 +76,36 @@ const VIEWS = [
   },
 ] as const;
 
+// The views of the tests with a group: All, after New and Unassigned.
+const GROUPED: readonly View[] = [
+  VIEWS[0],
+  {
+    id: "unassigned",
+    label: "Unassigned",
+    href: linkOptions({ to: "/tickets", search: { view: "unassigned" } }),
+    count: <Count value={1} failed={false} />,
+  },
+  { ...VIEWS[1], startsGroup: true },
+];
+
 interface ListProps {
   // The controls of the toolbar of the list, if it has any.
   toolbar?: ReactNode;
+  // The views of the list, those of the tests unless given.
+  views?: readonly View[];
 }
 
 // The list, with the views of the tests, and without New when its URL has
 // the fictional parameter without-new, as a view that not every user is
 // shown.
-function List({ toolbar }: ListProps) {
+function List({ toolbar, views: all = VIEWS }: ListProps) {
   const search = new URLSearchParams(
     useRouterState({ select: (state) => state.location.searchStr }),
   );
   const selected = search.get("view") ?? "all";
   const views = search.has("without-new")
-    ? VIEWS.filter((view) => view.id !== "new")
-    : VIEWS;
+    ? all.filter((view) => view.id !== "new")
+    : all;
   return (
     <>
       <ScreenHeading>Records</ScreenHeading>
@@ -107,7 +122,11 @@ function List({ toolbar }: ListProps) {
 }
 
 // A list at /tickets whose view is in the search parameter of its URL.
-function renderList(path: string, toolbar?: ReactNode) {
+function renderList(
+  path: string,
+  toolbar?: ReactNode,
+  views?: readonly View[],
+) {
   const root = createRootRoute({
     component: () => (
       <RouterLinks>
@@ -119,7 +138,7 @@ function renderList(path: string, toolbar?: ReactNode) {
     getParentRoute: () => root,
     path: "/tickets",
     validateSearch: z.object({ view: z.string().optional() }),
-    component: () => <List toolbar={toolbar} />,
+    component: () => <List toolbar={toolbar} views={views} />,
   });
   const router = createRouter({
     routeTree: root.addChildren([list]),
@@ -381,6 +400,132 @@ describe("the toolbar", () => {
     expect(
       panel.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
     ).toBe(16);
+  });
+});
+
+// border, the color of the line of a group, and canvas, the page, in the
+// light theme.
+const BORDER = "#d8dee4";
+const CANVAS = "#f6f8fa";
+
+// The box of a tab.
+function boxOf(screen: Awaited<ReturnType<typeof render>>, name: string) {
+  return screen.getByRole("tab", { name }).element().getBoundingClientRect();
+}
+
+// The colors of the pixels from one point of the tabs to another along a row
+// or a column, one each CSS pixel, from the middle of each.
+async function pixelsOf(
+  screen: Awaited<ReturnType<typeof render>>,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): Promise<string[]> {
+  const tabs = screen.getByRole("tablist", { name: "Views" });
+  const picture = await screenshot(tabs);
+  const box = tabs.element().getBoundingClientRect();
+  const length = Math.round(Math.max(to.x - from.x, to.y - from.y));
+  const across = to.x - from.x > to.y - from.y;
+  return Array.from({ length }, (_, index) =>
+    picture.at(
+      from.x - box.left + (across ? index + 0.5 : 0),
+      from.y - box.top + (across ? 0 : index + 0.5),
+    ),
+  );
+}
+
+describe("a group of views", () => {
+  beforeEach(async () => {
+    await page.viewport(1280, 800);
+  });
+
+  afterEach(async () => {
+    await page.viewport(414, 896);
+  });
+
+  test("sets its first tab apart with a line of 1 px in border, 20 px high, 12 px from the tabs before and after it, which assistive technologies do not perceive", async () => {
+    const { rendered } = renderList("/tickets?view=new", undefined, GROUPED);
+    const screen = await rendered;
+    await expect
+      .element(screen.getByRole("tab", { name: "All 1,250" }))
+      .toBeVisible();
+    const fresh = boxOf(screen, "New 12");
+    const unassigned = boxOf(screen, "Unassigned 1");
+    const all = boxOf(screen, "All 1,250");
+    const middle = all.top + all.height / 2;
+
+    // The tabs of a group are 8 px apart, and the line stands in a gap of
+    // 25 px.
+    expect(unassigned.left - fresh.right).toBeCloseTo(8);
+    expect(all.left - unassigned.right).toBeCloseTo(25);
+    // Within the gap, away from the borders of the tabs: one column of the
+    // line, 12 px after Unassigned, and the page on either side.
+    const gap = await pixelsOf(
+      screen,
+      { x: unassigned.right + 2, y: middle },
+      { x: all.left - 2, y: middle },
+    );
+    expect(gap.filter((color) => color === BORDER)).toHaveLength(1);
+    expect(gap.filter((color) => color === CANVAS)).toHaveLength(
+      gap.length - 1,
+    );
+    const line = unassigned.right + 2 + gap.indexOf(BORDER);
+    expect(Math.abs(line - unassigned.right - 12)).toBeLessThanOrEqual(1);
+    // 20 px of the height of the tabs, centered.
+    const column = await pixelsOf(
+      screen,
+      { x: line, y: all.top },
+      { x: line, y: all.bottom },
+    );
+    expect(column.filter((color) => color === BORDER)).toHaveLength(20);
+    expect(column.slice(0, 6).concat(column.slice(26))).toEqual(
+      Array.from({ length: 12 }, () => CANVAS),
+    );
+    // No line between the tabs of a group.
+    const before = await pixelsOf(
+      screen,
+      { x: fresh.right + 2, y: middle },
+      { x: unassigned.left - 2, y: middle },
+    );
+    expect(before.every((color) => color === CANVAS)).toBe(true);
+    // The line adds no text to the tabs or their names.
+    expect(
+      screen.getByRole("tablist", { name: "Views" }).element().textContent,
+    ).toBe("New 12Unassigned 1All 1,250");
+    await expect
+      .element(screen.getByRole("tab", { name: "All 1,250" }))
+      .toHaveAccessibleName("All 1,250");
+  });
+
+  test("keeps the line before the first tab of its group when the tab starts a row", async () => {
+    const { rendered } = renderList("/tickets?view=new", undefined, GROUPED);
+    const screen = await rendered;
+    await expect
+      .element(screen.getByRole("tab", { name: "All 1,250" }))
+      .toBeVisible();
+    const tabs = screen.getByRole("tablist", { name: "Views" }).element();
+    const left = tabs.getBoundingClientRect().left;
+    const fresh = boxOf(screen, "New 12");
+    const unassigned = boxOf(screen, "Unassigned 1");
+
+    // Room for New and Unassigned alone.
+    await page.viewport(
+      Math.floor(2 * left + unassigned.right - left + 40),
+      640,
+    );
+
+    await expect
+      .poll(() => boxOf(screen, "All 1,250").top)
+      .toBeGreaterThan(fresh.bottom);
+    const all = boxOf(screen, "All 1,250");
+    // The tab keeps its place after the line, 13 px after it.
+    expect(all.left - left).toBeCloseTo(17);
+    const start = await pixelsOf(
+      screen,
+      { x: left, y: all.top + all.height / 2 },
+      { x: all.left - 2, y: all.top + all.height / 2 },
+    );
+    expect(start.filter((color) => color === BORDER)).toHaveLength(1);
+    expect(Math.abs(start.indexOf(BORDER) - 4)).toBeLessThanOrEqual(1);
   });
 });
 
