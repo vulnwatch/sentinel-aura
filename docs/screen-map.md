@@ -307,12 +307,12 @@ them, as tabs in this order:
 - New and Unassigned are the queues of the Tickets that wait for someone to
   take them, which analysts work until they are empty. A line sets them apart
   from the views that follow, which are not expected to be empty
-  (`docs/design-system.md`, Lists); Assigned to me is among them, because its
-  Tickets stay assigned through Analysis and Analyzed. Assigned to me, the
-  only view that not every user is shown, comes last, so that every other
-  view keeps its place for every user, also when a read of the signed-in user
-  adds or removes it during a session (`docs/behaviors.md`, The Signed-in
-  User).
+  (`docs/design-system.md`, Lists); Assigned to me is among the views that
+  follow, because its Tickets stay assigned through Analysis and Analyzed.
+  Assigned to me, the only view that not every user is shown, comes last, so
+  that every other view keeps its place for every user, also when a read of
+  the signed-in user adds or removes it during a session (`docs/behaviors.md`,
+  The Signed-in User).
 - Each tab shows the number of Tickets of its view as this table defines it,
   without the filters and search that the user adds, so that it always shows
   the size of the queue. A view without Tickets keeps its tab and shows an

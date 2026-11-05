@@ -541,8 +541,10 @@ describe("the views", () => {
     async (_, user, names) => {
       stubTickets({ user });
       const { screen } = await renderApp("/tickets?view=new");
-      // Once every count has arrived, which widens the tabs.
+      // Once every count has arrived and the font has loaded, which widen
+      // the tabs.
       await expectTabs(screen, names);
+      await document.fonts.ready;
       const boxes = tabsOf(screen)
         .elements()
         .map((tab) => tab.getBoundingClientRect());

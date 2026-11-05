@@ -448,6 +448,9 @@ describe("a group of views", () => {
     await expect
       .element(screen.getByRole("tab", { name: "All 1,250" }))
       .toBeVisible();
+    // Measured once the font has loaded, which changes the width of the
+    // labels.
+    await document.fonts.ready;
     const fresh = boxOf(screen, "New 12");
     const unassigned = boxOf(screen, "Unassigned 1");
     const all = boxOf(screen, "All 1,250");
@@ -468,8 +471,9 @@ describe("a group of views", () => {
     expect(gap.filter((color) => color === CANVAS)).toHaveLength(
       gap.length - 1,
     );
-    const line = unassigned.right + 2 + gap.indexOf(BORDER);
-    expect(Math.abs(line - unassigned.right - 12)).toBeLessThanOrEqual(1);
+    // The middle of the column of the line, where the row read it.
+    const line = unassigned.right + 2 + gap.indexOf(BORDER) + 0.5;
+    expect(Math.abs(line - unassigned.right - 12.5)).toBeLessThanOrEqual(1);
     // 20 px of the height of the tabs, centered.
     const column = await pixelsOf(
       screen,
@@ -502,6 +506,9 @@ describe("a group of views", () => {
     await expect
       .element(screen.getByRole("tab", { name: "All 1,250" }))
       .toBeVisible();
+    // Measured once the font has loaded, which changes the width of the
+    // labels.
+    await document.fonts.ready;
     const tabs = screen.getByRole("tablist", { name: "Views" }).element();
     const left = tabs.getBoundingClientRect().left;
     const fresh = boxOf(screen, "New 12");
