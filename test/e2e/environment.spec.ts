@@ -160,6 +160,12 @@ function readsAllCount(url: URL): boolean {
 }
 
 test.describe("the wait for the counts of the views", () => {
+  // On a page without views, as before the list shows them, where no view
+  // lacks its count yet.
+  test("lasts until the views show", async ({ page }) => {
+    await expect(expectViewCounts(page)).rejects.toThrow(/toBeVisible/);
+  });
+
   test("lasts until each view shows its count", async ({ page }) => {
     // The count of the All view arrives only once the test lets it through.
     let release!: () => void;
