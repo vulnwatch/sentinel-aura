@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.17.0"
+    "version": "0.18.0"
   },
   "paths": {
     "/health": {
@@ -4169,10 +4169,10 @@
                 ],
                 "maxLength": 500
               },
-              "description": "Filter by past-due, uncompleted milestones: `triage` (Ticket `new` or `analysis` past its triage due date, VA decision), `submission` (maintainer submission request), `um` (UM release request), `qa` (QA testing and publication): at least one track has that milestone overdue. Repeatable; OR semantics. Invalid values are ignored.",
+              "description": "Filter by past-due, uncompleted milestones: `triage` (Ticket `new` or `analysis` past its triage due date, VA decision), `submission` (maintainer submission request), `um` (UM release request), `qa` (QA testing and publication): the Ticket is not `resolved` and at least one track has that milestone overdue. Repeatable; OR semantics. Invalid values are ignored.",
               "title": "Overdue"
             },
-            "description": "Filter by past-due, uncompleted milestones: `triage` (Ticket `new` or `analysis` past its triage due date, VA decision), `submission` (maintainer submission request), `um` (UM release request), `qa` (QA testing and publication): at least one track has that milestone overdue. Repeatable; OR semantics. Invalid values are ignored."
+            "description": "Filter by past-due, uncompleted milestones: `triage` (Ticket `new` or `analysis` past its triage due date, VA decision), `submission` (maintainer submission request), `um` (UM release request), `qa` (QA testing and publication): the Ticket is not `resolved` and at least one track has that milestone overdue. Repeatable; OR semantics. Invalid values are ignored."
           },
           {
             "name": "current_phase",
@@ -4859,7 +4859,7 @@
           "Tickets"
         ],
         "summary": "Assign Ticket",
-        "description": "Assigns or reassigns a Ticket to a user eligible to be its assignee (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential), identified by UUID or exact username. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. JSON `null` instead unassigns the caller, who must be the current assignee: the Ticket keeps its status, and a Ticket without an assignee is an idempotent success. Another user's assignment cannot be cleared, only reassigned. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Assigns or reassigns a Ticket to a user eligible to be its assignee (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential), identified by UUID or exact username. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. JSON `null` instead unassigns the caller, who must be the current assignee: the Ticket keeps its status, and a Ticket without an assignee is an idempotent success. Another user's assignment cannot be cleared, only reassigned. The optional `expected_assignee_id` states the assignee that the client expects to replace: when the current assignee differs and the request is not an idempotent success, it fails with `TICKET_ASSIGNEE_CHANGED` and changes nothing. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "assign_ticket_api_v1_tickets__ticket_id__assignee_patch",
         "parameters": [
           {
@@ -4939,7 +4939,7 @@
             }
           },
           "409": {
-            "description": "`TICKET_ASSIGNEE_INACTIVE`: the target user is inactive. `TICKET_ASSIGNEE_NOT_CALLER`: `user_id` is `null` and another user is the current assignee. `TICKET_NOT_MUTABLE`: the Ticket is Ignored or Duplicated.",
+            "description": "`TICKET_ASSIGNEE_INACTIVE`: the target user is inactive. `TICKET_ASSIGNEE_NOT_CALLER`: `user_id` is `null` and another user is the current assignee. `TICKET_ASSIGNEE_CHANGED`: `expected_assignee_id` differs from the current assignee and the request is not an idempotent success. `TICKET_NOT_MUTABLE`: the Ticket is Ignored or Duplicated.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15691,6 +15691,23 @@
               "jdoe",
               null
             ]
+          },
+          "expected_assignee_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Assignee Id",
+            "description": "The assignee that the client expects the Ticket to have: the `id` of the `assignee` that it last read, or JSON `null` for a Ticket that it read without an assignee. When it differs from the current assignee, the request fails with `409 TICKET_ASSIGNEE_CHANGED` and changes nothing, unless the request is an idempotent success (the target already is the assignee, or `user_id` is `null` and the Ticket has no assignee). Omitted: no check. Only a UUID is accepted, compared by value and never looked up: a username fails validation, and a UUID of no user is a mismatch.",
+            "examples": [
+              "01994c20-7c00-7000-8000-000000000003",
+              null
+            ]
           }
         },
         "type": "object",
@@ -15698,7 +15715,7 @@
           "user_id"
         ],
         "title": "TicketAssigneeUpdateRequest",
-        "description": "Request body of `PATCH /api/v1/tickets/{ticket_id}/assignee`.\n\nSee `docs/features/tickets/tickets.md` (Assign Ticket). `user_id` is\nrequired and nullable (`docs/api-spec.md`, Partial Update Semantics:\nsingle-field PATCH). A UUID-or-username string (User Identifier\nResolution) assigns or reassigns the Ticket; the service locks the\ntarget before the Ticket but reports its absence only after\nlocked-current Ticket accessibility. JSON `null` clears the caller's\nown assignment (tickets.md, Self-Unassignment). An omitted field or a\nvalue of another type fails with the global `422 VALIDATION_ERROR`."
+        "description": "Request body of `PATCH /api/v1/tickets/{ticket_id}/assignee`.\n\nSee `docs/features/tickets/tickets.md` (Assign Ticket). `user_id` is\nrequired and nullable (`docs/api-spec.md`, Partial Update Semantics:\nsingle-field PATCH). A UUID-or-username string (User Identifier\nResolution) assigns or reassigns the Ticket; the service locks the\ntarget before the Ticket but reports its absence only after\nlocked-current Ticket accessibility. JSON `null` clears the caller's\nown assignment (tickets.md, Self-Unassignment). An omitted field or a\nvalue of another type fails with the global `422 VALIDATION_ERROR`.\n\n`expected_assignee_id` is optional and nullable, and its omission\ndiffers from every value, so it defaults to `MISSING`\n(`docs/conventions.md`, Omitted Values) and is published without a\ndefault. It is a condition of the request, not a field to change\n(`docs/api-spec.md`, Partial Update Semantics): the service compares\nit with the locked-current assignee. It is typed as a UUID and never\nresolved, so a username fails with the global `422 VALIDATION_ERROR`\n(`docs/api-spec.md`, User Identifier Resolution)."
       },
       "TicketAssociateCVERequest": {
         "properties": {
@@ -16237,7 +16254,7 @@
                 "type": "null"
               }
             ],
-            "description": "Earliest open remediation phase of the Ticket among the phases that Sentinel observes: `triage` (the VA, Vulnerability Analyst, decides affectedness) while the Ticket is `new` or `analysis`; otherwise `submission` (the maintainer submits the fix), `um` (the UM, SUSE maintenance update team, creates the release request), or `qa` (QA, quality assurance, tests the update before publication) when at least one track has that milestone `pending` or `overdue`. A phase that a track reports as `null` (not observable) does not hold it back. `done` when no phase is open and the Ticket is `resolved` or no track has a `null` milestone. `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`), or when no phase is open, the Ticket is not `resolved`, and a track has a `null` milestone. Unlike a track's `current_phase`, it takes `triage` from the Ticket status."
+            "description": "Earliest open remediation phase of the Ticket among the phases that Sentinel observes: `triage` (the VA, Vulnerability Analyst, decides affectedness) while the Ticket is `new` or `analysis`; otherwise `submission` (the maintainer submits the fix), `um` (the UM, SUSE maintenance update team, creates the release request), or `qa` (QA, quality assurance, tests the update before publication) when the Ticket is not `resolved` and at least one track has that milestone `pending` or `overdue`. A phase that a track reports as `null` (not observable) does not hold it back. `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). Otherwise `done` when the Ticket is `resolved`, or when no phase is open and no track has a `null` milestone; `null` when no phase is open, the Ticket is not `resolved`, and a track has a `null` milestone. Unlike a track's `current_phase`, it takes `triage` from the Ticket status."
           },
           "current_phase_milestone": {
             "anyOf": [
@@ -16907,7 +16924,7 @@
                 "type": "null"
               }
             ],
-            "description": "Earliest open remediation phase of the Ticket among the phases that Sentinel observes: `triage` (the VA, Vulnerability Analyst, decides affectedness) while the Ticket is `new` or `analysis`; otherwise `submission` (the maintainer submits the fix), `um` (the UM, SUSE maintenance update team, creates the release request), or `qa` (QA, quality assurance, tests the update before publication) when at least one track has that milestone `pending` or `overdue`. A phase that a track reports as `null` (not observable) does not hold it back. `done` when no phase is open and the Ticket is `resolved` or no track has a `null` milestone. `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`), or when no phase is open, the Ticket is not `resolved`, and a track has a `null` milestone. Unlike a track's `current_phase`, it takes `triage` from the Ticket status."
+            "description": "Earliest open remediation phase of the Ticket among the phases that Sentinel observes: `triage` (the VA, Vulnerability Analyst, decides affectedness) while the Ticket is `new` or `analysis`; otherwise `submission` (the maintainer submits the fix), `um` (the UM, SUSE maintenance update team, creates the release request), or `qa` (QA, quality assurance, tests the update before publication) when the Ticket is not `resolved` and at least one track has that milestone `pending` or `overdue`. A phase that a track reports as `null` (not observable) does not hold it back. `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). Otherwise `done` when the Ticket is `resolved`, or when no phase is open and no track has a `null` milestone; `null` when no phase is open, the Ticket is not `resolved`, and a track has a `null` milestone. Unlike a track's `current_phase`, it takes `triage` from the Ticket status."
           },
           "current_phase_milestone": {
             "anyOf": [

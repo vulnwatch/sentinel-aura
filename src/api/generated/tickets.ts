@@ -887,7 +887,7 @@ export const getAssignTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Assigns or reassigns a Ticket to a user eligible to be its assignee (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential), identified by UUID or exact username. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. JSON `null` instead unassigns the caller, who must be the current assignee: the Ticket keeps its status, and a Ticket without an assignee is an idempotent success. Another user's assignment cannot be cleared, only reassigned. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Assigns or reassigns a Ticket to a user eligible to be its assignee (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential), identified by UUID or exact username. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. JSON `null` instead unassigns the caller, who must be the current assignee: the Ticket keeps its status, and a Ticket without an assignee is an idempotent success. Another user's assignment cannot be cleared, only reassigned. The optional `expected_assignee_id` states the assignee that the client expects to replace: when the current assignee differs and the request is not an idempotent success, it fails with `TICKET_ASSIGNEE_CHANGED` and changes nothing. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Assign Ticket
  */
 export const assignTicket = async (
