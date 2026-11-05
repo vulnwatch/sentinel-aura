@@ -8,7 +8,10 @@ import { SeveralValues } from "./several-values";
 // A cell of a table with several values (docs/design-system.md, Tables), as
 // the Ticket list shows the packages of a Ticket, in the light theme.
 
-// The colors of docs/design-system.md (Tones) in the light theme.
+// The colors of docs/design-system.md (Color Tokens; Tones) in the light
+// theme.
+const SURFACE = "rgb(255, 255, 255)";
+const MUTED_ON_FG = "rgb(145, 152, 161)";
 const NEUTRAL_SOFT = "rgb(239, 242, 245)";
 const NEUTRAL_ON_SOFT = "rgb(59, 67, 75)";
 
@@ -144,11 +147,11 @@ test.each([
   expect(lines.elements().map((line) => line.textContent)).toEqual(
     packages(listed),
   );
-  const end = tooltip.getByText(/^and \d+ more$/);
+  const end = tooltip.getByText(/^…and \d+ more$/);
   if (more === undefined) {
     await expect.element(end).not.toBeInTheDocument();
   } else {
-    await expect.element(end).toHaveTextContent(more);
+    await expect.element(end).toHaveTextContent(`…${more}`);
     expect(end.element().getBoundingClientRect().top).toBeGreaterThanOrEqual(
       lines.last().element().getBoundingClientRect().bottom,
     );
@@ -165,7 +168,7 @@ test("sets the count of its tooltip apart from the values: at weight 600, 4 px a
   await expect.element(tooltip).toBeVisible();
   const count = tooltip.getByText("12 packages", { exact: true }).element();
   const lines = tooltip.getByRole("listitem");
-  const more = tooltip.getByText("and 2 more", { exact: true }).element();
+  const more = tooltip.getByText("…and 2 more", { exact: true }).element();
   expect(getComputedStyle(count).fontWeight).toBe("600");
   expect(
     [...lines.elements(), more].map(
@@ -176,6 +179,30 @@ test("sets the count of its tooltip apart from the values: at weight 600, 4 px a
     lines.first().element().getBoundingClientRect().top -
       count.getBoundingClientRect().bottom,
   ).toBe(4);
+});
+
+test("sets how many more apart from the values in its tooltip: in muted-on-fg right under them, read without the ellipsis", async () => {
+  const { screen } = await renderCell(packages(12));
+  await screen.getByRole("button", { name: "Before" }).click();
+  const button = screen.getByRole("button", { name: /more packages/ });
+
+  await button.hover();
+
+  const tooltip = screen.getByRole("tooltip");
+  await expect.element(tooltip).toBeVisible();
+  const lines = tooltip.getByRole("listitem");
+  const more = tooltip.getByText("…and 2 more", { exact: true }).element();
+  expect(lines.elements().map((line) => getComputedStyle(line).color)).toEqual(
+    Array.from({ length: 10 }, () => SURFACE),
+  );
+  expect(getComputedStyle(more).color).toBe(MUTED_ON_FG);
+  expect(more.getBoundingClientRect().top).toBe(
+    lines.last().element().getBoundingClientRect().bottom,
+  );
+  // The tooltip describes +N to assistive technologies, which read how many
+  // more without the ellipsis.
+  await expect.element(button).toHaveAccessibleDescription(/ and 2 more$/);
+  await expect.element(button).not.toHaveAccessibleDescription(/…/);
 });
 
 test("draws +N 24 px high in text-13, weight 500, neutral-on-soft on neutral-soft, with a 4 px radius", async () => {

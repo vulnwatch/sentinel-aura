@@ -40,7 +40,10 @@ function listed(values: readonly string[]) {
 // packages", at weight 600, so that the count is not taken for a value; its
 // accessible name states the others, such as "2 more packages:
 // fictional-openssl, fictional-zlib". Each names at most 10 values, then
-// "and N more", such as "and 42 more". Without values, an absent value.
+// "and N more", such as "and 42 more", which the tooltip shows as "…and 42
+// more" in muted-on-fg, so that it is not taken for a value either, with the
+// ellipsis hidden from assistive technologies. Without values, an absent
+// value.
 export function SeveralValues({ values, noun }: SeveralValuesProps) {
   const [first, ...others] = values;
   if (first === undefined) {
@@ -65,7 +68,10 @@ export function SeveralValues({ values, noun }: SeveralValuesProps) {
                 ))}
               </ul>
               {all.more !== undefined && (
-                <p className="font-normal">{all.more}</p>
+                <p className="font-normal text-muted-on-fg">
+                  <span aria-hidden>…</span>
+                  {all.more}
+                </p>
               )}
             </>
           }

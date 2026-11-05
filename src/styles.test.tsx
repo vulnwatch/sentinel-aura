@@ -22,6 +22,7 @@ const COLOR_TOKENS: [className: string, light: string, dark: string][] = [
   ["bg-sidebar-active", "#EAEEF2", "#1E2630"],
   ["bg-fg", "#1F2328", "#E6EDF3"],
   ["bg-fg-muted", "#59636E", "#9198A1"],
+  ["bg-muted-on-fg", "#9198A1", "#59636E"],
   ["bg-border", "#D8DEE4", "#2F3742"],
   ["bg-border-strong", "#818B98", "#6E7681"],
   ["bg-accent", "#0969DA", "#1F6FEB"],

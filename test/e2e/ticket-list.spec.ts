@@ -233,7 +233,7 @@ test.describe("for an analyst", () => {
       ...others.slice(0, 9),
     ]);
     await expect(
-      tooltip.getByText("and 2 more", { exact: true }),
+      tooltip.getByText("…and 2 more", { exact: true }),
     ).toBeVisible();
     await expectAccessible(page);
   });
