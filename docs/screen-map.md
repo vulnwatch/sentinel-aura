@@ -218,9 +218,9 @@ Sentinel associates them with a package of a Ticket (Sentinel
 which can happen months after the user first signed in. The sidebar reads the
 number when it first shows, when the tab returns to the foreground after
 being hidden, after every change (`docs/behaviors.md`, Outcome of a Change),
-and with every read of the pending work of My packages, so that the entry and
-that list agree. A failed read follows `docs/behaviors.md` (Where Errors
-Appear).
+and with every read of the pending work of My packages, so that the entry is
+as current as that list. A failed read follows `docs/behaviors.md` (Where
+Errors Appear).
 
 The sidebar is expanded, with the name of each entry, or collapsed to icons,
 each of which shows its name on hover and on keyboard focus
@@ -541,12 +541,9 @@ which would copy those definitions and that rule (Sentinel
 `docs/features/identity/rbac.md`, Assignment Eligibility Wire Format). The
 UI reads the signed-in user again during a session as `docs/behaviors.md`
 (The Signed-in User) defines, so that a change of the user's roles or bot
-marker reaches an open tab. A screen whose read itself depends on a
-capability, such as Users, which reads the complete profiles with
-`manage_users` and the directory otherwise (Areas and Screens), reads its
-data again when a read of the signed-in user changes that capability, and the
-new read replaces the error of the earlier one, such as the `403` of a read
-that needed the capability that the user lost.
+marker reaches an open tab. Users, which reads the complete profiles with
+`manage_users` and the directory otherwise (Areas and Screens), reads again
+when such a read changes that capability (`docs/behaviors.md`, Loading).
 
 The capabilities and the assignment eligibility only guide what the UI shows
 (Principles). They grant nothing, and a value read earlier can be out of

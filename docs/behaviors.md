@@ -294,10 +294,10 @@ message follows Wording.
   landing, "Go to the start page":
   a `404` of the read of a screen; the address of a CVE that does not exist,
   that the user cannot see, or that has no Ticket; a path that matches no
-  screen; a path whose identifier does not have
-  the form that the contract declares, such as a run identifier that is not a
-  UUID, for which the UI sends no request; and `/auth/callback` while it is
-  reserved (`docs/screen-map.md`, Contract URLs).
+  screen; a path whose identifier does not have the form that the contract
+  declares, such as a run identifier that is not a UUID, for which the UI
+  sends no request; and `/auth/callback` while it is reserved
+  (`docs/screen-map.md`, Contract URLs).
 - A `404` of a change, of the read of a part of a screen, or of a read of
   other data for what the screen shows (Where Errors Appear), such as one on a
   record that was deleted or became inaccessible in the meantime, shows "This
@@ -432,6 +432,12 @@ returns, whatever Sentinel guarantees for its field:
   before it showed any data, is not read again when the tab returns: its
   error stays until Try again, where the error offers it, or until the screen
   opens again (Where Errors Appear).
+- A screen whose read itself depends on a capability of the signed-in user,
+  such as Users, which reads the complete profiles with `manage_users` and the
+  directory otherwise (`docs/screen-map.md`, Areas and Screens), also reads its
+  data again when a read of the signed-in user changes that capability (The
+  Signed-in User), and the new read replaces the error of the earlier one,
+  such as the `403` of a read that needed the capability that the user lost.
 - A change in progress marks the control that started it as busy, and that
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while
@@ -787,8 +793,9 @@ complete profile and its manager, and the signed-in user alike: `id`,
   user picker, the account button, or the account menu, nor in the heading of
   the user's own screen.
 - **User card.** While the pointer rests on the link to a user, or the link
-  has the keyboard focus, and after a long press on a touch screen, a card
-  shows the user's details: the display name, the username, the labels, and,
+  has the keyboard focus, and after a long press on a touch screen, which
+  opens it in place of the browser's own menu of the link, a card shows the
+  user's details: the display name, the username, the labels, and,
   from the user's directory entry, their roles, named as Domain Terms names
   them, or "No roles", and their email (Sentinel
   `docs/features/identity/user-management.md`, Get User). As it opens, the
@@ -799,7 +806,9 @@ complete profile and its manager, and the signed-in user alike: `id`,
   focus stays on the link, whose name already states the user with the
   labels, and assistive technologies read the card as the link's description
   while it shows; the user's screen shows everything that the card adds. A
-  tap follows the link. `docs/design-system.md` (Representation of a User)
+  long press moves the focus into the card instead, so that the screen reader
+  of a touch screen reads it, and a tap elsewhere closes it. A tap follows the
+  link. `docs/design-system.md` (Representation of a User)
   defines how the card looks, when it shows, and when it hides.
 - **Inactive user** (`active` is `false`). The label "Inactive" follows the
   name, and the avatar is gray, so that the compact form shows the state at a

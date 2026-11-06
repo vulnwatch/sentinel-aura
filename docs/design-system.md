@@ -1003,8 +1003,8 @@ keep the search, the filters, and the sorting.
   (Tables). It shows after 300 ms of hover and at once on keyboard focus,
   stays while the pointer is over it, and Escape hides it (WCAG 2.2, 1.4.13
   Content on Hover or Focus). It names an icon alone or a compact avatar that
-  does not link to the user, whose link shows the user card instead
-  (Representation of a User), or lists the values of a "+N" (Tables); it never
+  does not link to the user (one that does shows the user card instead;
+  Representation of a User), or lists the values of a "+N" (Tables); it never
   holds the only means to act.
 
 ## Representation of a User
@@ -1045,7 +1045,8 @@ how the labels look, and the user card.
   with the identifiers that lead to the records, and the color of an inactive
   user's name is part of its state. A user who is the record of a row, as in
   the list of Users, is the identifier of the row instead, and follows Tables:
-  the name is in `link` at weight 500.
+  the name is in `link` at weight 500, also for an inactive user, whose label
+  and gray avatar show the state.
 - **User card:** a popover (Menus, Popovers, and Tooltips), 288 px wide with
   16 px of padding, below the link and aligned to its start, or above it
   where the window has no room below, and moved toward the start where it
@@ -1060,10 +1061,12 @@ how the labels look, and the user card.
   (Loading) takes the place of the roles and the email, and its failure line,
   in `fg-muted`, does when the read fails. The card shows after 300 ms of
   hover or of keyboard focus on the link, so that a pointer or a focus that
-  passes over many users opens none, and at once after a long press. It
-  stays while the pointer is over the link or the card, and hides 300 ms
-  after the pointer has left both or the focus has left the link, and at once
-  on Escape (WCAG 2.2, 1.4.13 Content on Hover or Focus).
+  passes over many users opens none, and at once after a long press, which
+  moves the focus into it (`docs/behaviors.md`, Representation of a User). It
+  stays while the pointer is over the link or the card or the focus is in
+  either, hides 300 ms after the pointer and the focus have left both, such as
+  on a tap elsewhere, and hides at once on Escape (WCAG 2.2, 1.4.13 Content on
+  Hover or Focus).
 - **No recorded actor:** a square of the avatar's size, on `neutral-soft`
   with a corner radius of 20 %, holding the Sentinel mark (Sentinel Mark) at
   70 % of that size in `neutral-on-soft`, then, 6 px later, "System" in the
