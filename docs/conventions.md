@@ -972,7 +972,7 @@ The 72-character hard-wrapping convention remains scoped to:
   - `feat: add CVE severity filtering to the ticket list`
   - `fix: show the session expiration notice after a 401 response`
   - `feat!: remove the legacy ticket export view`
-  - `docs: describe the empty state of the CVE list`
+  - `docs: describe the empty state of the Ticket list`
   - `test: cover the login error messages`
 
 ### Versioning

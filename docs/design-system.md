@@ -286,6 +286,8 @@ Graphical elements, minimum 3:1:
 | `info-icon` | `canvas` | 4.87 | 6.10 |
 | `info-icon` | `surface` | 5.19 | 5.58 |
 | `info-icon` | `surface-hover` | 4.75 | 4.92 |
+| `info-icon` | `sidebar` | 5.19 | 6.62 |
+| `info-icon` | `sidebar-active` | 4.45 | 4.92 |
 | `success-icon` | `canvas` | 4.77 | 7.44 |
 | `success-icon` | `surface` | 5.07 | 6.81 |
 | `success-icon` | `surface-hover` | 4.65 | 6.01 |
@@ -328,7 +330,7 @@ Status).
 
 | Token | Size / line height | Use |
 |---|---|---|
-| `text-12` | 12 / 16 px | The labels Inactive and Bot, and the headings of the sections of a menu |
+| `text-12` | 12 / 16 px | The labels Inactive and Bot, the headings of the sections of a menu, and the number of an entry of the sidebar |
 | `text-13` | 13 / 20 px | Column headers, captions, the descriptions and errors of fields, the deadline badge, tooltips, and the "+N" of a cell |
 | `text-14` | 14 / 20 px | The cells of a table, and the toolbar, attention counts, and pagination of a list |
 | `text-15` | 15 / 24 px | Everything else: running text, the sidebar, buttons, menus, fields, and messages |
@@ -342,8 +344,8 @@ wins.
 
 - Weights: 400 for text; 500 for buttons, the labels of fields, and the
   identifiers that link to a record in a table; 600 for headings, the current
-  navigation entry, the selected view, the P1 label, and the numbers of the
-  attention summary.
+  navigation entry, the selected view, the P1 label, the numbers of the
+  attention summary, and the number of an entry of the sidebar.
 - Numbers that align in a column or change in place, such as counts, dates in
   a table, deadline badges, and pagination, use tabular figures.
 - Text is in sentence case (`docs/behaviors.md`, Style); no text is set in
@@ -406,11 +408,11 @@ that the code imports ship.
 | Need | Lucide icon |
 |---|---|
 | Product name | The Sentinel mark, which is not a Lucide icon (Sentinel Mark) |
-| Tickets, CVEs, Packages, Products, My packages, Data sources, Administration | `ticket`, `shield-alert`, `package`, `boxes`, `package-check`, `database`, `settings` |
+| Tickets, My packages, Users, Fetchers, Administration | `ticket`, `package-check`, `users`, `cloud-download`, `settings` |
 | Search | `search` |
 | Collapse and expand the sidebar | `panel-left-close`, `panel-left-open` |
 | The account button | `chevrons-up-down` |
-| Profile, API keys, Identity audit log, Sign out | `user`, `key-round`, `scroll-text`, `log-out` |
+| Account, API keys, Sign out | `user`, `key-round`, `log-out` |
 | Theme System, Light, Dark; the selected item of a menu, a selected checkbox | `monitor`, `sun`, `moon`; `check` |
 | Create | `plus` |
 | Filters | `list-filter` |
@@ -486,11 +488,11 @@ the sidebar, the sidebar scrolls within itself.
 **One axis.** The pictures of the sidebar, the Sentinel mark, the icons, and
 the avatar, are centered on one vertical axis, 28 px from its left edge, the
 middle of the collapsed sidebar, and every part keeps its height and place in
-both states. Collapsing or expanding the sidebar only changes its width and
-hides or shows the names, so that nothing that stays moves. The axis decides
-where each picture sits inside its part, before the spacing grid (Spacing and
-Sizes): an 18 px icon sits 11 px into its entry, and the 20 px mark 10 px
-into its link.
+both states. Collapsing or expanding the sidebar only changes its width, hides
+or shows the names, and swaps the number of an entry for its dot, so that
+nothing that stays moves. The axis decides where each picture sits inside its
+part, before the spacing grid (Spacing and Sizes): an 18 px icon sits 11 px
+into its entry, and the 20 px mark 10 px into its link.
 
 **Expanded, 216 px wide,** from top to bottom:
 
@@ -503,7 +505,14 @@ into its link.
   the icon at 18 px on the axis and the name in `text-15`, in `fg-muted`, on
   `sidebar-active` under the pointer. The current entry has the
   `sidebar-active` background, its name in `fg` at weight 600, its icon in
-  `link`, and a 3 px bar in `link` along its left edge;
+  `link`, and a 3 px bar in `link` along its left edge. An entry with a
+  number, such as the pending work of My packages (`docs/screen-map.md`,
+  Sidebar), ends with it, 8 px after its name: a round box 20 px high and at
+  least 20 px wide, with 6 px of side padding, on `info-soft`, holding the
+  number in `text-12`, weight 600, `info-on-soft`, with tabular figures and
+  the thousands grouped (`docs/behaviors.md`, Style). The number belongs to
+  the entry's accessible name, which is the name followed by the number and
+  the kind of work, such as "My packages, 2 pending";
 - at the bottom, the collapse button: `panel-left-close` at 18 px in a 32 px
   target on the axis, without a visible label, named "Collapse navigation",
   which its tooltip shows; and
@@ -519,11 +528,16 @@ keeps its 32 px target: the product name as the Sentinel mark, named
 "Sentinel"; the search as the `search` button, 36 px high, which opens the
 search field in a popover beside the sidebar; each entry as its icon, named
 by its entry, the current one with the `sidebar-active` background, its icon
-in `link`, and the 3 px bar along its left edge; the expand button,
-`panel-left-open`, named "Expand navigation"; and the account button as the
-avatar alone, the compact form of the user. Each shows its name in a tooltip
-to its right, on hover and on keyboard focus; in the expanded sidebar, where
-the names show, only the collapse button has a tooltip.
+in `link`, and the 3 px bar along its left edge, and an entry with a number
+with a dot of 8 px in `info-icon` in place of the number, centered on the
+upper right corner of its icon, inside a 2 px ring in the background of the
+entry, so that the dot stands apart from the icon's lines, while the
+accessible name and the tooltip state the number, such as "My packages, 2
+pending"; the expand button, `panel-left-open`, named "Expand navigation";
+and the account button as the avatar alone, the compact form of the user.
+Each shows its name in a tooltip to its right, on hover and on keyboard
+focus; in the expanded sidebar, where the names show, only the collapse
+button has a tooltip.
 
 **Over the content:** below the breakpoint, the expand button opens the
 expanded sidebar over the content, on `overlay`, with a shadow; its collapse
@@ -541,10 +555,10 @@ the username, as `@` and the username, such as `@jdoe`, in `text-13`,
 wrap where the menu is too narrow, instead of ending with an ellipsis, so
 that the menu shows whole the name that the account button cuts. Its items
 follow, below a `border` line and separated by `border` lines into three
-groups: Profile, API keys, and Identity audit log; the section Theme
-(`docs/behaviors.md`, Preferences), with its heading in `text-12`, weight
-500, `fg-muted`, and the items System, Light, and Dark, of which the selected
-one ends with `check`; and Sign out, an ordinary item. While Sign
+groups: Account and API keys (`docs/screen-map.md`, Sidebar); the section
+Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
+weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
+selected one ends with `check`; and Sign out, an ordinary item. While Sign
 out is in progress, the menu stays open, and the item keeps the focus, shows
 `loader-circle` in place of its icon, has the description "Signing out" for
 assistive technologies, and cannot start the sign-out again
@@ -712,7 +726,7 @@ writes "Confidential" next to it.
 | Primary | `accent` fill, `on-accent` text, `accent-hover` under the pointer | The main action of a screen, a form, or a dialog; one per screen part |
 | Secondary | `surface` fill, `border-strong` boundary, `fg` text, `surface-hover` under the pointer | Other actions, and Cancel in a dialog |
 | Quiet | No fill or boundary, `fg` text, `surface-hover` under the pointer | Cancel in a form |
-| Danger | `danger-solid` fill, `on-danger-solid` text, `danger-solid-hover` under the pointer | The button that confirms an action that cannot be undone, that ends another person's access, or that discards input (`docs/behaviors.md`, Confirmation); a confirmed change of a setting or of a fetcher uses Primary |
+| Danger | `danger-solid` fill, `on-danger-solid` text, `danger-solid-hover` under the pointer | The button that confirms an action that cannot be undone, that ends another person's access, or that discards input (`docs/behaviors.md`, Confirmation); a confirmed change of a fetcher uses Primary |
 | Icon | A quiet button with an icon alone, named by its accessible name and its tooltip | Compact actions, such as dismiss and the sidebar buttons |
 
 - Buttons have a 6 px radius, 12 px of side padding, or 16 px at a height
@@ -724,9 +738,10 @@ writes "Confidential" next to it.
 - A disabled button shows at 60 % opacity. A busy button shows
   `loader-circle` in place of its icon, or before its label, keeps its label,
   and cannot be pressed (`docs/behaviors.md`, Loading).
-- A link is in `link`. In running text it is underlined; in a table or a list,
-  where it is an identifier, a name, or an address, it is underlined under
-  the pointer and on focus.
+- A link is in `link`, except a link to a user (Representation of a User).
+  In running text it is underlined; in a table or a list, where it is an
+  identifier, a name, or an address, it is underlined under the pointer and
+  on focus.
 - A link to another site (`docs/behaviors.md`, Links to Other Sites) ends
   with `external-link`, 4 px after its text, in `link`, at the size of an
   icon beside that text (Icon Set), such as 14 px in a table. The icon is
@@ -987,20 +1002,22 @@ keep the search, the filters, and the sorting.
   many more values a "+N" has than its tooltip lists is in `muted-on-fg`
   (Tables). It shows after 300 ms of hover and at once on keyboard focus,
   stays while the pointer is over it, and Escape hides it (WCAG 2.2, 1.4.13
-  Content on Hover or Focus). It names an icon alone or a compact avatar, or
-  lists the values of a "+N" (Tables); it never holds the only means to act.
+  Content on Hover or Focus). It names an icon alone or a compact avatar that
+  does not link to the user, whose link shows the user card instead
+  (Representation of a User), or lists the values of a "+N" (Tables); it never
+  holds the only means to act.
 
 ## Representation of a User
 
 `docs/behaviors.md` (Representation of a User) defines what shows for a user.
 This section defines the dimensions of its three sizes, where each is used,
-and how the labels look.
+how the labels look, and the user card.
 
 | Size | Avatar | Use |
 |---|---|---|
 | Small | 24 px | Text, table rows, and the options of a field |
 | Medium | 32 px | Other lists of users, such as the access grants of a Ticket, the account button, and the account menu |
-| Large | 64 px | The heading of a user's screen |
+| Large | 64 px | The heading of a user's screen, and the user card |
 
 - **Full form:** the avatar, 6 px of space, and the display name in the
   surrounding text's style; where the username follows, as `@` and the
@@ -1015,10 +1032,38 @@ and how the labels look.
   second label follows the first, 6 px later. An inactive user's name is in
   `fg-muted`, and its avatar is gray (Avatar). Where the place is too narrow,
   only the name, with the username that follows it, ends with an ellipsis,
-  unless a table or the account menu wraps it (Tables; Account Menu); the
-  labels always show.
+  unless a table, the account menu, or the user card wraps it (Tables;
+  Account Menu; User card); the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
-  name.
+  name, or the user card where it links to the user.
+- **Link:** a user that links to their screen (`docs/behaviors.md`,
+  Representation of a User) keeps the colors of the full form, unlike the
+  other links (Buttons and Links): its name is in the surrounding text's
+  color, or in `fg-muted` for an inactive user, and is underlined under the
+  pointer and on focus, and always in running text, as every link there is.
+  A list or a table shows many users, whose names in `link` would compete
+  with the identifiers that lead to the records, and the color of an inactive
+  user's name is part of its state. A user who is the record of a row, as in
+  the list of Users, is the identifier of the row instead, and follows Tables:
+  the name is in `link` at weight 500.
+- **User card:** a popover (Menus, Popovers, and Tooltips), 288 px wide with
+  16 px of padding, below the link and aligned to its start, or above it
+  where the window has no room below, and moved toward the start where it
+  would pass the end of the window. It holds the avatar at the large size
+  and, 12 px after it, the display name in `text-16`, weight 600, the username
+  below it as `@` and the username in `text-14`, `fg-muted`, and the labels
+  below that, the name and the username wrapping instead of ending with an
+  ellipsis, so that the card shows them whole; then a `border` line 12 px
+  below, and 12 px below the line the roles, separated by commas, and below
+  them the email, in `text-14`, the roles in `fg` and the email in
+  `fg-muted`. While the directory entry loads, the loading indicator
+  (Loading) takes the place of the roles and the email, and its failure line,
+  in `fg-muted`, does when the read fails. The card shows after 300 ms of
+  hover or of keyboard focus on the link, so that a pointer or a focus that
+  passes over many users opens none, and at once after a long press. It
+  stays while the pointer is over the link or the card, and hides 300 ms
+  after the pointer has left both or the focus has left the link, and at once
+  on Escape (WCAG 2.2, 1.4.13 Content on Hover or Focus).
 - **No recorded actor:** a square of the avatar's size, on `neutral-soft`
   with a corner radius of 20 %, holding the Sentinel mark (Sentinel Mark) at
   70 % of that size in `neutral-on-soft`, then, 6 px later, "System" in the
