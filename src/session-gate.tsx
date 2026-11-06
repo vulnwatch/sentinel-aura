@@ -8,6 +8,7 @@ import {
   type QueryState,
 } from "@tanstack/react-query";
 import {
+  linkOptions,
   useRouter,
   useRouterState,
   type AnyRouter,
@@ -190,13 +191,18 @@ export function useSignedInUser(): CurrentUserData | undefined {
   return user.data?.data;
 }
 
-// Whether the user holds triage_ticket, the capability with which the queue
-// of new Tickets is worked: it decides the landing and the view that the
-// Tickets entry opens (docs/screen-map.md, Landing; Sidebar; Roles,
-// Principles). A capability that the pinned contract does not list changes
-// nothing.
-export function triagesTickets(user: Pick<CurrentUserData, "capabilities">) {
-  return user.capabilities.includes("triage_ticket");
+// The landing of the user, the view of the Ticket list that the Tickets entry
+// opens (docs/screen-map.md, Landing; Sidebar): the New view, the queue of new
+// Tickets, for a user who holds triage_ticket, the capability with which that
+// queue is worked, and the All view for every other user (Roles, Principles).
+// A capability that the pinned contract does not list changes nothing.
+export function landingOf(user: Pick<CurrentUserData, "capabilities">) {
+  return linkOptions({
+    to: "/tickets",
+    search: {
+      view: user.capabilities.includes("triage_ticket") ? "new" : undefined,
+    },
+  });
 }
 
 // Whether a sign-out is in progress.

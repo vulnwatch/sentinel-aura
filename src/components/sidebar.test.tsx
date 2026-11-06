@@ -17,15 +17,17 @@ import { FICTIONAL_USER, jsonResponse, stubApi, ticketPage } from "../test-api";
 
 const ME = "/api/v1/users/me";
 
-// The entries that every user sees, in their order, with their paths.
+// The entries that every user sees, in their order, with their paths for a
+// user without a capability.
 const ENTRIES = [
   ["Tickets", "/tickets"],
-  ["CVEs", "/cves"],
-  ["Packages", "/packages"],
-  ["Products", "/products"],
   ["My packages", "/my-packages"],
-  ["Data sources", "/data-sources"],
+  ["Users", "/users"],
+  ["Fetchers", "/fetchers"],
 ] as const;
+// A path that requires a session and matches no screen, so that it shows Not
+// found and belongs to no entry.
+const SCREEN = "/fictional/path";
 
 let client: QueryClient;
 
@@ -79,7 +81,7 @@ function widthOf(element: Element): number {
 
 describe("expanded", () => {
   test("shows the product name, the entries in their order, and the account button, beside the content", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const sidebar = sidebarOf(screen);
 
     await expect.element(sidebar).toBeVisible();
@@ -103,7 +105,7 @@ describe("expanded", () => {
   });
 
   test("stays in place while the content scrolls, the full height of the window", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const sidebar = sidebarOf(screen).element();
     document.body.style.height = "3000px";
     try {
@@ -120,7 +122,7 @@ describe("expanded", () => {
 
   test("scrolls within itself when the window is shorter than the sidebar", async () => {
     await page.viewport(1280, 300);
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const sidebar = sidebarOf(screen).element();
 
     expect(sidebar.scrollHeight).toBeGreaterThan(sidebar.clientHeight);
@@ -128,49 +130,75 @@ describe("expanded", () => {
   });
 
   test.each([
-    ["manage_users", ["manage_users"], "/admin/users"],
-    ["manage_settings", ["manage_settings"], "/admin/settings"],
+    ["manage_users", ["manage_users"]],
     [
-      "both, with a capability that the pinned contract does not list",
-      ["fictional_capability", "manage_settings", "manage_users"],
-      "/admin/users",
+      "manage_users, with a capability that the pinned contract does not list",
+      ["fictional_capability", "manage_users"],
     ],
   ])(
-    "ends with Administration for a user who holds %s",
-    async (_, capabilities, path) => {
-      const { screen } = await renderApp("/", capabilities);
+    "ends with Administration, which opens API keys, for a user who holds %s",
+    async (_, capabilities) => {
+      const { screen } = await renderApp(SCREEN, capabilities);
       const links = sidebarOf(screen).getByRole("list").getByRole("link");
 
-      await expect.element(links.last()).toHaveAccessibleName("Administration");
-      await expect.element(links.last()).toHaveAttribute("href", path);
+      expect(links.all().map((link) => link.element().textContent)).toEqual([
+        ...ENTRIES.map(([name]) => name),
+        "Administration",
+      ]);
+      await expect
+        .element(links.last())
+        .toHaveAttribute("href", "/admin/api-keys");
     },
   );
 
   test.each([
     ["no capability", []],
-    ["another capability", ["create_ticket", "manage_fetchers"]],
+    ["manage_settings alone", ["manage_settings"]],
+    [
+      "every other capability",
+      Object.values(Capability).filter(
+        (capability) => capability !== "manage_users",
+      ),
+    ],
     [
       "only a capability that the pinned contract does not list",
       ["fictional_capability"],
     ],
   ])("has no Administration for a user with %s", async (_, capabilities) => {
-    const { screen } = await renderApp("/", capabilities);
+    const { screen } = await renderApp(SCREEN, capabilities);
 
     await expect
       .element(sidebarOf(screen).getByRole("link", { name: "Administration" }))
       .not.toBeInTheDocument();
+    expect(
+      sidebarOf(screen)
+        .getByRole("list")
+        .getByRole("link")
+        .all()
+        .map((link) => link.element().textContent),
+    ).toEqual(ENTRIES.map(([name]) => name));
   });
 
   test.each([
     ["the screen of an area", "/tickets", "Tickets"],
     [
-      "a path under an area, in another case",
-      "/Data-Sources/fetchers/kev",
-      "Data sources",
+      "a path under an area",
+      "/users/00000000-0000-0000-0000-000000000002",
+      "Users",
     ],
-    ["a screen of Administration", "/admin/settings", "Administration"],
+    [
+      "a path under an area, in another case",
+      "/Fetchers/fictional-fetcher/runs/00000000-0000-0000-0000-000000000003",
+      "Fetchers",
+    ],
+    ["the screen of My packages", "/my-packages", "My packages"],
+    [
+      "a screen of Administration",
+      "/admin/identity-audit-log",
+      "Administration",
+    ],
   ])("marks the entry of %s as current", async (_, path, name) => {
-    const { screen } = await renderApp(path, ["manage_settings"]);
+    const { screen } = await renderApp(path, ["manage_users"]);
     const current = sidebarOf(screen).getByRole("link", { name });
 
     await expect.element(current).toHaveAttribute("aria-current", "page");
@@ -203,7 +231,7 @@ describe("expanded", () => {
       "/tickets",
     ],
   ])("leads with Tickets to %s", async (_, capabilities, roles, href) => {
-    const { router, screen } = await renderApp("/cves", capabilities, roles);
+    const { router, screen } = await renderApp(SCREEN, capabilities, roles);
     const tickets = sidebarOf(screen).getByRole("link", { name: "Tickets" });
 
     await expect.element(tickets).toHaveAttribute("href", href);
@@ -217,11 +245,11 @@ describe("expanded", () => {
   });
 
   test.each([
-    ["the Home", "/"],
-    ["a screen of the user's own account", "/account"],
+    ["a screen of the user's own account", "/account/api-keys"],
+    ["the address of a CVE", "/cves/CVE-2099-0001"],
     ["a path that starts like an area", "/ticketsandmore"],
   ])("marks no entry as current on %s", async (_, path) => {
-    const { screen } = await renderApp(path);
+    const { screen } = await renderApp(path, ["manage_users"]);
 
     await expect.element(sidebarOf(screen)).toBeVisible();
     expect(
@@ -230,12 +258,15 @@ describe("expanded", () => {
   });
 
   test("shows no tooltip on an entry, whose name shows", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const entry = sidebarOf(screen).getByRole("link", {
-      name: "Packages",
+      name: "Users",
       exact: true,
     });
-    sidebarOf(screen).getByRole("link", { name: "CVEs" }).element().focus();
+    sidebarOf(screen)
+      .getByRole("link", { name: "My packages" })
+      .element()
+      .focus();
 
     await userEvent.keyboard("{Tab}");
 
@@ -247,30 +278,31 @@ describe("expanded", () => {
   });
 
   test("leads to the screen of an entry and moves the focus to its heading", async () => {
-    const { router, screen } = await renderApp("/");
+    const { router, screen } = await renderApp(SCREEN);
 
-    await sidebarOf(screen).getByRole("link", { name: "CVEs" }).click();
+    await sidebarOf(screen).getByRole("link", { name: "Users" }).click();
 
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toHaveFocus();
-    expect(router.state.location.pathname).toBe("/cves");
+    expect(router.state.location.pathname).toBe("/users");
     await expect
-      .element(sidebarOf(screen).getByRole("link", { name: "CVEs" }))
+      .element(sidebarOf(screen).getByRole("link", { name: "Users" }))
       .toHaveAttribute("aria-current", "page");
   });
 
-  test("leads to the landing from the product name", async () => {
-    const { router, screen } = await renderApp("/tickets");
+  test("leads to the landing from the product name, and moves the focus to its heading", async () => {
+    const { router, screen } = await renderApp(SCREEN);
 
     await sidebarOf(screen)
       .getByRole("link", { name: "Sentinel", exact: true })
       .click();
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
       .toHaveFocus();
-    expect(router.state.location.pathname).toBe("/");
+    expect(router.state.location.href).toBe("/tickets");
+    expect(router.history.length).toBe(2);
   });
 });
 
@@ -314,7 +346,7 @@ describe("collapsed", () => {
 
   test("expands again, and keeps the preference", async () => {
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "collapsed");
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
 
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
@@ -331,15 +363,15 @@ describe("collapsed", () => {
 
   test("shows the name of a control in a tooltip to its right on keyboard focus", async () => {
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "collapsed");
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const sidebar = sidebarOf(screen);
-    const entry = sidebar.getByRole("link", { name: "CVEs" });
+    const entry = sidebar.getByRole("link", { name: "Users" });
 
     entry.element().focus();
     await userEvent.keyboard("{Shift>}{Tab}{/Shift}{Tab}");
 
     await expect.element(entry).toHaveFocus();
-    const tooltip = screen.getByRole("tooltip", { name: "CVEs" });
+    const tooltip = screen.getByRole("tooltip", { name: "Users" });
     await expect.element(tooltip).toBeVisible();
     expect(tooltip.element().getBoundingClientRect().left).toBeGreaterThan(
       entry.element().getBoundingClientRect().right,
@@ -347,7 +379,7 @@ describe("collapsed", () => {
   });
 
   test("keeps the focus on the button that collapses and expands it", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const collapse = sidebarOf(screen).getByRole("button", {
       name: "Collapse navigation",
     });
@@ -368,8 +400,8 @@ describe("collapsed", () => {
   });
 
   test("leaves the focus where it was when another tab collapses it", async () => {
-    const { screen } = await renderApp("/");
-    const entry = sidebarOf(screen).getByRole("link", { name: "CVEs" });
+    const { screen } = await renderApp(SCREEN);
+    const entry = sidebarOf(screen).getByRole("link", { name: "Users" });
     await expect.element(entry).toBeVisible();
     // An earlier switch in this tab, which took the focus.
     await sidebarOf(screen)
@@ -378,7 +410,7 @@ describe("collapsed", () => {
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
       .click();
-    sidebarOf(screen).getByRole("link", { name: "CVEs" }).element().focus();
+    sidebarOf(screen).getByRole("link", { name: "Users" }).element().focus();
 
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "collapsed");
     window.dispatchEvent(
@@ -395,12 +427,12 @@ describe("collapsed", () => {
       .toBeVisible();
     // The entry stays the same element, with the focus.
     await expect
-      .element(sidebarOf(screen).getByRole("link", { name: "CVEs" }))
+      .element(sidebarOf(screen).getByRole("link", { name: "Users" }))
       .toHaveFocus();
   });
 
   test("follows a change of the preference in another tab", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     await expect
       .element(
         sidebarOf(screen).getByRole("button", { name: "Collapse navigation" }),
@@ -428,7 +460,7 @@ describe("collapsed", () => {
     "is expanded when the stored preference is %j",
     async (value) => {
       window.localStorage.setItem(SIDEBAR_STORAGE_KEY, value);
-      const { screen } = await renderApp("/");
+      const { screen } = await renderApp(SCREEN);
 
       await expect
         .element(
@@ -491,7 +523,7 @@ describe("in a window narrower than 1024 px", () => {
 
   test("is always collapsed, whatever the preference", async () => {
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "expanded");
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
 
     await expect
       .element(
@@ -502,12 +534,9 @@ describe("in a window narrower than 1024 px", () => {
   });
 
   test("shows the focus inside the sidebar over the content when the keyboard opens it", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     // The keyboard reaches the expand button from the entry before it.
-    sidebarOf(screen)
-      .getByRole("link", { name: "Data sources" })
-      .element()
-      .focus();
+    sidebarOf(screen).getByRole("link", { name: "Fetchers" }).element().focus();
     await userEvent.keyboard("{Tab}");
     await expect
       .element(
@@ -529,7 +558,7 @@ describe("in a window narrower than 1024 px", () => {
   });
 
   test("opens the expanded sidebar over the content, as a dialog that takes the focus, without changing the preference", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
 
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
@@ -573,7 +602,7 @@ describe("in a window narrower than 1024 px", () => {
   ])(
     "closes with %s, and returns the focus to the expand button",
     async (_, close) => {
-      const { screen } = await renderApp("/");
+      const { screen } = await renderApp(SCREEN);
       const expand = sidebarOf(screen).getByRole("button", {
         name: "Expand navigation",
       });
@@ -593,56 +622,56 @@ describe("in a window narrower than 1024 px", () => {
   );
 
   test("closes after a navigation from it, and the focus follows the navigation", async () => {
-    const { router, screen } = await renderApp("/");
+    const { router, screen } = await renderApp(SCREEN);
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
       .click();
     const dialog = screen.getByRole("dialog", { name: "Navigation" });
 
-    await dialog.getByRole("link", { name: "Packages" }).click();
+    await dialog.getByRole("link", { name: "Users" }).click();
 
     await expect.element(dialog).not.toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/packages");
+    expect(router.state.location.pathname).toBe("/users");
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toHaveFocus();
   });
 
   test("does not open again when the user returns to the URL at which it opened", async () => {
-    const { router, screen } = await renderApp("/");
+    const { router, screen } = await renderApp(SCREEN);
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
       .click();
     const dialog = screen.getByRole("dialog", { name: "Navigation" });
     await expect.element(dialog).toBeVisible();
     // A navigation that is not from it, such as the browser's Forward.
-    router.history.push("/cves");
+    router.history.push("/users");
     await expect.element(dialog).not.toBeInTheDocument();
 
     router.history.back();
 
+    await expect.poll(() => router.state.location.pathname).toBe(SCREEN);
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toBeVisible();
-    expect(router.state.location.pathname).toBe("/");
     expect(screen.getByRole("dialog").query()).toBeNull();
   });
 
   test("closes after a navigation from it to the URL that shows", async () => {
-    const { router, screen } = await renderApp("/packages");
+    const { router, screen } = await renderApp("/users");
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
       .click();
     const dialog = screen.getByRole("dialog", { name: "Navigation" });
 
-    await dialog.getByRole("link", { name: "Packages", exact: true }).click();
+    await dialog.getByRole("link", { name: "Users", exact: true }).click();
 
     await expect.element(dialog).not.toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/packages");
+    expect(router.state.location.pathname).toBe("/users");
   });
 
   test("closes when the window grows past 1024 px, with the focus on the screen's heading, and does not open again when it narrows", async () => {
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     await sidebarOf(screen)
       .getByRole("button", { name: "Expand navigation" })
       .click();
@@ -656,7 +685,7 @@ describe("in a window narrower than 1024 px", () => {
       .not.toBeInTheDocument();
     expect(widthOf(sidebarOf(screen).element())).toBe(216);
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toHaveFocus();
 
     await page.viewport(1023, 700);

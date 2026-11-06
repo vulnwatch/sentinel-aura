@@ -121,7 +121,7 @@ test("moves the focus to the screen's heading when it leaves the page while it h
           page={1}
           perPage={20}
           total={total}
-          href={(target) => (target === 1 ? "/" : "/cves")}
+          href={(target) => (target === 1 ? "/" : "/users")}
         />
       </>
     );

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { RouterProvider } from "react-aria-components";
 
 // The address of a screen of the UI as a link takes it: the router's typed
-// path, such as "/cves", or, for a link with path or search parameters, its
+// path, such as "/users", or, for a link with path or search parameters, its
 // options as linkOptions checks them against the route tree, such as
 // linkOptions({ to: "/tickets", search: { view: "new" } }).
 export type ScreenHref = ToOptions["to"] | ToOptions;

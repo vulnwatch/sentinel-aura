@@ -6,7 +6,6 @@ import {
   LogOut,
   Monitor,
   Moon,
-  ScrollText,
   Sun,
   User as UserIcon,
   type LucideIcon,
@@ -168,8 +167,9 @@ interface AccountMenuProps {
 // named by the button. The menu starts with the signed-in user, with the
 // username always on a line of its own, and the name and the username wrap
 // rather than end with an ellipsis, so that the menu shows whole the name
-// that the button cuts. Its items follow in three groups: the screens of the
-// user's own account; the theme, which applies at once in every open tab;
+// that the button cuts. Its items follow in three groups: Account and its API
+// keys, the screens of the user's own account; the theme, which applies at
+// once in every open tab;
 // and Sign out, which asks for no confirmation and stays in the open menu,
 // busy, until it ends. When it fails, the menu closes and the message area
 // shows the message of its status, which also closes the sidebar opened over
@@ -214,18 +214,11 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
         <div className={SEPARATOR} />
         <Menu className="outline-none">
           <MenuSection>
-            <Item id="profile" icon={UserIcon} href="/account">
-              Profile
+            <Item id="account" icon={UserIcon} href="/account">
+              Account
             </Item>
             <Item id="api-keys" icon={KeyRound} href="/account/api-keys">
               API keys
-            </Item>
-            <Item
-              id="identity-audit-log"
-              icon={ScrollText}
-              href="/account/identity-audit-log"
-            >
-              Identity audit log
             </Item>
           </MenuSection>
           <Separator className={SEPARATOR} />

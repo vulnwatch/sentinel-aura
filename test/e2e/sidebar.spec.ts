@@ -1,30 +1,54 @@
 import type { Page } from "@playwright/test";
-import { expect, expectAccessible, signIn, test } from "./fixtures";
+import {
+  avatars,
+  dateTimes,
+  expect,
+  expectAccessible,
+  expectViewCounts,
+  signIn,
+  test,
+} from "./fixtures";
 
 // The sidebar and the account menu (docs/screen-map.md, Sidebar;
 // docs/design-system.md, Sidebar; Account Menu), against a backend loaded
 // with Sentinel's example dataset, whose users hold the roles of the dataset
 // (Sentinel docs/features/platform/example-dataset.md, Users).
 
-// The entries that every user sees, in their order, with their paths.
+// The entries that every user sees, in their order, with their paths for a
+// user without triage_ticket.
 const ENTRIES = [
   ["Tickets", "/tickets"],
-  ["CVEs", "/cves"],
-  ["Packages", "/packages"],
-  ["Products", "/products"],
   ["My packages", "/my-packages"],
-  ["Data sources", "/data-sources"],
+  ["Users", "/users"],
+  ["Fetchers", "/fetchers"],
 ] as const;
 
 function sidebar(page: Page) {
   return page.getByRole("navigation", { name: "Main" });
 }
 
+// Waits until the Ticket list, the landing of jdoe, shows its rows and the
+// counts of its views, which move what follows them, before a reference
+// screenshot of it.
+async function expectTicketListShown(page: Page) {
+  await expect(
+    page.getByRole("grid", { name: "Tickets" }).getByRole("rowheader"),
+  ).toHaveCount(20);
+  await expectViewCounts(page);
+}
+
+// The reference screenshots mask the avatars and the dates, which change from
+// one load of the dataset to the next (docs/conventions.md, End-to-End
+// Tests).
+function masked(page: Page) {
+  return { mask: [avatars(page), dateTimes(page)] };
+}
+
 test.describe("the sidebar", () => {
-  test("shows Administration to an administrator, after the entries of every user", async ({
+  test("shows Administration to an administrator, after the entries of every user, and opens API keys from it", async ({
     page,
   }) => {
-    // jdoe holds the admin role, with manage_users.
+    // jdoe holds the admin role, with manage_users, without triage_ticket.
     await signIn(page, "jdoe");
     const links = sidebar(page).getByRole("list").getByRole("link");
 
@@ -32,7 +56,21 @@ test.describe("the sidebar", () => {
       ...ENTRIES.map(([name]) => name),
       "Administration",
     ]);
-    await expect(links.last()).toHaveAttribute("href", "/admin/users");
+    for (const [index, [, path]] of ENTRIES.entries()) {
+      await expect(links.nth(index)).toHaveAttribute("href", path);
+    }
+    await expect(links.last()).toHaveAttribute("href", "/admin/api-keys");
+    await expect(
+      sidebar(page).getByRole("link", { name: "Tickets", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+
+    await links.last().click();
+
+    await expect(page).toHaveURL("/admin/api-keys");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Not found" }),
+    ).toBeFocused();
+    await expect(links.last()).toHaveAttribute("aria-current", "page");
   });
 
   test("leads an analyst with Tickets to the New view of the Ticket list", async ({
@@ -63,6 +101,26 @@ test.describe("the sidebar", () => {
     await expect(
       sidebar(page).getByRole("button", { name: "Security Scanner Bot" }),
     ).toBeVisible();
+  });
+
+  test("collapses to its icons", async ({ page }) => {
+    await signIn(page);
+    await expectTicketListShown(page);
+
+    await sidebar(page)
+      .getByRole("button", { name: "Collapse navigation" })
+      .click();
+
+    await expect(
+      sidebar(page).getByRole("button", { name: "Expand navigation" }),
+    ).toBeVisible();
+    // To the empty part of the sidebar, away from the controls, whose
+    // tooltips would show, and from the rows, which the pointer would mark.
+    await page.mouse.move(28, 500);
+    await expect(page).toHaveScreenshot(
+      "ticket-list-sidebar-collapsed.png",
+      masked(page),
+    );
   });
 
   test("stays collapsed after a reload", async ({ page }) => {
@@ -118,10 +176,9 @@ test.describe("the sidebar", () => {
 });
 
 test.describe("the account menu", () => {
-  test("shows the signed-in user and the screens of the account", async ({
-    page,
-  }) => {
+  test("shows the signed-in user, Account, and API keys", async ({ page }) => {
     await signIn(page);
+    await expectTicketListShown(page);
 
     await sidebar(page).getByRole("button", { name: "John Doe" }).click();
 
@@ -130,12 +187,21 @@ test.describe("the account menu", () => {
       page.getByRole("dialog", { name: "John Doe" }).getByText("@jdoe"),
     ).toBeVisible();
     await expect(menu.getByRole("menuitem")).toHaveText([
-      "Profile",
+      "Account",
       "API keys",
-      "Identity audit log",
       "Sign out",
     ]);
+    await expect(
+      menu.getByRole("menuitem", { name: "Account" }),
+    ).toHaveAttribute("href", "/account");
+    await expect(
+      menu.getByRole("menuitem", { name: "API keys" }),
+    ).toHaveAttribute("href", "/account/api-keys");
     await expectAccessible(page);
+    await expect(page).toHaveScreenshot(
+      "ticket-list-account-menu.png",
+      masked(page),
+    );
   });
 
   test("applies the theme that the user selects, which lasts across a reload", async ({
@@ -155,7 +221,7 @@ test.describe("the account menu", () => {
     await expect.poll(background).toBe("rgb(13, 17, 23)");
     await page.reload();
     await expect(
-      page.getByRole("heading", { level: 1, name: "Home" }),
+      page.getByRole("heading", { level: 1, name: "Tickets" }),
     ).toBeVisible();
     expect(await background()).toBe("rgb(13, 17, 23)");
     await sidebar(page).getByRole("button", { name: "John Doe" }).click();

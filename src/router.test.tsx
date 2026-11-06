@@ -18,11 +18,16 @@ import { App } from "./app";
 import { Button } from "./components/button";
 import { createAppRouter, routerDefaults } from "./router";
 import { RootLayout } from "./routes/root";
-import { FICTIONAL_USER, jsonResponse, stubApi } from "./test-api";
+import { FICTIONAL_USER, jsonResponse, stubApi, ticketPage } from "./test-api";
 
-// Every screen of these tests shows to a signed-in user (src/session-gate.tsx).
+// Every screen of these tests shows to a signed-in user (src/session-gate.tsx),
+// and the Ticket list, the landing of the user, has no Tickets.
 beforeEach(() => {
-  stubApi(() => jsonResponse(200, FICTIONAL_USER));
+  stubApi((request) =>
+    request.path === "/api/v1/users/me"
+      ? jsonResponse(200, FICTIONAL_USER)
+      : ticketPage([]),
+  );
 });
 
 afterEach(() => {
@@ -38,19 +43,6 @@ function renderRouter(router: AnyRouter) {
     </QueryClientProvider>,
   );
 }
-
-test("shows the home page at /", async () => {
-  const router = createAppRouter({
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
-  const screen = await render(
-    <App router={router} queryClient={new QueryClient()} />,
-  );
-
-  await expect
-    .element(screen.getByRole("heading", { level: 1, name: "Home" }))
-    .toBeVisible();
-});
 
 test("follows the URL of the browser by default", () => {
   const url = window.location.href;
@@ -184,6 +176,39 @@ describe("Not found", () => {
   test.each([
     ["a path that matches no screen", "/fictional/path"],
     ["/auth/callback, which is reserved", "/auth/callback?code=fictional"],
+    // The paths of screens that docs/screen-map.md (Areas and Screens) no
+    // longer has.
+    ...[
+      "/cves",
+      "/packages",
+      "/products",
+      "/data-sources",
+      "/admin/users",
+      "/admin/settings",
+    ].map((path): [string, string] => [
+      `${path}, of a screen that the UI does not have`,
+      path,
+    ]),
+    // The paths of the screens that are not built yet, with or without a
+    // route (src/routes/unbuilt.ts), and the address of a CVE.
+    ...[
+      "/tickets/SNTL-42",
+      "/my-packages",
+      "/users",
+      "/users/00000000-0000-0000-0000-000000000002",
+      "/fetchers",
+      "/fetchers/fictional-fetcher",
+      "/fetchers/fictional-fetcher/runs/00000000-0000-0000-0000-000000000003",
+      "/account",
+      "/account/api-keys",
+      "/account/identity-audit-log",
+      "/admin/api-keys",
+      "/admin/identity-audit-log",
+      "/cves/CVE-2099-0001",
+    ].map((path): [string, string] => [
+      `${path}, of a screen that is not built yet`,
+      path,
+    ]),
   ])("shows at %s", async (_, path) => {
     const screen = await renderApp(path);
 
@@ -207,9 +232,9 @@ describe("Not found", () => {
     await screen.getByRole("link", { name: "Go to the start page" }).click();
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
       .toBeVisible();
-    expect(document.title).toBe("Home – Sentinel");
+    expect(document.title).toBe("Tickets – Sentinel");
   });
 });
 

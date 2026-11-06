@@ -1129,7 +1129,7 @@ describe("the table", () => {
     ).toHaveLength(1);
   });
 
-  test("shows the values of a Ticket in its row, with the links to the Ticket and its CVE", async () => {
+  test("shows the values of a Ticket in its row, with the CVE ID as text and one link, to the Ticket", async () => {
     const updated = new Date(2026, 9, 9, 14, 5, 9);
     const ticket: TicketSummary = fictionalTicket({
       ticket_id: "SNTL-18",
@@ -1170,14 +1170,15 @@ describe("the table", () => {
     await expect
       .element(row.getByRole("img", { name: "Confidential" }))
       .toBeVisible();
-    await expect
-      .element(row.getByRole("link", { name: "CVE-2099-0018" }))
-      .toHaveAttribute("href", "/cves/CVE-2099-0018");
-    expect(
-      getComputedStyle(
-        row.getByRole("link", { name: "CVE-2099-0018" }).element(),
-      ).fontWeight,
-    ).toBe("500");
+    // A CVE has no screen of its own, and its address leads to the Ticket
+    // to which the row already links (docs/screen-map.md, Links Between
+    // Areas).
+    expect(row.getByRole("link").all()).toHaveLength(1);
+    const cve = row.getByText("CVE-2099-0018", { exact: true });
+    await expect.element(cve).toBeVisible();
+    // At the weight of the text of a row, as an identifier that is not a
+    // link (docs/design-system.md, Type Scale).
+    expect(getComputedStyle(cve.element()).fontWeight).toBe("400");
     expect(
       row
         .getByRole("gridcell")

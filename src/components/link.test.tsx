@@ -3,6 +3,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  linkOptions,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -59,8 +60,14 @@ test("is underlined only under the pointer and on keyboard focus in a table or a
     getParentRoute: () => root,
     path: "/",
     component: () => (
-      <Link placement="list" href="/cves">
-        CVE-2099-0001
+      <Link
+        placement="list"
+        href={linkOptions({
+          to: "/tickets/$ticketId",
+          params: { ticketId: "SNTL-42" },
+        })}
+      >
+        SNTL-42
       </Link>
     ),
   });
@@ -69,10 +76,10 @@ test("is underlined only under the pointer and on keyboard focus in a table or a
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   const screen = await render(<RouterProvider router={router} />);
-  const link = screen.getByRole("link", { name: "CVE-2099-0001" });
+  const link = screen.getByRole("link", { name: "SNTL-42" });
   const decoration = () => getComputedStyle(link.element()).textDecorationLine;
 
-  await expect.element(link).toHaveAttribute("href", "/cves");
+  await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-42");
   // Away from the pointer, which an earlier test can leave over it.
   await userEvent.unhover(link);
   // link of the light theme.

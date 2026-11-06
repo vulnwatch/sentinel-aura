@@ -2,7 +2,7 @@ import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import { NotFound } from "./components/not-found";
 import { UiFailurePage } from "./components/ui-failure";
 import { authCallbackRoute } from "./routes/auth-callback";
-import { homeRoute } from "./routes/home";
+import { landingRoute } from "./routes/landing";
 import { rootRoute } from "./routes/root";
 import { signInRoute } from "./routes/sign-in";
 import { ticketListRoute } from "./routes/tickets";
@@ -10,7 +10,7 @@ import { unbuiltScreenRoutes } from "./routes/unbuilt";
 import { parseSearch, stringifySearch } from "./search-params";
 
 const routeTree = rootRoute.addChildren([
-  homeRoute,
+  landingRoute,
   signInRoute,
   authCallbackRoute,
   ticketListRoute,

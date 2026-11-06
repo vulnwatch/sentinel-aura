@@ -282,8 +282,8 @@ confidently.
 
 - Does each action ask for confirmation exactly when `docs/behaviors.md`
   (Confirmation) requires it — before an action that cannot be undone, that
-  ends another person's access, that changes a system setting or the
-  operation of a fetcher, or that discards input, and never for routine work
+  ends another person's access, that changes the operation of a fetcher, or
+  that discards input, and never for routine work
   that another action reverses — with the title, the consequence, and the
   buttons that it states, in the variant of `docs/design-system.md` (Buttons
   and Links)?
