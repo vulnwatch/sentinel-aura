@@ -229,7 +229,14 @@ message follows Wording.
 - A count, such as the count of a view or of the attention summary, has no
   room for a message or an action: when a read of it fails, even after it
   showed a number, it shows as not available, read as "Not available", and
-  the screen's next read of its data tries it again (Loading).
+  the screen's next read of its data tries it again (Loading). The number on
+  the My packages entry of the sidebar, which shows only above zero
+  (`docs/screen-map.md`, Sidebar), is the exception: it shows nothing until a
+  read of it succeeds, and then keeps the number of its last successful read
+  when a later read fails, because a mark of the failure would show on every
+  screen to every user, most of whom have no such work, and no number would
+  tell a maintainer that no work waits. My packages shows the error of its own
+  read.
 - A form checks before sending the constraints that the pinned contract
   declares for its fields, such as a required value or a maximum length, and
   states the constraint at the field. A field error of a `VALIDATION_ERROR`
@@ -285,11 +292,12 @@ message follows Wording.
 - These show the same page, with the heading "Not found", the text "This page
   doesn't exist, or you don't have access to it.", and the link to the
   landing, "Go to the start page":
-  a `404` of the read of a screen; a path that matches no screen; a path
-  whose identifier does not have the form that the contract declares, such as
-  a run identifier that is not a UUID, for which the UI sends no request; and
-  `/auth/callback` while it is reserved (`docs/screen-map.md`, Contract
-  URLs).
+  a `404` of the read of a screen; the address of a CVE that does not exist,
+  that the user cannot see, or that has no Ticket; a path that matches no
+  screen; a path whose identifier does not have the form that the contract
+  declares, such as a run identifier that is not a UUID, for which the UI
+  sends no request; and `/auth/callback` while it is reserved
+  (`docs/screen-map.md`, Contract URLs).
 - A `404` of a change, of the read of a part of a screen, or of a read of
   other data for what the screen shows (Where Errors Appear), such as one on a
   record that was deleted or became inaccessible in the meantime, shows "This
@@ -424,6 +432,12 @@ returns, whatever Sentinel guarantees for its field:
   before it showed any data, is not read again when the tab returns: its
   error stays until Try again, where the error offers it, or until the screen
   opens again (Where Errors Appear).
+- A screen whose read itself depends on a capability of the signed-in user,
+  such as Users, which reads the complete profiles with `manage_users` and the
+  directory otherwise (`docs/screen-map.md`, Areas and Screens), also reads its
+  data again when a read of the signed-in user changes that capability (The
+  Signed-in User), and the new read replaces the error of the earlier one,
+  such as the `403` of a read that needed the capability that the user lost.
 - A change in progress marks the control that started it as busy, and that
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while
@@ -568,8 +582,7 @@ it:
   non-confidential, which discloses it to every user;
 - ends another person's access to Sentinel or to a record, such as
   deactivating a user, removing a role, or revoking an access grant, or
-  changes a system setting or the operation of a fetcher, such as disabling
-  it; or
+  changes the operation of a fetcher, such as disabling it; or
 - discards input that the user has not submitted, such as leaving a form or
   closing a dialog with changes; a term typed in the search or a filter of a
   list and not applied is not such input, and is dropped without a question.
@@ -759,16 +772,45 @@ complete profile and its manager, and the signed-in user alike: `id`,
 - **Full form.** The avatar followed by the display name. The avatar is
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the
-  access grants of a Ticket, or Administration, the username follows the
-  display name, as `@` and the username, such as `@jdoe`, before the labels;
-  the account menu shows it on a line of its own, below the name and its
-  labels (`docs/design-system.md`, Account Menu). In these places it shows
-  also when it is the display name, so that it is always found in the same
-  place and never taken for a name.
+  access grants of a Ticket, or the screens of Users and Administration, the
+  username follows the display name, as `@` and the username, such as
+  `@jdoe`, before the labels; the account menu shows it on a line of its own,
+  below the name and its labels (`docs/design-system.md`, Account Menu). In
+  these places it shows also when it is the display name, so that it is
+  always found in the same place and never taken for a name.
 - **Compact form.** The avatar alone, in a link, a button, or another
   interactive element without room for the name. The display name is its
-  accessible name and shows in a tooltip on hover and on keyboard focus. Every
-  other place shows the full form.
+  accessible name and shows in a tooltip on hover and on keyboard focus, or in
+  the user card where the avatar links to the user (User card). Every other
+  place shows the full form.
+- **Link to the user.** A user, in the full or the compact form, is a link to
+  their screen, User (`docs/screen-map.md`, Areas and Screens), so that a name
+  leads to the user's profile and work wherever it shows. The representation
+  as a whole is the link, the avatar, the name, the username, and the labels
+  together, so that its accessible name is the display name followed by the
+  username where it shows and by the labels. A user is not a link where the
+  representation is the content of another control, such as an option of a
+  user picker, the account button, or the account menu, nor in the heading of
+  the user's own screen.
+- **User card.** While the pointer rests on the link to a user, or the link
+  has the keyboard focus, and after a long press on a touch screen, which
+  opens it in place of the browser's own menu of the link, a card shows the
+  user's details: the display name, the username, the labels, and, from the
+  user's directory entry, their roles, named as Domain Terms names them, or
+  "No roles", and their email (Sentinel
+  `docs/features/identity/user-management.md`, Get User). As it opens, the
+  card shows what the representation holds, and the roles and the email once
+  the read of the entry, sent when the card first opens, arrives; when that
+  read fails, the card says "Other details aren't available." in their place,
+  and its next opening sends the read again. The card holds no control: the
+  focus stays on the link, whose name already states the user with the
+  labels, and assistive technologies read the card as the link's description
+  while it shows; the user's screen shows everything that the card adds. A
+  long press moves the focus into the card instead, so that the screen reader
+  of a touch screen reads it; a tap elsewhere closes it, and Escape closes it
+  and returns the focus to the link. A tap follows the link.
+  `docs/design-system.md` (Representation of a User) defines how the card
+  looks, when it shows, and when it hides.
 - **Inactive user** (`active` is `false`). The label "Inactive" follows the
   name, and the avatar is gray, so that the compact form shows the state at a
   glance too; in the compact form, the accessible name and the tooltip end
@@ -784,7 +826,7 @@ complete profile and its manager, and the signed-in user alike: `id`,
   of a system task or of an external provisioning sync (Sentinel
   `docs/features/identity/rbac.md`, Actor Identities), shows "System" with the
   Sentinel mark instead of an avatar, so that it differs from a person and
-  from a bot account.
+  from a bot account. It is not a link and has no card.
   Only the actor of a recorded action is "System": another field without a
   user, such as the assignee of an unassigned Ticket, is an absent value
   (Absent Values).

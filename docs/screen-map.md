@@ -77,8 +77,8 @@ Identification and Ownership). They sign in when work is pending for them:
 - check their pending fixes and their submission deadlines;
 - follow their deliveries in progress, with their submission and release
   requests;
-- open the view of their work on one Ticket that an analyst shares, a
-  confidential Ticket of one of their packages included.
+- open a Ticket that an analyst shares, a confidential Ticket of one of their
+  packages included, and see their work on it.
 
 ### Readers
 
@@ -100,7 +100,6 @@ role too. Besides the tasks of an analyst, they occasionally:
   passwords, and deactivate and reactivate users;
 - review and revoke the API keys of every user, and review the identity audit
   log;
-- change the system settings, such as the default CVSS version;
 - operate the fetchers: trigger, enable, disable, and configure them.
 
 ### Restricted Analysts
@@ -122,7 +121,10 @@ Coexistence):
 ### Every User
 
 Every user sees their own profile, manages their own API keys, and reviews
-the identity events of their own account.
+the identity events of their own account. Every user also finds the other
+users in the directory and sees, for each of them, their entry in the
+directory, the Tickets assigned to them, and the Tickets of the packages that
+they maintain, such as to follow the work of a colleague.
 
 ## Areas and Screens
 
@@ -133,46 +135,57 @@ under the path of the screen, and its screen document records it.
 | Area | Screen | Path | Content |
 |---|---|---|---|
 | Sign-in | Sign in | `/login` | Local sign-in (Sentinel `docs/features/identity/local-authentication.md`, Login) |
-| Home | Home | `/` | The landing of the users without the `triage_ticket` capability: the search and a summary of their package work (Landing) |
-| Search | Search results | `/search` | The Tickets and CVEs that match a search term (Search) |
-| Tickets | Ticket list | `/tickets` | The Tickets, in the views of Ticket List Views |
-| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, package tree, references, IBS requests, and audit log, and, with `manage_confidentiality`, its access grants |
-| CVEs | CVE list | `/cves` | The CVEs, with or without a Ticket |
-| CVEs | CVE | `/cves/{cve_id}` | One CVE: its Ticket, CVSS assessments, sources, and affected versions |
-| Packages | Package list | `/packages` | The packages of the Tickets, across Tickets |
-| Products | Product list | `/products` | The Product catalog, with the lifecycle of each Product |
+| Tickets | Ticket list | `/tickets` | The Tickets, in the views of Ticket List Views; the landing (Landing) |
+| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, with the CVE's CVSS assessments, sources, and affected versions; its package tree, references, IBS requests, and audit log; the signed-in user's own work on it, when they maintain one of its packages; and, with `manage_confidentiality`, its access grants |
 | My packages | My packages | `/my-packages` | The signed-in user's maintainer workbench: pending, in-progress, and completed work |
-| My packages | My work on a Ticket | `/my-packages/tickets/{ticket_id}` | The signed-in user's work on one Ticket, the view that analysts share |
-| Data sources | Data sources | `/data-sources` | The fetchers with their latest runs, and the status of the IBS consumer |
-| Data sources | Fetcher | `/data-sources/fetchers/{fetcher_name}` | One fetcher: its run history and timeline, and, with `manage_fetchers`, its configuration and audit log |
-| Data sources | Fetcher run | `/data-sources/fetchers/{fetcher_name}/runs/{run_id}` | One run of a fetcher |
-| Data sources | CVE source records | `/data-sources/cve-sources` | The latest fetch status of each CVE in each source |
-| Account | Profile | `/account` | The signed-in user's own profile |
-| Account | API keys | `/account/api-keys` | The signed-in user's own API keys |
-| Account | Identity audit log | `/account/identity-audit-log` | The identity events of the signed-in user's own account |
-| Administration | Users | `/admin/users` | Every user, with the complete profile |
-| Administration | User | `/admin/users/{user_id}` | One user's complete profile and its administration |
+| Users | Users | `/users` | The user directory, and, with `manage_users`, the complete profile of each user and the creation of a local user |
+| Users | User | `/users/{user_id}` | One user: their directory entry, the Tickets assigned to them, and the Tickets of the packages that they maintain; with `manage_users`, also the complete profile, its administration, and the user's API keys and identity events |
+| Fetchers | Fetchers | `/fetchers` | The fetchers, with their state and latest runs, and the status of the IBS consumer |
+| Fetchers | Fetcher | `/fetchers/{fetcher_name}` | One fetcher: its runs, as a history and over time, and, with `manage_fetchers`, its configuration and audit log |
+| Fetchers | Fetcher run | `/fetchers/{fetcher_name}/runs/{run_id}` | One run of a fetcher |
+| Account | Account | `/account` | The signed-in user's own account, in three tabs with a path each: Profile at `/account`, API keys at `/account/api-keys`, and Identity audit log at `/account/identity-audit-log`, the identity events of the account |
 | Administration | API keys | `/admin/api-keys` | The API keys of every user |
 | Administration | Identity audit log | `/admin/identity-audit-log` | The identity events of every user |
-| Administration | Settings | `/admin/settings` | The system settings, their audit log, and the CVSS recalculation |
 
 - A Ticket is created from the Ticket list.
-- The UI has no screen of the user directory. The directory serves the
-  pickers and filters of other screens, such as the assignee of a Ticket,
-  which offers only the users who can be its assignee (Roles, Principles),
-  and its access grants; the complete profile of a user appears only in
-  Administration (Sentinel `docs/features/identity/user-management.md`, Access
-  Level Requirements).
+- A CVE has no screen of its own: its data shows on the screen of its Ticket.
+  Sentinel creates a Ticket for every CVE that it ingests and associates a CVE
+  with one Ticket at most (Sentinel `docs/features/tickets/cve-service.md`,
+  Ticket Creation Decision; Sentinel `docs/features/tickets/tickets.md`, CVE
+  Association), and the work on a CVE, such as its SUSE CVSS assessment, is
+  work on its Ticket (same document, Gate: Analysis → Analyzed). The address
+  of a CVE leads to the screen of its Ticket (Contract URLs). A CVE without a
+  Ticket therefore shows nowhere, although the API returns it to every user
+  (Sentinel `docs/features/tickets/cve-tracking.md`, List CVEs): Sentinel
+  gives it a Ticket at its next ingestion, and an analyst can create one for
+  it (Sentinel `docs/features/tickets/tickets.md`, CVE Resolution Behavior).
+- The Ticket screen shows a user who maintains one of its packages their work
+  on the Ticket, as Sentinel classifies it for each maintainer (Sentinel
+  `docs/features/packages/maintainer.md`, Package Details for Ticket), so that
+  analysts share the address of the Ticket with its maintainers.
 - My packages is there for every user: Sentinel serves the workbench to every
   signed-in user (Sentinel `docs/features/packages/maintainer.md`, API
   Endpoints), and a user who maintains no package with work sees its lists
   empty.
-- Data sources is open to every user, as Sentinel's fetcher monitoring is,
-  while operating a fetcher and reading its configuration and audit log need
-  `manage_fetchers` (Sentinel `docs/features/platform/fetcher-operations.md`,
-  Purpose; Access Control). Fetcher management is therefore part of Data
-  sources rather than of Administration: the same screens show a fetcher to
-  every user and its actions to the users who can take them.
+- Users is open to every user, as Sentinel's user directory is, while the
+  complete profile of a user, its administration, and the API keys and
+  identity events of every user need `manage_users` (Sentinel
+  `docs/features/identity/user-management.md`, Access Level Requirements;
+  Sentinel `docs/features/identity/api-key-management.md`, List All API Keys;
+  Sentinel `docs/features/identity/identity-audit-log.md`, List Identity Audit
+  Events). User administration is therefore part of Users rather than of
+  Administration: the same screens show a user to every user and the complete
+  profile and the actions to the users who can take them. The directory also
+  serves the pickers and filters of other screens, such as the assignee of a
+  Ticket, which offers only the users who can be its assignee (Roles,
+  Principles), and its access grants.
+- Fetchers is open to every user, as Sentinel's fetcher monitoring is, while
+  operating a fetcher, reading the details of the error of a run, and reading
+  its configuration and audit log need `manage_fetchers` (Sentinel
+  `docs/features/platform/fetcher-operations.md`, Purpose; Access Control).
+  Fetcher management is therefore part of Fetchers rather than of
+  Administration: the same screens show a fetcher to every user and its
+  actions to the users who can take them.
 
 ## Navigation
 
@@ -184,16 +197,30 @@ read of the signed-in user (`docs/behaviors.md`, Session State). The sidebar
 holds, from top to bottom:
 
 - the product name, which leads to the landing (`/`);
-- the search (Search), except on the Home, which presents the search as its
-  main content;
-- the global navigation: Tickets, CVEs, Packages, Products, My packages, Data
-  sources, and Administration, in this order. Administration appears only to
-  a user who holds `manage_users` or `manage_settings` (Roles); every other
-  entry appears to every user;
+- the search (Search);
+- the global navigation: Tickets, My packages, Users, Fetchers, and
+  Administration, in this order. Administration appears only to a user who
+  holds `manage_users` (Roles); every other entry appears to every user;
 - the button that collapses or expands the sidebar; and
-- the account menu, which shows the signed-in user, leads to Profile, API
-  keys, and Identity audit log, offers the choice of theme
+- the account menu, which shows the signed-in user, leads to Account and to
+  its API keys (Areas and Screens), offers the choice of theme
   (`docs/behaviors.md`, Preferences), and offers Sign out.
+
+The My packages entry shows the number of the signed-in user's pending work,
+the tracks that wait for the user's submission (Sentinel
+`docs/features/packages/maintainer.md`, Pending), read from Pending Packages,
+`GET /api/v1/my/packages/pending`, with `per_page=1`, as `meta.total` (same
+document, Pending Packages). It shows no number while the user has no pending
+work, so that the entry calls a maintainer's attention only when work waits,
+also on a screen far from My packages: a user becomes a maintainer only once
+Sentinel associates them with a package of a Ticket (Sentinel
+`docs/features/packages/maintainer.md`, User Identification and Ownership),
+which can happen months after the user first signed in. The sidebar reads the
+number when it first shows, when the tab returns to the foreground after
+being hidden, after every change (`docs/behaviors.md`, Outcome of a Change),
+and with every read of the pending work of My packages, so that the entry is
+as current as that list. A failed read follows `docs/behaviors.md` (Where
+Errors Appear).
 
 The sidebar is expanded, with the name of each entry, or collapsed to icons,
 each of which shows its name on hover and on keyboard focus
@@ -213,31 +240,29 @@ heading. Once it closes, in any of these ways, only the expand button opens
 it again.
 
 An entry is marked as current while the path of the URL is the path under
-which every screen of its area lies (Areas and Screens), `/tickets`, `/cves`,
-`/packages`, `/products`, `/my-packages`, `/data-sources`, or `/admin`, or a
-path under it, such as Tickets at `/tickets/SNTL-42`. The Home, Search
-results, and the screens of Account belong to no entry. The Tickets entry
-opens the Ticket list in its New view for a user who holds `triage_ticket`
-(Roles), and in its All view for every other user. The Administration entry
-opens Users for a user who holds `manage_users`, and Settings for every other
-user who sees it; from each of its screens, the others that the user can use
-are one step away.
+which every screen of its area lies (Areas and Screens), `/tickets`,
+`/my-packages`, `/users`, `/fetchers`, or `/admin`, or a path under it, such
+as Tickets at `/tickets/SNTL-42`. The screen of Account and the address of a
+CVE (Contract URLs) belong to no entry. The Tickets entry opens the Ticket
+list in its New view for a user who holds `triage_ticket` (Roles), and in its
+All view for every other user. The Administration entry opens API keys, and
+Identity audit log is one step away from it.
 
 ### Links Between Areas
 
 A screen links each record that it shows to the screen of that record:
 
-- a Ticket and its CVE link to each other, and a duplicate Ticket links to the
-  Ticket that it duplicates;
-- a Ticket links to My work on that Ticket, the address that analysts share
-  with the maintainers of its packages;
-- an item of the Package list or of My packages links to its Ticket, and an
-  item of My packages also to My work on that Ticket;
-- the Data sources screen links to CVE source records, and a run of a CVE
-  fetcher links to the CVE source records of its failures, the
-  drill-down that Sentinel describes (Sentinel
-  `docs/features/platform/fetcher-operations.md`, Get Fetcher Run Detail), and
-  a CVE source record links to its CVE.
+- a duplicate Ticket links to the Ticket that it duplicates;
+- an item of My packages links to its Ticket;
+- a user links to their screen, User (`docs/behaviors.md`, Representation of
+  a User), which links to the Ticket list refined to the Tickets assigned to
+  the user and to the Tickets of the packages that they maintain (Sentinel
+  `docs/features/tickets/tickets.md`, List Tickets);
+- Fetchers links to each fetcher, and a fetcher to each of its runs.
+
+A CVE has no screen (Areas and Screens), so a CVE ID that a screen shows next
+to its Ticket is not a link to the address of the CVE, which would lead to the
+same Ticket.
 
 ### Browser History
 
@@ -250,7 +275,8 @@ A screen links each record that it shows to the screen of that record:
   navigations are Sign in in place of a screen that needs a session or of the
   screen from which the user signed out; the saved URL or the landing in place
   of Sign in; the landing in place of `/`; the landing of another user who
-  signed in; and a screen's default in place of a search parameter that it
+  signed in; the Ticket of a CVE in place of the address of the CVE (Contract
+  URLs); and a screen's default in place of a search parameter that it
   does not accept or that names that default, or its own form of a value in
   place of another form (`docs/behaviors.md`, Session; Invalid Search
   Parameters).
@@ -260,35 +286,37 @@ A screen links each record that it shows to the screen of that record:
 The search takes one term:
 
 - a term that, in upper case and without surrounding whitespace, is a Ticket
-  identifier or a CVE ID opens that Ticket or that CVE (Sentinel
+  identifier opens that Ticket, and one that is a CVE ID opens the address of
+  that CVE, which leads to its Ticket (Contract URLs; Sentinel
   `docs/api-spec.md`, Ticket Identifier Resolution; CVE Identifier
-  Resolution). A Ticket or CVE that does not exist or that the user cannot see
-  shows as missing (`docs/behaviors.md`, Missing and Inaccessible Records);
-- every other term opens Search results, which show the first Tickets and
-  CVEs that the term matches, as the searches of their lists match it: the
-  Ticket search also matches package names (Sentinel
-  `docs/features/tickets/tickets.md`, Search; Sentinel
-  `docs/features/tickets/cve-tracking.md`, List CVEs). Each group links to its
-  list with the same search, the Ticket list in its All view.
+  Resolution). A Ticket that does not exist or that the user cannot see shows
+  as missing (`docs/behaviors.md`, Missing and Inaccessible Records);
+- every other term opens the Ticket list in its All view with that search,
+  which matches the identifiers, CVE IDs, package names, and external
+  identifiers of the Tickets (Sentinel `docs/features/tickets/tickets.md`,
+  Search).
+
+The search finds Tickets only: a reader looks for SUSE's status of a CVE,
+which its Ticket holds (Users and Frequent Tasks), and Users has a search of
+its own.
 
 ## Landing
 
 The landing is the screen to which `/` leads, as the product name in the
 sidebar does, and which Sign in opens after a sign-in when it has no saved URL
-to return to (`docs/behaviors.md`, Return After Sign-in). It depends on the
-user:
+to return to (`docs/behaviors.md`, Return After Sign-in). `/` leads to the URL
+of the view of the Ticket list that the Tickets entry opens (Sidebar), in
+place of `/` in the browser history (Browser History):
 
-- for a user who holds `triage_ticket`, `/` leads to the URL of the Ticket
-  list in its New view, the queue of new Tickets (Ticket List Views; Browser
-  History). Such a user does not see the Home;
-- every other user sees the Home at `/`.
+- for a user who holds `triage_ticket`, the New view, the queue of new
+  Tickets (Ticket List Views);
+- for every other user, the All view, with the attention summary and the
+  search of the list.
 
 The landing depends on a capability (Roles) and not on data, so the landing
-of a user does not change from one day to the next.
-
-The Home leads with the search, followed by a summary of the user's pending
-and in-progress work in My packages, which links to its lists. A user without
-such work sees that none is pending.
+of a user does not change from one day to the next. The UI has no other start
+page: a maintainer learns of pending work from the number of the My packages
+entry, which the sidebar of every screen shows (Sidebar).
 
 ## Ticket List Views
 
@@ -365,8 +393,9 @@ that need attention, among the Tickets that the API returns to the user
 
 ## Contract URLs
 
-The paths of Areas and Screens and `/auth/callback` are part of the contract:
-users bookmark and share them, and changing one changes this document first.
+The paths of Areas and Screens, `/auth/callback`, and the address of a CVE,
+`/cves/{cve_id}`, are part of the contract: users bookmark and share them, and
+changing one changes this document first.
 
 - `/auth/callback` is fixed by Sentinel, which registers it as the address to
   which the identity provider returns the browser (`docs/architecture.md`, Same
@@ -377,6 +406,19 @@ users bookmark and share them, and changing one changes this document first.
   (Sentinel `docs/features/identity/sso-authentication.md`, Status): Sign in
   offers local sign-in only, and the path is reserved: no screen uses it, so
   it shows as missing, like every path that matches no screen.
+- `/cves/{cve_id}`, the address of a CVE, leads to the screen of its Ticket,
+  in place of itself in the browser history (Browser History). Anyone can
+  make it, such as in a message or in another tool, from a CVE ID, which
+  every security tool knows, and the search and a screen that knows only a
+  CVE ID open a Ticket through it. It reads the CVE (Sentinel
+  `docs/features/tickets/cve-tracking.md`, Get CVE), whose `ticket` names its
+  Ticket, and meanwhile shows as the Ticket screen shows while it reads its
+  Ticket, under the heading "Ticket" (`docs/behaviors.md`, Accessibility,
+  Focus after a navigation), which the Ticket screen then keeps without
+  moving the focus again. A CVE that does not exist, one that the user cannot
+  see, and one without a Ticket show as missing alike (`docs/behaviors.md`,
+  Missing and Inaccessible Records); every other failure of the read shows as
+  that of the read of a screen (`docs/behaviors.md`, Where Errors Appear).
 - A Ticket is addressed by its `SNTL-{n}` identifier and a CVE by its CVE ID,
   in the canonical forms that the API uses (Sentinel `docs/api-spec.md`, Ticket
   Identifier Resolution; CVE Identifier Resolution). A user is addressed by
@@ -478,11 +520,11 @@ below only summarizes them.
 
 | Profile | In Sentinel | In the UI |
 |---|---|---|
-| Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the Home |
-| Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
+| Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the All view of the Ticket list |
+| Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages and on the screen of each Ticket of their packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
 | Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
 | Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same rule) | The queue of new Tickets as landing, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
-| Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the fetcher management of Data sources, and the actions of its other capabilities; Ticket work needs an analyst role too. Lands on the Home unless the user also holds an analyst role |
+| Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the user administration of Users, the fetcher management of Fetchers, and the actions of its other capabilities; Ticket work needs an analyst role too. Lands on the All view of the Ticket list unless the user also holds an analyst role |
 
 ### Capabilities of the Signed-in User
 
@@ -499,7 +541,10 @@ which would copy those definitions and that rule (Sentinel
 `docs/features/identity/rbac.md`, Assignment Eligibility Wire Format). The
 UI reads the signed-in user again during a session as `docs/behaviors.md`
 (The Signed-in User) defines, so that a change of the user's roles or bot
-marker reaches an open tab.
+marker reaches an open tab. Users, which reads the complete profiles with
+`manage_users` and the directory otherwise (Areas and Screens), reads again
+when a read of the signed-in user changes `manage_users` (`docs/behaviors.md`,
+Loading).
 
 The capabilities and the assignment eligibility only guide what the UI shows
 (Principles). They grant nothing, and a value read earlier can be out of
