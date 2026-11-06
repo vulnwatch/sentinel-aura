@@ -119,6 +119,24 @@ export async function signIn(page: Page, username = "jdoe") {
   await page.waitForURL(TRIAGERS.has(username) ? "/tickets?view=new" : "/");
 }
 
+// The text of a tab of the views once its count shows: its label, then the
+// number, its thousands grouped (src/components/view-tabs.tsx, Count).
+const COUNTED_VIEW = /\s\d[\d,]*$/;
+
+// Waits until each view of the list that the page shows, among the tabs
+// named "Views" (docs/screens/ticket-list.md, Content), shows its count. The
+// counts arrive after the tabs, and each widens its tab, which moves the tabs
+// and the controls after it (docs/behaviors.md, Loading;
+// docs/design-system.md, Lists): a click on one of them while they arrive can
+// start on it and end beside it, which cancels it. A test calls this before
+// it points at the toolbar of such a list, or at what the counts can move
+// (docs/conventions.md, End-to-End Tests).
+export async function expectViewCounts(page: Page) {
+  const views = page.getByRole("tablist", { name: "Views" }).getByRole("tab");
+  await expect(views.first()).toBeVisible();
+  await expect(views.filter({ hasNotText: COUNTED_VIEW })).toHaveCount(0);
+}
+
 // The avatars that the page shows, which the reference screenshots mask: the
 // dataset does not fix the users' ids, from which the avatars are generated
 // (docs/conventions.md, End-to-End Tests). An avatar is hidden from assistive

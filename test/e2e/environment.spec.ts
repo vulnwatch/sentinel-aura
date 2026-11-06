@@ -1,5 +1,11 @@
 import type { Page } from "@playwright/test";
-import { expect, expectAccessible, test } from "./fixtures";
+import {
+  expect,
+  expectAccessible,
+  expectViewCounts,
+  signIn,
+  test,
+} from "./fixtures";
 
 // A page with one text, in its colors under the light and under the dark color
 // scheme.
@@ -143,5 +149,42 @@ test.describe("the checks of every test", () => {
     expect(await prefersDark(page), "the dark color scheme of the test").toBe(
       true,
     );
+  });
+});
+
+// Whether a request reads the count of the All view of the Ticket list: List
+// Tickets without a filter, with per_page=1 (docs/screens/ticket-list.md,
+// Content).
+function readsAllCount(url: URL): boolean {
+  return url.pathname === "/api/v1/tickets" && url.search === "?per_page=1";
+}
+
+test.describe("the wait for the counts of the views", () => {
+  // On a page without views, as before the list shows them, where no view
+  // lacks its count yet.
+  test("lasts until the views show", async ({ page }) => {
+    await expect(expectViewCounts(page)).rejects.toThrow(/toBeVisible/);
+  });
+
+  test("lasts until each view shows its count", async ({ page }) => {
+    // The count of the All view arrives only once the test lets it through.
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(readsAllCount, async (route) => {
+      await released;
+      await route.continue();
+    });
+    // asmith of the dataset lands on the Ticket list (signIn).
+    await signIn(page, "asmith");
+    const views = page.getByRole("tablist", { name: "Views" }).getByRole("tab");
+    await expect(views.first()).toHaveText(/^New \d+$/);
+
+    await expect(expectViewCounts(page)).rejects.toThrow(/toHaveCount/);
+
+    release();
+    await expectViewCounts(page);
+    await expect(views.filter({ hasText: "All" })).toHaveText(/^All \d+$/);
   });
 });
