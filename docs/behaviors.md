@@ -795,9 +795,9 @@ complete profile and its manager, and the signed-in user alike: `id`,
 - **User card.** While the pointer rests on the link to a user, or the link
   has the keyboard focus, and after a long press on a touch screen, which
   opens it in place of the browser's own menu of the link, a card shows the
-  user's details: the display name, the username, the labels, and,
-  from the user's directory entry, their roles, named as Domain Terms names
-  them, or "No roles", and their email (Sentinel
+  user's details: the display name, the username, the labels, and, from the
+  user's directory entry, their roles, named as Domain Terms names them, or
+  "No roles", and their email (Sentinel
   `docs/features/identity/user-management.md`, Get User). As it opens, the
   card shows what the representation holds, and the roles and the email once
   the read of the entry, sent when the card first opens, arrives; when that
@@ -807,9 +807,10 @@ complete profile and its manager, and the signed-in user alike: `id`,
   labels, and assistive technologies read the card as the link's description
   while it shows; the user's screen shows everything that the card adds. A
   long press moves the focus into the card instead, so that the screen reader
-  of a touch screen reads it, and a tap elsewhere closes it. A tap follows the
-  link. `docs/design-system.md` (Representation of a User)
-  defines how the card looks, when it shows, and when it hides.
+  of a touch screen reads it; a tap elsewhere closes it, and Escape closes it
+  and returns the focus to the link. A tap follows the link.
+  `docs/design-system.md` (Representation of a User) defines how the card
+  looks, when it shows, and when it hides.
 - **Inactive user** (`active` is `false`). The label "Inactive" follows the
   name, and the avatar is gray, so that the compact form shows the state at a
   glance too; in the compact form, the accessible name and the tooltip end

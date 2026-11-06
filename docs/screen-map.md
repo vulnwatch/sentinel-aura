@@ -543,7 +543,8 @@ UI reads the signed-in user again during a session as `docs/behaviors.md`
 (The Signed-in User) defines, so that a change of the user's roles or bot
 marker reaches an open tab. Users, which reads the complete profiles with
 `manage_users` and the directory otherwise (Areas and Screens), reads again
-when such a read changes that capability (`docs/behaviors.md`, Loading).
+when a read of the signed-in user changes `manage_users` (`docs/behaviors.md`,
+Loading).
 
 The capabilities and the assignment eligibility only guide what the UI shows
 (Principles). They grant nothing, and a value read earlier can be out of
