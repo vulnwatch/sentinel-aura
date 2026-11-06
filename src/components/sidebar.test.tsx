@@ -645,15 +645,18 @@ describe("in a window narrower than 1024 px", () => {
     const dialog = screen.getByRole("dialog", { name: "Navigation" });
     await expect.element(dialog).toBeVisible();
     // A navigation that is not from it, such as the browser's Forward.
-    router.history.push("/users");
+    router.history.push("/tickets");
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
     await expect.element(dialog).not.toBeInTheDocument();
 
     router.history.back();
 
-    await expect.poll(() => router.state.location.pathname).toBe(SCREEN);
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toBeVisible();
+    expect(router.state.location.pathname).toBe(SCREEN);
     expect(screen.getByRole("dialog").query()).toBeNull();
   });
 

@@ -84,8 +84,8 @@ Summary).
   (`docs/design-system.md`, Lists). A tab opens its view at its first page,
   without the search, the filters, and the sorting that the user applied, so
   that the list agrees with the count of the tab.
-- Each row links only to its Ticket, `/tickets/{ticket_id}`. Its CVE ID is
-  not a link: the address of the CVE would lead to the same Ticket
+- Each row links to its Ticket, `/tickets/{ticket_id}`. Its CVE ID is not a
+  link: the address of the CVE would lead to the same Ticket
   (`docs/screen-map.md`, Links Between Areas). Each count of the attention
   summary links to the All view refined to its Tickets.
 

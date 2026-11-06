@@ -11,21 +11,20 @@ import { THEME_STORAGE_KEY } from "./theme";
 const root = document.documentElement;
 // The runs of the entry point, which name the URL of each.
 let runs = 0;
-// The URL of the page of the tests, which the application follows.
-let pageUrl: string;
 
 // The application reads the signed-in user as it loads, and shows the screen
 // of the URL of the page: a path that matches no screen, which shows Not
-// found to a signed-in user without reading anything else.
+// found to a signed-in user without reading anything else. The page keeps
+// that URL after the tests, because the application of each run stays
+// mounted, follows the URL of the page, and would leave / for the Ticket
+// list, which reads it; each test file runs in a page of its own.
 beforeEach(() => {
-  pageUrl = window.location.href;
   window.history.replaceState(window.history.state, "", "/fictional/path");
   stubApi(() => jsonResponse(200, FICTIONAL_USER));
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  window.history.replaceState(window.history.state, "", pageUrl);
   window.localStorage.removeItem(THEME_STORAGE_KEY);
   window.localStorage.removeItem(SESSION_RECORD_KEY);
   delete root.dataset.theme;

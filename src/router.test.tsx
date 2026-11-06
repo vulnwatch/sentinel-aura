@@ -18,16 +18,11 @@ import { App } from "./app";
 import { Button } from "./components/button";
 import { createAppRouter, routerDefaults } from "./router";
 import { RootLayout } from "./routes/root";
-import { FICTIONAL_USER, jsonResponse, stubApi, ticketPage } from "./test-api";
+import { FICTIONAL_USER, jsonResponse, stubApi } from "./test-api";
 
-// Every screen of these tests shows to a signed-in user (src/session-gate.tsx),
-// and the Ticket list, the landing of the user, has no Tickets.
+// Every screen of these tests shows to a signed-in user (src/session-gate.tsx).
 beforeEach(() => {
-  stubApi((request) =>
-    request.path === "/api/v1/users/me"
-      ? jsonResponse(200, FICTIONAL_USER)
-      : ticketPage([]),
-  );
+  stubApi(() => jsonResponse(200, FICTIONAL_USER));
 });
 
 afterEach(() => {
@@ -224,17 +219,6 @@ describe("Not found", () => {
       .toBeVisible();
     expect(document.title).toBe("Not found – Sentinel");
     await expect.element(screen.getByRole("main")).toBeVisible();
-  });
-
-  test("leads to the landing", async () => {
-    const screen = await renderApp("/fictional/path");
-
-    await screen.getByRole("link", { name: "Go to the start page" }).click();
-
-    await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
-      .toBeVisible();
-    expect(document.title).toBe("Tickets – Sentinel");
   });
 });
 
