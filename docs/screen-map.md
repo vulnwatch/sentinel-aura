@@ -64,7 +64,9 @@ role and work in Sentinel all day. Their most frequent tasks:
 - follow the deadlines of their Tickets, and chase the maintainers, the SUSE
   maintenance update team (UM), or QA when a delivery is late;
 - manage the confidentiality of embargoed Tickets, their Coordinated Release
-  Dates, and their access grants;
+  Dates, and their access grants, and make a Ticket non-confidential once its
+  Coordinated Release Date has passed, which Sentinel never does by itself
+  (Sentinel `docs/features/tickets/tickets.md`, Coordinated Release Date);
 - create Tickets manually and refetch CVE data.
 
 ### Package Maintainers
@@ -331,16 +333,19 @@ them, as tabs in this order:
 | Analyzed | Status Analyzed | Every user |
 | All | Every status | Every user |
 | Assigned to me | Assigned to the signed-in user, in status Analysis or Analyzed | A user who can be the assignee of a Ticket (Roles) |
+| Embargo | Confidential, in every status: the Tickets under embargo, and those whose Coordinated Release Date has passed, which an analyst has yet to make non-confidential (Sentinel `docs/features/tickets/tickets.md`, Coordinated Release Date; List Tickets) | A user who holds `manage_confidentiality` (Roles) |
 
 - New and Unassigned are the queues of the Tickets that wait for someone to
   take them, which analysts work until they are empty. A line sets them apart
   from the views that follow, which are not expected to be empty
   (`docs/design-system.md`, Lists); Assigned to me is among the views that
-  follow, because its Tickets stay assigned through Analysis and Analyzed.
-  Assigned to me, the only view that not every user is shown, comes last, so
-  that every other view keeps its place for every user, also when a read of
-  the signed-in user adds or removes it during a session (`docs/behaviors.md`,
-  The Signed-in User).
+  follow, because its Tickets stay assigned through Analysis and Analyzed,
+  and so is Embargo, because its Tickets stay confidential until an analyst
+  makes them non-confidential.
+  Assigned to me and Embargo, the views that not every user is shown, come
+  last, in this order, so that every other view keeps its place for every
+  user, also when a read of the signed-in user adds or removes one of them
+  during a session (`docs/behaviors.md`, The Signed-in User).
 - Each tab shows the number of Tickets of its view as this table defines it,
   without the filters and search that the user adds, so that it always shows
   the size of the queue. A view without Tickets keeps its tab and shows an
@@ -354,13 +359,15 @@ them, as tabs in this order:
 
 ### Attention Summary
 
-The Ticket list shows every user, above its views, five counts of the Tickets
-that need attention, among the Tickets that the API returns to the user
-(Roles, Principles):
+The Ticket list shows, above its views and in the order of this table, counts
+of the Tickets that need attention, among the Tickets that the API returns to
+the user (Roles, Principles): Embargo expired to a user who holds
+`manage_confidentiality` (Roles), and the others to every user.
 
 | Count | Tickets |
 |---|---|
 | Active P1 | Effective priority P1, in status New, Analysis, or Analyzed (Sentinel `docs/features/tickets/ticket-priority.md`, Persistence and Effective Priority) |
+| Embargo expired | Confidential, in every status, with a Coordinated Release Date at or before the instant at which Sentinel evaluates the read: the Tickets whose embargo has ended and that an analyst has yet to make non-confidential (Sentinel `docs/features/tickets/tickets.md`, Coordinated Release Date; List Tickets, Embargo filters) |
 | Triage overdue | Current phase Triage, past due: in status New or Analysis, with the triage due date past |
 | Submission overdue | Current phase Submission, past due: a maintainer's submission of the fix is late |
 | UM overdue | Current phase UM, past due: the release request of the SUSE maintenance update team is late |
@@ -375,7 +382,9 @@ that need attention, among the Tickets that the API returns to the user
   `overdue` filters both name that phase (same document, Relation to the
   Overdue Filter).
 - Each count links to the All view of the Ticket list, refined to those
-  Tickets. A count of zero stays.
+  Tickets, except Embargo expired, which links to the Embargo view (Ticket
+  List Views), refined to them, so that the list shows their Coordinated
+  Release Dates. A count of zero stays.
 - A Ticket has one current phase, so the four overdue counts never count the
   same Ticket: a Ticket counts once, under its current phase, even when a
   later phase is past due too, on the same track or on another; the package
@@ -387,6 +396,14 @@ that need attention, among the Tickets that the API returns to the user
   (same document, SLA Tier; Deadline Window; Relation to the Overdue
   Filter). Active P1 measures priority, not time, and can include Tickets of
   the other counts.
+- Embargo expired measures the confidentiality that remains after the
+  Coordinated Release Date, which is not a phase of the remediation, so it is
+  not an overdue count. It can include Tickets of the other counts, such as
+  one whose update is not released by that date, which is also its final
+  release deadline (Sentinel `docs/features/tickets/ticket-deadlines.md`,
+  Deadline Window), and it counts a Ticket in every status, because its
+  confidentiality and its date stay editable in every status (Sentinel
+  `docs/features/tickets/tickets.md`, List Tickets, Embargo filters).
 - A Ticket without a current phase counts in no overdue count: one without an
   SLA, and one in status Analyzed whose remaining work Sentinel cannot
   observe, such as one without a CVE (same document, Rules). A track whose
@@ -490,6 +507,16 @@ changing one changes this document first.
   - the landing (Landing) and the view that the Tickets entry opens
     (Sidebar) follow `triage_ticket`, the capability with which the queue of
     new Tickets is worked;
+  - the Embargo view (Ticket List Views) and the Embargo expired count
+    (Attention Summary) show to a user who holds `manage_confidentiality`,
+    the capability with which the embargoes are worked, such as making a
+    Ticket non-confidential and setting its Coordinated Release Date
+    (Sentinel `docs/features/identity/rbac.md`, Capabilities). List Tickets
+    lists and counts these Tickets without a capability (Sentinel
+    `docs/features/tickets/tickets.md`, List Tickets, Embargo filters), but
+    a user without it can neither make them non-confidential nor set their
+    Coordinated Release Date; the All view still shows them to every user
+    who sees them (The UI shows what the API returns);
   - the Assigned to me view (Ticket List Views) shows to a user who can be
     the assignee of a Ticket: one whose assignment eligibility is `all` or
     `non_confidential`;
@@ -525,7 +552,7 @@ below only summarizes them.
 |---|---|---|
 | Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the All view of the Ticket list |
 | Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages and on the screen of each Ticket of their packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
-| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
+| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, the Embargo view and the Embargo expired count, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
 | Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same rule) | The queue of new Tickets as landing, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
 | Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the user administration of Users, the fetcher management of Fetchers, and the actions of its other capabilities; Ticket work needs an analyst role too. Lands on the All view of the Ticket list unless the user also holds an analyst role |
 

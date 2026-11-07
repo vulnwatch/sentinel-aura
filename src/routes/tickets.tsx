@@ -77,6 +77,7 @@ const QUEUES = [
   "analysis",
   "analyzed",
   "assigned-to-me",
+  "embargo",
 ] as const;
 type Queue = (typeof QUEUES)[number];
 
@@ -122,6 +123,10 @@ const OVERDUE_PHASES = [
   "um",
   "qa",
 ] as const satisfies readonly ListTicketsOverdueItem[];
+// The state of an embargo that the embargo filter of the Embargo view names:
+// expired, a confidential Ticket whose Coordinated Release Date has passed
+// (Sentinel docs/features/tickets/tickets.md, List Tickets, Embargo filters).
+const EMBARGO_STATES = ["expired"] as const;
 
 // The columns by which the user can sort, as the sort search parameter names
 // them.
@@ -131,6 +136,7 @@ const SORT_COLUMNS = [
   "severity",
   "priority",
   "deadline",
+  "coordinated-release-date",
   "last-modified",
 ] as const;
 type SortColumn = (typeof SORT_COLUMNS)[number];
@@ -139,7 +145,10 @@ type SortColumn = (typeof SORT_COLUMNS)[number];
 // which pressing its header first sorts (docs/screens/ticket-list.md): the
 // queues are sorted by priority, by effective priority, P1 first, then by
 // the due date of the current phase, the deadline of the row, earliest first
-// (Sentinel docs/features/tickets/ticket-deadlines.md, Current Due Date).
+// (Sentinel docs/features/tickets/ticket-deadlines.md, Current Due Date), and
+// the embargoes by their Coordinated Release Dates, earliest first, and a
+// Ticket without one last in either direction (Sentinel
+// docs/features/tickets/tickets.md, List Tickets, Embargo filters).
 const SORTING: Record<
   SortColumn,
   { sortBy: TicketSortField; first: SortOrder }
@@ -149,6 +158,10 @@ const SORTING: Record<
   severity: { sortBy: "severity", first: "desc" },
   priority: { sortBy: "priority_then_current_due", first: "desc" },
   deadline: { sortBy: "current_due_at", first: "asc" },
+  "coordinated-release-date": {
+    sortBy: "coordinated_release_at",
+    first: "asc",
+  },
   "last-modified": { sortBy: "updated_at", first: "desc" },
 };
 
@@ -177,6 +190,7 @@ const ticketListParams = z.object({
   view: z.enum(QUEUES).optional().catch(undefined),
   search: searchTermParam,
   status: valueListParam(STATUSES),
+  embargo: valueListParam(EMBARGO_STATES),
   severity: valueListParam(SEVERITIES),
   priority: valueListParam(PRIORITIES),
   phase: valueListParam(PHASES),
@@ -199,6 +213,7 @@ type ColumnId =
   | "severity"
   | "priority"
   | "deadline"
+  | "coordinated-release-date"
   | "assignee"
   | "last-modified";
 
@@ -207,26 +222,57 @@ interface TicketView {
   id: Queue | "all";
   // Its name, the label of its tab.
   name: string;
-  // Whether only a user who can be the assignee of a Ticket sees it.
-  assigneesOnly: boolean;
+  // Whether the user is shown it (docs/screen-map.md, Ticket List Views;
+  // Roles, Principles).
+  shownTo: (user: CurrentUserData) => boolean;
   // Whether each of its Tickets waits for someone to take it: the queues
   // that analysts empty, which a line sets apart from the other views
   // (docs/screen-map.md, Ticket List Views).
   waiting: boolean;
+  // Whether its Tickets have every status, so that the status filter refines
+  // it without replacing the statuses of a queue.
+  everyStatus: boolean;
   // The filters of its Tickets, for the signed-in user.
   filters: (user: CurrentUserData) => ListTicketsParams;
   // Its columns, in their order: a view omits a column whose value it fixes.
   columns: readonly ColumnId[];
   // The column by which its Tickets are sorted until the user sorts them:
-  // the queues by priority, the All view by last modification.
+  // the queues by priority, the All view by last modification, and the
+  // embargoes by their Coordinated Release Dates.
   sort: SortColumn;
+}
+
+function everyUser(): boolean {
+  return true;
+}
+
+// Whether the user can be the assignee of a Ticket, of every Ticket or of
+// the non-confidential ones, as Get Current User reports the outcome of
+// Sentinel's rule, which the UI does not derive (docs/screen-map.md, Roles,
+// Principles; Sentinel docs/features/identity/rbac.md, Assignment
+// Eligibility Wire Format). none, and a value that the pinned contract does
+// not list, admit no Ticket (docs/behaviors.md, Unknown Values).
+function canBeAssignee(user: CurrentUserData): boolean {
+  return (
+    user.assignment_eligibility === "all" ||
+    user.assignment_eligibility === "non_confidential"
+  );
+}
+
+// Whether the user holds manage_confidentiality, the capability with which
+// the embargoes are worked, as Get Current User returns the capabilities
+// (docs/screen-map.md, Roles, Principles; Sentinel
+// docs/features/identity/rbac.md, Capabilities).
+function holdsConfidentiality(user: CurrentUserData): boolean {
+  return user.capabilities.includes("manage_confidentiality");
 }
 
 const ALL_VIEW: TicketView = {
   id: "all",
   name: "All",
-  assigneesOnly: false,
+  shownTo: everyUser,
   waiting: false,
+  everyStatus: true,
   filters: () => ({}),
   columns: [
     "ticket",
@@ -243,14 +289,41 @@ const ALL_VIEW: TicketView = {
   sort: "last-modified",
 };
 
+// The confidential Tickets, in every status, which the users who hold
+// manage_confidentiality make non-confidential once their Coordinated
+// Release Dates have passed (docs/screen-map.md, Ticket List Views; Sentinel
+// docs/features/tickets/tickets.md, Coordinated Release Date; List Tickets,
+// Embargo filters). It follows the embargoes by their dates, so it shows
+// neither their severity, their priority, nor their last modification.
+const EMBARGO_VIEW: TicketView = {
+  id: "embargo",
+  name: "Embargo",
+  shownTo: holdsConfidentiality,
+  waiting: false,
+  everyStatus: true,
+  filters: () => ({ is_confidential: true }),
+  columns: [
+    "ticket",
+    "cve",
+    "title",
+    "packages",
+    "status",
+    "coordinated-release-date",
+    "deadline",
+    "assignee",
+  ],
+  sort: "coordinated-release-date",
+};
+
 // The views, in the order of their tabs (docs/screen-map.md, Ticket List
 // Views).
 const VIEWS: readonly TicketView[] = [
   {
     id: "new",
     name: "New",
-    assigneesOnly: false,
+    shownTo: everyUser,
     waiting: true,
+    everyStatus: false,
     filters: () => ({ status: ["new"] }),
     columns: [
       "ticket",
@@ -266,8 +339,9 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "unassigned",
     name: "Unassigned",
-    assigneesOnly: false,
+    shownTo: everyUser,
     waiting: true,
+    everyStatus: false,
     filters: () => ({ status: ["analysis", "analyzed"], assignee: "none" }),
     columns: [
       "ticket",
@@ -284,8 +358,9 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "analysis",
     name: "Analysis",
-    assigneesOnly: false,
+    shownTo: everyUser,
     waiting: false,
+    everyStatus: false,
     filters: () => ({ status: ["analysis"] }),
     columns: [
       "ticket",
@@ -302,8 +377,9 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "analyzed",
     name: "Analyzed",
-    assigneesOnly: false,
+    shownTo: everyUser,
     waiting: false,
+    everyStatus: false,
     filters: () => ({ status: ["analyzed"] }),
     columns: [
       "ticket",
@@ -321,8 +397,9 @@ const VIEWS: readonly TicketView[] = [
   {
     id: "assigned-to-me",
     name: "Assigned to me",
-    assigneesOnly: true,
+    shownTo: canBeAssignee,
     waiting: false,
+    everyStatus: false,
     // By the user's id, which never changes, unlike the username (Sentinel
     // docs/api-spec.md, User Identifier Resolution).
     filters: (user) => ({
@@ -341,6 +418,7 @@ const VIEWS: readonly TicketView[] = [
     ],
     sort: "priority",
   },
+  EMBARGO_VIEW,
 ];
 
 // The view that the view search parameter names, whoever the user is.
@@ -361,11 +439,12 @@ function sortShownIn(
 
 // The search parameters that the view accepts, in the form that the list
 // gives them (docs/behaviors.md, Invalid Search Parameters): the status
-// filter only in the All view, whose Tickets have every status; the sorting
-// by a column that the view shows, left out when it is the view's own; its
-// order, left out when it is the first direction of the column, and when the
-// list does not accept the sorting; and the page, left out when it is the
-// first. So the same state always gives the same parameters.
+// filter only in a view whose Tickets have every status; the embargo filter
+// only in the Embargo view; the sorting by a column that the view shows,
+// left out when it is the view's own; its order, left out when it is the
+// first direction of the column, and when the list does not accept the
+// sorting; and the page, left out when it is the first. So the same state
+// always gives the same parameters.
 function acceptedInView(
   search: z.output<typeof ticketListParams>,
 ): TicketListSearch {
@@ -375,7 +454,8 @@ function acceptedInView(
   const column = shown ?? view.sort;
   return {
     ...search,
-    status: view === ALL_VIEW ? search.status : undefined,
+    status: view.everyStatus ? search.status : undefined,
+    embargo: view === EMBARGO_VIEW ? search.embargo : undefined,
     sort: shown === view.sort ? undefined : shown,
     order:
       rejected || search.order === SORTING[column].first
@@ -387,23 +467,9 @@ function acceptedInView(
 
 const ticketListSearch = ticketListParams.transform(acceptedInView);
 
-// Whether the user can be the assignee of a Ticket, of every Ticket or of
-// the non-confidential ones, as Get Current User reports the outcome of
-// Sentinel's rule, which the UI does not derive (docs/screen-map.md, Roles,
-// Principles; Sentinel docs/features/identity/rbac.md, Assignment
-// Eligibility Wire Format). none, and a value that the pinned contract does
-// not list, admit no Ticket (docs/behaviors.md, Unknown Values).
-function canBeAssignee(user: CurrentUserData): boolean {
-  return (
-    user.assignment_eligibility === "all" ||
-    user.assignment_eligibility === "non_confidential"
-  );
-}
-
 // The views that the user is shown.
 function viewsOf(user: CurrentUserData): readonly TicketView[] {
-  const assignee = canBeAssignee(user);
-  return VIEWS.filter((view) => assignee || !view.assigneesOnly);
+  return VIEWS.filter((view) => view.shownTo(user));
 }
 
 // The value of the view search parameter of a view.
@@ -449,8 +515,10 @@ function tableSortOf({ column, order }: Sorting): TableSort {
 
 // The search and the filters that the user applied, as List Tickets receives
 // them, and as they read the Tickets of a count of the attention summary.
-// Only the All view accepts the status filter, so it never replaces the
-// statuses of a queue.
+// Only a view whose Tickets have every status accepts the status filter, so
+// it never replaces the statuses of a queue; an expired embargo is a
+// confidential Ticket whose Coordinated Release Date has passed (Sentinel
+// docs/features/tickets/tickets.md, List Tickets, Embargo filters).
 function refinementOf(search: TicketListSearch): ListTicketsParams {
   return {
     search: search.search,
@@ -458,6 +526,8 @@ function refinementOf(search: TicketListSearch): ListTicketsParams {
     priority: search.priority,
     current_phase: search.phase,
     overdue: search.overdue,
+    coordinated_release_passed:
+      search.embargo?.includes("expired") === true ? true : undefined,
     ...(search.status === undefined ? {} : { status: search.status }),
   };
 }
@@ -466,6 +536,7 @@ function refinementOf(search: TicketListSearch): ListTicketsParams {
 function filtersApplied(search: TicketListSearch): number {
   return [
     search.status,
+    search.embargo,
     search.severity,
     search.priority,
     search.phase,
@@ -524,6 +595,10 @@ const OVERDUE_OPTIONS: readonly FilterOption<
   value: phase,
   label: PHASE_NAMES[phase],
 }));
+
+const EMBARGO_OPTIONS: readonly FilterOption<
+  (typeof EMBARGO_STATES)[number]
+>[] = [{ value: "expired", label: "Expired" }];
 
 // The columns of the table, with the cell of each column in a row. The
 // deadline badge compares with now, the instant at which the list's data
@@ -604,6 +679,20 @@ function columnsOf(
       allowsSorting: true,
       render: (row) => <DeadlineBadge ticket={row} now={now} />,
     },
+    // The date and time of the embargo, never the days that remain to it:
+    // the days to a deadline are the only relative value
+    // (docs/behaviors.md, Dates and Times, Display).
+    "coordinated-release-date": {
+      id: "coordinated-release-date",
+      name: "Coordinated Release Date",
+      allowsSorting: true,
+      render: (row) =>
+        row.coordinated_release_at === null ? (
+          <AbsentValue />
+        ) : (
+          <DateTime value={row.coordinated_release_at} />
+        ),
+    },
     assignee: {
       id: "assignee",
       name: "Assignee",
@@ -663,11 +752,20 @@ function resultText(list: TicketListResponse, search: TicketListSearch) {
   return `${COUNT.format(first)}–${COUNT.format(last)} of ${COUNT.format(meta.total)} Tickets`;
 }
 
+// The search parameters of the All view, which opens in place of a view that
+// the user is not shown: the parameters that only that view accepts, such as
+// the embargo filter or a sorting by a column that the All view does not
+// show, leave with it (acceptedInView).
+function acceptedInAllView(search: TicketListSearch): TicketListSearch {
+  return acceptedInView({ ...search, view: undefined });
+}
+
 // Removes from the URL the view that the user is not shown, which opens the
-// All view, as the search parameters that the list does not accept are
-// (ticketListRoute), in place of the URL in the browser history, and keeps
-// the other parameters. The list already shows the All view, so no request
-// carries the view.
+// All view, with the parameters that the All view does not accept, as the
+// search parameters that the list does not accept are (ticketListRoute), in
+// place of the URL in the browser history, and keeps the other parameters.
+// The list already shows the All view with the parameters that it accepts,
+// so no request carries the others.
 function useShownView(search: TicketListSearch, view: TicketView) {
   const navigate = useNavigate();
   const hidden = search.view !== undefined && search.view !== view.id;
@@ -675,7 +773,7 @@ function useShownView(search: TicketListSearch, view: TicketView) {
     if (hidden) {
       void navigate({
         to: "/tickets",
-        search: (previous) => ({ ...previous, view: undefined }),
+        search: acceptedInAllView,
         hash: true,
         replace: true,
       });
@@ -740,8 +838,8 @@ interface AttentionCount {
   // Its label after its number: what it counts, or, among the overdue
   // counts, its phase.
   label: string;
-  // The filters of the All view that hold its Tickets, which the count reads
-  // and to which it links.
+  // The view and the filters that hold its Tickets, the All view unless it
+  // names another, which the count reads and to which it links.
   search: TicketListSearch;
 }
 
@@ -752,6 +850,15 @@ const ACTIVE_P1: AttentionCount = {
   id: "active-p1",
   label: "Active P1",
   search: { status: ["new", "analysis", "analyzed"], priority: ["p1"] },
+};
+
+// The confidential Tickets whose Coordinated Release Date has passed, in
+// every status, which the Embargo view lists with its embargo filter, with
+// their dates (docs/screen-map.md, Attention Summary).
+const EMBARGO_EXPIRED: AttentionCount = {
+  id: "embargo-expired",
+  label: "Embargo expired",
+  search: { view: "embargo", embargo: ["expired"] },
 };
 
 // The Tickets whose current phase is past due, a count for each phase, in
@@ -767,6 +874,7 @@ const OVERDUE_COUNTS: readonly AttentionCount[] = OVERDUE_PHASES.map(
 );
 
 interface AttentionCountLinkProps {
+  user: CurrentUserData;
   count: AttentionCount;
   // The name of its group, which assistive technologies read after its
   // label (CountLink).
@@ -775,12 +883,22 @@ interface AttentionCountLinkProps {
   listFetching: boolean;
 }
 
+// A count of the attention summary, which reads the Tickets of its view with
+// its filters, so that it counts the rows of the list to which it links.
 function AttentionCountLink({
+  user,
   count,
   groupName,
   listFetching,
 }: AttentionCountLinkProps) {
-  const read = useTicketCount(refinementOf(count.search), false, listFetching);
+  const read = useTicketCount(
+    {
+      ...viewNamed(count.search.view).filters(user),
+      ...refinementOf(count.search),
+    },
+    false,
+    listFetching,
+  );
   return (
     <CountLink
       label={count.label}
@@ -792,31 +910,55 @@ function AttentionCountLink({
 }
 
 interface AttentionSummaryProps {
+  user: CurrentUserData;
   // Whether the screen reads its list.
   listFetching: boolean;
 }
 
-// The attention summary of every user, in the heading row after the heading:
-// five counts of the Tickets that List Tickets returns to the user, each a
-// link to the All view refined to its Tickets (docs/screen-map.md, Attention
-// Summary; docs/design-system.md, Lists). Active P1 measures priority, and
-// the four overdue counts, which never count the same Ticket, form a group
-// after it: a vertical line, the name "Overdue", and the counts, 8 px apart,
-// each showing its phase, as "1 Triage", and read whole, as "1 Triage
-// overdue". The line and the name are hidden from assistive technologies,
-// which read the name with each count. The group wraps to the next line as a
-// whole, and its counts after its name when it is wider than its line.
-function AttentionSummary({ listFetching }: AttentionSummaryProps) {
+// The attention summary, in the heading row after the heading: counts of the
+// Tickets that List Tickets returns to the user, each a link to the list
+// refined to its Tickets (docs/screen-map.md, Attention Summary;
+// docs/design-system.md, Lists). Active P1 measures priority, and Embargo
+// expired, for a user who holds manage_confidentiality, the confidentiality
+// that remains after the Coordinated Release Date; each stands alone, 8 px
+// apart. The four overdue counts, which never count the same Ticket, form a
+// group after them: a vertical line, 12 px from the count before it and from
+// the name "Overdue", and the counts, 8 px apart, each showing its phase, as
+// "1 Triage", and read whole, as "1 Triage overdue". The line and the name
+// are hidden from assistive technologies, which read the name with each
+// count. The group wraps to the next line as a whole, where its line stands
+// 4 px after the start of the row, as the line of the views does, and its
+// counts after its name when it is wider than its line. When Embargo expired
+// leaves the page while it holds the focus, because a read of the signed-in
+// user tells that the user no longer holds the capability, the focus moves to
+// the screen's heading (docs/behaviors.md, Accessibility, Focus after an
+// action).
+function AttentionSummary({ user, listFetching }: AttentionSummaryProps) {
   return (
     <ul
       aria-label="Tickets that need attention"
-      className="flex flex-wrap items-start gap-y-2"
+      className="flex flex-wrap items-start gap-x-2 gap-y-2"
     >
       <li>
-        <AttentionCountLink count={ACTIVE_P1} listFetching={listFetching} />
+        <AttentionCountLink
+          user={user}
+          count={ACTIVE_P1}
+          listFetching={listFetching}
+        />
       </li>
+      {holdsConfidentiality(user) && (
+        <li>
+          <FocusHandOff>
+            <AttentionCountLink
+              user={user}
+              count={EMBARGO_EXPIRED}
+              listFetching={listFetching}
+            />
+          </FocusHandOff>
+        </li>
+      )}
       <li className="flex items-start">
-        <span aria-hidden className="flex h-8 items-center px-3">
+        <span aria-hidden className="flex h-8 items-center ps-1 pe-3">
           <span className="h-5 w-px bg-border" />
         </span>
         <span
@@ -829,6 +971,7 @@ function AttentionSummary({ listFetching }: AttentionSummaryProps) {
           {OVERDUE_COUNTS.map((count) => (
             <li key={count.id}>
               <AttentionCountLink
+                user={user}
                 count={count}
                 groupName="overdue"
                 listFetching={listFetching}
@@ -881,14 +1024,16 @@ interface TicketListProps {
 }
 
 function TicketList({ user }: TicketListProps) {
-  const search = ticketListRoute.useSearch();
+  const url = ticketListRoute.useSearch();
   const navigate = useNavigate();
   const views = viewsOf(user);
   // A view that the user is not shown counts as absent, and opens the All
-  // view (docs/screen-map.md, Ticket List Views).
-  const view = views.find((shown) => shown.id === search.view) ?? ALL_VIEW;
+  // view (docs/screen-map.md, Ticket List Views), with the parameters that
+  // the All view accepts.
+  const view = views.find((shown) => shown.id === url.view) ?? ALL_VIEW;
+  const search = url.view === searchOf(view) ? url : acceptedInAllView(url);
   const page = search.page ?? 1;
-  useShownView(search, view);
+  useShownView(url, view);
   const sorting = sortingOf(search, view);
   const refined = refinedBy(search);
 
@@ -988,7 +1133,7 @@ function TicketList({ user }: TicketListProps) {
         <>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <ScreenHeading>Tickets</ScreenHeading>
-            <AttentionSummary listFetching={list.isFetching} />
+            <AttentionSummary user={user} listFetching={list.isFetching} />
           </div>
           <div className="mt-4">
             <ViewTabs
@@ -1023,13 +1168,23 @@ function TicketList({ user }: TicketListProps) {
                     applied={filtersApplied(search)}
                     status={<span key={key}>{filtersStatus}</span>}
                   >
-                    {view === ALL_VIEW && (
+                    {view.everyStatus && (
                       <FilterGroup
                         label="Status"
                         options={STATUS_OPTIONS}
                         selected={search.status ?? []}
                         onChange={(values) => {
                           refine({ status: values });
+                        }}
+                      />
+                    )}
+                    {view === EMBARGO_VIEW && (
+                      <FilterGroup
+                        label="Embargo"
+                        options={EMBARGO_OPTIONS}
+                        selected={search.embargo ?? []}
+                        onChange={(values) => {
+                          refine({ embargo: values });
                         }}
                       />
                     )}

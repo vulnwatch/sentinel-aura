@@ -17,8 +17,10 @@ sorting of its columns. It is the landing of every user. Vulnerability and
 restricted analysts work their queues in it, starting from the queue of new
 Tickets; every other user finds a Ticket in it, starting from all of them.
 The attention summary above the views shows every user the Tickets that need
-attention (`docs/screen-map.md`, Users and Frequent Tasks; Landing; Attention
-Summary).
+attention. The analysts who hold `manage_confidentiality` also follow the
+embargoes in the Embargo view, and the summary counts for them those whose
+Coordinated Release Date has passed (`docs/screen-map.md`, Users and Frequent
+Tasks; Landing; Ticket List Views; Attention Summary).
 
 ## Access
 
@@ -28,12 +30,16 @@ Summary).
   (Sentinel `docs/features/tickets/tickets.md`, List Tickets; Sentinel
   `docs/features/identity/rbac.md`, Scope and Confidential Ticket
   Visibility).
-- The Assigned to me view shows only to a user who can be the assignee of a
-  Ticket: one whose `assignment_eligibility`, as Get Current User returns it,
-  is `all` or `non_confidential` (Sentinel
-  `docs/features/identity/authentication.md`, Get Current User; Sentinel
-  `docs/features/identity/rbac.md`, Assignment Eligibility Wire Format;
-  `docs/screen-map.md`, Roles, Principles).
+- Two views, and one count of the attention summary, show only to some users,
+  as Get Current User describes them (Sentinel
+  `docs/features/identity/authentication.md`, Get Current User;
+  `docs/screen-map.md`, Roles, Principles):
+  - Assigned to me, to a user who can be the assignee of a Ticket: one whose
+    `assignment_eligibility` is `all` or `non_confidential` (Sentinel
+    `docs/features/identity/rbac.md`, Assignment Eligibility Wire Format);
+  - Embargo and the Embargo expired count, to a user whose `capabilities`
+    include `manage_confidentiality` (Sentinel
+    `docs/features/identity/rbac.md`, Capabilities).
 
 ## Navigation
 
@@ -43,14 +49,15 @@ Summary).
 
   | Parameter | Values | Without it |
   |---|---|---|
-  | `view` | `new`, `unassigned`, `analysis`, `analyzed`, `assigned-to-me` | The All view |
+  | `view` | `new`, `unassigned`, `analysis`, `analyzed`, `assigned-to-me`, `embargo` | The All view |
   | `search` | The search term, at most 500 characters, without surrounding whitespace and without U+0000, which Sentinel rejects (Sentinel `docs/api-spec.md`, Query Parameter Length Limit; Inadmissible Characters in Request Input) | No search |
-  | `status` | One or more of `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`, in the All view only | No filter by status |
+  | `status` | One or more of `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`, in the All and Embargo views only | No filter by status |
+  | `embargo` | `expired`, in the Embargo view only: a Coordinated Release Date that has passed | No filter by embargo |
   | `severity` | One or more of `critical`, `high`, `medium`, `low`, `none`, `unresolved` | No filter by severity |
   | `priority` | One or more of `p1`, `p2`, `p3`, `p4`, `unresolved` | No filter by priority |
   | `phase` | One or more of `triage`, `submission`, `um`, `qa`, `done`: the current phase | No filter by current phase |
   | `overdue` | One or more of `triage`, `submission`, `um`, `qa`: the phases whose milestones are past due | No filter by overdue phase |
-  | `sort` | `ticket`, `status`, `severity`, `priority`, `deadline`, `last-modified`: a sortable column that the view shows | The sorting of the view |
+  | `sort` | `ticket`, `status`, `severity`, `priority`, `deadline`, `coordinated-release-date`, `last-modified`: a sortable column that the view shows | The sorting of the view |
   | `order` | `asc` or `desc` | The first direction of the column |
   | `page` | A whole number from 1 to 2147483647, the largest page that Sentinel accepts (Sentinel `docs/api-spec.md`, Pagination) | The first page |
 
@@ -61,18 +68,20 @@ Summary).
   parameter other than a filter that the URL gives more than once are
   removed from the URL in place of the URL in the browser history, before the
   list reads anything (`docs/behaviors.md`, Invalid Search Parameters). So
-  are a status filter outside the All view, whose statuses the view fixes,
-  and a sorting that the list does not accept, such as by a column that the
-  view does not show, with its order. A filter keeps the values that it
-  knows, once each, in the order of the table above, a search term loses its
-  surrounding whitespace, and a parameter that names the value of the last
-  column, such as `page=1`, is left out, all in place of the URL in the
-  browser history. A user who is not shown Assigned to me sees the All view
-  for `view=assigned-to-me`, and the list removes the parameter in the same
-  way once it knows the user, also when a read of the signed-in user tells
-  during the session that the user can no longer be the assignee of a Ticket
-  (`docs/behaviors.md`, The Signed-in User); no request carries it. The other
-  parameters and the fragment stay.
+  are a status filter in a view whose statuses its filters fix, an embargo
+  filter outside the Embargo view, and a sorting that the list does not
+  accept, such as by a column that the view does not show, with its order. A
+  filter keeps the values that it knows, once each, in the order of the
+  table above, a search term loses its surrounding whitespace, and a
+  parameter that names the value of the last column, such as `page=1`, is
+  left out, all in place of the URL in the browser history. A user who is
+  not shown a view, Assigned to me or Embargo (Access), sees the All view for
+  its `view`, and the list removes that parameter in the same way once it
+  knows the user, with those that the All view does not accept, such as the
+  embargo filter or a sorting by Coordinated Release Date, also when a read
+  of the signed-in user tells during the session that the user is no longer
+  shown the view (`docs/behaviors.md`, The Signed-in User); no request
+  carries them. The other parameters and the fragment stay.
 - The Tickets entry of the sidebar and `/`, the landing, lead to
   `/tickets?view=new` for a user who holds `triage_ticket`, and to `/tickets`
   for every other user. `/` leads there in place of itself in the browser
@@ -87,25 +96,29 @@ Summary).
 - Each row links to its Ticket, `/tickets/{ticket_id}`. Its CVE ID is not a
   link: the address of the CVE would lead to the same Ticket
   (`docs/screen-map.md`, Links Between Areas). Each count of the attention
-  summary links to the All view refined to its Tickets.
+  summary links to the list refined to its Tickets: Embargo expired to the
+  Embargo view, every other count to the All view.
 
 ## Content
 
 - The heading "Tickets", and the page title "Tickets – Sentinel".
 - **Attention summary**, in the heading row after the heading, named
-  "Tickets that need attention" for assistive technologies: the five counts
-  of `docs/screen-map.md` (Attention Summary), in this order, each read from
+  "Tickets that need attention" for assistive technologies: the counts of
+  `docs/screen-map.md` (Attention Summary), in this order, Embargo expired
+  only for a user who holds `manage_confidentiality` (Access), each read from
   List Tickets, `GET /api/v1/tickets`, with its filters and `per_page=1`, as
   `meta.total`, so that it counts the Tickets that the user sees, and each a
-  link to the All view with the same filters.
-  Active P1 measures priority, and the four overdue counts, which never count
-  the same Ticket, form the group "Overdue" after it (`docs/design-system.md`,
-  Lists): each shows its phase, as "1 Triage", and is read with the name of
-  the group, as "1 Triage overdue".
+  link to the view of its Tickets with the same filters, so that the count
+  and the rows agree.
+  Active P1 and Embargo expired stand alone, and the four overdue counts,
+  which never count the same Ticket, form the group "Overdue" after them
+  (`docs/design-system.md`, Lists): each shows its phase, as "1 Triage", and
+  is read with the name of the group, as "1 Triage overdue".
 
   | Count | Filters of List Tickets | Link |
   |---|---|---|
   | Active P1 | `priority=p1`, `status=new`, `status=analysis`, `status=analyzed` | `/tickets?status=new&status=analysis&status=analyzed&priority=p1` |
+  | Embargo expired | `is_confidential=true`, `coordinated_release_passed=true` | `/tickets?view=embargo&embargo=expired` |
   | Triage overdue | `current_phase=triage`, `overdue=triage` | `/tickets?phase=triage&overdue=triage` |
   | Submission overdue | `current_phase=submission`, `overdue=submission` | `/tickets?phase=submission&overdue=submission` |
   | UM overdue | `current_phase=um`, `overdue=um` | `/tickets?phase=um&overdue=um` |
@@ -136,7 +149,8 @@ Summary).
 
   | Filter | Values | Of List Tickets |
   |---|---|---|
-  | Status, in the All view only | New, Analysis, Analyzed, Resolved, Ignored, Duplicated, each with its mark | `status` (Sentinel `docs/features/tickets/tickets.md`, Statuses) |
+  | Status, in the All and Embargo views only | New, Analysis, Analyzed, Resolved, Ignored, Duplicated, each with its mark | `status` (Sentinel `docs/features/tickets/tickets.md`, Statuses) |
+  | Embargo, in the Embargo view only | Expired | `coordinated_release_passed=true`: a confidential Ticket whose Coordinated Release Date is at or before the instant at which Sentinel evaluates the read (Sentinel `docs/features/tickets/tickets.md`, List Tickets, Embargo filters) |
   | Severity | Critical, High, Medium, Low, None, each with its mark, and Not set for a Ticket without a severity | `severity`, with `unresolved` for Not set |
   | Priority | P1, P2, P3, P4, each with its mark, and Not set for a Ticket that is not yet prioritizable | `priority`, the effective priority, with `unresolved` for Not set (Sentinel `docs/features/tickets/ticket-priority.md`, Persistence and Effective Priority) |
   | Current phase | Triage, Submission, UM, QA, Done | `current_phase`; a Ticket without a current phase matches none (Sentinel `docs/features/tickets/ticket-deadlines.md`, Current Phase Filter) |
@@ -160,9 +174,13 @@ Summary).
 | Analyzed | `status=analyzed` | Priority, then deadline | Ticket, CVE, Title, Packages, Severity, Priority, Deadline, Assignee |
 | All | None | Last modified | Ticket, CVE, Title, Packages, Status, Severity, Priority, Deadline, Assignee, Last modified |
 | Assigned to me | `assignee` with the `id` of the signed-in user, `status=analysis`, `status=analyzed` | Priority, then deadline | Ticket, CVE, Title, Packages, Status, Severity, Priority, Deadline |
+| Embargo | `is_confidential=true` | Coordinated Release Date | Ticket, CVE, Title, Packages, Status, Coordinated Release Date, Deadline, Assignee |
 
 - A view omits a column whose value its filters fix: Status where the view
   has one status, Assignee where it has none or only the signed-in user.
+  Embargo, which follows the embargoes by their dates, also omits Severity,
+  Priority, and Last modified; the severity and priority filters still
+  refine it.
 - Assigned to me filters by the user's `id`, which never changes, rather than
   by the username (Sentinel `docs/api-spec.md`, User Identifier Resolution).
 - **Sorting.** The user sorts by these columns by pressing their headers
@@ -176,6 +194,7 @@ Summary).
   | Severity | `severity`, from Critical to None, and a Ticket without one last | Descending |
   | Priority | `priority_then_current_due` | Descending |
   | Deadline | `current_due_at` | Ascending, the earliest first |
+  | Coordinated Release Date | `coordinated_release_at` | Ascending, the earliest first |
   | Last modified | `updated_at` | Descending, the most recent first |
 
   The CVE, Title, Packages, and Assignee columns are not sortable. Priority,
@@ -194,7 +213,12 @@ Summary).
   Deterministic Pagination Ordering), which is a UUIDv7 (Sentinel
   `docs/features/tickets/tickets.md`, Ticket Identification), so the newest
   Ticket comes first when descending. Last modified, the sorting of the All
-  view, is `updated_at` descending, the most recent first.
+  view, is `updated_at` descending, the most recent first. Coordinated
+  Release Date, the sorting of the Embargo view, is `coordinated_release_at`
+  ascending: the dates that have passed first, then the nearest, and a
+  Ticket without a date last in either direction (Sentinel
+  `docs/features/tickets/tickets.md`, List Tickets, Embargo filters; Sentinel
+  `docs/api-spec.md`, Nullable Sort Field Ordering).
 - **Ticket**: the identifier, which names the row, as a link to the Ticket at
   weight 500, followed by `lock` when the Ticket is confidential
   (`docs/design-system.md`, Tables; Confidential Tickets).
@@ -219,6 +243,14 @@ Summary).
 - **Deadline**: the deadline badge (`docs/behaviors.md`, Deadlines), which
   compares the dates with the instant at which the data of the list arrived,
   the same for every row. A Ticket without a deadline leaves the place empty.
+- **Coordinated Release Date**: `coordinated_release_at`, as a date and time
+  (`docs/behaviors.md`, Display), not as the days that remain to it, which
+  only a deadline shows; or an absent value for a confidential Ticket without
+  one. When an SLA applies to a Ticket with a date, its deadlines divide the
+  window up to that date, and its QA deadline is that date (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, Deadline Window; Coordinated
+  Release Window; Null Due Dates), so the Deadline column shows how the
+  remediation keeps to the embargo.
 - **Assignee**: the user in the full form at the small size
   (`docs/behaviors.md`, Representation of a User), or "Unassigned", the
   precise name of the absence (`docs/behaviors.md`, Absent Values).
@@ -258,12 +290,12 @@ Summary).
   the popover of Filters is open, it announces the same itself
   (`docs/design-system.md`, Lists).
 - **The focus.** When the rows, the table without rows, the action of an
-  empty state, the pagination, a tab, or Clear filters leaves the page while
-  it holds the focus, such as "Go to the first page" once the rows arrive,
-  the pagination when an error takes the place of the rows, Clear filters
-  once it removed the search and the filters, or Assigned to me when a read
-  of the signed-in user tells that the user can no longer be the assignee of
-  a Ticket, the focus moves to the screen's heading (`docs/behaviors.md`,
+  empty state, the pagination, a tab, a count of the attention summary, or
+  Clear filters leaves the page while it holds the focus, such as "Go to the
+  first page" once the rows arrive, the pagination when an error takes the
+  place of the rows, Clear filters once it removed the search and the
+  filters, or a tab or a count that a read of the signed-in user removes
+  (Access), the focus moves to the screen's heading (`docs/behaviors.md`,
   Accessibility, Focus after an action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
   page. A view that the user refined without Tickets that match says "No
@@ -300,17 +332,19 @@ Summary).
   Links; Lists; Tables; Forms; Loading; Empty States; Errors in Place of
   Content; Menus, Popovers, and Tooltips
 - Sentinel `docs/features/tickets/tickets.md` — Ticket Identification;
-  Search; Statuses; Confidential Tickets; TicketSummary; List Tickets;
-  Reassignment
+  Search; Statuses; Confidential Tickets (Coordinated Release Date);
+  TicketSummary; List Tickets (Embargo filters); Reassignment
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Persistence and Effective Priority
-- Sentinel `docs/features/tickets/ticket-deadlines.md` — Ticket-Level Overdue
+- Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Deadline
+  Window; Coordinated Release Window; Null Due Dates); Ticket-Level Overdue
   Filter; Ticket Current Phase (Relation to the Overdue Filter; Current Phase
   Filter); Sorting, Current Due Date
 - Sentinel `docs/features/identity/authentication.md` — Get Current User
-- Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
-  Visibility; Assignment Eligibility Wire Format
+- Sentinel `docs/features/identity/rbac.md` — Capabilities; Scope and
+  Confidential Ticket Visibility; Assignment Eligibility Wire Format
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Pagination; Filtering; Enum Filter
-  Validation; Sorting; User Identifier Resolution
+  Validation; Sorting (Nullable Sort Field Ordering); User Identifier
+  Resolution

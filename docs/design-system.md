@@ -766,7 +766,9 @@ A list screen, such as the Ticket list, shows from top to bottom:
    apart, such as "1 Triage". The line and the name are hidden from assistive
    technologies, which read the name of the group after the label of each
    count, as "1 Triage overdue". The group wraps to the next line as a whole,
-   and its counts wrap after its name when it is wider than its line.
+   where its line stands 4 px after the start of the row, as the line of the
+   views does (item 2), and its counts wrap after its name when it is wider
+   than its line.
 2. The toolbar, 16 px below: the views (`docs/screen-map.md`, Ticket List
    Views) as tabs 32 px high with a `border` line and a 6 px radius, each its
    label followed by its count; the selected tab has a `border-strong`

@@ -81,8 +81,9 @@ test.describe("for an analyst", () => {
   test("lands on the New view, sorted by priority, then deadline, with the counts of the views", async ({
     page,
   }) => {
-    // asmith holds the vulnerability_analyst role, sees every Ticket, and can
-    // be the assignee of every Ticket.
+    // asmith holds the vulnerability_analyst role, with
+    // manage_confidentiality, sees every Ticket, and can be the assignee of
+    // every Ticket; SNTL-18, SNTL-19, and SNTL-27 are confidential (Tickets).
     await signIn(page, "asmith");
 
     await expect(
@@ -96,6 +97,7 @@ test.describe("for an analyst", () => {
       "Analyzed 4",
       "All 27",
       "Assigned to me 5",
+      "Embargo 3",
     ]);
     await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
     // P1, P2, P3, P4, and the Ticket without a priority last (Sentinel
@@ -194,6 +196,60 @@ test.describe("for an analyst", () => {
     await expect(
       table(page).getByRole("row", { name: /SNTL-27/ }),
     ).toContainText("QA -3d");
+  });
+
+  test("shows the embargoes by their Coordinated Release Dates, the earliest first", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await expectViewCounts(page);
+
+    await views(page).filter({ hasText: "Embargo" }).click();
+
+    await expect(page).toHaveURL("/tickets?view=embargo");
+    // SNTL-27, whose embargo expired at T − 2d, then SNTL-18, which runs
+    // until T + 14d, and SNTL-19, without a Coordinated Release Date, last
+    // (Embargoes; Sentinel docs/features/tickets/tickets.md, List Tickets,
+    // Embargo filters).
+    await expect(identifiers(page)).toHaveText([
+      "SNTL-27",
+      "SNTL-18",
+      "SNTL-19",
+    ]);
+    const release = table(page).getByRole("columnheader", {
+      name: "Coordinated Release Date",
+    });
+    await expect(release).toHaveAttribute("aria-sort", "ascending");
+    // The cell of the date, after the CVE, the title, the packages, and the
+    // status: a date and time, which the dataset computes from its load, or
+    // an absent value.
+    const releaseOf = (ticket: string) =>
+      table(page)
+        .getByRole("row", { name: new RegExp(`${ticket}\\b`) })
+        .getByRole("gridcell")
+        .nth(4);
+    for (const ticket of ["SNTL-27", "SNTL-18"]) {
+      await expect(releaseOf(ticket)).toHaveText(
+        /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/,
+      );
+    }
+    await expect(releaseOf("SNTL-19")).toHaveText("–Not set");
+    await expectAccessible(page);
+    await pointerAway(page);
+
+    await expect(page).toHaveScreenshot(
+      "ticket-list-embargo.png",
+      masked(page),
+    );
+
+    // The latest first, and still SNTL-19, without a date, last.
+    await release.click();
+    await expect(page).toHaveURL("/tickets?view=embargo&order=desc");
+    await expect(identifiers(page)).toHaveText([
+      "SNTL-18",
+      "SNTL-27",
+      "SNTL-19",
+    ]);
   });
 
   test("shows the Tickets awaiting an assignee", async ({ page }) => {
@@ -321,7 +377,7 @@ test.describe("for an analyst", () => {
 });
 
 test.describe("refined by an analyst", () => {
-  test("shows the attention summary, whose counts open the All view refined to their Tickets", async ({
+  test("shows the attention summary, whose counts open the All view, or the Embargo view, refined to their Tickets", async ({
     page,
   }) => {
     await signIn(page, "asmith");
@@ -332,9 +388,11 @@ test.describe("refined by an analyst", () => {
 
     // Right after a load, the aged Tickets are the only ones past due, each
     // in its current phase: SNTL-26 and SNTL-27 in QA, and one in each other
-    // phase (Aged Tickets).
+    // phase (Aged Tickets). The embargo of SNTL-27 has expired too, and
+    // asmith holds manage_confidentiality (Embargoes).
     await expect(attention(page)).toHaveText([
       `${active.length} Active P1`,
+      "1 Embargo expired",
       "1 Triage overdue",
       "1 Submission overdue",
       "1 UM overdue",
@@ -367,6 +425,15 @@ test.describe("refined by an analyst", () => {
       "/tickets?status=new&status=analysis&status=analyzed&priority=p1",
     );
     await expect(identifiers(page)).toHaveCount(active.length);
+
+    // The Embargo view, refined to the embargoes that have expired.
+    await attention(page).filter({ hasText: "Embargo expired" }).click();
+    await expect(page).toHaveURL("/tickets?view=embargo&embargo=expired");
+    await expect(identifiers(page)).toHaveText(["SNTL-27"]);
+    await expect(views(page).filter({ hasText: "Embargo" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   test("searches the Tickets, and tells when none match", async ({ page }) => {
