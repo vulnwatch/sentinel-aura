@@ -1383,7 +1383,9 @@ describe("the table", () => {
             um_due_at: due(7),
             qa_due_at: release.toISOString(),
             release_due_at: release.toISOString(),
+            // In QA on the track of its package.
             current_phase: "qa",
+            package_names: ["fictional-bind"],
           }),
           fictionalTicket({ ticket_id: "SNTL-19", is_confidential: true }),
         ]),
