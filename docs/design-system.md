@@ -675,11 +675,15 @@ Sentinel `docs/features/tickets/ticket-priority.md`, Automatic Priority Basis;
 API Surface). It needs no copy of the Decision Table or of the threshold of
 the EPSS percentile, which Sentinel states for itself.
 
-- The button is the priority as above, 24 px high and at least 24 px wide,
-  with 4 px of side padding and a 4 px radius, on `neutral-soft` under the
-  pointer and while its popover is open. A click, a tap, Enter, or Space
-  opens the popover, so that it works on a touch screen too, and the popover
-  stays until the user closes it.
+- In a table, the whole cell of the priority is the button, so that the cell,
+  which takes the focus in turn as the arrow keys move in the table, holds no
+  smaller target beside it (WCAG 2.2, 2.5.8 Target Size (Minimum)). The
+  priority shows in it as above, in a box 24 px high and at least 24 px wide,
+  with 4 px of side padding and a 4 px radius, on `neutral-soft` while the
+  pointer is over the cell and while the popover is open, with the focus ring
+  around the box. A click, a tap, Enter, or Space opens the popover, so that
+  it works on a touch screen too, and the popover stays until the user closes
+  it.
 - The popover (Menus, Popovers, and Tooltips) is 288 px wide, with 16 px of
   padding, in `text-14`. It opens below the priority, aligned to its start,
   or above it where the window has no room below, and moves toward the start
