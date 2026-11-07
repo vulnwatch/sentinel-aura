@@ -1,5 +1,12 @@
-import type { QueryClient } from "@tanstack/react-query";
-import { createMemoryHistory } from "@tanstack/react-router";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
@@ -11,9 +18,11 @@ import {
   FICTIONAL_USER,
   jsonResponse,
   OTHER_USER,
+  requestsTo,
   stubApi,
   ticketPage,
 } from "../test-api";
+import { LandingRedirect } from "./landing";
 
 // The landing, to which / leads (docs/screen-map.md, Landing): the Ticket
 // list in its New view for a user who holds triage_ticket, and in its All
@@ -96,4 +105,41 @@ describe.each([
     expect(router.state.location.href).toBe(landing);
     expect(router.history.length).toBe(1);
   });
+});
+
+// While the session ends, the read of the signed-in user is discarded before
+// the screen leaves the page (src/session-gate.tsx, useSignedInUser): / then
+// knows no landing, shows nothing, and leads nowhere, and it never reads the
+// signed-in user itself.
+test("shows nothing and leads nowhere while no signed-in user is known", async () => {
+  const fetch = stubApi(() => jsonResponse(200, FICTIONAL_USER));
+  const root = createRootRoute({ component: Outlet });
+  const landing = createRoute({
+    getParentRoute: () => root,
+    path: "/",
+    component: LandingRedirect,
+  });
+  const tickets = createRoute({
+    getParentRoute: () => root,
+    path: "/tickets",
+    component: () => <h1>Tickets</h1>,
+  });
+  const router = createRouter({
+    routeTree: root.addChildren([landing, tickets]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  const screen = await render(
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+
+  await expect.poll(() => router.state.resolvedLocation?.href).toBe("/");
+  // Long enough for a navigation that the screen would start.
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+  expect(router.state.location.href).toBe("/");
+  expect(screen.container.textContent).toBe("");
+  expect(requestsTo(fetch, ME)).toBe(0);
 });
