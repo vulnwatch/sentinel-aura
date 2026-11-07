@@ -12,7 +12,7 @@ import {
 // The Ticket list (docs/screens/ticket-list.md), against a backend loaded
 // with Sentinel's example dataset, whose Tickets, users, and roles the tests
 // rely on as loaded (Sentinel docs/features/platform/example-dataset.md,
-// Users; CVEs; Tickets; Priorities; Aged Tickets; Embargoes).
+// Users; CVEs; Tickets; Aged Tickets; Embargoes; Priorities).
 
 // The counts of the attention summary.
 function attention(page: Page) {
