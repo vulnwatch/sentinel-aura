@@ -14,15 +14,18 @@ import type {
   SSVCExploitationEvidenceValue,
   SSVCExploitationPriorityEvidence,
 } from "../api/generated/model";
-import { formatDate } from "./date-time";
+import { AbsentValue } from "./absent-value";
+import { DateTime, formatDate } from "./date-time";
 import { FOCUS_RING } from "./focus-ring";
 import { Priority, priorityName } from "./priority";
 import { focusScreenHeading } from "./screen-heading";
 import { Severity } from "./severity";
+import { User, type UserFields } from "./user";
 
 // The explanation of the priority of a Ticket (docs/design-system.md,
 // Priority, Explanation): whether the effective priority is automatic or an
-// override, and what the automatic priority is based on.
+// override, who set an override and when, and what the automatic priority is
+// based on.
 
 // A piece of deciding evidence of a kind that the pinned contract lists, with
 // its value (Sentinel docs/features/tickets/tickets.md, PriorityEvidence).
@@ -44,11 +47,16 @@ type Evidence = ListedEvidence | { kind: string; value?: unknown };
 // docs/features/tickets/tickets.md, PriorityBasis; PriorityEvidence; Sentinel
 // docs/features/tickets/ticket-priority.md, Automatic Priority Basis). The
 // values of their enums take every string, as a later Sentinel release can
-// return another.
+// return another. The user who set the override and the time at which they
+// set it are its provenance, which Sentinel returns exactly when an override
+// is set (Sentinel docs/features/tickets/ticket-priority.md, Persistence and
+// Effective Priority).
 export interface PriorityFields {
   priority: string | null;
   priority_automatic: string | null;
   priority_override: string | null;
+  priority_override_by: UserFields | null;
+  priority_override_at: string | null;
   priority_automatic_basis: {
     severity: string | null;
     exploitation: string;
@@ -122,10 +130,47 @@ interface ExplanationProps {
   isOverride: boolean;
 }
 
-// The content of the explanation: its title, which names it, a border line
-// 12 px below it and 12 px above the sections, then the section of the basis
-// and the section of the evidence, 12 px apart, each with its heading in
-// text-12, weight 500, fg-muted, and its lines 4 px apart.
+interface ProvenanceProps {
+  ticket: PriorityFields;
+}
+
+// Who set an override and when, 8 px below the title, on two lines 4 px
+// apart: the user in the full form at the small size, and the date and time.
+// A value that is absent shows as an absent value, never as System, since no
+// system task sets an override (Sentinel
+// docs/features/tickets/ticket-priority.md, Manual Override). The user
+// shrinks to the room that its label leaves, so that its name ends with an
+// ellipsis rather than passing the end of the explanation.
+function Provenance({ ticket }: ProvenanceProps) {
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      <p className="flex items-center gap-1.5">
+        <span className="shrink-0 text-fg-muted">Set by</span>
+        {ticket.priority_override_by === null ? (
+          <AbsentValue />
+        ) : (
+          <span className="min-w-0">
+            <User user={ticket.priority_override_by} />
+          </span>
+        )}
+      </p>
+      <p className="flex items-center gap-1.5">
+        <span className="text-fg-muted">Set on</span>
+        {ticket.priority_override_at === null ? (
+          <AbsentValue />
+        ) : (
+          <DateTime value={ticket.priority_override_at} />
+        )}
+      </p>
+    </div>
+  );
+}
+
+// The content of the explanation: its title, which names it, for an override
+// who set it and when, a border line 12 px below them and 12 px above the
+// sections, then the section of the basis and the section of the evidence,
+// 12 px apart, each with its heading in text-12, weight 500, fg-muted, and its
+// lines 4 px apart.
 function Explanation({ ticket, isOverride }: ExplanationProps) {
   const basis = ticket.priority_automatic_basis;
   const heading = "text-12 font-medium text-fg-muted";
@@ -149,6 +194,7 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
           <span>{isOverride ? "override" : "automatic"}</span>
         </Heading>
       )}
+      {isOverride && <Provenance ticket={ticket} />}
       <hr className="my-3 border-border" />
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">

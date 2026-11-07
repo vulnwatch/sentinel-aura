@@ -242,9 +242,9 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   included. The cell of the priority is the button of its explanation
   (`docs/design-system.md`, Priority, Explanation), which shows the fields
   that List Tickets returns for the row: `priority`, `priority_automatic`,
-  `priority_override`, and `priority_automatic_basis` (Sentinel
-  `docs/features/tickets/tickets.md`, TicketSummary; PriorityBasis;
-  PriorityEvidence).
+  `priority_override`, `priority_override_by`, `priority_override_at`, and
+  `priority_automatic_basis` (Sentinel `docs/features/tickets/tickets.md`,
+  TicketSummary; PriorityBasis; PriorityEvidence).
 - **Deadline**: the deadline badge (`docs/behaviors.md`, Deadlines), which
   compares the dates with the instant at which the data of the list arrived,
   the same for every row. A Ticket without a deadline leaves the place empty.
@@ -344,7 +344,7 @@ Tasks; Landing; Ticket List Views; Attention Summary).
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Exploitation Level; Persistence and Effective Priority; Automatic Priority
-  Basis; API Surface
+  Basis; Manual Override; API Surface
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Deadline
   Window; Coordinated Release Window; Null Due Dates); Ticket-Level Overdue
   Filter; Ticket Current Phase (Relation to the Overdue Filter; Current Phase
@@ -355,4 +355,4 @@ Tasks; Landing; Ticket List Views; Attention Summary).
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Pagination; Filtering; Enum Filter
   Validation; Sorting (Nullable Sort Field Ordering); User Identifier
-  Resolution
+  Resolution (User References in Responses)

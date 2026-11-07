@@ -667,13 +667,20 @@ The marks, in a box of 14 by 14 units:
 **Explanation.** Where a screen document gives the priority of a Ticket its
 explanation, such as the Ticket list in its rows, the priority is a button
 that opens the explanation in a popover. The explanation states whether the
-effective priority is automatic or an override and what the automatic
-priority is based on, from the fields of the Ticket alone: `priority`,
-`priority_automatic`, `priority_override`, and `priority_automatic_basis`
-(Sentinel `docs/features/tickets/tickets.md`, PriorityBasis; PriorityEvidence;
-Sentinel `docs/features/tickets/ticket-priority.md`, Automatic Priority Basis;
-API Surface). It needs no copy of the Decision Table or of the threshold of
-the EPSS percentile, which Sentinel states for itself.
+effective priority is automatic or an override, who set an override and
+when, and what the automatic priority is based on, from the fields of the
+Ticket alone: `priority`, `priority_automatic`, `priority_override`,
+`priority_override_by`, `priority_override_at`, and
+`priority_automatic_basis` (Sentinel `docs/features/tickets/tickets.md`,
+PriorityBasis; PriorityEvidence; TicketSummary; Sentinel
+`docs/features/tickets/ticket-priority.md`, Persistence and Effective
+Priority; Automatic Priority Basis; API Surface). It needs no copy of the
+Decision Table or of the threshold of the EPSS percentile, which Sentinel
+states for itself. Who set an override and when lets the reader judge
+whether it still holds, such as an override set before the evidence that
+raised the automatic priority, which an override hides without an audit
+event (Sentinel `docs/features/tickets/ticket-priority.md`,
+`refresh_priority_auto()`).
 
 - The priority shows as above in a box 24 px high and at least 24 px wide,
   with 4 px of side padding and a 4 px radius, on `neutral-soft` while the
@@ -700,8 +707,23 @@ the EPSS percentile, which Sentinel states for itself.
      icon of an override, followed by "· automatic" or "· override", such as
      "P1 · override", in `text-16`, weight 600, which assistive technologies
      read as "P1, override"; or "Not yet prioritizable" for `null`;
-  2. a `border` line, 12 px below the title and 12 px above the sections;
-  3. the section of the basis, "Based on" for an automatic priority and
+  2. for an override, 8 px below the title, two lines 4 px apart that state
+     who set it and when, as Sentinel records them (Sentinel
+     `docs/features/tickets/ticket-priority.md`, Persistence and Effective
+     Priority): "Set by" in `fg-muted`, followed by the user in the full
+     form at the small size, without the username (Representation of a
+     User); and "Set on" in `fg-muted`, followed by the date and time at
+     which they set it (`docs/behaviors.md`, Dates and Times, Display). The
+     user is the setter's current profile, so a user deactivated since shows
+     as inactive (Sentinel `docs/api-spec.md`, User References in
+     Responses). A value that is absent shows as an absent value, never as
+     "System": no system task sets an override (Sentinel
+     `docs/features/tickets/ticket-priority.md`, Manual Override;
+     `docs/behaviors.md`, Absent Values). An automatic priority has neither
+     line;
+  3. a `border` line, 12 px below the title, or below the lines of an
+     override, and 12 px above the sections;
+  4. the section of the basis, "Based on" for an automatic priority and
      "Automatic priority" for an override, with its heading in `text-12`,
      weight 500, `fg-muted`, and its lines 4 px apart: for an override, the
      automatic priority as above, P1 in red included, so that the P1 that an
@@ -709,7 +731,7 @@ the EPSS percentile, which Sentinel states for itself.
      "Severity" in `fg-muted`, followed by the severity of the basis as
      Severity shows it; then "Exploitation" in `fg-muted`, followed by the
      exploitation level: KEV, Active, Likely, or Unknown; and
-  4. 12 px below, the section "Evidence", in the same style: a line for each
+  5. 12 px below, the section "Evidence", in the same style: a line for each
      piece of deciding evidence, in the order of the basis, "Listed in CISA
      KEV on 9 Oct 2026" with the date of the entry (`docs/behaviors.md`,
      Dates and Times, Display), "SSVC exploitation PoC" or "SSVC exploitation
