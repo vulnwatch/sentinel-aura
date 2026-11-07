@@ -471,27 +471,33 @@ test.each([
   ).toBe(color);
 });
 
-test("shows a setter and a time that are absent under an override as absent values, not as System", async () => {
-  const { screen } = await renderPriority(
-    fields({
-      ...OVERRIDE_ABOVE,
-      priority_override_by: null,
-      priority_override_at: null,
-    }),
-  );
+// Each value apart, so that each line shows its own value.
+test.each([
+  [
+    "a setter",
+    { priority_override_by: null },
+    ["Set by–Not set", `Set on${formatDateTime(SET_AT)}`],
+  ],
+  [
+    "a time",
+    { priority_override_at: null },
+    ["Set byJane Doe", "Set on–Not set"],
+  ],
+])(
+  "shows %s that is absent under an override as an absent value, not as System",
+  async (_, changes, lines) => {
+    const { screen } = await renderPriority(
+      fields({ ...OVERRIDE_ABOVE, ...changes }),
+    );
 
-  const dialog = await openExplanation(screen, "P1, override");
+    const dialog = await openExplanation(screen, "P1, override");
 
-  expect(textOf(dialog)).toContain(
-    [
-      "P1·override",
-      "Set by–Not set",
-      "Set on–Not set",
-      "Automatic priority",
-    ].join(""),
-  );
-  expect(textOf(dialog)).not.toContain("System");
-});
+    expect(textOf(dialog)).toContain(
+      ["P1·override", ...lines, "Automatic priority"].join(""),
+    );
+    expect(textOf(dialog)).not.toContain("System");
+  },
+);
 
 test("shows who set an override and when 8 px below the title, 4 px apart, and the border line 12 px below them", async () => {
   const { screen } = await renderPriority(OVERRIDE_ABOVE);
@@ -534,6 +540,9 @@ test("ends a long name of the setter with an ellipsis within the explanation", a
     .element();
   expect(getComputedStyle(name).textOverflow).toBe("ellipsis");
   expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
+  // "Set by" stays whole, on a line as high as the avatar of the small size.
+  const setBy = dialog.getByText("Set by", { exact: true }).element();
+  expect(setBy.parentElement?.getBoundingClientRect().height).toBe(24);
   // The label still shows, within the explanation.
   const label = dialog.getByText("Inactive", { exact: true }).element();
   expect(label.getBoundingClientRect().right).toBeLessThanOrEqual(
