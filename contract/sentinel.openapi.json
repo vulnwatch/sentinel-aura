@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.19.0"
+    "version": "0.20.0"
   },
   "paths": {
     "/health": {
@@ -16305,6 +16305,30 @@
             ],
             "description": "Manual priority override: `p1`-`p4`, or `null` when no override is set."
           },
+          "priority_override_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current profile of the user who set the current priority override, including `active = false` when deactivated; `null` when no override is set."
+          },
+          "priority_override_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority Override At",
+            "description": "When the current priority override was set (UTC): the time of the change that set its current value, equal to the `created_at` of that change's `priority_changed` audit event; `null` when no override is set."
+          },
           "priority_automatic_basis": {
             "$ref": "#/components/schemas/PriorityBasis",
             "description": "What `priority_automatic` is based on."
@@ -16480,6 +16504,8 @@
           "priority",
           "priority_automatic",
           "priority_override",
+          "priority_override_by",
+          "priority_override_at",
           "priority_automatic_basis",
           "assignee",
           "cve",
@@ -17003,6 +17029,30 @@
             ],
             "description": "Manual priority override: `p1`-`p4`, or `null` when no override is set."
           },
+          "priority_override_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current profile of the user who set the current priority override, including `active = false` when deactivated; `null` when no override is set."
+          },
+          "priority_override_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority Override At",
+            "description": "When the current priority override was set (UTC): the time of the change that set its current value, equal to the `created_at` of that change's `priority_changed` audit event; `null` when no override is set."
+          },
           "priority_automatic_basis": {
             "$ref": "#/components/schemas/PriorityBasis",
             "description": "What `priority_automatic` is based on."
@@ -17184,6 +17234,8 @@
           "priority",
           "priority_automatic",
           "priority_override",
+          "priority_override_by",
+          "priority_override_at",
           "priority_automatic_basis",
           "assignee",
           "cve",

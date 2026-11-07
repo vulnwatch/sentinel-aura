@@ -39,6 +39,18 @@ const DAY = 24 * 60 * 60 * 1000;
 const ANALYST: CurrentUserResponse = OTHER_USER;
 const READER: CurrentUserResponse = FICTIONAL_USER;
 
+// The provenance of a priority override, which Sentinel states exactly when an
+// override is set (Sentinel docs/features/tickets/ticket-priority.md,
+// Persistence and Effective Priority): the user who set it and when.
+const OVERRIDE_BY: NonNullable<TicketSummary["priority_override_by"]> = {
+  id: "00000000-0000-0000-0000-000000000003",
+  username: "asmith",
+  full_name: "Alice Smith",
+  active: true,
+  bot: false,
+};
+const OVERRIDE_AT = "2099-10-09T15:05:09Z";
+
 // An assignment eligibility and a capability that the pinned contract does
 // not list, which a later Sentinel release can return.
 const UNLISTED_ELIGIBILITY = "fictional_eligibility";
@@ -1439,6 +1451,8 @@ describe("the table", () => {
       // Decision Table; Automatic Priority Basis).
       priority: "p1",
       priority_override: "p1",
+      priority_override_by: OVERRIDE_BY,
+      priority_override_at: OVERRIDE_AT,
       priority_automatic_basis: {
         severity: "critical",
         exploitation: "likely",
@@ -1518,6 +1532,8 @@ describe("the table", () => {
             priority: "p3",
             priority_automatic: "p1",
             priority_override: "p3",
+            priority_override_by: OVERRIDE_BY,
+            priority_override_at: OVERRIDE_AT,
             priority_automatic_basis: {
               severity: "high",
               exploitation: "active",

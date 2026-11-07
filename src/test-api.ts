@@ -109,6 +109,8 @@ export function fictionalTicket(
     priority: "p2",
     priority_automatic: "p2",
     priority_override: null,
+    priority_override_by: null,
+    priority_override_at: null,
     priority_automatic_basis: {
       severity: "high",
       exploitation: "likely",
