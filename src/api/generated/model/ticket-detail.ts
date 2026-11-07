@@ -33,6 +33,10 @@ export interface TicketDetail {
   priority_automatic: TicketPriorityValue | null;
   /** Manual priority override: `p1`-`p4`, or `null` when no override is set. */
   priority_override: TicketPriorityValue | null;
+  /** Current profile of the user who set the current priority override, including `active = false` when deactivated; `null` when no override is set. */
+  priority_override_by: UserReference | null;
+  /** When the current priority override was set (UTC): the time of the change that set its current value, equal to the `created_at` of that change's `priority_changed` audit event; `null` when no override is set. */
+  priority_override_at: string | null;
   /** What `priority_automatic` is based on. */
   priority_automatic_basis: PriorityBasis;
   /** Current assignee, or `null` if unassigned. */

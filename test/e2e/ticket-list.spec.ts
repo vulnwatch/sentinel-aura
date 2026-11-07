@@ -451,14 +451,16 @@ test.describe("for an analyst", () => {
   });
 
   for (const { ticket, name, title, basis, evidence } of [
-    // SNTL-10, whose automatic P3 follows from its Medium severity and the
-    // SSVC exploitation poc of CVE-2099-0010 (CVEs).
+    // SNTL-10, whose automatic P3 follows from its Medium severity, the
+    // SSVC exploitation poc of CVE-2099-0010, and its EPSS percentile 0.96
+    // (CVEs; Sentinel docs/features/platform/example-dataset.md,
+    // Priorities).
     {
       ticket: "SNTL-10",
       name: "P3",
       title: "P3, automatic",
       basis: ["Medium", "Likely"],
-      evidence: ["SSVC exploitation PoC"],
+      evidence: ["SSVC exploitation PoC", "EPSS percentile 0.96"],
     },
     // SNTL-6, whose CVE-2099-0006 has no CVSS data and no exploitation
     // evidence, so that it is not yet prioritizable (CVEs).
