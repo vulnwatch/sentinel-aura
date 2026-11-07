@@ -12,7 +12,7 @@ import {
 // The Ticket list (docs/screens/ticket-list.md), against a backend loaded
 // with Sentinel's example dataset, whose Tickets, users, and roles the tests
 // rely on as loaded (Sentinel docs/features/platform/example-dataset.md,
-// Users; CVEs; Tickets; Aged Tickets).
+// Users; CVEs; Tickets; Aged Tickets; Embargoes).
 
 // The counts of the attention summary.
 function attention(page: Page) {
@@ -93,9 +93,9 @@ test.describe("for an analyst", () => {
       "New 11",
       "Unassigned 1",
       "Analysis 6",
-      "Analyzed 3",
-      "All 26",
-      "Assigned to me 4",
+      "Analyzed 4",
+      "All 27",
+      "Assigned to me 5",
     ]);
     await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
     // P1, P2, P3, P4, and the Ticket without a priority last (Sentinel
@@ -172,14 +172,28 @@ test.describe("for an analyst", () => {
     await views(page).filter({ hasText: "Assigned to me" }).click();
 
     await expect(page).toHaveURL("/tickets?view=assigned-to-me");
-    // Among the P3 Tickets, SNTL-13, past its UM due date (Aged Tickets),
-    // before SNTL-21, whose triage due date is still ahead.
+    // Among the P3 Tickets, SNTL-13, past its UM due date, and SNTL-27, past
+    // its QA due date (Aged Tickets), before SNTL-21, whose triage due date
+    // is still ahead.
     await expect(identifiers(page)).toHaveText([
       "SNTL-12",
       "SNTL-18",
       "SNTL-13",
+      "SNTL-27",
       "SNTL-21",
     ]);
+    // The deadlines of SNTL-18 and SNTL-27 divide the window up to their
+    // Coordinated Release Dates instead of their SLA: the triage of SNTL-18
+    // is due about 1 day 9 h 36 min after the load, and the QA of SNTL-27
+    // was due 2 days before it, so its badge counts the third day begun
+    // since (Embargoes; Sentinel docs/features/tickets/ticket-deadlines.md,
+    // Coordinated Release Window; docs/behaviors.md, Deadlines).
+    await expect(
+      table(page).getByRole("row", { name: /SNTL-18/ }),
+    ).toContainText("Triage 1d");
+    await expect(
+      table(page).getByRole("row", { name: /SNTL-27/ }),
+    ).toContainText("QA -3d");
   });
 
   test("shows the Tickets awaiting an assignee", async ({ page }) => {
@@ -254,7 +268,7 @@ test.describe("for an analyst", () => {
       table(page).getByRole("columnheader", { name: "Last modified" }),
     ).toHaveAttribute("aria-sort", "descending");
     const pagination = page.getByRole("navigation", { name: "Pagination" });
-    await expect(pagination).toContainText("1–20 of 26");
+    await expect(pagination).toContainText("1–20 of 27");
     await expectAccessible(page);
     await pointerAway(page);
 
@@ -263,8 +277,8 @@ test.describe("for an analyst", () => {
     await pagination.getByRole("link", { name: "Next" }).click();
 
     await expect(page).toHaveURL("/tickets?page=2");
-    await expect(identifiers(page)).toHaveCount(6);
-    await expect(pagination).toContainText("21–26 of 26");
+    await expect(identifiers(page)).toHaveCount(7);
+    await expect(pagination).toContainText("21–27 of 27");
     // Next is disabled on the last page, and the focus moves to Previous.
     await expect(
       pagination.getByRole("link", { name: "Previous" }),
@@ -299,7 +313,7 @@ test.describe("for an analyst", () => {
     await page.getByRole("link", { name: "Go to the first page" }).click();
 
     await expect(page).toHaveURL("/tickets?view=analyzed");
-    await expect(identifiers(page)).toHaveCount(3);
+    await expect(identifiers(page)).toHaveCount(4);
     await expect(
       page.getByRole("heading", { level: 1, name: "Tickets" }),
     ).toBeFocused();
@@ -316,29 +330,32 @@ test.describe("refined by an analyst", () => {
       "priority=p1&status=new&status=analysis&status=analyzed&per_page=100",
     );
 
-    // Right after a load, each aged Ticket is the only one past due in its
-    // current phase (Aged Tickets).
+    // Right after a load, the aged Tickets are the only ones past due, each
+    // in its current phase: SNTL-26 and SNTL-27 in QA, and one in each other
+    // phase (Aged Tickets).
     await expect(attention(page)).toHaveText([
       `${active.length} Active P1`,
       "1 Triage overdue",
       "1 Submission overdue",
       "1 UM overdue",
-      "1 QA overdue",
+      "2 QA overdue",
     ]);
 
-    for (const [count, url, ticket] of [
-      ["1 Triage overdue", "/tickets?phase=triage&overdue=triage", "SNTL-7"],
+    // The All view lists them by last modification, the most recent first:
+    // the load sets the Coordinated Release Date of SNTL-27 last.
+    for (const [count, url, tickets] of [
+      ["1 Triage overdue", "/tickets?phase=triage&overdue=triage", ["SNTL-7"]],
       [
         "1 Submission overdue",
         "/tickets?phase=submission&overdue=submission",
-        "SNTL-12",
+        ["SNTL-12"],
       ],
-      ["1 UM overdue", "/tickets?phase=um&overdue=um", "SNTL-13"],
-      ["1 QA overdue", "/tickets?phase=qa&overdue=qa", "SNTL-26"],
+      ["1 UM overdue", "/tickets?phase=um&overdue=um", ["SNTL-13"]],
+      ["2 QA overdue", "/tickets?phase=qa&overdue=qa", ["SNTL-27", "SNTL-26"]],
     ] as const) {
       await attention(page).filter({ hasText: count }).click();
       await expect(page).toHaveURL(url);
-      await expect(identifiers(page)).toHaveText([ticket]);
+      await expect(identifiers(page)).toHaveText(tickets);
       await expect(views(page).filter({ hasText: "All" })).toHaveAttribute(
         "aria-selected",
         "true",
@@ -396,7 +413,7 @@ test.describe("refined by an analyst", () => {
     // Once the counts have arrived, which widen the tabs and the summary, so
     // that the popover opens below Filters where it stays.
     await expectViewCounts(page);
-    await expect(attention(page).last()).toHaveText("1 QA overdue");
+    await expect(attention(page).last()).toHaveText("2 QA overdue");
 
     // In the New view, whose columns hold no avatar and no date, so that no
     // mask of the reference lies over the popover.
@@ -431,7 +448,7 @@ test.describe("refined by an analyst", () => {
       .click();
 
     await expect(page).toHaveURL("/tickets?status=analyzed");
-    await expect(identifiers(page)).toHaveCount(3);
+    await expect(identifiers(page)).toHaveCount(4);
     // SNTL-12 has two packages (Packages, Tracks, and Maintainers).
     const packages = table(page)
       .getByRole("row", { name: /SNTL-12/ })
@@ -550,8 +567,9 @@ test("lands a user without a role on the All view, which the Tickets entry opens
     "All 25",
   ]);
   await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
-  // The attention summary is for every user: each aged Ticket is
-  // non-confidential (Aged Tickets).
+  // The attention summary is for every user, with the counts of the Tickets
+  // that the user sees: dbrown sees every aged Ticket but the confidential
+  // SNTL-27, so one past due in each phase (Aged Tickets; Embargoes).
   const active = await ticketsOf(
     page,
     "priority=p1&status=new&status=analysis&status=analyzed&per_page=100",
