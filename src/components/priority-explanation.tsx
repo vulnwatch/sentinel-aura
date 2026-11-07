@@ -92,8 +92,8 @@ const SSVC_EXPLOITATION = new Map<string, string>(
 // shows more than its value. Its text with ten decimals leaves out the error
 // of its binary representation, which would cut 0.29 to 0.28.
 function cutPercentile(value: number): string {
-  const [whole, fraction = ""] = value.toFixed(10).split(".");
-  return `${whole}.${fraction.slice(0, 2)}`;
+  const text = value.toFixed(10);
+  return text.slice(0, text.indexOf(".") + 3);
 }
 
 // The line of a piece of deciding evidence. A kind that the pinned contract
