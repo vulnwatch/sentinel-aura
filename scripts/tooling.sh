@@ -76,7 +76,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 # The official Playwright image, pinned by version and digest and updated by
 # Renovate. Its version matches @playwright/test in package.json, so that the
 # browsers of the image are the ones that Playwright expects.
-readonly TOOLING_IMAGE="mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f"
+readonly TOOLING_IMAGE="mcr.microsoft.com/playwright:v1.65.0-noble@sha256:6e3fb709361521eb27161606e6da6d2674e5e89fa16516cb37d6fdd91372273d"
 
 # The dependencies of this clone, in a directory named after the path of the
 # clone, under the user's cache directory, and the file that records the
