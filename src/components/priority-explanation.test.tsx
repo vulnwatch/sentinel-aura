@@ -143,6 +143,11 @@ function textOf(dialog: Locator): string {
   return dialog.element().textContent;
 }
 
+// The line of who set an override, or of when, by its label.
+function lineOf(dialog: Locator, label: "Set by" | "Set on"): Element {
+  return dialog.getByRole("paragraph").filter({ hasText: label }).element();
+}
+
 // The texts of the lines of the evidence, each an item of its list.
 function evidenceOf(dialog: Locator): string[] {
   return dialog
@@ -416,21 +421,20 @@ test("explains an override over an automatic priority that is not yet prioritiza
   );
 });
 
-test("states who set an override, with the avatar at the small size, and when, in the time zone of the browser", async () => {
+test("states who set an override, with the avatar at the small size, and when, as a date and time", async () => {
   const { screen } = await renderPriority(OVERRIDE_ABOVE);
 
   const dialog = await openExplanation(screen, "P1, override");
 
   const setBy = dialog.getByText("Set by", { exact: true }).element();
   const setOn = dialog.getByText("Set on", { exact: true }).element();
-  expect(setBy.parentElement?.textContent).toBe("Set byJane Doe");
+  expect(textOf(dialog)).toContain(
+    `P1·overrideSet byJane DoeSet on${formatDateTime(SET_AT)}Automatic priority`,
+  );
   // The line of the user is as high as the avatar of the small size.
-  expect(setBy.parentElement?.getBoundingClientRect().height).toBe(24);
+  expect(lineOf(dialog, "Set by").getBoundingClientRect().height).toBe(24);
   const time = dialog.getByText(formatDateTime(SET_AT), { exact: true });
   await expect.element(time).toHaveAttribute("datetime", SET_AT);
-  expect(setOn.parentElement?.textContent).toBe(
-    `Set on${formatDateTime(SET_AT)}`,
-  );
   expect([
     getComputedStyle(setBy).color,
     getComputedStyle(setOn).color,
@@ -463,8 +467,7 @@ test.each([
 
   const dialog = await openExplanation(screen, "P1, override");
 
-  const setBy = dialog.getByText("Set by", { exact: true }).element();
-  expect(setBy.parentElement?.textContent).toBe(`Set by${text}`);
+  expect(textOf(dialog)).toContain(`Set by${text}Set on`);
   const name = user.full_name ?? user.username;
   expect(
     getComputedStyle(dialog.getByText(name, { exact: true }).element()).color,
@@ -505,12 +508,8 @@ test("shows who set an override and when 8 px below the title, 4 px apart, and t
   const dialog = await openExplanation(screen, "P1, override");
 
   const title = dialog.getByRole("heading", { level: 2 }).element();
-  const setBy = dialog
-    .getByText("Set by", { exact: true })
-    .element().parentElement!;
-  const setOn = dialog
-    .getByText("Set on", { exact: true })
-    .element().parentElement!;
+  const setBy = lineOf(dialog, "Set by");
+  const setOn = lineOf(dialog, "Set on");
   const line = dialog.getByRole("separator").element();
   expect([
     setBy.getBoundingClientRect().top - title.getBoundingClientRect().bottom,
@@ -541,8 +540,7 @@ test("ends a long name of the setter with an ellipsis within the explanation", a
   expect(getComputedStyle(name).textOverflow).toBe("ellipsis");
   expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
   // "Set by" stays whole, on a line as high as the avatar of the small size.
-  const setBy = dialog.getByText("Set by", { exact: true }).element();
-  expect(setBy.parentElement?.getBoundingClientRect().height).toBe(24);
+  expect(lineOf(dialog, "Set by").getBoundingClientRect().height).toBe(24);
   // The label still shows, within the explanation.
   const label = dialog.getByText("Inactive", { exact: true }).element();
   expect(label.getBoundingClientRect().right).toBeLessThanOrEqual(
