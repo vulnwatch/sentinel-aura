@@ -120,18 +120,18 @@ function popoverOf(dialog: Locator): Element {
   return element!;
 }
 
-// The texts of the lines of a section of the explanation, after its heading.
-function sectionLines(dialog: Locator, heading: string): string[] {
-  const section = dialog
-    .getByRole("heading", { level: 3, name: heading })
-    .element().parentElement!;
-  return [...section.children]
-    .slice(1)
-    .flatMap((line) =>
-      line.tagName === "UL"
-        ? [...line.children].map((item) => item.textContent)
-        : [line.textContent],
-    );
+// The text of the explanation, in the order in which it shows: its title, the
+// headings of its sections, and their lines.
+function textOf(dialog: Locator): string {
+  return dialog.element().textContent;
+}
+
+// The texts of the lines of the evidence, each an item of its list.
+function evidenceOf(dialog: Locator): string[] {
+  return dialog
+    .getByRole("listitem")
+    .elements()
+    .map((item) => item.textContent);
 }
 
 test("makes the whole cell a button named by the priority, which shows in a box 24 px high", async () => {
@@ -180,14 +180,17 @@ test("explains an automatic priority from its basis and its evidence", async () 
   await expect
     .element(dialog.getByRole("heading", { level: 2 }))
     .toHaveTextContent("P1·automatic");
-  expect(sectionLines(dialog, "Based on")).toEqual([
-    "SeverityCritical",
-    "ExploitationKEV",
-  ]);
-  expect(sectionLines(dialog, "Evidence")).toEqual([
-    "Listed in CISA KEV on 9 Oct 2026",
-  ]);
-  await expect.element(dialog.getByRole("listitem")).toBeVisible();
+  expect(textOf(dialog)).toBe(
+    [
+      "P1·automatic",
+      "Based on",
+      "SeverityCritical",
+      "ExploitationKEV",
+      "Evidence",
+      "Listed in CISA KEV on 9 Oct 2026",
+    ].join(""),
+  );
+  expect(evidenceOf(dialog)).toEqual(["Listed in CISA KEV on 9 Oct 2026"]);
 });
 
 test("explains an override with the automatic priority that it replaces", async () => {
@@ -204,12 +207,18 @@ test("explains an override with the automatic priority that it replaces", async 
       .elements()
       .map((h) => h.textContent),
   ).toEqual(["Automatic priority", "Evidence"]);
-  expect(sectionLines(dialog, "Automatic priority")).toEqual([
-    "P3",
-    "SeverityHigh",
-    "ExploitationUnknown",
-  ]);
-  expect(sectionLines(dialog, "Evidence")).toEqual(["No evidence."]);
+  expect(textOf(dialog)).toBe(
+    [
+      "P1·override",
+      "Automatic priority",
+      "P3",
+      "SeverityHigh",
+      "ExploitationUnknown",
+      "Evidence",
+      "No evidence.",
+    ].join(""),
+  );
+  expect(evidenceOf(dialog)).toEqual([]);
   expect(
     getComputedStyle(dialog.getByText("No evidence.").element()).color,
   ).toBe(FG_MUTED);
@@ -231,16 +240,20 @@ test("shows the automatic P1 that an override hides, with its deciding evidence"
 
   const dialog = await openExplanation(screen, "P3, override");
 
-  expect(sectionLines(dialog, "Automatic priority")).toEqual([
-    "P1",
-    "SeverityHigh",
-    "ExploitationActive",
-  ]);
+  expect(textOf(dialog)).toBe(
+    [
+      "P3·override",
+      "Automatic priority",
+      "P1",
+      "SeverityHigh",
+      "ExploitationActive",
+      "Evidence",
+      "SSVC exploitation Active",
+    ].join(""),
+  );
   const p1 = dialog.getByText("P1", { exact: true });
   expect(getComputedStyle(p1.element()).fontWeight).toBe("600");
-  expect(sectionLines(dialog, "Evidence")).toEqual([
-    "SSVC exploitation Active",
-  ]);
+  expect(evidenceOf(dialog)).toEqual(["SSVC exploitation Active"]);
 });
 
 test("lists each piece of deciding evidence on a line of its own, in the order of the basis", async () => {
@@ -261,17 +274,13 @@ test("lists each piece of deciding evidence on a line of its own, in the order o
 
   const dialog = await openExplanation(screen, "P3, automatic");
 
-  expect(sectionLines(dialog, "Based on")).toEqual([
-    "SeverityMedium",
-    "ExploitationLikely",
+  expect(textOf(dialog)).toContain(
+    ["Based on", "SeverityMedium", "ExploitationLikely", "Evidence"].join(""),
+  );
+  expect(evidenceOf(dialog)).toEqual([
+    "SSVC exploitation PoC",
+    "EPSS percentile 0.97",
   ]);
-  await expect
-    .element(dialog.getByRole("listitem").nth(0))
-    .toHaveTextContent("SSVC exploitation PoC");
-  await expect
-    .element(dialog.getByRole("listitem").nth(1))
-    .toHaveTextContent("EPSS percentile 0.97");
-  expect(dialog.getByRole("listitem").elements()).toHaveLength(2);
 });
 
 test.each([
@@ -298,9 +307,7 @@ test.each([
 
     const dialog = await openExplanation(screen, "P2, automatic");
 
-    expect(sectionLines(dialog, "Evidence")).toEqual([
-      `EPSS percentile ${text}`,
-    ]);
+    expect(evidenceOf(dialog)).toEqual([`EPSS percentile ${text}`]);
   },
 );
 
@@ -317,9 +324,7 @@ test("shows the date of a KEV entry as received when it is not a date", async ()
 
   const dialog = await openExplanation(screen, "P1, automatic");
 
-  expect(sectionLines(dialog, "Evidence")).toEqual([
-    "Listed in CISA KEV on 2026-02-30",
-  ]);
+  expect(evidenceOf(dialog)).toEqual(["Listed in CISA KEV on 2026-02-30"]);
 });
 
 test("explains a Ticket that is not yet prioritizable", async () => {
@@ -337,16 +342,26 @@ test("explains a Ticket that is not yet prioritizable", async () => {
   const button = cell.getByRole("button", { name: "Not set", exact: true });
 
   await expect.element(button).toBeVisible();
-  expect(boxOf(cell, "–").getBoundingClientRect().width).toBeGreaterThanOrEqual(
-    24,
-  );
+  const box = boxOf(cell, "–");
+  expect(box.getBoundingClientRect().width).toBeGreaterThanOrEqual(24);
+  // The dash starts where the level would, as the dashes of the other
+  // columns do.
+  expect(
+    cell.getByText("–", { exact: true }).element().getBoundingClientRect()
+      .left - box.getBoundingClientRect().left,
+  ).toBe(4);
   const dialog = await openExplanation(screen, "Not yet prioritizable");
 
-  expect(sectionLines(dialog, "Based on")).toEqual([
-    "Severity–Not set",
-    "ExploitationUnknown",
-  ]);
-  expect(sectionLines(dialog, "Evidence")).toEqual(["No evidence."]);
+  expect(textOf(dialog)).toBe(
+    [
+      "Not yet prioritizable",
+      "Based on",
+      "Severity–Not set",
+      "ExploitationUnknown",
+      "Evidence",
+      "No evidence.",
+    ].join(""),
+  );
 });
 
 test("explains an override over an automatic priority that is not yet prioritizable", async () => {
@@ -365,11 +380,15 @@ test("explains an override over an automatic priority that is not yet prioritiza
 
   const dialog = await openExplanation(screen, "P2, override");
 
-  expect(sectionLines(dialog, "Automatic priority")).toEqual([
-    "Not yet prioritizable",
-    "Severity–Not set",
-    "ExploitationUnknown",
-  ]);
+  expect(textOf(dialog)).toContain(
+    [
+      "Automatic priority",
+      "Not yet prioritizable",
+      "Severity–Not set",
+      "ExploitationUnknown",
+      "Evidence",
+    ].join(""),
+  );
 });
 
 test("shows values that the pinned contract does not list as received, and an evidence of an unlisted kind without its value", async () => {
@@ -394,11 +413,15 @@ test("shows values that the pinned contract does not list as received, and an ev
     .toBeVisible();
   const dialog = await openExplanation(screen, "p0, automatic");
 
-  expect(sectionLines(dialog, "Based on")).toEqual([
-    "Severityfictional_severity",
-    "Exploitationfictional_level",
-  ]);
-  expect(sectionLines(dialog, "Evidence")).toEqual([
+  expect(textOf(dialog)).toContain(
+    [
+      "Based on",
+      "Severityfictional_severity",
+      "Exploitationfictional_level",
+      "Evidence",
+    ].join(""),
+  );
+  expect(evidenceOf(dialog)).toEqual([
     "SSVC exploitation fictional_value",
     "fictional_kind",
   ]);
@@ -420,11 +443,10 @@ test("looks up the names of the values only among those of the pinned contract",
 
   const dialog = await openExplanation(screen, "P1, automatic");
 
-  expect(sectionLines(dialog, "Based on")).toEqual([
-    "SeverityCritical",
-    "Exploitationconstructor",
-  ]);
-  expect(sectionLines(dialog, "Evidence")).toEqual([
+  expect(textOf(dialog)).toContain(
+    ["SeverityCritical", "Exploitationconstructor", "Evidence"].join(""),
+  );
+  expect(evidenceOf(dialog)).toEqual([
     "SSVC exploitation toString",
     "hasOwnProperty",
   ]);
@@ -433,13 +455,24 @@ test("looks up the names of the values only among those of the pinned contract",
 test("opens with Enter, takes the focus itself, and returns it to the priority on Escape", async () => {
   const { screen, cell } = await renderPriority(fields());
   const button = cell.getByRole("button", { name: "P1" });
-  button.element().focus();
+  // With the keyboard alone, from the control before it.
+  screen.getByRole("button", { name: "Before" }).element().focus();
+  await userEvent.keyboard("{Tab}");
+  await expect.element(button).toHaveFocus();
 
   await userEvent.keyboard("{Enter}");
 
   const dialog = page.getByRole("dialog", { name: "P1, automatic" });
   await expect.element(dialog).toHaveFocus();
   await expect.element(button).toHaveAttribute("aria-expanded", "true");
+  // With the focus ring around its content.
+  const ring = getComputedStyle(dialog.element());
+  expect([
+    ring.outlineStyle,
+    ring.outlineWidth,
+    ring.outlineOffset,
+    ring.outlineColor,
+  ]).toEqual(["solid", "2px", "2px", FOCUS]);
   // It holds no control, and the rest of the page is out of reach of the
   // keyboard.
   await userEvent.keyboard("{Tab}");
@@ -539,6 +572,18 @@ test("opens below the priority, aligned to its start, on surface with a border l
   expect(Math.abs(box.left - priority.left)).toBeLessThan(1);
 });
 
+test("opens above the priority where the window has no room below it", async () => {
+  await page.viewport(1280, 480);
+  const { screen, cell } = await renderPriority(fields(), undefined, true);
+
+  const dialog = await openExplanation(screen, "P1, automatic");
+
+  const box = popoverOf(dialog).getBoundingClientRect();
+  const priority = boxOf(cell, "P1").getBoundingClientRect();
+  expect(Math.abs(priority.top - box.bottom - 4)).toBeLessThan(1);
+  expect(Math.abs(box.left - priority.left)).toBeLessThan(1);
+});
+
 test("shows its title in text-16 at weight 600, a border line 12 px around, and the headings of its sections in text-12, weight 500, fg-muted, 12 px apart", async () => {
   const { screen } = await renderPriority(fields());
 
@@ -549,7 +594,7 @@ test("shows its title in text-16 at weight 600, a border line 12 px around, and 
     getComputedStyle(title).fontSize,
     getComputedStyle(title).fontWeight,
   ]).toEqual(["16px", "600"]);
-  const line = title.nextElementSibling!;
+  const line = dialog.getByRole("separator").element();
   expect(getComputedStyle(line).borderTopColor).toBe(BORDER);
   expect(
     line.getBoundingClientRect().top - title.getBoundingClientRect().bottom,
@@ -566,9 +611,11 @@ test("shows its title in text-16 at weight 600, a border line 12 px around, and 
     "500",
     FG_MUTED,
   ]);
+  // The last line of the basis, then the section of the evidence.
   expect(
     evidence.element().getBoundingClientRect().top -
-      basis.element().parentElement!.getBoundingClientRect().bottom,
+      dialog.getByText("KEV", { exact: true }).element().getBoundingClientRect()
+        .bottom,
   ).toBe(12);
   expect(
     getComputedStyle(dialog.getByText("Severity", { exact: true }).element())

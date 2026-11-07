@@ -444,6 +444,7 @@ test.describe("for an analyst", () => {
     await expect(dialog.getByRole("listitem")).toHaveText([
       `Listed in CISA KEV on ${added}`,
     ]);
+    await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(priority).toBeFocused();

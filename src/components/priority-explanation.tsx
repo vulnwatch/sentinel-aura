@@ -7,11 +7,15 @@ import {
   Popover,
 } from "react-aria-components";
 import type {
+  EPSSPercentilePriorityEvidence,
   ExploitationLevel,
+  KEVPriorityEvidence,
   PriorityEvidence,
   SSVCExploitationEvidenceValue,
+  SSVCExploitationPriorityEvidence,
 } from "../api/generated/model";
 import { formatDate } from "./date-time";
+import { FOCUS_RING } from "./focus-ring";
 import { Priority, priorityName } from "./priority";
 import { focusScreenHeading } from "./screen-heading";
 import { Severity } from "./severity";
@@ -26,9 +30,9 @@ import { Severity } from "./severity";
 // one that the pinned contract does not list (Sentinel docs/api-spec.md,
 // Response Enums).
 type ListedEvidence =
-  | { kind: "kev"; value: string }
-  | { kind: "ssvc_exploitation"; value: string }
-  | { kind: "epss_percentile"; value: number };
+  | KEVPriorityEvidence
+  | (Omit<SSVCExploitationPriorityEvidence, "value"> & { value: string })
+  | EPSSPercentilePriorityEvidence;
 
 // A piece of deciding evidence of any kind, one that the pinned contract
 // does not list included.
@@ -145,7 +149,7 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
           <span>{isOverride ? "override" : "automatic"}</span>
         </Heading>
       )}
-      <div className="my-3 border-t border-border" />
+      <hr className="my-3 border-border" />
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h3 className={heading}>
@@ -209,7 +213,8 @@ interface ExplainedPriorityProps {
 // start, or above it where the window has no room below, moved toward the
 // start where it would pass the end of the window, and scrolling within it in
 // a window shorter than it is. The explanation holds no control and takes the
-// focus itself, named by its title; while it is open, the rest of the page is
+// focus itself, with the focus ring around its content on keyboard focus,
+// named by its title; while it is open, the rest of the page is
 // out of reach. Escape or a click outside closes it, and the focus returns to
 // the priority.
 export function ExplainedPriority({ ticket }: ExplainedPriorityProps) {
@@ -243,7 +248,7 @@ export function ExplainedPriority({ ticket }: ExplainedPriorityProps) {
       <span
         ref={box}
         aria-hidden
-        className="-mx-1 inline-flex h-6 min-w-6 items-center justify-center rounded px-1 align-middle peer-data-hovered:bg-neutral-soft peer-aria-expanded:bg-neutral-soft peer-data-focus-visible:outline-2 peer-data-focus-visible:outline-offset-2 peer-data-focus-visible:outline-focus"
+        className="-mx-1 inline-flex h-6 min-w-6 items-center rounded px-1 align-middle peer-data-hovered:bg-neutral-soft peer-aria-expanded:bg-neutral-soft peer-data-focus-visible:outline-2 peer-data-focus-visible:outline-offset-2 peer-data-focus-visible:outline-focus"
       >
         <Priority priority={ticket.priority} isOverride={isOverride} />
       </span>
@@ -253,7 +258,7 @@ export function ExplainedPriority({ ticket }: ExplainedPriorityProps) {
         offset={4}
         className="w-72 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-4 text-14 text-fg shadow-lg outline-none"
       >
-        <Dialog id={dialogId} className="outline-none">
+        <Dialog id={dialogId} className={FOCUS_RING}>
           <Explanation ticket={ticket} isOverride={isOverride} />
         </Dialog>
       </Popover>

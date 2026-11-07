@@ -32,12 +32,9 @@ test.each([
   ["2026-09-30", "30 Sep 2026"],
   ["2027-01-01", "1 Jan 2027"],
   ["2026-12-31", "31 Dec 2026"],
-])(
-  "shows the date %s as %s, without a conversion between time zones",
-  (value, text) => {
-    expect(formatDate(value)).toBe(text);
-  },
-);
+])("shows the date %s as %s", (value, text) => {
+  expect(formatDate(value)).toBe(text);
+});
 
 test.each(["2026-02-30", "2026-13-01", "2026-10-09T14:05:09Z", "not a date"])(
   "shows %s, which is not a date, as received",

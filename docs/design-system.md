@@ -689,11 +689,13 @@ the EPSS percentile, which Sentinel states for itself.
   or above it where the window has no room below, and moves toward the start
   where it would pass the end of the window; its content scrolls within it in
   a window shorter than it is. It holds no control: it takes the focus itself
-  as it opens, and assistive technologies read it by its title. While it is
-  open, the rest of the page is out of reach of the keyboard and of assistive
-  technologies. Escape or a click outside closes it, a click without acting
-  on what it hits, and either way the focus returns to the priority
-  (`docs/behaviors.md`, Accessibility, Dialogs). From top to bottom, it holds:
+  as it opens, with the focus ring around its content on keyboard focus
+  (Focus and Motion), and assistive technologies read it by its title. While
+  it is open, the rest of the page is out of reach of the keyboard and of
+  assistive technologies. Escape or a click outside closes it, a click
+  without acting on what it hits, and either way the focus returns to the
+  priority (`docs/behaviors.md`, Accessibility, Dialogs). From top to bottom,
+  it holds:
   1. its title, which names it: the effective priority as above, without the
      icon of an override, followed by "· automatic" or "· override", such as
      "P1 · override", in `text-16`, weight 600, which assistive technologies
