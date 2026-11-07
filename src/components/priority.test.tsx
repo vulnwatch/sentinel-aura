@@ -159,6 +159,38 @@ test.each([
   },
 );
 
+test.each([
+  ["p1", "P1"],
+  ["p3", "P3"],
+])(
+  "ends an override of %s with user-pen at 14 px in fg-muted, 4 px after the level, hidden from assistive technologies",
+  async (value, name) => {
+    const { screen, figure } = await renderValue(
+      <Priority priority={value} isOverride />,
+    );
+    const level = figure.getByText(name, { exact: true });
+    // The icon follows the mark of the level.
+    const icon = [...figure.element().querySelectorAll("svg")].at(-1)!;
+
+    // The element that shows the override names it (priority-explanation).
+    await expect
+      .element(screen.getByRole("cell", { name, exact: true }))
+      .toBeVisible();
+    expect(screen.getByRole("img").query()).toBeNull();
+    const box = icon.getBoundingClientRect();
+    expect([box.width, box.height]).toEqual([14, 14]);
+    expect(box.left - level.element().getBoundingClientRect().right).toBe(4);
+    expect(getComputedStyle(icon).color).toBe(FG_MUTED);
+  },
+);
+
+test("shows a priority that is not an override without the icon", async () => {
+  const { figure } = await renderValue(<Priority priority="p1" />);
+
+  expect(figure.element().querySelectorAll("svg")).toHaveLength(1);
+  expect(figure.element().textContent).toBe("P1");
+});
+
 test("shows null as an absent value", async () => {
   const { screen, figure } = await renderValue(<Priority priority={null} />);
 

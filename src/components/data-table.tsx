@@ -112,8 +112,10 @@ function DataRows<TRow>({
             className={`h-9 border-t border-border text-14 hover:bg-surface-hover ${INSIDE_FOCUS_RING}`}
           >
             {(column) => (
+              // Positioned, so that its content can fill it, as the button of
+              // the explanation of a priority does (priority-explanation).
               <Cell
-                className={`align-middle whitespace-nowrap ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
+                className={`relative align-middle whitespace-nowrap ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
               >
                 {column.grows === true ? (
                   <div className="truncate">{column.render(row)}</div>
