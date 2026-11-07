@@ -239,7 +239,12 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   why a row matches when the name that matches is among those that it names.
 - **Status**, **Severity**, and **Priority**: as `docs/design-system.md`
   (Ticket Status; Severity; Priority) shows them, the effective priority
-  included.
+  included. The cell of the priority is the button of its explanation
+  (`docs/design-system.md`, Priority, Explanation), which shows the fields
+  that List Tickets returns for the row: `priority`, `priority_automatic`,
+  `priority_override`, and `priority_automatic_basis` (Sentinel
+  `docs/features/tickets/tickets.md`, TicketSummary; PriorityBasis;
+  PriorityEvidence).
 - **Deadline**: the deadline badge (`docs/behaviors.md`, Deadlines), which
   compares the dates with the instant at which the data of the list arrived,
   the same for every row. A Ticket without a deadline leaves the place empty.
@@ -289,14 +294,15 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   (`docs/behaviors.md`, Accessibility, Focus after a navigation), and while
   the popover of Filters is open, it announces the same itself
   (`docs/design-system.md`, Lists).
-- **The focus.** When the rows, the table without rows, the action of an
-  empty state, the pagination, a tab, a count of the attention summary, or
-  Clear filters leaves the page while it holds the focus, such as "Go to the
-  first page" once the rows arrive, the pagination when an error takes the
-  place of the rows, Clear filters once it removed the search and the
-  filters, or a tab or a count that a read of the signed-in user removes
-  (Access), the focus moves to the screen's heading (`docs/behaviors.md`,
-  Accessibility, Focus after an action).
+- **The focus.** When the rows, the explanation of a priority, the table
+  without rows, the action of an empty state, the pagination, a tab, a count
+  of the attention summary, or Clear filters leaves the page while it holds
+  the focus, such as "Go to the first page" once the rows arrive, the
+  explanation of a priority whose row a new read removes, the pagination when
+  an error takes the place of the rows, Clear filters once it removed the
+  search and the filters, or a tab or a count that a read of the signed-in
+  user removes (Access), the focus moves to the screen's heading
+  (`docs/behaviors.md`, Accessibility, Focus after an action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
   page. A view that the user refined without Tickets that match says "No
   Tickets in this view match the search." when only a search applies and "No
@@ -332,11 +338,12 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   Links; Lists; Tables; Forms; Loading; Empty States; Errors in Place of
   Content; Menus, Popovers, and Tooltips
 - Sentinel `docs/features/tickets/tickets.md` — Ticket Identification;
-  Search; Statuses; Confidential Tickets (Coordinated Release Date);
-  TicketSummary; List Tickets (Embargo filters); Reassignment
+  Search; Statuses; Confidential Tickets; PriorityBasis; PriorityEvidence;
+  TicketSummary; List Tickets; Reassignment
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
-  Persistence and Effective Priority
+  Exploitation Level; Persistence and Effective Priority; Automatic Priority
+  Basis; API Surface
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Deadline
   Window; Coordinated Release Window; Null Due Dates); Ticket-Level Overdue
   Filter; Ticket Current Phase (Relation to the Overdue Filter; Current Phase
