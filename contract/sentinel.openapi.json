@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.18.0"
+    "version": "0.19.0"
   },
   "paths": {
     "/health": {
@@ -4058,7 +4058,7 @@
           "Tickets"
         ],
         "summary": "List Tickets",
-        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, and track filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
+        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_tickets_api_v1_tickets_get",
         "parameters": [
           {
@@ -4233,6 +4233,41 @@
             "description": "Filter by track: IBS codestream project name or Git branch name, exact and case-sensitive. Matches a Ticket with at least one track of that reference whose package and track are not excluded. Product lifecycle, eligibility, affectedness, and delivery have no effect on either filter. An unknown reference yields an empty page."
           },
           {
+            "name": "duplicate_of_ticket_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by original: canonical identity (`SNTL-{n}`, `n` at most 2147483647) of a Ticket. Matches the Tickets whose `duplicate_of_ticket_id` is that value, the duplicates of that Ticket. A malformed value fails validation; an unknown value yields an empty page, and the visibility of the named Ticket has no effect.",
+              "pattern": "^SNTL-[1-9][0-9]*$",
+              "maxLength": 15,
+              "title": "Duplicate Of Ticket Id"
+            },
+            "description": "Filter by original: canonical identity (`SNTL-{n}`, `n` at most 2147483647) of a Ticket. Matches the Tickets whose `duplicate_of_ticket_id` is that value, the duplicates of that Ticket. A malformed value fails validation; an unknown value yields an empty page, and the visibility of the named Ticket has no effect."
+          },
+          {
+            "name": "is_confidential",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "`true`: only confidential Tickets; `false`: only non-confidential Tickets. Narrows the Tickets that the caller can see.",
+              "title": "Is Confidential"
+            },
+            "description": "`true`: only confidential Tickets; `false`: only non-confidential Tickets. Narrows the Tickets that the caller can see."
+          },
+          {
+            "name": "coordinated_release_passed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "`true`: only confidential Tickets whose Coordinated Release Date (`coordinated_release_at`) is at or before the instant at which the request is evaluated, whatever their status; `false`: every other Ticket, including a confidential Ticket without a Coordinated Release Date. A Coordinated Release Date retained on a non-confidential Ticket never matches `true`.",
+              "title": "Coordinated Release Passed"
+            },
+            "description": "`true`: only confidential Tickets whose Coordinated Release Date (`coordinated_release_at`) is at or before the instant at which the request is evaluated, whatever their status; `false`: every other Ticket, including a confidential Ticket without a Coordinated Release Date. A Coordinated Release Date retained on a non-confidential Ticket never matches `true`."
+          },
+          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -4266,11 +4301,11 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/TicketSortField",
-              "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), or `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys). `null` values sort last in both directions, for each key.",
+              "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys), or `coordinated_release_at` (the stored Coordinated Release Date). `null` values sort last in both directions, for each key.",
               "default": "created_at",
               "maxLength": 500
             },
-            "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), or `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys). `null` values sort last in both directions, for each key."
+            "description": "Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys), or `coordinated_release_at` (the stored Coordinated Release Date). `null` values sort last in both directions, for each key."
           },
           {
             "name": "sort_order",
@@ -4333,7 +4368,7 @@
           "Tickets"
         ],
         "summary": "Create Ticket",
-        "description": "Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential). A creator eligible to be the assignee of the new Ticket (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential) is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.",
+        "description": "Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential, and not before the creation instant of the Ticket). A creator eligible to be the assignee of the new Ticket (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential) is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.",
         "operationId": "create_ticket_api_v1_tickets_post",
         "requestBody": {
           "required": true,
@@ -4395,7 +4430,7 @@
             }
           },
           "422": {
-            "description": "`CVE_INVALID_FORMAT`: `cve_id` does not match `^CVE-[0-9]{4}-[0-9]{4,}$` or exceeds 20 characters. `VALIDATION_ERROR`: the body is invalid, including a `coordinated_release_at` without `is_confidential: true`.",
+            "description": "`CVE_INVALID_FORMAT`: `cve_id` does not match `^CVE-[0-9]{4}-[0-9]{4,}$` or exceeds 20 characters. `TICKET_COORDINATED_RELEASE_BEFORE_CREATION`: `coordinated_release_at` is before the creation instant of the Ticket (checked before `TICKET_CVE_CONFLICT`). `VALIDATION_ERROR`: the body is invalid, including a `coordinated_release_at` without `is_confidential: true`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5595,7 +5630,7 @@
           "Tickets"
         ],
         "summary": "Set Coordinated Release Date",
-        "description": "Sets, changes, or clears the Coordinated Release Date (embargo publication instant) of a confidential Ticket. An ISO 8601 date-time sets or replaces it (a value without a UTC offset is interpreted as UTC; past instants are accepted); JSON `null` clears it. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. An unchanged request (the same instant, or `null` when none is set) is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.",
+        "description": "Sets the Coordinated Release Date (embargo publication instant) of a confidential Ticket, or changes or clears the date of a Ticket that has one, including a Ticket made non-confidential that retains it. While set, the date is the final release deadline: the due dates divide the window from the Ticket's creation to it; clearing it returns them to the SLA. An ISO 8601 date-time sets or replaces it (a value without a UTC offset is interpreted as UTC; a past instant is accepted when it is not before the creation of the Ticket); JSON `null` clears it. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. An unchanged request (the same instant, or `null` when none is set) is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.",
         "operationId": "set_ticket_coordinated_release_date_api_v1_tickets__ticket_id__coordinated_release_date_patch",
         "parameters": [
           {
@@ -5665,7 +5700,7 @@
             }
           },
           "409": {
-            "description": "`TICKET_NOT_CONFIDENTIAL`: the Ticket is not confidential (including a declassified Ticket that retains its date).",
+            "description": "`TICKET_NOT_CONFIDENTIAL`: the Ticket is neither confidential nor carrying a Coordinated Release Date, for every request including `null`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5675,11 +5710,19 @@
             }
           },
           "422": {
-            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "description": "`TICKET_COORDINATED_RELEASE_BEFORE_CREATION`: `coordinated_release_at` is before the Ticket's `created_at` (checked after `TICKET_NOT_CONFIDENTIAL`). `VALIDATION_ERROR`: the body is invalid.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Set Ticket Coordinated Release Date Api V1 Tickets  Ticket Id  Coordinated Release Date Patch"
                 }
               }
             }
@@ -12669,6 +12712,27 @@
           "released"
         ]
       },
+      "EPSSPercentilePriorityEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "epss_percentile",
+            "title": "Kind"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "FIRST EPSS percentile rank (0.0-1.0), at or above the threshold of the `likely` level."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "EPSSPercentilePriorityEvidence",
+        "description": "Deciding evidence: the FIRST EPSS percentile of the CVE."
+      },
       "EligibilitySource": {
         "type": "string",
         "enum": [
@@ -12696,6 +12760,17 @@
         ],
         "title": "ErrorResponse",
         "description": "The standard `{\"code\": ..., \"detail\": ...}` error body."
+      },
+      "ExploitationLevel": {
+        "type": "string",
+        "enum": [
+          "kev",
+          "active",
+          "likely",
+          "unknown"
+        ],
+        "title": "ExploitationLevel",
+        "description": "Classification of the exploitation evidence of a Ticket's CVE, the\nDecision Table row of its automatic priority.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). Serialized only as `exploitation` of the automatic priority\nbasis. See `docs/features/tickets/ticket-priority.md` (Exploitation\nLevel; Automatic Priority Basis)."
       },
       "FetcherAuditEventData": {
         "properties": {
@@ -13927,6 +14002,28 @@
         "title": "IdentityAuditEventType",
         "description": "Classifies the action recorded in an `IdentityAuditEvent`.\n\nCategory B \u2014 classification (Python Enum only, no CHECK constraint;\nadding a value requires only a code change). See\n`docs/features/identity/identity-audit-log.md` (IdentityAuditEventType\nEnum) for the full event type contract: trigger, actor/target\nsemantics, and `old_value`/`new_value`/`detail` field values per\nevent type."
       },
+      "KEVPriorityEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "kev",
+            "title": "Kind"
+          },
+          "value": {
+            "type": "string",
+            "format": "date",
+            "title": "Value",
+            "description": "`date_added` of the CVE's CISA KEV catalog entry."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "KEVPriorityEvidence",
+        "description": "Deciding evidence: the CISA KEV catalog entry of the CVE."
+      },
       "LifecyclePhaseValue": {
         "type": "string",
         "enum": [
@@ -14128,7 +14225,7 @@
               }
             ],
             "title": "Submission Due At",
-            "description": "Due date (UTC) of the submission milestone of this track: the date by which the maintainer, who prepares the fix and submits it to IBS (submission request, SR), should complete the submission phase of the remediation SLA. `null` when no SLA applies."
+            "description": "Due date (UTC) of the submission milestone of this track: the date by which the maintainer, who prepares the fix and submits it to IBS (submission request, SR), should complete the submission phase of the remediation SLA, or of the window up to the Ticket's Coordinated Release Date when one is set. `null` when no SLA applies."
           },
           "submission_milestone": {
             "anyOf": [
@@ -14536,6 +14633,62 @@
         ],
         "title": "PlatformVersionResponse",
         "description": "Single-resource envelope of `GET /api/v1/version`."
+      },
+      "PriorityBasis": {
+        "properties": {
+          "severity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeverityValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolved severity that selects the Decision Table column: `critical`, `high`, `medium`, `low`, or `none`, or `null` when unresolved. Equal to the Ticket's `severity`."
+          },
+          "exploitation": {
+            "$ref": "#/components/schemas/ExploitationLevel",
+            "description": "Exploitation level that selects the Decision Table row: `kev` (listed in CISA KEV), `active` (SSVC exploitation `active`), `likely` (SSVC exploitation `poc` or a high EPSS percentile), or `unknown`."
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/PriorityEvidence"
+            },
+            "type": "array",
+            "title": "Evidence",
+            "description": "Persisted evidence that decided `exploitation`, ordered `kev`, `ssvc_exploitation`, `epss_percentile`; empty when `exploitation` is `unknown`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "severity",
+          "exploitation",
+          "evidence"
+        ],
+        "title": "PriorityBasis",
+        "description": "What the automatic priority of a Ticket is based on.\n\nSee `docs/features/tickets/tickets.md` (PriorityBasis) and\n`docs/features/tickets/ticket-priority.md` (Automatic Priority Basis).\nThe Decision Table cell of `severity` and `exploitation` is the\n`priority_automatic` of the same response."
+      },
+      "PriorityEvidence": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/KEVPriorityEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/SSVCExploitationPriorityEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/EPSSPercentilePriorityEvidence"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "epss_percentile": "#/components/schemas/EPSSPercentilePriorityEvidence",
+            "kev": "#/components/schemas/KEVPriorityEvidence",
+            "ssvc_exploitation": "#/components/schemas/SSVCExploitationPriorityEvidence"
+          }
+        }
       },
       "ProductDetail": {
         "properties": {
@@ -15199,6 +15352,33 @@
         ],
         "title": "SSVCExploitation",
         "description": "SSVC Exploitation decision point (CERT/CC v1.1.0).\n\nCategory B \u2014 classification (Python Enum only; stored in\n`CVESSVCAssessment.exploitation`, VARCHAR(20)). See\n`docs/data-model.md` (CVESSVCAssessment) and\n`docs/features/tickets/cve-service.md` (CVEIngestPayload Schema)."
+      },
+      "SSVCExploitationEvidenceValue": {
+        "type": "string",
+        "enum": [
+          "active",
+          "poc"
+        ]
+      },
+      "SSVCExploitationPriorityEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "ssvc_exploitation",
+            "title": "Kind"
+          },
+          "value": {
+            "$ref": "#/components/schemas/SSVCExploitationEvidenceValue",
+            "description": "CISA SSVC exploitation decision point: `active` or `poc`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "SSVCExploitationPriorityEvidence",
+        "description": "Deciding evidence: the CISA SSVC exploitation decision point."
       },
       "SSVCTechnicalImpact": {
         "type": "string",
@@ -15991,7 +16171,7 @@
               }
             ],
             "title": "Coordinated Release At",
-            "description": "Coordinated Release Date (embargo publication instant), an ISO 8601 date-time, or JSON `null` to clear it. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. Past instants are accepted. Required.",
+            "description": "Coordinated Release Date (embargo publication instant), an ISO 8601 date-time, or JSON `null` to clear it. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. A past instant is accepted when it is not before the Ticket's `created_at` (otherwise `422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION`). The latest accepted instant is `9999-12-31T23:59:59.999998Z`. Required.",
             "examples": [
               "2026-10-06T14:00:00Z",
               null
@@ -16057,7 +16237,7 @@
               }
             ],
             "title": "Coordinated Release At",
-            "description": "Initial Coordinated Release Date (embargo publication instant), an ISO 8601 date-time. Accepted only with `is_confidential: true`. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. Past instants are accepted. Omitted or `null` creates the Ticket without a CRD.",
+            "description": "Initial Coordinated Release Date (embargo publication instant), an ISO 8601 date-time. Accepted only with `is_confidential: true`. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. A value before the creation instant of the Ticket is rejected with `422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION`. The latest accepted instant is `9999-12-31T23:59:59.999998Z`. Omitted or `null` creates the Ticket without a CRD.",
             "examples": [
               "2026-10-06T14:00:00Z"
             ]
@@ -16125,6 +16305,10 @@
             ],
             "description": "Manual priority override: `p1`-`p4`, or `null` when no override is set."
           },
+          "priority_automatic_basis": {
+            "$ref": "#/components/schemas/PriorityBasis",
+            "description": "What `priority_automatic` is based on."
+          },
           "assignee": {
             "anyOf": [
               {
@@ -16178,7 +16362,7 @@
               }
             ],
             "title": "Coordinated Release At",
-            "description": "Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. A retained value on a non-confidential Ticket is historical and inert."
+            "description": "Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. When set and an SLA applies, it is `release_due_at` and the due dates divide the window from `created_at` to it, also on a non-confidential Ticket that retains it."
           },
           "triage_due_at": {
             "anyOf": [
@@ -16191,7 +16375,7 @@
               }
             ],
             "title": "Triage Due At",
-            "description": "Due date (UTC) of the triage milestone, in which the VA (Vulnerability Analyst) decides affectedness; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`)."
+            "description": "Due date (UTC) of the triage milestone, in which the VA (Vulnerability Analyst) decides affectedness; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). The due dates divide the window from `created_at` to the Coordinated Release Date when one is set (`coordinated_release_at`), otherwise the SLA window."
           },
           "submission_due_at": {
             "anyOf": [
@@ -16243,7 +16427,7 @@
               }
             ],
             "title": "Release Due At",
-            "description": "Final deadline (UTC) by which the update must be released; currently equal to `qa_due_at`."
+            "description": "Final deadline (UTC) by which the update must be released; `null` when no SLA applies, otherwise the Coordinated Release Date when one is set and the SLA deadline when none is; currently equal to `qa_due_at`."
           },
           "current_phase": {
             "anyOf": [
@@ -16296,6 +16480,7 @@
           "priority",
           "priority_automatic",
           "priority_override",
+          "priority_automatic_basis",
           "assignee",
           "cve",
           "duplicate_of_ticket_id",
@@ -16743,10 +16928,11 @@
           "qa_due_at",
           "release_due_at",
           "current_due_at",
-          "priority_then_current_due"
+          "priority_then_current_due",
+          "coordinated_release_at"
         ],
         "title": "TicketSortField",
-        "description": "Sortable fields for the Ticket list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/tickets/tickets.md` (List Tickets) and\n`docs/features/tickets/ticket-service.md` (`list_tickets()`):\n`severity`, `priority`, and `status` use semantic ranks, `ticket_id`\nsorts by the numeric `sequence_id`, and the five due dates sort by\nthe Ticket-level date with `NULL` last\n(`docs/features/tickets/ticket-deadlines.md`, Sorting).\n`current_due_at` sorts by the current due date and\n`priority_then_current_due` by the effective priority, then the\ncurrent due date (same document, Current Due Date)."
+        "description": "Sortable fields for the Ticket list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/tickets/tickets.md` (List Tickets) and\n`docs/features/tickets/ticket-service.md` (`list_tickets()`):\n`severity`, `priority`, and `status` use semantic ranks, `ticket_id`\nsorts by the numeric `sequence_id`, and the five due dates sort by\nthe Ticket-level date with `NULL` last\n(`docs/features/tickets/ticket-deadlines.md`, Sorting).\n`current_due_at` sorts by the current due date and\n`priority_then_current_due` by the effective priority, then the\ncurrent due date (same document, Current Due Date).\n`coordinated_release_at` sorts by the stored Coordinated Release Date\nwith `NULL` last (tickets.md, List Tickets > Embargo filters)."
       },
       "TicketStatusValue": {
         "type": "string",
@@ -16794,6 +16980,32 @@
               }
             ],
             "description": "Effective priority: `priority_override` when set, otherwise `priority_automatic`. `p1`-`p4`, or `null` when not yet prioritizable."
+          },
+          "priority_automatic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketPriorityValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "System-derived priority: `p1`-`p4`, or `null` when not yet prioritizable."
+          },
+          "priority_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketPriorityValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Manual priority override: `p1`-`p4`, or `null` when no override is set."
+          },
+          "priority_automatic_basis": {
+            "$ref": "#/components/schemas/PriorityBasis",
+            "description": "What `priority_automatic` is based on."
           },
           "assignee": {
             "anyOf": [
@@ -16848,7 +17060,7 @@
               }
             ],
             "title": "Coordinated Release At",
-            "description": "Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. A retained value on a non-confidential Ticket is historical and inert."
+            "description": "Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. When set and an SLA applies, it is `release_due_at` and the due dates divide the window from `created_at` to it, also on a non-confidential Ticket that retains it."
           },
           "triage_due_at": {
             "anyOf": [
@@ -16861,7 +17073,7 @@
               }
             ],
             "title": "Triage Due At",
-            "description": "Due date (UTC) of the triage milestone, in which the VA (Vulnerability Analyst) decides affectedness; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`)."
+            "description": "Due date (UTC) of the triage milestone, in which the VA (Vulnerability Analyst) decides affectedness; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). The due dates divide the window from `created_at` to the Coordinated Release Date when one is set (`coordinated_release_at`), otherwise the SLA window."
           },
           "submission_due_at": {
             "anyOf": [
@@ -16913,7 +17125,7 @@
               }
             ],
             "title": "Release Due At",
-            "description": "Final deadline (UTC) by which the update must be released; currently equal to `qa_due_at`."
+            "description": "Final deadline (UTC) by which the update must be released; `null` when no SLA applies, otherwise the Coordinated Release Date when one is set and the SLA deadline when none is; currently equal to `qa_due_at`."
           },
           "current_phase": {
             "anyOf": [
@@ -16970,6 +17182,9 @@
           "status",
           "severity",
           "priority",
+          "priority_automatic",
+          "priority_override",
+          "priority_automatic_basis",
           "assignee",
           "cve",
           "duplicate_of_ticket_id",
@@ -17067,7 +17282,7 @@
               }
             ],
             "title": "Triage Due At",
-            "description": "Due date (UTC) of the VA (Vulnerability Analyst) triage milestone for this track; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`)."
+            "description": "Due date (UTC) of the VA (Vulnerability Analyst) triage milestone for this track; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). The track due dates equal those of the Ticket, from its Coordinated Release Date when one is set."
           },
           "submission_due_at": {
             "anyOf": [
@@ -17119,7 +17334,7 @@
               }
             ],
             "title": "Release Due At",
-            "description": "Final deadline (UTC) by which the update must be released; currently equal to `qa_due_at`."
+            "description": "Final deadline (UTC) by which the update must be released; `null` when no SLA applies, otherwise the Ticket's Coordinated Release Date when one is set and the SLA deadline when none is; currently equal to `qa_due_at`."
           },
           "milestones": {
             "$ref": "#/components/schemas/TrackMilestones",

@@ -1135,7 +1135,16 @@ describe("the table", () => {
       ticket_id: "SNTL-18",
       status: "analysis",
       severity: "critical",
+      // An override of the automatic P2 of a Critical severity with a
+      // likely exploitation (Sentinel docs/features/tickets/ticket-priority.md,
+      // Decision Table; Automatic Priority Basis).
       priority: "p1",
+      priority_override: "p1",
+      priority_automatic_basis: {
+        severity: "critical",
+        exploitation: "likely",
+        evidence: [{ kind: "ssvc_exploitation", value: "poc" }],
+      },
       is_confidential: true,
       assignee: {
         id: "00000000-0000-0000-0000-000000000003",

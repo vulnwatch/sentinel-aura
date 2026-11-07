@@ -34,7 +34,7 @@ export interface TrackDetail {
   actionable: boolean;
   /** First applicable reason in the order `package_excluded`, `track_excluded`, `no_actionable_products`; `null` when actionable. */
   non_actionable_reason: TrackReasonValue | null;
-  /** Due date (UTC) of the VA (Vulnerability Analyst) triage milestone for this track; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). */
+  /** Due date (UTC) of the VA (Vulnerability Analyst) triage milestone for this track; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). The track due dates equal those of the Ticket, from its Coordinated Release Date when one is set. */
   triage_due_at: string | null;
   /** Due date (UTC) of the maintainer submission (SR) milestone. */
   submission_due_at: string | null;
@@ -42,7 +42,7 @@ export interface TrackDetail {
   um_due_at: string | null;
   /** Due date (UTC) of the QA (quality assurance) milestone; currently equal to `release_due_at`. */
   qa_due_at: string | null;
-  /** Final deadline (UTC) by which the update must be released; currently equal to `qa_due_at`. */
+  /** Final deadline (UTC) by which the update must be released; `null` when no SLA applies, otherwise the Ticket's Coordinated Release Date when one is set and the SLA deadline when none is; currently equal to `qa_due_at`. */
   release_due_at: string | null;
   /** Per-phase milestone status of this track. */
   milestones: TrackMilestones;

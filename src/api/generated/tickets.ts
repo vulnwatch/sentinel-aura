@@ -94,7 +94,7 @@ export const getListTicketsUrl = (params?: ListTicketsParams) => {
 };
 
 /**
- * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, and track filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
+ * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
  */
 export const listTickets = async (
@@ -240,7 +240,7 @@ export const getCreateTicketUrl = () => {
 };
 
 /**
- * Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential). A creator eligible to be the assignee of the new Ticket (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential) is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.
+ * Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential, and not before the creation instant of the Ticket). A creator eligible to be the assignee of the new Ticket (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential) is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.
  * @summary Create Ticket
  */
 export const createTicket = async (
@@ -1650,7 +1650,7 @@ export const getSetTicketCoordinatedReleaseDateUrl = (ticketId: string) => {
 };
 
 /**
- * Sets, changes, or clears the Coordinated Release Date (embargo publication instant) of a confidential Ticket. An ISO 8601 date-time sets or replaces it (a value without a UTC offset is interpreted as UTC; past instants are accepted); JSON `null` clears it. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. An unchanged request (the same instant, or `null` when none is set) is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.
+ * Sets the Coordinated Release Date (embargo publication instant) of a confidential Ticket, or changes or clears the date of a Ticket that has one, including a Ticket made non-confidential that retains it. While set, the date is the final release deadline: the due dates divide the window from the Ticket's creation to it; clearing it returns them to the SLA. An ISO 8601 date-time sets or replaces it (a value without a UTC offset is interpreted as UTC; a past instant is accepted when it is not before the creation of the Ticket); JSON `null` clears it. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. An unchanged request (the same instant, or `null` when none is set) is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.
  * @summary Set Coordinated Release Date
  */
 export const setTicketCoordinatedReleaseDate = async (

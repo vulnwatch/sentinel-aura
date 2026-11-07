@@ -5,6 +5,7 @@
 import type { CurrentPhaseMilestoneValue } from "./current-phase-milestone-value";
 import type { CurrentPhaseValue } from "./current-phase-value";
 import type { CVESummary } from "./cvesummary";
+import type { PriorityBasis } from "./priority-basis";
 import type { SeverityValue } from "./severity-value";
 import type { TicketPriorityValue } from "./ticket-priority-value";
 import type { TicketStatusValue } from "./ticket-status-value";
@@ -25,6 +26,12 @@ export interface TicketSummary {
   severity: SeverityValue | null;
   /** Effective priority: `priority_override` when set, otherwise `priority_automatic`. `p1`-`p4`, or `null` when not yet prioritizable. */
   priority: TicketPriorityValue | null;
+  /** System-derived priority: `p1`-`p4`, or `null` when not yet prioritizable. */
+  priority_automatic: TicketPriorityValue | null;
+  /** Manual priority override: `p1`-`p4`, or `null` when no override is set. */
+  priority_override: TicketPriorityValue | null;
+  /** What `priority_automatic` is based on. */
+  priority_automatic_basis: PriorityBasis;
   /** Current assignee, or `null` if unassigned. */
   assignee: UserReference | null;
   /** Summary of the associated CVE, or `null` if no CVE. */
@@ -33,9 +40,9 @@ export interface TicketSummary {
   duplicate_of_ticket_id: string | null;
   /** Whether the Ticket is confidential. */
   is_confidential: boolean;
-  /** Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. A retained value on a non-confidential Ticket is historical and inert. */
+  /** Coordinated Release Date (embargo publication instant, UTC), or `null` when none is set. When set and an SLA applies, it is `release_due_at` and the due dates divide the window from `created_at` to it, also on a non-confidential Ticket that retains it. */
   coordinated_release_at: string | null;
-  /** Due date (UTC) of the triage milestone, in which the VA (Vulnerability Analyst) decides affectedness; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). */
+  /** Due date (UTC) of the triage milestone, in which the VA (Vulnerability Analyst) decides affectedness; `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). The due dates divide the window from `created_at` to the Coordinated Release Date when one is set (`coordinated_release_at`), otherwise the SLA window. */
   triage_due_at: string | null;
   /** Due date (UTC) of the submission milestone, in which the maintainer prepares the fix and submits it to IBS (submission request, SR). */
   submission_due_at: string | null;
@@ -43,7 +50,7 @@ export interface TicketSummary {
   um_due_at: string | null;
   /** Due date (UTC) of the QA milestone, in which QA (quality assurance) tests the maintenance update before publication; currently equal to `release_due_at`. */
   qa_due_at: string | null;
-  /** Final deadline (UTC) by which the update must be released; currently equal to `qa_due_at`. */
+  /** Final deadline (UTC) by which the update must be released; `null` when no SLA applies, otherwise the Coordinated Release Date when one is set and the SLA deadline when none is; currently equal to `qa_due_at`. */
   release_due_at: string | null;
   /** Earliest open remediation phase of the Ticket among the phases that Sentinel observes: `triage` (the VA, Vulnerability Analyst, decides affectedness) while the Ticket is `new` or `analysis`; otherwise `submission` (the maintainer submits the fix), `um` (the UM, SUSE maintenance update team, creates the release request), or `qa` (QA, quality assurance, tests the update before publication) when the Ticket is not `resolved` and at least one track has that milestone `pending` or `overdue`. A phase that a track reports as `null` (not observable) does not hold it back. `null` when no SLA applies (Ticket `ignored` or `duplicated`, or severity `none`). Otherwise `done` when the Ticket is `resolved`, or when no phase is open and no track has a `null` milestone; `null` when no phase is open, the Ticket is not `resolved`, and a track has a `null` milestone. Unlike a track's `current_phase`, it takes `triage` from the Ticket status. */
   current_phase: CurrentPhaseValue | null;
