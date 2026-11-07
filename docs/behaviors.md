@@ -677,11 +677,10 @@ also meets these requirements, which they cannot check:
   Appear), the focus moves to the screen's heading.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
-  editing; a dialog without a field or a button, such as a popover that
-  explains a value (`docs/design-system.md`, Menus, Popovers, and Tooltips),
-  takes the focus itself. Escape closes it, and the focus then returns to the
-  element that opened it, or follows Focus after an action when that element
-  is gone.
+  editing; a dialog without a field or a button, such as the explanation of a
+  priority (`docs/design-system.md`, Priority), takes the focus itself. Escape
+  closes it, and the focus then returns to the element that opened it, or
+  follows Focus after an action when that element is gone.
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus (4.1.3 Status Messages). After a form is submitted with errors,
