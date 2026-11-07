@@ -7,6 +7,7 @@ import "../styles.css";
 import { App } from "../app";
 import type {
   AssignmentEligibility,
+  Capability,
   CurrentUserData,
   CurrentUserResponse,
   TicketSummary,
@@ -38,25 +39,44 @@ const DAY = 24 * 60 * 60 * 1000;
 const ANALYST: CurrentUserResponse = OTHER_USER;
 const READER: CurrentUserResponse = FICTIONAL_USER;
 
-// An assignment eligibility that the pinned contract does not list, which a
-// later Sentinel release can return.
+// An assignment eligibility and a capability that the pinned contract does
+// not list, which a later Sentinel release can return.
 const UNLISTED_ELIGIBILITY = "fictional_eligibility";
+const UNLISTED_CAPABILITY = "fictional_capability";
 
 // Get Current User's response, with a listed assignment eligibility or the
-// unlisted one.
+// unlisted one, and with listed capabilities or the unlisted one.
 interface UserResponse {
-  data: Omit<CurrentUserData, "assignment_eligibility"> & {
+  data: Omit<CurrentUserData, "assignment_eligibility" | "capabilities"> & {
     assignment_eligibility: AssignmentEligibility | typeof UNLISTED_ELIGIBILITY;
+    capabilities: (Capability | typeof UNLISTED_CAPABILITY)[];
   };
 }
 
 // The user with another assignment eligibility.
 function withEligibility(
-  user: CurrentUserResponse,
+  user: UserResponse,
   eligibility: AssignmentEligibility | typeof UNLISTED_ELIGIBILITY,
 ): UserResponse {
   return { data: { ...user.data, assignment_eligibility: eligibility } };
 }
+
+// The user with other capabilities.
+function withCapabilities(
+  user: UserResponse,
+  capabilities: (Capability | typeof UNLISTED_CAPABILITY)[],
+): UserResponse {
+  return { data: { ...user.data, capabilities } };
+}
+
+// An analyst who also holds manage_confidentiality, as the
+// vulnerability_analyst role grants it (Sentinel
+// docs/features/identity/rbac.md, Predefined Roles), and so is shown the
+// Embargo view and the Embargo expired count.
+const EMBARGO_ANALYST = withCapabilities(ANALYST, [
+  "manage_confidentiality",
+  "triage_ticket",
+]);
 
 // The filters of the views, as the requests send them, for the analyst.
 const FILTERS = {
@@ -78,12 +98,21 @@ const ATTENTION = {
   "QA overdue": "current_phase=qa&overdue=qa",
 };
 
+// The filters of the Embargo view, and of the Embargo expired count, as the
+// requests send them.
+const EMBARGO = "is_confidential=true";
+const EXPIRED = `${EMBARGO}&coordinated_release_passed=true`;
+
 // The sorting of the queues: by priority, then by the due date of the
 // current phase.
 const QUEUE_SORT = "sort_by=priority_then_current_due";
 // The sorting of the All view, and the read of its first page.
 const ALL_SORT = "sort_by=updated_at&sort_order=desc";
 const ALL_PAGE = `${ALL_SORT}&page=1&per_page=20`;
+// The sorting of the Embargo view, by Coordinated Release Date, earliest
+// first, and the read of its first page.
+const EMBARGO_SORT = "sort_by=coordinated_release_at&sort_order=asc";
+const EMBARGO_PAGE = `${EMBARGO_SORT}&page=1&per_page=20`;
 
 // The number of Tickets of each view and of each count of the attention
 // summary in the tests, by its filters.
@@ -94,7 +123,9 @@ const TOTALS = new Map([
   [FILTERS.Analyzed, 3],
   [FILTERS.All, 1250],
   [FILTERS["Assigned to me"], 4],
+  [EMBARGO, 3],
   [ATTENTION["Active P1"], 2],
+  [EXPIRED, 1],
   [ATTENTION["Triage overdue"], 1],
   [ATTENTION["Submission overdue"], 0],
   [ATTENTION["UM overdue"], 1],
@@ -360,6 +391,91 @@ describe("the views", () => {
   });
 
   test.each([
+    [
+      "an analyst who holds manage_confidentiality, after Assigned to me",
+      EMBARGO_ANALYST,
+      ["Assigned to me 4", "Embargo 3"],
+    ],
+    [
+      "a user who holds manage_confidentiality with a capability that the pinned contract does not list",
+      withCapabilities(ANALYST, [
+        UNLISTED_CAPABILITY,
+        "manage_confidentiality",
+        "triage_ticket",
+      ]),
+      ["Assigned to me 4", "Embargo 3"],
+    ],
+    [
+      "a bot account that holds manage_confidentiality and can be the assignee of no Ticket, after All",
+      withEligibility(
+        withCapabilities(
+          { data: { ...ANALYST.data, bot: true } },
+          EMBARGO_ANALYST.data.capabilities,
+        ),
+        "none",
+      ),
+      ["Embargo 3"],
+    ],
+  ])("show Embargo last to %s, with its count", async (_, user, last) => {
+    const { spy } = stubTickets({ user });
+    const { screen } = await renderApp("/tickets?view=new");
+
+    await expectTabs(screen, [
+      "New 12",
+      "Unassigned 1",
+      "Analysis 5",
+      "Analyzed 3",
+      "All 1,250",
+      ...last,
+    ]);
+    await expect
+      .element(screen.getByRole("tab", { name: "Embargo 3" }))
+      .toHaveAttribute("href", "/tickets?view=embargo");
+    expect(queriesOf(spy, "count")).toContain(countQuery(EMBARGO));
+  });
+
+  test.each([
+    ["holds triage_ticket alone", ANALYST],
+    [
+      "holds a capability that the pinned contract does not list, without manage_confidentiality",
+      withCapabilities(ANALYST, [UNLISTED_CAPABILITY, "triage_ticket"]),
+    ],
+  ])(
+    "show no Embargo, and read no embargo, to a user who %s",
+    async (_, user) => {
+      const { spy } = stubTickets({ user });
+      const { screen } = await renderApp("/tickets?view=new");
+
+      await expectTabs(screen, [
+        "New 12",
+        "Unassigned 1",
+        "Analysis 5",
+        "Analyzed 3",
+        "All 1,250",
+        "Assigned to me 4",
+      ]);
+      await expectSummary(screen);
+      expect(
+        [...queriesOf(spy, "count"), ...queriesOf(spy, "list")].filter(
+          (query) => query.includes("is_confidential"),
+        ),
+      ).toEqual([]);
+    },
+  );
+
+  test("read Embargo with its filter, sorted by Coordinated Release Date in ascending order, and its page of 20", async () => {
+    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+    const { screen } = await renderApp("/tickets?view=embargo");
+
+    await expect
+      .poll(() => queriesOf(spy, "list"))
+      .toEqual([`${EMBARGO}&${EMBARGO_PAGE}`]);
+    await expect
+      .element(screen.getByRole("tab", { name: "Embargo 3" }))
+      .toHaveAttribute("aria-selected", "true");
+  });
+
+  test.each([
     ["New", "?view=new", `${FILTERS.New}&${QUEUE_SORT}`],
     ["Unassigned", "?view=unassigned", `${FILTERS.Unassigned}&${QUEUE_SORT}`],
     ["Analysis", "?view=analysis", `${FILTERS.Analysis}&${QUEUE_SORT}`],
@@ -535,6 +651,19 @@ describe("the views", () => {
       "a user who is not shown Assigned to me",
       READER,
       ["New 12", "Unassigned 1", "Analysis 5", "Analyzed 3", "All 1,250"],
+    ],
+    [
+      "a user who is shown Embargo",
+      EMBARGO_ANALYST,
+      [
+        "New 12",
+        "Unassigned 1",
+        "Analysis 5",
+        "Analyzed 3",
+        "All 1,250",
+        "Assigned to me 4",
+        "Embargo 3",
+      ],
     ],
   ])(
     "set New and Unassigned apart from the other views for %s, with a line before Analysis alone",
@@ -835,6 +964,18 @@ describe("the URL", () => {
       NEW,
     ],
     [
+      "an embargo filter outside the Embargo view",
+      "?view=new&embargo=expired",
+      "/tickets?view=new",
+      NEW,
+    ],
+    [
+      "a sorting by Coordinated Release Date outside the Embargo view, with its order",
+      "?sort=coordinated-release-date&order=desc",
+      "/tickets",
+      ALL,
+    ],
+    [
       "an unknown sorting, with its order",
       "?sort=created_at&order=asc",
       "/tickets",
@@ -969,6 +1110,21 @@ describe("the URL", () => {
     );
   });
 
+  test("keeps the status and the embargo filters in the Embargo view, without a state of an embargo that it does not know, and sends them to List Tickets", async () => {
+    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+    const { router } = await renderApp(
+      "/tickets?view=embargo&status=resolved&embargo=running&embargo=expired",
+    );
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=embargo&status=resolved&embargo=expired");
+    expect(router.history.length).toBe(1);
+    await expect
+      .poll(() => queriesOf(spy, "list"))
+      .toEqual([`${EXPIRED}&status=resolved&${EMBARGO_PAGE}`]);
+  });
+
   test("keeps a page and the fragment that it accepts", async () => {
     stubTickets();
     const { router } = await renderApp("/tickets?view=new&page=2&sort=id#top");
@@ -992,6 +1148,48 @@ describe("the URL", () => {
     expect(queriesOf(spy, "list")).toEqual([
       "sort_by=updated_at&sort_order=desc&page=2&per_page=20",
     ]);
+  });
+
+  test("opens the All view for a user who is not shown Embargo, and drops the view with the parameters that the All view does not accept", async () => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp(
+      "/tickets?view=embargo&embargo=expired&status=analysis&order=desc&page=2",
+    );
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?status=analysis&page=2");
+    expect(router.history.length).toBe(1);
+    await expect
+      .element(screen.getByRole("tab", { name: /^All/ }))
+      .toHaveAttribute("aria-selected", "true");
+    expect(queriesOf(spy, "list")).toEqual([
+      "status=analysis&sort_by=updated_at&sort_order=desc&page=2&per_page=20",
+    ]);
+  });
+
+  test("drops Embargo, with its filter, when a read of the signed-in user tells that the user no longer holds manage_confidentiality, and moves the focus from its tab to the heading", async () => {
+    const { stub } = stubTickets({ user: EMBARGO_ANALYST });
+    const { router, screen } = await renderApp(
+      "/tickets?view=embargo&embargo=expired",
+    );
+    const tab = screen.getByRole("tab", { name: "Embargo 3" });
+    await expect.element(tab).toHaveAttribute("aria-selected", "true");
+    tab.element().focus();
+
+    stub.user = ANALYST;
+    returnToForeground();
+
+    await expect.poll(() => router.state.location.href).toBe("/tickets");
+    await expect
+      .element(screen.getByRole("tab", { name: /^Embargo/ }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("tab", { name: /^All/ }))
+      .toHaveAttribute("aria-selected", "true");
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toHaveFocus();
   });
 
   test("drops Assigned to me when a read of the signed-in user tells that the user can no longer be the assignee of a Ticket, and moves the focus from its tab to the heading", async () => {
@@ -1054,6 +1252,30 @@ describe("a change of the assignment eligibility", () => {
   });
 });
 
+describe("a change of manage_confidentiality", () => {
+  test("shows Embargo and Embargo expired, and keeps the focus on a tab that stays, when a read of the signed-in user tells that the user holds manage_confidentiality", async () => {
+    const { stub } = stubTickets();
+    const { router, screen } = await renderApp("/tickets?view=new");
+    const fresh = screen.getByRole("tab", { name: "New 12" });
+    await expect.element(fresh).toBeVisible();
+    fresh.element().focus();
+
+    stub.user = EMBARGO_ANALYST;
+    returnToForeground();
+
+    await expect
+      .element(screen.getByRole("tab", { name: "Embargo 3" }))
+      .toBeVisible();
+    await expect
+      .element(
+        summaryOf(screen).getByRole("link", { name: "1 Embargo expired" }),
+      )
+      .toBeVisible();
+    await expect.element(fresh).toHaveFocus();
+    expect(router.state.location.href).toBe("/tickets?view=new");
+  });
+});
+
 describe("the table", () => {
   // The names of the columns that every view shows first.
   const FIRST = ["Ticket", "CVE", "Title", "Packages"];
@@ -1108,6 +1330,67 @@ describe("the table", () => {
       }
     },
   );
+
+  test("shows in Embargo the columns of its embargoes, its Coordinated Release Date marked as sorted in ascending order", async () => {
+    stubTickets({ user: EMBARGO_ANALYST });
+    const { screen } = await renderApp("/tickets?view=embargo");
+    const headers = tableOf(screen).getByRole("columnheader");
+    const names = [
+      ...FIRST,
+      "Status",
+      "Coordinated Release Date",
+      "Deadline",
+      "Assignee",
+    ];
+
+    await expect.element(headers.first()).toBeVisible();
+    expect(headers.elements()).toHaveLength(names.length);
+    for (const [index, name] of names.entries()) {
+      await expect.element(headers.nth(index)).toHaveAccessibleName(name);
+    }
+    const sorted = tableOf(screen).getByRole("columnheader", {
+      name: "Coordinated Release Date",
+    });
+    await expect.element(sorted).toHaveAttribute("aria-sort", "ascending");
+    const marked = headers
+      .elements()
+      .filter((cell) => cell.querySelector("svg") !== null);
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toBe(sorted.element());
+  });
+
+  test("shows in Embargo the Coordinated Release Date of a Ticket as a date and time, and an absent one as Not set", async () => {
+    const release = new Date(2026, 10, 21, 14, 0);
+    stubTickets({
+      user: EMBARGO_ANALYST,
+      list: () =>
+        ticketPage([
+          fictionalTicket({
+            ticket_id: "SNTL-27",
+            status: "analyzed",
+            is_confidential: true,
+            coordinated_release_at: release.toISOString(),
+          }),
+          fictionalTicket({ ticket_id: "SNTL-19", is_confidential: true }),
+        ]),
+    });
+    const { screen } = await renderApp("/tickets?view=embargo");
+    const rows = tableOf(screen).getByRole("row");
+    const cells = (index: number) =>
+      rows
+        .nth(index)
+        .getByRole("gridcell")
+        .elements()
+        .map((cell) => cell.textContent);
+
+    await expect.element(rows.nth(2)).toBeVisible();
+    // CVE, Title, Packages, Status, then the date.
+    expect(cells(1).slice(3, 5)).toEqual(["Analyzed", "21 Nov 2026, 14:00"]);
+    await expect
+      .element(rows.nth(1).getByText("21 Nov 2026, 14:00"))
+      .toHaveAttribute("datetime", release.toISOString());
+    expect(cells(2)[4]).toBe("–Not set");
+  });
 
   test.each([
     ["a queue by priority", "?view=new", "Priority"],
@@ -1647,6 +1930,7 @@ describe("the filters", () => {
     "Status",
     ["New", "Analysis", "Analyzed", "Resolved", "Ignored", "Duplicated"],
   ] as const;
+  const EMBARGO_VALUES = ["Embargo", ["Expired"]] as const;
 
   test.each([
     ["the All view", "", [STATUS_VALUES, ...FILTER_VALUES], "New"],
@@ -1656,10 +1940,16 @@ describe("the filters", () => {
       FILTER_VALUES,
       "Critical",
     ],
+    [
+      "the Embargo view, with the status and the embargo filters",
+      "?view=embargo",
+      [STATUS_VALUES, EMBARGO_VALUES, ...FILTER_VALUES],
+      "New",
+    ],
   ])(
     "offer in %s their values, and move the focus to the first",
     async (_, search, filters, first) => {
-      stubTickets();
+      stubTickets({ user: EMBARGO_ANALYST });
       const { screen } = await renderApp(`/tickets${search}`);
 
       const dialog = await openFilters(screen);
@@ -1707,6 +1997,28 @@ describe("the filters", () => {
       await expect.element(optionOf(dialog, filter, value)).toBeChecked();
     },
   );
+
+  test("apply Embargo Expired at once in the Embargo view, at the first page, and count it among the filters that apply", async () => {
+    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+    const { router, screen } = await renderApp("/tickets?view=embargo&page=2");
+    const dialog = await openFilters(screen);
+
+    await toggle(dialog, "Embargo", "Expired");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=embargo&embargo=expired");
+    expect(router.history.length).toBe(2);
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(`${EXPIRED}&${EMBARGO_PAGE}`);
+    await expect.element(optionOf(dialog, "Embargo", "Expired")).toBeChecked();
+
+    await userEvent.keyboard("{Escape}");
+    await expect
+      .element(screen.getByRole("button", { name: "Filters 1 applied" }))
+      .toHaveFocus();
+  });
 
   test("keep the values of a filter in the order of the contract, count the filters that apply, and remove a filter without values", async () => {
     const { spy } = stubTickets();
@@ -1891,6 +2203,39 @@ describe("the sorting", () => {
       .poll(() => router.state.location.href)
       .toBe("/tickets?view=new");
     await expect.element(priority).toHaveAttribute("aria-sort", "descending");
+  });
+
+  test("reverses the sorting of the Embargo view by Coordinated Release Date, and returns to it in its first direction, which leaves the URL", async () => {
+    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+    const { router, screen } = await renderApp("/tickets?view=embargo");
+    const release = tableOf(screen).getByRole("columnheader", {
+      name: "Coordinated Release Date",
+    });
+    await expect.element(release).toHaveAttribute("aria-sort", "ascending");
+
+    await release.click();
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=embargo&order=desc");
+    await expect.element(release).toHaveAttribute("aria-sort", "descending");
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(
+        `${EMBARGO}&sort_by=coordinated_release_at&sort_order=desc&page=1&per_page=20`,
+      );
+
+    await tableOf(screen)
+      .getByRole("columnheader", { name: "Deadline" })
+      .click();
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=embargo&sort=deadline");
+
+    await release.click();
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=embargo");
+    await expect.element(release).toHaveAttribute("aria-sort", "ascending");
   });
 
   test("reverses the sorting of the All view by last modification", async () => {
@@ -2288,6 +2633,18 @@ describe("the attention summary", () => {
       .getBoundingClientRect();
     expect(triage.top).toBeGreaterThan(active.bottom);
     expect(name.top).toBe(triage.top);
+    // The line stands 4 px after the start of the line, as the line of the
+    // views does, and 12 px before the name.
+    const line = document.elementFromPoint(
+      active.left + 4.5,
+      name.top + name.height / 2,
+    )!;
+    const box = line.getBoundingClientRect();
+    expect([
+      Math.round(box.left - active.left),
+      Math.round(name.left - box.right),
+      getComputedStyle(line).backgroundColor,
+    ]).toEqual([4, 12, "rgb(216, 222, 228)"]);
     expect(qa.top).toBeGreaterThan(triage.top);
     expect(qa.left).toBeGreaterThanOrEqual(name.right);
     expect(qa.right).toBeLessThanOrEqual(window.innerWidth);
@@ -2389,6 +2746,85 @@ describe("the attention summary", () => {
     await expect
       .poll(() => queriesOf(spy, "list").at(-1))
       .toBe(`current_phase=um&overdue=um&${ALL_PAGE}`);
+  });
+
+  test("shows Embargo expired after Active P1 to a user who holds manage_confidentiality, standing alone, as a link to the Embargo view refined to its Tickets", async () => {
+    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+    const { screen } = await renderApp("/tickets?view=new");
+    const links = summaryOf(screen).getByRole("link");
+
+    await expect
+      .poll(() => links.elements().map((link) => link.textContent))
+      .toEqual([
+        "2 Active P1",
+        "1 Embargo expired",
+        "1 Triage overdue",
+        "0 Submission overdue",
+        "1 UM overdue",
+        "3 QA overdue",
+      ]);
+    await expect
+      .element(links.nth(1))
+      .toHaveAttribute("href", "/tickets?view=embargo&embargo=expired");
+    expect(
+      queriesOf(spy, "count").filter((query) => query === countQuery(EXPIRED)),
+    ).toHaveLength(1);
+    // 8 px after Active P1, and the line of the overdue counts 12 px after
+    // it, all on one line in a wide window.
+    const active = links.first().element().getBoundingClientRect();
+    const expired = links.nth(1).element().getBoundingClientRect();
+    expect(Math.round(expired.left - active.right)).toBe(8);
+    const line = document.elementFromPoint(
+      expired.right + 12.5,
+      expired.top + expired.height / 2,
+    )!;
+    const box = line.getBoundingClientRect();
+    expect([
+      Math.round(box.left - expired.right),
+      Math.round(box.width),
+      getComputedStyle(line).backgroundColor,
+    ]).toEqual([12, 1, "rgb(216, 222, 228)"]);
+    expect(
+      links.elements().map((link) => link.getBoundingClientRect().top),
+    ).toEqual(Array.from({ length: 6 }, () => active.top));
+  });
+
+  test("opens the Embargo view refined to the Tickets of Embargo expired", async () => {
+    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+    const { router, screen } = await renderApp("/tickets?view=new");
+
+    await summaryOf(screen)
+      .getByRole("link", { name: "1 Embargo expired" })
+      .click();
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?view=embargo&embargo=expired");
+    await expect
+      .element(screen.getByRole("tab", { name: "Embargo 3" }))
+      .toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(`${EXPIRED}&${EMBARGO_PAGE}`);
+  });
+
+  test("moves the focus from Embargo expired to the heading when a read of the signed-in user tells that the user no longer holds manage_confidentiality", async () => {
+    const { stub } = stubTickets({ user: EMBARGO_ANALYST });
+    const { screen } = await renderApp("/tickets?view=new");
+    const count = summaryOf(screen).getByRole("link", {
+      name: "1 Embargo expired",
+    });
+    await expect.element(count).toBeVisible();
+    count.element().focus();
+
+    stub.user = ANALYST;
+    returnToForeground();
+
+    await expect.element(count).not.toBeInTheDocument();
+    await expectSummary(screen);
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toHaveFocus();
   });
 
   test("shows the same counts to a user who holds no capability and can be the assignee of no Ticket", async () => {
