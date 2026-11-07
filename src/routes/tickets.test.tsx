@@ -1360,7 +1360,13 @@ describe("the table", () => {
   });
 
   test("shows in Embargo the Coordinated Release Date of a Ticket as a date and time, and an absent one as Not set", async () => {
+    const created = new Date(2026, 10, 11, 14, 0);
     const release = new Date(2026, 10, 21, 14, 0);
+    // The due dates divide the 10 days from the creation to the Coordinated
+    // Release Date, and the QA and release due dates are that date (Sentinel
+    // docs/features/tickets/ticket-deadlines.md, Coordinated Release Window).
+    const due = (days: number) =>
+      new Date(created.getTime() + days * DAY).toISOString();
     stubTickets({
       user: EMBARGO_ANALYST,
       list: () =>
@@ -1370,6 +1376,14 @@ describe("the table", () => {
             status: "analyzed",
             is_confidential: true,
             coordinated_release_at: release.toISOString(),
+            created_at: created.toISOString(),
+            updated_at: created.toISOString(),
+            triage_due_at: due(1),
+            submission_due_at: due(6),
+            um_due_at: due(7),
+            qa_due_at: release.toISOString(),
+            release_due_at: release.toISOString(),
+            current_phase: "qa",
           }),
           fictionalTicket({ ticket_id: "SNTL-19", is_confidential: true }),
         ]),

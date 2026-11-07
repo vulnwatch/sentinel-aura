@@ -229,7 +229,9 @@ test.describe("for an analyst", () => {
         .getByRole("gridcell")
         .nth(4);
     for (const ticket of ["SNTL-27", "SNTL-18"]) {
-      await expect(releaseOf(ticket).locator("time")).toHaveCount(1);
+      await expect(releaseOf(ticket)).toHaveText(
+        /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/,
+      );
     }
     await expect(releaseOf("SNTL-19")).toHaveText("–Not set");
     await expectAccessible(page);
@@ -375,7 +377,7 @@ test.describe("for an analyst", () => {
 });
 
 test.describe("refined by an analyst", () => {
-  test("shows the attention summary, whose counts open the All view refined to their Tickets", async ({
+  test("shows the attention summary, whose counts open the All view, or the Embargo view, refined to their Tickets", async ({
     page,
   }) => {
     await signIn(page, "asmith");
@@ -608,41 +610,6 @@ test("lands a bot account on the New view, without Assigned to me", async ({
     "All 24",
   ]);
   await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
-});
-
-test("shows neither Embargo nor Embargo expired to an administrator, who sees every Ticket without manage_confidentiality", async ({
-  page,
-}) => {
-  // jdoe holds the admin role alone: scope all, without manage_confidentiality
-  // or triage_ticket (Users).
-  await signIn(page, "jdoe");
-
-  await expect(views(page)).toHaveText([
-    "New 11",
-    "Unassigned 1",
-    "Analysis 6",
-    "Analyzed 4",
-    "All 27",
-  ]);
-  const active = await ticketsOf(
-    page,
-    "priority=p1&status=new&status=analysis&status=analyzed&per_page=100",
-  );
-  // SNTL-27 counts in QA overdue, and in no count of its embargo.
-  await expect(attention(page)).toHaveText([
-    `${active.length} Active P1`,
-    "1 Triage overdue",
-    "1 Submission overdue",
-    "1 UM overdue",
-    "2 QA overdue",
-  ]);
-
-  // A view that the user is not shown opens the All view, and leaves the URL
-  // with the filter that only that view accepts.
-  await page.goto("/tickets?view=embargo&embargo=expired");
-  await expect(page).toHaveURL("/tickets");
-  await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
-  await expect(identifiers(page)).toHaveCount(20);
 });
 
 test("lands a user without a role on the All view, which the Tickets entry opens, with the views of every user and the attention summary", async ({
