@@ -278,6 +278,7 @@ Graphical elements, minimum 3:1:
 | `danger-solid` | `canvas` | 5.03 | 4.10 |
 | `danger-solid` | `surface` | 5.35 | 3.75 |
 | `danger-solid` | `surface-hover` | 4.90 | 3.31 |
+| `danger-solid` | `neutral-soft` | 4.76 | 3.04 |
 | `link` | `sidebar` | 5.19 | 6.62 |
 | `link` | `sidebar-active` | 4.45 | 4.92 |
 | `neutral-icon` | `canvas` | 4.27 | 6.49 |
@@ -301,7 +302,9 @@ Graphical elements, minimum 3:1:
 A mark drawn in `surface` inside a filled `{tone}-icon` or `danger-solid`
 shape, such as the check of the Resolved status, has the contrast of the same
 pair. The icon of a link to another site (Buttons and Links), an icon that
-carries a meaning without a text, has the contrast of the text of its link.
+carries a meaning without a text, has the contrast of the text of its link,
+and the icon of a priority override (Priority) has that of `fg-muted` text on
+its background.
 The avatar colors are in Palette.
 
 ## Type
@@ -423,6 +426,7 @@ that the code imports ship.
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
 | A deadline that has passed, an overdue milestone | `clock-alert` |
 | A confidential Ticket | `lock` |
+| A priority override | `user-pen` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy | `loader-circle` |
 | A Ticket status that the pinned contract does not list | `circle-question-mark` |
@@ -633,7 +637,8 @@ The resolved severity of a Ticket or a CVE is `critical`, `high`, `medium`,
 ### Priority
 
 The effective priority of a Ticket is `p1` to `p4`, or `null` while it is not
-yet prioritizable (Sentinel `docs/features/tickets/ticket-priority.md`,
+yet prioritizable: its priority override when one is set, and its automatic
+priority otherwise (Sentinel `docs/features/tickets/ticket-priority.md`,
 Priority Levels; Persistence and Effective Priority). Only P1 is red, so that
 the Tickets to remediate at once stand out among many.
 
@@ -643,8 +648,56 @@ the Tickets to remediate at once stand out among many.
 - P2, P3, and P4 show as a mark of 14 px of three rising bars, of which the
   first three, two, or one are filled in `fg-muted` and the others in
   `border`, followed, 6 px later, by the level in `fg-muted`.
+- An effective priority that is an override, a Ticket whose
+  `priority_override` is set, ends with `user-pen` at 14 px in `fg-muted`,
+  4 px after the level, so that an override stands out among the automatic
+  priorities, and assistive technologies read ", override" after the level,
+  as "P1, override".
 - `null` is an absent value. A value that the pinned contract does not list
   shows as received, in `fg`, without a mark.
+
+**Explanation.** Where a screen document gives the priority of a Ticket its
+explanation, such as the Ticket list in its rows, the priority is a button
+that opens the explanation in a popover (Menus, Popovers, and Tooltips). The
+explanation states whether the effective priority is automatic or an override
+and what the automatic priority is based on, from the fields of the Ticket
+alone: `priority`, `priority_automatic`, `priority_override`, and
+`priority_automatic_basis` (Sentinel `docs/features/tickets/tickets.md`,
+PriorityBasis; PriorityEvidence; Sentinel
+`docs/features/tickets/ticket-priority.md`, Automatic Priority Basis). It needs
+no copy of the Decision Table or of the threshold of the EPSS percentile, which
+Sentinel states for itself.
+
+- The button is the priority as above, 24 px high and at least 24 px wide,
+  with 4 px of side padding and a 4 px radius. Under the pointer and while its
+  popover is open, it is on `neutral-soft`, which stands out from the
+  `surface-hover` of a row under the pointer.
+- The popover is 288 px wide, with 16 px of padding, in `text-14`. It opens
+  below the priority, aligned to its start, or above it where the window has
+  no room below. From top to bottom, it holds:
+  1. its title, which names it: the effective priority as above, followed by
+     "· Automatic" or "· Override", such as "P1 · Override", in `text-16`,
+     weight 600, which assistive technologies read as "P1, Override"; or "Not
+     yet prioritizable" for `null`;
+  2. a `border` line, 12 px below the title and 12 px above the sections;
+  3. the section of the basis, "Based on" for an automatic priority and
+     "Automatic priority" for an override, with its heading in `text-12`,
+     weight 500, `fg-muted`, and its lines 4 px apart: for an override, the
+     automatic priority as above, or "Not yet prioritizable" for `null`; then
+     "Severity" in `fg-muted`, followed by the severity of the basis as
+     Severity shows it; then "Exploitation" in `fg-muted`, followed by the
+     exploitation level: KEV, Active, Likely, or Unknown; and
+  4. 12 px below, the section "Evidence", in the same style: a line for each
+     piece of deciding evidence, in the order of the basis, "Listed in CISA
+     KEV on 9 Oct 2026" with the date of the entry (`docs/behaviors.md`,
+     Dates and Times, Display), "SSVC exploitation PoC" or "SSVC exploitation
+     Active", and "EPSS percentile 0.97", the percentile cut to two decimals,
+     so that it never shows more than its value. Without evidence, the line
+     "No evidence." in `fg-muted` (Empty States).
+- A level, a severity, an exploitation level, or an SSVC value that the pinned
+  contract does not list shows as received, and a piece of evidence of a kind
+  that it does not list shows its kind as received, without its value, whose
+  meaning depends on the kind (`docs/behaviors.md`, Unknown Values).
 
 The marks, in a box of 14 by 14 units:
 
@@ -992,7 +1045,8 @@ keep the search, the filters, and the sorting.
 
 - A menu or a popover is on `surface`, with a `border` line, an 8 px radius,
   a shadow, and 4 px of padding, or 16 px for a popover that holds fields,
-  such as that of Filters (Lists). A menu item is 36 px high with a 6 px radius
+  such as that of Filters (Lists), or that explains a value, such as the
+  priority of a Ticket (Priority). A menu item is 36 px high with a 6 px radius
   and 10 px of side padding, its icon at 16 px in `fg-muted` before its label
   in `text-15`, and `surface-hover` under the pointer and on focus, with the
   focus ring inside it on keyboard focus (Focus and Motion). The
@@ -1006,8 +1060,15 @@ keep the search, the filters, and the sorting.
   stays while the pointer is over it, and Escape hides it (WCAG 2.2, 1.4.13
   Content on Hover or Focus). It names an icon alone or a compact avatar that
   does not link to the user (one that does shows the user card instead;
-  Representation of a User), or lists the values of a "+N" (Tables); it never
+  Representation of a User), or lists the values of a "+N" (  Tables); it never
   holds the only means to act.
+- A popover that explains a value, such as the priority of a Ticket
+  (Priority), opens when the user presses the value, a button, with a click,
+  a tap, Enter, or Space, so that it works on a touch screen too, and stays
+  until the user closes it. It holds no control: it takes the focus itself as
+  it opens, and assistive technologies read it by its title. Escape or a click
+  outside closes it, and the focus returns to the value (`docs/behaviors.md`,
+  Accessibility, Dialogs).
 
 ## Representation of a User
 
