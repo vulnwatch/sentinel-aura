@@ -71,6 +71,65 @@ function masked(page: Page) {
   return { mask: [avatars(page), dateTimes(page)] };
 }
 
+// Whether a response body is a page of Tickets with the basis of their
+// automatic priority.
+function isBasisPage(body: unknown): body is {
+  data: { priority_automatic_basis: { evidence: { value: unknown }[] } }[];
+} {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "data" in body &&
+    Array.isArray(body.data) &&
+    body.data.every(
+      (ticket: unknown) =>
+        typeof ticket === "object" &&
+        ticket !== null &&
+        "priority_automatic_basis" in ticket &&
+        typeof ticket.priority_automatic_basis === "object" &&
+        ticket.priority_automatic_basis !== null &&
+        "evidence" in ticket.priority_automatic_basis &&
+        Array.isArray(ticket.priority_automatic_basis.evidence),
+    )
+  );
+}
+
+const DATE = new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+// The date on which the CISA KEV entry of the CVE of the only Ticket that a
+// search finds was added, which the dataset computes from the date of its
+// load (Sentinel docs/features/platform/example-dataset.md, Time Base; CVEs),
+// as the explanation of a priority shows it, such as 9 Oct 2026
+// (docs/behaviors.md, Dates and Times, Display).
+async function kevDateOf(page: Page, search: string): Promise<string> {
+  const response = await page.request.get(`/api/v1/tickets?search=${search}`);
+  expect(response.ok()).toBe(true);
+  const body: unknown = await response.json();
+  if (!isBasisPage(body) || body.data.length !== 1) {
+    throw new Error(`List Tickets found no single Ticket for ${search}`);
+  }
+  const value = String(
+    body.data[0]?.priority_automatic_basis.evidence[0]?.value,
+  );
+  const parts = new Map(
+    DATE.formatToParts(new Date(`${value}T00:00:00Z`)).map((part) => [
+      part.type,
+      part.value,
+    ]),
+  );
+  return `${parts.get("day")} ${parts.get("month")} ${parts.get("year")}`;
+}
+
+// The explanation of a priority that the page shows, by its name.
+function explanation(page: Page, name: string) {
+  return page.getByRole("dialog", { name, exact: true });
+}
+
 // Moves the pointer away from the rows, which it would mark, to the empty
 // part of the sidebar, before a reference screenshot.
 async function pointerAway(page: Page) {
@@ -312,6 +371,124 @@ test.describe("for an analyst", () => {
     ).toBeVisible();
     await expectAccessible(page);
   });
+
+  test("explains an override of the priority with the automatic priority that it replaces", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await expectViewCounts(page);
+    // In Assigned to me, whose columns hold no avatar and no date, so that no
+    // mask of the reference lies over the popover.
+    await views(page).filter({ hasText: "Assigned to me" }).click();
+    await expect(page).toHaveURL("/tickets?view=assigned-to-me");
+    // SNTL-12, assigned to asmith, whose override P1 bwilson set over the
+    // automatic P3 of its High severity without exploitation evidence
+    // (Tickets; CVEs; Sentinel docs/features/tickets/ticket-priority.md,
+    // Decision Table).
+    const priority = table(page)
+      .getByRole("row", { name: /SNTL-12/ })
+      .getByRole("button", { name: "P1, override", exact: true });
+
+    await priority.click();
+
+    const dialog = explanation(page, "P1, override");
+    await expect(dialog).toBeFocused();
+    await expect(dialog.getByRole("heading", { level: 3 })).toHaveText([
+      "Automatic priority",
+      "Evidence",
+    ]);
+    for (const text of ["P3", "High", "Unknown", "No evidence."]) {
+      await expect(dialog.getByText(text, { exact: true })).toBeVisible();
+    }
+    await expectAccessible(page);
+    await pointerAway(page);
+
+    await expect(page).toHaveScreenshot(
+      "ticket-list-priority.png",
+      masked(page),
+    );
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(priority).toBeFocused();
+  });
+
+  test("explains an automatic priority from the CISA KEV entry, opened and closed with the keyboard", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await expectViewCounts(page);
+    // SNTL-1, in the New view, whose automatic P1 follows from the CISA KEV
+    // entry of CVE-2099-0001 (CVEs; Sentinel
+    // docs/features/tickets/ticket-priority.md, Decision Table).
+    const added = await kevDateOf(page, "CVE-2099-0001");
+    const row = table(page).getByRole("row", { name: /SNTL-1\b/ });
+    const priority = row.getByRole("button", { name: "P1", exact: true });
+    // From the cell of the severity, before it, as the arrow keys move in
+    // the table.
+    await row.getByRole("gridcell", { name: "Critical", exact: true }).click();
+    await page.keyboard.press("ArrowRight");
+    await expect(priority).toBeFocused();
+
+    await page.keyboard.press("Enter");
+
+    const dialog = explanation(page, "P1, automatic");
+    await expect(dialog).toBeFocused();
+    await expect(dialog.getByRole("heading", { level: 3 })).toHaveText([
+      "Based on",
+      "Evidence",
+    ]);
+    for (const text of ["Critical", "KEV"]) {
+      await expect(dialog.getByText(text, { exact: true })).toBeVisible();
+    }
+    await expect(dialog.getByRole("listitem")).toHaveText([
+      `Listed in CISA KEV on ${added}`,
+    ]);
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(priority).toBeFocused();
+  });
+
+  for (const { ticket, name, title, basis, evidence } of [
+    // SNTL-10, whose automatic P3 follows from its Medium severity and the
+    // SSVC exploitation poc of CVE-2099-0010 (CVEs).
+    {
+      ticket: "SNTL-10",
+      name: "P3",
+      title: "P3, automatic",
+      basis: ["Medium", "Likely"],
+      evidence: ["SSVC exploitation PoC"],
+    },
+    // SNTL-6, whose CVE-2099-0006 has no CVSS data and no exploitation
+    // evidence, so that it is not yet prioritizable (CVEs).
+    {
+      ticket: "SNTL-6",
+      name: "Not set",
+      title: "Not yet prioritizable",
+      basis: ["Unknown", "No evidence."],
+      evidence: [],
+    },
+  ]) {
+    test(`explains the priority of ${ticket} from its basis`, async ({
+      page,
+    }) => {
+      await signIn(page, "asmith");
+      await expectViewCounts(page);
+
+      await table(page)
+        .getByRole("row", { name: new RegExp(`${ticket}\\b`) })
+        .getByRole("button", { name, exact: true })
+        .click();
+
+      const dialog = explanation(page, title);
+      await expect(dialog).toBeFocused();
+      for (const text of basis) {
+        await expect(dialog.getByText(text, { exact: true })).toBeVisible();
+      }
+      await expect(dialog.getByRole("listitem")).toHaveText(evidence);
+    });
+  }
 
   test("pages the All view, sorted by last modification", async ({ page }) => {
     await signIn(page, "asmith");

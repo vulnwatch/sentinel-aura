@@ -1,3 +1,4 @@
+import { UserPen } from "lucide-react";
 import type { TicketPriorityValue } from "../api/generated/model";
 import { AbsentValue } from "./absent-value";
 
@@ -69,15 +70,50 @@ interface PriorityProps {
   // docs/features/tickets/ticket-priority.md, Priority Levels; Persistence
   // and Effective Priority).
   priority: string | null;
+  // Whether the effective priority is an override, a Ticket whose
+  // priority_override is set.
+  isOverride?: boolean;
 }
 
-// A priority (docs/design-system.md, Priority): P1 as its red mark, then
-// "P1" in fg at weight 600; P2, P3, and P4 as the bars, of which the first
-// three, two, or one are filled, then the level in fg-muted; the mark 6 px
-// before the level. null is an absent value, and a value that the pinned
-// contract does not list shows as received, in fg, without a mark
-// (docs/behaviors.md, Unknown Values).
-export function Priority({ priority }: PriorityProps) {
+// The name of a priority, which assistive technologies read: its level, such
+// as P1, a value that the pinned contract does not list as received, or "Not
+// set" for null (docs/behaviors.md, Absent Values).
+export function priorityName(priority: string | null): string {
+  if (priority === null) {
+    return "Not set";
+  }
+  const level = LEVELS.get(priority);
+  return level === undefined ? priority : `P${level}`;
+}
+
+// A priority (docs/design-system.md, Priority): the value, then, for an
+// override, user-pen at 14 px in fg-muted, 4 px after the level. The icon is
+// hidden from assistive technologies: the element that shows an override
+// names it, as the level followed by ", override", such as the button of the
+// explanation of the priority, because a text hidden on the screen would
+// read as a part of its own, "P1 , override".
+export function Priority({ priority, isOverride = false }: PriorityProps) {
+  if (!isOverride) {
+    return <PriorityValue priority={priority} />;
+  }
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      <PriorityValue priority={priority} />
+      <UserPen aria-hidden className="size-3.5 shrink-0 text-fg-muted" />
+    </span>
+  );
+}
+
+interface PriorityValueProps {
+  priority: string | null;
+}
+
+// The value of a priority: P1 as its red mark, then "P1" in fg at weight 600;
+// P2, P3, and P4 as the bars, of which the first three, two, or one are
+// filled, then the level in fg-muted; the mark 6 px before the level. null is
+// an absent value, and a value that the pinned contract does not list shows
+// as received, in fg, without a mark (docs/behaviors.md, Unknown Values).
+function PriorityValue({ priority }: PriorityValueProps) {
   if (priority === null) {
     return <AbsentValue />;
   }
@@ -89,14 +125,14 @@ export function Priority({ priority }: PriorityProps) {
     return (
       <span className="inline-flex items-center gap-1.5 align-middle font-semibold text-fg">
         <P1Mark />
-        <span>P1</span>
+        <span>{priorityName(priority)}</span>
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 align-middle text-fg-muted">
       <BarsMark filled={5 - level} />
-      <span>{`P${level}`}</span>
+      <span>{priorityName(priority)}</span>
     </span>
   );
 }

@@ -39,6 +39,7 @@ import { FilterGroup, Filters, type FilterOption } from "../components/filters";
 import { Link } from "../components/link";
 import { Pagination } from "../components/pagination";
 import { Priority } from "../components/priority";
+import { ExplainedPriority } from "../components/priority-explanation";
 import { placeMessage, ScreenRead } from "../components/read-view";
 import { FocusHandOff, ScreenHeading } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
@@ -667,11 +668,13 @@ function columnsOf(
       allowsSorting: true,
       render: (row) => <Severity severity={row.severity} />,
     },
+    // The effective priority as the button of its explanation, from the
+    // fields of the row (docs/design-system.md, Priority, Explanation).
     priority: {
       id: "priority",
       name: "Priority",
       allowsSorting: true,
-      render: (row) => <Priority priority={row.priority} />,
+      render: (row) => <ExplainedPriority ticket={row} />,
     },
     deadline: {
       id: "deadline",

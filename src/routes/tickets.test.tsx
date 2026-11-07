@@ -1505,6 +1505,106 @@ describe("the table", () => {
     ]);
   });
 
+  test("explains the priority of a row from its fields, opened from the keyboard in the table", async () => {
+    stubTickets({
+      list: () =>
+        ticketPage([
+          // An override of P3 over the automatic P1 of a High severity with
+          // an active exploitation (Sentinel
+          // docs/features/tickets/ticket-priority.md, Decision Table;
+          // Automatic Priority Basis).
+          fictionalTicket({
+            ticket_id: "SNTL-13",
+            priority: "p3",
+            priority_automatic: "p1",
+            priority_override: "p3",
+            priority_automatic_basis: {
+              severity: "high",
+              exploitation: "active",
+              evidence: [{ kind: "ssvc_exploitation", value: "active" }],
+            },
+          }),
+          fictionalTicket({ ticket_id: "SNTL-12" }),
+          fictionalTicket({ ticket_id: "SNTL-11" }),
+        ]),
+    });
+    const { screen } = await renderApp("/tickets");
+    const row = tableOf(screen).getByRole("row").nth(1);
+    const priority = row.getByRole("button", {
+      name: "P3, override",
+      exact: true,
+    });
+    await expect.element(priority).toBeVisible();
+    // In every row, the first, the last, and one between, the whole cell is
+    // the button (docs/design-system.md, Priority, Explanation), so that the
+    // cell, which takes the focus in turn as the arrow keys move in the
+    // table, holds no smaller target beside it.
+    for (const index of [1, 2, 3]) {
+      const button = tableOf(screen)
+        .getByRole("row")
+        .nth(index)
+        .getByRole("button", { name: /^P/ })
+        .element();
+      const area = button.getBoundingClientRect();
+      const cell = ancestorOf(
+        button,
+        (element) => element.getAttribute("role") === "gridcell",
+      ).getBoundingClientRect();
+      expect([
+        area.left <= cell.left,
+        area.top <= cell.top,
+        area.right >= cell.right,
+        area.bottom >= cell.bottom,
+      ]).toEqual([true, true, true, true]);
+    }
+    // The button of the last row does not reach past the table, which would
+    // make it scroll vertically within its frame (docs/design-system.md,
+    // Tables).
+    const scroller = ancestorOf(
+      tableOf(screen).element(),
+      (element) => getComputedStyle(element).overflowX === "auto",
+    );
+    expect(scroller.scrollHeight).toBe(scroller.clientHeight);
+    // From the cell of the severity, before it, as the arrow keys move in the
+    // table.
+    await row.getByRole("gridcell", { name: "High", exact: true }).click();
+    await userEvent.keyboard("{ArrowRight}");
+    await expect.element(priority).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    const dialog = page.getByRole("dialog", { name: "P3, override" });
+    await expect.element(dialog).toHaveFocus();
+    await expect
+      .element(dialog.getByRole("heading", { level: 3 }).first())
+      .toHaveTextContent("Automatic priority");
+    await expect
+      .element(dialog.getByRole("listitem"))
+      .toHaveTextContent("SSVC exploitation Active");
+    await userEvent.keyboard("{Escape}");
+    await expect.element(priority).toHaveFocus();
+  });
+
+  test("moves the focus to the heading when a read removes the row whose explanation holds it", async () => {
+    const { stub } = stubTickets();
+    const { screen } = await renderApp("/tickets");
+    await tableOf(screen)
+      .getByRole("row")
+      .nth(1)
+      .getByRole("button", { name: "P2", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "P2, automatic" });
+    await expect.element(dialog).toHaveFocus();
+    stub.list = () => ticketPage([]);
+
+    returnToForeground();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toHaveFocus();
+  });
+
   test("shows a Ticket without a CVE, a title, packages, or an assignee with absent values", async () => {
     stubTickets({
       list: () =>
