@@ -17,10 +17,10 @@ sorting of its columns. It is the landing of every user. Vulnerability and
 restricted analysts work their queues in it, starting from the queue of new
 Tickets; every other user finds a Ticket in it, starting from all of them.
 The attention summary above the views shows every user the Tickets that need
-attention, and the analysts who hold `manage_confidentiality` follow the
-embargoes in it, among them those whose Coordinated Release Date has passed
-(`docs/screen-map.md`, Users and Frequent Tasks; Landing; Ticket List Views;
-Attention Summary).
+attention. The analysts who hold `manage_confidentiality` also follow the
+embargoes in the Embargo view, and the summary counts for them those whose
+Coordinated Release Date has passed (`docs/screen-map.md`, Users and Frequent
+Tasks; Landing; Ticket List Views; Attention Summary).
 
 ## Access
 
@@ -246,11 +246,11 @@ Attention Summary).
 - **Coordinated Release Date**: `coordinated_release_at`, as a date and time
   (`docs/behaviors.md`, Display), not as the days that remain to it, which
   only a deadline shows; or an absent value for a confidential Ticket without
-  one. With a date, the deadlines of the Ticket divide the window up to it,
-  and its QA deadline is that date (Sentinel
+  one. When an SLA applies to a Ticket with a date, its deadlines divide the
+  window up to that date, and its QA deadline is that date (Sentinel
   `docs/features/tickets/ticket-deadlines.md`, Deadline Window; Coordinated
-  Release Window), so the Deadline column shows how the remediation keeps to
-  the embargo.
+  Release Window; Null Due Dates), so the Deadline column shows how the
+  remediation keeps to the embargo.
 - **Assignee**: the user in the full form at the small size
   (`docs/behaviors.md`, Representation of a User), or "Unassigned", the
   precise name of the absence (`docs/behaviors.md`, Absent Values).
@@ -290,15 +290,13 @@ Attention Summary).
   the popover of Filters is open, it announces the same itself
   (`docs/design-system.md`, Lists).
 - **The focus.** When the rows, the table without rows, the action of an
-  empty state, the pagination, a tab, or Clear filters leaves the page while
-  it holds the focus, such as "Go to the first page" once the rows arrive,
-  the pagination when an error takes the place of the rows, Clear filters
-  once it removed the search and the filters, or a tab or a count of the
-  attention summary that a read of the signed-in user removes (Access), such
-  as Assigned to me once the user can no longer be the assignee of a Ticket,
-  or Embargo and Embargo expired once the user no longer holds
-  `manage_confidentiality`, the focus moves to the screen's heading
-  (`docs/behaviors.md`, Accessibility, Focus after an action).
+  empty state, the pagination, a tab, a count of the attention summary, or
+  Clear filters leaves the page while it holds the focus, such as "Go to the
+  first page" once the rows arrive, the pagination when an error takes the
+  place of the rows, Clear filters once it removed the search and the
+  filters, or a tab or a count that a read of the signed-in user removes
+  (Access), the focus moves to the screen's heading (`docs/behaviors.md`,
+  Accessibility, Focus after an action).
 - **Empty.** A view without Tickets says "No Tickets in this view.", on any
   page. A view that the user refined without Tickets that match says "No
   Tickets in this view match the search." when only a search applies and "No
@@ -340,9 +338,9 @@ Attention Summary).
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Persistence and Effective Priority
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Deadline
-  Window; Coordinated Release Window); Ticket-Level Overdue Filter; Ticket
-  Current Phase (Relation to the Overdue Filter; Current Phase Filter);
-  Sorting, Current Due Date
+  Window; Coordinated Release Window; Null Due Dates); Ticket-Level Overdue
+  Filter; Ticket Current Phase (Relation to the Overdue Filter; Current Phase
+  Filter); Sorting, Current Due Date
 - Sentinel `docs/features/identity/authentication.md` — Get Current User
 - Sentinel `docs/features/identity/rbac.md` — Capabilities; Scope and
   Confidential Ticket Visibility; Assignment Eligibility Wire Format
