@@ -12,7 +12,7 @@ import {
 // The Ticket list (docs/screens/ticket-list.md), against a backend loaded
 // with Sentinel's example dataset, whose Tickets, users, and roles the tests
 // rely on as loaded (Sentinel docs/features/platform/example-dataset.md,
-// Users; CVEs; Tickets; Aged Tickets; Embargoes).
+// Users; CVEs; Tickets; Priorities; Aged Tickets; Embargoes).
 
 // The counts of the attention summary.
 function attention(page: Page) {
@@ -233,9 +233,10 @@ test.describe("for an analyst", () => {
     await views(page).filter({ hasText: "Assigned to me" }).click();
 
     await expect(page).toHaveURL("/tickets?view=assigned-to-me");
-    // Among the P3 Tickets, SNTL-13, past its UM due date, and SNTL-27, past
-    // its QA due date (Aged Tickets), before SNTL-21, whose triage due date
-    // is still ahead.
+    // Among the P3 Tickets, SNTL-13, whose override P3 lies below its
+    // automatic P1 (Priorities) and which is past its UM due date, and
+    // SNTL-27, past its QA due date (Aged Tickets), before SNTL-21, whose
+    // triage due date is still ahead.
     await expect(identifiers(page)).toHaveText([
       "SNTL-12",
       "SNTL-18",
@@ -453,8 +454,7 @@ test.describe("for an analyst", () => {
   for (const { ticket, name, title, basis, evidence } of [
     // SNTL-10, whose automatic P3 follows from its Medium severity, the
     // SSVC exploitation poc of CVE-2099-0010, and its EPSS percentile 0.96
-    // (CVEs; Sentinel docs/features/platform/example-dataset.md,
-    // Priorities).
+    // (CVEs; Priorities).
     {
       ticket: "SNTL-10",
       name: "P3",
