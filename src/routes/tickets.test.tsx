@@ -1524,6 +1524,8 @@ describe("the table", () => {
               evidence: [{ kind: "ssvc_exploitation", value: "active" }],
             },
           }),
+          fictionalTicket({ ticket_id: "SNTL-12" }),
+          fictionalTicket({ ticket_id: "SNTL-11" }),
         ]),
     });
     const { screen } = await renderApp("/tickets");
@@ -1533,24 +1535,40 @@ describe("the table", () => {
       exact: true,
     });
     await expect.element(priority).toBeVisible();
-    // The whole cell is the button (docs/design-system.md, Priority,
-    // Explanation), so that the cell, which takes the focus in turn as the
-    // arrow keys move in the table, holds no smaller target beside it.
-    const area = priority.element().getBoundingClientRect();
-    const cell = ancestorOf(
-      priority.element(),
-      (element) => element.getAttribute("role") === "gridcell",
-    ).getBoundingClientRect();
-    expect([
-      area.left <= cell.left,
-      area.top <= cell.top,
-      area.right >= cell.right,
-      area.bottom >= cell.bottom,
-    ]).toEqual([true, true, true, true]);
-    // From the identifier, as the arrow keys move in the table, past CVE,
-    // Title, Packages, Status, and Severity.
-    row.getByRole("link", { name: "SNTL-13" }).element().focus();
-    await userEvent.keyboard("{ArrowRight}".repeat(6));
+    // In every row, the first, the last, and one between, the whole cell is
+    // the button (docs/design-system.md, Priority, Explanation), so that the
+    // cell, which takes the focus in turn as the arrow keys move in the
+    // table, holds no smaller target beside it.
+    for (const index of [1, 2, 3]) {
+      const button = tableOf(screen)
+        .getByRole("row")
+        .nth(index)
+        .getByRole("button", { name: /^P/ })
+        .element();
+      const area = button.getBoundingClientRect();
+      const cell = ancestorOf(
+        button,
+        (element) => element.getAttribute("role") === "gridcell",
+      ).getBoundingClientRect();
+      expect([
+        area.left <= cell.left,
+        area.top <= cell.top,
+        area.right >= cell.right,
+        area.bottom >= cell.bottom,
+      ]).toEqual([true, true, true, true]);
+    }
+    // The button of the last row does not reach past the table, which would
+    // make it scroll vertically within its frame (docs/design-system.md,
+    // Tables).
+    const scroller = ancestorOf(
+      tableOf(screen).element(),
+      (element) => getComputedStyle(element).overflowX === "auto",
+    );
+    expect(scroller.scrollHeight).toBe(scroller.clientHeight);
+    // From the cell of the severity, before it, as the arrow keys move in the
+    // table.
+    await row.getByRole("gridcell", { name: "High", exact: true }).click();
+    await userEvent.keyboard("{ArrowRight}");
     await expect.element(priority).toHaveFocus();
 
     await userEvent.keyboard("{Enter}");

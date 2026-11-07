@@ -338,8 +338,9 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   Links; Lists; Tables; Forms; Loading; Empty States; Errors in Place of
   Content; Menus, Popovers, and Tooltips
 - Sentinel `docs/features/tickets/tickets.md` — Ticket Identification;
-  Search; Statuses; Confidential Tickets; PriorityBasis; PriorityEvidence;
-  TicketSummary; List Tickets; Reassignment
+  Search; Statuses; Confidential Tickets (Coordinated Release Date);
+  PriorityBasis; PriorityEvidence; TicketSummary; List Tickets (Embargo
+  filters); Reassignment
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Exploitation Level; Persistence and Effective Priority; Automatic Priority

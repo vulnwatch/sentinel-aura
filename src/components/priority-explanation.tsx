@@ -239,11 +239,13 @@ export function ExplainedPriority({ ticket }: ExplainedPriorityProps) {
   return (
     <DialogTrigger>
       {/* Before the box, whose look follows its state (peer). It extends a
-          pixel beyond the cell, whose bounds include half of its border
-          line, so that the cell is covered whole. */}
+          pixel beyond the cell, whose bounds include part of the border lines
+          between its row and the rows around it, so that the cell is covered
+          whole, except below the last row, which has no line below it, so
+          that the button does not reach past the table. */}
       <AriaButton
         aria-label={isOverride ? `${name}, override` : name}
-        className="peer absolute -inset-px cursor-default outline-none"
+        className="peer absolute -inset-px cursor-default outline-none in-[tr:last-child]:bottom-0"
       />
       <span
         ref={box}
