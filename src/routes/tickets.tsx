@@ -927,7 +927,7 @@ interface AttentionSummaryProps {
 // "1 Triage", and read whole, as "1 Triage overdue". The line and the name
 // are hidden from assistive technologies, which read the name with each
 // count. The group wraps to the next line as a whole, where its line stands
-// 4 px after the start of the line, as the line of the views does, and its
+// 4 px after the start of the row, as the line of the views does, and its
 // counts after its name when it is wider than its line. When Embargo expired
 // leaves the page while it holds the focus, because a read of the signed-in
 // user tells that the user no longer holds the capability, the focus moves to
