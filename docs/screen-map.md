@@ -514,8 +514,9 @@ changing one changes this document first.
     (Sentinel `docs/features/identity/rbac.md`, Capabilities). List Tickets
     lists and counts these Tickets without a capability (Sentinel
     `docs/features/tickets/tickets.md`, List Tickets, Embargo filters), but
-    a user without it cannot act on them; the All view still shows them to
-    every user who sees them (The UI shows what the API returns);
+    a user without it can neither make them non-confidential nor set their
+    Coordinated Release Date; the All view still shows them to every user
+    who sees them (The UI shows what the API returns);
   - the Assigned to me view (Ticket List Views) shows to a user who can be
     the assignee of a Ticket: one whose assignment eligibility is `all` or
     `non_confidential`;
