@@ -16,6 +16,8 @@
  * `current_due_at` sorts by the current due date and
  * `priority_then_current_due` by the effective priority, then the
  * current due date (same document, Current Due Date).
+ * `coordinated_release_at` sorts by the stored Coordinated Release Date
+ * with `NULL` last (tickets.md, List Tickets > Embargo filters).
  */
 export type TicketSortField =
   (typeof TicketSortField)[keyof typeof TicketSortField];
@@ -34,4 +36,5 @@ export const TicketSortField = {
   release_due_at: "release_due_at",
   current_due_at: "current_due_at",
   priority_then_current_due: "priority_then_current_due",
+  coordinated_release_at: "coordinated_release_at",
 } as const;

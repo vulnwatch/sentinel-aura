@@ -94,7 +94,11 @@ export function signedIn(): Response {
 }
 
 // A fictional Ticket, as List Tickets returns it: SNTL-1, New, with a CVE,
-// unassigned, and a triage deadline, with the fields that a test sets.
+// unassigned, and a triage deadline, with the fields that a test sets. Its
+// automatic priority P2 follows from its High severity and the SSVC
+// exploitation poc of its CVE (Sentinel
+// docs/features/tickets/ticket-priority.md, Decision Table; Automatic
+// Priority Basis).
 export function fictionalTicket(
   fields: Partial<TicketSummary> = {},
 ): TicketSummary {
@@ -103,6 +107,13 @@ export function fictionalTicket(
     status: "new",
     severity: "high",
     priority: "p2",
+    priority_automatic: "p2",
+    priority_override: null,
+    priority_automatic_basis: {
+      severity: "high",
+      exploitation: "likely",
+      evidence: [{ kind: "ssvc_exploitation", value: "poc" }],
+    },
     assignee: null,
     cve: {
       cve_id: "CVE-2099-0001",

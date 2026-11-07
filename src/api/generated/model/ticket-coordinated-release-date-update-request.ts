@@ -16,6 +16,6 @@
  * value fails with the global `422 VALIDATION_ERROR`.
  */
 export interface TicketCoordinatedReleaseDateUpdateRequest {
-  /** Coordinated Release Date (embargo publication instant), an ISO 8601 date-time, or JSON `null` to clear it. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. Past instants are accepted. Required. */
+  /** Coordinated Release Date (embargo publication instant), an ISO 8601 date-time, or JSON `null` to clear it. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. A past instant is accepted when it is not before the Ticket's `created_at` (otherwise `422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION`). The latest accepted instant is `9999-12-31T23:59:59.999998Z`. Required. */
   coordinated_release_at: string | null;
 }

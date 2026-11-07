@@ -27,6 +27,6 @@ export interface TicketCreateRequest {
   severity?: SeverityValue | null;
   /** Create the Ticket as confidential. When present (`true` or `false`), the caller also needs the `manage_confidentiality` capability; otherwise `403 AUTH_INSUFFICIENT_PERMISSION`. Omitted: the Ticket is not confidential and the capability is not checked. */
   is_confidential?: boolean;
-  /** Initial Coordinated Release Date (embargo publication instant), an ISO 8601 date-time. Accepted only with `is_confidential: true`. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. Past instants are accepted. Omitted or `null` creates the Ticket without a CRD. */
+  /** Initial Coordinated Release Date (embargo publication instant), an ISO 8601 date-time. Accepted only with `is_confidential: true`. A value without a UTC offset is interpreted as UTC; an offset is converted to UTC. A value before the creation instant of the Ticket is rejected with `422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION`. The latest accepted instant is `9999-12-31T23:59:59.999998Z`. Omitted or `null` creates the Ticket without a CRD. */
   coordinated_release_at?: string | null;
 }

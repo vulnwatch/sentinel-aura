@@ -62,6 +62,20 @@ export type ListTicketsParams = {
    */
   track?: string;
   /**
+   * Filter by original: canonical identity (`SNTL-{n}`, `n` at most 2147483647) of a Ticket. Matches the Tickets whose `duplicate_of_ticket_id` is that value, the duplicates of that Ticket. A malformed value fails validation; an unknown value yields an empty page, and the visibility of the named Ticket has no effect.
+   * @maxLength 15
+   * @pattern ^SNTL-[1-9][0-9]*$
+   */
+  duplicate_of_ticket_id?: string;
+  /**
+   * `true`: only confidential Tickets; `false`: only non-confidential Tickets. Narrows the Tickets that the caller can see.
+   */
+  is_confidential?: boolean;
+  /**
+   * `true`: only confidential Tickets whose Coordinated Release Date (`coordinated_release_at`) is at or before the instant at which the request is evaluated, whatever their status; `false`: every other Ticket, including a confidential Ticket without a Coordinated Release Date. A Coordinated Release Date retained on a non-confidential Ticket never matches `true`.
+   */
+  coordinated_release_passed?: boolean;
+  /**
    * Page number.
    * @minimum 1
    * @maximum 2147483647
@@ -74,7 +88,7 @@ export type ListTicketsParams = {
    */
   per_page?: number;
   /**
-   * Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), or `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys). `null` values sort last in both directions, for each key.
+   * Sort field (default `created_at`): `created_at`, `updated_at`, `severity`, `priority`, and `status` (semantic ordering), `ticket_id` (numeric), a Ticket-level due date (`triage_due_at`, `submission_due_at`, `um_due_at`, `qa_due_at`, `release_due_at`), `current_due_at` (the due date of the Ticket's `current_phase`, or `release_due_at` when `current_phase` is `null` and the Ticket has due dates; `null` for `done` and without an SLA), `priority_then_current_due` (the effective priority, then the current due date: `desc` lists `p1` first and, within one priority, the earliest current due date first; `asc` reverses both keys), or `coordinated_release_at` (the stored Coordinated Release Date). `null` values sort last in both directions, for each key.
    * @maxLength 500
    */
   sort_by?: TicketSortField;

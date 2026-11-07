@@ -516,7 +516,7 @@ Ticket Current Phase):
 | `triage` | "Triage" and the triage due date, `triage_due_at` |
 | `submission` | "Submission" and the submission due date, `submission_due_at` |
 | `um` | "UM" and the UM due date, `um_due_at` |
-| `qa` | "QA" and the QA due date, `qa_due_at`, which is the final release deadline (same document, Formula) |
+| `qa` | "QA" and the QA due date, `qa_due_at`, which is the final release deadline (same document, Deadline Window) |
 | `null`, with due dates | "Release" and the final release deadline, `release_due_at` |
 | `done`; `null` without due dates | No badge |
 | A value that the pinned contract does not list | The value as received, without days (Unknown Values) |
@@ -543,12 +543,18 @@ Ticket Current Phase):
   the last day, while it shows `0d`; and green otherwise. The same days thus
   show in the same color in every row, whatever the phase and the severity
   of the Ticket, so that the rows compare at a glance; a color that depended
-  on the length of the phase, which ranges from 3 days for the triage or the
-  UM phase of a Critical Ticket to 90 days for the submission phase of a Low
-  one, would show the same days in green in one row and in yellow in
-  another. A phase that becomes current on time starts in green, because no
-  phase is shorter than 3 days (same document, SLA Tier; Phase Shares; Due
-  Dates).
+  on the length of the phase, which ranges in the SLA window from 3 days for
+  the triage or the UM phase of a Critical Ticket to 90 days for the
+  submission phase of a Low one, would show the same days in green in one
+  row and in yellow in another. In the SLA window, a phase that becomes
+  current on time starts in green, because no phase is shorter than 3 days
+  (same document, SLA Tier; Phase Shares; Formula). The due dates of a
+  Ticket with a Coordinated Release Date divide the window up to that date
+  instead, so a phase can be shorter than a day and consecutive phases can
+  share a due date (same document, Deadline Window; Coordinated Release
+  Window): a phase that becomes current on time can start in yellow, and a
+  phase can be past due as soon as it is current, such as every phase of a
+  Ticket whose Coordinated Release Date equals its creation time.
 - The color never carries the meaning alone: a yellow badge shows `0d`, and
   a red one a negative number and an icon, and the accessible name of the
   badge states the deadline, such as "Triage due in 3 days", "UM due in less
@@ -556,15 +562,18 @@ Ticket Current Phase):
 - The badge compares the date with the browser's clock when the screen shows
   its data; like the deadlines, it is informational (same document,
   Informational Only).
-- Sentinel applies one SLA to every Product (same document, SLA Tier), so the
-  badge of a phase is red exactly when Sentinel reports the current phase as
-  past due, and the Ticket counts in the overdue count of that phase in the
-  attention summary (`docs/screen-map.md`, Attention Summary), as long as the
-  browser's clock agrees with Sentinel's. A Release badge is the exception:
-  its Ticket has no current phase, and Sentinel never reports a phase that it
-  cannot observe as past due, so the Ticket counts in no overdue count, even
-  when the badge is red (Sentinel `docs/features/tickets/ticket-deadlines.md`,
-  Observability of Later Phases).
+- Every track of a Ticket has the due dates of the Ticket, from the SLA,
+  which Sentinel applies to every Product, or from the Coordinated Release
+  Date of the Ticket (same document, SLA Tier; Ticket and Track Dates), so
+  the badge of a phase is red exactly when Sentinel reports the current
+  phase as past due, and the Ticket counts in the overdue count of that
+  phase in the attention summary (`docs/screen-map.md`, Attention Summary),
+  as long as the browser's clock agrees with Sentinel's. A Release badge is
+  the exception: its Ticket has no current phase, and Sentinel never reports
+  a phase that it cannot observe as past due, so the Ticket counts in no
+  overdue count, even when the badge is red (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, Observability of Later
+  Phases).
 - Another due date, such as one of a track or of a maintainer's workbench
   item, shows as a date (Display), next to the milestone status that Sentinel
   returns for it, named as Sentinel names it (Wording). An `overdue` status is

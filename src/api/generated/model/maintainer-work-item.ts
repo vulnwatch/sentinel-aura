@@ -35,7 +35,7 @@ export interface MaintainerWorkItem {
   status: PackageStatusValue;
   /** Delivery pipeline status of the track: `pending`, `in_progress`, or `released`. Unrelated to a submission milestone `pending`. */
   delivery_status: DeliveryStatusValue;
-  /** Due date (UTC) of the submission milestone of this track: the date by which the maintainer, who prepares the fix and submits it to IBS (submission request, SR), should complete the submission phase of the remediation SLA. `null` when no SLA applies. */
+  /** Due date (UTC) of the submission milestone of this track: the date by which the maintainer, who prepares the fix and submits it to IBS (submission request, SR), should complete the submission phase of the remediation SLA, or of the window up to the Ticket's Coordinated Release Date when one is set. `null` when no SLA applies. */
   submission_due_at: string | null;
   /** Status of the maintainer submission milestone of this track: `done` (submitted: delivery is `in_progress` or `released`, or a later phase is completed), `pending` (not completed and its due date is not past), `overdue` (not completed and its due date is past), `not_applicable` (the phase does not apply to this track), or `null` (no SLA applies, or Sentinel cannot observe the phase, such as a Git track or a Ticket without a CVE). A milestone `pending` is unrelated to `delivery_status = pending`. */
   submission_milestone: MilestoneStatusValue | null;
