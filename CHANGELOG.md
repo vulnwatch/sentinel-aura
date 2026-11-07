@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.6.0...v0.7.0) (2026-11-07)
+
+
+### Features
+
+* align the sidebar, landing, and Ticket list with the screen map ([#178](https://github.com/vulnwatch/sentinel-aura/issues/178)) ([f1c631a](https://github.com/vulnwatch/sentinel-aura/commit/f1c631a657b344b22ef9a71c93a57e77c195156d))
+* **deps:** pin Sentinel 0.19.0 and follow the embargo deadlines ([#182](https://github.com/vulnwatch/sentinel-aura/issues/182)) ([f4a542e](https://github.com/vulnwatch/sentinel-aura/commit/f4a542e683518fa52ec1c01db01357dc3c7a5401))
+
 ## [0.6.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.5.0...v0.6.0) (2026-11-05)
 
 
