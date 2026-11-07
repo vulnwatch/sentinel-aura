@@ -124,7 +124,9 @@ function stubSession(
   return { fetch, session };
 }
 
-async function renderApp(path = "/") {
+// Shows the screen at the path, by default one that matches no screen, so
+// that it shows Not found without reading anything else.
+async function renderApp(path = "/fictional/path") {
   const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
   });
@@ -151,7 +153,7 @@ async function openMenu(screen: Screen, name = "John Doe") {
 
 describe("the account button", () => {
   // The avatar, its size, and chevrons-up-down show in the reference
-  // screenshot home.png.
+  // screenshot ticket-list.png.
   test("shows the display name, with its pictures hidden from assistive technologies", async () => {
     stubSession();
     const { screen } = await renderApp();
@@ -241,14 +243,13 @@ describe("the account menu", () => {
     );
     const items = menu.getByRole("menuitem").all();
     expect(items.map((item) => item.element().textContent)).toEqual([
-      "Profile",
+      "Account",
       "API keys",
-      "Identity audit log",
       "Sign out",
     ]);
     expect(
-      items.slice(0, 3).map((item) => item.element().getAttribute("href")),
-    ).toEqual(["/account", "/account/api-keys", "/account/identity-audit-log"]);
+      items.slice(0, 2).map((item) => item.element().getAttribute("href")),
+    ).toEqual(["/account", "/account/api-keys"]);
     const themes = menu.getByRole("menuitemradio").all();
     expect(themes.map((item) => item.element().textContent)).toEqual([
       "System",
@@ -269,7 +270,7 @@ describe("the account menu", () => {
 
     const item = screen
       .getByRole("menu", { name: "John Doe" })
-      .getByRole("menuitem", { name: "Profile" });
+      .getByRole("menuitem", { name: "Account" });
     await expect.element(item).toHaveFocus();
     const style = getComputedStyle(item.element());
     // focus and surface-hover of the light theme.

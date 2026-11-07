@@ -1,14 +1,12 @@
-import { linkOptions, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import {
-  Boxes,
-  Database,
-  Package,
+  CloudDownload,
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
-  ShieldAlert,
   Ticket,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -20,7 +18,7 @@ import {
 } from "react-aria-components";
 import type { CurrentUserData } from "../api/generated/model";
 import { sidebarPreference } from "../preferences";
-import { triagesTickets } from "../session-gate";
+import { landingOf } from "../session-gate";
 import { AccountMenu } from "./account-menu";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { IconButton } from "./icon-button";
@@ -66,65 +64,49 @@ interface Entry {
   icon: LucideIcon;
 }
 
-// The entries that every user sees, in their order (docs/screen-map.md,
-// Sidebar; Areas and Screens).
-const ENTRIES: readonly Entry[] = [
-  { name: "Tickets", href: "/tickets", area: "/tickets", icon: Ticket },
-  { name: "CVEs", href: "/cves", area: "/cves", icon: ShieldAlert },
-  { name: "Packages", href: "/packages", area: "/packages", icon: Package },
-  { name: "Products", href: "/products", area: "/products", icon: Boxes },
+// The entries that every user sees after Tickets, in their order
+// (docs/screen-map.md, Sidebar; Areas and Screens).
+const OTHER_ENTRIES: readonly Entry[] = [
   {
     name: "My packages",
     href: "/my-packages",
     area: "/my-packages",
     icon: PackageCheck,
   },
+  { name: "Users", href: "/users", area: "/users", icon: Users },
   {
-    name: "Data sources",
-    href: "/data-sources",
-    area: "/data-sources",
-    icon: Database,
+    name: "Fetchers",
+    href: "/fetchers",
+    area: "/fetchers",
+    icon: CloudDownload,
   },
 ];
 
 // The entries of the user, from the capabilities of Get Current User, which
 // only guide what the UI shows (docs/screen-map.md, Roles; Capabilities of
-// the Signed-in User): Tickets opens the Ticket list in its New view for a
-// user who holds triage_ticket, and in its All view for every other user;
-// Administration appears last, only to a user who holds manage_users or
-// manage_settings, and opens Users for a user who holds manage_users,
-// Settings otherwise. A capability that the pinned contract does not list
-// changes nothing.
+// the Signed-in User): Tickets first, which opens the landing of the user;
+// then the entries of every user; and Administration last, only to a user
+// who holds manage_users, opening API keys. A capability that the pinned
+// contract does not list changes nothing.
 function entriesOf(user: CurrentUserData): readonly Entry[] {
-  const entries = triagesTickets(user)
-    ? ENTRIES.map((entry) =>
-        entry.area === "/tickets"
-          ? {
-              ...entry,
-              href: linkOptions({ to: "/tickets", search: { view: "new" } }),
-            }
-          : entry,
-      )
-    : ENTRIES;
-  const users = user.capabilities.includes("manage_users");
-  if (!users && !user.capabilities.includes("manage_settings")) {
-    return entries;
-  }
-  return [
-    ...entries,
-    {
+  const entries: Entry[] = [
+    { name: "Tickets", href: landingOf(user), area: "/tickets", icon: Ticket },
+    ...OTHER_ENTRIES,
+  ];
+  if (user.capabilities.includes("manage_users")) {
+    entries.push({
       name: "Administration",
-      href: users ? "/admin/users" : "/admin/settings",
+      href: "/admin/api-keys",
       area: "/admin",
       icon: Settings,
-    },
-  ];
+    });
+  }
+  return entries;
 }
 
 // Whether the screen at the path belongs to the area of the entry, as the
-// router matches a path: in any case, and with a trailing slash. The Home,
-// Search results, and the screens of the user's own account belong to no
-// entry.
+// router matches a path: in any case, and with a trailing slash. The screens
+// of the user's own account and the address of a CVE belong to no entry.
 function isCurrent(entry: Entry, path: string): boolean {
   const lowerPath = path.toLowerCase();
   return lowerPath === entry.area || lowerPath.startsWith(`${entry.area}/`);

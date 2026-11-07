@@ -16,6 +16,7 @@ import {
   requestsTo,
   signedIn,
   stubApi,
+  ticketPage,
   unauthorized,
   validationError,
   type ApiRequest,
@@ -46,7 +47,8 @@ afterEach(() => {
 });
 
 // Answers sign-in with the response of the test, after which the read of the
-// signed-in user returns the user when the sign-in succeeded.
+// signed-in user returns the user when the sign-in succeeded, and the Ticket
+// list, the landing of the user, has no Tickets.
 function stubSignIn(
   respond: (request: ApiRequest) => Response | Promise<Response>,
   me: () => Response | Promise<Response> = () =>
@@ -59,7 +61,10 @@ function stubSignIn(
       session = response.ok;
       return response;
     }
-    return session ? me() : unauthorized();
+    if (!session) {
+      return unauthorized();
+    }
+    return request.path === ME ? me() : ticketPage([]);
   });
 }
 
@@ -197,9 +202,9 @@ describe("Sign in", () => {
     await userEvent.keyboard("{Enter}");
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
       .toBeVisible();
-    expect(router.state.location.pathname).toBe("/");
+    expect(router.state.location.href).toBe("/tickets");
   });
 
   test.each([
@@ -231,7 +236,7 @@ describe("Sign in", () => {
       );
 
       await expect
-        .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+        .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
         .toBeVisible();
       expect(requestsTo(fetch, LOGIN)).toBe(1);
     },
@@ -510,7 +515,7 @@ describe("Sign in, after a failure", () => {
     await expect.element(message).not.toBeInTheDocument();
     answer(signedIn());
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
       .toBeVisible();
   });
 });

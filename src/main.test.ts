@@ -12,8 +12,14 @@ const root = document.documentElement;
 // The runs of the entry point, which name the URL of each.
 let runs = 0;
 
-// The application reads the signed-in user as it loads.
+// The application reads the signed-in user as it loads, and shows the screen
+// of the URL of the page: a path that matches no screen, which shows Not
+// found to a signed-in user without reading anything else. The page keeps
+// that URL after the tests, because the application of each run stays
+// mounted, follows the URL of the page, and would leave / for the Ticket
+// list, which reads it; each test file runs in a page of its own.
 beforeEach(() => {
+  window.history.replaceState(window.history.state, "", "/fictional/path");
   stubApi(() => jsonResponse(200, FICTIONAL_USER));
 });
 
@@ -39,9 +45,6 @@ async function runEntryPoint(): Promise<void> {
 }
 
 test("mounts the application in the #root element", async () => {
-  // The page of the tests is at /, the path of the home page, which shows to
-  // a signed-in user (beforeEach).
-  expect(window.location.pathname).toBe("/");
   const container = addRootElement();
 
   await runEntryPoint();
@@ -50,7 +53,7 @@ test("mounts the application in the #root element", async () => {
     .element(
       page
         .elementLocator(container)
-        .getByRole("heading", { level: 1, name: "Home" }),
+        .getByRole("heading", { level: 1, name: "Not found" }),
     )
     .toBeVisible();
 });

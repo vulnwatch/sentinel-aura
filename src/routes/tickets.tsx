@@ -555,25 +555,13 @@ function columnsOf(
         </>
       ),
     },
+    // The CVE ID as text: a CVE has no screen of its own, and its address
+    // leads to the Ticket to which the row already links
+    // (docs/screen-map.md, Links Between Areas).
     cve: {
       id: "cve",
       name: "CVE",
-      render: (row) =>
-        row.cve === null ? (
-          <AbsentValue />
-        ) : (
-          <span className="font-medium">
-            <Link
-              placement="list"
-              href={linkOptions({
-                to: "/cves/$cveId",
-                params: { cveId: row.cve.cve_id },
-              })}
-            >
-              {row.cve.cve_id}
-            </Link>
-          </span>
-        ),
+      render: (row) => (row.cve === null ? <AbsentValue /> : row.cve.cve_id),
     },
     title: {
       id: "title",

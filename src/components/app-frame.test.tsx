@@ -16,6 +16,7 @@ import {
   jsonResponse,
   signedIn,
   stubApi,
+  ticketPage,
   unauthorized,
 } from "../test-api";
 
@@ -46,7 +47,7 @@ afterEach(async () => {
 
 // Answers the read of the signed-in user with the session that the test
 // sets, sign-in with a success that starts it, and every other request with
-// an empty list, or a 401 without a session.
+// a page without Tickets, or a 401 without a session.
 function stubSession(initial: "signed-in" | "none") {
   const session = { active: initial === "signed-in" };
   stubApi((request) => {
@@ -59,10 +60,14 @@ function stubSession(initial: "signed-in" | "none") {
     }
     return request.path === ME
       ? jsonResponse(200, FICTIONAL_USER)
-      : jsonResponse(200, { data: [] });
+      : ticketPage([]);
   });
   return session;
 }
+
+// A path that requires a session and matches no screen, so that it shows Not
+// found to a signed-in user.
+const SCREEN = "/fictional/path";
 
 async function renderApp(path: string) {
   const router = createAppRouter({
@@ -76,7 +81,7 @@ async function renderApp(path: string) {
 describe("with a signed-in user", () => {
   test("shows the sidebar as the navigation landmark and the screen as the main landmark", async () => {
     stubSession("signed-in");
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
 
     await expect
       .element(screen.getByRole("navigation", { name: "Main" }))
@@ -85,11 +90,11 @@ describe("with a signed-in user", () => {
       .element(
         screen
           .getByRole("main")
-          .getByRole("heading", { level: 1, name: "Home" }),
+          .getByRole("heading", { level: 1, name: "Not found" }),
       )
       .toBeVisible();
     expect(screen.getByRole("main").all()).toHaveLength(1);
-    expect(document.title).toBe("Home – Sentinel");
+    expect(document.title).toBe("Not found – Sentinel");
     // 24 px of space at the top and the sides of the main content.
     const main = screen.getByRole("main").element().getBoundingClientRect();
     const heading = screen
@@ -103,7 +108,7 @@ describe("with a signed-in user", () => {
 
   test("starts with the link that skips to the main content, shown only while it has the focus", async () => {
     stubSession("signed-in");
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const skip = screen.getByRole("link", { name: "Skip to main content" });
     expect(skip.element().getBoundingClientRect().width).toBeLessThanOrEqual(1);
 
@@ -126,7 +131,7 @@ describe("with a signed-in user", () => {
 
   test("moves the focus to the main content from the skip link", async () => {
     stubSession("signed-in");
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     await userEvent.keyboard("{Tab}");
     await expect
       .element(screen.getByRole("link", { name: "Skip to main content" }))
@@ -194,12 +199,21 @@ describe("without a signed-in user", () => {
 });
 
 describe("the focus after a navigation", () => {
-  test("stays at the top of the page on the first screen that the UI shows", async () => {
-    stubSession("signed-in");
-    await renderApp("/");
+  test.each([
+    ["at the URL that the page loaded", SCREEN, "Not found"],
+    ["when / leads at once to the landing", "/", "Tickets"],
+  ])(
+    "stays at the top of the page on the first screen that the UI shows, %s",
+    async (_, path, heading) => {
+      stubSession("signed-in");
+      const { screen } = await renderApp(path);
 
-    expect(document.activeElement).toBe(document.body);
-  });
+      await expect
+        .element(screen.getByRole("heading", { level: 1, name: heading }))
+        .toBeVisible();
+      expect(document.activeElement).toBe(document.body);
+    },
+  );
 
   // In strict mode, as the entry point renders the application
   // (src/main.tsx), where React shows a screen with the timing of its
@@ -252,7 +266,7 @@ describe("the focus after a navigation", () => {
     const { router, screen } = await renderApp("/fictional/path");
     const entry = screen
       .getByRole("navigation", { name: "Main" })
-      .getByRole("link", { name: "CVEs" });
+      .getByRole("link", { name: "Users" });
     entry.element().focus();
 
     router.history.push("/fictional/path?page=2");

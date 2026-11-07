@@ -39,6 +39,7 @@ import {
   stubApi,
   ticketPage,
   unauthorized,
+  urlOf,
   type ApiResponder,
 } from "./test-api";
 
@@ -145,7 +146,7 @@ describe("as the UI loads", () => {
           answer = resolve;
         }),
     );
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
     const indicator = screen.getByRole("progressbar", { name: "Loading" });
 
     await expect.element(indicator).toBeVisible();
@@ -159,7 +160,7 @@ describe("as the UI loads", () => {
     answer(jsonResponse(200, FICTIONAL_USER));
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toBeVisible();
     await expect
       .element(screen.getByRole("progressbar"))
@@ -168,10 +169,10 @@ describe("as the UI loads", () => {
 
   test("records that the browser has a session", async () => {
     stubSession("signed-in");
-    const { screen } = await renderApp("/");
+    const { screen } = await renderApp(SCREEN);
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toBeVisible();
     expect(hasSessionRecord()).toBe(true);
   });
@@ -288,16 +289,21 @@ describe("as the UI loads", () => {
       expect(savedUrl()).toBeNull();
       expect(document.title).toBe("This page couldn't be loaded – Sentinel");
 
-      fetch.mockImplementation(() =>
-        Promise.resolve(jsonResponse(200, FICTIONAL_USER)),
+      fetch.mockImplementation((input) =>
+        Promise.resolve(
+          urlOf(input).pathname === ME
+            ? jsonResponse(200, FICTIONAL_USER)
+            : ticketPage([]),
+        ),
       );
       await screen.getByRole("button", { name: "Try again" }).click();
 
+      // Sign in leads to the landing once a session exists.
       await expect
         .element(
           screen.getByRole("heading", {
             level: 1,
-            name: path === "/login" ? "Home" : "Not found",
+            name: path === "/login" ? "Tickets" : "Not found",
           }),
         )
         .toBeVisible();
@@ -597,7 +603,12 @@ describe("the signed-in user", () => {
   });
 
   test.each([
-    ["the Home for a user without triage_ticket", READER, "Home", "/"],
+    [
+      "the Ticket list in its All view for a user without triage_ticket",
+      READER,
+      "Tickets",
+      "/tickets",
+    ],
     [
       "the Ticket list in its New view for a user who holds triage_ticket",
       OTHER_USER,
@@ -706,13 +717,13 @@ describe("Sign in, once a session exists", () => {
     if (saved !== undefined) {
       window.sessionStorage.setItem(RETURN_URL_KEY, saved);
     }
-    stubSession("signed-in");
+    stubSession("signed-in", () => ticketPage([]));
     const { router, screen } = await renderApp("/login");
 
     await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Home" }))
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
       .toBeVisible();
-    expect(router.state.location.pathname).toBe("/");
+    expect(router.state.location.href).toBe("/tickets");
     expect(router.history.length).toBe(1);
     expect(savedUrl()).toBeNull();
   });

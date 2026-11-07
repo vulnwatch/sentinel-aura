@@ -13,11 +13,11 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 The Ticket list shows the Tickets in the views of `docs/screen-map.md`
 (Ticket List Views), which the user refines with a search, filters, and the
-sorting of its columns. Vulnerability and restricted analysts work their
-queues in it, starting from the queue of new Tickets, their landing; every
-other user finds a Ticket in it, starting from all of them. The attention
-summary above the views shows every user the Tickets that need attention
-(`docs/screen-map.md`, Users and Frequent Tasks; Landing; Attention
+sorting of its columns. It is the landing of every user. Vulnerability and
+restricted analysts work their queues in it, starting from the queue of new
+Tickets; every other user finds a Ticket in it, starting from all of them.
+The attention summary above the views shows every user the Tickets that need
+attention (`docs/screen-map.md`, Users and Frequent Tasks; Landing; Attention
 Summary).
 
 ## Access
@@ -73,20 +73,21 @@ Summary).
   during the session that the user can no longer be the assignee of a Ticket
   (`docs/behaviors.md`, The Signed-in User); no request carries it. The other
   parameters and the fragment stay.
-- The Tickets entry of the sidebar leads to `/tickets?view=new` for a user
-  who holds `triage_ticket`, and to `/tickets` for every other user. For
-  such a user, `/` leads to `/tickets?view=new`, in place of `/` in the
-  browser history, from every way to the landing, and so does the Home when a
-  read of the signed-in user tells that the capability was added while it
-  shows (`docs/screen-map.md`, Sidebar; Landing; Browser History).
+- The Tickets entry of the sidebar and `/`, the landing, lead to
+  `/tickets?view=new` for a user who holds `triage_ticket`, and to `/tickets`
+  for every other user. `/` leads there in place of itself in the browser
+  history, from every way to the landing, such as the product name, "Go to
+  the start page", and Sign in without a saved URL (`docs/screen-map.md`,
+  Sidebar; Landing; Browser History).
 - A view and a page are each an entry of the browser history, and so are a
   search, a change of the filters, and a sorting, which keep the view
   (`docs/design-system.md`, Lists). A tab opens its view at its first page,
   without the search, the filters, and the sorting that the user applied, so
   that the list agrees with the count of the tab.
-- Each row links to its Ticket, `/tickets/{ticket_id}`, and to its CVE,
-  `/cves/{cve_id}` (`docs/screen-map.md`, Links Between Areas). Each count of
-  the attention summary links to the All view refined to its Tickets.
+- Each row links to its Ticket, `/tickets/{ticket_id}`. Its CVE ID is not a
+  link: the address of the CVE would lead to the same Ticket
+  (`docs/screen-map.md`, Links Between Areas). Each count of the attention
+  summary links to the All view refined to its Tickets.
 
 ## Content
 
@@ -197,9 +198,9 @@ Summary).
 - **Ticket**: the identifier, which names the row, as a link to the Ticket at
   weight 500, followed by `lock` when the Ticket is confidential
   (`docs/design-system.md`, Tables; Confidential Tickets).
-- **CVE**: the CVE ID as a link to the CVE at weight 500
-  (`docs/design-system.md`, Type Scale), or an absent value for a Ticket
-  without a CVE.
+- **CVE**: the CVE ID as text, at the weight of the row, since it is not a
+  link (Navigation; `docs/design-system.md`, Type Scale), or an absent value
+  for a Ticket without a CVE.
 - **Title**: the title of the CVE, `cve.title`, the only title of a Ticket
   that List Tickets returns, or an absent value when it is `null` or the
   Ticket has no CVE. The column takes the width that the others leave, at

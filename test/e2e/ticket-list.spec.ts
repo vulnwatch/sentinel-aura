@@ -528,7 +528,7 @@ test("lands a bot account on the New view, without Assigned to me", async ({
   await expect(views(page).first()).toHaveAttribute("aria-selected", "true");
 });
 
-test("shows a user without a role the views of every user, the attention summary, and the All view from the Tickets entry", async ({
+test("lands a user without a role on the All view, which the Tickets entry opens, with the views of every user and the attention summary", async ({
   page,
 }) => {
   // dbrown holds no role, and sees the non-confidential Tickets and the
@@ -536,12 +536,12 @@ test("shows a user without a role the views of every user, the attention summary
   // Tracks, and Maintainers).
   await signIn(page, "dbrown");
 
-  await page
-    .getByRole("navigation", { name: "Main" })
-    .getByRole("link", { name: "Tickets", exact: true })
-    .click();
-
   await expect(page).toHaveURL("/tickets");
+  await expect(
+    page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: "Tickets", exact: true }),
+  ).toHaveAttribute("href", "/tickets");
   await expect(views(page)).toHaveText([
     "New 11",
     "Unassigned 1",
@@ -566,6 +566,11 @@ test("shows a user without a role the views of every user, the attention summary
 
   // A view that the user is not shown opens the All view, and leaves the URL.
   await page.goto("/tickets?view=assigned-to-me");
+  await expect(page).toHaveURL("/tickets");
+  await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
+
+  // The landing, to which / leads.
+  await page.goto("/");
   await expect(page).toHaveURL("/tickets");
   await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
 });
