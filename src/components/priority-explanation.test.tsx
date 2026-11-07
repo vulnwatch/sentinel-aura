@@ -65,10 +65,12 @@ const OVERRIDE_ABOVE = fields({
 async function renderPriority(
   ticket: PriorityFields,
   onBefore: () => void = () => {},
+  // Whether the priority lies lower, with room for the popover above it too.
+  roomAbove = false,
 ) {
   // Away from the edges of the window, which the popover keeps 12 px from.
   const screen = await render(
-    <div className="p-8">
+    <div className={roomAbove ? "px-8 pt-96" : "p-8"}>
       <h1 tabIndex={-1}>Tickets</h1>
       <Button onPress={onBefore}>Before</Button>
       <table className="w-60">
@@ -512,7 +514,7 @@ test("shows the box on neutral-soft while the pointer is over the cell and while
 });
 
 test("opens below the priority, aligned to its start, on surface with a border line, an 8 px radius, a shadow, and 16 px of padding, 288 px wide", async () => {
-  const { screen, cell } = await renderPriority(fields());
+  const { screen, cell } = await renderPriority(fields(), undefined, true);
 
   const dialog = await openExplanation(screen, "P1, automatic");
 
