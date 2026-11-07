@@ -1210,7 +1210,21 @@ describe("the table", () => {
     stubTickets({
       list: () =>
         ticketPage([
-          fictionalTicket({ ticket_id: "SNTL-21", cve: null }),
+          // Without a CVE, the automatic priority of a High severity has
+          // no exploitation evidence (Sentinel
+          // docs/features/tickets/ticket-priority.md, Automatic Priority
+          // Basis).
+          fictionalTicket({
+            ticket_id: "SNTL-21",
+            cve: null,
+            priority: "p3",
+            priority_automatic: "p3",
+            priority_automatic_basis: {
+              severity: "high",
+              exploitation: "unknown",
+              evidence: [],
+            },
+          }),
           fictionalTicket({
             ticket_id: "SNTL-6",
             cve: { cve_id: "CVE-2099-0006", title: null, description: null },

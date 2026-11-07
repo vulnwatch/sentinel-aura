@@ -543,18 +543,18 @@ Ticket Current Phase):
   the last day, while it shows `0d`; and green otherwise. The same days thus
   show in the same color in every row, whatever the phase and the severity
   of the Ticket, so that the rows compare at a glance; a color that depended
-  on the length of the phase, which ranges under the SLA from 3 days for the
-  triage or the UM phase of a Critical Ticket to 90 days for the submission
-  phase of a Low one, would show the same days in green in one row and in
-  yellow in another. Under the SLA, a phase that becomes current on time
-  starts in green, because no phase is shorter than 3 days (same document,
-  SLA Tier; Phase Shares; Formula). The due dates of a Ticket with a
-  Coordinated Release Date divide the window up to that date instead, so a
-  phase can be shorter than a day and consecutive phases can share a due
-  date (same document, Deadline Window; Coordinated Release Window): a phase
-  that becomes current on time can start in yellow, and a phase can be past
-  due as soon as it is current, such as every phase of a Ticket whose
-  Coordinated Release Date equals its creation time.
+  on the length of the phase, which ranges in the SLA window from 3 days for
+  the triage or the UM phase of a Critical Ticket to 90 days for the
+  submission phase of a Low one, would show the same days in green in one
+  row and in yellow in another. In the SLA window, a phase that becomes
+  current on time starts in green, because no phase is shorter than 3 days
+  (same document, SLA Tier; Phase Shares; Formula). The due dates of a
+  Ticket with a Coordinated Release Date divide the window up to that date
+  instead, so a phase can be shorter than a day and consecutive phases can
+  share a due date (same document, Deadline Window; Coordinated Release
+  Window): a phase that becomes current on time can start in yellow, and a
+  phase can be past due as soon as it is current, such as every phase of a
+  Ticket whose Coordinated Release Date equals its creation time.
 - The color never carries the meaning alone: a yellow badge shows `0d`, and
   a red one a negative number and an icon, and the accessible name of the
   badge states the deadline, such as "Triage due in 3 days", "UM due in less

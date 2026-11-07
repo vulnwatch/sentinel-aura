@@ -380,12 +380,13 @@ that need attention, among the Tickets that the API returns to the user
   same Ticket: a Ticket counts once, under its current phase, even when a
   later phase is past due too, on the same track or on another; the package
   tree of the Ticket shows the phase of each track. Every track of a Ticket
-  has the one deadline window of the Ticket, from the SLA, which Sentinel
-  applies to every Product, or up to the Coordinated Release Date of the
-  Ticket, so no phase is due before an earlier one, and together the four
-  counts hold every Ticket that its `overdue` filter matches (same document,
-  Deadline Window; Relation to the Overdue Filter). Active P1 measures
-  priority, not time, and can include Tickets of the other counts.
+  has the one deadline window of the Ticket, up to the deadline of the SLA,
+  which Sentinel applies to every Product, or up to the Coordinated Release
+  Date of the Ticket, so no phase is due before an earlier one, and together
+  the four counts hold every Ticket that Sentinel's `overdue` filter matches
+  (same document, SLA Tier; Deadline Window; Relation to the Overdue
+  Filter). Active P1 measures priority, not time, and can include Tickets of
+  the other counts.
 - A Ticket without a current phase counts in no overdue count: one without an
   SLA, and one in status Analyzed whose remaining work Sentinel cannot
   observe, such as one without a CVE (same document, Rules). A track whose
