@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.6.0...v0.7.0) (2026-11-08)
+
+
+### Features
+
+* align the sidebar, landing, and Ticket list with the screen map ([#178](https://github.com/vulnwatch/sentinel-aura/issues/178)) ([f1c631a](https://github.com/vulnwatch/sentinel-aura/commit/f1c631a657b344b22ef9a71c93a57e77c195156d))
+* **deps:** pin Sentinel 0.19.0 and follow the embargo deadlines ([#182](https://github.com/vulnwatch/sentinel-aura/issues/182)) ([f4a542e](https://github.com/vulnwatch/sentinel-aura/commit/f4a542e683518fa52ec1c01db01357dc3c7a5401))
+* **deps:** pin Sentinel 0.20.0 and follow the override provenance ([#187](https://github.com/vulnwatch/sentinel-aura/issues/187)) ([5d13c5d](https://github.com/vulnwatch/sentinel-aura/commit/5d13c5ddcfd3159a3c79520c139af5babe5651a3)), closes [#186](https://github.com/vulnwatch/sentinel-aura/issues/186)
+* explain the priority of a Ticket in the Ticket list ([#185](https://github.com/vulnwatch/sentinel-aura/issues/185)) ([4416c85](https://github.com/vulnwatch/sentinel-aura/commit/4416c851c44bb5a7f17e1d776e64fc3cdb731f7e))
+* show the Embargo view and its count in the Ticket list ([#183](https://github.com/vulnwatch/sentinel-aura/issues/183)) ([4a8aa54](https://github.com/vulnwatch/sentinel-aura/commit/4a8aa544e89fbb8bcd566375b735967c521a958a))
+* show who set the priority override of a Ticket and when ([#188](https://github.com/vulnwatch/sentinel-aura/issues/188)) ([f11900a](https://github.com/vulnwatch/sentinel-aura/commit/f11900ae0e3a54ff1441964429e8587a23d8a4d2)), closes [#184](https://github.com/vulnwatch/sentinel-aura/issues/184)
+
 ## [0.6.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.5.0...v0.6.0) (2026-11-05)
 
 
