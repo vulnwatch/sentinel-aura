@@ -13,6 +13,7 @@ import type {
   TicketSummary,
 } from "../api/generated/model";
 import { getListTicketsQueryKey } from "../api/generated/tickets";
+import { formatDateTime } from "../components/date-time";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { screenshot, type Screenshot } from "../test-screenshot";
@@ -1597,6 +1598,11 @@ describe("the table", () => {
     await expect
       .element(dialog.getByRole("listitem"))
       .toHaveTextContent("SSVC exploitation Active");
+    // Who set the override and when, from the fields of the row.
+    expect(dialog.element().textContent).toContain("Set byAlice SmithSet on");
+    await expect
+      .element(dialog.getByText(formatDateTime(OVERRIDE_AT), { exact: true }))
+      .toHaveAttribute("datetime", OVERRIDE_AT);
     await userEvent.keyboard("{Escape}");
     await expect.element(priority).toHaveFocus();
   });

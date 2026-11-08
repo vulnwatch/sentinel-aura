@@ -125,6 +125,37 @@ async function kevDateOf(page: Page, search: string): Promise<string> {
   return `${parts.get("day")} ${parts.get("month")} ${parts.get("year")}`;
 }
 
+// Whether a response body is a page of Tickets with the time at which their
+// priority override was set.
+function isOverridePage(body: unknown): body is {
+  data: { ticket_id: string; priority_override_at: unknown }[];
+} {
+  return (
+    isTicketPage(body) &&
+    body.data.every((ticket) => "priority_override_at" in ticket)
+  );
+}
+
+// The time at which the priority override of a Ticket was set, the database
+// time of the operation of the dataset, shortly after its load (Sentinel
+// docs/features/platform/example-dataset.md, Time Base; Priorities).
+async function overrideAtOf(page: Page, ticket: string): Promise<string> {
+  const response = await page.request.get(`/api/v1/tickets?search=${ticket}`);
+  expect(response.ok()).toBe(true);
+  const body: unknown = await response.json();
+  const value = isOverridePage(body)
+    ? body.data.find((row) => row.ticket_id === ticket)?.priority_override_at
+    : undefined;
+  if (typeof value !== "string") {
+    throw new Error(`List Tickets returned no override of ${ticket}`);
+  }
+  return value;
+}
+
+// A date and time as the UI shows it, such as 9 Oct 2026, 14:05
+// (docs/behaviors.md, Dates and Times, Display).
+const DATE_TIME = /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/;
+
 // The explanation of a priority that the page shows, by its name.
 function explanation(page: Page, name: string) {
   return page.getByRole("dialog", { name, exact: true });
@@ -379,13 +410,16 @@ test.describe("for an analyst", () => {
     await signIn(page, "asmith");
     await expectViewCounts(page);
     // In Assigned to me, whose columns hold no avatar and no date, so that no
-    // mask of the reference lies over the popover.
+    // mask of the rows lies over the popover: the masks of the reference
+    // cover only the avatar of the user who set the override and the time at
+    // which they set it.
     await views(page).filter({ hasText: "Assigned to me" }).click();
     await expect(page).toHaveURL("/tickets?view=assigned-to-me");
     // SNTL-12, assigned to asmith, whose override P1 bwilson set over the
     // automatic P3 of its High severity without exploitation evidence
-    // (Tickets; CVEs; Sentinel docs/features/tickets/ticket-priority.md,
-    // Decision Table).
+    // (Tickets; CVEs; Priorities; Sentinel
+    // docs/features/tickets/ticket-priority.md, Decision Table).
+    const setAt = await overrideAtOf(page, "SNTL-12");
     const priority = table(page)
       .getByRole("row", { name: /SNTL-12/ })
       .getByRole("button", { name: "P1, override", exact: true });
@@ -398,9 +432,21 @@ test.describe("for an analyst", () => {
       "Automatic priority",
       "Evidence",
     ]);
-    for (const text of ["P3", "High", "Unknown", "No evidence."]) {
+    for (const text of [
+      "Set by",
+      "Bob Wilson",
+      "Set on",
+      "P3",
+      "High",
+      "Unknown",
+      "No evidence.",
+    ]) {
       await expect(dialog.getByText(text, { exact: true })).toBeVisible();
     }
+    await expect(dialog.getByText(DATE_TIME)).toHaveAttribute(
+      "datetime",
+      setAt,
+    );
     await expectAccessible(page);
     await pointerAway(page);
 
@@ -412,6 +458,37 @@ test.describe("for an analyst", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(priority).toBeFocused();
+  });
+
+  test("explains an override below the automatic P1 with who set it and when", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await expectViewCounts(page);
+    await views(page).filter({ hasText: "Assigned to me" }).click();
+    await expect(page).toHaveURL("/tickets?view=assigned-to-me");
+    // SNTL-13, whose override P3 asmith set below the automatic P1 that the
+    // SSVC exploitation active of CVE-2099-0013 gives its High severity
+    // (CVEs; Priorities).
+    const setAt = await overrideAtOf(page, "SNTL-13");
+
+    await table(page)
+      .getByRole("row", { name: /SNTL-13/ })
+      .getByRole("button", { name: "P3, override", exact: true })
+      .click();
+
+    const dialog = explanation(page, "P3, override");
+    await expect(dialog).toBeFocused();
+    for (const text of ["Set by", "Alice Smith", "Set on", "P1", "Active"]) {
+      await expect(dialog.getByText(text, { exact: true })).toBeVisible();
+    }
+    await expect(dialog.getByText(DATE_TIME)).toHaveAttribute(
+      "datetime",
+      setAt,
+    );
+    await expect(dialog.getByRole("listitem")).toHaveText([
+      "SSVC exploitation Active",
+    ]);
   });
 
   test("explains an automatic priority from the CISA KEV entry, opened and closed with the keyboard", async ({

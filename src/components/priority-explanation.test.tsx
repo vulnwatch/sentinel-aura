@@ -3,6 +3,7 @@ import { page, userEvent, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { Button } from "./button";
+import { formatDateTime } from "./date-time";
 import { ExplainedPriority, type PriorityFields } from "./priority-explanation";
 
 // The explanation of the priority of a Ticket (docs/design-system.md,
@@ -26,6 +27,18 @@ const NEUTRAL_SOFT = "rgb(239, 242, 245)";
 const FOCUS = "rgb(9, 105, 218)";
 const TRANSPARENT = "rgba(0, 0, 0, 0)";
 
+// The user who set an override, and when, its provenance (Sentinel
+// docs/features/tickets/ticket-priority.md, Persistence and Effective
+// Priority).
+const SETTER: NonNullable<PriorityFields["priority_override_by"]> = {
+  id: "00000000-0000-0000-0000-000000000002",
+  username: "jdoe",
+  full_name: "Jane Doe",
+  active: true,
+  bot: false,
+};
+const SET_AT = "2099-10-09T15:05:09Z";
+
 // A Ticket whose automatic priority P1 follows from its Critical severity
 // and the CISA KEV entry of its CVE (Sentinel
 // docs/features/tickets/ticket-priority.md, Decision Table; Automatic
@@ -35,6 +48,8 @@ function fields(changes: Partial<PriorityFields> = {}): PriorityFields {
     priority: "p1",
     priority_automatic: "p1",
     priority_override: null,
+    priority_override_by: null,
+    priority_override_at: null,
     priority_automatic_basis: {
       severity: "critical",
       exploitation: "kev",
@@ -45,11 +60,13 @@ function fields(changes: Partial<PriorityFields> = {}): PriorityFields {
 }
 
 // An override of P1 over the automatic P3 of a High severity without
-// exploitation evidence.
+// exploitation evidence, which SETTER set at SET_AT.
 const OVERRIDE_ABOVE = fields({
   priority: "p1",
   priority_automatic: "p3",
   priority_override: "p1",
+  priority_override_by: SETTER,
+  priority_override_at: SET_AT,
   priority_automatic_basis: {
     severity: "high",
     exploitation: "unknown",
@@ -124,6 +141,11 @@ function popoverOf(dialog: Locator): Element {
 // headings of its sections, and their lines.
 function textOf(dialog: Locator): string {
   return dialog.element().textContent;
+}
+
+// The line of who set an override, or of when, by its label.
+function lineOf(dialog: Locator, label: "Set by" | "Set on"): Element {
+  return dialog.getByRole("paragraph").filter({ hasText: label }).element();
 }
 
 // The texts of the lines of the evidence, each an item of its list.
@@ -210,6 +232,8 @@ test("explains an override with the automatic priority that it replaces", async 
   expect(textOf(dialog)).toBe(
     [
       "P1·override",
+      "Set byJane Doe",
+      `Set on${formatDateTime(SET_AT)}`,
       "Automatic priority",
       "P3",
       "SeverityHigh",
@@ -230,6 +254,8 @@ test("shows the automatic P1 that an override hides, with its deciding evidence"
       priority: "p3",
       priority_automatic: "p1",
       priority_override: "p3",
+      priority_override_by: SETTER,
+      priority_override_at: SET_AT,
       priority_automatic_basis: {
         severity: "high",
         exploitation: "active",
@@ -243,6 +269,8 @@ test("shows the automatic P1 that an override hides, with its deciding evidence"
   expect(textOf(dialog)).toBe(
     [
       "P3·override",
+      "Set byJane Doe",
+      `Set on${formatDateTime(SET_AT)}`,
       "Automatic priority",
       "P1",
       "SeverityHigh",
@@ -370,6 +398,8 @@ test("explains an override over an automatic priority that is not yet prioritiza
       priority: "p2",
       priority_automatic: null,
       priority_override: "p2",
+      priority_override_by: SETTER,
+      priority_override_at: SET_AT,
       priority_automatic_basis: {
         severity: null,
         exploitation: "unknown",
@@ -391,11 +421,143 @@ test("explains an override over an automatic priority that is not yet prioritiza
   );
 });
 
+test("states who set an override, with the avatar at the small size, and when, as a date and time", async () => {
+  const { screen } = await renderPriority(OVERRIDE_ABOVE);
+
+  const dialog = await openExplanation(screen, "P1, override");
+
+  const setBy = dialog.getByText("Set by", { exact: true }).element();
+  const setOn = dialog.getByText("Set on", { exact: true }).element();
+  expect(textOf(dialog)).toContain(
+    `P1·overrideSet byJane DoeSet on${formatDateTime(SET_AT)}Automatic priority`,
+  );
+  // The line of the user is as high as the avatar of the small size.
+  expect(lineOf(dialog, "Set by").getBoundingClientRect().height).toBe(24);
+  const time = dialog.getByText(formatDateTime(SET_AT), { exact: true });
+  await expect.element(time).toHaveAttribute("datetime", SET_AT);
+  expect([
+    getComputedStyle(setBy).color,
+    getComputedStyle(setOn).color,
+  ]).toEqual([FG_MUTED, FG_MUTED]);
+});
+
+test.each([
+  [
+    "an inactive user with the label Inactive, in fg-muted",
+    { ...SETTER, active: false },
+    "Jane DoeInactive",
+    FG_MUTED,
+  ],
+  [
+    "a bot account with the label Bot",
+    { ...SETTER, bot: true },
+    "Jane DoeBot",
+    FG,
+  ],
+  [
+    "a user without a full name by the username",
+    { ...SETTER, full_name: null },
+    "jdoe",
+    FG,
+  ],
+])("shows a setter who is %s", async (_, user, text, color) => {
+  const { screen } = await renderPriority(
+    fields({ ...OVERRIDE_ABOVE, priority_override_by: user }),
+  );
+
+  const dialog = await openExplanation(screen, "P1, override");
+
+  expect(textOf(dialog)).toContain(`Set by${text}Set on`);
+  const name = user.full_name ?? user.username;
+  expect(
+    getComputedStyle(dialog.getByText(name, { exact: true }).element()).color,
+  ).toBe(color);
+});
+
+// Each value apart, so that each line shows its own value.
+test.each([
+  [
+    "a setter",
+    { priority_override_by: null },
+    ["Set by–Not set", `Set on${formatDateTime(SET_AT)}`],
+  ],
+  [
+    "a time",
+    { priority_override_at: null },
+    ["Set byJane Doe", "Set on–Not set"],
+  ],
+])(
+  "shows %s that is absent under an override as an absent value, not as System",
+  async (_, changes, lines) => {
+    const { screen } = await renderPriority(
+      fields({ ...OVERRIDE_ABOVE, ...changes }),
+    );
+
+    const dialog = await openExplanation(screen, "P1, override");
+
+    expect(textOf(dialog)).toContain(
+      ["P1·override", ...lines, "Automatic priority"].join(""),
+    );
+    expect(textOf(dialog)).not.toContain("System");
+  },
+);
+
+test("shows who set an override and when 8 px below the title, 4 px apart, and the border line 12 px below them", async () => {
+  const { screen } = await renderPriority(OVERRIDE_ABOVE);
+
+  const dialog = await openExplanation(screen, "P1, override");
+
+  const title = dialog.getByRole("heading", { level: 2 }).element();
+  const setBy = lineOf(dialog, "Set by");
+  const setOn = lineOf(dialog, "Set on");
+  const line = dialog.getByRole("separator").element();
+  expect([
+    setBy.getBoundingClientRect().top - title.getBoundingClientRect().bottom,
+    setOn.getBoundingClientRect().top - setBy.getBoundingClientRect().bottom,
+    line.getBoundingClientRect().top - setOn.getBoundingClientRect().bottom,
+  ]).toEqual([8, 4, 12]);
+});
+
+test("wraps a long name of the setter within the explanation, which shows it whole", async () => {
+  const { screen } = await renderPriority(
+    fields({
+      ...OVERRIDE_ABOVE,
+      priority_override_by: {
+        ...SETTER,
+        full_name: "Jane Fictional Doe-Longname of the Fictional Example",
+        active: false,
+      },
+    }),
+  );
+
+  const dialog = await openExplanation(screen, "P1, override");
+
+  const name = dialog
+    .getByText("Jane Fictional Doe-Longname of the Fictional Example", {
+      exact: true,
+    })
+    .element();
+  expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+  expect(name.getBoundingClientRect().height).toBeGreaterThan(24);
+  // "Set by" stays whole, on a line of its own text, and the label shows
+  // within the explanation.
+  const setBy = dialog.getByText("Set by", { exact: true }).element();
+  const label = dialog.getByText("Inactive", { exact: true }).element();
+  const bounds = dialog.element().getBoundingClientRect();
+  expect(setBy.getBoundingClientRect().height).toBe(20);
+  expect([
+    name.getBoundingClientRect().right <= bounds.right,
+    label.getBoundingClientRect().right <= bounds.right,
+  ]).toEqual([true, true]);
+});
+
 test("shows values that the pinned contract does not list as received, and an evidence of an unlisted kind without its value", async () => {
   const { screen, cell } = await renderPriority({
     priority: "p0",
     priority_automatic: "p0",
     priority_override: null,
+    priority_override_by: null,
+    priority_override_at: null,
     priority_automatic_basis: {
       // Values that a later Sentinel release can return (Sentinel
       // docs/api-spec.md, Response Enums).
