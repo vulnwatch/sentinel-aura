@@ -342,7 +342,7 @@ about ten times faster than TypeScript 6. It ships without a programmatic API
 until a later minor version, so tools that need that API, such as
 typescript-eslint and openapi-typescript, cannot run on it. The chosen static
 checks do not need it, and the API client generator takes it from its own
-copy of TypeScript 6, which npm installs beside TypeScript 7 (API Client
+copies of TypeScript 6, which npm installs beside TypeScript 7 (API Client
 Generation): TypeScript 6 can run beside TypeScript 7, as Microsoft documents.
 
 #### Build Tool, Package Manager, and Node.js
@@ -693,19 +693,21 @@ its shared scale counters drift between screens.
 **Choice:** Orval generates, from the pinned OpenAPI document, the API types, a
 request function for each operation, and the TanStack Query hooks.
 `orval.config.ts` configures the generation, and the generated code is
-committed in `src/api/generated/`; CI regenerates it and fails when the result
-differs, so a change of the contract appears in the pull request diff (Backend
-Contract). The client covers only the operations under `/api/v1/`: the
-document also describes the probes `/health` and `/ready`, which the Sentinel
-host does not route to the API (Same Origin). The requests use origin-relative
-URLs under `/api/v1/` (Same Origin) and the browser's default same-origin
-credentials, through one shared request function, in `src/api/request.ts`,
-that turns every error response into an error, carrying Sentinel's `code` when
-the response provides one (Sentinel `docs/api-spec.md`, Response Format).
+committed in `src/api/generated/`; CI compares it, without writing, with the
+client that the document generates and fails when a file differs, is missing,
+or is no longer generated, so a change of the contract appears in the pull
+request diff (Backend Contract). The client covers only the operations under
+`/api/v1/`: the document also describes the probes `/health` and `/ready`,
+which the Sentinel host does not route to the API (Same Origin). The requests
+use origin-relative URLs under `/api/v1/` (Same Origin) and the browser's
+default same-origin credentials, through one shared request function, in
+`src/api/request.ts`, that turns every error response into an error, carrying
+Sentinel's `code` when the response provides one (Sentinel `docs/api-spec.md`,
+Response Format).
 
 | Option | Impact |
 |---|---|
-| **Orval** (chosen) | Generates the types, the requests, and the query hooks, and runs beside the native TypeScript compiler: its package that uses the TypeScript API depends on its own copy of TypeScript 6, which npm installs beside the project's TypeScript 7. Released several times a month by several maintainers. Adds no runtime dependency besides TanStack Query; used only at build time, where it brings about 110 packages, published without provenance attestations |
+| **Orval** (chosen) | Generates the types, the requests, and the query hooks, and runs beside the native TypeScript compiler: its packages that use the TypeScript API depend on their own copies of TypeScript 6, which npm installs beside the project's TypeScript 7. Released several times a month by several maintainers. Adds no runtime dependency besides TanStack Query; used only at build time, where it brings about 110 packages, published without provenance attestations |
 | openapi-typescript with openapi-fetch | Types and a minimal client, the smallest footprint. Requires the TypeScript 5 API and cannot be installed with TypeScript 7; no release since February 2026 |
 | Hey API | Pre-1.0, with breaking changes in minor releases, and one main maintainer |
 | Kubb | Active, with smaller adoption and one main maintainer |

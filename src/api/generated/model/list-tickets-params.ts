@@ -67,13 +67,9 @@ export type ListTicketsParams = {
    * @pattern ^SNTL-[1-9][0-9]*$
    */
   duplicate_of_ticket_id?: string;
-  /**
-   * `true`: only confidential Tickets; `false`: only non-confidential Tickets. Narrows the Tickets that the caller can see.
-   */
+  /** `true`: only confidential Tickets; `false`: only non-confidential Tickets. Narrows the Tickets that the caller can see. */
   is_confidential?: boolean;
-  /**
-   * `true`: only confidential Tickets whose Coordinated Release Date (`coordinated_release_at`) is at or before the instant at which the request is evaluated, whatever their status; `false`: every other Ticket, including a confidential Ticket without a Coordinated Release Date. A Coordinated Release Date retained on a non-confidential Ticket never matches `true`.
-   */
+  /** `true`: only confidential Tickets whose Coordinated Release Date (`coordinated_release_at`) is at or before the instant at which the request is evaluated, whatever their status; `false`: every other Ticket, including a confidential Ticket without a Coordinated Release Date. A Coordinated Release Date retained on a non-confidential Ticket never matches `true`. */
   coordinated_release_passed?: boolean;
   /**
    * Page number.

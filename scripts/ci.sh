@@ -11,10 +11,10 @@
 # ui-checks runs the dependency audit when package.json, package-lock.json, or
 # .npmrc differ from the merge base with origin/master, or when that merge
 # base cannot be found, as a pull request does. The generated API client is
-# compared with the working tree, which the check leaves unchanged, so the
-# command runs before a commit. Not run here: PR Metadata, which needs the
-# pull request; Renovate Validation; the Image Scan; the coverage upload; and
-# the release workflows.
+# compared with the working tree without writing it, so the command runs
+# before a commit. Not run here: PR Metadata, which needs the pull request;
+# Renovate Validation; the Image Scan; the coverage upload; and the release
+# workflows.
 #
 # Usage:
 #   scripts/ci.sh ui-checks   The checks of the UI Checks job: the pinned
@@ -46,10 +46,8 @@ readonly BASE_BRANCH="origin/master"
 readonly SBOM_FILE="test-results/sbom/sentinel-aura.sbom.cdx.json"
 
 # The check that runs, which the exit handler reports when the script ends
-# during it; the copy of the generated API client that the handler restores;
-# and the jobs of `all` that failed.
+# during it, and the jobs of `all` that failed.
 CURRENT_CHECK=""
-CLIENT_COPY=""
 FAILED_JOBS=()
 
 in_ci() {
@@ -73,20 +71,8 @@ run_check() {
     CURRENT_CHECK=""
 }
 
-restore_client() {
-    rm -rf -- "${REPO_ROOT:?}/${GENERATED_DIR}"
-    cp -pR -- "${CLIENT_COPY}/client" "${REPO_ROOT}/${GENERATED_DIR}"
-    rm -rf -- "${CLIENT_COPY}"
-    CLIENT_COPY=""
-    warn "restored ${GENERATED_DIR}/ as the working tree held it"
-}
-
-# Restores the generated API client when its check did not complete, and
-# reports the check during which the script ends.
+# Reports the check during which the script ends.
 on_exit() {
-    if [[ -n "${CLIENT_COPY}" ]]; then
-        restore_client
-    fi
     if [[ -n "${CURRENT_CHECK}" ]]; then
         if in_ci; then
             echo "::endgroup::"
@@ -116,25 +102,14 @@ audit_if_required() {
     run_check "Audit dependencies" "${SCRIPTS}/tooling.sh" audit
 }
 
-# Regenerates the API client from the pinned OpenAPI document and fails unless
-# the result is identical to the client of the working tree
-# (docs/architecture.md, API Client Generation). Unless it is, the exit
-# handler restores the client of the working tree.
+# Fails unless the client of the working tree is the one that the pinned
+# OpenAPI document generates (docs/architecture.md, API Client Generation).
+# The generator compares them without writing, and lists each file that
+# differs.
 check_client() {
-    local dir="${REPO_ROOT}/${GENERATED_DIR}" copy
-    [[ -d "${dir}" ]] ||
+    [[ -d "${REPO_ROOT}/${GENERATED_DIR}" ]] ||
         die "missing ${GENERATED_DIR}/; run 'scripts/tooling.sh generate' and commit the result"
-    copy="$(mktemp -d)"
-    if ! cp -pR -- "${dir}" "${copy}/client"; then
-        rm -rf -- "${copy}"
-        die "cannot copy ${GENERATED_DIR}/"
-    fi
-    CLIENT_COPY="${copy}"
-    "${SCRIPTS}/tooling.sh" generate
-    diff --recursive --brief -- "${copy}/client" "${dir}" >&2 ||
-        die "${GENERATED_DIR}/ is not the client that the pinned OpenAPI document generates; run 'scripts/tooling.sh generate' and commit the result"
-    rm -rf -- "${copy}"
-    CLIENT_COPY=""
+    "${SCRIPTS}/tooling.sh" generate --check
 }
 
 # The dependencies stay in their directory outside the working tree

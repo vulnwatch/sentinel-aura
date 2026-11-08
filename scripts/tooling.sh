@@ -26,8 +26,11 @@
 #   scripts/tooling.sh install               Install the dependencies (npm ci)
 #   scripts/tooling.sh run <script> [args]   Run a package.json script, offline
 #   scripts/tooling.sh format                Format the sources with Prettier
-#   scripts/tooling.sh generate              Generate the API client from the
-#                                            pinned OpenAPI document, offline
+#   scripts/tooling.sh generate [--check]    Generate the API client from the
+#                                            pinned OpenAPI document, offline;
+#                                            --check writes nothing and fails
+#                                            unless the client of the working
+#                                            tree is the one that it generates
 #   scripts/tooling.sh npm <args>            Run npm, with write access to
 #                                            package.json and package-lock.json
 #   scripts/tooling.sh audit                 Audit the installed dependencies:
@@ -216,7 +219,16 @@ cmd_format() {
 }
 
 cmd_generate() {
-    [[ $# -eq 0 ]] || die "generate: takes no arguments"
+    if [[ "${1:-}" == --check ]]; then
+        [[ $# -eq 1 ]] || die "generate: takes no arguments besides --check"
+        ensure_installed
+        # Orval compares in memory, so the repository stays read-only; it
+        # lists each file that differs, is missing, or is no longer generated.
+        run_container --network=none -- npm run generate -- --outdated ||
+            die "${GENERATED_DIR}/ is not the client that the pinned OpenAPI document generates; run 'scripts/tooling.sh generate' and commit the result"
+        return
+    fi
+    [[ $# -eq 0 ]] || die "generate: takes no arguments besides --check"
     ensure_installed
     mkdir -p "${REPO_ROOT}/${GENERATED_DIR}"
     local -a mounts=()

@@ -14,18 +14,14 @@ export type ListUsersParams = {
    * @maxLength 500
    */
   search?: string;
-  /**
-   * Filter by active status.
-   */
+  /** Filter by active status. */
   active?: boolean;
   /**
    * One or more of 'admin', 'vulnerability_analyst', 'restricted_analyst'. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
   role?: ListUsersRoleItem[];
-  /**
-   * true for users with at least one role, false for none.
-   */
+  /** true for users with at least one role, false for none. */
   has_role?: boolean;
   /**
    * One or more of 'all', 'non_confidential', 'none': the users whose assignment_eligibility is one of the values. Repeatable; OR semantics. The users eligible to be the assignee of a confidential Ticket are 'all'; those of a non-confidential Ticket are 'all' and 'non_confidential'. Invalid values are ignored; only invalid values yield an empty page.
