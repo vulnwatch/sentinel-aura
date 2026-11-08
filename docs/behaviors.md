@@ -793,16 +793,23 @@ complete profile and its manager, and the signed-in user alike: `id`,
   interactive element without room for the name. The display name is its
   accessible name and shows in a tooltip on hover and on keyboard focus, or in
   the user card where the avatar links to the user (User card). Every other
-  place shows the full form.
-- **Link to the user.** A user, in the full or the compact form, is a link to
-  their screen, User (`docs/screen-map.md`, Areas and Screens), so that a name
-  leads to the user's profile and work wherever it shows. The representation
-  as a whole is the link, the avatar, the name, the username, and the labels
-  together, so that its accessible name is the display name followed by the
-  username where it shows and by the labels. A user is not a link where the
-  representation is the content of another control, such as an option of a
-  user picker, the account button, or the account menu, nor in the heading of
-  the user's own screen.
+  place shows the full form, or the name form where it applies.
+- **Name form.** The full form without the avatar: the display name, the
+  username where the full form shows it, and the labels. It shows a user who
+  is a detail of another value, such as who set a priority override in the
+  explanation of the priority (`docs/design-system.md`, Priority), where an
+  avatar would weigh more than the text around it. The avatar is hidden from
+  assistive technologies in the full form, so the name form reads the same,
+  and its labels still show the state of the user (Accessibility).
+- **Link to the user.** A user, in the full, the compact, or the name form, is
+  a link to their screen, User (`docs/screen-map.md`, Areas and Screens), so
+  that a name leads to the user's profile and work wherever it shows. The
+  representation as a whole is the link, the avatar where it shows, the name,
+  the username, and the labels together, so that its accessible name is the
+  display name followed by the username where it shows and by the labels. A
+  user is not a link where the representation is the content of another
+  control, such as an option of a user picker, the account button, or the
+  account menu, nor in the heading of the user's own screen.
 - **User card.** While the pointer rests on the link to a user, or the link
   has the keyboard focus, and after a long press on a touch screen, which
   opens it in place of the browser's own menu of the link, a card shows the
