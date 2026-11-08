@@ -411,8 +411,8 @@ test.describe("for an analyst", () => {
     await expectViewCounts(page);
     // In Assigned to me, whose columns hold no avatar and no date, so that no
     // mask of the rows lies over the popover: the masks of the reference
-    // cover only the avatar of the user who set the override and the time at
-    // which they set it.
+    // cover in it only the time at which the override was set, since the user
+    // who set it shows without an avatar.
     await views(page).filter({ hasText: "Assigned to me" }).click();
     await expect(page).toHaveURL("/tickets?view=assigned-to-me");
     // SNTL-12, assigned to asmith, whose override P1 bwilson set over the
@@ -433,9 +433,9 @@ test.describe("for an analyst", () => {
       "Evidence",
     ]);
     for (const text of [
-      "Set by",
+      "Override set by",
       "Bob Wilson",
-      "Set on",
+      "Override set on",
       "P3",
       "High",
       "Unknown",
@@ -479,7 +479,13 @@ test.describe("for an analyst", () => {
 
     const dialog = explanation(page, "P3, override");
     await expect(dialog).toBeFocused();
-    for (const text of ["Set by", "Alice Smith", "Set on", "P1", "Active"]) {
+    for (const text of [
+      "Override set by",
+      "Alice Smith",
+      "Override set on",
+      "P1",
+      "Active",
+    ]) {
       await expect(dialog.getByText(text, { exact: true })).toBeVisible();
     }
     await expect(dialog.getByText(DATE_TIME)).toHaveAttribute(

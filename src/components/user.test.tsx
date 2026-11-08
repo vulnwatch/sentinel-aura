@@ -192,6 +192,25 @@ test("wraps the name, with its username, where the place is too narrow when aske
   }
 });
 
+test("shows the name form without the avatar: the name at the start of its place, as high as the surrounding text, followed by the labels", async () => {
+  const screen = await render(
+    <section aria-label="Row" className="flex text-14">
+      <User user={{ ...SCANNER, active: false }} withAvatar={false} />
+    </section>,
+  );
+  const row = screen.getByRole("region").element().getBoundingClientRect();
+  const name = screen.getByText("Security Scanner", { exact: true }).element();
+
+  await expect.element(screen.getByText("Inactive")).toBeVisible();
+  expect(screen.getByRole("region").element().textContent).toBe(
+    "Security ScannerBotInactive",
+  );
+  expect(name.getBoundingClientRect().left).toBe(row.left);
+  // The line of text-14, 20 px, below the 24 px of the small avatar.
+  expect(row.height).toBe(20);
+  expect(getComputedStyle(name).color).toBe(FG_MUTED);
+});
+
 describe("with the username on a line of its own", () => {
   test.each([
     ["a user with a full name", ALICE, "Alice Smith", "@asmith"],

@@ -144,7 +144,10 @@ function textOf(dialog: Locator): string {
 }
 
 // The line of who set an override, or of when, by its label.
-function lineOf(dialog: Locator, label: "Set by" | "Set on"): Element {
+function lineOf(
+  dialog: Locator,
+  label: "Override set by" | "Override set on",
+): Element {
   return dialog.getByRole("paragraph").filter({ hasText: label }).element();
 }
 
@@ -213,6 +216,8 @@ test("explains an automatic priority from its basis and its evidence", async () 
     ].join(""),
   );
   expect(evidenceOf(dialog)).toEqual(["Listed in CISA KEV on 9 Oct 2026"]);
+  // Only the border line below the title, without the lines of an override.
+  expect(dialog.getByRole("separator").elements()).toHaveLength(1);
 });
 
 test("explains an override with the automatic priority that it replaces", async () => {
@@ -232,14 +237,14 @@ test("explains an override with the automatic priority that it replaces", async 
   expect(textOf(dialog)).toBe(
     [
       "P1·override",
-      "Set byJane Doe",
-      `Set on${formatDateTime(SET_AT)}`,
       "Automatic priority",
       "P3",
       "SeverityHigh",
       "ExploitationUnknown",
       "Evidence",
       "No evidence.",
+      "Override set byJane Doe",
+      `Override set on${formatDateTime(SET_AT)}`,
     ].join(""),
   );
   expect(evidenceOf(dialog)).toEqual([]);
@@ -269,14 +274,14 @@ test("shows the automatic P1 that an override hides, with its deciding evidence"
   expect(textOf(dialog)).toBe(
     [
       "P3·override",
-      "Set byJane Doe",
-      `Set on${formatDateTime(SET_AT)}`,
       "Automatic priority",
       "P1",
       "SeverityHigh",
       "ExploitationActive",
       "Evidence",
       "SSVC exploitation Active",
+      "Override set byJane Doe",
+      `Override set on${formatDateTime(SET_AT)}`,
     ].join(""),
   );
   const p1 = dialog.getByText("P1", { exact: true });
@@ -421,24 +426,34 @@ test("explains an override over an automatic priority that is not yet prioritiza
   );
 });
 
-test("states who set an override, with the avatar at the small size, and when, as a date and time", async () => {
+test("states who set an override, in the name form, and when, as a date and time, in text-13, the values in fg", async () => {
   const { screen } = await renderPriority(OVERRIDE_ABOVE);
 
   const dialog = await openExplanation(screen, "P1, override");
 
-  const setBy = dialog.getByText("Set by", { exact: true }).element();
-  const setOn = dialog.getByText("Set on", { exact: true }).element();
-  expect(textOf(dialog)).toContain(
-    `P1·overrideSet byJane DoeSet on${formatDateTime(SET_AT)}Automatic priority`,
-  );
-  // The line of the user is as high as the avatar of the small size.
-  expect(lineOf(dialog, "Set by").getBoundingClientRect().height).toBe(24);
+  const setBy = dialog.getByText("Override set by", { exact: true }).element();
+  const setOn = dialog.getByText("Override set on", { exact: true }).element();
+  const name = dialog.getByText("Jane Doe", { exact: true }).element();
   const time = dialog.getByText(formatDateTime(SET_AT), { exact: true });
   await expect.element(time).toHaveAttribute("datetime", SET_AT);
-  expect([
-    getComputedStyle(setBy).color,
-    getComputedStyle(setOn).color,
-  ]).toEqual([FG_MUTED, FG_MUTED]);
+  // Without the avatar, the name follows its label 6 px later, and the line
+  // is as high as text-13, 20 px, not as the avatar of the small size, 24 px.
+  expect(
+    name.getBoundingClientRect().left - setBy.getBoundingClientRect().right,
+  ).toBe(6);
+  expect(lineOf(dialog, "Override set by").getBoundingClientRect().height).toBe(
+    20,
+  );
+  expect(
+    [setBy, setOn, name, time.element()].map(
+      (element) => getComputedStyle(element).fontSize,
+    ),
+  ).toEqual(["13px", "13px", "13px", "13px"]);
+  expect(
+    [setBy, setOn, name, time.element()].map(
+      (element) => getComputedStyle(element).color,
+    ),
+  ).toEqual([FG_MUTED, FG_MUTED, FG, FG]);
 });
 
 test.each([
@@ -467,7 +482,7 @@ test.each([
 
   const dialog = await openExplanation(screen, "P1, override");
 
-  expect(textOf(dialog)).toContain(`Set by${text}Set on`);
+  expect(textOf(dialog)).toContain(`Override set by${text}Override set on`);
   const name = user.full_name ?? user.username;
   expect(
     getComputedStyle(dialog.getByText(name, { exact: true }).element()).color,
@@ -479,12 +494,12 @@ test.each([
   [
     "a setter",
     { priority_override_by: null },
-    ["Set by–Not set", `Set on${formatDateTime(SET_AT)}`],
+    ["Override set by–Not set", `Override set on${formatDateTime(SET_AT)}`],
   ],
   [
     "a time",
     { priority_override_at: null },
-    ["Set byJane Doe", "Set on–Not set"],
+    ["Override set byJane Doe", "Override set on–Not set"],
   ],
 ])(
   "shows %s that is absent under an override as an absent value, not as System",
@@ -495,30 +510,36 @@ test.each([
 
     const dialog = await openExplanation(screen, "P1, override");
 
-    expect(textOf(dialog)).toContain(
-      ["P1·override", ...lines, "Automatic priority"].join(""),
-    );
+    expect(textOf(dialog)).toContain(["No evidence.", ...lines].join(""));
     expect(textOf(dialog)).not.toContain("System");
   },
 );
 
-test("shows who set an override and when 8 px below the title, 4 px apart, and the border line 12 px below them", async () => {
+test("shows who set an override and when last, 12 px below a border line 12 px below the evidence, 4 px apart, and the title followed by its own border line", async () => {
   const { screen } = await renderPriority(OVERRIDE_ABOVE);
 
   const dialog = await openExplanation(screen, "P1, override");
 
   const title = dialog.getByRole("heading", { level: 2 }).element();
-  const setBy = lineOf(dialog, "Set by");
-  const setOn = lineOf(dialog, "Set on");
-  const line = dialog.getByRole("separator").element();
+  const lines = dialog.getByRole("separator").elements();
+  expect(lines).toHaveLength(2);
+  const [first, second] = lines.map((line) => line.getBoundingClientRect());
+  const evidence = dialog
+    .getByText("No evidence.", { exact: true })
+    .element()
+    .getBoundingClientRect();
+  const setBy = lineOf(dialog, "Override set by").getBoundingClientRect();
+  const setOn = lineOf(dialog, "Override set on").getBoundingClientRect();
   expect([
-    setBy.getBoundingClientRect().top - title.getBoundingClientRect().bottom,
-    setOn.getBoundingClientRect().top - setBy.getBoundingClientRect().bottom,
-    line.getBoundingClientRect().top - setOn.getBoundingClientRect().bottom,
-  ]).toEqual([8, 4, 12]);
+    first!.top - title.getBoundingClientRect().bottom,
+    second!.top - evidence.bottom,
+    setBy.top - second!.bottom,
+    setOn.top - setBy.bottom,
+  ]).toEqual([12, 12, 12, 4]);
+  expect(getComputedStyle(lines[1]!).borderTopColor).toBe(BORDER);
 });
 
-test("wraps a long name of the setter within the explanation, which shows it whole", async () => {
+test("wraps a long name of the setter within the explanation, which shows it whole, beside its label aligned with its first line", async () => {
   const { screen } = await renderPriority(
     fields({
       ...OVERRIDE_ABOVE,
@@ -538,13 +559,19 @@ test("wraps a long name of the setter within the explanation, which shows it who
     })
     .element();
   expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
-  expect(name.getBoundingClientRect().height).toBeGreaterThan(24);
-  // "Set by" stays whole, on a line of its own text, and the label shows
-  // within the explanation.
-  const setBy = dialog.getByText("Set by", { exact: true }).element();
+  expect(name.getBoundingClientRect().height).toBeGreaterThan(20);
+  // "Override set by" stays whole, on a line of its own text, beside the
+  // first line of the name, and the label shows within the explanation.
+  const setBy = dialog
+    .getByText("Override set by", { exact: true })
+    .element()
+    .getBoundingClientRect();
   const label = dialog.getByText("Inactive", { exact: true }).element();
   const bounds = dialog.element().getBoundingClientRect();
-  expect(setBy.getBoundingClientRect().height).toBe(20);
+  expect(setBy.height).toBe(20);
+  expect(Math.abs(name.getBoundingClientRect().top - setBy.top)).toBeLessThan(
+    1,
+  );
   expect([
     name.getBoundingClientRect().right <= bounds.right,
     label.getBoundingClientRect().right <= bounds.right,

@@ -24,8 +24,8 @@ import { User, type UserFields } from "./user";
 
 // The explanation of the priority of a Ticket (docs/design-system.md,
 // Priority, Explanation): whether the effective priority is automatic or an
-// override, who set an override and when, and what the automatic priority is
-// based on.
+// override, what the automatic priority is based on, and who set an override
+// and when.
 
 // A piece of deciding evidence of a kind that the pinned contract lists, with
 // its value (Sentinel docs/features/tickets/tickets.md, PriorityEvidence).
@@ -134,28 +134,31 @@ interface ProvenanceProps {
   ticket: PriorityFields;
 }
 
-// Who set an override and when, 8 px below the title, on two lines 4 px
-// apart: the user in the full form at the small size, and the date and time.
-// A value that is absent shows as an absent value, never as System, since no
-// system task sets an override (Sentinel
-// docs/features/tickets/ticket-priority.md, Manual Override). The user
-// shrinks to the room that its label leaves, and its name wraps, so that the
-// explanation, which holds nothing else that shows it, shows it whole.
+// Who set an override and when, in text-13, on two lines 4 px apart: the
+// user in the name form, and the date and time. A value that is absent shows
+// as an absent value, never as System, since no system task sets an override
+// (Sentinel docs/features/tickets/ticket-priority.md, Manual Override). Each
+// value starts after its label, on the baseline of its first line, and
+// shrinks to the room that the label leaves, so that the label stays whole;
+// the name wraps, so that the explanation, which holds nothing else that
+// shows it, shows it whole.
 function Provenance({ ticket }: ProvenanceProps) {
   return (
-    <div className="mt-2 flex flex-col gap-1">
-      <p className="flex items-center gap-1.5">
-        <span className="shrink-0 text-fg-muted">Set by</span>
+    <div className="flex flex-col gap-1 text-13">
+      <p className="flex items-baseline gap-1.5">
+        <span className="shrink-0 text-fg-muted">Override set by</span>
         {ticket.priority_override_by === null ? (
           <AbsentValue />
         ) : (
-          <span className="min-w-0">
-            <User user={ticket.priority_override_by} wrap />
+          // A flex container, in which the user takes no vertical alignment of
+          // its own and gives its first line as the baseline.
+          <span className="flex min-w-0">
+            <User user={ticket.priority_override_by} withAvatar={false} wrap />
           </span>
         )}
       </p>
-      <p className="flex items-center gap-1.5">
-        <span className="text-fg-muted">Set on</span>
+      <p className="flex items-baseline gap-1.5">
+        <span className="shrink-0 text-fg-muted">Override set on</span>
         {ticket.priority_override_at === null ? (
           <AbsentValue />
         ) : (
@@ -166,11 +169,13 @@ function Provenance({ ticket }: ProvenanceProps) {
   );
 }
 
-// The content of the explanation: its title, which names it, for an override
-// who set it and when, a border line 12 px below them and 12 px above the
-// sections, then the section of the basis and the section of the evidence,
-// 12 px apart, each with its heading in text-12, weight 500, fg-muted, and its
-// lines 4 px apart.
+// The content of the explanation: its title, which names it, a border line
+// 12 px below it and 12 px above the sections, then the section of the basis
+// and the section of the evidence, 12 px apart, each with its heading in
+// text-12, weight 500, fg-muted, and its lines 4 px apart, and last, for an
+// override, another border line 12 px around and who set it and when, as
+// details of the override, right below the evidence with which the reader
+// compares them.
 function Explanation({ ticket, isOverride }: ExplanationProps) {
   const basis = ticket.priority_automatic_basis;
   const heading = "text-12 font-medium text-fg-muted";
@@ -194,7 +199,6 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
           <span>{isOverride ? "override" : "automatic"}</span>
         </Heading>
       )}
-      {isOverride && <Provenance ticket={ticket} />}
       <hr className="my-3 border-border" />
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
@@ -237,6 +241,12 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
           )}
         </div>
       </div>
+      {isOverride && (
+        <>
+          <hr className="my-3 border-border" />
+          <Provenance ticket={ticket} />
+        </>
+      )}
     </>
   );
 }

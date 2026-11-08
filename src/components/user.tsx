@@ -62,6 +62,10 @@ interface UserProps {
   // Small in text, table rows, and the options of a field; medium in other
   // lists of users; large in the heading of a user's screen.
   size?: AvatarSize;
+  // Whether the avatar shows, as in the full form, or not, as in the name
+  // form, which has no size, where the user is a detail of another value,
+  // such as who set a priority override.
+  withAvatar?: boolean;
   // Whether the username follows the display name, as @ and the username in
   // fg-muted, also when it is the display name, where users must be told
   // apart exactly, such as in a user picker.
@@ -74,20 +78,22 @@ interface UserProps {
 
 // A user in the full form: the avatar, then the display name in the style of
 // the surrounding text, the username when asked, at weight 400, and the labels
-// Bot, then Inactive. An inactive user's name is in fg-muted, and the @ sets
-// its username apart from it. Where the place is too narrow, only the name,
-// with its username, ends with an ellipsis, and assistive technologies read
-// it whole, or wraps when asked.
+// Bot, then Inactive; or in the name form, the same without the avatar. An
+// inactive user's name is in fg-muted, and the @ sets its username apart from
+// it. Where the place is too narrow, only the name, with its username, ends
+// with an ellipsis, and assistive technologies read it whole, or wraps when
+// asked.
 export function User({
   user,
   size = "small",
+  withAvatar = true,
   withUsername = false,
   wrap = false,
 }: UserProps) {
   const name = displayName(user);
   return (
     <span className="inline-flex max-w-full items-center gap-1.5 align-middle">
-      <Avatar user={user} size={size} />
+      {withAvatar && <Avatar user={user} size={size} />}
       <span
         className={`min-w-0 ${wrap ? "wrap-anywhere" : "truncate"} ${user.active ? "" : "text-fg-muted"}`}
       >

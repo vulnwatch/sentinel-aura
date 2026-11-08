@@ -1599,7 +1599,9 @@ describe("the table", () => {
       .element(dialog.getByRole("listitem"))
       .toHaveTextContent("SSVC exploitation Active");
     // Who set the override and when, from the fields of the row.
-    expect(dialog.element().textContent).toContain("Set byAlice SmithSet on");
+    expect(dialog.element().textContent).toContain(
+      "Override set byAlice SmithOverride set on",
+    );
     await expect
       .element(dialog.getByText(formatDateTime(OVERRIDE_AT), { exact: true }))
       .toHaveAttribute("datetime", OVERRIDE_AT);
