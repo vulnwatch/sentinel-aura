@@ -667,9 +667,9 @@ The marks, in a box of 14 by 14 units:
 **Explanation.** Where a screen document gives the priority of a Ticket its
 explanation, such as the Ticket list in its rows, the priority is a button
 that opens the explanation in a popover. The explanation states whether the
-effective priority is automatic or an override, who set an override and
-when, and what the automatic priority is based on, from the fields of the
-Ticket alone: `priority`, `priority_automatic`, `priority_override`,
+effective priority is automatic or an override, what the automatic priority
+is based on, and who set an override and when, from the fields of the Ticket
+alone: `priority`, `priority_automatic`, `priority_override`,
 `priority_override_by`, `priority_override_at`, and
 `priority_automatic_basis` (Sentinel `docs/features/tickets/tickets.md`,
 PriorityBasis; PriorityEvidence; TicketSummary; Sentinel
@@ -707,39 +707,42 @@ event (Sentinel `docs/features/tickets/ticket-priority.md`,
      icon of an override, followed by "· automatic" or "· override", such as
      "P1 · override", in `text-16`, weight 600, which assistive technologies
      read as "P1, override"; or "Not yet prioritizable" for `null`;
-  2. for an override, 8 px below the title, two lines 4 px apart that state
-     who set it and when, as Sentinel records them (Sentinel
-     `docs/features/tickets/ticket-priority.md`, Persistence and Effective
-     Priority): "Set by" in `fg-muted`, followed by the user in the full
-     form at the small size, without the username, its name wrapping
-     instead of ending with an ellipsis, since nothing else in the
-     explanation shows it whole (Representation of a User); and "Set on" in
-     `fg-muted`, followed by the date and time at which they set it
-     (`docs/behaviors.md`, Dates and Times, Display). The user is the
-     setter's current profile, so a user deactivated since shows as inactive
-     (Sentinel `docs/api-spec.md`, User References in Responses). A value
-     that is absent shows as an absent value, never as "System": no system
-     task sets an override (Sentinel
-     `docs/features/tickets/ticket-priority.md`, Manual Override;
-     `docs/behaviors.md`, Absent Values; Representation of a User). An
-     automatic priority has neither line;
-  3. a `border` line, 12 px below the title, or below the lines of an
-     override, and 12 px above the sections;
-  4. the section of the basis, "Based on" for an automatic priority and
+  2. a `border` line, 12 px below the title and 12 px above the sections;
+  3. the section of the basis, "Based on" for an automatic priority and
      "Automatic priority" for an override, with its heading in `text-12`,
      weight 500, `fg-muted`, and its lines 4 px apart: for an override, the
      automatic priority as above, P1 in red included, so that the P1 that an
      override hides stands out, or "Not yet prioritizable" for `null`; then
      "Severity" in `fg-muted`, followed by the severity of the basis as
      Severity shows it; then "Exploitation" in `fg-muted`, followed by the
-     exploitation level: KEV, Active, Likely, or Unknown; and
-  5. 12 px below, the section "Evidence", in the same style: a line for each
+     exploitation level: KEV, Active, Likely, or Unknown;
+  4. 12 px below, the section "Evidence", in the same style: a line for each
      piece of deciding evidence, in the order of the basis, "Listed in CISA
      KEV on 9 Oct 2026" with the date of the entry (`docs/behaviors.md`,
      Dates and Times, Display), "SSVC exploitation PoC" or "SSVC exploitation
      Active", and "EPSS percentile 0.97", the percentile cut to two decimals,
      so that it never shows more than its value. Without evidence, the line
-     "No evidence." in `fg-muted` (Empty States).
+     "No evidence." in `fg-muted` (Empty States); and
+  5. for an override, a `border` line 12 px below the evidence and, 12 px
+     below the line, two lines 4 px apart in `text-13` that state who set it
+     and when, as Sentinel records them (Sentinel
+     `docs/features/tickets/ticket-priority.md`, Persistence and Effective
+     Priority): "Override set by" in `fg-muted`, followed by the user in the
+     name form, without the username, its name wrapping instead of ending
+     with an ellipsis, since nothing else in the explanation shows it whole
+     (Representation of a User); and "Override set on" in `fg-muted`,
+     followed by the date and time at which they set it (`docs/behaviors.md`,
+     Dates and Times, Display). They come last, as details of the override
+     rather than of what the priority is based on, right below the evidence,
+     such as the date of a CISA KEV entry, with which the reader compares
+     them; their labels name the override, since the title is far above them.
+     The user is the setter's current profile, so a user deactivated since
+     shows as inactive (Sentinel `docs/api-spec.md`, User References in
+     Responses). A value that is absent shows as an absent value, never as
+     "System": no system task sets an override (Sentinel
+     `docs/features/tickets/ticket-priority.md`, Manual Override;
+     `docs/behaviors.md`, Absent Values; Representation of a User). An
+     automatic priority has neither the line nor the two lines.
 - An exploitation level or an SSVC value that the pinned contract does not
   list shows as received, as a level and a severity do (above; Severity), and
   a piece of evidence of a kind that it does not list shows its kind as
@@ -1132,6 +1135,11 @@ how the labels look, and the user card.
   the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
+- **Name form:** the full form without the avatar and the 6 px of space after
+  it: the display name in the surrounding text's style, followed by the
+  username where it shows and by the labels, as in the full form, the name
+  ending with an ellipsis or wrapping where the full form's would. It has no
+  size, since the sizes are those of the avatar.
 - **Link:** a user that links to their screen (`docs/behaviors.md`,
   Representation of a User) keeps the colors of the full form, unlike the
   other links (Buttons and Links): its name is in the surrounding text's
