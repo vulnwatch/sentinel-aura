@@ -711,8 +711,9 @@ event (Sentinel `docs/features/tickets/ticket-priority.md`,
      who set it and when, as Sentinel records them (Sentinel
      `docs/features/tickets/ticket-priority.md`, Persistence and Effective
      Priority): "Set by" in `fg-muted`, followed by the user in the full
-     form at the small size, without the username (Representation of a
-     User); and "Set on" in `fg-muted`, followed by the date and time at
+     form at the small size, without the username, its name wrapping instead
+     of ending with an ellipsis, since nothing else in the explanation shows
+     it whole (Representation of a User); and "Set on" in `fg-muted`, followed by the date and time at
      which they set it (`docs/behaviors.md`, Dates and Times, Display). The
      user is the setter's current profile, so a user deactivated since shows
      as inactive (Sentinel `docs/api-spec.md`, User References in
@@ -1125,8 +1126,9 @@ how the labels look, and the user card.
   second label follows the first, 6 px later. An inactive user's name is in
   `fg-muted`, and its avatar is gray (Avatar). Where the place is too narrow,
   only the name, with the username that follows it, ends with an ellipsis,
-  unless a table, the account menu, or the user card wraps it (Tables;
-  Account Menu; User card); the labels always show.
+  unless a table, the account menu, the user card, or the explanation of a
+  priority wraps it (Tables; Account Menu; User card; Priority, Explanation);
+  the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
 - **Link:** a user that links to their screen (`docs/behaviors.md`,

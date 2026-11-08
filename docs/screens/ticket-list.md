@@ -336,7 +336,7 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   Accessibility; Wording; Representation of a User
 - `docs/design-system.md` — Type Scale; Values; Other Values; Buttons and
   Links; Lists; Tables; Forms; Loading; Empty States; Errors in Place of
-  Content; Menus, Popovers, and Tooltips
+  Content; Menus, Popovers, and Tooltips; Representation of a User
 - Sentinel `docs/features/tickets/tickets.md` — Ticket Identification;
   Search; Statuses; Confidential Tickets (Coordinated Release Date);
   PriorityBasis; PriorityEvidence; TicketSummary; List Tickets (Embargo

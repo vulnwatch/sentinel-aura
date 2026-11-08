@@ -839,8 +839,10 @@ complete profile and its manager, and the signed-in user alike: `id`,
   Sentinel mark instead of an avatar, so that it differs from a person and
   from a bot account. It is not a link and has no card.
   Only the actor of a recorded action is "System": another field without a
-  user, such as the assignee of an unassigned Ticket, is an absent value
-  (Absent Values).
+  user, such as the assignee of an unassigned Ticket or the user who set a
+  priority override, which no system task sets (Sentinel
+  `docs/features/tickets/ticket-priority.md`, Manual Override), is an absent
+  value (Absent Values).
 - **Sizes.** Three sizes, small, medium, and large. `docs/design-system.md`
   (Representation of a User) defines their dimensions, where each is used,
   and how the labels look, never by color alone (Accessibility).

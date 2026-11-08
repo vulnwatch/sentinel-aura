@@ -139,8 +139,8 @@ interface ProvenanceProps {
 // A value that is absent shows as an absent value, never as System, since no
 // system task sets an override (Sentinel
 // docs/features/tickets/ticket-priority.md, Manual Override). The user
-// shrinks to the room that its label leaves, so that its name ends with an
-// ellipsis rather than passing the end of the explanation.
+// shrinks to the room that its label leaves, and its name wraps, so that the
+// explanation, which holds nothing else that shows it, shows it whole.
 function Provenance({ ticket }: ProvenanceProps) {
   return (
     <div className="mt-2 flex flex-col gap-1">
@@ -150,7 +150,7 @@ function Provenance({ ticket }: ProvenanceProps) {
           <AbsentValue />
         ) : (
           <span className="min-w-0">
-            <User user={ticket.priority_override_by} />
+            <User user={ticket.priority_override_by} wrap />
           </span>
         )}
       </p>

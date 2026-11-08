@@ -518,7 +518,7 @@ test("shows who set an override and when 8 px below the title, 4 px apart, and t
   ]).toEqual([8, 4, 12]);
 });
 
-test("ends a long name of the setter with an ellipsis within the explanation", async () => {
+test("wraps a long name of the setter within the explanation, which shows it whole", async () => {
   const { screen } = await renderPriority(
     fields({
       ...OVERRIDE_ABOVE,
@@ -537,15 +537,18 @@ test("ends a long name of the setter with an ellipsis within the explanation", a
       exact: true,
     })
     .element();
-  expect(getComputedStyle(name).textOverflow).toBe("ellipsis");
-  expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
-  // "Set by" stays whole, on a line as high as the avatar of the small size.
-  expect(lineOf(dialog, "Set by").getBoundingClientRect().height).toBe(24);
-  // The label still shows, within the explanation.
+  expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+  expect(name.getBoundingClientRect().height).toBeGreaterThan(24);
+  // "Set by" stays whole, on a line of its own text, and the label shows
+  // within the explanation.
+  const setBy = dialog.getByText("Set by", { exact: true }).element();
   const label = dialog.getByText("Inactive", { exact: true }).element();
-  expect(label.getBoundingClientRect().right).toBeLessThanOrEqual(
-    dialog.element().getBoundingClientRect().right,
-  );
+  const bounds = dialog.element().getBoundingClientRect();
+  expect(setBy.getBoundingClientRect().height).toBe(20);
+  expect([
+    name.getBoundingClientRect().right <= bounds.right,
+    label.getBoundingClientRect().right <= bounds.right,
+  ]).toEqual([true, true]);
 });
 
 test("shows values that the pinned contract does not list as received, and an evidence of an unlisted kind without its value", async () => {

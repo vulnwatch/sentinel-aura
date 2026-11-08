@@ -66,6 +66,10 @@ interface UserProps {
   // fg-muted, also when it is the display name, where users must be told
   // apart exactly, such as in a user picker.
   withUsername?: boolean;
+  // Whether the name, with its username, wraps where the place is too
+  // narrow, instead of ending with an ellipsis, where nothing else shows it
+  // whole, such as the explanation of a priority.
+  wrap?: boolean;
 }
 
 // A user in the full form: the avatar, then the display name in the style of
@@ -73,18 +77,19 @@ interface UserProps {
 // Bot, then Inactive. An inactive user's name is in fg-muted, and the @ sets
 // its username apart from it. Where the place is too narrow, only the name,
 // with its username, ends with an ellipsis, and assistive technologies read
-// it whole.
+// it whole, or wraps when asked.
 export function User({
   user,
   size = "small",
   withUsername = false,
+  wrap = false,
 }: UserProps) {
   const name = displayName(user);
   return (
     <span className="inline-flex max-w-full items-center gap-1.5 align-middle">
       <Avatar user={user} size={size} />
       <span
-        className={`min-w-0 truncate ${user.active ? "" : "text-fg-muted"}`}
+        className={`min-w-0 ${wrap ? "wrap-anywhere" : "truncate"} ${user.active ? "" : "text-fg-muted"}`}
       >
         {name}
         {withUsername && (

@@ -166,6 +166,32 @@ test("cuts only the name, with its username, when the place is too narrow, and k
   }
 });
 
+test("wraps the name, with its username, where the place is too narrow when asked, and keeps the labels within it", async () => {
+  const longName = "Alice Fictional Smith-Wilson-Brown";
+  const screen = await render(
+    <section aria-label="Narrow place" className="w-40">
+      <User
+        user={{ ...SCANNER, full_name: longName, active: false }}
+        withUsername
+        wrap
+      />
+    </section>,
+  );
+  const place = screen.getByRole("region").element().getBoundingClientRect();
+  const name = screen.getByText(`${longName} @security-scanner`).element();
+
+  await expect.element(screen.getByText("Inactive")).toBeVisible();
+  expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+  expect(name.getBoundingClientRect().height).toBeGreaterThan(24);
+  for (const text of ["Bot", "Inactive"]) {
+    const box = screen
+      .getByText(text, { exact: true })
+      .element()
+      .getBoundingClientRect();
+    expect(box.right, text).toBeLessThanOrEqual(place.right);
+  }
+});
+
 describe("with the username on a line of its own", () => {
   test.each([
     ["a user with a full name", ALICE, "Alice Smith", "@asmith"],
