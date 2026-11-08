@@ -711,17 +711,18 @@ event (Sentinel `docs/features/tickets/ticket-priority.md`,
      who set it and when, as Sentinel records them (Sentinel
      `docs/features/tickets/ticket-priority.md`, Persistence and Effective
      Priority): "Set by" in `fg-muted`, followed by the user in the full
-     form at the small size, without the username, its name wrapping instead
-     of ending with an ellipsis, since nothing else in the explanation shows
-     it whole (Representation of a User); and "Set on" in `fg-muted`, followed by the date and time at
-     which they set it (`docs/behaviors.md`, Dates and Times, Display). The
-     user is the setter's current profile, so a user deactivated since shows
-     as inactive (Sentinel `docs/api-spec.md`, User References in
-     Responses). A value that is absent shows as an absent value, never as
-     "System": no system task sets an override (Sentinel
+     form at the small size, without the username, its name wrapping
+     instead of ending with an ellipsis, since nothing else in the
+     explanation shows it whole (Representation of a User); and "Set on" in
+     `fg-muted`, followed by the date and time at which they set it
+     (`docs/behaviors.md`, Dates and Times, Display). The user is the
+     setter's current profile, so a user deactivated since shows as inactive
+     (Sentinel `docs/api-spec.md`, User References in Responses). A value
+     that is absent shows as an absent value, never as "System": no system
+     task sets an override (Sentinel
      `docs/features/tickets/ticket-priority.md`, Manual Override;
-     `docs/behaviors.md`, Absent Values). An automatic priority has neither
-     line;
+     `docs/behaviors.md`, Absent Values; Representation of a User). An
+     automatic priority has neither line;
   3. a `border` line, 12 px below the title, or below the lines of an
      override, and 12 px above the sections;
   4. the section of the basis, "Based on" for an automatic priority and
