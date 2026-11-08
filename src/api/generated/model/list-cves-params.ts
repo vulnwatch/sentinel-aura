@@ -23,9 +23,7 @@ export type ListCvesParams = {
    * @items.maxLength 500
    */
   severity?: ListCvesSeverityItem[];
-  /**
-   * `true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket.
-   */
+  /** `true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket. */
   has_ticket?: boolean;
   /**
    * ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded.
