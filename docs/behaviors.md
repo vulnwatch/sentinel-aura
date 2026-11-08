@@ -796,12 +796,11 @@ complete profile and its manager, and the signed-in user alike: `id`,
   place shows the full form, or the name form where it applies.
 - **Name form.** The full form without the avatar: the display name, the
   username where the full form shows it, and the labels. It shows a user who
-  is a detail of another value in a line of secondary text, such as who set a
-  priority override in the explanation of the priority
-  (`docs/design-system.md`, Priority), where an avatar would weigh more than
-  the text around it. The avatar is hidden from assistive technologies in the
-  full form, so the name form reads the same, and its labels still show the
-  state of the user (Accessibility).
+  is a detail of another value, such as who set a priority override in the
+  explanation of the priority (`docs/design-system.md`, Priority), where an
+  avatar would weigh more than the text around it. The avatar is hidden from
+  assistive technologies in the full form, so the name form reads the same,
+  and its labels still show the state of the user (Accessibility).
 - **Link to the user.** A user, in the full, the compact, or the name form, is
   a link to their screen, User (`docs/screen-map.md`, Areas and Screens), so
   that a name leads to the user's profile and work wherever it shows. The

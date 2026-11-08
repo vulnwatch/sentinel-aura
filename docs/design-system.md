@@ -732,14 +732,17 @@ event (Sentinel `docs/features/tickets/ticket-priority.md`,
      with an ellipsis, since nothing else in the explanation shows it whole
      (Representation of a User); and "Override set on" in `fg-muted`,
      followed by the date and time at which they set it (`docs/behaviors.md`,
-     Dates and Times, Display). They come last, as details of the override
-     rather than of what the priority is based on, right below the evidence,
-     such as the date of a CISA KEV entry, with which the reader compares
-     them; their labels name the override, since the title is far above them.
-     The user is the setter's current profile, so a user deactivated since
-     shows as inactive (Sentinel `docs/api-spec.md`, User References in
-     Responses). A value that is absent shows as an absent value, never as
-     "System": no system task sets an override (Sentinel
+     Dates and Times, Display). The values are in `fg`, except an inactive
+     user's name, and each starts after its label, aligned with it on its
+     first line, and wraps in the room that the label leaves, so that the
+     label stays whole. They come last, as details of the override rather
+     than of what the priority is based on, right below the evidence, such as
+     the date of a CISA KEV entry, with which the reader compares them; their
+     labels name the override, since the title is far above them. The user is
+     the setter's current profile, so a user deactivated since shows as
+     inactive (Sentinel `docs/api-spec.md`, User References in Responses). A
+     value that is absent shows as an absent value, never as "System": no
+     system task sets an override (Sentinel
      `docs/features/tickets/ticket-priority.md`, Manual Override;
      `docs/behaviors.md`, Absent Values; Representation of a User). An
      automatic priority has neither the line nor the two lines.
@@ -1136,10 +1139,7 @@ how the labels look, and the user card.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
 - **Name form:** the full form without the avatar and the 6 px of space after
-  it: the display name in the surrounding text's style, followed by the
-  username where it shows and by the labels, as in the full form, the name
-  ending with an ellipsis or wrapping where the full form's would. It has no
-  size, since the sizes are those of the avatar.
+  it; it has no size, since the sizes are those of the avatar.
 - **Link:** a user that links to their screen (`docs/behaviors.md`,
   Representation of a User) keeps the colors of the full form, unlike the
   other links (Buttons and Links): its name is in the surrounding text's
