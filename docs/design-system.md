@@ -1183,7 +1183,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   line: an icon button of 24 px with `pencil` at 14 px, named by its action,
   such as "Edit assignee", which its tooltip shows. It opens the control of
   the field in a popover below it, or above it where the window has no room
-  below, such as a search field with the matching users listed below it, in
+  below, moved toward the start where it would pass the end of the window,
+  such as a search field with the matching users listed below it, in
   the states of a combobox (Forms), whose choice applies at once and closes
   the popover; or a dialog where the change needs more than one choice
   (Dialogs). While the change is in progress, the pencil is busy
@@ -1192,7 +1193,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   on the background of the page, below a `border` line: its level-two heading
   in `text-16`, weight 600, 24 px below the line, with its actions at the end
   of the heading's line, and its content 16 px below the heading; the line of
-  the next part is 32 px below the content, and the first part has no line. A
+  the next part is 32 px below the content, and the first part has no line of
+  its own. A
   box within a part, such as a group of items, a table, or values set side by
   side, keeps its frame on `surface`, with a `border` line and the radius of
   its pattern, 6 or 8 px. A part without items shows its short line in
@@ -1213,16 +1215,21 @@ states it, such as that of a Ticket; the other audit logs are tables
   that order in the page too (Main Content). In one column, each section of
   the side column keeps its look, at the width of the content, and each part
   keeps its own; a `border` line sets the sections of the side column apart
-  from the parts above and below them, 16 px from a section and 32 px from a
-  part. When the layout changes while the screen is open, as the window, the
-  text size, or the sidebar changes, a section whose place in the order of
-  the page differs between the layouts, such as the details of a Ticket,
-  moves to its new place. While a popover or a dialog of such a section is
-  open, the layout waits until it closes, so that the input that it holds
-  and a change in progress stay. When the element with the focus is in such
-  a section, the focus moves to the screen's heading (`docs/behaviors.md`,
-  Accessibility, Focus after an action); elsewhere it stays where it is. The
-  page keeps its scroll position as the browser adjusts it.
+  from the parts above and below them, 16 px below a section's content and
+  32 px below a part's content, and the heading of a part follows it 24 px
+  below, as it follows the line of a part.
+- When the layout changes while the screen is open, as the window, the text
+  size, or the sidebar changes, a section whose place in the order of the
+  page differs between the layouts, such as the details of a Ticket, moves
+  to its new place. While a dialog of such a section is open, the layout
+  waits until it closes, so that its input and a change in progress stay;
+  the dialog fits the window meanwhile (Dialogs). A popover of such a section
+  closes, as on a click outside it, and a control of the section whose
+  change is in progress stays busy in its new place (`docs/behaviors.md`,
+  Loading). When the element with the focus is in such a section, the focus
+  moves to the screen's heading, which comes into view (`docs/behaviors.md`,
+  Accessibility, Focus after an action); elsewhere it stays where it is, and
+  the page keeps its scroll position as the browser adjusts it.
 - With two columns, while the page scrolls, the side column stays at the top
   of its place, below the message area and the compact heading, until the
   end of the page comes into view, and then scrolls with the page to its own
@@ -1236,9 +1243,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   heading row stays at the top of the window once it has scrolled out of
   view, below the message area, as the compact heading, on `surface` above a
   `border` line across the width, without a shadow (Spacing and Sizes,
-  Shadows): 10 px of space, the level-one heading in
-  `text-16` with the main values, and the actions as buttons 32 px high, then
-  right below them the tabs, 36 px high. Its place in the page keeps the
+  Shadows): 10 px of space, the level-one heading in `text-16` with the main
+  values, and the actions as buttons 32 px high, then right below them the
+  tabs, 36 px high. Its place in the page keeps the
   height of the heading row and the tabs, so that the content does not move
   when the heading becomes compact or returns. It is the heading row itself,
   not a copy, so the screen keeps one level-one heading, one set of tabs, and
@@ -1375,7 +1382,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   `fg` under the pointer; it wraps, and its target is at least 24 px high.
   Its popover is 320 px wide, with 16 px of padding, in `text-14`, below the
   name and aligned to its start, or above it where the window has no room
-  below, and its content scrolls within it in a window shorter than it is:
+  below, moved toward the start where it would pass the end of the window,
+  and its content scrolls within it in a window shorter than it is:
   its title, the name, in `text-16`, weight 600, wrapping; below it, in
   `text-13`, `fg-muted`, what identifies the record further, such as a CPE; a
   `border` line with 12 px of space above and below it; the details as a
@@ -1389,11 +1397,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   and the rest of the page is out of reach while it is open. Escape or a
   click outside closes it and returns the focus to the name, except while
   one of its actions is in progress, which marks its item busy
-  (`docs/behaviors.md`, Loading); the action
-  then closes the popover, with the focus on the name, or where Focus after
-  an action leads when the name is gone (`docs/behaviors.md`,
-  Accessibility), and its outcome shows as that of any other change
-  (`docs/behaviors.md`, Where Errors Appear; Outcome of a Change).
+  (`docs/behaviors.md`, Loading); the action then closes the popover, with
+  the focus on the name, or where Focus after an action leads when the name
+  is gone (`docs/behaviors.md`, Accessibility), and its outcome shows as
+  that of any other change (`docs/behaviors.md`, Where Errors Appear;
+  Outcome of a Change).
 
 ## Representation of a User
 
