@@ -1205,14 +1205,16 @@ states it, such as that of a Ticket; the other audit logs are tables
   labels, and ends with its actions. Its items follow 12 px below the band,
   indented by the 12 px of its padding, and the band of the next group is
   32 px below them.
-- A part that hides records, such as the excluded records of a package tree,
-  shows them on request with a switch (Forms). A hidden record that shows,
-  and every record within it, is in `fg-muted`, in its texts and in the
-  heading of its group, so that it reads apart from the records that count.
-  The record whose own state hides it carries the label of that state
-  (Labels), such as Excluded or EOL; a record hidden because of the record
-  that holds it, or because of the records that it holds, carries none. Its
-  controls, such as its menu of actions, keep their colors.
+- A part that hides records, such as the excluded and EOL records of a
+  package tree, shows them on request with a switch (Forms). A hidden record
+  that shows, and every record within it, is in `fg-muted`, in its texts, its
+  names that open a popover included, and, when it is a group, in the heading
+  of its band, so that it reads apart from the records that count. A record
+  whose own state hides it carries the label of each such state (Labels),
+  such as Excluded or EOL, also when the record that holds it is hidden too;
+  a record hidden only because of the record that holds it, or of the
+  records that it holds, carries none. Its controls with colors of their own,
+  such as a select or its menu of actions, keep them.
 - A screen document can give a detail screen, or one of its tabs, a side
   column for the fields of the record and short parts, 288 px wide, 32 px
   after the main column, aligned with its top; another tab takes the whole
