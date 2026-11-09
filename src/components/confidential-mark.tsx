@@ -18,3 +18,17 @@ export function ConfidentialMark() {
     />
   );
 }
+
+// The mark of a confidential Ticket on its detail screen, which writes
+// "Confidential" next to the lock (docs/design-system.md, Confidential
+// Tickets): lock at 14 px in fg-muted, then the word, in text-14 and
+// fg-muted. Assistive technologies read the word, so the lock is hidden from
+// them. What it follows sets it 4 px after the identifier.
+export function ConfidentialLabel() {
+  return (
+    <span className="inline-flex items-center gap-1 text-14 text-fg-muted">
+      <Lock aria-hidden className="size-3.5 shrink-0" />
+      Confidential
+    </span>
+  );
+}

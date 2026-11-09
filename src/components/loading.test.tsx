@@ -28,6 +28,31 @@ function elapsed(since: number) {
 }
 
 describe("Loading", () => {
+  test("is centered in a value of a description list, without the space of a part", async () => {
+    const screen = await render(
+      <div className="w-96">
+        <Loading inValue />
+      </div>,
+    );
+    const indicator = screen.getByRole("progressbar", { name: "Loading" });
+
+    await expect.element(indicator).toBeVisible();
+    const style = getComputedStyle(indicator.element());
+    expect([style.paddingTop, style.justifyContent]).toEqual(["0px", "center"]);
+  });
+
+  test("is centered in the place of a part, with 40 px of space above and below", async () => {
+    const screen = await render(<Loading />);
+    const indicator = screen.getByRole("progressbar", { name: "Loading" });
+
+    await expect.element(indicator).toBeVisible();
+    const style = getComputedStyle(indicator.element());
+    expect([style.paddingTop, style.justifyContent]).toEqual([
+      "40px",
+      "center",
+    ]);
+  });
+
   test("shows nothing until the data has taken longer than 300 ms", async () => {
     const start = performance.now();
     const screen = await render(<Loading />);

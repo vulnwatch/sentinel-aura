@@ -187,7 +187,6 @@ describe("Not found", () => {
     // The paths of the screens that are not built yet, with or without a
     // route (src/routes/unbuilt.ts), and the address of a CVE.
     ...[
-      "/tickets/SNTL-42",
       "/my-packages",
       "/users",
       "/users/00000000-0000-0000-0000-000000000002",

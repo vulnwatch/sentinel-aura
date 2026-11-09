@@ -73,18 +73,51 @@ function dayCount(days: number): string {
   return `${COUNT.format(days)} ${days === 1 ? "day" : "days"}`;
 }
 
+// The state of a due date at the instant now, in milliseconds since the
+// epoch, as the badge counts its days.
+export interface DueState {
+  tone: Exclude<DeadlineTone, "neutral">;
+  // The whole days that remain to the date, 0 in the last day, or, once the
+  // date is past, the days begun since, as a negative number.
+  days: number;
+  // The days in words, such as "due in 3 days", "due in less than a day", or
+  // "overdue by 2 days".
+  words: string;
+}
+
+// The state of a due date of the API at the instant now, or undefined when
+// it is null or not a date and time. A day is 24 hours: the state counts the
+// whole days that remain to the date, 0 in the last day, and once the date is
+// past, which Sentinel defines as before the current instant (Sentinel
+// docs/features/tickets/ticket-deadlines.md, Evaluation Instant), the days
+// begun since. It is red once the date is past, yellow in the last day, and
+// green otherwise (docs/behaviors.md, Deadlines).
+export function dueState(
+  due: string | null,
+  now: number,
+): DueState | undefined {
+  const instantOfDue = instant(due);
+  if (Number.isNaN(instantOfDue)) {
+    return undefined;
+  }
+  const days = Math.floor((instantOfDue - now) / DAY_MS);
+  if (instantOfDue < now) {
+    return { tone: "danger", days, words: `overdue by ${dayCount(-days)}` };
+  }
+  if (days === 0) {
+    return { tone: "warning", days, words: "due in less than a day" };
+  }
+  return { tone: "success", days, words: `due in ${dayCount(days)}` };
+}
+
 // The deadline that the badge of a Ticket shows at the instant now, in
 // milliseconds since the epoch, or undefined when it shows no badge: for done,
 // for a current phase of null without due dates, and for a phase without its
-// due date. A day is 24 hours: the badge shows the whole days that remain to
-// the date, 0 in the last day, and once the date is past, which Sentinel
-// defines as before the current instant (Sentinel
-// docs/features/tickets/ticket-deadlines.md, Evaluation Instant), the days
-// begun since, as a negative number. It is red once the date is past, yellow
-// in the last day, and green otherwise, so that the same days show in the
-// same color in every row. A phase that the pinned contract does not list
-// shows as received, in the neutral tone, without days (docs/behaviors.md,
-// Unknown Values).
+// due date. The badge shows the name of the phase and the days of the state
+// of its due date (dueState), so that the same days show in the same color in
+// every row. A phase that the pinned contract does not list shows as
+// received, in the neutral tone, without days (docs/behaviors.md, Unknown
+// Values).
 export function deadline(
   ticket: DeadlineTicket,
   now: number,
@@ -103,29 +136,16 @@ export function deadline(
   if (phase === null) {
     return undefined;
   }
-  const due = instant(ticket[phase.due]);
-  if (Number.isNaN(due)) {
+  const state = dueState(ticket[phase.due], now);
+  if (state === undefined) {
     return undefined;
   }
-  const days = Math.floor((due - now) / DAY_MS);
-  if (due < now) {
-    return {
-      tone: "danger",
-      text: `${phase.name} -${COUNT.format(-days)}d`,
-      description: `${phase.name} overdue by ${dayCount(-days)}`,
-    };
-  }
-  if (days === 0) {
-    return {
-      tone: "warning",
-      text: `${phase.name} 0d`,
-      description: `${phase.name} due in less than a day`,
-    };
-  }
+  const days =
+    state.days < 0 ? `-${COUNT.format(-state.days)}` : COUNT.format(state.days);
   return {
-    tone: "success",
-    text: `${phase.name} ${COUNT.format(days)}d`,
-    description: `${phase.name} due in ${dayCount(days)}`,
+    tone: state.tone,
+    text: `${phase.name} ${days}d`,
+    description: `${phase.name} ${state.words}`,
   };
 }
 

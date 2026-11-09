@@ -8,8 +8,8 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type RefObject,
 } from "react";
+import { useFixedTopHeight } from "./fixed-top";
 import { Message, type MessageTone } from "./message";
 import { useFocusHeadingOnRemoval } from "./screen-heading";
 
@@ -127,42 +127,19 @@ function DismissibleMessage({ message, onDismiss }: DismissibleMessageProps) {
   );
 }
 
-// Keeps the element with the focus out from under the area while the area
-// stays at the top of the window: the window scrolls an element into view
-// below the height of the area.
-function useScrollPaddingBelow(
-  area: RefObject<HTMLElement | null>,
-  holdsMessages: boolean,
-) {
-  useLayoutEffect(() => {
-    const element = area.current;
-    if (!holdsMessages || element === null) {
-      return undefined;
-    }
-    const root = document.documentElement;
-    const observer = new ResizeObserver(() => {
-      root.style.scrollPaddingTop = `${element.offsetHeight}px`;
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-      root.style.removeProperty("scroll-padding-top");
-    };
-  }, [area, holdsMessages]);
-}
-
 // The message area: the messages of the screen, newest first, 8 px apart.
 // Each stays until the user dismisses it or opens another screen, and is
 // announced without moving the focus, through a live region that is there
 // before it (docs/behaviors.md, Accessibility, Announcements). While the area
 // holds a message, it stays at the top of the window when the content
 // scrolls, and takes at most a third of the window's height, beyond which its
-// messages scroll within it.
+// messages scroll within it. Meanwhile the window scrolls an element into
+// view below the area (src/components/fixed-top.ts).
 export function MessageArea() {
   const { messages, dismiss, keepPath } = useMessageAreaState();
   const path = useRouterState({ select: (state) => state.location.pathname });
   const area = useRef<HTMLDivElement>(null);
-  useScrollPaddingBelow(area, messages.length > 0);
+  useFixedTopHeight("--message-area-height", area, messages.length > 0);
 
   // Another screen opened: the messages of the previous ones go for good,
   // also if the user returns to them, before the screen shows.

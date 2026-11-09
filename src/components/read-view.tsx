@@ -151,6 +151,8 @@ export function dataPlace<TData>(read: Read<TData>): DataPlace<TData> {
 interface DataProps<TData> {
   read: Read<TData>;
   children: (data: TData) => ReactNode;
+  // Whether the place is a value of a description list (Loading).
+  inValue?: boolean;
 }
 
 // The data of a read in its place: the loading indicator while it waits, its
@@ -161,14 +163,14 @@ interface DataProps<TData> {
 // announce them without moving the focus (docs/behaviors.md, Accessibility,
 // Announcements). When the data leaves the page while it holds the focus,
 // such as data that a 403 replaces, the focus moves to the screen's heading.
-function Data<TData>({ read, children }: DataProps<TData>) {
+function Data<TData>({ read, children, inValue = false }: DataProps<TData>) {
   const place = dataPlace(read);
   return (
     <div className="relative">
       {place.updating && <UpdatingBar />}
       <output className="block">{place.failure ?? place.warning}</output>
       {place.data === undefined ? (
-        place.waiting && <Loading />
+        place.waiting && <Loading inValue={inValue} />
       ) : (
         <FocusHandOff>{children(place.data)}</FocusHandOff>
       )}
@@ -242,10 +244,21 @@ interface PartReadProps<TData> {
   // failure leaves the rest of the screen usable.
   read: Read<TData>;
   children: (data: TData) => ReactNode;
+  // Whether the part is a value of a description list, such as a field of
+  // the details of a record with a read of its own.
+  inValue?: boolean;
 }
 
 // A part of a screen that shows the data of one read, below the heading of
 // the part (docs/behaviors.md, Where Errors Appear).
-export function PartRead<TData>({ read, children }: PartReadProps<TData>) {
-  return <Data read={read}>{children}</Data>;
+export function PartRead<TData>({
+  read,
+  children,
+  inValue = false,
+}: PartReadProps<TData>) {
+  return (
+    <Data read={read} inValue={inValue}>
+      {children}
+    </Data>
+  );
 }

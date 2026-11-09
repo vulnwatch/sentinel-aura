@@ -128,14 +128,20 @@ export function FocusHandOff({ children }: FocusHandOffProps) {
 
 interface ScreenHeadingProps {
   children: string;
+  // Whether the heading is in the compact heading of a detail screen, in
+  // text-16 (docs/design-system.md, Detail Screens).
+  compact?: boolean;
 }
 
 // The level-one heading of a screen (docs/design-system.md, Main Content),
-// which also titles the page: the heading followed by "– Sentinel". The
-// focus can move to it (focusScreenHeading), and passes to the heading that
-// replaces it. It takes the focus as it appears when the screen changed
-// before it (FocusAfterNavigation).
-export function ScreenHeading({ children }: ScreenHeadingProps) {
+// in text-20, which also titles the page: the heading followed by "–
+// Sentinel". The focus can move to it (focusScreenHeading), and passes to the
+// heading that replaces it. It takes the focus as it appears when the screen
+// changed before it (FocusAfterNavigation).
+export function ScreenHeading({
+  children,
+  compact = false,
+}: ScreenHeadingProps) {
   const ref = useRef<HTMLHeadingElement>(null);
   useFocusHeadingOnRemoval(ref);
   const focus = use(NavigationFocusContext);
@@ -155,7 +161,7 @@ export function ScreenHeading({ children }: ScreenHeadingProps) {
     <h1
       ref={ref}
       tabIndex={-1}
-      className={`text-20 font-semibold ${FOCUS_RING}`}
+      className={`${compact ? "text-16" : "text-20"} font-semibold ${FOCUS_RING}`}
     >
       {children}
     </h1>

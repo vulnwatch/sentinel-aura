@@ -1176,8 +1176,11 @@ states it, such as that of a Ticket; the other audit logs are tables
 - The fields of the record show as a description list: each term on the
   line of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px
   before the value in `text-14`, `fg`, fields 8 px apart; where the list is
-  narrower than 280 px, each term stands above its value. A popover that
-  shows the details of a record uses the same list (Menus, Popovers, and
+  narrower than 280 px, each term stands above its value. A group of fields
+  under one term, such as the deadlines of a Ticket, has its term on a line
+  of its own, then its fields 4 px apart, their terms in the style of the
+  values, indented by 12 px in the column of the terms. A popover that shows
+  the details of a record uses the same list (Menus, Popovers, and
   Tooltips).
 - A field that a user can change shows that user a pencil at the end of its
   line: an icon button of 24 px with `pencil` at 14 px, named by its action,
@@ -1247,17 +1250,18 @@ states it, such as that of a Ticket; the other audit logs are tables
   Accessibility, Focus after an action); elsewhere it stays where it is, and
   the page keeps its scroll position as the browser adjusts it.
 - With two columns, while the page scrolls, the side column stays at the top
-  of its place, below the message area and the compact heading, until the
-  end of the page comes into view, and then scrolls with the page to its own
-  end, so that its first sections stay beside the parts. When an element of
+  of its place, 24 px below the message area and the compact heading, as it
+  starts 24 px below the line of the tabs, until the end of the page comes
+  into view, and then scrolls with the page to its own end, so that its first
+  sections stay beside the parts. When an element of
   the side column that is out of view takes the focus, or is the target of an
   anchor, the page scrolls until it shows, which for the last sections of a
   side column taller than the window can be the end of the page. With one
   column, the side column scrolls with the page.
 - On a screen with a side column, while the main content is wide enough for
   two columns, on each of its tabs, also one that takes the whole width, the
-  heading row stays at the top of the window once it has scrolled out of
-  view, below the message area, as the compact heading, on `surface` above a
+  heading row stays at the top of the window once the page has scrolled it
+  there, below the message area, as the compact heading, on `surface` above a
   `border` line across the width, without a shadow (Spacing and Sizes,
   Shadows): 10 px of space, the level-one heading in `text-16` with the main
   values, and the actions as buttons 32 px high, then right below them the

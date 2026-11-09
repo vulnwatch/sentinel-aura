@@ -142,6 +142,19 @@
     color-scheme: light dark;
   }
 
+  /* What stays at the top of the window while the page scrolls, the message
+     area and the compact heading of a detail screen, gives its height to
+     these properties (src/components/fixed-top.ts): the window scrolls the
+     element with the focus, and the target of an anchor, below both, and
+     what sticks below them takes --fixed-top as its offset
+     (docs/design-system.md, Main Content; Detail Screens). */
+  :root {
+    --fixed-top: calc(
+      var(--message-area-height, 0px) + var(--compact-heading-height, 0px)
+    );
+    scroll-padding-top: var(--fixed-top);
+  }
+
   :root[data-theme="light"] {
     color-scheme: light;
   }

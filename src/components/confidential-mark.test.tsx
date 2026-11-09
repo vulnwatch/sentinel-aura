@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
-import { ConfidentialMark } from "./confidential-mark";
+import { ConfidentialLabel, ConfidentialMark } from "./confidential-mark";
 
 // The mark of a confidential Ticket (docs/design-system.md, Confidential
 // Tickets), after the identifier of a Ticket in a cell of a table, as the
@@ -82,4 +82,30 @@ test("draws lock in fg-muted", async () => {
       picture.at((x * picture.width) / 24, (y * picture.height) / 24),
     ),
   ).toEqual([MUTED, MUTED, MUTED, MUTED, CANVAS]);
+});
+
+test("writes Confidential after the lock on a detail screen, which assistive technologies read once", async () => {
+  const screen = await render(
+    <p className="flex items-center gap-1">
+      <span>SNTL-42</span>
+      <ConfidentialLabel />
+    </p>,
+  );
+  const label = screen.getByText("Confidential", { exact: true }).element();
+  const lock = label.querySelector("svg");
+
+  expect(screen.getByRole("img").elements()).toHaveLength(0);
+  expect(lock?.getAttribute("aria-hidden")).toBe("true");
+  expect(lock?.getBoundingClientRect().width).toBe(14);
+  expect([
+    getComputedStyle(label).fontSize,
+    getComputedStyle(label).color,
+  ]).toEqual(["14px", FG_MUTED]);
+  // The word follows the lock 4 px later.
+  const word = document.createRange();
+  word.selectNode(label.lastChild!);
+  expect(
+    word.getBoundingClientRect().left -
+      (lock?.getBoundingClientRect().right ?? 0),
+  ).toBeCloseTo(4);
 });

@@ -307,7 +307,9 @@ test("takes no room and leaves no scroll padding without messages", async () => 
 
   const area = document.querySelector("[aria-live]");
   expect(area?.getBoundingClientRect().height).toBe(0);
-  expect(document.documentElement.style.scrollPaddingTop).toBe("");
+  expect(getComputedStyle(document.documentElement).scrollPaddingTop).toBe(
+    "0px",
+  );
 });
 
 test("is used only inside its provider", async () => {
