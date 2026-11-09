@@ -1215,8 +1215,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   keeps its own; a `border` line 32 px below the last part and 16 px above
   the sections that follow it sets them apart. When the layout changes while
   the screen is open, as the window, the text size, or the sidebar changes,
-  the element with the focus keeps it, each part keeps its state, and the
-  part at the top of the window stays in view.
+  the screen shows its record in the new layout: a popover or a dialog of a
+  section that changes place closes, input not yet submitted included, and
+  the focus moves to the screen's heading (`docs/behaviors.md`,
+  Accessibility, Focus after an action). Such a change is rare while a user
+  edits, and keeping what is open across it would cost every section that
+  changes place.
 - With two columns, while the page scrolls, the side column stays at the top
   of its place, below the message area and the compact heading, until the
   end of the page comes into view, and then scrolls with the page to its own

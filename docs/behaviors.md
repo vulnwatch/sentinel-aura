@@ -633,10 +633,13 @@ it:
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
-it. The navigations that the session forces ask nothing (Session State). In a
-form, the confirmation comes when the form sends its request, such as when
-Save removes a role. The screen document states which of its actions ask for
-confirmation (`docs/conventions.md`, Screen Documents).
+it. The navigations that the session forces ask nothing (Session State), and
+neither does a change of the layout of a detail screen, which closes a
+popover or a dialog of a section that changes place with the input that it
+holds (`docs/design-system.md`, Detail Screens). In a form, the confirmation
+comes when the form sends its request, such as when Save removes a role.
+The screen document states which of its actions ask for confirmation
+(`docs/conventions.md`, Screen Documents).
 
 A confirmation dialog:
 
