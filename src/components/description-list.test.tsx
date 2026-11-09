@@ -15,9 +15,13 @@ import {
 const FG = "rgb(31, 35, 40)";
 const FG_MUTED = "rgb(89, 99, 110)";
 
-// The place of the list: 288 px, as the side column of a detail screen, or
-// 279 px.
-const WIDTHS = { side: "w-72", narrow: "w-[279px]" } as const;
+// The place of the list: 288 px, as the side column of a detail screen,
+// 280 px, or 279 px.
+const WIDTHS = {
+  side: "w-72",
+  least: "w-[280px]",
+  narrow: "w-[279px]",
+} as const;
 
 function renderList(width: keyof typeof WIDTHS) {
   return render(
@@ -85,6 +89,15 @@ test("shows the term of a group on a line of its own, then its fields 4 px apart
   expect(getComputedStyle(submission).fontSize).toBe("14px");
   expect(getComputedStyle(triage).color).toBe(FG_MUTED);
   expect(getComputedStyle(submission).color).toBe(FG);
+});
+
+test("shows each term on the line of its value where the list is 280 px wide", async () => {
+  const screen = await renderList("least");
+  const term = screen.getByText("Assignee").element();
+  const value = screen.getByText("Alice Smith").element();
+
+  expect(rectOf(value).left - rectOf(term).left).toBe(116);
+  expect(Math.abs(rectOf(value).top - rectOf(term).top)).toBeLessThanOrEqual(1);
 });
 
 test("shows each term above its value where the list is narrower than 280 px", async () => {

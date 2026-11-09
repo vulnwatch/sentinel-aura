@@ -37,7 +37,6 @@ const LARGEST_TICKET_NUMBER = 2_147_483_647;
 export function isTicketId(value: string): boolean {
   return (
     TICKET_ID.test(value) &&
-    value.length <= "SNTL-".length + String(LARGEST_TICKET_NUMBER).length &&
     Number(value.slice("SNTL-".length)) <= LARGEST_TICKET_NUMBER
   );
 }

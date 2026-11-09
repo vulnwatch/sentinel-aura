@@ -57,6 +57,7 @@ afterEach(async () => {
   client.clear();
   vi.restoreAllMocks();
   document.title = "Sentinel";
+  document.documentElement.style.removeProperty("font-size");
   window.scrollTo(0, 0);
   await page.viewport(414, 896);
 });
@@ -208,6 +209,7 @@ describe("the read of the Ticket", () => {
     ["beyond the largest identifier", "SNTL-2147483648"],
     ["with more digits than the largest", "SNTL-00000000002147483647"],
     ["with another suffix", "SNTL-12a"],
+    ["with a suffix that reads as a number", "SNTL-12e3"],
     ["that is a UUID", "00000000-0000-0000-0000-000000000012"],
   ])(
     "shows Not found for an identifier %s, without a request",
@@ -336,6 +338,7 @@ describe("the heading row", () => {
       "Severity",
       "Priority",
     ]);
+    expect(textsOf(screen.getByRole("term"))).not.toContain("Deadline");
   });
 });
 
@@ -367,6 +370,26 @@ describe("the layout", () => {
   ])(
     "decides the columns by the width of the main content: a window of %i px with the expanded sidebar shows two: %s",
     async (width, twoColumns) => {
+      await page.viewport(width, 800);
+      showing(fictionalTicketDetail());
+
+      const { screen } = await renderTicket();
+
+      const cve = boxOf(region(screen, "CVE-2099-0012"));
+      const details = boxOf(region(screen, "Details"));
+      expect(details.left > cve.right).toBe(twoColumns);
+    },
+  );
+
+  test.each([
+    // At a text size of 20 px, the sidebar of 270 px and the space of 30 px
+    // leave 1200 px of main content in a window of 1530 px.
+    [1530, true],
+    [1529, false],
+  ])(
+    "decides the columns by the width of the main content in the text size: a window of %i px at a text size of 20 px shows two: %s",
+    async (width, twoColumns) => {
+      document.documentElement.style.fontSize = "20px";
       await page.viewport(width, 800);
       showing(fictionalTicketDetail());
 
@@ -780,6 +803,21 @@ describe("the details", () => {
         .toBe("None");
     });
 
+    test("show the loading indicator of their read in place of their value, without the space of a part", async () => {
+      const duplicates = later();
+      stubTicket({ duplicates: () => duplicates.promise });
+      const { screen } = await renderTicket();
+
+      const indicator = region(screen, "Details").getByRole("progressbar", {
+        name: "Loading",
+      });
+      await expect.element(indicator).toBeVisible();
+      expect(valueOf(screen, "Duplicates").contains(indicator.element())).toBe(
+        true,
+      );
+      expect(getComputedStyle(indicator.element()).paddingTop).toBe("0px");
+    });
+
     test("show the failure of their read in place of their value, with Try again", async () => {
       let fail = true;
       stubTicket({
@@ -832,6 +870,17 @@ describe("the CVE", () => {
       );
   });
 
+  test("encodes its CVE ID in the path of the CVE page of SUSE", async () => {
+    const { part } = await renderCve({ cve_id: "CVE-2099-0012/x?y#z" });
+
+    await expect
+      .element(part.getByRole("link", { name: "SUSE CVE page (another site)" }))
+      .toHaveAttribute(
+        "href",
+        "https://www.suse.com/security/cve/CVE-2099-0012%2Fx%3Fy%23z.html",
+      );
+  });
+
   test("shows its title, its description, its dates with their times, and its weaknesses", async () => {
     const { part } = await renderCve({
       cwes: [
@@ -857,6 +906,10 @@ describe("the CVE", () => {
       "Modified",
       "CWE",
     ]);
+    // Without external identifiers, the CVE has no such field.
+    expect(textsOf(part.getByRole("term"))).not.toContain(
+      "External identifiers",
+    );
   });
 
   test("shows absent values, and no description, where Sentinel returns none", async () => {
@@ -961,7 +1014,7 @@ describe("the CVE", () => {
     const { part } = await renderCve({
       kev: { date_added: "2099-10-05", reference_url: null },
       ssvc: null,
-      epss: { score: 0.000431, percentile: 0.9, assessed_at: "2099-10-08" },
+      epss: { score: 0.000436, percentile: 0.3, assessed_at: "2099-10-08" },
     });
 
     const terms = textsOf(part.getByRole("term"));
@@ -970,7 +1023,7 @@ describe("the CVE", () => {
     expect(valueOfTerm("Added")).toBe(formatDate("2099-10-05"));
     expect(valueOfTerm("SSVC")).toBe("–Not set");
     expect(valueOfTerm("Score")).toBe("0.00043");
-    expect(valueOfTerm("Percentile")).toBe("0.90");
+    expect(valueOfTerm("Percentile")).toBe("0.30");
     expect(definitions.at(-1)).toBe(formatDate("2099-10-08"));
   });
 
@@ -1032,15 +1085,35 @@ describe("the anchor of the URL", () => {
     expect(Math.round(boxOf(region(screen, "CVE-2099-0012")).top)).toBe(0);
   });
 
+  test("shows its part on a duplicate, whose duplicates the tab does not read", async () => {
+    await page.viewport(900, 300);
+    showing(
+      fictionalTicketDetail({
+        status: "duplicated",
+        duplicate_of_ticket_id: "SNTL-21",
+      }),
+    );
+    const { screen } = await renderTicket("/tickets/SNTL-12#cve");
+
+    await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+    expect(Math.round(boxOf(region(screen, "CVE-2099-0012")).top)).toBe(0);
+  });
+
   test("shows the top of the screen when the Ticket lacks its target", async () => {
     await page.viewport(900, 300);
-    stubTicket();
+    const duplicates = later();
+    stubTicket({ duplicates: () => duplicates.promise });
     const { screen } = await renderTicket("/tickets/SNTL-12#cvss");
+    // The page lies elsewhere, without the user having scrolled it.
+    window.scrollTo(0, 10);
+    await expect.poll(() => window.scrollY).toBe(10);
+
+    duplicates.resolve(ticketPage([]));
 
     await expect
       .poll(() => valueOf(screen, "Duplicates").textContent)
       .toBe("None");
-    expect(window.scrollY).toBe(0);
+    await expect.poll(() => window.scrollY).toBe(0);
   });
 
   test("leaves the page where the user scrolled it with the keyboard meanwhile", async () => {

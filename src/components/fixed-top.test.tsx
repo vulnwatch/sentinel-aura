@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
@@ -33,6 +33,15 @@ function scrollPadding(): string {
   return getComputedStyle(document.documentElement).scrollPaddingTop;
 }
 
+// Reads the scroll padding in the commit in which it first renders, after the
+// elements before it, as code that moves the focus in that commit sees it.
+function ReadAtCommit({ onRead }: { onRead: (padding: string) => void }) {
+  useLayoutEffect(() => {
+    onRead(scrollPadding());
+  }, [onRead]);
+  return null;
+}
+
 test("gives the page the scroll padding of the heights of what stays at the top, while it stays there", async () => {
   const screen = await render(
     <>
@@ -59,4 +68,21 @@ test("gives the page the scroll padding of the heights of what stays at the top,
 
   expect(scrollPadding()).toBe("0px");
   expect(fixedTopHeight("--message-area-height")).toBe(0);
+});
+
+test("gives the scroll padding in the commit that fixes the element, before its size is observed", async () => {
+  const read: string[] = [];
+  await render(
+    <>
+      <MessageArea fixed height="h-10" />
+      <CompactHeading fixed height="h-20" />
+      <ReadAtCommit
+        onRead={(padding) => {
+          read.push(padding);
+        }}
+      />
+    </>,
+  );
+
+  expect(read[0]).toBe("120px");
 });

@@ -45,7 +45,7 @@ describe("a web address", () => {
     ["a file", "file:///etc/passwd"],
     ["of a desktop application", "ms-word:ofe|u|https://example.com/a.docx"],
     ["with a user name", "https://jdoe@example.com/"],
-    ["with a password", "https://jdoe:secret@example.com/"],
+    ["with a password", "https://:secret@example.com/"],
   ])("is not a value that is %s", (_, value) => {
     expect(WebAddress.of(value)).toBeUndefined();
   });
@@ -101,7 +101,7 @@ function browserLoads(container: HTMLElement): () => boolean {
 describe("a link to another site", () => {
   test("leads to the address as parsed, ends with its icon, and is named as leading to another site", async () => {
     const { screen } = await renderLink(
-      <WebLink address="https://github.com/advisories/GHSA-2c4f-7h9j-mqrv">
+      <WebLink address="https://GitHub.com/advisories/GHSA-2c4f-7h9j-mqrv">
         GHSA-2c4f-7h9j-mqrv
       </WebLink>,
     );
@@ -140,25 +140,30 @@ describe("a link to another site", () => {
 
   test("keeps its icon on the line of the last characters of its text when the text wraps", async () => {
     await page.viewport(320, 640);
+    // As narrow as its longest word, the last one, so that the icon has no
+    // room after that word unless it stays with it.
     const { screen } = await renderLink(
-      <span className="block w-24 text-14">
+      <span className="block w-min text-14">
         <WebLink address="https://bugzilla.example.com/">
-          Fictional bug report of the example
+          Fictional bug report of a misconfiguration
         </WebLink>
       </span>,
     );
 
     const link = screen.getByRole("link", {
-      name: "Fictional bug report of the example (another site)",
+      name: "Fictional bug report of a misconfiguration (another site)",
     });
     await expect.element(link).toBeVisible();
     const rects = [...link.element().getClientRects()];
     const icon = link.element().querySelector("svg")?.getBoundingClientRect();
     const lastLine = rects.at(-1);
+    const lineStart = rects[0]?.left ?? 0;
     expect(rects.length).toBeGreaterThan(1);
-    // The icon is on the last line, with the last word.
+    // The icon is on the last line, with the last word, which precedes it
+    // there: at the start of a line of its own, only its 4 px margin would.
     expect(icon?.top).toBeGreaterThanOrEqual(lastLine?.top ?? 0);
     expect(icon?.bottom).toBeLessThanOrEqual((lastLine?.bottom ?? 0) + 1);
+    expect((icon?.left ?? 0) - lineStart).toBeGreaterThan(5);
   });
 });
 

@@ -124,4 +124,16 @@ test("measures another text again, which starts cut", async () => {
   await expect
     .element(screen.getByRole("button", { name: "Show more" }))
     .toHaveAttribute("aria-expanded", "false");
+
+  await screen.getByRole("button", { name: "Show more" }).click();
+  await expect
+    .element(screen.getByRole("button", { name: "Show less" }))
+    .toBeVisible();
+  await screen.rerender(
+    <ClampedText>{`${LONG_TEXT} Another fictional sentence.`}</ClampedText>,
+  );
+
+  await expect
+    .element(screen.getByRole("button", { name: "Show more" }))
+    .toHaveAttribute("aria-expanded", "false");
 });
