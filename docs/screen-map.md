@@ -80,7 +80,8 @@ Identification and Ownership). They sign in when work is pending for them:
 - follow their deliveries in progress, with their submission and release
   requests;
 - open a Ticket that an analyst shares, a confidential Ticket of one of their
-  packages included, and see their work on it.
+  packages included, and find in its package tree the tracks that wait for
+  their submission.
 
 ### Readers
 
@@ -138,7 +139,7 @@ under the path of the screen, and its screen document records it.
 |---|---|---|---|
 | Sign-in | Sign in | `/login` | Local sign-in (Sentinel `docs/features/identity/local-authentication.md`, Login) |
 | Tickets | Ticket list | `/tickets` | The Tickets, in the views of Ticket List Views; the landing (Landing) |
-| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, with the CVE's CVSS assessments, sources, and affected versions; its package tree, references, IBS requests, and audit log; the signed-in user's own work on it, when they maintain one of its packages; and, with `manage_confidentiality`, its access grants |
+| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, with the CVE's CVSS assessments, sources, and affected versions; its package tree, references, IBS requests, and audit log; the tracks that wait for the signed-in user's submission, when they maintain one of its packages; and, with `manage_confidentiality`, its access grants |
 | My packages | My packages | `/my-packages` | The signed-in user's maintainer workbench: pending, in-progress, and completed work |
 | Users | Users | `/users` | The user directory, and, with `manage_users`, the complete profile of each user and the creation of a local user |
 | Users | User | `/users/{user_id}` | One user: their directory entry, the Tickets assigned to them, and the Tickets of the packages that they maintain; with `manage_users`, also the complete profile, its administration, and the user's API keys and identity events |
@@ -161,10 +162,15 @@ under the path of the screen, and its screen document records it.
   (Sentinel `docs/features/tickets/cve-tracking.md`, List CVEs): Sentinel
   gives it a Ticket at its next ingestion, and an analyst can create one for
   it (Sentinel `docs/features/tickets/tickets.md`, CVE Resolution Behavior).
-- The Ticket screen shows a user who maintains one of its packages their work
-  on the Ticket, as Sentinel classifies it for each maintainer (Sentinel
-  `docs/features/packages/maintainer.md`, Package Details for Ticket), so that
-  analysts share the address of the Ticket with its maintainers.
+- The Ticket screen marks in its package tree, for a user who maintains one
+  of its packages, the tracks that wait for the user's submission: their
+  pending work on the Ticket, as Sentinel classifies it for each maintainer
+  (Sentinel `docs/features/packages/maintainer.md`, Pending; Package Details
+  for Ticket), so that analysts share the address of the Ticket with its
+  maintainers. The mark says that the track needs the user's action rather
+  than that it is pending, a word that the same track shows for its delivery
+  status; My packages lists the same tracks as the user's pending work. The
+  screen has no part of the user's work of its own: My packages holds it.
 - My packages is there for every user: Sentinel serves the workbench to every
   signed-in user (Sentinel `docs/features/packages/maintainer.md`, API
   Endpoints), and a user who maintains no package with work sees its lists
@@ -551,7 +557,7 @@ below only summarizes them.
 | Profile | In Sentinel | In the UI |
 |---|---|---|
 | Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the All view of the Ticket list |
-| Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages and on the screen of each Ticket of their packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
+| Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages, the tracks that wait for them on the screen of each Ticket of their packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
 | Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, the Embargo view and the Embargo expired count, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
 | Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same rule) | The queue of new Tickets as landing, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
 | Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the user administration of Users, the fetcher management of Fetchers, and the actions of its other capabilities; Ticket work needs an analyst role too. Lands on the All view of the Ticket list unless the user also holds an analyst role |

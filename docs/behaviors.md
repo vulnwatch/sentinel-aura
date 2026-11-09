@@ -505,11 +505,11 @@ actor of a recorded action (Representation of a User) are exceptions.
 ### Deadlines
 
 A screen that shows the deadline of a Ticket, such as the Ticket list in its
-rows, shows it as a badge with the name of the deadline and the days that
-remain to it. The deadline depends on the current phase of the Ticket, the
-earliest phase of its remediation that is not completed, among the phases
-that Sentinel observes (Sentinel `docs/features/tickets/ticket-deadlines.md`,
-Ticket Current Phase):
+rows and the Ticket screen in its heading row, shows it as a badge with the
+name of the deadline and the days that remain to it. The deadline depends on
+the current phase of the Ticket, the earliest phase of its remediation that
+is not completed, among the phases that Sentinel observes (Sentinel
+`docs/features/tickets/ticket-deadlines.md`, Ticket Current Phase):
 
 | Current phase | Badge |
 |---|---|
@@ -574,10 +574,25 @@ Ticket Current Phase):
   overdue count, even when the badge is red (Sentinel
   `docs/features/tickets/ticket-deadlines.md`, Observability of Later
   Phases).
-- Another due date, such as one of a track or of a maintainer's workbench
-  item, shows as a date (Display), next to the milestone status that Sentinel
-  returns for it, named as Sentinel names it (Wording). An `overdue` status is
-  marked as a past deadline is, with the icon.
+- The package tree of a Ticket shows the deadline of each track as a badge
+  too, from the fields of the track, which carry the due dates of the Ticket
+  and a current phase of their own (same document, Ticket and Track Dates;
+  Track Milestones), by the table above. A track whose current phase is
+  `null` shows its Release badge only while the track is in status Analysis
+  or Affected and its Ticket is not Resolved: its later phases are not
+  observed, and on a track with nothing left to do the badge would stay, and
+  turn red once the date passes.
+- Another due date, such as one of a phase of a Ticket or of a track, or one
+  of a maintainer's workbench item, shows as a date (Display), next to the
+  state of its milestone, as Sentinel returns it: "Done" for `done`, "Not
+  applicable" for `not_applicable`, and "Not observed" for `null`; for
+  `pending` and `overdue`, the days of the badge in words, as its accessible
+  name states them, such as "Due in 3 days", "Due in less than a day", or
+  "Overdue by 2 days". A milestone that is `pending` is not named "Pending",
+  because that word also names the delivery status of a track, to which it is
+  unrelated (same document, Track Milestones). An `overdue` state is marked
+  as a past deadline is, with the icon, and a value that the pinned contract
+  does not list shows as received (Unknown Values).
 
 ## Confirmations and Outcomes
 
@@ -754,6 +769,11 @@ also meets these requirements, which they cannot check:
   API key"; never "OK", "Yes", or "Submit". One that opens a screen, a page,
   or a set of choices, or that selects a choice, names what it opens or
   selects, such as Profile, Next, Filters, or Dark.
+- A button or menu entry whose action waits for a dialog, which asks for its
+  input or its confirmation, ends with an ellipsis, "…", such as "Ignore…" or
+  "Make non-confidential…"; one that acts at once, or that opens what it
+  names, has none, and neither has the button of the dialog that performs
+  the action.
 - A message states what happened and, when the user can do something about
   it, what to do. It blames no one and holds no technical detail except the
   reference of an error (Default Presentation by Status), and it uses
@@ -792,8 +812,11 @@ complete profile and its manager, and the signed-in user alike: `id`,
 - **Compact form.** The avatar alone, in a link, a button, or another
   interactive element without room for the name. The display name is its
   accessible name and shows in a tooltip on hover and on keyboard focus, or in
-  the user card where the avatar links to the user (User card). Every other
-  place shows the full form, or the name form where it applies.
+  the user card where the avatar links to the user (User card). A group of
+  users, such as the participants of a Ticket, shows its users in the compact
+  form too, every user shown, so that many fit in a narrow place
+  (`docs/design-system.md`, Representation of a User). Every other place shows
+  the full form, or the name form where it applies.
 - **Name form.** The full form without the avatar: the display name, the
   username where the full form shows it, and the labels. It shows a user who
   is a detail of another value, such as who set a priority override in the
