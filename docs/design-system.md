@@ -1212,15 +1212,17 @@ states it, such as that of a Ticket; the other audit logs are tables
   above the parts and the other sections of the side column below them, in
   that order in the page too (Main Content). In one column, each section of
   the side column keeps its look, at the width of the content, and each part
-  keeps its own; a `border` line 32 px below the last part and 16 px above
-  the sections that follow it sets them apart. When the layout changes while
-  the screen is open, as the window, the text size, or the sidebar changes,
-  the screen shows its record in the new layout: a popover or a dialog of a
-  section that changes place closes, input not yet submitted included, and
-  the focus moves to the screen's heading (`docs/behaviors.md`,
-  Accessibility, Focus after an action). Such a change is rare while a user
-  edits, and keeping what is open across it would cost every section that
-  changes place.
+  keeps its own; a `border` line sets the sections of the side column apart
+  from the parts above and below them, 16 px from a section and 32 px from a
+  part. When the layout changes while the screen is open, as the window, the
+  text size, or the sidebar changes, a section whose place in the order of
+  the page differs between the layouts, such as the details of a Ticket,
+  moves to its new place. While a popover or a dialog of such a section is
+  open, the layout waits until it closes, so that the input that it holds
+  and a change in progress stay. When the element with the focus is in such
+  a section, the focus moves to the screen's heading (`docs/behaviors.md`,
+  Accessibility, Focus after an action); elsewhere it stays where it is. The
+  page keeps its scroll position as the browser adjusts it.
 - With two columns, while the page scrolls, the side column stays at the top
   of its place, below the message area and the compact heading, until the
   end of the page comes into view, and then scrolls with the page to its own
@@ -1232,9 +1234,9 @@ states it, such as that of a Ticket; the other audit logs are tables
 - On a screen with a side column, while the main content is wide enough for
   two columns, on each of its tabs, also one that takes the whole width, the
   heading row stays at the top of the window once it has scrolled out of
-  view, below the message area, as the compact heading,
-  on `surface` above a `border` line across the width, without a shadow
-  (Spacing and Sizes, Shadows): 10 px of space, the level-one heading in
+  view, below the message area, as the compact heading, on `surface` above a
+  `border` line across the width, without a shadow (Spacing and Sizes,
+  Shadows): 10 px of space, the level-one heading in
   `text-16` with the main values, and the actions as buttons 32 px high, then
   right below them the tabs, 36 px high. Its place in the page keeps the
   height of the heading row and the tabs, so that the content does not move
@@ -1386,7 +1388,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   (`docs/behaviors.md`, Accessibility, Dialogs); Tab reaches its actions,
   and the rest of the page is out of reach while it is open. Escape or a
   click outside closes it and returns the focus to the name, except while
-  one of its actions is in progress, which marks its item busy; the action
+  one of its actions is in progress, which marks its item busy
+  (`docs/behaviors.md`, Loading); the action
   then closes the popover, with the focus on the name, or where Focus after
   an action leads when the name is gone (`docs/behaviors.md`,
   Accessibility), and its outcome shows as that of any other change

@@ -582,8 +582,8 @@ is not completed, among the phases that Sentinel observes (Sentinel
   too, from the fields of the track, which carry the due dates of the Ticket
   and a current phase of their own (same document, Ticket and Track Dates;
   Track Milestones), by the table above. A track whose current phase is
-  `null`, with due dates, shows its Release badge only while it still has
-  work on a Ticket that is not Resolved, while it is not resolution-complete
+  `null`, with due dates, shows its Release badge only while its Ticket is
+  not Resolved and the track still has work, not being resolution-complete
   (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved):
   Affected with an actionable eligible Product, or, on a Ticket with a CVE,
   Fixed with an actionable eligible Product that is not released. Its later
@@ -633,13 +633,10 @@ it:
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
-it. The navigations that the session forces ask nothing (Session State), and
-neither does a change of the layout of a detail screen, which closes a
-popover or a dialog of a section that changes place with the input that it
-holds (`docs/design-system.md`, Detail Screens). In a form, the confirmation
-comes when the form sends its request, such as when Save removes a role.
-The screen document states which of its actions ask for confirmation
-(`docs/conventions.md`, Screen Documents).
+it. The navigations that the session forces ask nothing (Session State). In a
+form, the confirmation comes when the form sends its request, such as when
+Save removes a role. The screen document states which of its actions ask for
+confirmation (`docs/conventions.md`, Screen Documents).
 
 A confirmation dialog:
 
@@ -712,7 +709,9 @@ also meets these requirements, which they cannot check:
   as the action that reverses it, or otherwise to the screen's heading. When
   it disappears without an action, because a read replaced what the screen
   shows, such as a `403` after the tab returns to the foreground (Where Errors
-  Appear), the focus moves to the screen's heading.
+  Appear), or because a change of layout moved the section that held it
+  (`docs/design-system.md`, Detail Screens), the focus moves to the screen's
+  heading.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing; a dialog without a field or a button, such as the explanation of a
