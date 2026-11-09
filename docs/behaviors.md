@@ -215,6 +215,7 @@ message follows Wording.
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
+| A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
@@ -582,11 +583,12 @@ is not completed, among the phases that Sentinel observes (Sentinel
   and a current phase of their own (same document, Ticket and Track Dates;
   Track Milestones), by the table above. A track whose current phase is
   `null`, with due dates, shows its Release badge only while it still has
-  work on a Ticket that is not Resolved: while it is Affected or Fixed with
-  an actionable eligible Product, which a release must still reach
-  (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved).
-  Its later phases are not observed, and on a track with nothing left to do
-  the badge would stay, and turn red once the date passes.
+  work on a Ticket that is not Resolved, while it is not resolution-complete
+  (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved):
+  Affected with an actionable eligible Product, or, on a Ticket with a CVE,
+  Fixed with an actionable eligible Product that is not released. Its later
+  phases are not observed, and on a track with nothing left to do the badge
+  would stay, and turn red once the date passes.
 - Another due date that Sentinel returns with the status of its milestone,
   that of a phase of a track, that of a maintainer's workbench item, and that
   of the current phase of a Ticket (`current_phase_milestone`), shows as a
@@ -606,11 +608,11 @@ is not completed, among the phases that Sentinel observes (Sentinel
 - The word "Pending" names the delivery status of a track, which can show
   beside its milestones (Sentinel `docs/features/packages/package-model.md`,
   Axis 3: Delivery and Release Observation). So a milestone that is
-  `pending` is not named "Pending", to which it is unrelated (Sentinel
-  `docs/features/tickets/ticket-deadlines.md`, Track Milestones), and the
-  label of a track that waits for the signed-in user's submission says
-  "Needs your action" (`docs/screen-map.md`, Areas and Screens), although My
-  packages lists the same tracks as the user's pending work.
+  `pending` is not named "Pending", since it is unrelated to that status
+  (Sentinel `docs/features/tickets/ticket-deadlines.md`, Track Milestones),
+  and the label of a track that waits for the signed-in user's submission
+  says "Needs your action" (`docs/screen-map.md`, Areas and Screens),
+  although My packages lists the same tracks as the user's pending work.
 
 ## Confirmations and Outcomes
 

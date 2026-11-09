@@ -458,7 +458,7 @@ that the code imports ship.
 | Refetch | `refresh-cw` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy, an operation in progress (Other Values) | `loader-circle` |
-| A Ticket status that the pinned contract does not list | `circle-question-mark` |
+| A Ticket status, a milestone status, or a kind of event that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
 | A link to another site | `external-link` |
 
@@ -617,12 +617,14 @@ Sidebar).
   the element with the focus never lies under it, nor under the compact
   heading of a detail screen below it (Detail Screens), and so that the
   target of an anchor of the page shows below both (`docs/behaviors.md`,
-  Accessibility). A URL with an anchor shows its target once the parts above
-  it show their data or their error, unless the user has scrolled meanwhile,
-  so that a part that arrives later does not push the target out of view.
-  While it holds a message, the area is on `canvas`, with 8 px of space above
-  and below its messages, and the heading follows 16 px below the last
-  message; without one, it takes no room.
+  Accessibility). While it holds a message, the area is on `canvas`, with
+  8 px of space above and below its messages, and the heading follows 16 px
+  below the last message; without one, it takes no room.
+- A URL with an anchor shows its target once every part of the screen, or of
+  its tab, shows its data or its error, unless the user has scrolled
+  meanwhile, so that a part that arrives later does not move the target out
+  of view. A screen whose record lacks the target of an anchor shows its
+  top.
 - The heading row holds the level-one heading of the screen in `text-20`,
   weight 600, then what accompanies it, such as the attention summary, and
   the main action of the screen at its end. It wraps when the width runs
@@ -1168,9 +1170,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   record has none (`docs/behaviors.md`, Loading; Empty States). They behave
   like the views of a list (Lists): a tab opens when the user clicks it or
   presses Enter or Space, not when the arrow keys move the focus to it, and
-  the focus stays on it. Its content follows 24 px below the line, and
-  opening a tab shows the start of its content, below the compact heading
-  where the page had scrolled past it.
+  the focus stays on it. Its content follows 24 px below the line, and a
+  tab that the user opens shows the start of its content, below the compact
+  heading where the page had scrolled past it.
 - The fields of the record show as a description list: each term on the
   line of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px
   before the value in `text-14`, `fg`, fields 8 px apart; where the list is
@@ -1210,10 +1212,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   above the parts and the other sections of the side column below them, in
   that order in the page too (Main Content). In one column, each section of
   the side column keeps its look, at the width of the content, and each part
-  keeps its own. When the layout changes while the screen is open, as the
-  window, the text size, or the sidebar changes, the element with the focus
-  keeps it, each part keeps its state, and the part at the top of the window
-  stays in view.
+  keeps its own; a `border` line 32 px below the last part and 16 px above
+  the sections that follow it sets them apart. When the layout changes while
+  the screen is open, as the window, the text size, or the sidebar changes,
+  the element with the focus keeps it, each part keeps its state, and the
+  part at the top of the window stays in view.
 - With two columns, while the page scrolls, the side column stays at the top
   of its place, below the message area and the compact heading, until the
   end of the page comes into view, and then scrolls with the page to its own
@@ -1222,8 +1225,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   anchor, the page scrolls until it shows, which for the last sections of a
   side column taller than the window can be the end of the page. With one
   column, the side column scrolls with the page.
-- With two columns, once the heading row has scrolled out of view, it stays
-  at the top of the window, below the message area, as the compact heading,
+- On a screen with a side column, while the main content is wide enough for
+  two columns, on each of its tabs, also one that takes the whole width, the
+  heading row stays at the top of the window once it has scrolled out of
+  view, below the message area, as the compact heading,
   on `surface` above a `border` line across the width, without a shadow
   (Spacing and Sizes, Shadows): 10 px of space, the level-one heading in
   `text-16` with the main values, and the actions as buttons 32 px high, then
@@ -1231,8 +1236,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   height of the heading row and the tabs, so that the content does not move
   when the heading becomes compact or returns. It is the heading row itself,
   not a copy, so the screen keeps one level-one heading, one set of tabs, and
-  one menu of actions. With one column, the heading row scrolls with the
-  page, so that a fixed heading takes no room from a narrow window
+  one menu of actions. Narrower, the heading row scrolls with the page, so
+  that a fixed heading takes no room from a narrow window
   (`docs/behaviors.md`, Accessibility, Reflow and text size).
 
 ### Forms
@@ -1298,8 +1303,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   `info` for an operation that started and for information, `warning` for a
   change that Sentinel did not confirm (`docs/behaviors.md`, Retries and
   Unconfirmed Changes), and `danger` for an error.
-- When data stays shown after a new read of it failed, a `warning` message
-  above the data says that it could not be updated, followed 8 px below by
+- When data stays shown after a new read of it failed, or after a read that
+  only adds marks to it failed, a `warning` message above the data says that
+  it could not be updated, or what could not be shown, followed 8 px below by
   Try again as a secondary button when the failure offers it
   (`docs/behaviors.md`, Where Errors Appear). The button stands outside the
   message, on the background of the screen or of its part, against which its
@@ -1369,17 +1375,18 @@ states it, such as that of a Ticket; the other audit logs are tables
   `border` line with 12 px of space above and below it; the details as a
   description list (Detail Screens); and, with actions, another such line and
   the actions as menu items. Details that the popover reads as it first
-  opens, such as those of a CNA, show as those of the user card do: the
-  loading indicator in their place, then the details, or a line in
-  `fg-muted` that says they aren't available, read again at its next opening
-  (Representation of a User). The popover takes the focus itself as it
-  opens, as the explanation of a priority does (Priority, Explanation), so
-  that its title and details are read first; Tab reaches its actions, and
-  the rest of the page is out of reach while it is open. Escape or a click
-  outside closes it and returns the focus to the name. An action marks its
-  item busy while it is in progress, and then closes the popover, with the
-  focus on the name, or where Focus after an action leads when the name is
-  gone (`docs/behaviors.md`, Accessibility).
+  opens, such as those of a CNA, load and fail as those of the user card do
+  (`docs/behaviors.md`, Representation of a User, User card), with the
+  loading indicator (Loading) or the line of the failure in `fg-muted` in
+  their place. The popover takes the focus itself as it opens
+  (`docs/behaviors.md`, Accessibility, Dialogs); Tab reaches its actions,
+  and the rest of the page is out of reach while it is open. Escape or a
+  click outside closes it and returns the focus to the name, except while
+  one of its actions is in progress, which marks its item busy; the action
+  then closes the popover, with the focus on the name, or where Focus after
+  an action leads when the name is gone (`docs/behaviors.md`,
+  Accessibility), and its outcome shows as that of any other change
+  (`docs/behaviors.md`, Where Errors Appear; Outcome of a Change).
 
 ## Representation of a User
 
