@@ -1194,11 +1194,25 @@ states it, such as that of a Ticket; the other audit logs are tables
   in `text-16`, weight 600, 24 px below the line, with its actions at the end
   of the heading's line, and its content 16 px below the heading; the line of
   the next part is 32 px below the content, and the first part has no line of
-  its own. A
-  box within a part, such as a group of items, a table, or values set side by
-  side, keeps its frame on `surface`, with a `border` line and the radius of
-  its pattern, 6 or 8 px. A part without items shows its short line in
-  `fg-muted` (`docs/behaviors.md`, Empty States).
+  its own. A box within a part, such as a table or values set side by side,
+  keeps its frame on `surface`, with a `border` line and the radius of its
+  pattern, 6 or 8 px. A part without items shows its short line in `fg-muted`
+  (`docs/behaviors.md`, Empty States).
+- A group of items within a part, such as a package of a Ticket with its
+  tracks, has no frame: its heading row is a band on `neutral-soft`, at least
+  32 px high, with a 6 px radius and 12 px of side padding, which holds its
+  level-three heading in `text-15`, weight 600, followed by its values and
+  labels, and ends with its actions. Its items follow 12 px below the band,
+  indented by the 12 px of its padding, and the band of the next group is
+  32 px below them.
+- A part that hides records, such as the excluded records of a package tree,
+  shows them on request with a switch (Forms). A hidden record that shows,
+  and every record within it, is in `fg-muted`, in its texts and in the
+  heading of its group, so that it reads apart from the records that count.
+  The record whose own state hides it carries the label of that state
+  (Labels), such as Excluded or EOL; a record hidden because of the record
+  that holds it, or because of the records that it holds, carries none. Its
+  controls, such as its menu of actions, keep their colors.
 - A screen document can give a detail screen, or one of its tabs, a side
   column for the fields of the record and short parts, 288 px wide, 32 px
   after the main column, aligned with its top; another tab takes the whole
