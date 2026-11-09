@@ -167,10 +167,8 @@ under the path of the screen, and its screen document records it.
   pending work on the Ticket, as Sentinel classifies it for each maintainer
   (Sentinel `docs/features/packages/maintainer.md`, Pending; Package Details
   for Ticket), so that analysts share the address of the Ticket with its
-  maintainers. The mark says that the track needs the user's action rather
-  than that it is pending, a word that the same track shows for its delivery
-  status; My packages lists the same tracks as the user's pending work. The
-  screen has no part of the user's work of its own: My packages holds it.
+  maintainers; `docs/behaviors.md` (Deadlines) states the words of the mark.
+  The screen has no part of the user's work of its own: My packages holds it.
 - My packages is there for every user: Sentinel serves the workbench to every
   signed-in user (Sentinel `docs/features/packages/maintainer.md`, API
   Endpoints), and a user who maintains no package with work sees its lists

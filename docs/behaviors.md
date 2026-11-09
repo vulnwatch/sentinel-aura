@@ -485,6 +485,9 @@ actor of a recorded action (Representation of a User) are exceptions.
 - A date without a time, such as the end of support of a Product, shows as
   `9 Oct 2026`, as the API returns it, without a conversion between time
   zones.
+- Records grouped by the day of their date, such as the events of a timeline
+  (`docs/design-system.md`, Timelines), show the day once, as the heading of
+  its group, and each record its time alone, as `14:05`.
 - Times are absolute, never relative such as "3 hours ago": deadlines, audit
   logs, and fetcher runs are compared and shared, and a relative time is wrong
   in a screenshot or a report read later. The days that remain to a deadline
@@ -578,21 +581,36 @@ is not completed, among the phases that Sentinel observes (Sentinel
   too, from the fields of the track, which carry the due dates of the Ticket
   and a current phase of their own (same document, Ticket and Track Dates;
   Track Milestones), by the table above. A track whose current phase is
-  `null` shows its Release badge only while the track is in status Analysis
-  or Affected and its Ticket is not Resolved: its later phases are not
-  observed, and on a track with nothing left to do the badge would stay, and
-  turn red once the date passes.
-- Another due date, such as one of a phase of a Ticket or of a track, or one
-  of a maintainer's workbench item, shows as a date (Display), next to the
-  state of its milestone, as Sentinel returns it: "Done" for `done`, "Not
-  applicable" for `not_applicable`, and "Not observed" for `null`; for
-  `pending` and `overdue`, the days of the badge in words, as its accessible
-  name states them, such as "Due in 3 days", "Due in less than a day", or
-  "Overdue by 2 days". A milestone that is `pending` is not named "Pending",
-  because that word also names the delivery status of a track, to which it is
-  unrelated (same document, Track Milestones). An `overdue` state is marked
-  as a past deadline is, with the icon, and a value that the pinned contract
-  does not list shows as received (Unknown Values).
+  `null`, with due dates, shows its Release badge only while it still has
+  work on a Ticket that is not Resolved: while it is Affected or Fixed with
+  an actionable eligible Product, which a release must still reach
+  (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved).
+  Its later phases are not observed, and on a track with nothing left to do
+  the badge would stay, and turn red once the date passes.
+- Another due date that Sentinel returns with the status of its milestone,
+  that of a phase of a track, that of a maintainer's workbench item, and that
+  of the current phase of a Ticket (`current_phase_milestone`), shows as a
+  date (Display), next to the state of the milestone: "Done" for `done`, "Not
+  applicable" for `not_applicable`, and "Not observed" for `null` while the
+  record has due dates, which says that Sentinel does not observe the phase;
+  for `pending` and `overdue`, the days of the badge in words, as its
+  accessible name states them, such as "Due in 3 days", "Due in less than a
+  day", or "Overdue by 2 days" (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, Track Milestones; Ticket
+  Current Phase). Without due dates, no SLA applies and no state shows (same
+  document, Null Due Dates). A due date without a status, such as one of
+  another phase of a Ticket, shows its date alone, and its screen document
+  states how it shows. An `overdue` state is marked as a past deadline is,
+  with the icon, and a value that the pinned contract does not list shows as
+  received (Unknown Values).
+- The word "Pending" names the delivery status of a track, which can show
+  beside its milestones (Sentinel `docs/features/packages/package-model.md`,
+  Axis 3: Delivery and Release Observation). So a milestone that is
+  `pending` is not named "Pending", to which it is unrelated (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, Track Milestones), and the
+  label of a track that waits for the signed-in user's submission says
+  "Needs your action" (`docs/screen-map.md`, Areas and Screens), although My
+  packages lists the same tracks as the user's pending work.
 
 ## Confirmations and Outcomes
 
@@ -693,9 +711,12 @@ also meets these requirements, which they cannot check:
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing; a dialog without a field or a button, such as the explanation of a
-  priority (`docs/design-system.md`, Priority), takes the focus itself. Escape
-  closes it, and the focus then returns to the element that opened it, or
-  follows Focus after an action when that element is gone.
+  priority (`docs/design-system.md`, Priority), takes the focus itself, and so
+  does a popover that shows the details of a record before its actions
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips), so that they are
+  read first. Escape closes it, and the focus then returns to the element
+  that opened it, or follows Focus after an action when that element is
+  gone.
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus (4.1.3 Status Messages). After a form is submitted with errors,
@@ -769,11 +790,12 @@ also meets these requirements, which they cannot check:
   API key"; never "OK", "Yes", or "Submit". One that opens a screen, a page,
   or a set of choices, or that selects a choice, names what it opens or
   selects, such as Profile, Next, Filters, or Dark.
-- A button or menu entry whose action waits for a dialog, which asks for its
-  input or its confirmation, ends with an ellipsis, "…", such as "Ignore…" or
-  "Make non-confidential…"; one that acts at once, or that opens what it
-  names, has none, and neither has the button of the dialog that performs
-  the action.
+- A menu entry whose action waits for a dialog, which asks for its input or
+  its confirmation, ends with an ellipsis, "…", such as "Ignore…" or "Make
+  non-confidential…", so that the menus of a screen tell such entries from
+  those that act at once. An entry that acts at once, or that opens what it
+  names, has none, and neither has a button, that of the dialog that
+  performs the action included.
 - A message states what happened and, when the user can do something about
   it, what to do. It blames no one and holds no technical detail except the
   reference of an error (Default Presentation by Status), and it uses
@@ -874,8 +896,8 @@ complete profile and its manager, and the signed-in user alike: `id`,
   `docs/features/tickets/ticket-priority.md`, Manual Override), is an absent
   value (Absent Values).
 - **Sizes.** Three sizes, small, medium, and large. `docs/design-system.md`
-  (Representation of a User) defines their dimensions, where each is used,
-  and how the labels look, never by color alone (Accessibility).
+  (Representation of a User; Labels) defines their dimensions, where each is
+  used, and how the labels look, never by color alone (Accessibility).
 
 ## Open Decisions
 
