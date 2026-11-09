@@ -55,12 +55,15 @@ sidebar is the one exception (Spacing and Sizes).
   - [Priority](#priority)
   - [Ticket Status](#ticket-status)
   - [Deadline Badge](#deadline-badge)
+  - [Track Milestones](#track-milestones)
   - [Confidential Tickets](#confidential-tickets)
+  - [Labels](#labels)
   - [Other Values](#other-values)
 - [Interface Patterns](#interface-patterns)
   - [Buttons and Links](#buttons-and-links)
   - [Lists](#lists)
   - [Tables](#tables)
+  - [Timelines](#timelines)
   - [Detail Screens](#detail-screens)
   - [Forms](#forms)
   - [Dialogs](#dialogs)
@@ -123,7 +126,7 @@ sidebar is the one exception (Spacing and Sizes).
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `canvas` | `#F6F8FA` | `#0D1117` | The page behind the content; the search field of the sidebar |
-| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table, menus, popovers, dialogs, and fields |
+| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table and of a box within a part of a detail screen, menus, popovers, dialogs, and fields |
 | `surface-2` | `#F6F8FA` | `#1A212A` | The header row of a table |
 | `surface-hover` | `#F3F5F8` | `#1E2630` | A row, a menu item, or a quiet control under the pointer |
 | `sidebar` | `#FFFFFF` | `#010409` | The sidebar |
@@ -131,7 +134,7 @@ sidebar is the one exception (Spacing and Sizes).
 | `fg` | `#1F2328` | `#E6EDF3` | Text |
 | `fg-muted` | `#59636E` | `#9198A1` | Secondary text and icons: terms of a description list, column headers, counts, captions, placeholders, and the icons beside a text |
 | `muted-on-fg` | `#9198A1` | `#59636E` | How many more values a "+N" has than its tooltip lists (Tables): `fg-muted` of the other theme, as a tooltip inverts the colors |
-| `border` | `#D8DEE4` | `#2F3742` | Lines that separate: between rows, around cards and tables, in menus, and at the edge of the sidebar |
+| `border` | `#D8DEE4` | `#2F3742` | Lines that separate: between rows, around cards and tables, between the parts of a detail screen, in menus, and at the edge of the sidebar |
 | `border-strong` | `#818B98` | `#6E7681` | Boundaries that identify a control: fields, secondary buttons, checkboxes, and the selected view |
 | `accent` | `#0969DA` | `#1F6FEB` | The fill of a primary button and of a selected checkbox or radio button |
 | `accent-hover` | `#0757BA` | `#1A5FCC` | A primary button under the pointer |
@@ -206,6 +209,9 @@ WCAG sets them no minimum:
   around cards, tabs, menus, and dialogs, and at the edge of the sidebar;
 - the severity marks, which the name of the severity follows;
 - the empty bars of a priority mark, whose label follows them;
+- the lines that join the phases of a track (Track Milestones), the line and
+  the boundaries of the markers of a timeline (Timelines), and the boundary of
+  a label (Labels), whose icons and texts carry the meaning;
 - the backgrounds that tell surfaces and states apart: `canvas`, `surface`,
   `surface-2`, `surface-hover`, `sidebar-active`, and the soft backgrounds of
   the tones, whose text carries their meaning;
@@ -299,7 +305,19 @@ Graphical elements, minimum 3:1:
 | `danger-icon` | `canvas` | 5.03 | 5.64 |
 | `danger-icon` | `surface` | 5.35 | 5.16 |
 | `danger-icon` | `surface-hover` | 4.90 | 4.55 |
+| `danger-icon` | `danger-soft` | 4.66 | 4.51 |
+| `info-icon` | `info-soft` | 4.56 | 4.60 |
+| `neutral-icon` | `neutral-soft` | 4.04 | 4.81 |
+| `success-icon` | `neutral-soft` | 4.52 | 5.52 |
+| `danger-icon` | `neutral-soft` | 4.76 | 4.18 |
+| `info-icon` | `neutral-soft` | 4.62 | 4.52 |
+| `fg-muted` (knob of a switch that is off) | `neutral-soft` | 5.44 | 4.81 |
+| `on-accent` (knob of a switch that is on) | `accent` | 5.19 | 4.63 |
 
+The icon of the current phase of a track stands on the soft background of its
+tone, and the icons of a pipeline on `neutral-soft` under the pointer (Track
+Milestones); the rail of a switch that is on has the contrast of `accent` on
+its background (Forms).
 A mark drawn in `surface` inside a filled `{tone}-icon` or `danger-solid`
 shape, such as the check of the Resolved status, has the contrast of the same
 pair. The icon of a link to another site (Buttons and Links), an icon that
@@ -334,7 +352,7 @@ Status).
 
 | Token | Size / line height | Use |
 |---|---|---|
-| `text-12` | 12 / 16 px | The labels Inactive and Bot, the headings of the sections of a menu, and the number of an entry of the sidebar |
+| `text-12` | 12 / 16 px | Labels (Labels), the headings of the sections of a menu, and the number of an entry of the sidebar |
 | `text-13` | 13 / 20 px | Column headers, captions, the descriptions and errors of fields, the deadline badge, tooltips, and the "+N" of a cell |
 | `text-14` | 14 / 20 px | The cells of a table, and the toolbar, attention counts, and pagination of a list |
 | `text-15` | 15 / 24 px | Everything else: running text, the sidebar, buttons, menus, fields, and messages |
@@ -375,7 +393,10 @@ wins.
   sidebar opened over the content.
 - **Breakpoint:** one, at a window width of 1024 CSS pixels, which, unlike
   the other sizes, does not change with the text size. One media query
-  decides how the sidebar shows (Sidebar).
+  decides how the sidebar shows (Sidebar). Whether a detail screen shows its
+  side column beside its parts depends on the width of its main content,
+  which follows the width of the sidebar and the text size, not on a second
+  breakpoint of the window (Detail Screens).
 
 ## Icons
 
@@ -426,11 +447,18 @@ that the code imports ship.
 | Dismiss or clear | `x` |
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
 | A deadline that has passed, an overdue milestone | `clock-alert` |
+| The other statuses of a milestone: done, pending, not applicable, not observed (Track Milestones); an observation never made (Other Values) | `circle-check`, `circle`, `circle-minus`, `circle-dashed` |
 | A confidential Ticket | `lock` |
-| A priority override | `user-pen` |
+| A priority override, an eligibility set by hand | `user-pen` |
+| The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
+| Change a field of a record in place, edit a row of a table | `pencil` |
+| Delete a row of a table | `trash` |
+| The other actions of a record within a part, such as a package | `ellipsis` |
+| Restore an excluded record | `undo-2` |
+| Refetch | `refresh-cw` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
-| Loading, busy | `loader-circle` |
-| A Ticket status that the pinned contract does not list | `circle-question-mark` |
+| Loading, busy, an operation in progress (Other Values) | `loader-circle` |
+| A Ticket status, a milestone status, or a kind of event that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
 | A link to another site | `external-link` |
 
@@ -475,10 +503,12 @@ that it sits with the icons around it.
   Content), and the sidebar opened over the content (Sidebar). It shows on
   keyboard focus, and no element removes it (`docs/behaviors.md`,
   Accessibility).
-- **Motion:** only loading indicators move: the spinner turns and the progress
-  bar runs (Loading). When the browser reports a preference for reduced
-  motion, they stand still. Menus, popovers, dialogs, tooltips, and the
-  sidebar appear and change at once.
+- **Motion:** only loading indicators and the mark of an operation in
+  progress move: the spinner turns and the progress bar runs (Loading), and
+  so does the mark of an operation that a screen follows by reading it again,
+  such as the pending fetch of a source (Other Values). When the browser
+  reports a preference for reduced motion, they stand still. Menus,
+  popovers, dialogs, tooltips, and the sidebar appear and change at once.
 
 ## Page Layout
 
@@ -584,18 +614,35 @@ Sidebar).
   the top of the window when the content scrolls, so that a message that
   appears is always in view. It takes at most a third of the window's height,
   beyond which its messages scroll within it, and the content scrolls so that
-  the element with the focus never lies under it (`docs/behaviors.md`,
+  the element with the focus never lies under it, nor under the compact
+  heading of a detail screen below it (Detail Screens), and so that the
+  target of an anchor of the page shows below both (`docs/behaviors.md`,
   Accessibility). While it holds a message, the area is on `canvas`, with
   8 px of space above and below its messages, and the heading follows 16 px
   below the last message; without one, it takes no room.
+- A URL with an anchor shows its target once every part of the screen, or of
+  its tab, shows its data or its error, unless the user has scrolled
+  meanwhile, so that a part that arrives later does not move the target out
+  of view. A screen whose record lacks the target of an anchor shows its
+  top.
 - The heading row holds the level-one heading of the screen in `text-20`,
   weight 600, then what accompanies it, such as the attention summary, and
   the main action of the screen at its end. It wraps when the width runs
   short.
 - Running text, such as a CVE description, is at most 720 px wide. A word or
   an address longer than its place, such as a URL, breaks where it must.
-  Only a table cell and a user's name cut a text to its place, with an
-  ellipsis (Tables; Representation of a User).
+  A text is cut to its place, with an ellipsis, only in a table cell, in a
+  user's name (Tables; Representation of a User), and in the description of a
+  record on its detail screen, such as that of a CVE, where a screen document
+  states it: the description shows its first four lines, the last ending with
+  an ellipsis, and below them Show more, a button in `link`, `text-14`,
+  weight 500, which shows the text whole and becomes Show less. Assistive
+  technologies read the description whole, and Show more states whether it
+  is expanded.
+- In every layout, the order of the page, which the keyboard and assistive
+  technologies follow, is the order on the screen: no layout moves a part to
+  another place with CSS alone (`docs/behaviors.md`, Accessibility; WCAG 2.2,
+  1.3.2 Meaningful Sequence; 2.4.3 Focus Order).
 - At a width of 320 CSS pixels, which is a window of 1280 px at a zoom of
   400 %, the collapsed sidebar and the content fit side by side: rows of
   controls wrap, and tables scroll within their frame (`docs/behaviors.md`,
@@ -788,13 +835,83 @@ red as the `danger` tone, with `clock-alert` at 12 px in the color of its
 text, 4 px before the name of the deadline. A current phase that the pinned
 contract does not list shows in the same shape in the `neutral` tone,
 without an icon. Another due date with an overdue milestone status shows
-`clock-alert` at 14 px in `danger-icon` before that status.
+`clock-alert` at 14 px in `danger-icon` before its state
+(`docs/behaviors.md`, Deadlines).
+
+### Track Milestones
+
+The milestones of a track, its four phases in their order, Triage,
+Submission, UM, and QA, each with its status (Sentinel
+`docs/features/tickets/ticket-deadlines.md`, Actors and Phases; Track
+Milestones), show as a pipeline: the icon of the status of each phase at
+16 px, centered in a round box of 22 px, the boxes joined by lines of 1 px in
+`border-strong`, 6 px long.
+
+| Status | Icon |
+|---|---|
+| `done` | `circle-check` in `success-icon` |
+| `overdue` | `clock-alert` in `danger-icon` |
+| `pending` | `circle` in `neutral-icon` |
+| `not_applicable` | `circle-minus` in `neutral-icon` |
+| `null`, on a track with due dates: a phase that Sentinel does not observe for the track | `circle-dashed` in `neutral-icon` |
+| A value that the pinned contract does not list | `circle-question-mark` in `neutral-icon` |
+
+- A track without due dates, whose Ticket has no SLA, such as an Ignored or
+  Duplicated Ticket, has every milestone `null` and shows no pipeline (same
+  document, Null Due Dates; Track Milestones).
+- The box of the current phase of the track, its `current_phase`, is in the
+  soft background of its tone: `danger-soft` when the phase is overdue, and
+  `info-soft` otherwise, where its `circle` is in `info-icon`.
+- The pipeline is one button, at least 24 px high, with 4 px of side padding
+  and a 4 px radius, on `neutral-soft` under the pointer and while its
+  popover is open, with the focus ring around it. Its icons and lines are
+  hidden from assistive technologies, and its accessible name states the
+  package, the track, and the state of each phase, as Phases words them, such
+  as "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: Triage done;
+  Submission overdue by 2 days, current; UM due in 3 days; QA due in 10
+  days".
+- A click, a tap, Enter, or Space opens Phases, a popover 320 px wide, with
+  16 px of padding, in `text-14`, that opens and closes as the explanation of
+  a priority does (Priority, Explanation): it takes the focus itself, Escape
+  or a click outside closes it, and the focus returns to the pipeline. Its
+  title, "Phases", in `text-16`, weight 600, is followed by a `border` line
+  with 12 px of space above and below it, then a line for each phase, 10 px
+  apart: the icon of its status, as in the pipeline, then, 8 px later, the
+  name of the phase, at weight 600 for the current one, followed by " · " and
+  its actor in `fg-muted`: Vulnerability analyst, Maintainer, Maintenance
+  update team, or QA (same document, Actors and Phases); below the name, in
+  `text-13`, the state of the phase in the words of `docs/behaviors.md`
+  (Deadlines), in `danger-on-soft` at weight 500 when it is overdue and in
+  `fg-muted` otherwise, followed, for a phase with a due date, by " · due "
+  and its date and time (`docs/behaviors.md`, Dates and Times, Display). The
+  icon of the status starts the line, so the state takes no icon of its own
+  (Deadline Badge). A status that the pinned contract does not list shows as
+  received (`docs/behaviors.md`, Unknown Values).
+- A screen document states where the pipeline shows, and what more Phases
+  holds, such as the requests that a track has in a phase.
 
 ### Confidential Tickets
 
 A confidential Ticket shows `lock` at 14 px in `fg-muted`, 4 px after its
 identifier, with the accessible name "Confidential". A detail screen also
 writes "Confidential" next to it.
+
+### Labels
+
+- A label names a short state or kind beside a value or a name: Inactive and
+  Bot after the name of a user (Representation of a User), and, as a screen
+  document states them, such as the workflow of a track, IBS or Git, Excluded,
+  EOL, Disabled, Not eligible, or a type of a CNA. It is in `text-12`, weight
+  500, `fg-muted`, with a 1 px `border-strong` boundary, a 4 px radius, and
+  4 px of side padding, 6 px after what it follows; a second label follows the
+  first, 6 px later. Its text carries its meaning, and assistive technologies
+  read it as text.
+- A label that tells the signed-in user that a record waits for them, such as
+  the label of a track of a package tree that waits for their submission
+  (`docs/screen-map.md`, Areas and Screens), is 20 px high, in `text-12`,
+  weight 500, `info-on-soft` on `info-soft`, without a boundary, with 6 px of
+  side padding and a 4 px radius; its record has a bar of 3 px in `link` along
+  its left edge, as the current entry of the sidebar has (Sidebar).
 
 ### Other Values
 
@@ -805,7 +922,15 @@ writes "Confidential" next to it.
   it as Severity does: a dot of 8 px in its `{tone}-icon` followed by its
   name. A value that the pinned contract does not list shows as Severity
   shows one (`docs/behaviors.md`, Unknown Values). Red, the `danger` tone, is
-  kept for failure, lateness, and errors (Principles).
+  kept for failure, lateness, and errors (Principles). A value that names an
+  operation in progress, which the screen follows by reading it again, such
+  as the `pending` fetch of a source of a CVE, has the `info` tone and shows
+  `loader-circle` at 12 px in `info-icon`, turning, in place of its dot
+  (Focus and Motion). A value that names an observation never made, such as
+  the `not_attempted` status of a source, shows `circle-dashed` at 12 px in
+  `neutral-icon` in place of its dot, as a phase that Sentinel does not
+  observe does (Track Milestones), so that it is not taken for a value that
+  the pinned contract does not list.
 - An absent value shows as an en dash, "–", in `fg-muted`, read as "Not
   set", or as the word that names the absence precisely, also in `fg-muted`
   (`docs/behaviors.md`, Absent Values).
@@ -830,10 +955,12 @@ writes "Confidential" next to it.
 
 - Buttons have a 6 px radius, 12 px of side padding, or 16 px at a height
   of 40 px, their label at weight 500, and their icon at 16 px before the
-  label; Next has its chevron after it. They are 32 px high in the toolbar
-  and pagination of a list and in the heading of a card, 40 px in forms and
-  dialogs, and 36 px elsewhere, such as in the heading row of a screen, in an
-  empty state, and as Try again, unless a pattern states its own height.
+  label; Next has its chevron after it, and so has a button that opens a
+  menu, such as Actions, its `chevron-down`. They are 32 px high in the toolbar
+  and pagination of a list and in the heading of a part of a detail screen
+  (Detail Screens), 40 px in forms and dialogs, and 36 px elsewhere, such as
+  in the heading row of a screen, in an empty state, and as Try again, unless
+  a pattern states its own height.
 - A disabled button shows at 60 % opacity. A busy button shows
   `loader-circle` in place of its icon, or before its label, keeps its label,
   and cannot be pressed (`docs/behaviors.md`, Loading).
@@ -976,25 +1103,155 @@ keep the search, the filters, and the sorting.
   audit log, it wraps, a user's name included, and its row grows.
 - A user shows in the full form at the small size (Representation of a
   User).
+- The actions on one row, such as Edit and Delete, are icon buttons of 24 px
+  at the end of the row, 4 px apart, with their icon at 16 px in `fg-muted`,
+  each named by its action and the record of its row, such as "Edit SUSE
+  assessment v3.1", which its tooltip shows (Buttons and Links). They show
+  only to a user who can take them (`docs/screen-map.md`, Roles), and Delete
+  asks for confirmation (`docs/behaviors.md`, Confirmation).
 - The loading indicator, an error in place of the data, and an empty state
   show inside the frame, below the header row.
 - Rows have no colored marks other than those of their values.
+
+### Timelines
+
+The audit log of one record shows as a timeline where its screen document
+states it, such as that of a Ticket; the other audit logs are tables
+(Tables).
+
+- The events show newest first, grouped by the day of their date in the time
+  zone of the browser (`docs/behaviors.md`, Dates and Times, Display): each
+  day a heading one level below the heading of the timeline's place, in
+  `text-13`, weight 600, `fg-muted`, such as "8 Nov 2026", 16 px below the
+  events of the day before, and its events a list 4 px below it.
+- Each event is a row: its time, such as "14:10", in `text-13`, `fg-muted`,
+  with tabular figures, at the end of a column of 48 px; 12 px later its
+  marker, a round box of 24 px; 12 px later its sentence, which wraps. A
+  vertical line of 2 px in `border` joins the markers of a day, behind them.
+- The marker holds the icon of the kind of the event at 14 px, in `fg`, with
+  a 1 px `border-strong` boundary on `surface`; the screen document chooses
+  the icon of each kind and adds its row to Icons by Need, and a kind that
+  the pinned contract does not list takes `circle-question-mark`. The marker
+  is hidden from assistive technologies, which read the sentence.
+- The sentence, in `text-14`, starts with its actor in the full form at the
+  small size, the name at weight 500 (Representation of a User), and says
+  what the actor did, such as "Alice Smith set fictional-zlib · fles-16.0 to
+  Affected"; the screen document gives the sentence of each kind. A row has
+  8 px of space above and below it.
+- An event without an actor starts with System and the Sentinel mark
+  (Representation of a User, No recorded actor), in `text-13` and `fg-muted`,
+  with the boundary of its marker in `border` and its icon in `fg-muted`, and
+  its row has 4 px of space above and below it, so that the actions of people
+  stand out from their automatic consequences. An event of a kind that the
+  pinned contract does not list shows its kind as received
+  (`docs/behaviors.md`, Unknown Values).
+- Above the timeline, the toolbar of a list without views: the search field,
+  Filters, and Clear filters; below it, the pagination of a list (Lists).
 
 ### Detail Screens
 
 - The heading row holds the identifier of the record as the level-one
   heading, followed on the same line by its main values, such as the status,
   severity, and priority of a Ticket, and ends with the screen's actions.
-- The fields of the record show as a description list: the terms in
-  `fg-muted`, the values in `fg`, in two columns 24 px apart, with rows 6 px
-  apart.
-- Each part of the record, such as the references of a Ticket, is a card on
-  `surface` with a `border` line, an 8 px radius, and 24 px of padding, with a
-  level-two heading in `text-16`, weight 600, and its actions at the end of
-  the heading's line. A part without items shows its short line in `fg-muted`
-  (`docs/behaviors.md`, Empty States).
+  Several actions are one menu, Actions, a secondary button that opens them
+  as a menu (Buttons and Links; Menus, Popovers, and Tooltips), shown to a
+  user who can take at least one of them (`docs/screen-map.md`, Roles); an
+  action that changes one field of the record's description list is the
+  pencil of that field instead (below).
 - A screen document can show the parts of a long record one at a time, as
-  tabs that look and behave like the views of a list.
+  tabs at paths under the path of the screen (`docs/screen-map.md`, Areas and
+  Screens). The tabs follow the heading row, 12 px below it, in a row with a
+  `border` line across the width: each its label in `text-14`, `fg-muted`,
+  40 px high with 8 px of side padding, 16 px apart; the selected tab is in
+  `fg` at weight 600, over a bar of 2 px in `link` along its bottom edge, on
+  the line. Where their place is too narrow, the tabs wrap, and the line runs
+  under their last row. They show no count, and they show at once, also a tab
+  whose content depends on the record, which then says in its place that the
+  record has none (`docs/behaviors.md`, Loading; Empty States). They behave
+  like the views of a list (Lists): a tab opens when the user clicks it or
+  presses Enter or Space, not when the arrow keys move the focus to it, and
+  the focus stays on it. Its content follows 24 px below the line, and a
+  tab that the user opens shows the start of its content, below the compact
+  heading where the page had scrolled past it.
+- The fields of the record show as a description list: each term on the
+  line of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px
+  before the value in `text-14`, `fg`, fields 8 px apart; where the list is
+  narrower than 280 px, each term stands above its value. A popover that
+  shows the details of a record uses the same list (Menus, Popovers, and
+  Tooltips).
+- A field that a user can change shows that user a pencil at the end of its
+  line: an icon button of 24 px with `pencil` at 14 px, named by its action,
+  such as "Edit assignee", which its tooltip shows. It opens the control of
+  the field in a popover below it, or above it where the window has no room
+  below, moved toward the start where it would pass the end of the window,
+  such as a search field with the matching users listed below it, in
+  the states of a combobox (Forms), whose choice applies at once and closes
+  the popover; or a dialog where the change needs more than one choice
+  (Dialogs). While the change is in progress, the pencil is busy
+  (`docs/behaviors.md`, Loading).
+- Each part of the record, such as the references of a Ticket, is a section
+  on the background of the page, below a `border` line: its level-two heading
+  in `text-16`, weight 600, 24 px below the line, with its actions at the end
+  of the heading's line, and its content 16 px below the heading; the line of
+  the next part is 32 px below the content, and the first part has no line of
+  its own. A
+  box within a part, such as a group of items, a table, or values set side by
+  side, keeps its frame on `surface`, with a `border` line and the radius of
+  its pattern, 6 or 8 px. A part without items shows its short line in
+  `fg-muted` (`docs/behaviors.md`, Empty States).
+- A screen document can give a detail screen, or one of its tabs, a side
+  column for the fields of the record and short parts, 288 px wide, 32 px
+  after the main column, aligned with its top; another tab takes the whole
+  width. The side column follows the main column in the order of the page
+  (Main Content). Its sections have their level-two heading in `text-14`,
+  weight 600, in a row at least 32 px high with their actions at its end,
+  their content 10 px below, and a `border` line 16 px below their content
+  and 16 px above the next section; the last section has no line.
+- The two columns show while the main content, inside its space of 24 px, is
+  at least 960 px wide, so that the main column keeps at least 640 px
+  (Spacing and Sizes, Breakpoint). Narrower, the screen is one column, in the
+  order that its screen document states, such as the fields of the record
+  above the parts and the other sections of the side column below them, in
+  that order in the page too (Main Content). In one column, each section of
+  the side column keeps its look, at the width of the content, and each part
+  keeps its own; a `border` line sets the sections of the side column apart
+  from the parts above and below them, 16 px below a section's content and
+  32 px below a part's content, and the heading of a part follows it 24 px
+  below, as it follows the line of a part.
+- When the layout changes while the screen is open, as the window, the text
+  size, or the sidebar changes, a section whose place in the order of the
+  page differs between the layouts, such as the details of a Ticket, moves
+  to its new place. While a dialog of such a section is open, the layout
+  waits until it closes, so that its input and a change in progress stay;
+  the dialog fits the window meanwhile (Dialogs). A popover of such a section
+  closes, as on a click outside it, and a control of the section whose
+  change is in progress stays busy in its new place (`docs/behaviors.md`,
+  Loading). When the element with the focus is in such a section, the focus
+  moves to the screen's heading, which comes into view (`docs/behaviors.md`,
+  Accessibility, Focus after an action); elsewhere it stays where it is, and
+  the page keeps its scroll position as the browser adjusts it.
+- With two columns, while the page scrolls, the side column stays at the top
+  of its place, below the message area and the compact heading, until the
+  end of the page comes into view, and then scrolls with the page to its own
+  end, so that its first sections stay beside the parts. When an element of
+  the side column that is out of view takes the focus, or is the target of an
+  anchor, the page scrolls until it shows, which for the last sections of a
+  side column taller than the window can be the end of the page. With one
+  column, the side column scrolls with the page.
+- On a screen with a side column, while the main content is wide enough for
+  two columns, on each of its tabs, also one that takes the whole width, the
+  heading row stays at the top of the window once it has scrolled out of
+  view, below the message area, as the compact heading, on `surface` above a
+  `border` line across the width, without a shadow (Spacing and Sizes,
+  Shadows): 10 px of space, the level-one heading in `text-16` with the main
+  values, and the actions as buttons 32 px high, then right below them the
+  tabs, 36 px high. Its place in the page keeps the
+  height of the heading row and the tabs, so that the content does not move
+  when the heading becomes compact or returns. It is the heading row itself,
+  not a copy, so the screen keeps one level-one heading, one set of tabs, and
+  one menu of actions. Narrower, the heading row scrolls with the page, so
+  that a fixed heading takes no room from a narrow window
+  (`docs/behaviors.md`, Accessibility, Reflow and text size).
 
 ### Forms
 
@@ -1023,6 +1280,16 @@ keep the search, the filters, and the sorting.
   selected an `accent` fill with its mark in `on-accent`; a date field shows
   its parts as `docs/behaviors.md` (Input) orders them; and a search field
   starts with `search` at 16 px and, with a value, ends with a clear button.
+- A switch turns a choice of a screen on or off at once, outside a form, such
+  as showing the hidden records of a part: a rail 28 by 16 px, round, with a
+  1 px `border-strong` boundary on `neutral-soft` and a knob of 12 px in
+  `fg-muted` at its start; on, the rail is `accent`, its boundary too, and
+  the knob is in `on-accent` at its end. Its label follows 6 px later, in
+  `text-13`, `fg-muted`, and the switch with its label is the target, at
+  least 24 px high. Disabled, it shows at 60 % opacity. Assistive technologies
+  read it as a switch, on or off. A choice that a user returns to with the
+  URL, such as showing the hidden records, is in the URL
+  (`docs/screen-map.md`, Browser History).
 
 ### Dialogs
 
@@ -1049,8 +1316,9 @@ keep the search, the filters, and the sorting.
   `info` for an operation that started and for information, `warning` for a
   change that Sentinel did not confirm (`docs/behaviors.md`, Retries and
   Unconfirmed Changes), and `danger` for an error.
-- When data stays shown after a new read of it failed, a `warning` message
-  above the data says that it could not be updated, followed 8 px below by
+- When data stays shown after a new read of it failed, or after a read that
+  only adds marks to it failed, a `warning` message above the data says that
+  it could not be updated, or what could not be shown, followed 8 px below by
   Try again as a secondary button when the failure offers it
   (`docs/behaviors.md`, Where Errors Appear). The button stands outside the
   message, on the background of the screen or of its part, against which its
@@ -1107,17 +1375,44 @@ keep the search, the filters, and the sorting.
   does not link to the user (one that does shows the user card instead;
   Representation of a User), or lists the values of a "+N" (Tables); it never
   holds the only means to act.
+- A name that opens a popover with the details of its record, and with the
+  record's actions for a user who can take them, such as a Product of a
+  package tree or the CNA of a CVE, is a button in the style of the text
+  around it, with a dotted underline in `border-strong` 3 px below it, in
+  `fg` under the pointer; it wraps, and its target is at least 24 px high.
+  Its popover is 320 px wide, with 16 px of padding, in `text-14`, below the
+  name and aligned to its start, or above it where the window has no room
+  below, moved toward the start where it would pass the end of the window,
+  and its content scrolls within it in a window shorter than it is:
+  its title, the name, in `text-16`, weight 600, wrapping; below it, in
+  `text-13`, `fg-muted`, what identifies the record further, such as a CPE; a
+  `border` line with 12 px of space above and below it; the details as a
+  description list (Detail Screens); and, with actions, another such line and
+  the actions as menu items. Details that the popover reads as it first
+  opens, such as those of a CNA, load and fail as those of the user card do
+  (`docs/behaviors.md`, Representation of a User, User card), with the
+  loading indicator (Loading) or the line of the failure in `fg-muted` in
+  their place. The popover takes the focus itself as it opens
+  (`docs/behaviors.md`, Accessibility, Dialogs); Tab reaches its actions,
+  and the rest of the page is out of reach while it is open. Escape or a
+  click outside closes it and returns the focus to the name, except while
+  one of its actions is in progress, which marks its item busy
+  (`docs/behaviors.md`, Loading); the action then closes the popover, with
+  the focus on the name, or where Focus after an action leads when the name
+  is gone (`docs/behaviors.md`, Accessibility), and its outcome shows as
+  that of any other change (`docs/behaviors.md`, Where Errors Appear;
+  Outcome of a Change).
 
 ## Representation of a User
 
 `docs/behaviors.md` (Representation of a User) defines what shows for a user.
 This section defines the dimensions of its three sizes, where each is used,
-how the labels look, and the user card.
+where the labels show, a group of users, and the user card.
 
 | Size | Avatar | Use |
 |---|---|---|
 | Small | 24 px | Text, table rows, and the options of a field |
-| Medium | 32 px | Other lists of users, such as the access grants of a Ticket, the account button, and the account menu |
+| Medium | 32 px | Other lists of users, such as the access grants of a Ticket, a group of users, the account button, and the account menu |
 | Large | 64 px | The heading of a user's screen, and the user card |
 
 - **Full form:** the avatar, 6 px of space, and the display name in the
@@ -1127,17 +1422,21 @@ how the labels look, and the user card.
   its own below the name and its labels (Account Menu). The `@` sets it
   apart from the name without relying on color, also for an inactive user,
   whose name is in `fg-muted` too.
-- **Inactive and Bot:** the label follows the name, or the username where it
-  follows the name, 6 px later, in `text-12`, weight 500, `fg-muted`, with a
-  1 px `border-strong` boundary, a 4 px radius, and 4 px of side padding; a
-  second label follows the first, 6 px later. An inactive user's name is in
-  `fg-muted`, and its avatar is gray (Avatar). Where the place is too narrow,
-  only the name, with the username that follows it, ends with an ellipsis,
-  unless a table, the account menu, the user card, or the explanation of a
-  priority wraps it (Tables; Account Menu; User card; Priority, Explanation);
-  the labels always show.
+- **Inactive and Bot:** the label (Labels) follows the name, or the username
+  where it follows the name. An inactive user's name is in `fg-muted`, and
+  its avatar is gray (Avatar). Where the place is too narrow, only the name,
+  with the username that follows it, ends with an ellipsis, unless a table,
+  the account menu, the user card, or the explanation of a priority wraps it
+  (Tables; Account Menu; User card; Priority, Explanation); the labels always
+  show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
+- **Group of users:** the users of a group, such as the participants of a
+  Ticket, in the compact form at the medium size, 6 px apart, in rows that
+  wrap, every user shown. The group is named by its heading and is one stop
+  of the Tab key, within which the arrow keys move from user to user; each
+  user takes the focus and shows its tooltip, or the user card where it links
+  to the user (`docs/behaviors.md`, Representation of a User).
 - **Name form:** the full form without the avatar and the 6 px of space after
   it; it has no size, since the sizes are those of the avatar.
 - **Link:** a user that links to their screen (`docs/behaviors.md`,

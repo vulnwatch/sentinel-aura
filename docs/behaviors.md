@@ -215,6 +215,7 @@ message follows Wording.
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
+| A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user, before it has shown its marks; a later read of them is a new read of the same data | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
@@ -485,6 +486,9 @@ actor of a recorded action (Representation of a User) are exceptions.
 - A date without a time, such as the end of support of a Product, shows as
   `9 Oct 2026`, as the API returns it, without a conversion between time
   zones.
+- Records grouped by the day of their date, such as the events of a timeline
+  (`docs/design-system.md`, Timelines), show the day once, as the heading of
+  its group, and each record its time alone, as `14:05`.
 - Times are absolute, never relative such as "3 hours ago": deadlines, audit
   logs, and fetcher runs are compared and shared, and a relative time is wrong
   in a screenshot or a report read later. The days that remain to a deadline
@@ -505,11 +509,11 @@ actor of a recorded action (Representation of a User) are exceptions.
 ### Deadlines
 
 A screen that shows the deadline of a Ticket, such as the Ticket list in its
-rows, shows it as a badge with the name of the deadline and the days that
-remain to it. The deadline depends on the current phase of the Ticket, the
-earliest phase of its remediation that is not completed, among the phases
-that Sentinel observes (Sentinel `docs/features/tickets/ticket-deadlines.md`,
-Ticket Current Phase):
+rows and the Ticket screen in its heading row, shows it as a badge with the
+name of the deadline and the days that remain to it. The deadline depends on
+the current phase of the Ticket, the earliest phase of its remediation that
+is not completed, among the phases that Sentinel observes (Sentinel
+`docs/features/tickets/ticket-deadlines.md`, Ticket Current Phase):
 
 | Current phase | Badge |
 |---|---|
@@ -574,10 +578,41 @@ Ticket Current Phase):
   overdue count, even when the badge is red (Sentinel
   `docs/features/tickets/ticket-deadlines.md`, Observability of Later
   Phases).
-- Another due date, such as one of a track or of a maintainer's workbench
-  item, shows as a date (Display), next to the milestone status that Sentinel
-  returns for it, named as Sentinel names it (Wording). An `overdue` status is
-  marked as a past deadline is, with the icon.
+- The package tree of a Ticket shows the deadline of each track as a badge
+  too, from the fields of the track, which carry the due dates of the Ticket
+  and a current phase of their own (same document, Ticket and Track Dates;
+  Track Milestones), by the table above. A track whose current phase is
+  `null`, with due dates, shows its Release badge only while its Ticket is
+  not Resolved and the track still has work, not being resolution-complete
+  (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved):
+  Affected with an actionable eligible Product, or, on a Ticket with a CVE,
+  Fixed with an actionable eligible Product that is not released. Its later
+  phases are not observed, and on a track with nothing left to do the badge
+  would stay, and turn red once the date passes.
+- Another due date that Sentinel returns with the status of its milestone,
+  that of a phase of a track, that of a maintainer's workbench item, and that
+  of the current phase of a Ticket (`current_phase_milestone`), shows as a
+  date (Display), next to the state of the milestone: "Done" for `done`, "Not
+  applicable" for `not_applicable`, and "Not observed" for `null` while the
+  record has due dates, which says that Sentinel does not observe the phase;
+  for `pending` and `overdue`, the days of the badge in words, as its
+  accessible name states them, such as "Due in 3 days", "Due in less than a
+  day", or "Overdue by 2 days" (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, Track Milestones; Ticket
+  Current Phase). Without due dates, no SLA applies and no state shows (same
+  document, Null Due Dates). A due date without a status, such as one of
+  another phase of a Ticket, shows its date alone, and its screen document
+  states how it shows. An `overdue` state is marked as a past deadline is,
+  with the icon, and a value that the pinned contract does not list shows as
+  received (Unknown Values).
+- The word "Pending" names the delivery status of a track, which can show
+  beside its milestones (Sentinel `docs/features/packages/package-model.md`,
+  Axis 3: Delivery and Release Observation). So a milestone that is
+  `pending` is not named "Pending", since it is unrelated to that status
+  (Sentinel `docs/features/tickets/ticket-deadlines.md`, Track Milestones),
+  and the label of a track that waits for the signed-in user's submission
+  says "Needs your action" (`docs/screen-map.md`, Areas and Screens),
+  although My packages lists the same tracks as the user's pending work.
 
 ## Confirmations and Outcomes
 
@@ -674,13 +709,18 @@ also meets these requirements, which they cannot check:
   as the action that reverses it, or otherwise to the screen's heading. When
   it disappears without an action, because a read replaced what the screen
   shows, such as a `403` after the tab returns to the foreground (Where Errors
-  Appear), the focus moves to the screen's heading.
+  Appear), or because a change of layout moved the section that held it
+  (`docs/design-system.md`, Detail Screens), the focus moves to the screen's
+  heading.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing; a dialog without a field or a button, such as the explanation of a
-  priority (`docs/design-system.md`, Priority), takes the focus itself. Escape
-  closes it, and the focus then returns to the element that opened it, or
-  follows Focus after an action when that element is gone.
+  priority (`docs/design-system.md`, Priority), takes the focus itself, and so
+  does a popover that shows the details of a record before its actions
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips), so that they are
+  read first. Escape closes it, and the focus then returns to the element
+  that opened it, or follows Focus after an action when that element is
+  gone.
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus (4.1.3 Status Messages). After a form is submitted with errors,
@@ -754,6 +794,12 @@ also meets these requirements, which they cannot check:
   API key"; never "OK", "Yes", or "Submit". One that opens a screen, a page,
   or a set of choices, or that selects a choice, names what it opens or
   selects, such as Profile, Next, Filters, or Dark.
+- A menu entry whose action waits for a dialog, which asks for its input or
+  its confirmation, ends with an ellipsis, "…", such as "Ignore…" or "Make
+  non-confidential…", so that the menus of a screen tell such entries from
+  those that act at once. An entry that acts at once, or that opens what it
+  names, has none, and neither has a button, that of the dialog that
+  performs the action included.
 - A message states what happened and, when the user can do something about
   it, what to do. It blames no one and holds no technical detail except the
   reference of an error (Default Presentation by Status), and it uses
@@ -792,8 +838,11 @@ complete profile and its manager, and the signed-in user alike: `id`,
 - **Compact form.** The avatar alone, in a link, a button, or another
   interactive element without room for the name. The display name is its
   accessible name and shows in a tooltip on hover and on keyboard focus, or in
-  the user card where the avatar links to the user (User card). Every other
-  place shows the full form, or the name form where it applies.
+  the user card where the avatar links to the user (User card). A group of
+  users, such as the participants of a Ticket, shows its users in the compact
+  form too, every user shown, so that many fit in a narrow place
+  (`docs/design-system.md`, Representation of a User). Every other place shows
+  the full form, or the name form where it applies.
 - **Name form.** The full form without the avatar: the display name, the
   username where the full form shows it, and the labels. It shows a user who
   is a detail of another value, such as who set a priority override in the
@@ -851,8 +900,8 @@ complete profile and its manager, and the signed-in user alike: `id`,
   `docs/features/tickets/ticket-priority.md`, Manual Override), is an absent
   value (Absent Values).
 - **Sizes.** Three sizes, small, medium, and large. `docs/design-system.md`
-  (Representation of a User) defines their dimensions, where each is used,
-  and how the labels look, never by color alone (Accessibility).
+  (Representation of a User; Labels) defines their dimensions, where each is
+  used, and how the labels look, never by color alone (Accessibility).
 
 ## Open Decisions
 
