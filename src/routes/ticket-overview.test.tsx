@@ -275,6 +275,22 @@ const UNOBSERVED: Pick<TrackDetail, "milestones" | "current_phase"> = {
   current_phase: null,
 };
 
+// The eligibility of a Product that a user set by hand to not eligible, with
+// its provenance, which Sentinel returns with every override (Sentinel
+// docs/features/packages/package-model.md, Override Model).
+const SET_BY_HAND: Partial<ProductDetail> = {
+  eligible: false,
+  is_eligible_override: true,
+  eligibility_override_by: {
+    id: "00000000-0000-0000-0000-000000000003",
+    username: "asmith",
+    full_name: "Alice Smith",
+    active: true,
+    bot: false,
+  },
+  eligibility_override_at: "2099-10-10T11:00:00Z",
+};
+
 // A Product that is excluded from its track.
 function excludedProduct(fields: Partial<ProductDetail> = {}): ProductDetail {
   return fictionalProduct({
@@ -1233,9 +1249,7 @@ describe("a Product", () => {
       fictionalPackage({
         tracks: [
           fictionalTrack({
-            products: [
-              fictionalProduct({ eligible: false, is_eligible_override: true }),
-            ],
+            products: [fictionalProduct(SET_BY_HAND)],
           }),
         ],
       }),
@@ -1269,9 +1283,7 @@ describe("a Product", () => {
       fictionalPackage({
         tracks: [
           fictionalTrack({
-            products: [
-              fictionalProduct({ eligible: false, is_eligible_override: true }),
-            ],
+            products: [fictionalProduct(SET_BY_HAND)],
           }),
         ],
       }),
