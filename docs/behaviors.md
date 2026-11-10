@@ -578,17 +578,14 @@ is not completed, among the phases that Sentinel observes (Sentinel
   overdue count, even when the badge is red (Sentinel
   `docs/features/tickets/ticket-deadlines.md`, Observability of Later
   Phases).
-- The package tree of a Ticket shows the deadline of each track as a badge
-  too, from the fields of the track, which carry the due dates of the Ticket
-  and a current phase of their own (same document, Ticket and Track Dates;
-  Track Milestones), by the table above. A track whose current phase is
-  `null`, with due dates, shows its Release badge only while its Ticket is
-  not Resolved and the track is not resolution-complete (Sentinel
-  `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved):
-  Affected with an actionable eligible Product, or, on a Ticket with a CVE,
-  Fixed with an actionable eligible Product that is not released. Its later
-  phases are not observed, and on a track with nothing left to do the badge
-  would stay, and turn red once the date passes.
+- The package tree of a Ticket shows no badge on its tracks. A track carries
+  the due dates of its Ticket and a current phase of its own (same document,
+  Ticket and Track Dates; Track Milestones): the badge of the Ticket already
+  names the deadline of its earliest open phase, and the pipeline of each
+  track shows the current phase of the track and whether it is past due,
+  with its days in Phases (`docs/design-system.md`, Track Milestones). A
+  badge on each track would repeat the deadline of the Ticket on most of its
+  tracks.
 - Another due date that Sentinel returns with the status of its milestone,
   that of a phase of a track, that of a maintainer's workbench item, and that
   of the current phase of a Ticket (`current_phase_milestone`), shows as a

@@ -295,14 +295,24 @@ test.describe("for an analyst", () => {
       openssl.getByText("Fictional Linux Enterprise Server 15 SP7"),
     ).toBeVisible();
     await expect(openssl.getByText("Not released")).toBeVisible();
-    // Its Git track, whose later phases Sentinel does not observe, shows the
-    // Release badge, and its Products a release that is not observed.
+    // Its Git track, whose later phases Sentinel does not observe, shows its
+    // pipeline without Delivery Pending, and its Products a release that is
+    // not observed.
     const zlib = packages
       .getByRole("listitem")
       .filter({ has: page.getByText("fles-16.0", { exact: true }) })
       .last();
-    await expect(zlib.getByText(/^Release \d+d$/)).toBeVisible();
+    await expect(
+      zlib.getByRole("button", {
+        name: /^Phases of fictional-zlib, fles-16\.0: Triage done; Submission not observed; UM not observed; QA not observed$/,
+      }),
+    ).toBeVisible();
+    await expect(zlib.getByText("Delivery")).toHaveCount(0);
     await expect(zlib.getByText("Release not observed")).toHaveCount(2);
+    // No track shows a deadline badge, which the pipeline replaces.
+    await expect(
+      packages.getByText(/^(?:Triage|Submission|UM|QA|Release) -?\d+d$/),
+    ).toHaveCount(0);
     // No hidden record.
     await expect(
       page.getByRole("switch", { name: "Show hidden 0" }),

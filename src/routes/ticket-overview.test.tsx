@@ -267,8 +267,9 @@ const NO_SLA: Partial<TrackDetail> = {
   current_phase: null,
 };
 
-// The milestones of a Git track, whose later phases Sentinel does not
-// observe, after its triage, with due dates: its current phase is null.
+// The milestones of a track whose later phases Sentinel does not observe,
+// such as a Git track or a track of a Ticket without a CVE, after its triage,
+// with due dates: its current phase is null.
 const UNOBSERVED: Pick<TrackDetail, "milestones" | "current_phase"> = {
   milestones: { triage: "done", submission: null, um: null, qa: null },
   current_phase: null,
@@ -532,7 +533,7 @@ describe("a package", () => {
 });
 
 describe("a track", () => {
-  test("shows its reference, its workflow, and its affectedness on its first line", async () => {
+  test("shows its reference and its affectedness on its first line, without its workflow", async () => {
     showing([
       fictionalPackage({
         tracks: [
@@ -552,17 +553,17 @@ describe("a track", () => {
     const { screen } = await renderTree();
 
     const ibs = trackOf(screen, "SUSE:FLES-15-SP7:Update");
-    await expect.element(ibs.getByText("IBS", { exact: true })).toBeVisible();
     await expect
       .element(ibs.getByText("Affected", { exact: true }))
       .toBeVisible();
-    // The affectedness at the end of the line, 12 px after the content of
-    // the item.
     const git = trackOf(screen, "fles-16.0");
-    await expect.element(git.getByText("Git", { exact: true })).toBeVisible();
     await expect
       .element(git.getByText("Not affected", { exact: true }))
       .toBeVisible();
+    for (const track of [ibs, git]) {
+      expect(track.getByText(/^(?:IBS|Git)$/i).elements()).toHaveLength(0);
+    }
+    // The affectedness at the end of the line.
     expect(boxOf(ibs.getByText("Affected", { exact: true })).right).toBeCloseTo(
       boxOf(packagesPart(screen)).right,
       0,
@@ -608,7 +609,6 @@ describe("a track", () => {
         tracks: [
           {
             ...fictionalTrack(),
-            workflow_type: "obs",
             status: "partially_affected",
             delivery_status: "on_hold",
             milestones: {
@@ -625,7 +625,6 @@ describe("a track", () => {
     const { screen } = await renderTree();
 
     const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
-    await expect.element(track.getByText("obs", { exact: true })).toBeVisible();
     await expect
       .element(track.getByText("partially_affected", { exact: true }))
       .toBeVisible();
@@ -639,38 +638,8 @@ describe("a track", () => {
     ).toHaveLength(0);
   });
 
-  test("shows no release below a track of a workflow that the pinned contract does not list", async () => {
-    showingUnlisted([
-      {
-        ...fictionalPackage(),
-        tracks: [{ ...fictionalTrack(), workflow_type: "obs" }],
-      },
-    ]);
-    const { screen } = await renderTree();
-    const product = productOf(
-      screen,
-      "Fictional Linux Enterprise Server 15 SP7",
-    );
-    expect(product.getByText(/release/i).elements()).toHaveLength(0);
-
-    await screen
-      .getByRole("button", { name: "Fictional Linux Enterprise Server 15 SP7" })
-      .click();
-
-    const details = screen.getByRole("dialog", {
-      name: "Fictional Linux Enterprise Server 15 SP7",
-    });
-    await expect.element(details).toBeVisible();
-    expect(
-      details
-        .getByRole("term")
-        .elements()
-        .map((element) => element.textContent),
-    ).toEqual(["Eligibility", "Lifecycle"]);
-  });
-
   test.each<[TrackDetail["status"]]>([["analysis"], ["affected"], ["fixed"]])(
-    "shows its delivery, its pipeline, and its badge on its second line while it has work, in %s",
+    "shows its delivery and its pipeline on its second line while it has work, in %s",
     async (status) => {
       showing([
         fictionalPackage({
@@ -696,13 +665,125 @@ describe("a track", () => {
         name: /^Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: /,
       });
       await expect.element(pipeline).toBeVisible();
-      await expect
-        .element(track.getByText("Submission due in 3 days"))
-        .toBeInTheDocument();
       // On the line below the reference.
       expect(boxOf(delivery).top).toBeGreaterThan(
         boxOf(track.getByText("SUSE:FLES-15-SP7:Update")).bottom,
       );
+    },
+  );
+
+  test("shows no deadline badge, its pipeline showing its deadline", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            submission_due_at: fromNow(-3 * DAY + HOUR),
+            milestones: {
+              triage: "done",
+              submission: "overdue",
+              um: "pending",
+              qa: "pending",
+            },
+          }),
+          // A Git track, whose current phase is null with due dates: a badge
+          // would name its release.
+          fictionalTrack({
+            id: "00000000-0000-0000-0000-0000000000b2",
+            workflow_type: "git",
+            reference: "fles-16.0",
+            release_due_at: fromNow(9 * DAY + HOUR),
+            qa_due_at: fromNow(9 * DAY + HOUR),
+            ...UNOBSERVED,
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const ibs = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    await expect
+      .element(
+        ibs.getByRole("button", {
+          name: /: Triage done; Submission overdue by 3 days, current;/,
+        }),
+      )
+      .toBeVisible();
+    const git = trackOf(screen, "fles-16.0");
+    await expect
+      .element(git.getByRole("button", { name: /^Phases of/ }))
+      .toBeVisible();
+    for (const track of [ibs, git]) {
+      // Neither the text of a badge nor its words.
+      expect(
+        track
+          .getByText(/^(?:Triage|Submission|UM|QA|Release) -?\d+d$/)
+          .elements(),
+      ).toHaveLength(0);
+      expect(
+        track.getByText(/(?:due in|overdue by) \d+ days?$/).elements(),
+      ).toHaveLength(0);
+    }
+  });
+
+  test.each<
+    [string, Partial<TrackDetail>, Partial<TicketDetail>, string | undefined]
+  >([
+    ["whose submission Sentinel observes: Pending", {}, {}, "Pending"],
+    [
+      "of Git, whose submission Sentinel does not observe: no Delivery Pending",
+      { workflow_type: "git", reference: "fles-16.0", ...UNOBSERVED },
+      {},
+      undefined,
+    ],
+    [
+      "of a Ticket without a CVE, whose submission Sentinel does not observe: no Delivery Pending",
+      UNOBSERVED,
+      { cve: null },
+      undefined,
+    ],
+    [
+      "of Git, once Sentinel observes its submission: Pending",
+      { workflow_type: "git", reference: "fles-16.0" },
+      {},
+      "Pending",
+    ],
+    [
+      "whose submission Sentinel does not observe, when it is not Pending: In progress",
+      {
+        workflow_type: "git",
+        reference: "fles-16.0",
+        delivery_status: "in_progress",
+        ...UNOBSERVED,
+      },
+      {},
+      "In progress",
+    ],
+  ])(
+    "shows the delivery of a track with work %s",
+    async (_, fields, ticket, status) => {
+      showing([fictionalPackage({ tracks: [fictionalTrack(fields)] })], ticket);
+
+      const { screen } = await renderTree();
+
+      const track = trackOf(
+        screen,
+        fields.reference ?? "SUSE:FLES-15-SP7:Update",
+      );
+      // The track has work and due dates, so its pipeline shows.
+      await expect
+        .element(track.getByRole("button", { name: /^Phases of/ }))
+        .toBeVisible();
+      if (status === undefined) {
+        expect(track.getByText("Delivery").elements()).toHaveLength(0);
+      } else {
+        await expect
+          .element(track.getByText("Delivery", { exact: true }))
+          .toBeVisible();
+        await expect
+          .element(track.getByText(status, { exact: true }))
+          .toBeVisible();
+      }
     },
   );
 
@@ -817,31 +898,66 @@ describe("a track", () => {
     ).toHaveLength(0);
   });
 
-  test("shows no pipeline and no badge on a track without due dates, whose Ticket has no SLA", async () => {
+  test("shows only what happened on a track without due dates, whose Ticket has no SLA: no pipeline, no Delivery Pending, and no release that is due", async () => {
     // A Ticket whose severity is None has no SLA (Sentinel
-    // docs/features/tickets/ticket-deadlines.md, Null Due Dates).
-    showing([fictionalPackage({ tracks: [fictionalTrack(NO_SLA)] })], {
-      severity: "none",
-      triage_due_at: null,
-      submission_due_at: null,
-      um_due_at: null,
-      qa_due_at: null,
-      release_due_at: null,
-      current_phase: null,
-      current_phase_milestone: null,
-    });
+    // docs/features/tickets/ticket-deadlines.md, Null Due Dates), so the
+    // milestones of its tracks do not show which phases Sentinel observes.
+    showing(
+      [
+        fictionalPackage({
+          tracks: [
+            fictionalTrack(NO_SLA),
+            fictionalTrack({
+              ...NO_SLA,
+              id: "00000000-0000-0000-0000-0000000000b2",
+              reference: "SUSE:FLES-15-SP6:Update",
+              delivery_status: "in_progress",
+              products: [
+                fictionalProduct({
+                  id: "00000000-0000-0000-0000-0000000000c9",
+                  product_name: "Fictional Linux Enterprise Server 15 SP6",
+                  product_cpe: "cpe:/o:example:fles:15:sp6",
+                  released_at: "2099-10-20T09:00:00Z",
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+      {
+        severity: "none",
+        triage_due_at: null,
+        submission_due_at: null,
+        um_due_at: null,
+        qa_due_at: null,
+        release_due_at: null,
+        current_phase: null,
+        current_phase_milestone: null,
+      },
+    );
 
     const { screen } = await renderTree();
 
-    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
-    // The delivery still shows: the track is Affected, with work.
+    const pending = trackOf(screen, "SUSE:FLES-15-SP7:Update");
     await expect
-      .element(track.getByText("Delivery", { exact: true }))
+      .element(pending.getByText("Affected", { exact: true }))
       .toBeVisible();
+    expect(pending.getByText("Delivery").elements()).toHaveLength(0);
     expect(
-      track.getByRole("button", { name: /^Phases of/ }).elements(),
+      pending.getByRole("button", { name: /^Phases of/ }).elements(),
     ).toHaveLength(0);
-    expect(track.getByText(/^Release/).elements()).toHaveLength(0);
+    expect(pending.getByText(/release/i).elements()).toHaveLength(0);
+    const delivered = trackOf(screen, "SUSE:FLES-15-SP6:Update");
+    await expect
+      .element(delivered.getByText("In progress", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(
+        delivered.getByText(
+          `Released ${formatDateTime("2099-10-20T09:00:00Z")}`,
+        ),
+      )
+      .toBeVisible();
   });
 
   test.each<[TicketDetail["status"]]>([["ignored"], ["duplicated"]])(
@@ -895,145 +1011,6 @@ describe("a track", () => {
         .toBeVisible();
     },
   );
-
-  test.each<[string, Partial<TrackDetail>, Partial<TicketDetail>, boolean]>([
-    [
-      "Affected with a Product that is eligible",
-      { status: "affected" },
-      {},
-      true,
-    ],
-    [
-      "Fixed with a Product that is eligible and not released, on a Ticket with a CVE",
-      { status: "fixed" },
-      {},
-      true,
-    ],
-    [
-      "Fixed on a Ticket without a CVE",
-      { status: "fixed" },
-      { cve: null },
-      false,
-    ],
-    [
-      "Fixed with its Product released",
-      {
-        status: "fixed",
-        products: [fictionalProduct({ released_at: "2099-10-20T09:00:00Z" })],
-      },
-      {},
-      false,
-    ],
-    [
-      "Affected without a Product that receives the fix",
-      {
-        status: "affected",
-        products: [fictionalProduct({ eligible: false })],
-      },
-      {},
-      false,
-    ],
-    [
-      "Affected on a Resolved Ticket",
-      { status: "affected" },
-      { status: "resolved" },
-      false,
-    ],
-    [
-      "in Analysis",
-      {
-        status: "analysis",
-        milestones: { triage: null, submission: null, um: null, qa: null },
-      },
-      {},
-      false,
-    ],
-  ])(
-    "shows the Release badge of a track whose current phase is null, %s: %s",
-    async (_, track, ticket, shown) => {
-      showing(
-        [
-          fictionalPackage({
-            tracks: [
-              fictionalTrack({
-                workflow_type: "git",
-                reference: "fles-16.0",
-                release_due_at: fromNow(9 * DAY + HOUR),
-                qa_due_at: fromNow(9 * DAY + HOUR),
-                ...UNOBSERVED,
-                ...track,
-              }),
-            ],
-          }),
-        ],
-        ticket,
-      );
-
-      const { screen } = await renderTree();
-
-      expect(
-        trackOf(screen, "fles-16.0")
-          .getByText("Release due in 9 days")
-          .elements(),
-      ).toHaveLength(shown ? 1 : 0);
-    },
-  );
-
-  test("counts a Ticket status that the pinned contract does not list as outside the manual zone and not Resolved, so that its tracks keep their work", async () => {
-    stubTicket({
-      ticket: () =>
-        jsonResponse(200, {
-          data: {
-            ...fictionalTicketDetail({
-              packages: [
-                fictionalPackage({
-                  tracks: [
-                    fictionalTrack({
-                      workflow_type: "git",
-                      reference: "fles-16.0",
-                      release_due_at: fromNow(9 * DAY + HOUR),
-                      qa_due_at: fromNow(9 * DAY + HOUR),
-                      ...UNOBSERVED,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            status: "under_review",
-          },
-        }),
-    });
-
-    const { screen } = await renderTree();
-
-    const track = trackOf(screen, "fles-16.0");
-    await expect
-      .element(track.getByText("Delivery", { exact: true }))
-      .toBeVisible();
-    await expect
-      .element(track.getByText("Release due in 9 days"))
-      .toBeInTheDocument();
-    await expect.element(track.getByText("Release not observed")).toBeVisible();
-  });
-
-  test("shows the badge of a current phase that the pinned contract does not list as received", async () => {
-    showingUnlisted([
-      {
-        ...fictionalPackage(),
-        tracks: [{ ...fictionalTrack(), current_phase: "review" }],
-      },
-    ]);
-
-    const { screen } = await renderTree();
-
-    await expect
-      .element(
-        trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("review", {
-          exact: true,
-        }),
-      )
-      .toBeVisible();
-  });
 });
 
 describe("a Product", () => {
@@ -1059,50 +1036,40 @@ describe("a Product", () => {
   });
 
   test.each<
-    [
-      string,
-      TrackDetail["workflow_type"],
-      string,
-      Partial<TicketDetail>,
-      string,
-      string,
-    ]
+    [string, Partial<TrackDetail>, Partial<TicketDetail>, string, string]
   >([
     [
-      "an IBS track",
-      "ibs",
-      "SUSE:FLES-15-SP7:Update",
+      "a track whose QA Sentinel observes",
+      {},
       {},
       "Not released",
       "Not released",
     ],
     [
-      "a Git track, where Sentinel does not observe the release",
-      "git",
-      "fles-16.0",
+      "a Git track, whose QA Sentinel does not observe",
+      { workflow_type: "git", reference: "fles-16.0", ...UNOBSERVED },
       {},
       "Release not observed",
       "Not observed",
     ],
     [
-      "an IBS track of a Ticket without a CVE, where Sentinel does not observe the release",
-      "ibs",
-      "SUSE:FLES-15-SP7:Update",
+      "a track of a Ticket without a CVE, whose QA Sentinel does not observe",
+      UNOBSERVED,
       { cve: null },
       "Release not observed",
       "Not observed",
     ],
+    [
+      "a Git track, once Sentinel observes its QA",
+      { workflow_type: "git", reference: "fles-16.0" },
+      {},
+      "Not released",
+      "Not released",
+    ],
   ])(
     "shows below %s that it is not released",
-    async (_, workflow, reference, ticket, line, details) => {
-      showing(
-        [
-          fictionalPackage({
-            tracks: [fictionalTrack({ workflow_type: workflow, reference })],
-          }),
-        ],
-        ticket,
-      );
+    async (_, track, ticket, line, details) => {
+      showing([fictionalPackage({ tracks: [fictionalTrack(track)] })], ticket);
       const { screen } = await renderTree();
       await expect
         .element(
@@ -1276,7 +1243,7 @@ describe("a Product", () => {
   test.each<[string, Partial<TrackDetail>, Partial<ProductDetail>, string[]]>([
     [
       "an automatic eligibility, no lifecycle data, and a Git release that Sentinel does not observe",
-      { workflow_type: "git", reference: "fles-16.0" },
+      { workflow_type: "git", reference: "fles-16.0", ...UNOBSERVED },
       { lifecycle_phase: null },
       ["Eligible · automatic", "Not available", "Not observed"],
     ],

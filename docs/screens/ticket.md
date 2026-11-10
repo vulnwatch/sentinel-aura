@@ -137,48 +137,48 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   Package Tree). Users show without a link (Navigation).
 - Its tracks are a list below the band, 16 px apart, each with a border line
   at its left:
-  - on its first line, its reference at weight 500; the label of its
-    workflow, IBS or Git; "Needs your action" when it waits for the
-    signed-in user (below); and at the end its affectedness, a value with
-    the dot of its tone (`docs/design-system.md`, Other Values): Analysis
-    `info`, Affected `warning`, Not affected and Fixed `success`, Won't fix
-    `neutral`;
+  - on its first line, its reference at weight 500; "Needs your action"
+    when it waits for the signed-in user (below); and at the end its
+    affectedness, a value with the dot of its tone (`docs/design-system.md`,
+    Other Values): Analysis `info`, Affected `warning`, Not affected and
+    Fixed `success`, Won't fix `neutral`;
   - on its second line, "Delivery" in `fg-muted` and the delivery status,
     Pending `neutral`, In progress `info`, Released `success`, where
-    `delivery_relevant` is true and the track has work or its status is not
-    Pending (Sentinel `docs/features/packages/package-model.md`, Delivery
-    Relevance Indicator); the pipeline of its phases, when it has work and
-    due dates (`docs/design-system.md`, Track Milestones), named such as
-    "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: …", whose Phases
-    holds no more than the design system states; and its deadline badge, on
-    its fields, by `docs/behaviors.md` (Deadlines), the Release badge of a
-    current phase of `null` only while its Ticket is not Resolved and the
-    track is not resolution-complete. A track has work when it is actionable
-    and in Analysis, or Affected or Fixed with a Product that is actionable
-    and eligible, on a Ticket that is neither Ignored nor Duplicated: in
-    those statuses Sentinel applies no SLA and observes neither delivery nor
-    release (Sentinel `docs/features/tickets/ticket-deadlines.md`, Null Due
-    Dates; Sentinel `docs/features/packages/package-model.md`, Continued
-    Updates);
-    a track without work, Not affected and Won't fix included, shows no
+    `delivery_relevant` is true (Sentinel
+    `docs/features/packages/package-model.md`, Delivery Relevance Indicator)
+    and its status is not Pending, or the track has work and Sentinel
+    observes its submission (below); and the pipeline of its phases, when
+    it has work and due dates (`docs/design-system.md`, Track Milestones),
+    named such as "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: …",
+    whose Phases holds no more than the design system states. The pipeline
+    shows the deadline of the track, which has no badge (`docs/behaviors.md`,
+    Deadlines). A track has work when it is actionable and in Analysis, or
+    Affected or Fixed with a Product that is actionable and eligible; a
+    track without work, Not affected and Won't fix included, shows no
     pipeline and no Delivery Pending, and a Ticket without due dates shows
     no pipeline.
+  - Sentinel observes a phase of a track with due dates whose milestone is
+    not `null`, and not, for example, the submission, the UM, and the QA of
+    a Git track or of a track of a Ticket without a CVE; the completion of
+    the submission is the delivery of the track, and that of the QA the
+    release of its Products (Sentinel
+    `docs/features/tickets/ticket-deadlines.md`, Track Milestones;
+    Observability of Later Phases; Completion Evidence). A track without
+    due dates, such as one of an Ignored or Duplicated Ticket, whose
+    delivery and release Sentinel does not observe (same document, Null Due
+    Dates; Sentinel `docs/features/packages/package-model.md`, Continued
+    Updates), does not show which phases Sentinel observes, so it shows
+    neither Delivery Pending nor a release that is due.
 - Its Products are a list below the track, with a border line at their left,
   each on a line that wraps: its name, which wraps, in `fg-muted` when it is
   not eligible; `user-pen` when its eligibility is set by hand, read as ",
   eligibility set by hand"; the label Not eligible; and at the end its
   release, in `text-13`, `fg-muted`: "Released" with the date and time of
   `released_at` on a released Product, and on an actionable, eligible
-  Product of a track in Analysis, Affected, or Fixed, on a Ticket that is
-  neither Ignored nor Duplicated, "Not released", or
-  "Release not observed" below a Git track and on a Ticket without a CVE,
-  where Sentinel never sets the release (Sentinel
-  `docs/features/packages/package-model.md`, Workflow-Agnostic vs
-  Workflow-Specific; Sentinel
-  `docs/features/packages/ibs-product-release-detection.md`, Scope). A
-  Product that does not take part or is not eligible receives no release,
-  and a track of a workflow that the pinned contract does not list shows no
-  release that is not observed.
+  Product of a track in Analysis, Affected, or Fixed, "Not released" where
+  Sentinel observes the QA of the track, or "Release not observed" where it
+  does not. A Product that does not take part or is not eligible, or whose
+  track has no due dates, shows no release unless it is released.
 - The name of a Product opens its details (`docs/design-system.md`, Menus,
   Popovers, and Tooltips): its CPE in monospace below the name, then
   Eligibility, "Eligible" or "Not eligible", followed by " · automatic", or
@@ -272,20 +272,18 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
   Transitions; Duplicate Handling; Confidential Tickets (Identifier
   Disclosure Boundary; Coordinated Release Date); Response Schemas (Shared
-  Sub-Schemas; TicketDetail); Get Ticket; List Tickets (Duplicate filter);
-  Gate: Analyzed → Resolved
+  Sub-Schemas; TicketDetail); Get Ticket; List Tickets (Duplicate filter)
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Null Due
-  Dates); Track Milestones; Ticket Current Phase
+  Dates); Track Milestones (Observability of Later Phases; Completion
+  Evidence); Ticket Current Phase
 - Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
-  Dimensions; Exclusion and Actionability; Workflow-Agnostic vs
-  Workflow-Specific; List Ticket Packages
+  Dimensions; Exclusion and Actionability; List Ticket Packages
 - Sentinel `docs/features/packages/package-maintainership.md` — Maintainers
   in the Package Tree; Workbench Dependency
 - Sentinel `docs/features/packages/maintainer.md` — Classification; Package
   Details for Ticket
 - Sentinel `docs/features/packages/product-catalog.md` — Product Lifecycle
   Phases
-- Sentinel `docs/features/packages/ibs-product-release-detection.md` — Scope
 - Sentinel `docs/features/tickets/ticket-priority.md` — Automatic Priority
   Basis; Manual Override
 - Sentinel `docs/features/tickets/cve-tracking.md` — Get CVE; External

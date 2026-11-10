@@ -25,18 +25,13 @@ import type {
   SSVCTechnicalImpact,
   TicketDetail,
   TrackDetail,
-  WorkflowTypeValue,
 } from "../api/generated/model";
 import { useListTickets } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
 import { ClampedText } from "../components/clamped-text";
 import { ConfidentialMark } from "../components/confidential-mark";
 import { CalendarDate, DateTime } from "../components/date-time";
-import {
-  deadline,
-  DeadlineBadge,
-  dueState,
-} from "../components/deadline-badge";
+import { dueState } from "../components/deadline-badge";
 import {
   DescriptionGroup,
   DescriptionItem,
@@ -650,14 +645,6 @@ const DELIVERY = new Map<string, MarkedName>(
   } satisfies Record<DeliveryStatusValue, MarkedName>),
 );
 
-// The workflow of a track, the text of its label.
-const WORKFLOWS = new Map<string, string>(
-  Object.entries({ ibs: "IBS", git: "Git" } satisfies Record<
-    WorkflowTypeValue,
-    string
-  >),
-);
-
 // The lifecycle phase of a Product (Sentinel
 // docs/features/packages/product-catalog.md, Product Lifecycle Phases).
 const LIFECYCLE_PHASES = new Map<string, string>(
@@ -686,19 +673,9 @@ const PRODUCT_REASONS = new Map<string, string>(
 // its Products shows.
 const EXPECTS_FIX = new Set<string>(["analysis", "affected", "fixed"]);
 
-// The statuses of the manual zone, Ignored and Duplicated, in which Sentinel
-// applies no SLA, observes neither delivery nor release, and gives no
-// maintainer work, so that no track waits for a fix (Sentinel
-// docs/features/tickets/ticket-deadlines.md, Null Due Dates; Sentinel
-// docs/features/packages/package-model.md, Continued Updates; Sentinel
-// docs/features/packages/maintainer.md, Ticket Status and Workflow
-// Boundaries).
-const MANUAL_ZONE = new Set<string>(["ignored", "duplicated"]);
-
-// Whether a track expects a fix: one of a Ticket outside the manual zone, in
-// Analysis, Affected, or Fixed.
-function expectsFix(track: TrackDetail, ticket: TicketDetail): boolean {
-  return !MANUAL_ZONE.has(ticket.status) && EXPECTS_FIX.has(track.status);
+// Whether a track expects a fix: in Analysis, Affected, or Fixed.
+function expectsFix(track: TrackDetail): boolean {
+  return EXPECTS_FIX.has(track.status);
 }
 
 // Whether a Product takes part and receives the fix: actionable and eligible.
@@ -706,31 +683,12 @@ function receivesFix(product: ProductDetail): boolean {
   return product.actionable && product.eligible;
 }
 
-// Whether Sentinel observes the release of the Products of a track: below an
-// IBS track of a Ticket with a CVE, and never below a Git track or on a
-// Ticket without a CVE, where it never sets the release (Sentinel
-// docs/features/packages/package-model.md, Workflow-Agnostic vs
-// Workflow-Specific; Sentinel
-// docs/features/packages/ibs-product-release-detection.md, Scope); undefined
-// for a workflow that the pinned contract does not list.
-function releaseObserved(
-  track: TrackDetail,
-  ticket: TicketDetail,
-): boolean | undefined {
-  if (track.workflow_type === "git") {
-    return false;
-  }
-  if (track.workflow_type === "ibs") {
-    return ticket.cve !== null;
-  }
-  return undefined;
-}
-
 // The release of a Product that its line and its details show: when it was
 // released, on every released Product; and, on a Product that receives the
-// fix under a track that expects one (expectsFix), that it is not released,
-// or that its release is not observed where Sentinel does not observe it;
-// otherwise none, as for a workflow that the pinned contract does not list.
+// fix under a track that expects one (expectsFix), that it is not released
+// where Sentinel observes the QA of the track, whose completion is the
+// release of its Products, or that its release is not observed (observes);
+// otherwise none, as on a track without due dates.
 type Release =
   | { kind: "released"; at: string }
   | { kind: "not-released" }
@@ -770,11 +728,10 @@ function ReleaseText({ release, notObserved }: ReleaseTextProps) {
 }
 
 // Whether a track has work: actionable and in Analysis, or Affected or Fixed
-// with a Product that is actionable and eligible, on a Ticket outside the
-// manual zone. A track without work, a hidden one included, shows no
-// pipeline and no "Delivery Pending".
-function hasWork(track: TrackDetail, ticket: TicketDetail): boolean {
-  if (!track.actionable || MANUAL_ZONE.has(ticket.status)) {
+// with a Product that is actionable and eligible. A track without work, a
+// hidden one included, shows no pipeline and no "Delivery Pending".
+function hasWork(track: TrackDetail): boolean {
+  if (!track.actionable) {
     return false;
   }
   if (track.status === "analysis") {
@@ -786,36 +743,30 @@ function hasWork(track: TrackDetail, ticket: TicketDetail): boolean {
   );
 }
 
-// Whether the Ticket has an SLA for the track: without one, every due date
-// and every milestone is null (Sentinel
+// Whether the Ticket has an SLA for the track: without one, as on an Ignored
+// or Duplicated Ticket, every due date and every milestone is null (Sentinel
 // docs/features/tickets/ticket-deadlines.md, Null Due Dates).
 function hasDueDates(track: TrackDetail): boolean {
   return PHASES.some(({ due }) => track[due] !== null);
 }
 
-// Whether the deadline badge of a track shows. With a current phase, the
-// badge follows docs/behaviors.md (Deadlines) on the fields of the track.
-// With a current phase of null, the Release badge shows only while the track
-// still has work on a Ticket that is not Resolved, as long as it is not
-// resolution-complete (Sentinel docs/features/tickets/tickets.md, Gate:
-// Analyzed → Resolved): Affected with a Product that receives the fix, or, on
-// a Ticket with a CVE, Fixed with such a Product that is not released.
-function showsBadge(track: TrackDetail, ticket: TicketDetail): boolean {
-  if (track.current_phase !== null) {
-    return true;
+// Whether Sentinel observes a phase of a track, as its milestones state it:
+// on a track with due dates, a milestone of null is a phase that Sentinel
+// does not observe for the track, such as the submission, the UM, and the QA
+// of a Git track or of a track of a Ticket without a CVE, and every other
+// value one that it observes (Sentinel
+// docs/features/tickets/ticket-deadlines.md, Track Milestones; Observability
+// of Later Phases); undefined on a track without due dates, whose milestones
+// are all null because no SLA applies, so that it shows neither "Delivery
+// Pending" nor a release that is due.
+function observes(
+  track: TrackDetail,
+  phase: "submission" | "qa",
+): boolean | undefined {
+  if (!hasDueDates(track)) {
+    return undefined;
   }
-  if (ticket.status === "resolved") {
-    return false;
-  }
-  const receivers = track.products.filter(receivesFix);
-  if (track.status === "affected") {
-    return receivers.length > 0;
-  }
-  return (
-    track.status === "fixed" &&
-    ticket.cve !== null &&
-    receivers.some((product) => product.released_at === null)
-  );
+  return track.milestones[phase] !== null;
 }
 
 // The number of hidden records that "Show hidden" shows: every record that
@@ -929,8 +880,8 @@ interface ProductItemProps {
   trackHidden: boolean;
   // Whether the track that holds the Product expects a fix (expectsFix).
   fixExpected: boolean;
-  // Whether Sentinel observes the release of the Products of the track
-  // (releaseObserved).
+  // Whether Sentinel observes the QA of the track, the release of its
+  // Products (observes).
   releaseObserved: boolean | undefined;
 }
 
@@ -986,7 +937,6 @@ function ProductItem({
 }
 
 interface TrackItemProps {
-  ticket: TicketDetail;
   packageName: string;
   track: TrackDetail;
   // Whether the package that holds the track is hidden.
@@ -999,19 +949,20 @@ interface TrackItemProps {
 
 // A track of a package, on two lines, with a border line at its left, or,
 // when it waits for the signed-in user, a bar of 3 px in link:
-// - its reference at weight 500, the label of its workflow, IBS or Git,
-//   "Needs your action" when it waits for the user, the label of its own
-//   hidden state, and at the end its affectedness;
+// - its reference at weight 500, "Needs your action" when it waits for the
+//   user, the label of its own hidden state, and at the end its
+//   affectedness;
 // - "Delivery" and its status, where it is relevant (Sentinel
 //   docs/features/packages/package-model.md, Delivery Relevance Indicator)
-//   and the track has work or its status is not Pending; the pipeline of its
-//   phases, when it has work and due dates; and its deadline badge
-//   (showsBadge);
+//   and its status is not Pending, or the track has work and Sentinel
+//   observes its submission, whose completion is its delivery (observes;
+//   Sentinel docs/features/tickets/ticket-deadlines.md, Completion
+//   Evidence); and the pipeline of its phases, when it has work and due
+//   dates, which shows the deadline of the track in place of a badge;
 // then its Products, as a list with a border line at its left. A hidden
 // track shows its hidden Products; another track only while "Show hidden" is
 // on.
 function TrackItem({
-  ticket,
   packageName,
   track,
   packageHidden,
@@ -1022,11 +973,12 @@ function TrackItem({
   const ref = useRef<HTMLLIElement>(null);
   useFocusHeadingOnRemoval(ref);
   const hidden = packageHidden || !track.actionable;
-  const work = hasWork(track, ticket);
+  const work = hasWork(track);
   const delivery =
-    track.delivery_relevant && (work || track.delivery_status !== "pending");
+    track.delivery_relevant &&
+    (track.delivery_status !== "pending" ||
+      (work && observes(track, "submission") === true));
   const pipeline = work && hasDueDates(track);
-  const badge = showsBadge(track, ticket) && deadline(track, now) !== undefined;
   const products = track.products.filter(
     (product) => showHidden || product.actionable,
   );
@@ -1038,9 +990,6 @@ function TrackItem({
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="font-medium wrap-anywhere">{track.reference}</span>
-          <Label>
-            {WORKFLOWS.get(track.workflow_type) ?? track.workflow_type}
-          </Label>
           {waitsForYou && <NeedsYourAction />}
           <HiddenLabels excluded={track.deleted_at !== null} />
         </span>
@@ -1048,7 +997,7 @@ function TrackItem({
           <MarkedValue value={track.status} known={AFFECTEDNESS} />
         </span>
       </div>
-      {(delivery || pipeline || badge) && (
+      {(delivery || pipeline) && (
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-14">
           {delivery && (
             <span className="inline-flex items-center gap-1.5">
@@ -1063,7 +1012,6 @@ function TrackItem({
               now={now}
             />
           )}
-          {badge && <DeadlineBadge ticket={track} now={now} />}
         </div>
       )}
       {products.length > 0 && (
@@ -1073,8 +1021,8 @@ function TrackItem({
               key={product.id}
               product={product}
               trackHidden={hidden}
-              fixExpected={expectsFix(track, ticket)}
-              releaseObserved={releaseObserved(track, ticket)}
+              fixExpected={expectsFix(track)}
+              releaseObserved={observes(track, "qa")}
             />
           ))}
         </ul>
@@ -1097,7 +1045,6 @@ function NeedsYourAction() {
 }
 
 interface PackageGroupProps {
-  ticket: TicketDetail;
   ticketPackage: PackageDetail;
   // The keys of the tracks that wait for the signed-in user (trackKey).
   waiting: ReadonlySet<string>;
@@ -1113,7 +1060,6 @@ interface PackageGroupProps {
 // apart. A hidden package shows its hidden tracks; another package only
 // while "Show hidden" is on.
 function PackageGroup({
-  ticket,
   ticketPackage,
   waiting,
   showHidden,
@@ -1144,7 +1090,6 @@ function PackageGroup({
           {tracks.map((track) => (
             <TrackItem
               key={track.id}
-              ticket={ticket}
               packageName={ticketPackage.package_name}
               track={track}
               packageHidden={hidden}
@@ -1279,7 +1224,6 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
             {packages.map((ticketPackage) => (
               <PackageGroup
                 key={ticketPackage.id}
-                ticket={ticket}
                 ticketPackage={ticketPackage}
                 waiting={waiting}
                 showHidden={showHidden}
