@@ -85,9 +85,10 @@ side column; in one column, the details above the CVE.
 `docs/features/tickets/tickets.md`, CVEDetail):
 
 - Its heading is the CVE ID. While the CVE is rejected, the label "Rejected"
-  follows it (`docs/design-system.md`, Labels): Sentinel ignores by itself
-  only a New Ticket whose CVE is rejected, and leaves every other Ticket to the
-  analyst (Sentinel `docs/features/tickets/tickets.md`, Status Transitions). A
+  follows it (`docs/design-system.md`, Labels): of the Tickets whose CVE is
+  rejected, Sentinel ignores by itself only a New one, and leaves every other
+  to the analyst (Sentinel `docs/features/tickets/tickets.md`, Status
+  Transitions). A
   state that the pinned contract does not list shows as received in the
   label.
 - Next to the heading, "SUSE CVE page", a link to the public CVE page of SUSE,
