@@ -155,9 +155,11 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     current phase of `null` only while its Ticket is not Resolved and the
     track is not resolution-complete. A track has work when it is actionable
     and in Analysis, or Affected or Fixed with a Product that is actionable
-    and eligible, on a Ticket that is neither Ignored nor Duplicated, where
-    Sentinel applies no SLA and observes neither delivery nor release
-    (Sentinel `docs/features/packages/package-model.md`, Continued Updates);
+    and eligible, on a Ticket that is neither Ignored nor Duplicated: in
+    those statuses Sentinel applies no SLA and observes neither delivery nor
+    release (Sentinel `docs/features/tickets/ticket-deadlines.md`, Null Due
+    Dates; Sentinel `docs/features/packages/package-model.md`, Continued
+    Updates);
     a track without work, Not affected and Won't fix included, shows no
     pipeline and no Delivery Pending, and a Ticket without due dates shows
     no pipeline.
