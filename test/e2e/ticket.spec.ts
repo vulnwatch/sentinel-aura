@@ -379,8 +379,8 @@ test.describe("for an analyst", () => {
     await expect(packages.getByText("SUSE:FLES-15-SP5:Update")).toBeVisible();
     await expect(packages.getByText("SUSE:FLES-15-SP3:Update")).toHaveCount(0);
     await expect(packages.getByText("SUSE:FLES-15-SP4:Update")).toHaveCount(0);
-    // The SP5 track is Affected without a Product that is eligible, so it
-    // has no work: no pipeline and no Delivery Pending.
+    // The SP5 track is Affected without a Product that is both actionable and
+    // eligible, so it has no work: no pipeline and no Delivery Pending.
     await expect(
       packages.getByText("Not eligible", { exact: true }),
     ).toBeVisible();
@@ -401,6 +401,7 @@ test.describe("for an analyst", () => {
         })
         .getByRole("definition"),
     ).toHaveText(["Not eligible · set by hand", "Extended support"]);
+    await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(ltss).toBeFocused();
 

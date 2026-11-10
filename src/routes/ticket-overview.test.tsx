@@ -1065,6 +1065,9 @@ describe("a track", () => {
         ],
         {
           status,
+          // An Ignored Ticket always carries its reason (Sentinel
+          // docs/features/tickets/tickets.md, Ignore Reason).
+          ignore_reason: status === "ignored" ? "other" : null,
           triage_due_at: null,
           submission_due_at: null,
           um_due_at: null,

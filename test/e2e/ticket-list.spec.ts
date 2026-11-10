@@ -256,9 +256,10 @@ test.describe("for an analyst", () => {
     // Among the P3 Tickets, SNTL-13, whose override P3 lies below its
     // automatic P1 (Priorities) and which is past its UM due date, and
     // SNTL-27, past its QA due date (Aged Tickets), before SNTL-21, whose
-    // triage due date is still ahead, and SNTL-30, whose current phase is
-    // null (Packages, Tracks, and Maintainers); then SNTL-29, P4 for its
-    // medium severity (Priorities).
+    // triage due date is still ahead, and SNTL-30, whose current due date is
+    // its later release due date, as its current phase is null (Packages,
+    // Tracks, and Maintainers); then SNTL-29, P4 for its medium severity
+    // (Priorities).
     await expect(identifiers(page)).toHaveText([
       "SNTL-12",
       "SNTL-18",
