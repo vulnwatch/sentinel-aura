@@ -979,6 +979,43 @@ describe("a track", () => {
     },
   );
 
+  test("counts a Ticket status that the pinned contract does not list as outside the manual zone and not Resolved, so that its tracks keep their work", async () => {
+    stubTicket({
+      ticket: () =>
+        jsonResponse(200, {
+          data: {
+            ...fictionalTicketDetail({
+              packages: [
+                fictionalPackage({
+                  tracks: [
+                    fictionalTrack({
+                      workflow_type: "git",
+                      reference: "fles-16.0",
+                      release_due_at: fromNow(9 * DAY + HOUR),
+                      qa_due_at: fromNow(9 * DAY + HOUR),
+                      ...UNOBSERVED,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            status: "under_review",
+          },
+        }),
+    });
+
+    const { screen } = await renderTree();
+
+    const track = trackOf(screen, "fles-16.0");
+    await expect
+      .element(track.getByText("Delivery", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(track.getByText("Release due in 9 days"))
+      .toBeInTheDocument();
+    await expect.element(track.getByText("Release not observed")).toBeVisible();
+  });
+
   test("shows the badge of a current phase that the pinned contract does not list as received", async () => {
     showingUnlisted([
       {
@@ -1725,22 +1762,28 @@ describe("the tracks that wait for the signed-in user", () => {
     expect(screen.getByText(/couldn't be shown/).elements()).toHaveLength(0);
   });
 
-  test("stay marked, saying that they couldn't be updated, when a later read of them fails", async () => {
+  test("stay marked, saying that they couldn't be updated, when a later read of them fails, and marked as being updated while Try again reads them", async () => {
     let fails = false;
+    const retried = later();
+    let retrying = false;
     showing(
       [fictionalPackage()],
       {},
       {
         user: MAINTAINER,
-        yourWork: () =>
-          fails
+        yourWork: () => {
+          if (retrying) {
+            return retried.promise;
+          }
+          return fails
             ? errorResponse(503, "SERVICE_UNAVAILABLE")
             : ticketWorkResponse([
                 {
                   packageName: "fictional-openssl",
                   reference: "SUSE:FLES-15-SP7:Update",
                 },
-              ]),
+              ]);
+        },
       },
     );
     const { screen } = await renderTree();
@@ -1757,6 +1800,23 @@ describe("the tracks that wait for the signed-in user", () => {
       )
       .toBeVisible();
     await expect.element(screen.getByText("Needs your action")).toBeVisible();
+    retrying = true;
+
+    await screen.getByRole("button", { name: "Try again" }).click();
+
+    await expect
+      .element(
+        packagesPart(screen).getByRole("progressbar", { name: "Updating" }),
+      )
+      .toBeInTheDocument();
+    await expect.element(screen.getByText("Needs your action")).toBeVisible();
+    retried.resolve(ticketWorkResponse());
+    await expect
+      .poll(() => screen.getByText("Needs your action").elements().length)
+      .toBe(0);
+    expect(
+      packagesPart(screen).getByRole("progressbar").elements(),
+    ).toHaveLength(0);
   });
 
   test("mark nothing once the user no longer maintains a package that is not excluded, and are no longer read", async () => {
