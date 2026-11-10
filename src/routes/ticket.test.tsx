@@ -622,7 +622,7 @@ describe("the details", () => {
     expect(valueOf(screen, "Assignee").querySelector("svg")).not.toBeNull();
   });
 
-  test("show the name of the assignee whole, wrapping where it is longer than its place", async () => {
+  test("cut a name of the assignee longer than its place with an ellipsis, on one line, its labels showing and its text whole", async () => {
     showing(
       fictionalTicketDetail({
         assignee: {
@@ -640,10 +640,20 @@ describe("the details", () => {
       "Alexandra Konstantina Papadopoulou-Fictional",
     );
     await expect.element(name).toBeVisible();
-    expect(name.element().scrollWidth).toBeLessThanOrEqual(
+    expect(name.element().scrollWidth).toBeGreaterThan(
       name.element().clientWidth,
     );
-    expect(boxOf(name).height).toBeGreaterThan(20);
+    expect(boxOf(name).height).toBe(20);
+    const label = region(screen, "Details").getByText("Inactive", {
+      exact: true,
+    });
+    await expect.element(label).toBeVisible();
+    expect(boxOf(label).right).toBeLessThanOrEqual(
+      boxOf(region(screen, "Details")).right,
+    );
+    expect(valueOf(screen, "Assignee").textContent).toBe(
+      "Alexandra Konstantina Papadopoulou-FictionalInactive",
+    );
   });
 
   test("show Unassigned for a Ticket without an assignee", async () => {

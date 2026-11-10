@@ -905,5 +905,14 @@ complete profile and its manager, and the signed-in user alike: `id`,
 
 ## Open Decisions
 
-No decision is open. A decision that is not taken yet is listed here, with who
-takes it, and every design that depends on it waits for it.
+A decision that is not taken yet is listed here, with who takes it, and every
+design that depends on it waits for it.
+
+- **The link to a user.** A user links to their screen, User
+  (`docs/screen-map.md`, Areas and Screens; Links Between Areas), which the UI
+  does not have yet. Until it has it, the link to the user and the user card
+  (Representation of a User) do not take effect: a user shows in the full,
+  the compact, or the name form without a link and without a card, and the
+  compact form names the user in its tooltip (`docs/design-system.md`,
+  Representation of a User). The change that builds User adds the link and
+  the card wherever a user shows, and this entry is then removed.

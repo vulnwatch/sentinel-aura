@@ -630,15 +630,18 @@ Sidebar).
   the main action of the screen at its end. It wraps when the width runs
   short.
 - Running text, such as a CVE description, is at most 720 px wide. A word or
-  an address longer than its place, such as a URL, breaks where it must.
-  A text is cut to its place, with an ellipsis, only in a table cell, in a
+  an address longer than its place, such as a URL, breaks where it must. A
+  text is cut to its place, with an ellipsis, only in a table cell, in a
   user's name (Tables; Representation of a User), and in the description of a
   record on its detail screen, such as that of a CVE, where a screen document
   states it: the description shows its first four lines, the last ending with
-  an ellipsis, and below them Show more, a button in `link`, `text-14`,
-  weight 500, which shows the text whole and becomes Show less. Assistive
-  technologies read the description whole, and Show more states whether it
-  is expanded.
+  an ellipsis, and below them Show more, a button in `link`, `text-14`, weight
+  500, which shows the text whole and becomes Show less. Assistive
+  technologies read the description whole, and Show more states whether it is
+  expanded. Such a description keeps its line breaks, and a run of spaces
+  shows as one; it shows as written, as plain text, Markdown included, since
+  the UI interprets no text of the API (`docs/behaviors.md`, Links to Other
+  Sites, No address in a text; `docs/conventions.md`, No Raw HTML Injection).
 - In every layout, the order of the page, which the keyboard and assistive
   technologies follow, is the order on the screen: no layout moves a part to
   another place with CSS alone (`docs/behaviors.md`, Accessibility; WCAG 2.2,
@@ -1150,14 +1153,19 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Detail Screens
 
-- The heading row holds the identifier of the record as the level-one
-  heading, followed on the same line by its main values, such as the status,
-  severity, and priority of a Ticket, and ends with the screen's actions.
-  Several actions are one menu, Actions, a secondary button that opens them
-  as a menu (Buttons and Links; Menus, Popovers, and Tooltips), shown to a
-  user who can take at least one of them (`docs/screen-map.md`, Roles); an
-  action that changes one field of the record's description list is the
-  pencil of that field instead (below).
+- The heading row holds the identifier of the record as the level-one heading,
+  followed on the same line by its main values, such as the status, severity,
+  and priority of a Ticket, and ends with the screen's actions. The main
+  values follow the identifier 16 px apart, the rows 8 px apart where the
+  heading row wraps. No column header names them there, so each is named for
+  assistive technologies by a term that does not show, such as Severity, and a
+  value that is absent shows the word that the screen document gives it, such
+  as "Severity not set", rather than a dash (`docs/behaviors.md`, Absent
+  Values). Several actions are one menu, Actions, a secondary button that
+  opens them as a menu (Buttons and Links; Menus, Popovers, and Tooltips),
+  shown to a user who can take at least one of them (`docs/screen-map.md`,
+  Roles); an action that changes one field of the record's description list is
+  the pencil of that field instead (below).
 - A screen document can show the parts of a long record one at a time, as
   tabs at paths under the path of the screen (`docs/screen-map.md`, Areas and
   Screens). The tabs follow the heading row, 12 px below it, in a row with a
@@ -1176,9 +1184,7 @@ states it, such as that of a Ticket; the other audit logs are tables
 - The fields of the record show as a description list: each term on the line
   of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px before
   the value in `text-14`, `fg`, fields 8 px apart; where the list is narrower
-  than 280 px, each term stands above its value. A user in a value wraps their
-  name instead of ending with an ellipsis, as the record's screen may show it
-  nowhere else whole (Representation of a User). A group of fields under one
+  than 280 px, each term stands above its value. A group of fields under one
   term, such as the deadlines of a Ticket, has its term on a line of its own,
   then its fields 4 px apart, their terms in the style of the values, indented
   by 12 px in the column of the terms, or above their values, indented the
@@ -1448,9 +1454,9 @@ where the labels show, a group of users, and the user card.
   where it follows the name. An inactive user's name is in `fg-muted`, and
   its avatar is gray (Avatar). Where the place is too narrow, only the name,
   with the username that follows it, ends with an ellipsis, unless a table,
-  the account menu, the user card, the explanation of a priority, or the
-  description list of a detail screen wraps it (Tables; Account Menu; User
-  card; Priority, Explanation; Detail Screens); the labels always show.
+  the account menu, the user card, or the explanation of a priority wraps it
+  (Tables; Account Menu; User card; Priority, Explanation); the labels always
+  show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
 - **Group of users:** the users of a group, such as the participants of a

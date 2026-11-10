@@ -284,8 +284,7 @@ interface DetailsProps {
 }
 
 // The details of the Ticket, read-only, as a description list
-// (docs/design-system.md, Detail Screens): the assignee in the full form,
-// whose name wraps, since nothing else on the screen shows it whole, or
+// (docs/design-system.md, Detail Screens): the assignee in the full form, or
 // "Unassigned"; the Coordinated Release Date while the Ticket is
 // confidential, as an absent value without a date, and while it has one,
 // also after it became non-confidential (Sentinel
@@ -293,7 +292,8 @@ interface DetailsProps {
 // deadlines; the original of a duplicate, which is only an identifier, or the
 // duplicates of any other Ticket; the creation; and the last change, as
 // "Last modified", as the Ticket list names it. Users show without a link
-// until Users links them (docs/behaviors.md, Representation of a User).
+// and a card while the UI has no screen User (docs/behaviors.md, Open
+// Decisions).
 function Details({ ticket, now, duplicates }: DetailsProps) {
   return (
     <SideSection id={DETAILS_ANCHOR} heading="Details">
@@ -302,7 +302,7 @@ function Details({ ticket, now, duplicates }: DetailsProps) {
           {ticket.assignee === null ? (
             <AbsentValue name="Unassigned" />
           ) : (
-            <User user={ticket.assignee} wrap />
+            <User user={ticket.assignee} />
           )}
         </DescriptionItem>
         {(ticket.is_confidential || ticket.coordinated_release_at !== null) && (

@@ -11,9 +11,11 @@ interface ClampedTextProps {
 // lines, the last ending with an ellipsis, when it is longer, with Show more
 // below it, a button in link, text-14, weight 500, that shows the text whole
 // and becomes Show less (docs/design-system.md, Main Content). The text is
-// running text, at most 720 px wide. It is cut on the screen only, so
-// assistive technologies read it whole, and the button states whether the
-// text is expanded. Whether the text is longer than four lines follows its
+// running text, at most 720 px wide, which keeps its line breaks, shows a
+// run of spaces as one, and breaks a word longer than its place; it shows as
+// written, as plain text. It is cut on the screen only, so assistive
+// technologies read it whole, and the button states whether the text is
+// expanded. Whether the text is longer than four lines follows its
 // width, as the window and the text size change, and is measured again for
 // another text, which starts cut.
 export function ClampedText({ children }: ClampedTextProps) {

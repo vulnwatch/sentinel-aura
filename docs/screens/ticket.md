@@ -45,7 +45,8 @@ The screen offers no action, so it is the same for every user.
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
   would lead to this screen (`docs/screen-map.md`, Links Between Areas). Users
-  show without a link to their screen.
+  show without a link to their screen and without a card while the UI does
+  not have it (`docs/behaviors.md`, Open Decisions).
 
 ## Content
 
@@ -60,16 +61,14 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
 - The identifier, the level-one heading. For a confidential Ticket, `lock` and
   "Confidential" 4 px after it (`docs/design-system.md`, Confidential
   Tickets); assistive technologies read the word.
-- The main values, 16 px apart, each named for assistive technologies: the
-  CVE ID in `fg-muted`, at the size of the heading, for a Ticket with a CVE;
-  the status; the severity, or "Severity not set" without one; the effective
-  priority, whose box is the button of its explanation
-  (`docs/design-system.md`, Priority, Explanation), or "Not yet
+- The main values, named CVE, Status, Severity, Priority, and Deadline for
+  assistive technologies: the CVE ID in `fg-muted`, at the size of the
+  heading, for a Ticket with a CVE; the status; the severity, or "Severity not
+  set" without one; the effective priority, whose box is the button of its
+  explanation (`docs/design-system.md`, Priority, Explanation), or "Not yet
   prioritizable" without one, which also names the button; and the deadline
   badge, when the Ticket has one (`docs/behaviors.md`, Deadlines), which
-  compares the dates with the instant at which the Ticket arrived. No column
-  header names the severity and the priority here, so their absence is named
-  precisely, in `fg-muted` (`docs/behaviors.md`, Absent Values).
+  compares the dates with the instant at which the Ticket arrived.
 - The row wraps when the width runs short.
 
 **Tabs**, named "Ticket" for assistive technologies: Overview.
@@ -94,8 +93,7 @@ details above the CVE.
   Composed addresses).
 - The title, when Sentinel returns one, and below it the description, cut to
   its first four lines with Show more (`docs/design-system.md`, Main Content),
-  or "No description." in `fg-muted`. The description keeps its line breaks
-  and shows as written, Markdown included, with its runs of spaces collapsed.
+  or "No description." in `fg-muted`.
 - On one line that wraps, each value after its term in `fg-muted`: Published
   and Modified, each a date and time; Rejected, the date and time of the
   rejection, while the CVE is rejected; CWE, the identifiers of the
@@ -121,7 +119,7 @@ details above the CVE.
 
 | Term | Value |
 |---|---|
-| Assignee | The assignee in the full form at the small size, the name wrapping (`docs/design-system.md`, Detail Screens), or "Unassigned" |
+| Assignee | The assignee in the full form at the small size, or "Unassigned" |
 | Coordinated Release Date | While the Ticket is confidential, or while it has a Coordinated Release Date, also after it became non-confidential: the date and time, or an absent value (Sentinel `docs/features/tickets/tickets.md`, Coordinated Release Date) |
 | Deadlines | A line per phase, Triage, Submission, UM, and QA, with its due date and time; the QA line reads "QA, release" while the QA due date is the final release deadline, and a line Release follows it otherwise. The phases before the current phase are in `fg-muted`; the current phase is at weight 600, with the state of its milestone below its date, as `docs/behaviors.md` (Deadlines) words it; the later phases are plain. When the current phase is done, every phase is in `fg-muted`; when it is `null` with due dates, Triage is in `fg-muted` and the other phases are plain; a current phase that the pinned contract does not list marks no phase. Without due dates, an absent value (Sentinel `docs/features/tickets/ticket-deadlines.md`, Null Due Dates; Ticket Current Phase) |
 | Original | For a duplicate, `duplicate_of_ticket_id`, a link to its screen, without the lock, which the identifier does not carry (Sentinel `docs/features/tickets/tickets.md`, Identifier Disclosure Boundary) |
