@@ -224,21 +224,22 @@ Assessments for a CVE; Shared Assessment Item). A severity shows with its
 mark (`docs/design-system.md`, Severity), followed by its score with one
 decimal, such as "High 8.1"; a CVSS version shows with a "v", such as
 "v3.1", so that it is not read as a score, and a version that the pinned
-contract does not list as received, without the "v" (`docs/behaviors.md`,
-Unknown Values).
+contract does not list shows as received, without the "v"
+(`docs/behaviors.md`, Unknown Values).
 
-- What the assessments resolve, which Sentinel resolves apart (same
-  document, Core Distinctions), on lines whose term in `fg-muted` precedes
-  the value. When the SUSE assessment of the default CVSS version sets both
-  the severity and the eligibility score, as the source `suse` of
-  `eligibility` states, one line, such as "Severity High 8.1 from SUSE CVSS
-  v3.1, which also sets the eligibility score of the Products". Otherwise
-  two: Severity, from `severity`, such as "Critical 9.3 from NVD CVSS v4.0",
-  and Eligibility score, which with the source `fallback` reads such as
-  "10.0, the fallback without a SUSE CVSS v3.1 assessment", with the version
-  of `default_cvss_version` (same document, Severity Resolution Cascade;
-  Eligibility Score Resolution); a source that the pinned contract does not
-  list follows the score as received, such as "7.0, fictional_source".
+- What the assessments resolve, which Sentinel resolves apart (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Core Distinctions), on lines whose
+  term in `fg-muted` precedes the value. When the SUSE assessment of the
+  default CVSS version sets both the severity and the eligibility score, as
+  the source `suse` of `eligibility` states, one line, such as "Severity
+  High 8.1 from SUSE CVSS v3.1, which also sets the eligibility score of the
+  Products". Otherwise two: Severity, from `severity`, such as "Critical
+  9.3 from NVD CVSS v4.0", and Eligibility score, which with the source
+  `fallback` reads such as "10.0, the fallback without a SUSE CVSS v3.1
+  assessment", with the version of `default_cvss_version` (same document,
+  Severity Resolution Cascade; Eligibility Score Resolution); a source that
+  the pinned contract does not list follows the score as received, such as
+  "7.0, fictional_source".
 - Below them, the table "CVSS assessments" (`docs/design-system.md`,
   Tables), in the order of the API, by version, then by provider (Sentinel
   `docs/features/tickets/cvss-scoring.md`, Version Precedence): Provider,
@@ -295,10 +296,9 @@ Unknown Values).
   while it is sent again, the marks that stay shown are marked as being
   updated (`docs/behaviors.md`, Where Errors Appear; Loading). The screen
   handles no error code specifically.
-- **Reflow.** At 320 CSS px the page does not scroll horizontally, the names
-  of the package tree wrap, and the table of the CVSS assessments, where it is
-  wider than its place, scrolls within its frame (`docs/behaviors.md`,
-  Accessibility, Reflow and text size).
+- **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
+  names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow
+  and text size).
 
 ## Cross-references
 

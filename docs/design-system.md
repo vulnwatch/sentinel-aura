@@ -1120,10 +1120,12 @@ keep the search, the filters, and the sorting.
   asks for confirmation (`docs/behaviors.md`, Confirmation).
 - The loading indicator, an error in place of the data, and an empty state
   show inside the frame, below the header row. A table within a part of a
-  detail screen follows the part instead (Detail Screens): the loading
-  indicator and an error show in place of the part, below its heading, and a
-  part without items shows its short line without the table (Loading; Errors
-  in Place of Content; `docs/behaviors.md`, Empty States).
+  detail screen whose rows come with the read of the part, without pages,
+  filters, or sorting of their own, follows the part instead (Detail
+  Screens): the loading indicator and an error show in place of the part,
+  below its heading, and a part without items shows its short line without
+  the table (Loading; Errors in Place of Content; `docs/behaviors.md`, Empty
+  States).
 - Rows have no colored marks other than those of their values.
 
 ### Timelines
