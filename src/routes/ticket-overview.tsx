@@ -2,26 +2,41 @@ import {
   createRoute,
   linkOptions,
   redirect,
+  useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { ClockAlert } from "lucide-react";
+import { ClockAlert, UserPen } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
+import { z } from "zod";
+import { useGetTicketPackageWork } from "../api/generated/maintainer-operations";
 import type {
   CVEDetail,
   CVEEPSSResponse,
   CVESSVCResponse,
   CurrentPhaseValue,
+  DeliveryStatusValue,
+  LifecyclePhaseValue,
+  PackageDetail,
+  PackageStatusValue,
+  ProductDetail,
+  ProductReasonValue,
   SSVCAutomatable,
   SSVCExploitation,
   SSVCTechnicalImpact,
   TicketDetail,
+  TrackDetail,
+  WorkflowTypeValue,
 } from "../api/generated/model";
 import { useListTickets } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
 import { ClampedText } from "../components/clamped-text";
 import { ConfidentialMark } from "../components/confidential-mark";
 import { CalendarDate, DateTime } from "../components/date-time";
-import { dueState } from "../components/deadline-badge";
+import {
+  deadline,
+  DeadlineBadge,
+  dueState,
+} from "../components/deadline-badge";
 import {
   DescriptionGroup,
   DescriptionItem,
@@ -29,21 +44,30 @@ import {
   GroupedItem,
 } from "../components/description-list";
 import { DetailColumns, Part, SideSection } from "../components/detail-screen";
+import { DetailsName } from "../components/details-popover";
 import { Label } from "../components/label";
 import { Link } from "../components/link";
-import { PartRead, type Read } from "../components/read-view";
+import { Maintainers } from "../components/maintainers";
+import { MarkedValue, type MarkedName } from "../components/marked-value";
+import { marksPlace, PartRead, type Read } from "../components/read-view";
+import { useFocusHeadingOnRemoval } from "../components/screen-heading";
+import { Switch } from "../components/switch";
+import { TrackMilestones } from "../components/track-milestones";
 import { User } from "../components/user";
 import { WebLink } from "../components/web-link";
 import { sameSearch } from "../search-params";
+import { useSignedInUser } from "../session-gate";
 import { ticketRoute, useShownTicket } from "./ticket";
 
 // Overview, the first tab of the Ticket screen (docs/screens/ticket.md): the
-// CVE of the Ticket in the main column, and its details in the side column,
-// in two columns where the main content is wide enough, and otherwise in one,
-// the details first (docs/design-system.md, Detail Screens).
+// CVE and the package tree of the Ticket in the main column, and its details
+// in the side column, in two columns where the main content is wide enough,
+// and otherwise in one, the details first (docs/design-system.md, Detail
+// Screens).
 
 // The anchors of the parts that the tab shows, which every Ticket has.
 const CVE_ANCHOR = "cve";
+const PACKAGES_ANCHOR = "packages";
 const DETAILS_ANCHOR = "details";
 
 // The public CVE page of SUSE, a composed address of another site, with its
@@ -594,6 +618,607 @@ function CvePart({ cve }: CvePartProps) {
 }
 
 // ----------------------------------------------------------------------------
+// Packages
+
+// The value of the search parameter hidden while the package tree shows its
+// hidden records.
+const HIDDEN_SHOWN = "shown";
+
+// The affectedness of a track, with the tone of its meaning: Analysis blue,
+// Affected orange, as warning, since red stays for lateness and errors, Not
+// affected and Fixed green, Won't fix gray (docs/design-system.md, Other
+// Values; Sentinel docs/features/packages/package-model.md, Axis 1:
+// Affectedness).
+const AFFECTEDNESS = new Map<string, MarkedName>(
+  Object.entries({
+    analysis: { name: "Analysis", tone: "info" },
+    affected: { name: "Affected", tone: "warning" },
+    not_affected: { name: "Not affected", tone: "success" },
+    fixed: { name: "Fixed", tone: "success" },
+    wont_fix: { name: "Won't fix", tone: "neutral" },
+  } satisfies Record<PackageStatusValue, MarkedName>),
+);
+
+// The delivery status of a track: Pending neutral, In progress blue,
+// Released green (same document, Axis 3: Delivery and Release Observation).
+const DELIVERY = new Map<string, MarkedName>(
+  Object.entries({
+    pending: { name: "Pending", tone: "neutral" },
+    in_progress: { name: "In progress", tone: "info" },
+    released: { name: "Released", tone: "success" },
+  } satisfies Record<DeliveryStatusValue, MarkedName>),
+);
+
+// The workflow of a track, the text of its label.
+const WORKFLOWS = new Map<string, string>(
+  Object.entries({ ibs: "IBS", git: "Git" } satisfies Record<
+    WorkflowTypeValue,
+    string
+  >),
+);
+
+// The lifecycle phase of a Product (Sentinel
+// docs/features/packages/product-catalog.md, Product Lifecycle Phases).
+const LIFECYCLE_PHASES = new Map<string, string>(
+  Object.entries({
+    pre_release: "Pre-release",
+    general_support: "General support",
+    extended_support: "Extended support",
+    reactive_support: "Reactive support",
+    eol: "EOL",
+  } satisfies Record<LifecyclePhaseValue, string>),
+);
+
+// Why a Product takes no part in the work on the Ticket, by the first
+// reason that applies (Sentinel docs/features/packages/package-model.md,
+// Derived Actionability).
+const PRODUCT_REASONS = new Map<string, string>(
+  Object.entries({
+    package_excluded: "No, its package is excluded",
+    track_excluded: "No, its track is excluded",
+    product_excluded: "No, it is excluded from this track",
+    eol: "No, it has reached its end of life",
+  } satisfies Record<ProductReasonValue, string>),
+);
+
+// The affectedness of a track that expects a fix, under which the release of
+// its Products shows.
+const EXPECTS_FIX = new Set<string>(["analysis", "affected", "fixed"]);
+
+// Whether a Product takes part and receives the fix: actionable and eligible.
+function receivesFix(product: ProductDetail): boolean {
+  return product.actionable && product.eligible;
+}
+
+// Whether a track has work: actionable and in Analysis, or Affected or Fixed
+// with a Product that is actionable and eligible. A track without work, a
+// hidden one included, shows no pipeline and no "Delivery Pending".
+function hasWork(track: TrackDetail): boolean {
+  if (!track.actionable) {
+    return false;
+  }
+  if (track.status === "analysis") {
+    return true;
+  }
+  return (
+    (track.status === "affected" || track.status === "fixed") &&
+    track.products.some(receivesFix)
+  );
+}
+
+// Whether the Ticket has an SLA for the track: without one, every due date
+// and every milestone is null (Sentinel
+// docs/features/tickets/ticket-deadlines.md, Null Due Dates).
+function hasDueDates(track: TrackDetail): boolean {
+  return PHASES.some(({ due }) => track[due] !== null);
+}
+
+// Whether the deadline badge of a track shows. With a current phase, the
+// badge follows docs/behaviors.md (Deadlines) on the fields of the track.
+// With a current phase of null, the Release badge shows only while the track
+// still has work on a Ticket that is not Resolved, as long as it is not
+// resolution-complete (Sentinel docs/features/tickets/tickets.md, Gate:
+// Analyzed → Resolved): Affected with a Product that receives the fix, or, on
+// a Ticket with a CVE, Fixed with such a Product that is not released.
+function showsBadge(track: TrackDetail, ticket: TicketDetail): boolean {
+  if (track.current_phase !== null) {
+    return true;
+  }
+  if (ticket.status === "resolved") {
+    return false;
+  }
+  const receivers = track.products.filter(receivesFix);
+  if (track.status === "affected") {
+    return receivers.length > 0;
+  }
+  return (
+    track.status === "fixed" &&
+    ticket.cve !== null &&
+    receivers.some((product) => product.released_at === null)
+  );
+}
+
+// The number of hidden records that "Show hidden" shows: every record that
+// is not actionable and whose parent shows, a hidden package or track
+// counting once with what it holds. A record is hidden exactly when it is not
+// actionable: excluded, directly or through its parent, at the end of its
+// life, or holding no record that is actionable (Sentinel
+// docs/features/packages/package-model.md, Derived Actionability).
+export function hiddenCount(packages: readonly PackageDetail[]): number {
+  let count = 0;
+  for (const ticketPackage of packages) {
+    if (!ticketPackage.actionable) {
+      count += 1;
+      continue;
+    }
+    for (const track of ticketPackage.tracks) {
+      count += track.actionable
+        ? track.products.filter((product) => !product.actionable).length
+        : 1;
+    }
+  }
+  return count;
+}
+
+// The key of a track of a package, by which the tracks that wait for the
+// user are matched: Sentinel keeps the reference unique within a package
+// (Sentinel docs/features/packages/package-model.md, TicketPackageTrack).
+function trackKey(packageName: string, reference: string): string {
+  return JSON.stringify([packageName, reference]);
+}
+
+interface HiddenLabelsProps {
+  // Whether its own marker excludes it.
+  excluded: boolean;
+  // Whether it has reached the end of its life.
+  eol?: boolean;
+}
+
+// The labels of a record whose own state hides it, such as Excluded, also
+// under a hidden parent; a record hidden only because of its parent or of
+// the records that it holds carries none (docs/design-system.md, Detail
+// Screens).
+function HiddenLabels({ excluded, eol = false }: HiddenLabelsProps) {
+  return (
+    <>
+      {excluded && <Label>Excluded</Label>}
+      {eol && <Label>EOL</Label>}
+    </>
+  );
+}
+
+// The text color of a record: fg-muted for a hidden record and everything it
+// holds, so that it reads apart from the records that count.
+function mutedIf(hidden: boolean): string {
+  return hidden ? "text-fg-muted" : "";
+}
+
+interface ProductDetailsProps {
+  product: ProductDetail;
+  track: TrackDetail;
+}
+
+// The details of a Product, as its popover shows them: its eligibility,
+// automatic or set by hand; its lifecycle phase, or "Not available" without
+// lifecycle data; its release; and, for a Product that takes no part, why.
+// Values that the pinned contract does not list show as received.
+function ProductDetails({ product, track }: ProductDetailsProps) {
+  let release: ReactNode = <AbsentValue />;
+  if (product.released_at !== null) {
+    release = (
+      <>
+        Released <DateTime value={product.released_at} />
+      </>
+    );
+  } else if (track.workflow_type === "ibs") {
+    release = "Not released";
+  } else if (track.workflow_type === "git") {
+    release = "Not observed";
+  }
+  return (
+    <DescriptionList>
+      <DescriptionItem term="Eligibility">
+        {product.eligible ? "Eligible" : "Not eligible"}
+        {" · "}
+        {product.is_eligible_override ? (
+          <span className="inline-flex items-center gap-1 align-bottom">
+            <UserPen aria-hidden className="size-3.5 text-fg-muted" />
+            set by hand
+          </span>
+        ) : (
+          "automatic"
+        )}
+      </DescriptionItem>
+      <DescriptionItem term="Lifecycle">
+        {product.lifecycle_phase === null ? (
+          <AbsentValue name="Not available" />
+        ) : (
+          (LIFECYCLE_PHASES.get(product.lifecycle_phase) ??
+          product.lifecycle_phase)
+        )}
+      </DescriptionItem>
+      <DescriptionItem term="Release">{release}</DescriptionItem>
+      {!product.actionable && (
+        <DescriptionItem term="Actionable">
+          {product.non_actionable_reason === null
+            ? "No"
+            : (PRODUCT_REASONS.get(product.non_actionable_reason) ??
+              `No, ${product.non_actionable_reason}`)}
+        </DescriptionItem>
+      )}
+    </DescriptionList>
+  );
+}
+
+interface ProductItemProps {
+  product: ProductDetail;
+  track: TrackDetail;
+  // Whether the track that holds the Product is hidden.
+  trackHidden: boolean;
+}
+
+// A Product of a track: its name, which opens its details, in fg-muted when
+// it is hidden or not eligible, and wraps; user-pen at 14 px in fg-muted when
+// its eligibility is set by hand, read as ", eligibility set by hand"; the
+// label Not eligible, and the labels of its own hidden state; and at the end
+// its release, in text-13, fg-muted: "Released" with the date and time, on
+// every released Product; and, on a Product that receives the fix under a
+// track that expects one, "Not released", or "Release not observed" below a
+// Git track, where Sentinel never sets the release (Sentinel
+// docs/features/packages/package-model.md, Workflow-Agnostic vs
+// Workflow-Specific). A track of a workflow that the pinned contract does not
+// list shows no release that is not observed.
+function ProductItem({ product, track, trackHidden }: ProductItemProps) {
+  const ref = useRef<HTMLLIElement>(null);
+  useFocusHeadingOnRemoval(ref);
+  const hidden = trackHidden || !product.actionable;
+  let release: ReactNode = null;
+  if (product.released_at !== null) {
+    release = (
+      <>
+        Released <DateTime value={product.released_at} />
+      </>
+    );
+  } else if (receivesFix(product) && EXPECTS_FIX.has(track.status)) {
+    if (track.workflow_type === "ibs") {
+      release = "Not released";
+    } else if (track.workflow_type === "git") {
+      release = "Release not observed";
+    }
+  }
+  return (
+    <li
+      ref={ref}
+      className="flex flex-wrap items-center justify-between gap-x-3"
+    >
+      <span
+        className={`flex min-w-0 flex-wrap items-center gap-x-1.5 ${mutedIf(hidden || !product.eligible)}`}
+      >
+        <DetailsName
+          name={product.product_name}
+          identifier={<span className="font-mono">{product.product_cpe}</span>}
+        >
+          <ProductDetails product={product} track={track} />
+        </DetailsName>
+        {product.is_eligible_override && (
+          <>
+            <UserPen aria-hidden className="size-3.5 shrink-0 text-fg-muted" />
+            <span className="sr-only">, eligibility set by hand</span>
+          </>
+        )}
+        {!product.eligible && <Label>Not eligible</Label>}
+        <HiddenLabels
+          excluded={product.deleted_at !== null}
+          eol={product.lifecycle_phase === "eol"}
+        />
+      </span>
+      {release !== null && (
+        <span className="text-13 text-fg-muted">{release}</span>
+      )}
+    </li>
+  );
+}
+
+interface TrackItemProps {
+  ticket: TicketDetail;
+  packageName: string;
+  track: TrackDetail;
+  // Whether the package that holds the track is hidden.
+  packageHidden: boolean;
+  // Whether the track waits for the signed-in user.
+  waitsForYou: boolean;
+  showHidden: boolean;
+  now: number;
+}
+
+// A track of a package, on two lines, with a border line at its left, or,
+// when it waits for the signed-in user, a bar of 3 px in link:
+// - its reference at weight 500, the label of its workflow, IBS or Git,
+//   "Needs your action" when it waits for the user, the label of its own
+//   hidden state, and at the end its affectedness;
+// - "Delivery" and its status, where it is relevant (Sentinel
+//   docs/features/packages/package-model.md, Delivery Relevance Indicator)
+//   and the track has work or its status is not Pending; the pipeline of its
+//   phases, when it has work and due dates; and its deadline badge
+//   (showsBadge);
+// then its Products, as a list with a border line at its left. A hidden
+// track shows its hidden Products; another track only while "Show hidden" is
+// on.
+function TrackItem({
+  ticket,
+  packageName,
+  track,
+  packageHidden,
+  waitsForYou,
+  showHidden,
+  now,
+}: TrackItemProps) {
+  const ref = useRef<HTMLLIElement>(null);
+  useFocusHeadingOnRemoval(ref);
+  const hidden = packageHidden || !track.actionable;
+  const work = hasWork(track);
+  const delivery =
+    track.delivery_relevant && (work || track.delivery_status !== "pending");
+  const pipeline = work && hasDueDates(track);
+  const badge = showsBadge(track, ticket) && deadline(track, now) !== undefined;
+  const products = track.products.filter(
+    (product) => showHidden || product.actionable,
+  );
+  return (
+    <li
+      ref={ref}
+      className={`border-s ${waitsForYou ? "border-s-3 border-link ps-2.5" : "border-border ps-3"} ${mutedIf(hidden)}`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+          <span className="font-medium wrap-anywhere">{track.reference}</span>
+          <Label>
+            {WORKFLOWS.get(track.workflow_type) ?? track.workflow_type}
+          </Label>
+          {waitsForYou && <NeedsYourAction />}
+          <HiddenLabels excluded={track.deleted_at !== null} />
+        </span>
+        <span className="text-14">
+          <MarkedValue value={track.status} known={AFFECTEDNESS} />
+        </span>
+      </div>
+      {(delivery || pipeline || badge) && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-14">
+          {delivery && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-fg-muted">Delivery</span>
+              <MarkedValue value={track.delivery_status} known={DELIVERY} />
+            </span>
+          )}
+          {pipeline && (
+            <TrackMilestones
+              track={track}
+              subject={`${packageName}, ${track.reference}`}
+              now={now}
+            />
+          )}
+          {badge && <DeadlineBadge ticket={track} now={now} />}
+        </div>
+      )}
+      {products.length > 0 && (
+        <ul className="mt-2 flex flex-col gap-0.5 border-s border-border ps-3 text-14">
+          {products.map((product) => (
+            <ProductItem
+              key={product.id}
+              product={product}
+              track={track}
+              trackHidden={hidden}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+// The label of a track that waits for the signed-in user, 20 px high, in
+// text-12, weight 500, info-on-soft on info-soft, without a boundary, with
+// 6 px of side padding and a 4 px radius (docs/design-system.md, Labels). It
+// says "Needs your action" rather than "Pending", which names the delivery
+// status of the same track (docs/behaviors.md, Deadlines).
+function NeedsYourAction() {
+  return (
+    <span className="inline-flex h-5 shrink-0 items-center rounded bg-info-soft px-1.5 text-12 font-medium text-info-on-soft">
+      Needs your action
+    </span>
+  );
+}
+
+interface PackageGroupProps {
+  ticket: TicketDetail;
+  ticketPackage: PackageDetail;
+  // The keys of the tracks that wait for the signed-in user (trackKey).
+  waiting: ReadonlySet<string>;
+  showHidden: boolean;
+  now: number;
+}
+
+// A package as a group under a band (docs/design-system.md, Detail Screens):
+// the band, on neutral-soft, at least 32 px high, with a 6 px radius and
+// 12 px of side padding, holds its name as a level-three heading in text-15,
+// weight 600, which wraps, its maintainers, and the label of its own hidden
+// state; its tracks follow 12 px below the band, indented by 12 px, 16 px
+// apart. A hidden package shows its hidden tracks; another package only
+// while "Show hidden" is on.
+function PackageGroup({
+  ticket,
+  ticketPackage,
+  waiting,
+  showHidden,
+  now,
+}: PackageGroupProps) {
+  const ref = useRef<HTMLLIElement>(null);
+  useFocusHeadingOnRemoval(ref);
+  const hidden = !ticketPackage.actionable;
+  const tracks = ticketPackage.tracks.filter(
+    (track) => showHidden || track.actionable,
+  );
+  return (
+    <li ref={ref}>
+      <div
+        className={`flex min-h-8 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md bg-neutral-soft px-3 py-1 ${mutedIf(hidden)}`}
+      >
+        <h3 className="min-w-0 text-15 font-semibold wrap-anywhere">
+          {ticketPackage.package_name}
+        </h3>
+        <Maintainers
+          users={ticketPackage.maintainers}
+          packageName={ticketPackage.package_name}
+        />
+        <HiddenLabels excluded={ticketPackage.deleted_at !== null} />
+      </div>
+      {tracks.length > 0 && (
+        <ul className="ms-3 mt-3 flex flex-col gap-4 text-15">
+          {tracks.map((track) => (
+            <TrackItem
+              key={track.id}
+              ticket={ticket}
+              packageName={ticketPackage.package_name}
+              track={track}
+              packageHidden={hidden}
+              waitsForYou={waiting.has(
+                trackKey(ticketPackage.package_name, track.reference),
+              )}
+              showHidden={showHidden}
+              now={now}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+// Whether the user is a maintainer of a package of the Ticket that is not
+// excluded: the associations through which Sentinel gives them work on the
+// Ticket (Sentinel docs/features/packages/package-maintainership.md,
+// Maintainers in the Package Tree; Workbench Dependency).
+function maintainsIncludedPackage(
+  ticket: TicketDetail,
+  userId: string | undefined,
+): boolean {
+  return ticket.packages.some(
+    (ticketPackage) =>
+      ticketPackage.deleted_at === null &&
+      ticketPackage.maintainers.some((maintainer) => maintainer.id === userId),
+  );
+}
+
+// The read of the work of the signed-in user on the Ticket, which only adds
+// marks to the package tree: sent only for a user whom the package tree lists
+// as a maintainer of a package that is not excluded, and read again whenever
+// the tab returns to the foreground, as it shows no error in place of content
+// (src/query-client.ts).
+function useYourWork(ticket: TicketDetail) {
+  const user = useSignedInUser();
+  return useGetTicketPackageWork(ticket.ticket_id, {
+    query: {
+      enabled: maintainsIncludedPackage(ticket, user?.id),
+      refetchOnWindowFocus: true,
+    },
+  });
+}
+
+type YourWorkRead = ReturnType<typeof useYourWork>;
+
+interface PackagesPartProps {
+  ticket: TicketDetail;
+  now: number;
+  yourWork: YourWorkRead;
+}
+
+// The package tree of the Ticket, from Get Ticket (Sentinel
+// docs/features/tickets/tickets.md, TicketDetail; Sentinel
+// docs/features/packages/package-model.md, List Ticket Packages), in the
+// order of the API, read-only: each package as a group under a band, 32 px
+// apart, its tracks and their Products as nested lists. The excluded and EOL
+// records are hidden until "Show hidden", a switch at the end of the line of
+// the heading followed by the number of hidden records, shows them, in
+// fg-muted; the switch is disabled without hidden records, and its state is
+// in the URL (docs/screen-map.md, Browser History), where it adds an entry
+// to the browser history and keeps the anchor and the scroll position. The
+// tracks that the work of the signed-in user lists as pending, matched by
+// package and reference, wait for them; until that read arrives, no track is
+// marked, and when it fails, a warning above the tree says that they
+// couldn't be shown, so that the absence of marks is not read as no work
+// (docs/behaviors.md, Where Errors Appear). A Ticket without packages shows
+// "No packages.", and a tree whose packages are all hidden, "All packages
+// are hidden.".
+function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
+  const { hidden } = ticketOverviewRoute.useSearch();
+  const navigate = useNavigate();
+  const showHidden = hidden === HIDDEN_SHOWN;
+  const { marks, warning } = marksPlace(
+    yourWork,
+    "The tracks that wait for you couldn't be shown.",
+  );
+  const waiting = new Set(
+    (marks?.data.pending ?? []).map((item) =>
+      trackKey(item.package_name, item.reference),
+    ),
+  );
+  const packages = ticket.packages.filter(
+    (ticketPackage) => showHidden || ticketPackage.actionable,
+  );
+  const count = hiddenCount(ticket.packages);
+  const toggle = (shown: boolean) => {
+    void navigate({
+      to: "/tickets/$ticketId",
+      params: { ticketId: ticket.ticket_id },
+      search: { hidden: shown ? HIDDEN_SHOWN : undefined },
+      hash: true,
+      resetScroll: false,
+      hashScrollIntoView: false,
+    });
+  };
+  return (
+    <Part
+      id={PACKAGES_ANCHOR}
+      heading="Packages"
+      actions={
+        ticket.packages.length > 0 ? (
+          <Switch
+            isSelected={showHidden}
+            onChange={toggle}
+            isDisabled={count === 0}
+          >
+            Show hidden{" "}
+            <span className="tabular-nums">{COUNT.format(count)}</span>
+          </Switch>
+        ) : undefined
+      }
+    >
+      <output className="block">{warning}</output>
+      {ticket.packages.length === 0 && (
+        <p className="text-fg-muted">No packages.</p>
+      )}
+      {ticket.packages.length > 0 && packages.length === 0 && (
+        <p className="text-fg-muted">All packages are hidden.</p>
+      )}
+      {packages.length > 0 && (
+        <ul className="flex flex-col gap-8">
+          {packages.map((ticketPackage) => (
+            <PackageGroup
+              key={ticketPackage.id}
+              ticket={ticket}
+              ticketPackage={ticketPackage}
+              waiting={waiting}
+              showHidden={showHidden}
+              now={now}
+            />
+          ))}
+        </ul>
+      )}
+    </Part>
+  );
+}
+
+// ----------------------------------------------------------------------------
 // Anchors
 
 // The keys that scroll the page, with which a user scrolls it by the keyboard.
@@ -667,31 +1292,50 @@ function useAnchorTarget(reads: readonly TabRead[]) {
 function TicketOverview() {
   const { ticket, now, twoColumns } = useShownTicket();
   const duplicates = useDuplicates(ticket);
-  useAnchorTarget([duplicates]);
+  const yourWork = useYourWork(ticket);
+  useAnchorTarget([duplicates, yourWork]);
   return (
     <DetailColumns
       twoColumns={twoColumns}
       leadingSections={
         <Details ticket={ticket} now={now} duplicates={duplicates} />
       }
-      parts={<CvePart cve={ticket.cve} />}
+      parts={
+        <>
+          <CvePart cve={ticket.cve} />
+          <PackagesPart ticket={ticket} now={now} yourWork={yourWork} />
+        </>
+      }
     />
   );
 }
 
-// Overview, at the path of the Ticket. It takes no search parameter: a URL
-// with one leads to the URL without it, in place of the URL in the browser
-// history, keeping its anchor (docs/behaviors.md, Invalid Search Parameters;
-// docs/screen-map.md, Browser History).
+// The search parameters that Overview accepts: hidden, while the package
+// tree shows its hidden records. A value that it does not accept counts as
+// absent (docs/behaviors.md, Invalid Search Parameters).
+const ticketOverviewSearch = z.object({
+  hidden: z.literal(HIDDEN_SHOWN).optional().catch(undefined),
+});
+
+// Overview, at the path of the Ticket. A URL with a search parameter that it
+// does not accept, or with a value that it does not accept, leads to the URL
+// without it, in place of the URL in the browser history, keeping its anchor
+// (docs/behaviors.md, Invalid Search Parameters; docs/screen-map.md, Browser
+// History).
 export const ticketOverviewRoute = createRoute({
   getParentRoute: () => ticketRoute,
   path: "/",
+  validateSearch: ticketOverviewSearch,
   beforeLoad: ({ location, params }) => {
-    if (!sameSearch(location.search, {})) {
+    // The router's search of the route also passes on every parameter of the
+    // URL that the schema does not declare, so the schema reads the URL
+    // itself.
+    const accepted = ticketOverviewSearch.parse(location.search);
+    if (!sameSearch(location.search, accepted)) {
       throw redirect({
         to: "/tickets/$ticketId",
         params,
-        search: {},
+        search: accepted,
         hash: location.hash,
         replace: true,
       });

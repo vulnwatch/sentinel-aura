@@ -255,6 +255,148 @@ test.describe("for an analyst", () => {
     expect(await scrollsHorizontally(page)).toBe(false);
   });
 
+  test("shows the package tree of a Ticket, its maintainers, phases, and Products", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+
+    await page.goto("/tickets/SNTL-12#packages");
+
+    // SNTL-12 has two packages with different maintainers, and a package with
+    // two maintainers (Packages, Tracks, and Maintainers).
+    const packages = part(page, "Packages");
+    await expect(packages.getByRole("heading", { level: 3 })).toHaveText([
+      "fictional-openssl",
+      "fictional-zlib",
+    ]);
+    await expect(
+      packages.getByRole("button", {
+        name: "2 maintainers of fictional-openssl",
+      }),
+    ).toBeVisible();
+    await expect(
+      packages.getByRole("button", { name: "1 maintainer of fictional-zlib" }),
+    ).toBeVisible();
+    // Its IBS track, Affected, its submission past due (Aged Tickets).
+    const openssl = packages
+      .getByRole("listitem")
+      .filter({
+        has: page.getByText("SUSE:FLES-15-SP7:Update", { exact: true }),
+      })
+      .last();
+    await expect(openssl.getByText("Affected", { exact: true })).toBeVisible();
+    await expect(openssl.getByText("Delivery", { exact: true })).toBeVisible();
+    await expect(openssl.getByText("Pending", { exact: true })).toBeVisible();
+    const pipeline = openssl.getByRole("button", {
+      name: /^Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: Triage done; Submission overdue by \d+ days?, current; UM (?:due|overdue) .+; QA due in \d+ days?$/,
+    });
+    await expect(pipeline).toBeVisible();
+    await expect(
+      openssl.getByText("Fictional Linux Enterprise Server 15 SP7"),
+    ).toBeVisible();
+    await expect(openssl.getByText("Not released")).toBeVisible();
+    // Its Git track, whose later phases Sentinel does not observe, shows the
+    // Release badge, and its Products a release that is not observed.
+    const zlib = packages
+      .getByRole("listitem")
+      .filter({ has: page.getByText("fles-16.0", { exact: true }) })
+      .last();
+    await expect(zlib.getByText(/^Release \d+d$/)).toBeVisible();
+    await expect(zlib.getByText("Release not observed")).toHaveCount(2);
+    // No hidden record.
+    await expect(
+      page.getByRole("switch", { name: "Show hidden 0" }),
+    ).toBeDisabled();
+
+    await pipeline.click();
+
+    const phases = page.getByRole("dialog", { name: "Phases" });
+    await expect(phases).toBeFocused();
+    await expect(phases).toContainText("Submission · Maintainer");
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(pipeline).toBeFocused();
+
+    await packages
+      .getByRole("button", { name: "2 maintainers of fictional-openssl" })
+      .click();
+
+    const maintainers = page.getByRole("dialog", {
+      name: "Maintainers of fictional-openssl",
+    });
+    await expect(maintainers.getByRole("listitem")).toHaveText([
+      "Dave Brown @dbrown",
+      "Grace Hill @ghill",
+    ]);
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+
+    await packages
+      .getByRole("button", { name: "Fictional Linux Enterprise Micro 6.2" })
+      .click();
+
+    const product = page.getByRole("dialog", {
+      name: "Fictional Linux Enterprise Micro 6.2",
+    });
+    await expect(product).toBeFocused();
+    await expect(
+      product.getByText("cpe:/o:example:fles-micro:6.2"),
+    ).toBeVisible();
+    // Micro 6.2 has no lifecycle data (Product Catalog).
+    await expect(product.getByRole("definition")).toHaveText([
+      "Eligible · automatic",
+      "Not available",
+      "Not observed",
+    ]);
+    await expectAccessible(page);
+  });
+
+  test("shows the hidden records of a Ticket in gray, with their label", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-16#packages");
+
+    // The SUSE:FLES-15-SP3:Update track of SNTL-16 is not actionable, as its
+    // only Product is EOL (Tickets; Packages, Tracks, and Maintainers).
+    const packages = part(page, "Packages");
+    await expect(packages.getByText("SUSE:FLES-15-SP5:Update")).toBeVisible();
+    await expect(packages.getByText("SUSE:FLES-15-SP3:Update")).toHaveCount(0);
+    // The SP5 track is Affected without a Product that is eligible, so it
+    // has no work: no pipeline and no Delivery Pending.
+    await expect(
+      packages.getByText("Not eligible", { exact: true }),
+    ).toBeVisible();
+    await expect(packages.getByText("Delivery")).toHaveCount(0);
+    await expect(
+      packages.getByRole("button", { name: /^Phases of/ }),
+    ).toHaveCount(0);
+
+    await packages.getByText("Show hidden 1").click();
+
+    await expect(
+      page.getByRole("switch", { name: "Show hidden 1" }),
+    ).toBeChecked();
+    await expect(page).toHaveURL("/tickets/SNTL-16?hidden=shown#packages");
+    const eol = packages
+      .getByRole("listitem")
+      .filter({
+        has: page.getByRole("button", {
+          name: "Fictional Linux Enterprise Server 15 SP3",
+        }),
+      })
+      .last();
+    await expect(eol.getByText("EOL", { exact: true })).toBeVisible();
+    await expectScreenshot(page, "ticket-hidden-records.png");
+
+    await page.reload();
+
+    await expect(
+      page.getByRole("switch", { name: "Show hidden 1" }),
+    ).toBeChecked();
+    await expect(packages.getByText("SUSE:FLES-15-SP3:Update")).toBeVisible();
+  });
+
   test("keeps the compact heading at the top of the window while the page scrolls", async ({
     page,
   }) => {
@@ -275,6 +417,31 @@ test.describe("for an analyst", () => {
       .poll(async () => (await title.boundingBox())?.y ?? -1)
       .toBeGreaterThanOrEqual(0);
   });
+});
+
+test("shows a maintainer the tracks of a Ticket that wait for them", async ({
+  page,
+}) => {
+  // dbrown, without a role, maintains fictional-openssl of SNTL-12, whose
+  // track waits for their submission, and not fictional-zlib (Packages,
+  // Tracks, and Maintainers).
+  await signIn(page, "dbrown");
+
+  await page.goto("/tickets/SNTL-12#packages");
+
+  const packages = part(page, "Packages");
+  const waiting = packages.getByText("Needs your action", { exact: true });
+  await expect(waiting).toHaveCount(1);
+  await expect(
+    packages
+      .getByRole("listitem")
+      .filter({
+        has: page.getByText("SUSE:FLES-15-SP7:Update", { exact: true }),
+      })
+      .last()
+      .getByText("Needs your action"),
+  ).toBeVisible();
+  await expectScreenshot(page, "ticket-maintainer.png");
 });
 
 test("shows Not found for a Ticket that the user cannot see", async ({

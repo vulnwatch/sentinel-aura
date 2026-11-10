@@ -44,6 +44,8 @@ interface UpdateFailedProps {
   error: unknown;
   // Sends the read again.
   onRetry: () => void;
+  // The text of the warning, given the message of the failure.
+  text?: (message: string) => string;
 }
 
 // Above data that stays shown after a new read of it failed: a warning that
@@ -52,7 +54,11 @@ interface UpdateFailedProps {
 // screen or of its part (docs/behaviors.md, Where Errors Appear;
 // docs/design-system.md, Messages). When the warning goes, the focus on Try
 // again passes to the screen's heading.
-function UpdateFailed({ error, onRetry }: UpdateFailedProps) {
+function UpdateFailed({
+  error,
+  onRetry,
+  text = updateFailedText,
+}: UpdateFailedProps) {
   const ref = useRef<HTMLDivElement>(null);
   useFocusHeadingOnRemoval(ref);
   if (!isRequestFailure(error)) {
@@ -65,7 +71,7 @@ function UpdateFailed({ error, onRetry }: UpdateFailedProps) {
   return (
     <div ref={ref} className="mb-4">
       <Message tone="warning" reference={presentation.reference}>
-        {updateFailedText(presentation.message)}
+        {text(presentation.message)}
       </Message>
       {presentation.retry && (
         <div className="mt-2">
@@ -146,6 +152,52 @@ export function dataPlace<TData>(read: Read<TData>): DataPlace<TData> {
       data !== undefined &&
       (read.isPlaceholderData || (failed && read.isFetching)),
   };
+}
+
+// What a read that only adds marks to data that another read shows gives
+// its place, such as the tracks of a package tree that wait for the
+// signed-in user (docs/behaviors.md, Where Errors Appear).
+export interface MarksPlace<TData> {
+  // The data of the marks, or undefined while no mark shows: until the read
+  // arrives, and after a 403 or a 404, which removes the marks.
+  marks: TData | undefined;
+  // Above the data that the marks mark, which stays shown and usable: the
+  // warning of a read of the marks that failed, which goes while the read is
+  // sent again, or null.
+  warning: ReactNode;
+}
+
+// The marks of a read and the warning of its failure: before the read has
+// shown its marks, a warning that says what couldn't be shown, followed by
+// the message of the failure, and Try again when the failure offers it; once
+// it has, a later read of them is a new read of the same data, whose failure
+// says that they could not be updated, unless it is a 403 or a 404, which
+// removes them as for the first read.
+export function marksPlace<TData>(
+  read: Read<TData>,
+  // What the marks would have shown, such as "The tracks that wait for you
+  // couldn't be shown."
+  notShown: string,
+): MarksPlace<TData> {
+  const marks = dataShown(read);
+  const onRetry = () => {
+    retry(read);
+  };
+  let warning: ReactNode = null;
+  if (read.status === "error" && !read.isFetching) {
+    warning = (
+      <UpdateFailed
+        error={read.error}
+        onRetry={onRetry}
+        text={
+          marks === undefined
+            ? (message) => `${notShown} ${message}`
+            : updateFailedText
+        }
+      />
+    );
+  }
+  return { marks, warning };
 }
 
 interface DataProps<TData> {

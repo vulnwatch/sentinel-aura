@@ -17,7 +17,13 @@ import {
 } from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
-import { PartRead, placeMessage, ScreenRead, type Read } from "./read-view";
+import {
+  marksPlace,
+  PartRead,
+  placeMessage,
+  ScreenRead,
+  type Read,
+} from "./read-view";
 import { ScreenHeading } from "./screen-heading";
 
 // A fictional record of a detail screen, or a page of a list.
@@ -825,5 +831,157 @@ describe("placeMessage", () => {
     ],
   ])("gives %s", (_, read, message) => {
     expect(placeMessage(read)).toBe(message);
+  });
+});
+
+// A list whose items a read only marks, such as the tracks of a package tree
+// that wait for the signed-in user: the items show at once, and the item that
+// the record names is marked once the read arrives.
+function MarkedList() {
+  const read = useRecord(1);
+  const { marks, warning } = marksPlace(
+    read,
+    "The marks of the items couldn't be shown.",
+  );
+  return (
+    <main>
+      <ScreenHeading>Items</ScreenHeading>
+      <output className="block">{warning}</output>
+      <ul>
+        {["First item", "Second item"].map((item) => (
+          <li key={item}>
+            {item}
+            {marks?.title === item && " (marked)"}
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+
+describe("marksPlace", () => {
+  test("marks nothing until the read arrives, then its marks", async () => {
+    const { promise, resolve } = later();
+    respond.mockReturnValueOnce(promise);
+    const screen = await renderWithClient(<MarkedList />);
+
+    await expect.element(screen.getByText("First item")).toBeVisible();
+    expect(screen.getByText("(marked)").query()).toBeNull();
+    expect(screen.getByRole("progressbar").query()).toBeNull();
+    resolve({ title: "Second item" });
+
+    await expect
+      .element(screen.getByText("Second item (marked)"))
+      .toBeVisible();
+  });
+
+  test("says what couldn't be shown, with the message of the failure and Try again, while the data stays usable", async () => {
+    respond
+      .mockRejectedValueOnce(UNAVAILABLE)
+      .mockRejectedValueOnce(UNAVAILABLE)
+      .mockRejectedValueOnce(UNAVAILABLE)
+      .mockResolvedValueOnce({ title: "First item" });
+    const screen = await renderWithClient(<MarkedList />);
+
+    const warning = screen.getByText(
+      "The marks of the items couldn't be shown. Sentinel isn't available right now. Try again later.",
+    );
+    await expect.element(warning).toBeVisible();
+    await expect
+      .element(screen.getByText(`Reference: ${REQUEST_ID}`))
+      .toBeVisible();
+    // In a status region that is there before it, so that assistive
+    // technologies announce it.
+    expect(warning.element().closest("output")).not.toBeNull();
+    await expect.element(screen.getByText("First item")).toBeVisible();
+
+    await screen.getByRole("button", { name: "Try again" }).click();
+
+    await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+    expect(screen.getByText(/couldn't be shown/).query()).toBeNull();
+  });
+
+  test("hides the warning while Try again sends the read again", async () => {
+    const { promise, resolve } = later();
+    respond
+      .mockRejectedValueOnce(UNAVAILABLE)
+      .mockRejectedValueOnce(UNAVAILABLE)
+      .mockRejectedValueOnce(UNAVAILABLE)
+      .mockReturnValueOnce(promise);
+    const screen = await renderWithClient(<MarkedList />);
+    await expect.element(screen.getByText(/couldn't be shown/)).toBeVisible();
+
+    await screen.getByRole("button", { name: "Try again" }).click();
+
+    await expect
+      .poll(() => screen.getByText(/couldn't be shown/).query())
+      .toBeNull();
+    resolve({ title: "First item" });
+    await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+  });
+
+  test("offers no Try again after a failure that does not offer it", async () => {
+    respond.mockRejectedValueOnce(FORBIDDEN);
+    const screen = await renderWithClient(<MarkedList />);
+
+    await expect
+      .element(
+        screen.getByText(
+          "The marks of the items couldn't be shown. You don't have permission to do this.",
+        ),
+      )
+      .toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Try again" }).query(),
+    ).toBeNull();
+  });
+
+  test("keeps the marks, saying that they couldn't be updated, when a later read of them fails", async () => {
+    respond.mockResolvedValueOnce({ title: "First item" });
+    const screen = await renderWithClient(<MarkedList />);
+    await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+    respond.mockRejectedValue(UNAVAILABLE);
+
+    await refetch();
+
+    await expect
+      .element(
+        screen.getByText(
+          "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+        ),
+      )
+      .toBeVisible();
+    await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+  });
+
+  test("removes the marks when a later read of them fails with a 404", async () => {
+    respond.mockResolvedValueOnce({ title: "First item" });
+    const screen = await renderWithClient(<MarkedList />);
+    await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+    respond.mockRejectedValue(NOT_FOUND);
+
+    await refetch();
+
+    await expect
+      .element(
+        screen.getByText(
+          "The marks of the items couldn't be shown. This no longer exists, or you no longer have access to it.",
+        ),
+      )
+      .toBeVisible();
+    expect(screen.getByText("(marked)").query()).toBeNull();
+  });
+
+  test("shows no message when the read ends the session", async () => {
+    respond.mockRejectedValueOnce(ENDED);
+    const screen = await renderWithClient(
+      <>
+        <MarkedList />
+        <ReadStatus />
+      </>,
+    );
+
+    await expect.element(screen.getByText("The read failed")).toBeVisible();
+    expect(screen.getByRole("status").element().textContent).toBe("");
   });
 });

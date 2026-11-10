@@ -12,9 +12,10 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 ## Purpose
 
 The Ticket screen shows one Ticket: its heading row with its main values, and
-in the tab Overview its CVE and its details. Vulnerability and restricted
-analysts work in it all day; every other user reads it, as a package
-maintainer does a Ticket of one of their packages that an analyst shares
+in the tab Overview its CVE, its package tree, and its details. Vulnerability
+and restricted analysts work in it all day; every other user reads it, as a
+package maintainer does a Ticket of one of their packages that an analyst
+shares, and finds in its package tree the tracks that wait for them
 (`docs/screen-map.md`, Users and Frequent Tasks; Areas and Screens). It shows
 the same Ticket to every user who can see it.
 
@@ -25,7 +26,8 @@ Ticket that Get Ticket returns to the user, whose scope, access grants, and
 package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
-The screen offers no action, so it is the same for every user.
+The screen offers no action, so it is the same for every user, except that it
+marks for a maintainer the tracks that wait for them (Packages).
 
 ## Navigation
 
@@ -35,12 +37,14 @@ The screen offers no action, so it is the same for every user.
   Identifier Resolution). Any other form, such as `SNTL-0042`, `sntl-42`, or a
   UUID, shows Not found without a request (`docs/behaviors.md`, Missing and
   Inaccessible Records).
-- Overview is at the path of the Ticket. The screen accepts no search
-  parameter: it removes every one from its URL, in place of the URL in the
-  browser history, and keeps its anchor (`docs/behaviors.md`, Invalid Search
-  Parameters).
-- Anchors: `#cve`, the CVE, and `#details`, the details, which every Ticket
-  has; the reads of Overview are the Ticket and its duplicates
+- Overview is at the path of the Ticket. Its one search parameter is
+  `hidden=shown`, while the package tree shows its hidden records (Packages);
+  the screen removes every other parameter and value from its URL, in place
+  of the URL in the browser history, and keeps its anchor
+  (`docs/behaviors.md`, Invalid Search Parameters).
+- Anchors: `#cve`, the CVE, `#packages`, the package tree, and `#details`,
+  the details, which every Ticket has; the reads of Overview are the Ticket,
+  its duplicates, and, for a maintainer, their work on the Ticket
   (`docs/design-system.md`, Main Content).
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
@@ -73,9 +77,9 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
 
 **Tabs**, named "Ticket" for assistive technologies: Overview.
 
-**Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE in
-the main column and the details in the side column; in one column, the
-details above the CVE.
+**Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE and
+the package tree in the main column, in this order, and the details in the
+side column; in one column, the details above the CVE.
 
 **CVE**, the first part of the main column, from `cve` of Get Ticket (Sentinel
 `docs/features/tickets/tickets.md`, CVEDetail):
@@ -115,6 +119,91 @@ details above the CVE.
 - A Ticket without a CVE shows the heading "CVE" and "No CVE.".
 - Absent values show as such (`docs/behaviors.md`, Absent Values).
 
+**Packages**, the second part of the main column, the package tree of the
+Ticket, from `packages` of Get Ticket, read-only, in the order of the API
+(Sentinel `docs/features/tickets/tickets.md`, Shared Sub-Schemas; Sentinel
+`docs/features/packages/package-model.md`, List Ticket Packages):
+
+- Each package is a group under a band (`docs/design-system.md`, Detail
+  Screens): its name, the level-three heading, then its maintainers as an
+  icon with their number, `user-round` for one, `users-round` for several,
+  and `user-round-x` without any, a button named such as "2 maintainers of
+  fictional-openssl", "1 maintainer of fictional-openssl", or "No maintainer
+  of fictional-openssl", which its tooltip shows. It opens a popover, 288 px
+  wide, with the title "Maintainers" and the package below it, and each
+  maintainer in the full form at the medium size with the username, or
+  "Sentinel knows no maintainer of this package." (Sentinel
+  `docs/features/packages/package-maintainership.md`, Maintainers in the
+  Package Tree). Users show without a link (Navigation).
+- Its tracks are a list below the band, 16 px apart, each with a border line
+  at its left:
+  - on its first line, its reference at weight 500; the label of its
+    workflow, IBS or Git; "Needs your action" when it waits for the
+    signed-in user (below); and at the end its affectedness, a value with
+    the dot of its tone (`docs/design-system.md`, Other Values): Analysis
+    `info`, Affected `warning`, Not affected and Fixed `success`, Won't fix
+    `neutral`;
+  - on its second line, "Delivery" in `fg-muted` and the delivery status,
+    Pending `neutral`, In progress `info`, Released `success`, where
+    `delivery_relevant` is true and the track has work or its status is not
+    Pending (Sentinel `docs/features/packages/package-model.md`, Delivery
+    Relevance Indicator); the pipeline of its phases, when it has work and
+    due dates (`docs/design-system.md`, Track Milestones), named such as
+    "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: …", whose Phases
+    holds no more than the design system states; and its deadline badge, on
+    its fields, by `docs/behaviors.md` (Deadlines), the Release badge of a
+    current phase of `null` only while the track still has work. A track has
+    work when it is actionable and in Analysis, or Affected or Fixed with a
+    Product that is actionable and eligible; a track without work, Not
+    affected and Won't fix included, shows no pipeline and no Delivery
+    Pending, and a Ticket without due dates shows no pipeline.
+- Its Products are a list below the track, with a border line at their left,
+  each on a line that wraps: its name, which wraps, in `fg-muted` when it is
+  not eligible; `user-pen` when its eligibility is set by hand, read as ",
+  eligibility set by hand"; the label Not eligible; and at the end its
+  release, in `text-13`, `fg-muted`: "Released" with the date and time of
+  `released_at` on a released Product, and on an actionable, eligible
+  Product of a track in Analysis, Affected, or Fixed, "Not released", or
+  "Release not observed" below a Git track, where Sentinel never sets the
+  release (Sentinel `docs/features/packages/package-model.md`,
+  Workflow-Agnostic vs Workflow-Specific). A Product that does not take part
+  or is not eligible receives no release, and a track of a workflow that the
+  pinned contract does not list shows no release that is not observed.
+- The name of a Product opens its details (`docs/design-system.md`, Menus,
+  Popovers, and Tooltips): its CPE in monospace below the name, then
+  Eligibility, "Eligible" or "Not eligible", followed by " · automatic", or
+  " · set by hand" after `user-pen`; Lifecycle, the phase of `lifecycle_phase`
+  (Pre-release, General support, Extended support, Reactive support, EOL),
+  or "Not available" without lifecycle data; Release, "Released" with its
+  date and time, "Not released" below an IBS track, or "Not observed" below
+  a Git track; and, for a Product that is not actionable, Actionable, "No,"
+  followed by the first reason that applies: "it is excluded from this
+  track", "its track is excluded", "its package is excluded", or "it has
+  reached its end of life" (Sentinel `docs/features/packages/package-model.md`,
+  Derived Actionability). It holds no action.
+- **Hidden records.** A package, a track, or a Product that is not actionable,
+  excluded, EOL, or holding nothing actionable, is hidden. "Show hidden", a
+  switch at the end of the line of the heading of the part, followed by the
+  number of the hidden records whose parent shows, each counting with what
+  it holds, shows them in `fg-muted` (`docs/design-system.md`, Detail
+  Screens): a record that its own marker excludes carries the label
+  Excluded, and a Product at the end of its life the label EOL, also under a
+  hidden parent. The switch is disabled without hidden records, and keeps
+  its state; its state is `hidden=shown` in the URL, which it adds to the
+  browser history, keeping the anchor and the scroll position. While it is
+  off and every package is hidden, the part says "All packages are hidden.".
+- **The tracks that wait for the signed-in user.** For a user whom
+  `maintainers` lists for a package that is not excluded, the screen reads
+  their work on the Ticket, `GET /api/v1/my/packages/tickets/{ticket_id}`,
+  when Overview opens and whenever the tab returns to the foreground, and
+  marks each track that it returns as pending, matched by package name and
+  reference, with the label "Needs your action" and a bar of 3 px in `link`
+  in place of its line (`docs/design-system.md`, Labels; Sentinel
+  `docs/features/packages/maintainer.md`, Pending; Package Details for
+  Ticket; Sentinel `docs/features/packages/package-maintainership.md`,
+  Workbench Dependency). For every other user, the read is not sent.
+- A Ticket without packages shows "No packages.", without the switch.
+
 **Details**, the section of the side column, as a description list:
 
 | Term | Value |
@@ -141,10 +230,17 @@ details above the CVE.
   its warning at the top of the panel of the tab, unless it is a `403` or a
   `404`, which replaces the screen. The failure of the read of the duplicates
   shows in place of their value, with Try again where the failure offers it,
-  and leaves the rest of the screen usable. The screen handles no error code
-  specifically.
-- **Reflow.** At 320 CSS px the page does not scroll horizontally
-  (`docs/behaviors.md`, Accessibility, Reflow and text size).
+  and leaves the rest of the screen usable. Until the read of the work of a
+  maintainer arrives, no track is marked; when it fails, a `warning` message
+  above the package tree says "The tracks that wait for you couldn't be
+  shown.", followed by the message of its status, with Try again where the
+  failure offers it, and the package tree stays usable; a later read of it
+  that fails says that it couldn't be updated, and keeps the marks, unless it
+  is a `403` or a `404`, which removes them (`docs/behaviors.md`, Where
+  Errors Appear). The screen handles no error code specifically.
+- **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
+  names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow
+  and text size).
 
 ## Cross-references
 
@@ -153,15 +249,26 @@ details above the CVE.
 - `docs/behaviors.md` — Errors; Invalid Search Parameters; Unknown Values;
   Links to Other Sites; Loading and Empty States; Dates and Times;
   Accessibility; Wording; Representation of a User
-- `docs/design-system.md` — Main Content; Values; Labels; Buttons and Links;
-  Detail Screens; Loading; Errors in Place of Content; Representation of a
-  User
+- `docs/design-system.md` — Main Content; Values; Deadline Badge; Track
+  Milestones; Labels; Other Values; Buttons and Links; Detail Screens; Forms;
+  Messages; Loading; Errors in Place of Content; Menus, Popovers, and
+  Tooltips; Icons by Need; Representation of a User
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
   Transitions; Duplicate Handling; Confidential Tickets (Identifier
   Disclosure Boundary; Coordinated Release Date); Response Schemas (Shared
-  Sub-Schemas; TicketDetail); Get Ticket; List Tickets (Duplicate filter)
+  Sub-Schemas; TicketDetail); Get Ticket; List Tickets (Duplicate filter);
+  Gate: Analyzed → Resolved
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Null Due
-  Dates); Ticket Current Phase
+  Dates); Track Milestones; Ticket Current Phase
+- Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
+  Dimensions; Exclusion and Actionability; Workflow-Agnostic vs
+  Workflow-Specific; List Ticket Packages
+- Sentinel `docs/features/packages/package-maintainership.md` — Maintainers
+  in the Package Tree; Workbench Dependency
+- Sentinel `docs/features/packages/maintainer.md` — Classification; Package
+  Details for Ticket
+- Sentinel `docs/features/packages/product-catalog.md` — Product Lifecycle
+  Phases
 - Sentinel `docs/features/tickets/ticket-priority.md` — Automatic Priority
   Basis; Manual Override
 - Sentinel `docs/features/tickets/cve-tracking.md` — Get CVE; External

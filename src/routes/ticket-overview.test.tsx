@@ -1,0 +1,1639 @@
+import type { QueryClient } from "@tanstack/react-query";
+import { createMemoryHistory } from "@tanstack/react-router";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { page, type Locator } from "vitest/browser";
+import { cleanup, render } from "vitest-browser-react";
+import "../styles.css";
+import { App } from "../app";
+import type {
+  CurrentUserResponse,
+  PackageDetail,
+  ProductDetail,
+  TicketDetail,
+  TrackDetail,
+} from "../api/generated/model";
+import { formatDateTime } from "../components/date-time";
+import { createQueryClient } from "../query-client";
+import { createAppRouter } from "../router";
+import {
+  errorResponse,
+  fictionalPackage,
+  fictionalProduct,
+  fictionalTicketDetail,
+  fictionalTrack,
+  jsonResponse,
+  OTHER_USER,
+  requestsTo,
+  stubApi,
+  ticketPage,
+  ticketResponse,
+  ticketWorkResponse,
+} from "../test-api";
+import { hiddenCount } from "./ticket-overview";
+
+// The package tree of Overview, the first tab of the Ticket screen
+// (docs/screens/ticket.md), at the browser's default text size, in the light
+// theme.
+
+const ME = "/api/v1/users/me";
+const TICKETS = "/api/v1/tickets";
+const YOUR_WORK = "/api/v1/my/packages/tickets/SNTL-12";
+const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+
+// The colors of docs/design-system.md (Color Tokens; Tones) in the light
+// theme.
+const FG = "rgb(31, 35, 40)";
+const FG_MUTED = "rgb(89, 99, 110)";
+const NEUTRAL_SOFT = "rgb(239, 242, 245)";
+const LINK = "rgb(9, 105, 218)";
+const BORDER = "rgb(216, 222, 228)";
+const INFO_SOFT = "rgb(221, 244, 255)";
+const INFO_ON_SOFT = "rgb(10, 48, 105)";
+
+// A maintainer without a role, who maintains fictional-openssl, the package
+// of fictionalPackage.
+const MAINTAINER: CurrentUserResponse = {
+  data: {
+    id: "00000000-0000-0000-0000-000000000004",
+    username: "dbrown",
+    email: "dave.brown@example.com",
+    full_name: "Dave Brown",
+    roles: [],
+    capabilities: [],
+    active: true,
+    bot: false,
+    assignment_eligibility: "none",
+  },
+};
+
+let client: QueryClient;
+
+beforeEach(async () => {
+  client = createQueryClient();
+  // The delay between attempts is TanStack Query's; the tests remove it.
+  client.setDefaultOptions({
+    queries: { ...client.getDefaultOptions().queries, retryDelay: 0 },
+  });
+  await page.viewport(1280, 800);
+});
+
+afterEach(async () => {
+  // Before the responses go, so that the screen of the test reads nothing
+  // more.
+  await cleanup();
+  client.clear();
+  vi.restoreAllMocks();
+  document.title = "Sentinel";
+  window.scrollTo(0, 0);
+  await page.viewport(414, 896);
+});
+
+interface Stub {
+  // The signed-in user.
+  user: CurrentUserResponse;
+  // The response to Get Ticket.
+  ticket: () => Response | Promise<Response>;
+  // The response to the read of the work of the signed-in user on the
+  // Ticket.
+  yourWork: () => Response | Promise<Response>;
+}
+
+// Answers the read of the signed-in user, an analyst who maintains no
+// package unless the test says otherwise, Get Ticket, the read of the
+// duplicates, and the read of the work of the user, and returns the spy,
+// whose calls name the requests.
+function stubTicket(fields: Partial<Stub> = {}) {
+  const stub: Stub = {
+    user: OTHER_USER,
+    ticket: () => ticketResponse(fictionalTicketDetail()),
+    yourWork: () => ticketWorkResponse(),
+    ...fields,
+  };
+  return stubApi((request) => {
+    if (request.path === ME) {
+      return jsonResponse(200, stub.user);
+    }
+    if (request.path === TICKETS) {
+      return ticketPage([]);
+    }
+    if (request.path === YOUR_WORK) {
+      return stub.yourWork();
+    }
+    if (request.path.startsWith(`${TICKETS}/`)) {
+      return stub.ticket();
+    }
+    return errorResponse(404, "RESOURCE_NOT_FOUND");
+  });
+}
+
+// Answers Get Ticket with a Ticket that has the packages.
+function showing(
+  packages: PackageDetail[],
+  fields: Partial<TicketDetail> = {},
+  stub: Partial<Stub> = {},
+) {
+  return stubTicket({
+    ticket: () =>
+      ticketResponse(fictionalTicketDetail({ packages, ...fields })),
+    ...stub,
+  });
+}
+
+// Answers Get Ticket with a Ticket whose package tree holds values that the
+// pinned contract does not list, which a later Sentinel release can return.
+function showingUnlisted(packages: Record<string, unknown>[]) {
+  return stubTicket({
+    ticket: () =>
+      jsonResponse(200, { data: { ...fictionalTicketDetail(), packages } }),
+  });
+}
+
+async function renderApp(path: string) {
+  const router = createAppRouter({
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
+  const screen = await render(<App router={router} queryClient={client} />);
+  return { router, screen };
+}
+
+type Screen = Awaited<ReturnType<typeof renderApp>>["screen"];
+
+// Renders the screen of SNTL-12 and waits until it shows its package tree.
+async function renderTree(path = "/tickets/SNTL-12") {
+  const rendered = await renderApp(path);
+  await expect.element(packagesPart(rendered.screen)).toBeVisible();
+  return rendered;
+}
+
+function packagesPart(screen: Screen) {
+  return screen.getByRole("region", { name: "Packages", exact: true });
+}
+
+// The band of a package, by the name of its heading.
+function band(screen: Screen, name: string): HTMLElement {
+  const title = packagesPart(screen)
+    .getByRole("heading", { level: 3, name, exact: true })
+    .element();
+  if (!(title.parentElement instanceof HTMLElement)) {
+    throw new Error(`The package ${name} has no band`);
+  }
+  return title.parentElement;
+}
+
+// The list item of a track, by its reference: the innermost of the items
+// that hold it, the last in the order of the page, within the item of its
+// package. A locator within a filter is relative to the items, so it starts
+// from the page.
+function trackOf(screen: Screen, reference: string): Locator {
+  return packagesPart(screen)
+    .getByRole("listitem")
+    .filter({ has: page.getByText(reference, { exact: true }) })
+    .last();
+}
+
+// The list item of a Product, by its name.
+function productOf(screen: Screen, name: string): Locator {
+  return packagesPart(screen)
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("button", { name, exact: true }) })
+    .last();
+}
+
+function showHidden(screen: Screen) {
+  return screen.getByRole("switch", { name: /^Show hidden/ });
+}
+
+// Presses Show hidden where a pointer does: on its rail and its label, which
+// cover the input of the switch.
+async function pressShowHidden(screen: Screen) {
+  const label = showHidden(screen).element().closest("label");
+  if (label === null) {
+    throw new Error("Show hidden has no label");
+  }
+  await page.elementLocator(label).click();
+}
+
+// The rectangle of an element on the screen.
+function boxOf(element: Locator | Element): DOMRect {
+  return (
+    "element" in element ? element.element() : element
+  ).getBoundingClientRect();
+}
+
+function colorOf(element: Element): string {
+  return getComputedStyle(element).color;
+}
+
+// A date and time of the API that lies the duration from now.
+function fromNow(duration: number): string {
+  return new Date(Date.now() + duration).toISOString();
+}
+
+// A response that the test gives when it chooses.
+function later() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+// The milestones of a track whose every phase is not applicable, such as a
+// track that is not actionable, whose current phase is done.
+const NOT_APPLICABLE: Pick<TrackDetail, "milestones" | "current_phase"> = {
+  milestones: {
+    triage: "not_applicable",
+    submission: "not_applicable",
+    um: "not_applicable",
+    qa: "not_applicable",
+  },
+  current_phase: "done",
+};
+
+// The fields of a track without due dates, whose Ticket has no SLA.
+const NO_SLA: Partial<TrackDetail> = {
+  triage_due_at: null,
+  submission_due_at: null,
+  um_due_at: null,
+  qa_due_at: null,
+  release_due_at: null,
+  milestones: { triage: null, submission: null, um: null, qa: null },
+  current_phase: null,
+};
+
+// The milestones of a Git track, whose later phases Sentinel does not
+// observe, after its triage, with due dates: its current phase is null.
+const UNOBSERVED: Pick<TrackDetail, "milestones" | "current_phase"> = {
+  milestones: { triage: "done", submission: null, um: null, qa: null },
+  current_phase: null,
+};
+
+// A Product that is excluded from its track.
+function excludedProduct(fields: Partial<ProductDetail> = {}): ProductDetail {
+  return fictionalProduct({
+    id: "00000000-0000-0000-0000-0000000000c2",
+    product_name: "Fictional Linux Enterprise Desktop 15 SP7",
+    product_cpe: "cpe:/o:example:fled:15:sp7",
+    deleted_at: "2099-10-10T10:00:00Z",
+    actionable: false,
+    non_actionable_reason: "product_excluded",
+    ...fields,
+  });
+}
+
+// A Product at the end of its life.
+function eolProduct(fields: Partial<ProductDetail> = {}): ProductDetail {
+  return fictionalProduct({
+    id: "00000000-0000-0000-0000-0000000000c3",
+    product_name: "Fictional Linux Enterprise Server 15 SP3",
+    product_cpe: "cpe:/o:example:fles:15:sp3",
+    lifecycle_phase: "eol",
+    actionable: false,
+    non_actionable_reason: "eol",
+    ...fields,
+  });
+}
+
+// A track that is excluded, with a Product that is excluded through it.
+function excludedTrack(fields: Partial<TrackDetail> = {}): TrackDetail {
+  return fictionalTrack({
+    id: "00000000-0000-0000-0000-0000000000b2",
+    reference: "SUSE:FLES-15-SP6:Update",
+    status: "analysis",
+    deleted_at: "2099-10-10T10:00:00Z",
+    actionable: false,
+    non_actionable_reason: "track_excluded",
+    products: [
+      fictionalProduct({
+        id: "00000000-0000-0000-0000-0000000000c4",
+        product_name: "Fictional Linux Enterprise Server 15 SP6",
+        product_cpe: "cpe:/o:example:fles:15:sp6",
+        actionable: false,
+        non_actionable_reason: "track_excluded",
+      }),
+    ],
+    ...NOT_APPLICABLE,
+    ...fields,
+  });
+}
+
+// A package that is excluded, with its track and Product.
+function excludedPackage(): PackageDetail {
+  return fictionalPackage({
+    id: "00000000-0000-0000-0000-0000000000a3",
+    package_name: "fictional-libpng",
+    deleted_at: "2099-10-10T10:00:00Z",
+    actionable: false,
+    non_actionable_reason: "package_excluded",
+    maintainers: [],
+    tracks: [
+      fictionalTrack({
+        id: "00000000-0000-0000-0000-0000000000b3",
+        status: "analysis",
+        actionable: false,
+        non_actionable_reason: "package_excluded",
+        products: [
+          fictionalProduct({
+            id: "00000000-0000-0000-0000-0000000000c5",
+            actionable: false,
+            non_actionable_reason: "package_excluded",
+          }),
+        ],
+        ...NOT_APPLICABLE,
+      }),
+    ],
+  });
+}
+
+describe("the part", () => {
+  test("follows the CVE in the main column, with a level-two heading, and is the target of its anchor", async () => {
+    await page.viewport(1280, 300);
+    showing([fictionalPackage()]);
+
+    const { screen } = await renderTree("/tickets/SNTL-12#packages");
+
+    const part = packagesPart(screen);
+    await expect
+      .element(part.getByRole("heading", { level: 2, name: "Packages" }))
+      .toBeVisible();
+    expect(
+      screen
+        .getByRole("region", { name: "CVE-2099-0012" })
+        .element()
+        .compareDocumentPosition(part.element()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+    await expect
+      .element(part.getByRole("heading", { level: 2 }))
+      .toBeInViewport();
+  });
+
+  test("says No packages. for a Ticket without packages, without the switch", async () => {
+    showing([]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(packagesPart(screen).getByText("No packages.", { exact: true }))
+      .toBeVisible();
+    expect(colorOf(screen.getByText("No packages.").element())).toBe(FG_MUTED);
+    expect(showHidden(screen).elements()).toHaveLength(0);
+  });
+
+  test("shows each package as a group under a band, 32 px apart, its tracks 12 px below the band and indented by 12 px, in the order of the API", async () => {
+    showing([
+      fictionalPackage(),
+      fictionalPackage({
+        id: "00000000-0000-0000-0000-0000000000a2",
+        package_name: "fictional-zlib",
+        tracks: [
+          fictionalTrack({
+            id: "00000000-0000-0000-0000-0000000000b2",
+            workflow_type: "git",
+            reference: "fles-16.0",
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const headings = packagesPart(screen).getByRole("heading", { level: 3 });
+    expect(headings.elements().map((element) => element.textContent)).toEqual([
+      "fictional-openssl",
+      "fictional-zlib",
+    ]);
+    const first = band(screen, "fictional-openssl");
+    const style = getComputedStyle(first);
+    expect(style.backgroundColor).toBe(NEUTRAL_SOFT);
+    expect(style.borderRadius).toBe("6px");
+    expect(style.paddingLeft).toBe("12px");
+    expect(style.borderTopWidth).toBe("0px");
+    expect(boxOf(first).height).toBeGreaterThanOrEqual(32);
+    const title = getComputedStyle(
+      screen.getByRole("heading", { name: "fictional-openssl" }).element(),
+    );
+    expect(title.fontSize).toBe("15px");
+    expect(title.fontWeight).toBe("600");
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update").first();
+    expect(boxOf(track).top - boxOf(first).bottom).toBe(12);
+    expect(boxOf(track).left - boxOf(first).left).toBe(12);
+    const second = band(screen, "fictional-zlib");
+    const firstGroup = first.parentElement;
+    expect(firstGroup).not.toBeNull();
+    expect(boxOf(second).top - boxOf(firstGroup!).bottom).toBe(32);
+  });
+
+  test("lists the tracks and the Products as nested lists", async () => {
+    showing([fictionalPackage()]);
+
+    const { screen } = await renderTree();
+
+    const product = screen.getByRole("button", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+    });
+    // The Product, in the list of its track, in the list of the package, in
+    // the list of the packages.
+    let lists = 0;
+    for (
+      let element = product.element().parentElement;
+      element !== null;
+      element = element.parentElement
+    ) {
+      if (element.tagName === "UL") {
+        lists += 1;
+      }
+    }
+    expect(lists).toBe(3);
+  });
+
+  test("reflows at 320 CSS pixels without scrolling in two directions, its names wrapping", async () => {
+    await page.viewport(320, 640);
+    // Names without a place where a line breaks by itself, such as a space or
+    // a hyphen.
+    const long = `fictional${"package".repeat(8)}`;
+    showing([
+      fictionalPackage({
+        package_name: long,
+        tracks: [
+          fictionalTrack({
+            reference: "SUSE:FLES-15-SP7:Update:Fictional:Very:Long:Reference",
+            products: [
+              fictionalProduct({
+                product_name: `Fictional Linux Enterprise ${"Server".repeat(8)} 15 SP7`,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    expect(document.documentElement.scrollWidth).toBe(
+      document.documentElement.clientWidth,
+    );
+    await expect
+      .element(screen.getByRole("heading", { level: 3, name: long }))
+      .toBeVisible();
+  });
+});
+
+describe("a package", () => {
+  test.each([
+    [[], "No maintainer of fictional-openssl", ""],
+    [
+      [
+        {
+          id: "00000000-0000-0000-0000-000000000004",
+          username: "dbrown",
+          full_name: "Dave Brown",
+          active: true,
+          bot: false,
+        },
+      ],
+      "1 maintainer of fictional-openssl",
+      "1",
+    ],
+    [
+      [
+        {
+          id: "00000000-0000-0000-0000-000000000004",
+          username: "dbrown",
+          full_name: "Dave Brown",
+          active: true,
+          bot: false,
+        },
+        {
+          id: "00000000-0000-0000-0000-000000000005",
+          username: "ghill",
+          full_name: "Grace Hill",
+          active: true,
+          bot: false,
+        },
+      ],
+      "2 maintainers of fictional-openssl",
+      "2",
+    ],
+  ])(
+    "shows its maintainers in its band: %j as %s",
+    async (maintainers, name, number) => {
+      showing([fictionalPackage({ maintainers })]);
+
+      const { screen } = await renderTree();
+
+      const button = screen.getByRole("button", { name, exact: true });
+      expect(band(screen, "fictional-openssl").contains(button.element())).toBe(
+        true,
+      );
+      expect(button.element().textContent).toBe(number);
+    },
+  );
+
+  test("opens its maintainers, in the full form with the username", async () => {
+    showing([
+      fictionalPackage({
+        maintainers: [
+          {
+            id: "00000000-0000-0000-0000-000000000004",
+            username: "dbrown",
+            full_name: "Dave Brown",
+            active: true,
+            bot: false,
+          },
+          {
+            id: "00000000-0000-0000-0000-000000000005",
+            username: "ghill",
+            full_name: "Grace Hill",
+            active: false,
+            bot: false,
+          },
+        ],
+      }),
+    ]);
+    const { screen } = await renderTree();
+
+    await screen
+      .getByRole("button", { name: "2 maintainers of fictional-openssl" })
+      .click();
+
+    const popover = screen.getByRole("dialog", {
+      name: "Maintainers of fictional-openssl",
+    });
+    await expect.element(popover).toHaveFocus();
+    expect(
+      popover
+        .getByRole("listitem")
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(["Dave Brown @dbrown", "Grace Hill @ghillInactive"]);
+  });
+});
+
+describe("a track", () => {
+  test("shows its reference, its workflow, and its affectedness on its first line", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack(),
+          fictionalTrack({
+            id: "00000000-0000-0000-0000-0000000000b2",
+            workflow_type: "git",
+            reference: "fles-16.0",
+            status: "not_affected",
+            delivery_relevant: false,
+            ...NOT_APPLICABLE,
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const ibs = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    await expect.element(ibs.getByText("IBS", { exact: true })).toBeVisible();
+    await expect
+      .element(ibs.getByText("Affected", { exact: true }))
+      .toBeVisible();
+    // The affectedness at the end of the line, 12 px after the content of
+    // the item.
+    const git = trackOf(screen, "fles-16.0");
+    await expect.element(git.getByText("Git", { exact: true })).toBeVisible();
+    await expect
+      .element(git.getByText("Not affected", { exact: true }))
+      .toBeVisible();
+    expect(boxOf(ibs.getByText("Affected", { exact: true })).right).toBeCloseTo(
+      boxOf(packagesPart(screen)).right,
+      0,
+    );
+    const reference = getComputedStyle(
+      screen.getByText("SUSE:FLES-15-SP7:Update", { exact: true }).element(),
+    );
+    expect(reference.fontWeight).toBe("500");
+  });
+
+  test.each<[TrackDetail["status"], string]>([
+    ["analysis", "Analysis"],
+    ["affected", "Affected"],
+    ["not_affected", "Not affected"],
+    ["fixed", "Fixed"],
+    ["wont_fix", "Won't fix"],
+  ])("names the affectedness %s %s", async (status, name) => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            status,
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText(name, {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+  });
+
+  test("shows values that the pinned contract does not list as received", async () => {
+    showingUnlisted([
+      {
+        ...fictionalPackage(),
+        tracks: [
+          {
+            ...fictionalTrack(),
+            workflow_type: "obs",
+            status: "partially_affected",
+            delivery_status: "on_hold",
+            milestones: {
+              triage: "done",
+              submission: "waived",
+              um: "pending",
+              qa: "pending",
+            },
+          },
+        ],
+      },
+    ]);
+
+    const { screen } = await renderTree();
+
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    await expect.element(track.getByText("obs", { exact: true })).toBeVisible();
+    await expect
+      .element(track.getByText("partially_affected", { exact: true }))
+      .toBeVisible();
+    // An affectedness that it does not list has no work, so the delivery,
+    // which is not Pending, shows as a signal, without the pipeline.
+    await expect
+      .element(track.getByText("on_hold", { exact: true }))
+      .toBeVisible();
+    expect(
+      track.getByRole("button", { name: /^Phases of/ }).elements(),
+    ).toHaveLength(0);
+    // No release of a workflow that it does not list.
+    expect(track.getByText("Not released").elements()).toHaveLength(0);
+  });
+
+  test("shows its delivery, its pipeline, and its badge on its second line while it has work", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({ submission_due_at: fromNow(3 * DAY + HOUR) }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    const delivery = track.getByText("Delivery", { exact: true });
+    await expect.element(delivery).toBeVisible();
+    expect(colorOf(delivery.element())).toBe(FG_MUTED);
+    await expect
+      .element(track.getByText("Pending", { exact: true }))
+      .toBeVisible();
+    const pipeline = track.getByRole("button", {
+      name: /^Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: /,
+    });
+    await expect.element(pipeline).toBeVisible();
+    await expect
+      .element(track.getByText("Submission due in 3 days"))
+      .toBeInTheDocument();
+    // On the line below the reference.
+    expect(boxOf(delivery).top).toBeGreaterThan(
+      boxOf(track.getByText("SUSE:FLES-15-SP7:Update")).bottom,
+    );
+  });
+
+  test.each<[string, TrackDetail["status"]]>([
+    ["Not affected", "not_affected"],
+    ["Won't fix", "wont_fix"],
+  ])(
+    "shows no pipeline and no Delivery Pending while it is %s, without work",
+    async (_, status) => {
+      showing([
+        fictionalPackage({
+          tracks: [
+            fictionalTrack({
+              status,
+              delivery_relevant: false,
+              ...NOT_APPLICABLE,
+            }),
+          ],
+        }),
+      ]);
+
+      const { screen } = await renderTree();
+
+      const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+      expect(track.getByText("Delivery").elements()).toHaveLength(0);
+      expect(
+        track.getByRole("button", { name: /^Phases of/ }).elements(),
+      ).toHaveLength(0);
+    },
+  );
+
+  test("shows no pipeline and no Delivery Pending while it is Affected without a Product that is eligible", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            products: [fictionalProduct({ eligible: false })],
+            milestones: {
+              triage: "done",
+              submission: "not_applicable",
+              um: "not_applicable",
+              qa: "not_applicable",
+            },
+            current_phase: "done",
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    expect(track.getByText("Delivery").elements()).toHaveLength(0);
+    expect(
+      track.getByRole("button", { name: /^Phases of/ }).elements(),
+    ).toHaveLength(0);
+  });
+
+  test("shows a delivery other than Pending as a signal on a track without work", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            status: "not_affected",
+            delivery_status: "in_progress",
+            delivery_relevant: true,
+            ...NOT_APPLICABLE,
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    await expect
+      .element(track.getByText("In progress", { exact: true }))
+      .toBeVisible();
+    expect(
+      track.getByRole("button", { name: /^Phases of/ }).elements(),
+    ).toHaveLength(0);
+  });
+
+  test("shows no delivery where it is not relevant", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            status: "fixed",
+            delivery_relevant: false,
+            products: [
+              fictionalProduct({ released_at: "2099-10-20T09:00:00Z" }),
+            ],
+            milestones: {
+              triage: "done",
+              submission: "done",
+              um: "done",
+              qa: "done",
+            },
+            current_phase: "done",
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    expect(
+      trackOf(screen, "SUSE:FLES-15-SP7:Update")
+        .getByText("Delivery")
+        .elements(),
+    ).toHaveLength(0);
+  });
+
+  test("shows no pipeline and no badge on a track without due dates, whose Ticket has no SLA", async () => {
+    showing([fictionalPackage({ tracks: [fictionalTrack(NO_SLA)] })], {
+      status: "ignored",
+    });
+
+    const { screen } = await renderTree();
+
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    // The delivery still shows: the track is Affected, with work.
+    await expect
+      .element(track.getByText("Delivery", { exact: true }))
+      .toBeVisible();
+    expect(
+      track.getByRole("button", { name: /^Phases of/ }).elements(),
+    ).toHaveLength(0);
+    expect(track.getByText(/^Release/).elements()).toHaveLength(0);
+  });
+
+  test.each<[string, Partial<TrackDetail>, Partial<TicketDetail>, boolean]>([
+    [
+      "Affected with a Product that is eligible",
+      { status: "affected" },
+      {},
+      true,
+    ],
+    [
+      "Fixed with a Product that is eligible and not released, on a Ticket with a CVE",
+      { status: "fixed" },
+      {},
+      true,
+    ],
+    [
+      "Fixed on a Ticket without a CVE",
+      { status: "fixed" },
+      { cve: null },
+      false,
+    ],
+    [
+      "Fixed with its Product released",
+      {
+        status: "fixed",
+        products: [fictionalProduct({ released_at: "2099-10-20T09:00:00Z" })],
+      },
+      {},
+      false,
+    ],
+    [
+      "Affected on a Resolved Ticket",
+      { status: "affected" },
+      { status: "resolved" },
+      false,
+    ],
+    [
+      "in Analysis",
+      {
+        status: "analysis",
+        milestones: { triage: null, submission: null, um: null, qa: null },
+      },
+      {},
+      false,
+    ],
+  ])(
+    "shows the Release badge of a track whose current phase is null, %s: %s",
+    async (_, track, ticket, shown) => {
+      showing(
+        [
+          fictionalPackage({
+            tracks: [
+              fictionalTrack({
+                workflow_type: "git",
+                reference: "fles-16.0",
+                release_due_at: fromNow(9 * DAY + HOUR),
+                qa_due_at: fromNow(9 * DAY + HOUR),
+                ...UNOBSERVED,
+                ...track,
+              }),
+            ],
+          }),
+        ],
+        ticket,
+      );
+
+      const { screen } = await renderTree();
+
+      expect(
+        trackOf(screen, "fles-16.0")
+          .getByText("Release due in 9 days")
+          .elements(),
+      ).toHaveLength(shown ? 1 : 0);
+    },
+  );
+
+  test("shows the badge of a current phase that the pinned contract does not list as received", async () => {
+    showingUnlisted([
+      {
+        ...fictionalPackage(),
+        tracks: [{ ...fictionalTrack(), current_phase: "review" }],
+      },
+    ]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("review", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+  });
+});
+
+describe("a Product", () => {
+  test("shows its name as a button that opens its details, and its release at the end of its line", async () => {
+    showing([fictionalPackage()]);
+
+    const { screen } = await renderTree();
+
+    const product = productOf(
+      screen,
+      "Fictional Linux Enterprise Server 15 SP7",
+    );
+    const release = product.getByText("Not released", { exact: true });
+    await expect.element(release).toBeVisible();
+    expect(colorOf(release.element())).toBe(FG_MUTED);
+    expect(getComputedStyle(release.element()).fontSize).toBe("13px");
+    const name = screen.getByRole("button", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+    });
+    expect(colorOf(name.element())).toBe(FG);
+    expect(boxOf(name).height).toBeGreaterThanOrEqual(24);
+    expect(boxOf(release).right).toBeCloseTo(boxOf(product).right, 0);
+  });
+
+  test.each<[TrackDetail["workflow_type"], string, string]>([
+    ["ibs", "SUSE:FLES-15-SP7:Update", "Not released"],
+    ["git", "fles-16.0", "Release not observed"],
+  ])(
+    "shows on a %s track that it is not released: %s",
+    async (workflow, reference, words) => {
+      showing([
+        fictionalPackage({
+          tracks: [
+            fictionalTrack({
+              workflow_type: workflow,
+              reference,
+            }),
+          ],
+        }),
+      ]);
+
+      const { screen } = await renderTree();
+
+      await expect
+        .element(
+          productOf(
+            screen,
+            "Fictional Linux Enterprise Server 15 SP7",
+          ).getByText(words, { exact: true }),
+        )
+        .toBeVisible();
+    },
+  );
+
+  test("shows when it was released, also on a track that expects no fix", async () => {
+    const releasedAt = "2099-10-20T09:00:00Z";
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            status: "not_affected",
+            products: [fictionalProduct({ released_at: releasedAt })],
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        productOf(screen, "Fictional Linux Enterprise Server 15 SP7").getByText(
+          `Released ${formatDateTime(releasedAt)}`,
+        ),
+      )
+      .toBeVisible();
+  });
+
+  test.each<[string, Partial<TrackDetail>, Partial<ProductDetail>]>([
+    ["on a track that expects no fix", { status: "wont_fix" }, {}],
+    ["when it is not eligible", {}, { eligible: false }],
+  ])("shows no release %s", async (_, track, product) => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            ...track,
+            products: [fictionalProduct(product)],
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    expect(
+      productOf(screen, "Fictional Linux Enterprise Server 15 SP7")
+        .getByText(/released/i)
+        .elements(),
+    ).toHaveLength(0);
+  });
+
+  test("marks a Product that is not eligible, in gray, and one whose eligibility is set by hand", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            products: [
+              fictionalProduct({ eligible: false, is_eligible_override: true }),
+            ],
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const product = productOf(
+      screen,
+      "Fictional Linux Enterprise Server 15 SP7",
+    );
+    await expect
+      .element(product.getByText("Not eligible", { exact: true }))
+      .toBeVisible();
+    expect(product.element().textContent).toContain(
+      "Fictional Linux Enterprise Server 15 SP7, eligibility set by hand",
+    );
+    expect(
+      colorOf(
+        screen
+          .getByRole("button", {
+            name: "Fictional Linux Enterprise Server 15 SP7",
+          })
+          .element(),
+      ),
+    ).toBe(FG_MUTED);
+  });
+
+  test("opens its details, which take the focus, without actions", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            products: [
+              fictionalProduct({ eligible: false, is_eligible_override: true }),
+            ],
+          }),
+        ],
+      }),
+    ]);
+    const { screen } = await renderTree();
+    const name = screen.getByRole("button", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+    });
+
+    await name.click();
+
+    const details = screen.getByRole("dialog", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+    });
+    await expect.element(details).toHaveFocus();
+    await expect
+      .element(details.getByText("cpe:/o:example:fles:15:sp7"))
+      .toBeVisible();
+    expect(
+      details
+        .getByRole("term")
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(["Eligibility", "Lifecycle", "Release"]);
+    expect(
+      details
+        .getByRole("definition")
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual([
+      "Not eligible · set by hand",
+      "General support",
+      "Not released",
+    ]);
+    expect(details.getByRole("button").elements()).toHaveLength(0);
+  });
+
+  test.each<[string, Partial<TrackDetail>, Partial<ProductDetail>, string[]]>([
+    [
+      "an automatic eligibility, no lifecycle data, and a Git release that Sentinel does not observe",
+      { workflow_type: "git", reference: "fles-16.0" },
+      { lifecycle_phase: null },
+      ["Eligible · automatic", "Not available", "Not observed"],
+    ],
+    [
+      "a release",
+      {},
+      { released_at: "2099-10-20T09:00:00Z", lifecycle_phase: "pre_release" },
+      [
+        "Eligible · automatic",
+        "Pre-release",
+        `Released ${formatDateTime("2099-10-20T09:00:00Z")}`,
+      ],
+    ],
+  ])("shows in its details %s", async (_, track, product, values) => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            ...track,
+            products: [fictionalProduct(product)],
+          }),
+        ],
+      }),
+    ]);
+    const { screen } = await renderTree();
+
+    await screen
+      .getByRole("button", {
+        name: "Fictional Linux Enterprise Server 15 SP7",
+      })
+      .click();
+
+    const details = screen.getByRole("dialog", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+    });
+    await expect.element(details).toBeVisible();
+    expect(
+      details
+        .getByRole("definition")
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(values);
+  });
+
+  test.each([
+    ["product_excluded", "No, it is excluded from this track"],
+    ["track_excluded", "No, its track is excluded"],
+    ["package_excluded", "No, its package is excluded"],
+    ["eol", "No, it has reached its end of life"],
+    ["withdrawn", "No, withdrawn"],
+  ])("says in its details why it takes no part: %s", async (reason, words) => {
+    showingUnlisted([
+      {
+        ...fictionalPackage(),
+        tracks: [
+          {
+            ...fictionalTrack(),
+            products: [
+              fictionalProduct(),
+              {
+                ...excludedProduct(),
+                lifecycle_phase: "sunset",
+                non_actionable_reason: reason,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    await screen
+      .getByRole("button", {
+        name: "Fictional Linux Enterprise Desktop 15 SP7",
+      })
+      .click();
+
+    const details = screen.getByRole("dialog", {
+      name: "Fictional Linux Enterprise Desktop 15 SP7",
+    });
+    await expect.element(details).toBeVisible();
+    expect(
+      details
+        .getByRole("definition")
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(["Eligible · automatic", "sunset", "Not released", words]);
+  });
+});
+
+// A package with a track that shows, holding a Product that shows, an
+// excluded Product, and a Product at the end of its life; an excluded track;
+// and an excluded package.
+function withHiddenRecords(): PackageDetail[] {
+  return [
+    fictionalPackage({
+      tracks: [
+        fictionalTrack({
+          products: [fictionalProduct(), excludedProduct(), eolProduct()],
+        }),
+        excludedTrack(),
+      ],
+    }),
+    excludedPackage(),
+  ];
+}
+
+describe("the hidden records", () => {
+  test("counts the hidden records whose parent shows", () => {
+    expect(hiddenCount(withHiddenRecords())).toBe(4);
+    expect(hiddenCount([fictionalPackage()])).toBe(0);
+  });
+
+  test("hides the excluded and EOL records until Show hidden shows them", async () => {
+    showing(withHiddenRecords());
+
+    const { screen } = await renderTree();
+
+    const toggle = showHidden(screen);
+    await expect.element(toggle).not.toBeChecked();
+    await expect.element(toggle).toHaveAccessibleName("Show hidden 4");
+    expect(
+      packagesPart(screen)
+        .getByRole("heading", { level: 3 })
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(["fictional-openssl"]);
+    expect(screen.getByText("SUSE:FLES-15-SP6:Update").elements()).toHaveLength(
+      0,
+    );
+    expect(
+      screen
+        .getByRole("button", {
+          name: "Fictional Linux Enterprise Desktop 15 SP7",
+        })
+        .elements(),
+    ).toHaveLength(0);
+    expect(
+      screen
+        .getByRole("button", {
+          name: "Fictional Linux Enterprise Server 15 SP3",
+        })
+        .elements(),
+    ).toHaveLength(0);
+  });
+
+  test("puts the switch at the end of the line of the heading", async () => {
+    showing(withHiddenRecords());
+
+    const { screen } = await renderTree();
+
+    const heading = packagesPart(screen).getByRole("heading", { level: 2 });
+    const toggle = showHidden(screen).element().closest("label");
+    expect(toggle).not.toBeNull();
+    expect(boxOf(toggle!).right).toBeCloseTo(
+      boxOf(packagesPart(screen)).right,
+      0,
+    );
+    expect(boxOf(toggle!).top).toBeLessThan(boxOf(heading).bottom);
+  });
+
+  test("shows them in gray, with the label of their own state, and keeps the state in the URL", async () => {
+    showing(withHiddenRecords());
+    const { router, screen } = await renderTree("/tickets/SNTL-12#packages");
+
+    await pressShowHidden(screen);
+
+    await expect.element(showHidden(screen)).toBeChecked();
+    expect(router.state.location.href).toBe(
+      "/tickets/SNTL-12?hidden=shown#packages",
+    );
+    expect(router.history.length).toBe(2);
+    await expect.element(showHidden(screen)).toHaveFocus();
+    // The excluded package, in gray, with its label in its band.
+    const libpng = band(screen, "fictional-libpng");
+    expect(colorOf(libpng)).toBe(FG_MUTED);
+    expect(libpng.textContent).toContain("Excluded");
+    // The excluded track, with its label, and its Product, without one.
+    const track = trackOf(screen, "SUSE:FLES-15-SP6:Update");
+    await expect
+      .element(track.getByText("Excluded", { exact: true }))
+      .toBeVisible();
+    expect(colorOf(track.element())).toBe(FG_MUTED);
+    const throughTrack = productOf(
+      screen,
+      "Fictional Linux Enterprise Server 15 SP6",
+    );
+    expect(throughTrack.getByText("Excluded").elements()).toHaveLength(0);
+    expect(
+      colorOf(
+        screen
+          .getByRole("button", {
+            name: "Fictional Linux Enterprise Server 15 SP6",
+          })
+          .element(),
+      ),
+    ).toBe(FG_MUTED);
+    // The excluded Product and the Product at the end of its life, each with
+    // its label.
+    await expect
+      .element(
+        productOf(
+          screen,
+          "Fictional Linux Enterprise Desktop 15 SP7",
+        ).getByText("Excluded", { exact: true }),
+      )
+      .toBeVisible();
+    await expect
+      .element(
+        productOf(screen, "Fictional Linux Enterprise Server 15 SP3").getByText(
+          "EOL",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+    // The records that count keep their colors, unlike the Product of the
+    // same name in the excluded package.
+    expect(colorOf(band(screen, "fictional-openssl"))).toBe(FG);
+    const products = screen
+      .getByRole("button", { name: "Fictional Linux Enterprise Server 15 SP7" })
+      .elements();
+    expect(products.map(colorOf)).toEqual([FG, FG_MUTED]);
+
+    await pressShowHidden(screen);
+
+    expect(router.state.location.href).toBe("/tickets/SNTL-12#packages");
+    await expect.element(showHidden(screen)).not.toBeChecked();
+  });
+
+  test("keeps the scroll position when Show hidden changes", async () => {
+    await page.viewport(1280, 400);
+    showing(withHiddenRecords());
+    const { screen } = await renderTree();
+    window.scrollTo(0, 200);
+    await expect.poll(() => window.scrollY).toBe(200);
+
+    await pressShowHidden(screen);
+
+    await expect.element(showHidden(screen)).toBeChecked();
+    expect(window.scrollY).toBe(200);
+  });
+
+  test("shows the label of a record that its own state hides also under a hidden parent", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack(),
+          excludedTrack({
+            products: [eolProduct({ non_actionable_reason: "track_excluded" })],
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    await expect
+      .element(
+        productOf(screen, "Fictional Linux Enterprise Server 15 SP3").getByText(
+          "EOL",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+  });
+
+  test("shows a track without a Product that takes part in gray, without a label", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack(),
+          fictionalTrack({
+            id: "00000000-0000-0000-0000-0000000000b4",
+            reference: "SUSE:FLES-15-SP3:Update",
+            status: "analysis",
+            actionable: false,
+            non_actionable_reason: "no_actionable_products",
+            products: [eolProduct()],
+            ...NOT_APPLICABLE,
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    const track = trackOf(screen, "SUSE:FLES-15-SP3:Update");
+    await expect.element(track).toBeVisible();
+    expect(colorOf(track.element())).toBe(FG_MUTED);
+    expect(track.getByText("Excluded").elements()).toHaveLength(0);
+    await expect
+      .element(showHidden(screen))
+      .toHaveAccessibleName("Show hidden 1");
+  });
+
+  test("disables the switch without hidden records, and keeps its state", async () => {
+    showing([fictionalPackage()]);
+
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    await expect.element(showHidden(screen)).toBeDisabled();
+    await expect.element(showHidden(screen)).toBeChecked();
+    await expect
+      .element(showHidden(screen))
+      .toHaveAccessibleName("Show hidden 0");
+  });
+
+  test("says that every package is hidden while the switch is off", async () => {
+    showing([excludedPackage()]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(screen.getByText("All packages are hidden.", { exact: true }))
+      .toBeVisible();
+    expect(
+      colorOf(screen.getByText("All packages are hidden.").element()),
+    ).toBe(FG_MUTED);
+  });
+
+  test("removes a value of hidden that it does not accept from the URL, in place of the URL, and keeps the anchor", async () => {
+    showing(withHiddenRecords());
+
+    const { router, screen } = await renderTree(
+      "/tickets/SNTL-12?hidden=yes&view=new#packages",
+    );
+
+    expect(router.state.location.href).toBe("/tickets/SNTL-12#packages");
+    expect(router.history.length).toBe(1);
+    await expect.element(showHidden(screen)).not.toBeChecked();
+  });
+});
+
+describe("the tracks that wait for the signed-in user", () => {
+  test("show Needs your action with a bar for a maintainer, on the pending tracks that the read of their work returns", async () => {
+    const spy = showing(
+      [
+        fictionalPackage({
+          tracks: [
+            fictionalTrack(),
+            fictionalTrack({
+              id: "00000000-0000-0000-0000-0000000000b2",
+              reference: "SUSE:FLES-15-SP6:Update",
+            }),
+          ],
+        }),
+      ],
+      {},
+      {
+        user: MAINTAINER,
+        yourWork: () =>
+          ticketWorkResponse([
+            {
+              packageName: "fictional-openssl",
+              reference: "SUSE:FLES-15-SP7:Update",
+            },
+          ]),
+      },
+    );
+
+    const { screen } = await renderTree();
+
+    const label = packagesPart(screen).getByText("Needs your action", {
+      exact: true,
+    });
+    await expect.element(label).toBeVisible();
+    const waiting = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    expect(waiting.element().contains(label.element())).toBe(true);
+    const style = getComputedStyle(label.element());
+    expect(style.backgroundColor).toBe(INFO_SOFT);
+    expect(style.color).toBe(INFO_ON_SOFT);
+    expect(style.fontSize).toBe("12px");
+    expect(boxOf(label).height).toBe(20);
+    const bar = getComputedStyle(waiting.element());
+    expect(bar.borderLeftWidth).toBe("3px");
+    expect(bar.borderLeftColor).toBe(LINK);
+    const other = trackOf(screen, "SUSE:FLES-15-SP6:Update");
+    expect(other.getByText("Needs your action").elements()).toHaveLength(0);
+    expect(getComputedStyle(other.element()).borderLeftWidth).toBe("1px");
+    expect(getComputedStyle(other.element()).borderLeftColor).toBe(BORDER);
+    expect(requestsTo(spy, YOUR_WORK)).toBe(1);
+  });
+
+  test("are not read for a user whom no package lists as a maintainer", async () => {
+    const spy = showing([fictionalPackage()]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(screen.getByText("SUSE:FLES-15-SP7:Update"))
+      .toBeVisible();
+    expect(requestsTo(spy, YOUR_WORK)).toBe(0);
+  });
+
+  test("are not read for a user who maintains only an excluded package", async () => {
+    const spy = showing(
+      [
+        fictionalPackage({ maintainers: [] }),
+        {
+          ...excludedPackage(),
+          maintainers: [
+            {
+              id: MAINTAINER.data.id,
+              username: "dbrown",
+              full_name: "Dave Brown",
+              active: true,
+              bot: false,
+            },
+          ],
+        },
+      ],
+      {},
+      { user: MAINTAINER },
+    );
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(screen.getByText("SUSE:FLES-15-SP7:Update"))
+      .toBeVisible();
+    expect(requestsTo(spy, YOUR_WORK)).toBe(0);
+  });
+
+  test("show no mark until the read arrives", async () => {
+    const response = later();
+    showing(
+      [fictionalPackage()],
+      {},
+      {
+        user: MAINTAINER,
+        yourWork: () => response.promise,
+      },
+    );
+
+    const { screen } = await renderTree();
+
+    expect(screen.getByText("Needs your action").elements()).toHaveLength(0);
+    response.resolve(
+      ticketWorkResponse([
+        {
+          packageName: "fictional-openssl",
+          reference: "SUSE:FLES-15-SP7:Update",
+        },
+      ]),
+    );
+    await expect.element(screen.getByText("Needs your action")).toBeVisible();
+  });
+
+  test("say above the tree that they couldn't be shown when the read fails, with Try again where the failure offers it", async () => {
+    let fails = true;
+    showing(
+      [fictionalPackage()],
+      {},
+      {
+        user: MAINTAINER,
+        yourWork: () =>
+          fails
+            ? errorResponse(503, "SERVICE_UNAVAILABLE")
+            : ticketWorkResponse([
+                {
+                  packageName: "fictional-openssl",
+                  reference: "SUSE:FLES-15-SP7:Update",
+                },
+              ]),
+      },
+    );
+
+    const { screen } = await renderTree();
+
+    const warning = screen.getByText(
+      "The tracks that wait for you couldn't be shown. Sentinel isn't available right now. Try again later.",
+    );
+    await expect.element(warning).toBeVisible();
+    expect(boxOf(warning).bottom).toBeLessThan(
+      boxOf(band(screen, "fictional-openssl")).top,
+    );
+    // The tree stays usable.
+    await expect
+      .element(
+        screen.getByRole("button", {
+          name: "Fictional Linux Enterprise Server 15 SP7",
+        }),
+      )
+      .toBeEnabled();
+
+    fails = false;
+    await screen.getByRole("button", { name: "Try again" }).click();
+
+    await expect.element(screen.getByText("Needs your action")).toBeVisible();
+    expect(screen.getByText(/couldn't be shown/).elements()).toHaveLength(0);
+  });
+
+  test("offer no Try again after a failure that does not offer it", async () => {
+    showing(
+      [fictionalPackage()],
+      {},
+      {
+        user: MAINTAINER,
+        yourWork: () => errorResponse(400, "BAD_REQUEST"),
+      },
+    );
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        screen.getByText(
+          "The tracks that wait for you couldn't be shown. Sentinel didn't accept this request.",
+        ),
+      )
+      .toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Try again" }).elements(),
+    ).toHaveLength(0);
+  });
+});
