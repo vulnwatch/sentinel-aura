@@ -906,7 +906,9 @@ complete profile and its manager, and the signed-in user alike: `id`,
 ## Open Decisions
 
 A decision that is not taken yet is listed here, with who takes it, and every
-design that depends on it waits for it.
+design that depends on it waits for it; so is a behavior of this document that
+does not take effect yet, with what it waits for and how the screens show
+meanwhile.
 
 - **The link to a user.** A user links to their screen, User
   (`docs/screen-map.md`, Areas and Screens; Links Between Areas), which the UI

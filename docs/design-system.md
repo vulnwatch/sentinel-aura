@@ -1160,12 +1160,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   heading row wraps. No column header names them there, so each is named for
   assistive technologies by a term that does not show, such as Severity, and a
   value that is absent shows the word that the screen document gives it, such
-  as "Severity not set", rather than a dash (`docs/behaviors.md`, Absent
-  Values). Several actions are one menu, Actions, a secondary button that
-  opens them as a menu (Buttons and Links; Menus, Popovers, and Tooltips),
-  shown to a user who can take at least one of them (`docs/screen-map.md`,
-  Roles); an action that changes one field of the record's description list is
-  the pencil of that field instead (below).
+  as "Severity not set", rather than a dash, or nothing where the screen
+  document leaves it out, such as the CVE ID of a Ticket without a CVE
+  (`docs/behaviors.md`, Absent Values). Several actions are one menu, Actions,
+  a secondary button that opens them as a menu (Buttons and Links; Menus,
+  Popovers, and Tooltips), shown to a user who can take at least one of them
+  (`docs/screen-map.md`, Roles); an action that changes one field of the
+  record's description list is the pencil of that field instead (below).
 - A screen document can show the parts of a long record one at a time, as
   tabs at paths under the path of the screen (`docs/screen-map.md`, Areas and
   Screens). The tabs follow the heading row, 12 px below it, in a row with a
