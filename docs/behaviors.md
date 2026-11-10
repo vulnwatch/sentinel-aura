@@ -215,7 +215,7 @@ message follows Wording.
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
-| A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user, before it has shown its marks; a later read of them is a new read of the same data | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again |
+| A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again. Once a read of them has succeeded, a later read of them that fails keeps its marks, as a new read of the same data does, but its message names them, such as "The tracks that wait for you couldn't be updated.", so that it is not read as a failure of the data that they mark; a `403` or `404` removes them as for the first read |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
@@ -578,17 +578,14 @@ is not completed, among the phases that Sentinel observes (Sentinel
   overdue count, even when the badge is red (Sentinel
   `docs/features/tickets/ticket-deadlines.md`, Observability of Later
   Phases).
-- The package tree of a Ticket shows the deadline of each track as a badge
-  too, from the fields of the track, which carry the due dates of the Ticket
-  and a current phase of their own (same document, Ticket and Track Dates;
-  Track Milestones), by the table above. A track whose current phase is
-  `null`, with due dates, shows its Release badge only while its Ticket is
-  not Resolved and the track still has work, not being resolution-complete
-  (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved):
-  Affected with an actionable eligible Product, or, on a Ticket with a CVE,
-  Fixed with an actionable eligible Product that is not released. Its later
-  phases are not observed, and on a track with nothing left to do the badge
-  would stay, and turn red once the date passes.
+- The package tree of a Ticket shows no badge on its tracks. A track carries
+  the due dates of its Ticket and a current phase of its own (same document,
+  Ticket and Track Dates; Track Milestones): its pipeline shows its current
+  phase and whether it is past due, and Phases the state and the due date of
+  each phase (`docs/design-system.md`, Track Milestones), while the badge of
+  the Ticket names the deadline of the current phase of the Ticket. A track
+  ahead of that phase, such as an Affected track of a Ticket in Analysis,
+  whose badge names Triage, shows its days only in Phases.
 - Another due date that Sentinel returns with the status of its milestone,
   that of a phase of a track, that of a maintainer's workbench item, and that
   of the current phase of a Ticket (`current_phase_milestone`), shows as a

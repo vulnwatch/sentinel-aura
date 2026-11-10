@@ -905,12 +905,12 @@ screen, the heading row follows the lock with the label Confidential
 - A label names a short state or kind beside a value or a name: Inactive and
   Bot after the name of a user (Representation of a User), Confidential after
   the lock of a confidential Ticket in the heading row of its detail screen
-  (Confidential Tickets), and, as a screen document states them, such as the
-  workflow of a track, IBS or Git, Excluded, EOL, Disabled, Not eligible, or a
-  type of a CNA. It is in `text-12`, weight 500, `fg-muted`, with a 1 px
-  `border-strong` boundary, a 4 px radius, and 4 px of side padding, 6 px
-  after what it follows; a second label follows the first, 6 px later. Its
-  text carries its meaning, and assistive technologies read it as text.
+  (Confidential Tickets), and, as a screen document states them, such as
+  Excluded, EOL, Disabled, Not eligible, or a type of a CNA. It is in
+  `text-12`, weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a
+  4 px radius, and 4 px of side padding, 6 px after what it follows; a second
+  label follows the first, 6 px later. Its text carries its meaning, and
+  assistive technologies read it as text.
 - A label that tells the signed-in user that a record waits for them, such as
   the label of a track of a package tree that waits for their submission
   (`docs/screen-map.md`, Areas and Screens), is 20 px high, in `text-12`,
@@ -1349,8 +1349,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   Unconfirmed Changes), and `danger` for an error.
 - When data stays shown after a new read of it failed, or after a read that
   only adds marks to it failed, a `warning` message above the data says that
-  it could not be updated, or what could not be shown, followed 8 px below by
-  Try again as a secondary button when the failure offers it
+  it could not be updated, or what could not be shown or updated, followed
+  8 px below by Try again as a secondary button when the failure offers it
   (`docs/behaviors.md`, Where Errors Appear). The button stands outside the
   message, on the background of the screen or of its part, against which its
   boundary keeps its contrast (Contrast Table).

@@ -4,10 +4,14 @@ import type {
   CurrentUserResponse,
   ErrorResponse,
   LoginResponse,
+  MaintainerTicketWorkResponse,
+  PackageDetail,
+  ProductDetail,
   TicketDetail,
   TicketDetailResponse,
   TicketListResponse,
   TicketSummary,
+  TrackDetail,
   ValidationErrorResponse,
 } from "./api/generated/model";
 
@@ -215,6 +219,114 @@ export function fictionalCve(fields: Partial<CVEDetail> = {}): CVEDetail {
     cwes: [],
     ...fields,
   };
+}
+
+// A fictional Product occurrence of a track, as the package tree returns it:
+// Fictional Linux Enterprise Server 15 SP7, eligible by the automatic
+// calculation, not released, in General Support, and actionable, with the
+// fields that a test sets.
+export function fictionalProduct(
+  fields: Partial<ProductDetail> = {},
+): ProductDetail {
+  return {
+    id: "00000000-0000-0000-0000-0000000000c1",
+    product_cpe: "cpe:/o:example:fles:15:sp7",
+    product_name: "Fictional Linux Enterprise Server 15 SP7",
+    eligible: true,
+    is_eligible_override: false,
+    released_at: null,
+    lifecycle_phase: "general_support",
+    deleted_at: null,
+    actionable: true,
+    non_actionable_reason: null,
+    ...fields,
+  };
+}
+
+// A fictional track of a package, as the package tree returns it: the IBS
+// codestream SUSE:FLES-15-SP7:Update, Affected, its delivery Pending, with
+// one Product and the due dates of fictionalTicketDetail, its submission
+// pending and current, with the fields that a test sets.
+export function fictionalTrack(fields: Partial<TrackDetail> = {}): TrackDetail {
+  return {
+    id: "00000000-0000-0000-0000-0000000000b1",
+    workflow_type: "ibs",
+    reference: "SUSE:FLES-15-SP7:Update",
+    status: "affected",
+    delivery_status: "pending",
+    delivery_relevant: true,
+    products: [fictionalProduct()],
+    deleted_at: null,
+    actionable: true,
+    non_actionable_reason: null,
+    triage_due_at: "2099-10-12T14:05:09Z",
+    submission_due_at: "2099-10-27T14:05:09Z",
+    um_due_at: "2099-10-30T14:05:09Z",
+    qa_due_at: "2099-11-08T14:05:09Z",
+    release_due_at: "2099-11-08T14:05:09Z",
+    milestones: {
+      triage: "done",
+      submission: "pending",
+      um: "pending",
+      qa: "pending",
+    },
+    current_phase: "submission",
+    ...fields,
+  };
+}
+
+// A fictional package of a Ticket, as the package tree returns it:
+// fictional-openssl, with one track and one maintainer, with the fields that
+// a test sets.
+export function fictionalPackage(
+  fields: Partial<PackageDetail> = {},
+): PackageDetail {
+  return {
+    id: "00000000-0000-0000-0000-0000000000a1",
+    package_name: "fictional-openssl",
+    tracks: [fictionalTrack()],
+    deleted_at: null,
+    actionable: true,
+    non_actionable_reason: null,
+    maintainers: [
+      {
+        id: "00000000-0000-0000-0000-000000000004",
+        username: "dbrown",
+        full_name: "Dave Brown",
+        active: true,
+        bot: false,
+      },
+    ],
+    ...fields,
+  };
+}
+
+// The work of the signed-in user on a Ticket, as Get My Package Work for a
+// Ticket returns it, with the pending tracks of the packages that a test
+// names, and nothing in progress or completed.
+export function ticketWorkResponse(
+  pending: readonly { packageName: string; reference: string }[] = [],
+): Response {
+  const body: MaintainerTicketWorkResponse = {
+    data: {
+      pending: pending.map(({ packageName, reference }) => ({
+        package_name: packageName,
+        ticket_id: "SNTL-12",
+        is_confidential: false,
+        cve_id: "CVE-2099-0012",
+        severity: "high",
+        workflow_type: "ibs",
+        reference,
+        status: "affected",
+        delivery_status: "pending",
+        submission_due_at: "2099-10-27T14:05:09Z",
+        submission_milestone: "pending",
+      })),
+      in_progress: [],
+      completed: [],
+    },
+  };
+  return jsonResponse(200, body);
 }
 
 // Get Ticket's response for a Ticket.

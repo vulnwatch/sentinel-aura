@@ -156,17 +156,26 @@ interface PartProps {
   id: string;
   // The level-two heading of the part.
   heading: ReactNode;
-  // What follows the heading on its line, such as a link or the actions of
-  // the part, at its end.
+  // What follows the heading on its line, such as a link.
   besideHeading?: ReactNode;
+  // The actions of the part, and its controls, such as the switch that shows
+  // its hidden records, at the end of the line of the heading.
+  actions?: ReactNode;
   children: ReactNode;
 }
 
 // A part of the record in the main column (docs/design-system.md, Detail
 // Screens): a section on the background of the page, with its level-two
-// heading in text-16, weight 600, and its content 16 px below the heading.
-// The main column draws the line above each part but the first (MainColumn).
-export function Part({ id, heading, besideHeading, children }: PartProps) {
+// heading in text-16, weight 600, its actions at the end of the line of the
+// heading, and its content 16 px below the heading. The main column draws
+// the line above each part but the first (MainColumn).
+export function Part({
+  id,
+  heading,
+  besideHeading,
+  actions,
+  children,
+}: PartProps) {
   const headingId = `${id}-heading`;
   return (
     <section id={id} aria-labelledby={headingId} className="@container">
@@ -175,6 +184,9 @@ export function Part({ id, heading, besideHeading, children }: PartProps) {
           {heading}
         </h2>
         {besideHeading}
+        {actions !== undefined && (
+          <div className="ms-auto flex items-center">{actions}</div>
+        )}
       </div>
       <div className="mt-4">{children}</div>
     </section>
