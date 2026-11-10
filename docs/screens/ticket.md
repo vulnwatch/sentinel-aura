@@ -146,29 +146,28 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     Pending `neutral`, In progress `info`, Released `success`, where
     `delivery_relevant` is true (Sentinel
     `docs/features/packages/package-model.md`, Delivery Relevance Indicator)
-    and its status is not Pending, or the track has work and Sentinel
+    and either its status is not Pending or the track has work and Sentinel
     observes its submission (below); and the pipeline of its phases, when
     it has work and due dates (`docs/design-system.md`, Track Milestones),
     named such as "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: …",
-    whose Phases holds no more than the design system states. The pipeline
-    shows the deadline of the track, which has no badge (`docs/behaviors.md`,
-    Deadlines). A track has work when it is actionable and in Analysis, or
-    Affected or Fixed with a Product that is actionable and eligible; a
-    track without work, Not affected and Won't fix included, shows no
-    pipeline and no Delivery Pending, and a Ticket without due dates shows
-    no pipeline.
+    whose Phases holds no more than the design system states. The track has
+    no deadline badge: its pipeline and Phases show its deadlines
+    (`docs/behaviors.md`, Deadlines). A track has work when it is actionable
+    and in Analysis, or Affected or Fixed with a Product that is actionable
+    and eligible; a track without work, Not affected and Won't fix included,
+    shows no pipeline and no Delivery Pending, and a Ticket without due
+    dates shows no pipeline.
   - Sentinel observes a phase of a track with due dates whose milestone is
     not `null`, and not, for example, the submission, the UM, and the QA of
-    a Git track or of a track of a Ticket without a CVE; the completion of
-    the submission is the delivery of the track, and that of the QA the
-    release of its Products (Sentinel
-    `docs/features/tickets/ticket-deadlines.md`, Track Milestones;
+    a Git track or of a track of a Ticket without a CVE; the delivery of the
+    track completes its submission, and the release of its Products its QA
+    (Sentinel `docs/features/tickets/ticket-deadlines.md`, Track Milestones;
     Observability of Later Phases; Completion Evidence). A track without
-    due dates, such as one of an Ignored or Duplicated Ticket, whose
-    delivery and release Sentinel does not observe (same document, Null Due
-    Dates; Sentinel `docs/features/packages/package-model.md`, Continued
-    Updates), does not show which phases Sentinel observes, so it shows
-    neither Delivery Pending nor a release that is due.
+    due dates, whose milestones are all `null` because no SLA applies (same
+    document, Null Due Dates), does not show which phases Sentinel observes,
+    so it shows neither Delivery Pending nor a release that is due; on an
+    Ignored or Duplicated Ticket, Sentinel observes neither (Sentinel
+    `docs/features/packages/package-model.md`, Continued Updates).
 - Its Products are a list below the track, with a border line at their left,
   each on a line that wraps: its name, which wraps, in `fg-muted` when it is
   not eligible; `user-pen` when its eligibility is set by hand, read as ",

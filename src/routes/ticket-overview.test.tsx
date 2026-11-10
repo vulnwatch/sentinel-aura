@@ -787,6 +787,71 @@ describe("a track", () => {
     },
   );
 
+  test("decides Delivery Pending by the submission and the release by the QA, a milestone that the pinned contract does not list counting as observed", async () => {
+    showingUnlisted([
+      {
+        ...fictionalPackage(),
+        tracks: [
+          {
+            ...fictionalTrack(),
+            milestones: {
+              triage: "done",
+              submission: "waived",
+              um: null,
+              qa: null,
+            },
+            current_phase: null,
+          },
+          {
+            ...fictionalTrack({
+              id: "00000000-0000-0000-0000-0000000000b2",
+              reference: "SUSE:FLES-15-SP6:Update",
+              products: [
+                fictionalProduct({
+                  id: "00000000-0000-0000-0000-0000000000c9",
+                  product_name: "Fictional Linux Enterprise Server 15 SP6",
+                  product_cpe: "cpe:/o:example:fles:15:sp6",
+                }),
+              ],
+            }),
+            milestones: {
+              triage: "done",
+              submission: null,
+              um: null,
+              qa: "waived",
+            },
+            current_phase: null,
+          },
+        ],
+      },
+    ]);
+
+    const { screen } = await renderTree();
+
+    const submitted = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    await expect
+      .element(submitted.getByText("Delivery", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(
+        productOf(screen, "Fictional Linux Enterprise Server 15 SP7").getByText(
+          "Release not observed",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+    const tested = trackOf(screen, "SUSE:FLES-15-SP6:Update");
+    expect(tested.getByText("Delivery").elements()).toHaveLength(0);
+    await expect
+      .element(
+        productOf(screen, "Fictional Linux Enterprise Server 15 SP6").getByText(
+          "Not released",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+  });
+
   test.each<[string, TrackDetail["status"]]>([
     ["Not affected", "not_affected"],
     ["Won't fix", "wont_fix"],

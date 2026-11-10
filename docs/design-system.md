@@ -906,10 +906,11 @@ screen, the heading row follows the lock with the label Confidential
   Bot after the name of a user (Representation of a User), Confidential after
   the lock of a confidential Ticket in the heading row of its detail screen
   (Confidential Tickets), and, as a screen document states them, such as
-  Excluded, EOL, Disabled, Not eligible, or a type of a CNA. It is in `text-12`, weight 500, `fg-muted`, with a 1 px
-  `border-strong` boundary, a 4 px radius, and 4 px of side padding, 6 px
-  after what it follows; a second label follows the first, 6 px later. Its
-  text carries its meaning, and assistive technologies read it as text.
+  Excluded, EOL, Disabled, Not eligible, or a type of a CNA. It is in
+  `text-12`, weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a
+  4 px radius, and 4 px of side padding, 6 px after what it follows; a second
+  label follows the first, 6 px later. Its text carries its meaning, and
+  assistive technologies read it as text.
 - A label that tells the signed-in user that a record waits for them, such as
   the label of a track of a package tree that waits for their submission
   (`docs/screen-map.md`, Areas and Screens), is 20 px high, in `text-12`,

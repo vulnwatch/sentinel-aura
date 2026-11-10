@@ -580,12 +580,12 @@ is not completed, among the phases that Sentinel observes (Sentinel
   Phases).
 - The package tree of a Ticket shows no badge on its tracks. A track carries
   the due dates of its Ticket and a current phase of its own (same document,
-  Ticket and Track Dates; Track Milestones): the badge of the Ticket already
-  names the deadline of its earliest open phase, and the pipeline of each
-  track shows the current phase of the track and whether it is past due,
-  with its days in Phases (`docs/design-system.md`, Track Milestones). A
-  badge on each track would repeat the deadline of the Ticket on most of its
-  tracks.
+  Ticket and Track Dates; Track Milestones): its pipeline shows its current
+  phase and whether it is past due, and Phases the state and the due date of
+  each phase (`docs/design-system.md`, Track Milestones), while the badge of
+  the Ticket names the deadline of the current phase of the Ticket. A track
+  ahead of that phase, such as an Affected track of a Ticket in Analysis,
+  whose badge names Triage, shows its days only in Phases.
 - Another due date that Sentinel returns with the status of its milestone,
   that of a phase of a track, that of a maintainer's workbench item, and that
   of the current phase of a Ticket (`current_phase_milestone`), shows as a

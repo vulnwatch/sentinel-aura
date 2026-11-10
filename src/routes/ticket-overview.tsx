@@ -686,8 +686,8 @@ function receivesFix(product: ProductDetail): boolean {
 // The release of a Product that its line and its details show: when it was
 // released, on every released Product; and, on a Product that receives the
 // fix under a track that expects one (expectsFix), that it is not released
-// where Sentinel observes the QA of the track, whose completion is the
-// release of its Products, or that its release is not observed (observes);
+// where Sentinel observes the QA of the track, which the release of its
+// Products completes, or that its release is not observed (observes);
 // otherwise none, as on a track without due dates.
 type Release =
   | { kind: "released"; at: string }
@@ -954,11 +954,11 @@ interface TrackItemProps {
 //   affectedness;
 // - "Delivery" and its status, where it is relevant (Sentinel
 //   docs/features/packages/package-model.md, Delivery Relevance Indicator)
-//   and its status is not Pending, or the track has work and Sentinel
-//   observes its submission, whose completion is its delivery (observes;
+//   and either its status is not Pending or the track has work and Sentinel
+//   observes its submission, which its delivery completes (observes;
 //   Sentinel docs/features/tickets/ticket-deadlines.md, Completion
 //   Evidence); and the pipeline of its phases, when it has work and due
-//   dates, which shows the deadline of the track in place of a badge;
+//   dates, which shows the deadlines of the track in place of a badge;
 // then its Products, as a list with a border line at its left. A hidden
 // track shows its hidden Products; another track only while "Show hidden" is
 // on.
