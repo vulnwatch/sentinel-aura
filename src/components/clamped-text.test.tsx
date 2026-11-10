@@ -155,14 +155,21 @@ test("keeps the line breaks of the text, collapses its runs of spaces, and break
   const second = document.createRange();
   second.setStart(node, "First    line.\n".length);
   second.setEnd(node, "First    line.\nSecond".length);
-  // The line break starts a new line, and the first sentence, its spaces
-  // collapsed to one, takes less than the width of the text.
+  // The line break starts a new line.
   expect(first.getClientRects()).toHaveLength(1);
   expect(second.getBoundingClientRect().top).toBeGreaterThanOrEqual(
     first.getBoundingClientRect().bottom - 1,
   );
-  expect(first.getBoundingClientRect().width).toBeLessThan(
-    text.getBoundingClientRect().width / 2,
+  // The run of four spaces after "First" takes no more room than the one
+  // space after "Second".
+  const run = document.createRange();
+  run.setStart(node, "First".length);
+  run.setEnd(node, "First    ".length);
+  const space = document.createRange();
+  space.setStart(node, "First    line.\nSecond".length);
+  space.setEnd(node, "First    line.\nSecond ".length);
+  expect(run.getBoundingClientRect().width).toBeLessThanOrEqual(
+    space.getBoundingClientRect().width + 1,
   );
   // The long word breaks within the width of the text, which stays within
   // the window.

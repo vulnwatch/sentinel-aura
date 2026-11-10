@@ -887,11 +887,12 @@ describe("the details", () => {
         fictionalTicket({ ticket_id: `SNTL-${index + 100}` }),
       );
       stubTicket({
-        duplicates: () => ticketPage(duplicates, { total: 220, perPage: 100 }),
+        duplicates: () => ticketPage(duplicates, { total: 1250, perPage: 100 }),
       });
       const { screen } = await renderTicket();
 
-      await expect.element(screen.getByText("and 120 more")).toBeVisible();
+      // Their thousands grouped (docs/behaviors.md, Style).
+      await expect.element(screen.getByText("and 1,150 more")).toBeVisible();
     });
 
     test("show None without any", async () => {

@@ -57,6 +57,9 @@ function suseCvePage(cveId: string): string {
 // the details show at most this many duplicates, and how many more there are.
 const DUPLICATES_PAGE = 100;
 
+// A count, its thousands grouped (docs/behaviors.md, Style).
+const COUNT = new Intl.NumberFormat("en-US");
+
 // ----------------------------------------------------------------------------
 // Details
 
@@ -264,7 +267,7 @@ function Duplicates({ read }: DuplicatesProps) {
             ))}
             {page.meta.total > page.data.length && (
               <li className="text-fg-muted">
-                and {page.meta.total - page.data.length} more
+                and {COUNT.format(page.meta.total - page.data.length)} more
               </li>
             )}
           </ul>
