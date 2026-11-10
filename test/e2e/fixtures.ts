@@ -145,15 +145,77 @@ export async function expectViewCounts(page: Page) {
 // technologies, so it has no role or name to find it by; it is the only
 // picture of the page with the view box of 6 by 6 units that
 // src/components/avatar.tsx draws it in.
-export function avatars(page: Page): Locator {
+function avatars(page: Page): Locator {
   return page.locator('svg[viewBox="0 0 6 6"]');
 }
 
 // The dates and times that the page shows, which the reference screenshots
 // mask: the dataset computes them from the instant of its load (same
-// document, Time Base). A date and time shows in a time element.
-export function dateTimes(page: Page): Locator {
+// document, Time Base). A date and time shows in a time element
+// (src/components/date-time.tsx).
+function dateTimes(page: Page): Locator {
   return page.locator("time");
+}
+
+// The style of the dates while a reference is taken: each takes a fixed
+// width, on one line, so that its mask, and what follows it on its line or
+// in its column, does not move with the width of its text, which changes
+// with the date of the run, such as 9 Nov and 10 Nov. Each width is at least
+// that of the widest text of its kind in Inter with tabular figures, such as
+// 28 May 2026, 23:59, about 9.9 em, and 28 May 2026, 6.5 em; the text is
+// transparent, so that none shows beside its mask if it were wider. A date
+// and time of the API carries a time, after the T of its value; a date
+// without a time does not.
+const DATE_TIMES_STYLE = `
+  time {
+    display: inline-block;
+    width: 7em;
+    white-space: nowrap;
+    color: transparent;
+  }
+  time[datetime*="T"] {
+    width: 10em;
+  }
+`;
+
+// Runs an action while the dates of the page have their fixed widths
+// (DATE_TIMES_STYLE), and then gives the page back its own style, so that the
+// test continues, and its checks run, on the page as the UI renders it. The
+// style comes from a stylesheet of the CSS object model, which the policy
+// allows, unlike a style element (docs/architecture.md, Security Headers).
+export async function withFixedDates<T>(
+  page: Page,
+  action: () => Promise<T>,
+): Promise<T> {
+  const sheet = await page.evaluateHandle((style) => {
+    const added = new CSSStyleSheet();
+    added.replaceSync(style);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, added];
+    return added;
+  }, DATE_TIMES_STYLE);
+  try {
+    return await action();
+  } finally {
+    await sheet.evaluate((added) => {
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+        (adopted) => adopted !== added,
+      );
+    });
+    await sheet.dispose();
+  }
+}
+
+// Takes the reference screenshot of the page with the given name, and fails
+// unless it matches (docs/conventions.md, End-to-End Tests). Every reference
+// is taken with it, so that each masks the avatars and the dates, which change
+// from one load of the dataset to the next, with the dates at their fixed
+// widths.
+export async function expectScreenshot(page: Page, name: string) {
+  await withFixedDates(page, () =>
+    expect(page).toHaveScreenshot(name, {
+      mask: [avatars(page), dateTimes(page)],
+    }),
+  );
 }
 
 export const test = base.extend<{ pageChecks: undefined }>({

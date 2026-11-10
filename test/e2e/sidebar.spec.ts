@@ -1,9 +1,8 @@
 import type { Page } from "@playwright/test";
 import {
-  avatars,
-  dateTimes,
   expect,
   expectAccessible,
+  expectScreenshot,
   expectViewCounts,
   signIn,
   test,
@@ -35,13 +34,6 @@ async function expectTicketListShown(page: Page) {
     page.getByRole("grid", { name: "Tickets" }).getByRole("rowheader"),
   ).toHaveCount(20);
   await expectViewCounts(page);
-}
-
-// The reference screenshots mask the avatars and the dates, which change from
-// one load of the dataset to the next (docs/conventions.md, End-to-End
-// Tests).
-function masked(page: Page) {
-  return { mask: [avatars(page), dateTimes(page)] };
 }
 
 test.describe("the sidebar", () => {
@@ -117,10 +109,7 @@ test.describe("the sidebar", () => {
     // To the empty part of the sidebar, away from the controls, whose
     // tooltips would show, and from the rows, which the pointer would mark.
     await page.mouse.move(28, 500);
-    await expect(page).toHaveScreenshot(
-      "ticket-list-sidebar-collapsed.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-sidebar-collapsed.png");
   });
 
   test("stays collapsed after a reload", async ({ page }) => {
@@ -198,10 +187,7 @@ test.describe("the account menu", () => {
       menu.getByRole("menuitem", { name: "API keys" }),
     ).toHaveAttribute("href", "/account/api-keys");
     await expectAccessible(page);
-    await expect(page).toHaveScreenshot(
-      "ticket-list-account-menu.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-account-menu.png");
   });
 
   test("applies the theme that the user selects, which lasts across a reload", async ({

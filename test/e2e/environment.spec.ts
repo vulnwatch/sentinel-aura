@@ -5,6 +5,7 @@ import {
   expectViewCounts,
   signIn,
   test,
+  withFixedDates,
 } from "./fixtures";
 
 // A page with one text, in its colors under the light and under the dark color
@@ -186,5 +187,73 @@ test.describe("the wait for the counts of the views", () => {
     release();
     await expectViewCounts(page);
     await expect(views.filter({ hasText: "All" })).toHaveText(/^All \d+$/);
+  });
+});
+
+// Dates of each kind whose texts differ in width: a day of one digit and one
+// of two, and the widest text of the kind, the longest day and month in Inter.
+// Each is followed on its line by a word, which the dates must not move.
+const DATES = [
+  ["2026-11-09T14:05:00Z", "9 Nov 2026, 14:05"],
+  ["2026-11-10T14:05:00Z", "10 Nov 2026, 14:05"],
+  ["2026-05-28T23:59:00Z", "28 May 2026, 23:59"],
+  ["2026-11-09", "9 Nov 2026"],
+  ["2026-11-10", "10 Nov 2026"],
+  ["2026-05-28", "28 May 2026"],
+] as const;
+
+// Where the word after each date starts, and whether each date fits in its
+// box, as the page renders them.
+async function datesLaidOut(page: Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("[data-fictional-date]")].map((line) => {
+      const date = line.querySelector("time");
+      const word = line.querySelector("span");
+      return {
+        after: word?.getBoundingClientRect().left,
+        fits: date !== null && date.scrollWidth <= date.clientWidth,
+      };
+    }),
+  );
+}
+
+test.describe("the reference screenshots", () => {
+  // On a page of the UI, under its policy, which a style element would
+  // violate, with the font and the figures of the dates of the UI
+  // (src/components/date-time.tsx).
+  test("give the dates a fixed width for a screenshot alone", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.evaluate((dates) => {
+      for (const [value, text] of dates) {
+        const line = document.createElement("p");
+        line.dataset.fictionalDate = "";
+        const date = document.createElement("time");
+        date.dateTime = value;
+        date.className = "tabular-nums";
+        date.textContent = text;
+        const word = document.createElement("span");
+        word.textContent = "Modified";
+        line.append(date, " ", word);
+        document.querySelector("main")?.append(line);
+      }
+      return document.fonts.ready.then(() => undefined);
+    }, DATES);
+    const own = await datesLaidOut(page);
+    // As the UI renders them, the width of a date moves the word after it.
+    expect(new Set(own.slice(0, 3).map(({ after }) => after)).size).toBe(3);
+    expect(new Set(own.slice(3).map(({ after }) => after)).size).toBe(3);
+
+    const fixed = await withFixedDates(page, () => datesLaidOut(page));
+
+    // Each date of a kind then takes the same width, at least that of its
+    // widest text.
+    expect(new Set(fixed.slice(0, 3).map(({ after }) => after)).size).toBe(1);
+    expect(new Set(fixed.slice(3).map(({ after }) => after)).size).toBe(1);
+    expect(fixed.map(({ fits }) => fits)).toEqual(DATES.map(() => true));
+    // And the page then renders as before.
+    expect(await datesLaidOut(page)).toEqual(own);
   });
 });

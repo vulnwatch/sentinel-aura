@@ -1,4 +1,4 @@
-import { avatars, expect, signIn, test } from "./fixtures";
+import { expect, expectScreenshot, signIn, test } from "./fixtures";
 
 // Not found (docs/behaviors.md, Missing and Inaccessible Records): the UI's
 // image serves the entry document for a path that matches no file of the
@@ -21,9 +21,7 @@ test("a path that matches no screen shows Not found", async ({ page }) => {
   ).toBeVisible();
   await expect(page).toHaveTitle("Not found – Sentinel");
   await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
-  await expect(page).toHaveScreenshot("not-found.png", {
-    mask: [avatars(page)],
-  });
+  await expectScreenshot(page, "not-found.png");
 });
 
 // /auth/callback requires no session, and no signed-in user is known there
@@ -41,5 +39,5 @@ test("/auth/callback without a session shows Not found in the column of the Sign
   await expect(
     page.getByRole("main").getByText("Sentinel", { exact: true }),
   ).toBeVisible();
-  await expect(page).toHaveScreenshot("not-found-signed-out.png");
+  await expectScreenshot(page, "not-found-signed-out.png");
 });
