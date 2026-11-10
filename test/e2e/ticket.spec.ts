@@ -1,9 +1,8 @@
 import type { Page } from "@playwright/test";
 import {
-  avatars,
-  dateTimes,
   expect,
   expectAccessible,
+  expectScreenshot,
   signIn,
   test,
 } from "./fixtures";
@@ -12,12 +11,6 @@ import {
 // Sentinel's example dataset, whose Tickets, CVEs, users, and roles the tests
 // rely on as loaded (Sentinel docs/features/platform/example-dataset.md,
 // Users; CVEs; Tickets; Aged Tickets; Embargoes; Priorities).
-
-// The reference screenshots mask the avatars and the dates, which change
-// from one load of the dataset to the next.
-function masked(page: Page) {
-  return { mask: [avatars(page), dateTimes(page)] };
-}
 
 // The level-one heading of the screen.
 function heading(page: Page, name: string) {
@@ -135,7 +128,7 @@ test.describe("for an analyst", () => {
     expect(detailsBox?.x).toBeGreaterThan(
       (cveBox?.x ?? 0) + (cveBox?.width ?? 0),
     );
-    await expect(page).toHaveScreenshot("ticket.png", masked(page));
+    await expectScreenshot(page, "ticket.png");
   });
 
   test("explains the priority of the Ticket from its heading row", async ({
@@ -177,10 +170,7 @@ test.describe("for an analyst", () => {
     await expect(await valueOf(page, "CVE-2099-0018", "Score")).toHaveText(
       "0.31",
     );
-    await expect(page).toHaveScreenshot(
-      "ticket-confidential.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-confidential.png");
   });
 
   test("shows a Ticket without a CVE and its duplicate, each linked to the other", async ({
@@ -196,7 +186,7 @@ test.describe("for an analyst", () => {
       name: "SNTL-22",
     });
     await expect(duplicate).toBeVisible();
-    await expect(page).toHaveScreenshot("ticket-without-cve.png", masked(page));
+    await expectScreenshot(page, "ticket-without-cve.png");
 
     await duplicate.click();
 
