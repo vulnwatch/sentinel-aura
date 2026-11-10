@@ -329,7 +329,7 @@ describe("the heading row", () => {
     await expect.element(priority).toHaveFocus();
   });
 
-  test("writes Confidential after the identifier of a confidential Ticket, with the lock hidden from assistive technologies", async () => {
+  test("shows the lock and the label Confidential after the identifier of a confidential Ticket, with the lock hidden from assistive technologies", async () => {
     showing(fictionalTicketDetail({ is_confidential: true }));
 
     const { screen } = await renderTicket();
@@ -339,8 +339,10 @@ describe("the heading row", () => {
     expect(
       screen.getByRole("img", { name: "Confidential" }).elements(),
     ).toHaveLength(0);
-    // 4 px after the identifier.
-    expect(boxOf(label).left - boxOf(heading(screen, "SNTL-12")).right).toBe(4);
+    // The lock 4 px after the identifier, its 14 px, and the label 6 px later.
+    expect(boxOf(label).left - boxOf(heading(screen, "SNTL-12")).right).toBe(
+      24,
+    );
   });
 
   test("names a severity and a priority that are not set, which no column header names here", async () => {

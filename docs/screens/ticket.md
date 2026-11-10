@@ -58,9 +58,9 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
 
 **Heading row** (`docs/design-system.md`, Detail Screens):
 
-- The identifier, the level-one heading. For a confidential Ticket, `lock` and
-  "Confidential" 4 px after it (`docs/design-system.md`, Confidential
-  Tickets); assistive technologies read the word.
+- The identifier, the level-one heading. For a confidential Ticket, `lock`
+  after it, followed by the label Confidential (`docs/design-system.md`,
+  Confidential Tickets).
 - The main values, named CVE, Status, Severity, Priority, and Deadline for
   assistive technologies: the CVE ID in `fg-muted`, at the size of the
   heading, for a Ticket with a CVE; the status; the severity, or "Severity not

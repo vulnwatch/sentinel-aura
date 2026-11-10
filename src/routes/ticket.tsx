@@ -163,9 +163,9 @@ interface TicketFrameProps {
 // screen, Ticket, until the Ticket arrives, then its identifier, without
 // moving the focus (docs/behaviors.md, Accessibility, Focus after a
 // navigation; docs/screen-map.md, Contract URLs). After the identifier, 4 px
-// later, the lock and Confidential for a confidential Ticket, then its main
-// values, 16 px apart; the tabs follow 12 px below the row, or right below it
-// in the compact heading (docs/design-system.md, Detail Screens).
+// later, the lock and the label Confidential for a confidential Ticket, then
+// its main values, 16 px apart; the tabs follow 12 px below the row, or right
+// below it in the compact heading (docs/design-system.md, Detail Screens).
 function TicketFrame({ ticketId, ticket, now, children }: TicketFrameProps) {
   const root = useRef<HTMLDivElement>(null);
   const twoColumns = useTwoColumns(root);

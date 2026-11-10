@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import { Label } from "./label";
 
 // The mark of a confidential Ticket (docs/design-system.md, Confidential
 // Tickets; Sentinel docs/features/tickets/tickets.md, Confidential Tickets),
@@ -19,16 +20,16 @@ export function ConfidentialMark() {
   );
 }
 
-// The mark of a confidential Ticket on its detail screen, which writes
-// "Confidential" next to the lock (docs/design-system.md, Confidential
-// Tickets): lock at 14 px in fg-muted, then the word, in text-14 and
-// fg-muted. Assistive technologies read the word, so the lock is hidden from
-// them. What it follows sets it 4 px after the identifier.
+// The mark of a confidential Ticket on its detail screen, which follows the
+// lock with the label Confidential (docs/design-system.md, Confidential
+// Tickets; Labels): lock at 14 px in fg-muted, then the label, 6 px later.
+// Assistive technologies read the label, so the lock is hidden from them.
+// What it follows sets it 4 px after the identifier.
 export function ConfidentialLabel() {
   return (
-    <span className="inline-flex items-center gap-1 text-14 text-fg-muted">
-      <Lock aria-hidden className="size-3.5 shrink-0" />
-      Confidential
+    <span className="inline-flex items-center gap-1.5">
+      <Lock aria-hidden className="size-3.5 shrink-0 text-fg-muted" />
+      <Label>Confidential</Label>
     </span>
   );
 }
