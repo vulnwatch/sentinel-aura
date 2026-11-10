@@ -8,11 +8,15 @@ import {
 import { ClockAlert, UserPen } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { z } from "zod";
+import { useGetCveCvssAssessments } from "../api/generated/cves";
 import { useGetTicketPackageWork } from "../api/generated/maintainer-operations";
+import { CVSSVersionValue } from "../api/generated/model";
 import type {
+  CVECVSSAssessments,
   CVEDetail,
   CVEEPSSResponse,
   CVESSVCResponse,
+  CVSSAssessmentItem,
   CurrentPhaseValue,
   DeliveryStatusValue,
   LifecyclePhaseValue,
@@ -30,6 +34,7 @@ import { useListTickets } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
 import { ClampedText } from "../components/clamped-text";
 import { ConfidentialMark } from "../components/confidential-mark";
+import { FramedTable, type TableColumn } from "../components/data-table";
 import { CalendarDate, DateTime } from "../components/date-time";
 import { dueState } from "../components/deadline-badge";
 import {
@@ -47,6 +52,7 @@ import { MarkedValue, type MarkedName } from "../components/marked-value";
 import { UpdatingBar } from "../components/loading";
 import { marksPlace, PartRead, type Read } from "../components/read-view";
 import { useFocusHeadingOnRemoval } from "../components/screen-heading";
+import { Severity } from "../components/severity";
 import { Switch } from "../components/switch";
 import { TrackMilestones } from "../components/track-milestones";
 import { User } from "../components/user";
@@ -56,14 +62,16 @@ import { useSignedInUser } from "../session-gate";
 import { ticketRoute, useShownTicket } from "./ticket";
 
 // Overview, the first tab of the Ticket screen (docs/screens/ticket.md): the
-// CVE and the package tree of the Ticket in the main column, and its details
-// in the side column, in two columns where the main content is wide enough,
-// and otherwise in one, the details first (docs/design-system.md, Detail
-// Screens).
+// CVE, the package tree, and the CVSS assessments of the Ticket in the main
+// column, and its details in the side column, in two columns where the main
+// content is wide enough, and otherwise in one, the details first
+// (docs/design-system.md, Detail Screens).
 
-// The anchors of the parts that the tab shows, which every Ticket has.
+// The anchors of the parts that the tab shows, the same on every Ticket,
+// although a Ticket without a CVE lacks its CVSS assessments.
 const CVE_ANCHOR = "cve";
 const PACKAGES_ANCHOR = "packages";
+const CVSS_ANCHOR = "cvss";
 const DETAILS_ANCHOR = "details";
 
 // The public CVE page of SUSE, a composed address of another site, with its
@@ -1238,6 +1246,196 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
 }
 
 // ----------------------------------------------------------------------------
+// CVSS assessments
+
+// The CVSS versions that the pinned contract lists. A Set, so that a version
+// that a later Sentinel release returns is looked up only among them
+// (docs/conventions.md, Data Read from the API).
+const CVSS_VERSIONS = new Set<string>(Object.values(CVSSVersionValue));
+
+// A CVSS version with a "v", such as "v3.1", so that it is not read as a
+// score; a version that the pinned contract does not list shows as received
+// (docs/behaviors.md, Unknown Values).
+function cvssVersion(version: string): string {
+  return CVSS_VERSIONS.has(version) ? `v${version}` : version;
+}
+
+// A CVSS score, from 0.0 to 10.0, with its one decimal, such as 10.0.
+const SCORE = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+function Score({ value }: { value: number }) {
+  return <span className="tabular-nums">{SCORE.format(value)}</span>;
+}
+
+interface ScoredSeverityProps {
+  severity: string;
+  score: number;
+}
+
+// A severity followed by the score that gives it, such as "High 8.1".
+function ScoredSeverity({ severity, score }: ScoredSeverityProps) {
+  return (
+    <>
+      <Severity severity={severity} /> <Score value={score} />
+    </>
+  );
+}
+
+// The read of the CVSS assessments of the CVE of the Ticket, sent only for a
+// Ticket with a CVE (Sentinel docs/features/tickets/cvss-scoring.md, Get
+// CVSS Assessments for a CVE).
+function useCvssAssessments(ticket: TicketDetail) {
+  const cveId = ticket.cve?.cve_id;
+  return useGetCveCvssAssessments(cveId ?? "", {
+    query: { enabled: cveId !== undefined },
+  });
+}
+
+type CvssRead = ReturnType<typeof useCvssAssessments>;
+
+interface ResolutionProps {
+  assessments: CVECVSSAssessments;
+}
+
+// What the assessments resolve, which Sentinel resolves apart (Sentinel
+// docs/features/tickets/cvss-scoring.md, Core Distinctions): the severity of
+// the CVE, with the assessment that gives it, and the eligibility score with
+// which the Products are calculated. When the SUSE assessment of the default
+// CVSS version gives both, which the source suse of the eligibility score
+// states, one line says so; otherwise two lines, the second the eligibility
+// score, which without that assessment is the fallback 10.0 (same document,
+// Severity Resolution Cascade; Eligibility Score Resolution). A source that
+// the pinned contract does not list shows the score alone.
+function Resolution({ assessments }: ResolutionProps) {
+  const { severity, eligibility } = assessments;
+  if (severity !== null && eligibility.source === "suse") {
+    return (
+      <dl className="text-14">
+        <InlineField term="Severity">
+          <ScoredSeverity severity={severity.label} score={severity.score} />{" "}
+          from {severity.provider} CVSS {cvssVersion(severity.version)}, which
+          also sets the eligibility score of the Products
+        </InlineField>
+      </dl>
+    );
+  }
+  return (
+    <dl className="flex flex-col gap-1 text-14">
+      <InlineField term="Severity">
+        {severity === null ? (
+          <AbsentValue />
+        ) : (
+          <>
+            <ScoredSeverity severity={severity.label} score={severity.score} />{" "}
+            from {severity.provider} CVSS {cvssVersion(severity.version)}
+          </>
+        )}
+      </InlineField>
+      <InlineField term="Eligibility score">
+        <Score value={eligibility.score} />
+        {eligibility.source === "fallback" &&
+          `, the fallback without a SUSE CVSS ${cvssVersion(assessments.default_cvss_version)} assessment`}
+      </InlineField>
+    </dl>
+  );
+}
+
+interface VectorProps {
+  value: string;
+}
+
+// A CVSS vector in monospace, which users copy character by character
+// (docs/design-system.md, Font), with a place to break after each "/", so
+// that it wraps between its metrics where its column is narrower than it.
+function Vector({ value }: VectorProps) {
+  const metrics = value.split("/");
+  return (
+    <span className="font-mono">
+      {metrics.map((metric, index) => (
+        // The place of a metric keys it, since a vector, which a new read
+        // replaces whole, never reorders its metrics.
+        <span key={index}>
+          {metric}
+          {index < metrics.length - 1 && (
+            <>
+              /<wbr />
+            </>
+          )}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+// The columns of the table of the assessments: the provider and the version,
+// which name the assessment; its severity with its score, by the scale of
+// its version; and its vector.
+const ASSESSMENT_COLUMNS: readonly TableColumn<CVSSAssessmentItem>[] = [
+  {
+    id: "provider",
+    name: "Provider",
+    isRowHeader: true,
+    render: (assessment) => assessment.provider_name,
+  },
+  {
+    id: "version",
+    name: "Version",
+    isRowHeader: true,
+    render: (assessment) => cvssVersion(assessment.cvss_version),
+  },
+  {
+    id: "severity",
+    name: "Severity",
+    render: (assessment) => (
+      <ScoredSeverity severity={assessment.severity} score={assessment.score} />
+    ),
+  },
+  {
+    id: "vector",
+    name: "Vector",
+    wraps: true,
+    render: (assessment) => <Vector value={assessment.vector_string} />,
+  },
+];
+
+interface CvssPartProps {
+  read: CvssRead;
+}
+
+// The CVSS assessments of the CVE of the Ticket, from Get CVSS Assessments
+// for a CVE, read-only: what they resolve, then the table of the
+// assessments in the order of the API, by version, then by provider (same
+// document, Version Precedence), or "No CVSS assessments." without any. The
+// part reads them on its own, and their loading and their errors show in its
+// place (docs/behaviors.md, Loading; Where Errors Appear).
+function CvssPart({ read }: CvssPartProps) {
+  return (
+    <Part id={CVSS_ANCHOR} heading="CVSS assessments">
+      <PartRead read={read}>
+        {({ data }) =>
+          data.assessments.length === 0 ? (
+            <p className="text-fg-muted">No CVSS assessments.</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <Resolution assessments={data} />
+              <FramedTable
+                label="CVSS assessments"
+                columns={ASSESSMENT_COLUMNS}
+                rows={data.assessments}
+                rowId={(assessment) => assessment.id}
+              />
+            </div>
+          )
+        }
+      </PartRead>
+    </Part>
+  );
+}
+
+// ----------------------------------------------------------------------------
 // Anchors
 
 // The keys that scroll the page, with which a user scrolls it by the keyboard.
@@ -1312,7 +1510,8 @@ function TicketOverview() {
   const { ticket, now, twoColumns } = useShownTicket();
   const duplicates = useDuplicates(ticket);
   const yourWork = useYourWork(ticket);
-  useAnchorTarget([duplicates, yourWork.read]);
+  const cvss = useCvssAssessments(ticket);
+  useAnchorTarget([duplicates, yourWork.read, cvss]);
   return (
     <DetailColumns
       twoColumns={twoColumns}
@@ -1323,6 +1522,7 @@ function TicketOverview() {
         <>
           <CvePart cve={ticket.cve} />
           <PackagesPart ticket={ticket} now={now} yourWork={yourWork} />
+          {ticket.cve !== null && <CvssPart read={cvss} />}
         </>
       }
     />

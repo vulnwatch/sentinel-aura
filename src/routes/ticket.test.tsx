@@ -15,6 +15,7 @@ import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { useShownTicket } from "./ticket";
 import {
+  cvssResponse,
   errorResponse,
   fictionalCve,
   fictionalTicket,
@@ -32,6 +33,7 @@ import {
 
 const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
+const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -67,15 +69,18 @@ interface Stub {
   ticket: (path: string) => Response | Promise<Response>;
   // The response to the read of the duplicates.
   duplicates: (query: URLSearchParams) => Response | Promise<Response>;
+  // The response to the read of the CVSS assessments of the CVE.
+  cvss: () => Response | Promise<Response>;
 }
 
-// Answers the read of the signed-in user, an analyst, Get Ticket, and the
-// read of the duplicates, as the test sets them, and returns the spy, whose
-// calls name the requests.
+// Answers the read of the signed-in user, an analyst, Get Ticket, the read
+// of the duplicates, and the read of the CVSS assessments, as the test sets
+// them, and returns the spy, whose calls name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     ticket: () => ticketResponse(fictionalTicketDetail()),
     duplicates: () => ticketPage([]),
+    cvss: () => cvssResponse(),
     ...fields,
   };
   return stubApi((request) => {
@@ -87,6 +92,9 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path.startsWith(`${TICKETS}/`)) {
       return stub.ticket(request.path);
+    }
+    if (request.path === CVSS) {
+      return stub.cvss();
     }
     return errorResponse(404, "RESOURCE_NOT_FOUND");
   });
@@ -221,7 +229,11 @@ describe("the read of the Ticket", () => {
     expect(document.title).toBe("SNTL-12 – Sentinel");
     await expect
       .poll(() => requestsOf(spy))
-      .toEqual([`${TICKETS}/SNTL-12`, `${TICKETS}?${DUPLICATES_OF_SNTL_12}`]);
+      .toEqual([
+        `${TICKETS}/SNTL-12`,
+        `${TICKETS}?${DUPLICATES_OF_SNTL_12}`,
+        CVSS,
+      ]);
   });
 
   test.each([
@@ -869,7 +881,7 @@ describe("the details", () => {
       const link = screen.getByRole("link", { name: "SNTL-21" });
       await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-21");
       expect(valueOf(screen, "Original").contains(link.element())).toBe(true);
-      expect(requestsOf(spy)).toEqual([`${TICKETS}/SNTL-12`]);
+      expect(requestsOf(spy)).toEqual([`${TICKETS}/SNTL-12`, CVSS]);
     });
 
     test("link to each duplicate, with the lock of a confidential one", async () => {
@@ -1263,10 +1275,37 @@ describe("the anchor of the URL", () => {
     expect(Math.round(boxOf(region(screen, "CVE-2099-0012")).top)).toBe(0);
   });
 
+  test("shows the CVSS assessments once their read has settled", async () => {
+    await page.viewport(900, 300);
+    const cvss = later();
+    stubTicket({ cvss: () => cvss.promise });
+    const { screen } = await renderTicket("/tickets/SNTL-12#cvss");
+    await expect
+      .poll(() => valueOf(screen, "Duplicates").textContent)
+      .toBe("None");
+    expect(window.scrollY).toBe(0);
+
+    cvss.resolve(cvssResponse());
+
+    await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+    await expect
+      .element(
+        region(screen, "CVSS assessments").getByRole("heading", {
+          level: 2,
+          name: "CVSS assessments",
+        }),
+      )
+      .toBeInViewport();
+  });
+
   test("shows the top of the screen when the Ticket lacks its target", async () => {
     await page.viewport(900, 300);
     const duplicates = later();
-    stubTicket({ duplicates: () => duplicates.promise });
+    // The CVSS assessments of a Ticket without a CVE.
+    stubTicket({
+      ticket: () => ticketResponse(fictionalTicketDetail({ cve: null })),
+      duplicates: () => duplicates.promise,
+    });
     const { screen } = await renderTicket("/tickets/SNTL-12#cvss");
     // The page lies elsewhere, without the user having scrolled it.
     window.scrollTo(0, 10);

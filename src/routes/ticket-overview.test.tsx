@@ -6,6 +6,9 @@ import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
 import type {
+  CVECVSSAssessments,
+  CVSS20Assessment,
+  CVSS40Assessment,
   CurrentUserResponse,
   PackageDetail,
   ProductDetail,
@@ -16,9 +19,13 @@ import { formatDateTime } from "../components/date-time";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import {
+  cvssResponse,
   errorResponse,
+  fictionalAssessment,
+  fictionalCvssAssessments,
   fictionalPackage,
   fictionalProduct,
+  fictionalSuseAssessment,
   fictionalTicketDetail,
   fictionalTrack,
   jsonResponse,
@@ -29,13 +36,14 @@ import {
   ticketResponse,
   ticketWorkResponse,
 } from "../test-api";
-// The package tree of Overview, the first tab of the Ticket screen
-// (docs/screens/ticket.md), at the browser's default text size, in the light
-// theme.
+// The package tree and the CVSS assessments of Overview, the first tab of the
+// Ticket screen (docs/screens/ticket.md), at the browser's default text size,
+// in the light theme.
 
 const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
 const YOUR_WORK = "/api/v1/my/packages/tickets/SNTL-12";
+const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -96,17 +104,20 @@ interface Stub {
   // The response to the read of the work of the signed-in user on the
   // Ticket.
   yourWork: () => Response | Promise<Response>;
+  // The response to the read of the CVSS assessments of the CVE.
+  cvss: () => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst who maintains no
 // package unless the test says otherwise, Get Ticket, the read of the
-// duplicates, and the read of the work of the user, and returns the spy,
-// whose calls name the requests.
+// duplicates, the read of the work of the user, and the read of the CVSS
+// assessments, and returns the spy, whose calls name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: OTHER_USER,
     ticket: () => ticketResponse(fictionalTicketDetail()),
     yourWork: () => ticketWorkResponse(),
+    cvss: () => cvssResponse(),
     ...fields,
   };
   return stubApi((request) => {
@@ -121,6 +132,9 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path.startsWith(`${TICKETS}/`)) {
       return stub.ticket();
+    }
+    if (request.path === CVSS) {
+      return stub.cvss();
     }
     return errorResponse(404, "RESOURCE_NOT_FOUND");
   });
@@ -2040,5 +2054,408 @@ describe("the tracks that wait for the signed-in user", () => {
 
     await expect.element(screen.getByText("Needs your action")).toBeVisible();
     expect(screen.getByText(/couldn't be shown/).elements()).toHaveLength(0);
+  });
+});
+
+// NVD's CVSS v4.0 assessment of CVE-2099-0012, Critical 9.3.
+const NVD_V40: CVSS40Assessment = {
+  id: "00000000-0000-0000-0000-0000000000d3",
+  provider_name: "NVD",
+  cvss_version: "4.0",
+  score: 9.3,
+  severity: "critical",
+  vector_string:
+    "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+  metrics: {
+    attack_vector: "network",
+    attack_complexity: "low",
+    attack_requirements: "none",
+    privileges_required: "none",
+    user_interaction: "none",
+    vulnerable_system_confidentiality: "high",
+    vulnerable_system_integrity: "high",
+    vulnerable_system_availability: "high",
+    subsequent_system_confidentiality: "none",
+    subsequent_system_integrity: "none",
+    subsequent_system_availability: "none",
+  },
+  created_at: "2099-10-01T08:00:00Z",
+  updated_at: "2099-10-01T08:00:00Z",
+};
+
+// A CNA's CVSS v2.0 assessment of CVE-2099-0012, High 7.5, by the scale
+// of its version.
+const CNA_V20: CVSS20Assessment = {
+  id: "00000000-0000-0000-0000-0000000000d4",
+  provider_name: "Fictional CNA",
+  cvss_version: "2.0",
+  score: 7.5,
+  severity: "high",
+  vector_string: "AV:N/AC:L/Au:N/C:P/I:P/A:P",
+  metrics: {
+    access_vector: "network",
+    access_complexity: "low",
+    authentication: "none",
+    confidentiality_impact: "partial",
+    integrity_impact: "partial",
+    availability_impact: "partial",
+  },
+  created_at: "2099-10-01T08:00:00Z",
+  updated_at: "2099-10-01T08:00:00Z",
+};
+
+// Answers Get Ticket with SNTL-12 and its CVE-2099-0012, and the read of
+// the CVSS assessments with the assessments.
+function showingCvss(
+  assessments: CVECVSSAssessments | Record<string, unknown>,
+) {
+  return stubTicket({
+    cvss: () => jsonResponse(200, { data: assessments }),
+  });
+}
+
+function cvssPart(screen: Screen) {
+  return screen.getByRole("region", {
+    name: "CVSS assessments",
+    exact: true,
+  });
+}
+
+// Renders the screen of SNTL-12 and waits until its CVSS assessments show
+// the text.
+async function renderCvss(text: string) {
+  const rendered = await renderApp("/tickets/SNTL-12");
+  await expect
+    .element(cvssPart(rendered.screen).getByText(text).first())
+    .toBeVisible();
+  return rendered;
+}
+
+// The lines of what the assessments resolve, each its term and its value.
+function linesOf(screen: Screen): string[][] {
+  const part = cvssPart(screen);
+  const values = part.getByRole("definition").elements();
+  return part
+    .getByRole("term")
+    .elements()
+    .map((term, index) => [
+      term.textContent ?? "",
+      values[index]?.textContent ?? "",
+    ]);
+}
+
+// The rows of the table of the assessments, each the texts of its cells.
+function rowsOf(screen: Screen): string[][] {
+  const table = cvssPart(screen).getByRole("grid", {
+    name: "CVSS assessments",
+  });
+  return table
+    .getByRole("row")
+    .elements()
+    .slice(1)
+    .map((row) => {
+      const cells = page.elementLocator(row);
+      return [
+        ...cells.getByRole("rowheader").elements(),
+        ...cells.getByRole("gridcell").elements(),
+      ].map((cell) => cell.textContent ?? "");
+    });
+}
+
+describe("the CVSS assessments", () => {
+  test("follow the package tree, under a level-two heading", async () => {
+    stubTicket();
+    const { screen } = await renderCvss("SUSE");
+
+    await expect
+      .element(
+        cvssPart(screen).getByRole("heading", {
+          level: 2,
+          name: "CVSS assessments",
+        }),
+      )
+      .toBeVisible();
+    expect(boxOf(cvssPart(screen)).top).toBeGreaterThan(
+      boxOf(packagesPart(screen)).bottom,
+    );
+  });
+
+  test("say in one line that the SUSE assessment of the default version sets the severity and the eligibility score", async () => {
+    stubTicket();
+    const { screen } = await renderCvss("SUSE");
+
+    expect(linesOf(screen)).toEqual([
+      [
+        "Severity",
+        "Medium 5.5 from SUSE CVSS v3.1, which also sets the eligibility score of the Products",
+      ],
+    ]);
+  });
+
+  test("show the severity and the fallback eligibility score apart without a SUSE assessment of the default version", async () => {
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [NVD_V40],
+        severity: {
+          score: 9.3,
+          version: "4.0",
+          provider: "NVD",
+          label: "critical",
+        },
+        eligibility: { score: 10, source: "fallback" },
+      }),
+    );
+    const { screen } = await renderCvss("NVD");
+
+    expect(linesOf(screen)).toEqual([
+      ["Severity", "Critical 9.3 from NVD CVSS v4.0"],
+      [
+        "Eligibility score",
+        "10.0, the fallback without a SUSE CVSS v3.1 assessment",
+      ],
+    ]);
+  });
+
+  test("name the default version that the eligibility score lacks when a SUSE assessment of another version sets the severity", async () => {
+    showingCvss(
+      fictionalCvssAssessments({
+        default_cvss_version: "4.0",
+        eligibility: { score: 10, source: "fallback" },
+      }),
+    );
+    const { screen } = await renderCvss("SUSE");
+
+    expect(linesOf(screen)).toEqual([
+      ["Severity", "Medium 5.5 from SUSE CVSS v3.1"],
+      [
+        "Eligibility score",
+        "10.0, the fallback without a SUSE CVSS v4.0 assessment",
+      ],
+    ]);
+  });
+
+  test("show the eligibility score alone for a source that the pinned contract does not list, and versions as received", async () => {
+    showingCvss({
+      ...fictionalCvssAssessments(),
+      default_cvss_version: "5.0",
+      severity: { score: 8.1, version: "5.0", provider: "NVD", label: "high" },
+      eligibility: { score: 7, source: "fictional_source" },
+    });
+    const { screen } = await renderCvss("SUSE");
+
+    expect(linesOf(screen)).toEqual([
+      ["Severity", "High 8.1 from NVD CVSS 5.0"],
+      ["Eligibility score", "7.0"],
+    ]);
+  });
+
+  test("list the assessments in the order of the API, by provider and version, with the severity of each by its version and its vector", async () => {
+    // An order that neither the version nor the provider gives.
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [fictionalSuseAssessment(), CNA_V20, NVD_V40],
+      }),
+    );
+    const { screen } = await renderCvss("Fictional CNA");
+    const table = cvssPart(screen).getByRole("grid", {
+      name: "CVSS assessments",
+    });
+
+    expect(
+      table
+        .getByRole("columnheader")
+        .elements()
+        .map((header) => header.textContent),
+    ).toEqual(["Provider", "Version", "Severity", "Vector"]);
+    expect(rowsOf(screen)).toEqual([
+      [
+        "SUSE",
+        "v3.1",
+        "Medium 5.5",
+        "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      ],
+      ["Fictional CNA", "v2.0", "High 7.5", "AV:N/AC:L/Au:N/C:P/I:P/A:P"],
+      [
+        "NVD",
+        "v4.0",
+        "Critical 9.3",
+        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      ],
+    ]);
+    // Assistive technologies name each row by its provider and its version.
+    expect(
+      table
+        .getByRole("rowheader")
+        .elements()
+        .map((cell) => cell.textContent),
+    ).toEqual(["SUSE", "v3.1", "Fictional CNA", "v2.0", "NVD", "v4.0"]);
+  });
+
+  test("show a version and a severity of an assessment that the pinned contract does not list as received", async () => {
+    showingCvss({
+      ...fictionalCvssAssessments(),
+      assessments: [
+        {
+          ...fictionalAssessment(),
+          cvss_version: "5.0",
+          severity: "fictional_severity",
+          score: 6.2,
+          vector_string: "CVSS:5.0/AV:N",
+        },
+      ],
+    });
+    const { screen } = await renderCvss("CVSS:5.0/AV:N");
+
+    expect(rowsOf(screen)).toEqual([
+      ["NVD", "5.0", "fictional_severity 6.2", "CVSS:5.0/AV:N"],
+    ]);
+  });
+
+  test("show the vector in monospace, wrapping only after a slash where its column is narrower than it", async () => {
+    await page.viewport(320, 800);
+    showingCvss(fictionalCvssAssessments({ assessments: [NVD_V40] }));
+    const { screen } = await renderCvss(NVD_V40.vector_string);
+    const vector = cvssPart(screen)
+      .getByText(NVD_V40.vector_string, { exact: true })
+      .element();
+
+    expect(getComputedStyle(vector).fontFamily).toContain("monospace");
+    // The text of each line, from the top of each character: the lines break
+    // between the metrics, and the text stays the vector, which the user
+    // copies.
+    const lines = new Map<number, string>();
+    const walker = document.createTreeWalker(vector, NodeFilter.SHOW_TEXT);
+    for (
+      let node = walker.nextNode();
+      node !== null;
+      node = walker.nextNode()
+    ) {
+      const text = node.textContent ?? "";
+      for (let index = 0; index < text.length; index += 1) {
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const top = Math.round(range.getBoundingClientRect().top);
+        lines.set(top, `${lines.get(top) ?? ""}${text.charAt(index)}`);
+      }
+    }
+    const texts = [...lines.entries()]
+      .toSorted(([first], [second]) => first - second)
+      .map(([, text]) => text);
+    expect(texts.length).toBeGreaterThan(1);
+    expect(texts.join("")).toBe(NVD_V40.vector_string);
+    expect(texts.slice(0, -1).every((text) => text.endsWith("/"))).toBe(true);
+    // The page does not scroll horizontally (docs/behaviors.md,
+    // Accessibility, Reflow and text size).
+    expect(document.documentElement.scrollWidth).toBe(320);
+  });
+
+  test("say No CVSS assessments. without any", async () => {
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [],
+        severity: null,
+        eligibility: { score: 10, source: "fallback" },
+      }),
+    );
+    const { screen } = await renderCvss("No CVSS assessments.");
+
+    expect(cvssPart(screen).getByRole("grid").query()).toBeNull();
+    expect(linesOf(screen)).toEqual([]);
+  });
+
+  test("are neither read nor shown for a Ticket without a CVE", async () => {
+    const spy = showing([fictionalPackage()], { cve: null });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(screen.getByRole("region", { name: "CVE", exact: true }))
+      .toBeVisible();
+    expect(cvssPart(screen).query()).toBeNull();
+    expect(requestsTo(spy, CVSS)).toBe(0);
+  });
+
+  test("show the loading indicator in their place until their read arrives", async () => {
+    const response = later();
+    stubTicket({ cvss: () => response.promise });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(cvssPart(screen).getByRole("progressbar", { name: "Loading" }))
+      .toBeVisible();
+
+    response.resolve(cvssResponse());
+
+    await expect
+      .element(cvssPart(screen).getByRole("grid", { name: "CVSS assessments" }))
+      .toBeVisible();
+  });
+
+  test("show the failure of their read in their place, with Try again where it offers it, and leave the rest of the screen usable", async () => {
+    let fails = true;
+    const spy = stubTicket({
+      cvss: () =>
+        fails ? errorResponse(503, "SERVICE_UNAVAILABLE") : cvssResponse(),
+    });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        cvssPart(screen).getByText(
+          "Sentinel isn't available right now. Try again later.",
+        ),
+      )
+      .toBeVisible();
+    // Sent again twice before the error shows (docs/behaviors.md, Retries
+    // and Unconfirmed Changes).
+    expect(requestsTo(spy, CVSS)).toBe(3);
+    await expect
+      .element(packagesPart(screen).getByText("No packages."))
+      .toBeVisible();
+
+    fails = false;
+    await cvssPart(screen).getByRole("button", { name: "Try again" }).click();
+
+    await expect
+      .element(cvssPart(screen).getByRole("grid", { name: "CVSS assessments" }))
+      .toBeVisible();
+  });
+
+  test("say that the CVE no longer exists after a 404, without Try again", async () => {
+    stubTicket({ cvss: () => errorResponse(404, "CVE_NOT_FOUND") });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        cvssPart(screen).getByText(
+          "This no longer exists, or you no longer have access to it.",
+        ),
+      )
+      .toBeVisible();
+    expect(
+      cvssPart(screen).getByRole("button", { name: "Try again" }).query(),
+    ).toBeNull();
+  });
+
+  test("are read again when the tab returns to the foreground, and stay shown with a warning when that read fails", async () => {
+    let fails = false;
+    const spy = stubTicket({
+      cvss: () =>
+        fails ? errorResponse(503, "SERVICE_UNAVAILABLE") : cvssResponse(),
+    });
+    const { screen } = await renderCvss("SUSE");
+    fails = true;
+
+    returnToForeground();
+
+    await expect
+      .element(
+        cvssPart(screen).getByText(
+          "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+        ),
+      )
+      .toBeVisible();
+    expect(requestsTo(spy, CVSS)).toBe(4);
+    expect(rowsOf(screen)).toHaveLength(2);
   });
 });

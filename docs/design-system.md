@@ -684,6 +684,10 @@ The resolved severity of a Ticket or a CVE is `critical`, `high`, `medium`,
 - A value that the pinned contract does not list shows as received, in
   `fg`, 6 px after a hollow dot of 8 px with a 1 px edge in `neutral-icon`
   (`docs/behaviors.md`, Unknown Values).
+- The severity of one CVSS assessment, by the scale of its version, is not
+  the resolved severity (Sentinel `docs/features/tickets/cvss-scoring.md`,
+  Core Distinctions; Version-Specific Assessment Severity), but it has the
+  same values, and shows in the same way.
 
 ### Priority
 

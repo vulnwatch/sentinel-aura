@@ -12,12 +12,12 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 ## Purpose
 
 The Ticket screen shows one Ticket: its heading row with its main values, and
-in the tab Overview its CVE, its package tree, and its details. Vulnerability
-and restricted analysts work in it all day; every other user reads it, as a
-package maintainer does a Ticket of one of their packages that an analyst
-shares, and finds in its package tree the tracks that wait for them
-(`docs/screen-map.md`, Users and Frequent Tasks; Areas and Screens). It shows
-the same Ticket to every user who can see it.
+in the tab Overview its CVE, its package tree, the CVSS assessments of its
+CVE, and its details. Vulnerability and restricted analysts work in it all
+day; every other user reads it, as a package maintainer does a Ticket of one
+of their packages that an analyst shares, and finds in its package tree the
+tracks that wait for them (`docs/screen-map.md`, Users and Frequent Tasks;
+Areas and Screens). It shows the same Ticket to every user who can see it.
 
 ## Access
 
@@ -42,10 +42,12 @@ marks for a maintainer the tracks that wait for them (Packages).
   the screen removes every other parameter and value from its URL, in place
   of the URL in the browser history, and keeps its anchor
   (`docs/behaviors.md`, Invalid Search Parameters).
-- Anchors: `#cve`, the CVE, `#packages`, the package tree, and `#details`,
-  the details, which every Ticket has; the reads of Overview are the Ticket,
-  its duplicates, and, for a maintainer, their work on the Ticket
-  (`docs/design-system.md`, Main Content).
+- Anchors: `#cve`, the CVE, `#packages`, the package tree, `#cvss`, the CVSS
+  assessments, and `#details`, the details, the same on every Ticket; a
+  Ticket without a CVE lacks its CVSS assessments, so that their anchor shows
+  the top of the screen. The reads of Overview are the Ticket, its
+  duplicates, the CVSS assessments of its CVE, and, for a maintainer, their
+  work on the Ticket (`docs/design-system.md`, Main Content).
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
   would lead to this screen (`docs/screen-map.md`, Links Between Areas). Users
@@ -77,9 +79,9 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
 
 **Tabs**, named "Ticket" for assistive technologies: Overview.
 
-**Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE and
-the package tree in the main column, in this order, and the details in the
-side column; in one column, the details above the CVE.
+**Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE, the
+package tree, and the CVSS assessments in the main column, in this order, and
+the details in the side column; in one column, the details above the CVE.
 
 **CVE**, the first part of the main column, from `cve` of Get Ticket (Sentinel
 `docs/features/tickets/tickets.md`, CVEDetail):
@@ -216,6 +218,40 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   not excluded.
 - A Ticket without packages shows "No packages.", without the switch.
 
+**CVSS assessments**, the third part of the main column, for a Ticket with a
+CVE, from Get CVSS Assessments for a CVE, `GET /api/v1/cves/{cve_id}/cvss`,
+read-only (Sentinel `docs/features/tickets/cvss-scoring.md`, Get CVSS
+Assessments for a CVE; Shared Assessment Item):
+
+- What the assessments resolve, which Sentinel resolves apart (same
+  document, Core Distinctions), on lines whose term in `fg-muted` precedes
+  the value. When the SUSE assessment of the default CVSS version sets both
+  the severity and the eligibility score, as the source `suse` of
+  `eligibility` states, one line, such as "Severity High 8.1 from SUSE CVSS
+  v3.1, which also sets the eligibility score of the Products". Otherwise
+  two: Severity, from `severity`, such as "Critical 9.3 from NVD CVSS v4.0",
+  and Eligibility score, which with the source `fallback` reads such as
+  "10.0, the fallback without a SUSE CVSS v3.1 assessment", with the version
+  of `default_cvss_version` (same document, Severity Resolution Cascade;
+  Eligibility Score Resolution); a source that the pinned contract does not
+  list shows the score alone. A severity shows with its mark
+  (`docs/design-system.md`, Severity), followed by its score with one
+  decimal.
+- Below them, the table "CVSS assessments" (`docs/design-system.md`,
+  Tables), in the order of the API, by version, then by provider (same
+  document, Version Precedence): Provider, `provider_name`; Version, such as
+  "v3.1", so that it is not read as a score; Severity, the severity of the
+  assessment by the scale of its version and its score, such as "High 8.1";
+  and Vector, `vector_string`, in monospace, which wraps only after a "/"
+  where its column is narrower than it. The provider and the version name
+  the row for assistive technologies. A version that the pinned contract
+  does not list shows as received, without the "v", and so does a severity
+  (`docs/behaviors.md`, Unknown Values).
+- Without assessments, "No CVSS assessments.", without the lines and the
+  table.
+- A Ticket without a CVE has no CVSS assessments: the part does not show, and
+  its read is not sent.
+
 **Details**, the section of the side column, as a description list:
 
 | Term | Value |
@@ -231,9 +267,10 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 ## States
 
 - **Loading.** The heading row and the tabs show at once; the panel of
-  Overview shows the loading indicator until the Ticket arrives, and the value
-  of Duplicates until its read arrives (`docs/behaviors.md`, Loading). Until
-  the read of the work of a maintainer arrives, no track is marked.
+  Overview shows the loading indicator until the Ticket arrives, the value of
+  Duplicates until its read arrives, and the part CVSS assessments until
+  theirs arrives (`docs/behaviors.md`, Loading). Until the read of the work
+  of a maintainer arrives, no track is marked.
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -242,20 +279,25 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   such as when the tab returns to the foreground, keeps the Ticket shown, with
   its warning at the top of the panel of the tab, unless it is a `403` or a
   `404`, which replaces the screen. The failure of the read of the duplicates
-  shows in place of their value, with Try again where the failure offers it,
-  and leaves the rest of the screen usable. When the read of the work of a
-  maintainer fails, a `warning` message above the package tree says "The
-  tracks that wait for you couldn't be shown.", followed by the message of
-  its status, with Try again where the failure offers it, and the package
-  tree stays usable; once a read of it has succeeded, a later read that
-  fails keeps its marks and says "The tracks that wait for you couldn't be
-  updated.", followed by the message of its status, unless it is a `403` or
-  a `404`, which removes them; while it is sent again, the marks that stay
-  shown are marked as being updated (`docs/behaviors.md`, Where Errors
-  Appear; Loading). The screen handles no error code specifically.
-- **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
-  names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow
-  and text size).
+  shows in place of their value, and that of the read of the CVSS
+  assessments in place of the part, each with Try again where the failure
+  offers it, and leaves the rest of the screen usable; once the CVSS
+  assessments have shown, a later read of them that fails keeps them, with
+  its warning above them, unless it is a `403` or a `404`, which replaces
+  them. When the read of the work of a maintainer fails, a `warning` message
+  above the package tree says "The tracks that wait for you couldn't be
+  shown.", followed by the message of its status, with Try again where the
+  failure offers it, and the package tree stays usable; once a read of it
+  has succeeded, a later read that fails keeps its marks and says "The tracks
+  that wait for you couldn't be updated.", followed by the message of its
+  status, unless it is a `403` or a `404`, which removes them; while it is
+  sent again, the marks that stay shown are marked as being updated
+  (`docs/behaviors.md`, Where Errors Appear; Loading). The screen handles no
+  error code specifically.
+- **Reflow.** At 320 CSS px the page does not scroll horizontally, the names
+  of the package tree wrap, and the table of the CVSS assessments, where it is
+  wider than its place, scrolls within its frame (`docs/behaviors.md`,
+  Accessibility, Reflow and text size).
 
 ## Cross-references
 
@@ -264,10 +306,10 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 - `docs/behaviors.md` — Errors; Invalid Search Parameters; Unknown Values;
   Links to Other Sites; Loading and Empty States; Dates and Times;
   Accessibility; Wording; Representation of a User
-- `docs/design-system.md` — Main Content; Values; Deadline Badge; Track
-  Milestones; Labels; Other Values; Buttons and Links; Detail Screens; Forms;
-  Messages; Loading; Errors in Place of Content; Menus, Popovers, and
-  Tooltips; Icons by Need; Representation of a User
+- `docs/design-system.md` — Font; Main Content; Values; Severity; Deadline
+  Badge; Track Milestones; Labels; Other Values; Buttons and Links; Tables;
+  Detail Screens; Forms; Messages; Loading; Errors in Place of Content; Menus,
+  Popovers, and Tooltips; Icons by Need; Representation of a User
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
   Transitions; Duplicate Handling; Confidential Tickets (Identifier
   Disclosure Boundary; Coordinated Release Date); Response Schemas (Shared
@@ -287,6 +329,10 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   Basis; Manual Override
 - Sentinel `docs/features/tickets/cve-tracking.md` — Get CVE; External
   Identifiers; CVE Rejection Handling
+- Sentinel `docs/features/tickets/cvss-scoring.md` — Core Distinctions;
+  Version Precedence; Severity; Eligibility Score Resolution; API Endpoints
+  (Shared Assessment Item; Get CVSS Assessments for a CVE)
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
-  Visibility
-- Sentinel `docs/api-spec.md` — Ticket Identifier Resolution; Pagination
+  Visibility; Endpoint Permission Map (CVEs)
+- Sentinel `docs/api-spec.md` — Ticket Identifier Resolution; CVE Identifier
+  Resolution; CVE Accessibility Check; Pagination

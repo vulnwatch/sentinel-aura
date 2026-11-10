@@ -26,6 +26,10 @@ export interface TableColumn<TRow> {
   // Whether it takes the width that the other columns leave, at least
   // 100 px, its text cut with an ellipsis where it is longer.
   grows?: boolean;
+  // Whether its text wraps where it is longer than its column, and its row
+  // grows, as in a table whose records have no screen of their own
+  // (docs/design-system.md, Tables).
+  wraps?: boolean;
   // The content of its cell in the row.
   render: (row: TRow) => ReactNode;
 }
@@ -115,7 +119,7 @@ function DataRows<TRow>({
               // Positioned, so that its content can fill it, as the button of
               // the explanation of a priority does (priority-explanation).
               <Cell
-                className={`relative align-middle whitespace-nowrap ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
+                className={`relative align-middle ${column.wraps === true ? "py-2" : "whitespace-nowrap"} ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
               >
                 {column.grows === true ? (
                   <div className="truncate">{column.render(row)}</div>
@@ -128,6 +132,22 @@ function DataRows<TRow>({
         )}
       </TableBody>
     </Table>
+  );
+}
+
+// Rows that the place around the table shows, such as a part of a detail
+// screen with a read of its own, as a table in its frame, on surface with a
+// border line and an 8 px radius, which scrolls horizontally within the frame
+// when it is wider than its place (docs/design-system.md, Tables;
+// docs/behaviors.md, Accessibility). The place shows the loading and the
+// errors of the read, and what shows without rows.
+export function FramedTable<TRow>(props: TableProps<TRow>) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto">
+        <DataRows {...props} />
+      </div>
+    </div>
   );
 }
 

@@ -1,6 +1,9 @@
 import { vi } from "vitest";
 import type {
+  CVECVSSAssessments,
+  CVECVSSAssessmentsResponse,
   CVEDetail,
+  CVSS31Assessment,
   CurrentUserResponse,
   ErrorResponse,
   LoginResponse,
@@ -223,6 +226,83 @@ export function fictionalCve(fields: Partial<CVEDetail> = {}): CVEDetail {
     cwes: [],
     ...fields,
   };
+}
+
+// A fictional CVSS v3.1 assessment of CVE-2099-0012, as Get CVSS Assessments
+// for a CVE returns it: NVD's, High 8.1, with the fields that a test sets.
+export function fictionalAssessment(
+  fields: Partial<CVSS31Assessment> = {},
+): CVSS31Assessment {
+  return {
+    id: "00000000-0000-0000-0000-0000000000d1",
+    provider_name: "NVD",
+    cvss_version: "3.1",
+    score: 8.1,
+    severity: "high",
+    vector_string: "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    metrics: {
+      attack_vector: "network",
+      attack_complexity: "high",
+      privileges_required: "none",
+      user_interaction: "none",
+      scope: "unchanged",
+      confidentiality_impact: "high",
+      integrity_impact: "high",
+      availability_impact: "high",
+    },
+    created_at: "2099-10-01T08:00:00Z",
+    updated_at: "2099-10-01T08:00:00Z",
+    ...fields,
+  };
+}
+
+// The SUSE CVSS v3.1 assessment of CVE-2099-0012, Medium 5.5.
+export function fictionalSuseAssessment(): CVSS31Assessment {
+  return fictionalAssessment({
+    id: "00000000-0000-0000-0000-0000000000d2",
+    provider_name: "SUSE",
+    score: 5.5,
+    severity: "medium",
+    vector_string: "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+    metrics: {
+      attack_vector: "local",
+      attack_complexity: "low",
+      privileges_required: "low",
+      user_interaction: "none",
+      scope: "unchanged",
+      confidentiality_impact: "high",
+      integrity_impact: "none",
+      availability_impact: "none",
+    },
+    created_at: "2099-10-09T15:00:00Z",
+    updated_at: "2099-10-09T15:00:00Z",
+  });
+}
+
+// The CVSS assessments of CVE-2099-0012, as Get CVSS Assessments for a CVE
+// returns them, with the fields that a test sets: those of NVD and SUSE,
+// both v3.1, the default CVSS version, so that the SUSE assessment gives
+// both the severity and the eligibility score (Sentinel
+// docs/features/tickets/cvss-scoring.md, Severity Resolution Cascade;
+// Eligibility Score Resolution).
+export function fictionalCvssAssessments(
+  fields: Partial<CVECVSSAssessments> = {},
+): CVECVSSAssessments {
+  return {
+    assessments: [fictionalAssessment(), fictionalSuseAssessment()],
+    default_cvss_version: "3.1",
+    severity: { score: 5.5, version: "3.1", provider: "SUSE", label: "medium" },
+    eligibility: { score: 5.5, source: "suse" },
+    ...fields,
+  };
+}
+
+// Get CVSS Assessments for a CVE's response.
+export function cvssResponse(
+  assessments: CVECVSSAssessments = fictionalCvssAssessments(),
+): Response {
+  const body: CVECVSSAssessmentsResponse = { data: assessments };
+  return jsonResponse(200, body);
 }
 
 // A fictional Product occurrence of a track, as the package tree returns it:
