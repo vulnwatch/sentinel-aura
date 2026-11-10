@@ -3,6 +3,7 @@ import {
   DATASET_PASSWORD,
   expect,
   expectAccessible,
+  expectScreenshot,
   signIn,
   submitSignIn,
   test,
@@ -34,7 +35,7 @@ test.describe("Sign in", () => {
     await expect(page).toHaveURL("/login");
     await expect(page).toHaveTitle("Sign in – Sentinel");
     await expect(page.getByText(EXPIRED)).toHaveCount(0);
-    await expect(page).toHaveScreenshot("sign-in.png");
+    await expectScreenshot(page, "sign-in.png");
   });
 
   test("returns to the path after the sign-in", async ({ page }) => {
@@ -61,7 +62,7 @@ test.describe("Sign in", () => {
     await expect(heading(page, "Sign in")).toBeVisible();
     await expect(page.getByText(EXPIRED)).toBeVisible();
     await expectAccessible(page);
-    await expect(page).toHaveScreenshot("sign-in-session-expired.png");
+    await expectScreenshot(page, "sign-in-session-expired.png");
     await page.reload();
     await expect(page.getByText(EXPIRED)).toBeVisible();
 
@@ -82,7 +83,7 @@ test.describe("Sign in", () => {
       "fictional-rejected-user",
     );
     await expect(page).toHaveURL("/login");
-    await expect(page).toHaveScreenshot("sign-in-failed.png");
+    await expectScreenshot(page, "sign-in-failed.png");
   });
 
   test("says that there were too many attempts once the username is locked", async ({
@@ -118,6 +119,6 @@ test.describe("Sign in", () => {
     await expect(page.getByText("Enter your password.")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Username" })).toBeFocused();
     expect(signIns).toEqual([]);
-    await expect(page).toHaveScreenshot("sign-in-field-errors.png");
+    await expectScreenshot(page, "sign-in-field-errors.png");
   });
 });

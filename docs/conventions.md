@@ -509,7 +509,15 @@ that needs it; content of another kind needs a new row first.
   run to the next, such as a date that the dataset computes from the instant
   of its load (Sentinel `docs/features/platform/example-dataset.md`, Time
   Base) or the avatar of a user, whose `id` the dataset does not fix (same
-  document, Users), is masked.
+  document, Users), is masked. Such a region also keeps the same size in
+  every run, so that neither its mask nor what follows it moves: the text of
+  a date changes in width with the day and the month of the run, so each
+  date takes, for the screenshot alone, a fixed width of at least its widest
+  text. `expectScreenshot` of `fixtures.ts` takes every reference, with
+  these masks and widths. The widths come from a stylesheet of the CSS
+  object model, which the policy allows (`docs/architecture.md`, Security
+  Headers), and the page returns to its own style once the screenshot is
+  taken.
 - A test that changes no data that a screen shows takes the references of
   the dataset as loaded; its own sign-in, which changes only the sessions and
   the time of last sign-in of its user, is not such a change. It runs before

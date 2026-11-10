@@ -1,9 +1,8 @@
 import type { Page } from "@playwright/test";
 import {
-  avatars,
-  dateTimes,
   expect,
   expectAccessible,
+  expectScreenshot,
   expectViewCounts,
   signIn,
   test,
@@ -63,12 +62,6 @@ function table(page: Page) {
 // The identifiers of the rows, in their order.
 function identifiers(page: Page) {
   return table(page).getByRole("rowheader");
-}
-
-// The reference screenshots mask the avatars and the dates, which change
-// from one load of the dataset to the next.
-function masked(page: Page) {
-  return { mask: [avatars(page), dateTimes(page)] };
 }
 
 // Whether a response body is a page of Tickets with the basis of their
@@ -221,7 +214,7 @@ test.describe("for an analyst", () => {
     ).toContainText("Triage -3d");
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot("ticket-list.png", masked(page));
+    await expectScreenshot(page, "ticket-list.png");
   });
 
   test("opens a view with its tab, and the landing leads to the New view", async ({
@@ -248,10 +241,7 @@ test.describe("for an analyst", () => {
     await expectAccessible(page);
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot(
-      "ticket-list-analysis.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-analysis.png");
 
     await page.goto("/");
     await expect(page).toHaveURL("/tickets?view=new");
@@ -328,10 +318,7 @@ test.describe("for an analyst", () => {
     await expectAccessible(page);
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot(
-      "ticket-list-embargo.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-embargo.png");
 
     // The latest first, and still SNTL-19, without a date, last.
     await release.click();
@@ -450,10 +437,7 @@ test.describe("for an analyst", () => {
     await expectAccessible(page);
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot(
-      "ticket-list-priority.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-priority.png");
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
@@ -590,7 +574,7 @@ test.describe("for an analyst", () => {
     await expectAccessible(page);
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot("ticket-list-all.png", masked(page));
+    await expectScreenshot(page, "ticket-list-all.png");
 
     await pagination.getByRole("link", { name: "Next" }).click();
 
@@ -603,10 +587,7 @@ test.describe("for an analyst", () => {
     ).toBeFocused();
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot(
-      "ticket-list-all-last-page.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-all-last-page.png");
   });
 
   test("tells that a page beyond the last has no Tickets", async ({ page }) => {
@@ -623,10 +604,7 @@ test.describe("for an analyst", () => {
     await expectAccessible(page);
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot(
-      "ticket-list-beyond-last-page.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-beyond-last-page.png");
 
     await page.getByRole("link", { name: "Go to the first page" }).click();
 
@@ -716,10 +694,7 @@ test.describe("refined by an analyst", () => {
     await expectAccessible(page);
     await pointerAway(page);
 
-    await expect(page).toHaveScreenshot(
-      "ticket-list-no-match.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-no-match.png");
 
     await page.goto("/tickets?search=fictional-curl");
     await expect(identifiers(page)).toHaveText(["SNTL-11"]);
@@ -757,10 +732,7 @@ test.describe("refined by an analyst", () => {
     await expect(identifiers(page)).toHaveText(["SNTL-1", "SNTL-7"]);
     await expectAccessible(page);
 
-    await expect(page).toHaveScreenshot(
-      "ticket-list-filters.png",
-      masked(page),
-    );
+    await expectScreenshot(page, "ticket-list-filters.png");
 
     await page.keyboard.press("Escape");
     await expect(
