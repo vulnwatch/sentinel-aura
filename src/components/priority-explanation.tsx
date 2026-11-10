@@ -1,10 +1,8 @@
-import { useId, useLayoutEffect, useRef } from "react";
+import { useRef } from "react";
 import {
   Button as AriaButton,
-  Dialog,
   DialogTrigger,
   Heading,
-  Popover,
 } from "react-aria-components";
 import type {
   EPSSPercentilePriorityEvidence,
@@ -17,8 +15,8 @@ import type {
 import { AbsentValue } from "./absent-value";
 import { DateTime, formatDate } from "./date-time";
 import { FOCUS_RING } from "./focus-ring";
+import { InfoPopover, PopoverLine } from "./info-popover";
 import { Priority, priorityName } from "./priority";
-import { focusScreenHeading } from "./screen-heading";
 import { Severity } from "./severity";
 import { User, type UserFields } from "./user";
 
@@ -199,7 +197,7 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
           <span>{isOverride ? "override" : "automatic"}</span>
         </Heading>
       )}
-      <hr className="my-3 border-border" />
+      <PopoverLine />
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h3 className={heading}>
@@ -243,7 +241,7 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
       </div>
       {isOverride && (
         <>
-          <hr className="my-3 border-border" />
+          <PopoverLine />
           <Provenance ticket={ticket} />
         </>
       )}
@@ -277,7 +275,7 @@ interface ExplainedPriorityProps {
 // of padding, in text-14, below the box and aligned to its start, or above it
 // where the window has no room below, moved toward the start where it would
 // pass the end of the window, and scrolling within it in a window shorter
-// than it is. The explanation holds no control and takes the focus itself,
+// than it is (InfoPopover). The explanation holds no control and takes the focus itself,
 // with the focus ring around its content on keyboard focus, named by its
 // title; while it is open, the rest of the page is out of reach. Escape or a
 // click outside closes it, and the focus returns to the priority.
@@ -286,23 +284,8 @@ export function ExplainedPriority({
   placement = "cell",
   absentName,
 }: ExplainedPriorityProps) {
-  const dialogId = useId();
   const cellBox = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  // When the priority leaves the page while its explanation holds the focus,
-  // such as a row that a read of the list removes, the focus moves to the
-  // screen's heading (docs/behaviors.md, Accessibility, Focus after an
-  // action). The explanation shows outside the content around the priority,
-  // which hands off only the focus that it holds itself (FocusHandOff).
-  // Closing the explanation leaves the priority, to which the focus returns.
-  useLayoutEffect(
-    () => () => {
-      if (document.getElementById(dialogId)?.contains(document.activeElement)) {
-        queueMicrotask(focusScreenHeading);
-      }
-    },
-    [dialogId],
-  );
   const isOverride = ticket.priority_override !== null;
   const name =
     ticket.priority === null && absentName !== undefined
@@ -345,16 +328,12 @@ export function ExplainedPriority({
           </span>
         </AriaButton>
       )}
-      <Popover
+      <InfoPopover
+        width="narrow"
         triggerRef={placement === "cell" ? cellBox : button}
-        placement="bottom start"
-        offset={4}
-        className="w-72 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-4 text-14 text-fg shadow-lg outline-none"
       >
-        <Dialog id={dialogId} className={FOCUS_RING}>
-          <Explanation ticket={ticket} isOverride={isOverride} />
-        </Dialog>
-      </Popover>
+        <Explanation ticket={ticket} isOverride={isOverride} />
+      </InfoPopover>
     </DialogTrigger>
   );
 }

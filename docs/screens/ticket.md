@@ -155,16 +155,20 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     current phase of `null` only while its Ticket is not Resolved and the
     track is not resolution-complete. A track has work when it is actionable
     and in Analysis, or Affected or Fixed with a Product that is actionable
-    and eligible; a track without work, Not affected and Won't fix included,
-    shows no pipeline and no Delivery Pending, and a Ticket without due dates
-    shows no pipeline.
+    and eligible, on a Ticket that is neither Ignored nor Duplicated, where
+    Sentinel applies no SLA and observes neither delivery nor release
+    (Sentinel `docs/features/packages/package-model.md`, Continued Updates);
+    a track without work, Not affected and Won't fix included, shows no
+    pipeline and no Delivery Pending, and a Ticket without due dates shows
+    no pipeline.
 - Its Products are a list below the track, with a border line at their left,
   each on a line that wraps: its name, which wraps, in `fg-muted` when it is
   not eligible; `user-pen` when its eligibility is set by hand, read as ",
   eligibility set by hand"; the label Not eligible; and at the end its
   release, in `text-13`, `fg-muted`: "Released" with the date and time of
   `released_at` on a released Product, and on an actionable, eligible
-  Product of a track in Analysis, Affected, or Fixed, "Not released", or
+  Product of a track in Analysis, Affected, or Fixed, on a Ticket that is
+  neither Ignored nor Duplicated, "Not released", or
   "Release not observed" below a Git track and on a Ticket without a CVE,
   where Sentinel never sets the release (Sentinel
   `docs/features/packages/package-model.md`, Workflow-Agnostic vs
@@ -181,15 +185,16 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   or "Not available" without lifecycle data; Release, where its line shows
   one, "Released" with its date and time, "Not released", or "Not
   observed"; and, for a Product that is not actionable, Actionable, "No,"
-  followed by the first reason that applies: "it is excluded from this
-  track", "its track is excluded", "its package is excluded", or "it has
-  reached its end of life" (Sentinel `docs/features/packages/package-model.md`,
-  Derived Actionability). It holds no action.
+  followed by the reason that Sentinel gives, the first that applies in the
+  order "its package is excluded", "its track is excluded", "it is excluded
+  from this track", and "it has reached its end of life" (Sentinel
+  `docs/features/packages/package-model.md`, Derived Actionability). It
+  holds no action.
 - **Hidden records.** A package, a track, or a Product that is not actionable,
   excluded, EOL, or holding nothing actionable, is hidden. "Show hidden", a
   switch at the end of the line of the heading of the part, followed by the
-  number of the hidden records whose parent shows, each counting with what
-  it holds, shows them in `fg-muted` (`docs/design-system.md`, Detail
+  number of the hidden records whose parent is not hidden, each counting
+  with what it holds, shows them in `fg-muted` (`docs/design-system.md`, Detail
   Screens): a record that its own marker excludes carries the label
   Excluded, and a Product at the end of its life the label EOL, also under a
   hidden parent. The switch is disabled without hidden records, and keeps
@@ -205,7 +210,9 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   in place of its line (`docs/design-system.md`, Labels; Sentinel
   `docs/features/packages/maintainer.md`, Pending; Package Details for
   Ticket; Sentinel `docs/features/packages/package-maintainership.md`,
-  Workbench Dependency). For every other user, the read is not sent.
+  Workbench Dependency). For every other user, the read is not sent, and no
+  track is marked, also once a user no longer maintains a package that is
+  not excluded.
 - A Ticket without packages shows "No packages.", without the switch.
 
 **Details**, the section of the side column, as a description list:
@@ -224,7 +231,8 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 
 - **Loading.** The heading row and the tabs show at once; the panel of
   Overview shows the loading indicator until the Ticket arrives, and the value
-  of Duplicates until its read arrives (`docs/behaviors.md`, Loading).
+  of Duplicates until its read arrives (`docs/behaviors.md`, Loading). Until
+  the read of the work of a maintainer arrives, no track is marked.
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -234,15 +242,15 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   its warning at the top of the panel of the tab, unless it is a `403` or a
   `404`, which replaces the screen. The failure of the read of the duplicates
   shows in place of their value, with Try again where the failure offers it,
-  and leaves the rest of the screen usable. Until the read of the work of a
-  maintainer arrives, no track is marked; when it fails, a `warning` message
-  above the package tree says "The tracks that wait for you couldn't be
-  shown.", followed by the message of its status, with Try again where the
-  failure offers it, and the package tree stays usable; a later read of it
-  that fails keeps the marks and says "The tracks that wait for you couldn't
-  be updated.", followed by the message of its status, unless it is a `403`
-  or a `404`, which removes them; while it is sent again, the marks that
-  stay shown are marked as being updated (`docs/behaviors.md`, Where Errors
+  and leaves the rest of the screen usable. When the read of the work of a
+  maintainer fails, a `warning` message above the package tree says "The
+  tracks that wait for you couldn't be shown.", followed by the message of
+  its status, with Try again where the failure offers it, and the package
+  tree stays usable; once a read of it has succeeded, a later read that
+  fails keeps its marks and says "The tracks that wait for you couldn't be
+  updated.", followed by the message of its status, unless it is a `403` or
+  a `404`, which removes them; while it is sent again, the marks that stay
+  shown are marked as being updated (`docs/behaviors.md`, Where Errors
   Appear; Loading). The screen handles no error code specifically.
 - **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
   names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow

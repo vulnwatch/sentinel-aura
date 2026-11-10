@@ -686,6 +686,21 @@ const PRODUCT_REASONS = new Map<string, string>(
 // its Products shows.
 const EXPECTS_FIX = new Set<string>(["analysis", "affected", "fixed"]);
 
+// The statuses of the manual zone, Ignored and Duplicated, in which Sentinel
+// applies no SLA, observes neither delivery nor release, and gives no
+// maintainer work, so that no track waits for a fix (Sentinel
+// docs/features/tickets/ticket-deadlines.md, Null Due Dates; Sentinel
+// docs/features/packages/package-model.md, Continued Updates; Sentinel
+// docs/features/packages/maintainer.md, Ticket Status and Workflow
+// Boundaries).
+const MANUAL_ZONE = new Set<string>(["ignored", "duplicated"]);
+
+// Whether a track expects a fix: one of a Ticket outside the manual zone, in
+// Analysis, Affected, or Fixed.
+function expectsFix(track: TrackDetail, ticket: TicketDetail): boolean {
+  return !MANUAL_ZONE.has(ticket.status) && EXPECTS_FIX.has(track.status);
+}
+
 // Whether a Product takes part and receives the fix: actionable and eligible.
 function receivesFix(product: ProductDetail): boolean {
   return product.actionable && product.eligible;
@@ -713,9 +728,9 @@ function releaseObserved(
 
 // The release of a Product that its line and its details show: when it was
 // released, on every released Product; and, on a Product that receives the
-// fix under a track that expects one, that it is not released, or that its
-// release is not observed where Sentinel does not observe it; otherwise
-// none, as for a workflow that the pinned contract does not list.
+// fix under a track that expects one (expectsFix), that it is not released,
+// or that its release is not observed where Sentinel does not observe it;
+// otherwise none, as for a workflow that the pinned contract does not list.
 type Release =
   | { kind: "released"; at: string }
   | { kind: "not-released" }
@@ -723,17 +738,13 @@ type Release =
 
 function releaseOf(
   product: ProductDetail,
-  track: TrackDetail,
+  fixExpected: boolean,
   observed: boolean | undefined,
 ): Release | undefined {
   if (product.released_at !== null) {
     return { kind: "released", at: product.released_at };
   }
-  if (
-    observed === undefined ||
-    !receivesFix(product) ||
-    !EXPECTS_FIX.has(track.status)
-  ) {
+  if (observed === undefined || !receivesFix(product) || !fixExpected) {
     return undefined;
   }
   return observed ? { kind: "not-released" } : { kind: "not-observed" };
@@ -759,10 +770,11 @@ function ReleaseText({ release, notObserved }: ReleaseTextProps) {
 }
 
 // Whether a track has work: actionable and in Analysis, or Affected or Fixed
-// with a Product that is actionable and eligible. A track without work, a
-// hidden one included, shows no pipeline and no "Delivery Pending".
-function hasWork(track: TrackDetail): boolean {
-  if (!track.actionable) {
+// with a Product that is actionable and eligible, on a Ticket outside the
+// manual zone. A track without work, a hidden one included, shows no
+// pipeline and no "Delivery Pending".
+function hasWork(track: TrackDetail, ticket: TicketDetail): boolean {
+  if (!track.actionable || MANUAL_ZONE.has(ticket.status)) {
     return false;
   }
   if (track.status === "analysis") {
@@ -913,9 +925,10 @@ function ProductDetails({ product, release }: ProductDetailsProps) {
 
 interface ProductItemProps {
   product: ProductDetail;
-  track: TrackDetail;
   // Whether the track that holds the Product is hidden.
   trackHidden: boolean;
+  // Whether the track that holds the Product expects a fix (expectsFix).
+  fixExpected: boolean;
   // Whether Sentinel observes the release of the Products of the track
   // (releaseObserved).
   releaseObserved: boolean | undefined;
@@ -929,14 +942,14 @@ interface ProductItemProps {
 // time, "Not released", or "Release not observed".
 function ProductItem({
   product,
-  track,
   trackHidden,
+  fixExpected,
   releaseObserved: observed,
 }: ProductItemProps) {
   const ref = useRef<HTMLLIElement>(null);
   useFocusHeadingOnRemoval(ref);
   const hidden = trackHidden || !product.actionable;
-  const release = releaseOf(product, track, observed);
+  const release = releaseOf(product, fixExpected, observed);
   return (
     <li
       ref={ref}
@@ -1009,7 +1022,7 @@ function TrackItem({
   const ref = useRef<HTMLLIElement>(null);
   useFocusHeadingOnRemoval(ref);
   const hidden = packageHidden || !track.actionable;
-  const work = hasWork(track);
+  const work = hasWork(track, ticket);
   const delivery =
     track.delivery_relevant && (work || track.delivery_status !== "pending");
   const pipeline = work && hasDueDates(track);
@@ -1059,8 +1072,8 @@ function TrackItem({
             <ProductItem
               key={product.id}
               product={product}
-              track={track}
               trackHidden={hidden}
+              fixExpected={expectsFix(track, ticket)}
               releaseObserved={releaseObserved(track, ticket)}
             />
           ))}
@@ -1167,15 +1180,16 @@ function maintainsIncludedPackage(
 // marks to the package tree: sent only for a user whom the package tree lists
 // as a maintainer of a package that is not excluded, and read again whenever
 // the tab returns to the foreground, as it shows no error in place of content
-// (src/query-client.ts).
+// (src/query-client.ts). While the read is not sent, such as once the user
+// no longer maintains a package that is not excluded, what an earlier read
+// left in the query cache marks nothing.
 function useYourWork(ticket: TicketDetail) {
   const user = useSignedInUser();
-  return useGetTicketPackageWork(ticket.ticket_id, {
-    query: {
-      enabled: maintainsIncludedPackage(ticket, user?.id),
-      refetchOnWindowFocus: true,
-    },
+  const sent = maintainsIncludedPackage(ticket, user?.id);
+  const read = useGetTicketPackageWork(ticket.ticket_id, {
+    query: { enabled: sent, refetchOnWindowFocus: true },
   });
+  return { read, sent };
 }
 
 type YourWorkRead = ReturnType<typeof useYourWork>;
@@ -1199,18 +1213,22 @@ interface PackagesPartProps {
 // tracks that the work of the signed-in user lists as pending, matched by
 // package and reference, wait for them; until that read arrives, no track is
 // marked, and when it fails, a warning above the tree says that they
-// couldn't be shown, so that the absence of marks is not read as no work
-// (docs/behaviors.md, Where Errors Appear). A Ticket without packages shows
+// couldn't be shown, so that the absence of marks is not read as no work,
+// or, once a read of them has succeeded, that they couldn't be updated,
+// while they stay shown, marked as being updated while they are read again
+// (docs/behaviors.md, Where Errors Appear; Loading). A Ticket without packages shows
 // "No packages.", and a tree whose packages are all hidden, "All packages
 // are hidden.".
 function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
   const { hidden } = ticketOverviewRoute.useSearch();
   const navigate = useNavigate();
   const showHidden = hidden === HIDDEN_SHOWN;
-  const { marks, warning, updating } = marksPlace(yourWork, {
-    notShown: "The tracks that wait for you couldn't be shown.",
-    notUpdated: "The tracks that wait for you couldn't be updated.",
-  });
+  const { marks, warning, updating } = yourWork.sent
+    ? marksPlace(yourWork.read, {
+        notShown: "The tracks that wait for you couldn't be shown.",
+        notUpdated: "The tracks that wait for you couldn't be updated.",
+      })
+    : { marks: undefined, warning: null, updating: false };
   const waiting = new Set(
     (marks?.data.pending ?? []).map((item) =>
       trackKey(item.package_name, item.reference),
@@ -1350,7 +1368,7 @@ function TicketOverview() {
   const { ticket, now, twoColumns } = useShownTicket();
   const duplicates = useDuplicates(ticket);
   const yourWork = useYourWork(ticket);
-  useAnchorTarget([duplicates, yourWork]);
+  useAnchorTarget([duplicates, yourWork.read]);
   return (
     <DetailColumns
       twoColumns={twoColumns}

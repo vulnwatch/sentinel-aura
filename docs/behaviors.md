@@ -215,7 +215,7 @@ message follows Wording.
 | A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
-| A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again. Once the marks have shown, a later read of them that fails keeps them, as a new read of the same data does, but its message names them, such as "The tracks that wait for you couldn't be updated.", so that it is not read as a failure of the data that they mark; a `403` or `404` removes them as for the first read |
+| A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again. Once a read of them has succeeded, a later read of them that fails keeps its marks, as a new read of the same data does, but its message names them, such as "The tracks that wait for you couldn't be updated.", so that it is not read as a failure of the data that they mark; a `403` or `404` removes them as for the first read |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
@@ -583,8 +583,8 @@ is not completed, among the phases that Sentinel observes (Sentinel
   and a current phase of their own (same document, Ticket and Track Dates;
   Track Milestones), by the table above. A track whose current phase is
   `null`, with due dates, shows its Release badge only while its Ticket is
-  not Resolved and the track still has work, not being resolution-complete
-  (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved):
+  not Resolved and the track is not resolution-complete (Sentinel
+  `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved):
   Affected with an actionable eligible Product, or, on a Ticket with a CVE,
   Fixed with an actionable eligible Product that is not released. Its later
   phases are not observed, and on a track with nothing left to do the badge

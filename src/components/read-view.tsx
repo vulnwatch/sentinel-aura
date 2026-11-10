@@ -48,12 +48,13 @@ interface UpdateFailedProps {
   text?: (message: string) => string;
 }
 
-// Above data that stays shown after a new read of it failed: a warning that
-// says that it could not be updated, with the message of the failure, and,
-// when the failure offers it, Try again below it, on the background of the
-// screen or of its part (docs/behaviors.md, Where Errors Appear;
-// docs/design-system.md, Messages). When the warning goes, the focus on Try
-// again passes to the screen's heading.
+// Above data that stays shown after a new read of it failed, or after a read
+// that only adds marks to it failed: a warning that says that it could not be
+// updated, or what could not be shown or updated (text), with the message of
+// the failure, and, when the failure offers it, Try again below it, on the
+// background of the screen or of its part (docs/behaviors.md, Where Errors
+// Appear; docs/design-system.md, Messages). When the warning goes, the focus
+// on Try again passes to the screen's heading.
 function UpdateFailed({
   error,
   onRetry,

@@ -818,8 +818,17 @@ describe("a track", () => {
   });
 
   test("shows no pipeline and no badge on a track without due dates, whose Ticket has no SLA", async () => {
+    // A Ticket whose severity is None has no SLA (Sentinel
+    // docs/features/tickets/ticket-deadlines.md, Null Due Dates).
     showing([fictionalPackage({ tracks: [fictionalTrack(NO_SLA)] })], {
-      status: "ignored",
+      severity: "none",
+      triage_due_at: null,
+      submission_due_at: null,
+      um_due_at: null,
+      qa_due_at: null,
+      release_due_at: null,
+      current_phase: null,
+      current_phase_milestone: null,
     });
 
     const { screen } = await renderTree();
@@ -834,6 +843,58 @@ describe("a track", () => {
     ).toHaveLength(0);
     expect(track.getByText(/^Release/).elements()).toHaveLength(0);
   });
+
+  test.each<[TicketDetail["status"]]>([["ignored"], ["duplicated"]])(
+    "shows no work on a track of a Ticket that is %s: no Delivery Pending and no release that is due, only a release that happened",
+    async (status) => {
+      showing(
+        [
+          fictionalPackage({
+            tracks: [
+              fictionalTrack({
+                ...NO_SLA,
+                products: [
+                  fictionalProduct(),
+                  fictionalProduct({
+                    id: "00000000-0000-0000-0000-0000000000c9",
+                    product_name: "Fictional Linux Enterprise Server 16.0",
+                    product_cpe: "cpe:/o:example:fles:16.0",
+                    released_at: "2099-10-20T09:00:00Z",
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+        {
+          status,
+          triage_due_at: null,
+          submission_due_at: null,
+          um_due_at: null,
+          qa_due_at: null,
+          release_due_at: null,
+          current_phase: null,
+          current_phase_milestone: null,
+        },
+      );
+
+      const { screen } = await renderTree();
+
+      const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+      await expect
+        .element(track.getByText("Affected", { exact: true }))
+        .toBeVisible();
+      expect(track.getByText("Delivery").elements()).toHaveLength(0);
+      expect(track.getByText("Not released").elements()).toHaveLength(0);
+      await expect
+        .element(
+          productOf(screen, "Fictional Linux Enterprise Server 16.0").getByText(
+            /^Released /,
+          ),
+        )
+        .toBeVisible();
+    },
+  );
 
   test.each<[string, Partial<TrackDetail>, Partial<TicketDetail>, boolean]>([
     [
@@ -1696,6 +1757,65 @@ describe("the tracks that wait for the signed-in user", () => {
       )
       .toBeVisible();
     await expect.element(screen.getByText("Needs your action")).toBeVisible();
+  });
+
+  test("mark nothing once the user no longer maintains a package that is not excluded, and are no longer read", async () => {
+    let excluded = false;
+    const spy = stubTicket({
+      user: MAINTAINER,
+      ticket: () =>
+        ticketResponse(
+          fictionalTicketDetail({
+            packages: [
+              excluded
+                ? fictionalPackage({
+                    deleted_at: "2099-10-10T10:00:00Z",
+                    actionable: false,
+                    non_actionable_reason: "package_excluded",
+                    tracks: [
+                      fictionalTrack({
+                        actionable: false,
+                        non_actionable_reason: "package_excluded",
+                        ...NOT_APPLICABLE,
+                      }),
+                    ],
+                  })
+                : fictionalPackage(),
+            ],
+          }),
+        ),
+      yourWork: () =>
+        ticketWorkResponse([
+          {
+            packageName: "fictional-openssl",
+            reference: "SUSE:FLES-15-SP7:Update",
+          },
+        ]),
+    });
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    await expect.element(screen.getByText("Needs your action")).toBeVisible();
+    excluded = true;
+    const before = requestsTo(spy, `${TICKETS}/SNTL-12`);
+
+    returnToForeground();
+
+    await expect
+      .poll(() => requestsTo(spy, `${TICKETS}/SNTL-12`))
+      .toBe(before + 1);
+    await expect
+      .poll(() => band(screen, "fictional-openssl").textContent)
+      .toContain("Excluded");
+    expect(screen.getByText("Needs your action").elements()).toHaveLength(0);
+    // The next return of the tab reads the Ticket, not the work any more.
+    const work = requestsTo(spy, YOUR_WORK);
+    const tickets = requestsTo(spy, `${TICKETS}/SNTL-12`);
+
+    returnToForeground();
+
+    await expect
+      .poll(() => requestsTo(spy, `${TICKETS}/SNTL-12`))
+      .toBe(tickets + 1);
+    expect(requestsTo(spy, YOUR_WORK)).toBe(work);
   });
 
   test("are not read for a user whom no package lists as a maintainer", async () => {
