@@ -43,11 +43,10 @@ marks for a maintainer the tracks that wait for them (Packages).
   of the URL in the browser history, and keeps its anchor
   (`docs/behaviors.md`, Invalid Search Parameters).
 - Anchors: `#cve`, the CVE, `#packages`, the package tree, `#cvss`, the CVSS
-  assessments, and `#details`, the details, the same on every Ticket; a
-  Ticket without a CVE lacks its CVSS assessments, so that their anchor shows
-  the top of the screen. The reads of Overview are the Ticket, its
-  duplicates, the CVSS assessments of its CVE, and, for a maintainer, their
-  work on the Ticket (`docs/design-system.md`, Main Content).
+  assessments, which a Ticket without a CVE lacks, and `#details`, the
+  details; the reads of Overview are the Ticket, its duplicates, the CVSS
+  assessments of its CVE, and, for a maintainer, their work on the Ticket
+  (`docs/design-system.md`, Main Content).
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
   would lead to this screen (`docs/screen-map.md`, Links Between Areas). Users
@@ -221,7 +220,12 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 **CVSS assessments**, the third part of the main column, for a Ticket with a
 CVE, from Get CVSS Assessments for a CVE, `GET /api/v1/cves/{cve_id}/cvss`,
 read-only (Sentinel `docs/features/tickets/cvss-scoring.md`, Get CVSS
-Assessments for a CVE; Shared Assessment Item):
+Assessments for a CVE; Shared Assessment Item). A severity shows with its
+mark (`docs/design-system.md`, Severity), followed by its score with one
+decimal, such as "High 8.1"; a CVSS version shows with a "v", such as
+"v3.1", so that it is not read as a score, and a version that the pinned
+contract does not list as received, without the "v" (`docs/behaviors.md`,
+Unknown Values).
 
 - What the assessments resolve, which Sentinel resolves apart (same
   document, Core Distinctions), on lines whose term in `fg-muted` precedes
@@ -234,19 +238,18 @@ Assessments for a CVE; Shared Assessment Item):
   "10.0, the fallback without a SUSE CVSS v3.1 assessment", with the version
   of `default_cvss_version` (same document, Severity Resolution Cascade;
   Eligibility Score Resolution); a source that the pinned contract does not
-  list shows the score alone. A severity shows with its mark
-  (`docs/design-system.md`, Severity), followed by its score with one
-  decimal.
+  list follows the score as received, such as "7.0, fictional_source".
 - Below them, the table "CVSS assessments" (`docs/design-system.md`,
-  Tables), in the order of the API, by version, then by provider (same
-  document, Version Precedence): Provider, `provider_name`; Version, such as
-  "v3.1", so that it is not read as a score; Severity, the severity of the
-  assessment by the scale of its version and its score, such as "High 8.1";
-  and Vector, `vector_string`, in monospace, which wraps only after a "/"
-  where its column is narrower than it. The provider and the version name
-  the row for assistive technologies. A version that the pinned contract
-  does not list shows as received, without the "v", and so does a severity
-  (`docs/behaviors.md`, Unknown Values).
+  Tables), in the order of the API, by version, then by provider (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Version Precedence): Provider,
+  `provider_name`; Version; Assessment severity, the severity of the
+  assessment by the scale of its version, which is not the resolved
+  severity, and its score; and Vector, `vector_string`, in monospace, which
+  wraps only after a "/" where its column is narrower than it. The provider
+  and the version name the row for assistive technologies. An assessment of
+  a version that the pinned contract does not list shows its score without
+  its severity, whose scale depends on the version (`docs/behaviors.md`,
+  Unknown Values).
 - Without assessments, "No CVSS assessments.", without the lines and the
   table.
 - A Ticket without a CVE has no CVSS assessments: the part does not show, and
@@ -280,20 +283,18 @@ Assessments for a CVE; Shared Assessment Item):
   its warning at the top of the panel of the tab, unless it is a `403` or a
   `404`, which replaces the screen. The failure of the read of the duplicates
   shows in place of their value, and that of the read of the CVSS
-  assessments in place of the part, each with Try again where the failure
-  offers it, and leaves the rest of the screen usable; once the CVSS
-  assessments have shown, a later read of them that fails keeps them, with
-  its warning above them, unless it is a `403` or a `404`, which replaces
-  them. When the read of the work of a maintainer fails, a `warning` message
-  above the package tree says "The tracks that wait for you couldn't be
-  shown.", followed by the message of its status, with Try again where the
-  failure offers it, and the package tree stays usable; once a read of it
-  has succeeded, a later read that fails keeps its marks and says "The tracks
-  that wait for you couldn't be updated.", followed by the message of its
-  status, unless it is a `403` or a `404`, which removes them; while it is
-  sent again, the marks that stay shown are marked as being updated
-  (`docs/behaviors.md`, Where Errors Appear; Loading). The screen handles no
-  error code specifically.
+  assessments in place of the part (`docs/design-system.md`, Tables), each
+  with Try again where the failure offers it, and leaves the rest of the
+  screen usable. When the read of the work of a maintainer fails, a
+  `warning` message above the package tree says "The tracks that wait for
+  you couldn't be shown.", followed by the message of its status, with Try
+  again where the failure offers it, and the package tree stays usable; once
+  a read of it has succeeded, a later read that fails keeps its marks and
+  says "The tracks that wait for you couldn't be updated.", followed by the
+  message of its status, unless it is a `403` or a `404`, which removes them;
+  while it is sent again, the marks that stay shown are marked as being
+  updated (`docs/behaviors.md`, Where Errors Appear; Loading). The screen
+  handles no error code specifically.
 - **Reflow.** At 320 CSS px the page does not scroll horizontally, the names
   of the package tree wrap, and the table of the CVSS assessments, where it is
   wider than its place, scrolls within its frame (`docs/behaviors.md`,

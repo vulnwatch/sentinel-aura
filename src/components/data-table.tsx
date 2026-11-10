@@ -140,12 +140,17 @@ function DataRows<TRow>({
 // border line and an 8 px radius, which scrolls horizontally within the frame
 // when it is wider than its place (docs/design-system.md, Tables;
 // docs/behaviors.md, Accessibility). The place shows the loading and the
-// errors of the read, and what shows without rows.
+// errors of the read, and what shows without rows. When the table leaves the
+// page while it holds the focus, such as when a new read of the place has no
+// rows, the focus moves to the screen's heading (docs/behaviors.md,
+// Accessibility, Focus after an action).
 export function FramedTable<TRow>(props: TableProps<TRow>) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="overflow-x-auto">
-        <DataRows {...props} />
+        <FocusHandOff>
+          <DataRows {...props} />
+        </FocusHandOff>
       </div>
     </div>
   );

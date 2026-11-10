@@ -2163,6 +2163,26 @@ function rowsOf(screen: Screen): string[][] {
     });
 }
 
+// The text of each line of an element, from the top of each of its
+// characters, without the spaces at which the lines break.
+function linesOfText(element: Element): string[] {
+  const lines = new Map<number, string>();
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    const text = node.textContent ?? "";
+    for (let index = 0; index < text.length; index += 1) {
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + 1);
+      const top = Math.round(range.getBoundingClientRect().top);
+      lines.set(top, `${lines.get(top) ?? ""}${text.charAt(index)}`);
+    }
+  }
+  return [...lines.entries()]
+    .toSorted(([first], [second]) => first - second)
+    .map(([, text]) => text.trim());
+}
+
 describe("the CVSS assessments", () => {
   test("follow the package tree, under a level-two heading", async () => {
     stubTicket();
@@ -2242,7 +2262,7 @@ describe("the CVSS assessments", () => {
     ]);
   });
 
-  test("show the eligibility score alone for a source that the pinned contract does not list, and versions as received", async () => {
+  test("show a source of the eligibility score and versions that the pinned contract does not list as received", async () => {
     showingCvss({
       ...fictionalCvssAssessments(),
       default_cvss_version: "5.0",
@@ -2253,7 +2273,7 @@ describe("the CVSS assessments", () => {
 
     expect(linesOf(screen)).toEqual([
       ["Severity", "High 8.1 from NVD CVSS 5.0"],
-      ["Eligibility score", "7.0"],
+      ["Eligibility score", "7.0, fictional_source"],
     ]);
   });
 
@@ -2274,7 +2294,7 @@ describe("the CVSS assessments", () => {
         .getByRole("columnheader")
         .elements()
         .map((header) => header.textContent),
-    ).toEqual(["Provider", "Version", "Severity", "Vector"]);
+    ).toEqual(["Provider", "Version", "Assessment severity", "Vector"]);
     expect(rowsOf(screen)).toEqual([
       [
         "SUSE",
@@ -2306,23 +2326,35 @@ describe("the CVSS assessments", () => {
     ).toEqual(["SUSE", "v3.1", "Fictional CNA", "v2.0", "NVD", "v4.0"]);
   });
 
-  test("show a version and a severity of an assessment that the pinned contract does not list as received", async () => {
+  test("show a version and a severity of an assessment that the pinned contract does not list as received, without the severity of an unlisted version", async () => {
     showingCvss({
       ...fictionalCvssAssessments(),
       assessments: [
         {
           ...fictionalAssessment(),
           cvss_version: "5.0",
-          severity: "fictional_severity",
+          severity: "high",
           score: 6.2,
           vector_string: "CVSS:5.0/AV:N",
+        },
+        {
+          ...fictionalSuseAssessment(),
+          severity: "fictional_severity",
         },
       ],
     });
     const { screen } = await renderCvss("CVSS:5.0/AV:N");
 
+    // The scale of the severity depends on the version, so the severity of
+    // an unlisted version is left out (docs/behaviors.md, Unknown Values).
     expect(rowsOf(screen)).toEqual([
-      ["NVD", "5.0", "fictional_severity 6.2", "CVSS:5.0/AV:N"],
+      ["NVD", "5.0", "6.2", "CVSS:5.0/AV:N"],
+      [
+        "SUSE",
+        "v3.1",
+        "fictional_severity 5.5",
+        "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      ],
     ]);
   });
 
@@ -2335,34 +2367,60 @@ describe("the CVSS assessments", () => {
       .element();
 
     expect(getComputedStyle(vector).fontFamily).toContain("monospace");
-    // The text of each line, from the top of each character: the lines break
-    // between the metrics, and the text stays the vector, which the user
-    // copies.
-    const lines = new Map<number, string>();
-    const walker = document.createTreeWalker(vector, NodeFilter.SHOW_TEXT);
-    for (
-      let node = walker.nextNode();
-      node !== null;
-      node = walker.nextNode()
-    ) {
-      const text = node.textContent ?? "";
-      for (let index = 0; index < text.length; index += 1) {
-        const range = document.createRange();
-        range.setStart(node, index);
-        range.setEnd(node, index + 1);
-        const top = Math.round(range.getBoundingClientRect().top);
-        lines.set(top, `${lines.get(top) ?? ""}${text.charAt(index)}`);
-      }
-    }
-    const texts = [...lines.entries()]
-      .toSorted(([first], [second]) => first - second)
-      .map(([, text]) => text);
+    // The lines break between the metrics, and the text stays the vector,
+    // which the user copies.
+    const texts = linesOfText(vector);
     expect(texts.length).toBeGreaterThan(1);
     expect(texts.join("")).toBe(NVD_V40.vector_string);
     expect(texts.slice(0, -1).every((text) => text.endsWith("/"))).toBe(true);
     // The page does not scroll horizontally (docs/behaviors.md,
     // Accessibility, Reflow and text size).
     expect(document.documentElement.scrollWidth).toBe(320);
+  });
+
+  test("wrap a provider longer than its column", async () => {
+    await page.viewport(320, 800);
+    const provider = "Fictional Coordinated Disclosure Team";
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [{ ...NVD_V40, provider_name: provider }],
+      }),
+    );
+    const { screen } = await renderCvss(provider);
+
+    expect(
+      linesOfText(
+        cvssPart(screen).getByText(provider, { exact: true }).element(),
+      ),
+    ).toEqual(["Fictional", "Coordinated", "Disclosure", "Team"]);
+  });
+
+  test("move the focus to the screen's heading when a new read leaves no table where it was", async () => {
+    let assessments = fictionalCvssAssessments();
+    stubTicket({ cvss: () => cvssResponse(assessments) });
+    const { screen } = await renderCvss("SUSE");
+    const table = cvssPart(screen).getByRole("grid", {
+      name: "CVSS assessments",
+    });
+    await table.getByRole("rowheader", { name: "NVD" }).click();
+    expect(table.element().contains(document.activeElement)).toBe(true);
+    // Meanwhile the assessments of the CVE are gone.
+    assessments = fictionalCvssAssessments({
+      assessments: [],
+      severity: null,
+      eligibility: { score: 10, source: "fallback" },
+    });
+
+    returnToForeground();
+
+    await expect
+      .element(cvssPart(screen).getByText("No CVSS assessments."))
+      .toBeVisible();
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "SNTL-12", exact: true }),
+      )
+      .toHaveFocus();
   });
 
   test("say No CVSS assessments. without any", async () => {

@@ -488,7 +488,7 @@ test.describe("for an analyst", () => {
     await expect(cvssTable(page).getByRole("columnheader")).toHaveText([
       "Provider",
       "Version",
-      "Severity",
+      "Assessment severity",
       "Vector",
     ]);
     await expect(cvssTable(page).getByRole("rowheader")).toHaveText([
@@ -534,8 +534,9 @@ test.describe("for an analyst", () => {
       part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
     ).toBeInViewport();
     await expectScreenshot(page, "ticket-cvss-without-suse.png");
+    await expectAccessible(page);
 
-    await page.goto("/tickets/SNTL-6");
+    await page.goto("/tickets/SNTL-6#cvss");
 
     // No source supplies CVSS data for CVE-2099-0006 (CVEs).
     await expect(
@@ -544,6 +545,7 @@ test.describe("for an analyst", () => {
     await expect(part(page, "CVSS assessments").getByRole("grid")).toHaveCount(
       0,
     );
+    await expectScreenshot(page, "ticket-cvss-empty.png");
   });
 
   test("keeps the compact heading at the top of the window while the page scrolls", async ({

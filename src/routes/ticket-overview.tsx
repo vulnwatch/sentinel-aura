@@ -10,7 +10,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { z } from "zod";
 import { useGetCveCvssAssessments } from "../api/generated/cves";
 import { useGetTicketPackageWork } from "../api/generated/maintainer-operations";
-import { CVSSVersionValue } from "../api/generated/model";
+import { CVSSVersionValue, EligibilitySource } from "../api/generated/model";
 import type {
   CVECVSSAssessments,
   CVEDetail,
@@ -1253,6 +1253,9 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
 // (docs/conventions.md, Data Read from the API).
 const CVSS_VERSIONS = new Set<string>(Object.values(CVSSVersionValue));
 
+// The sources of an eligibility score that the pinned contract lists.
+const ELIGIBILITY_SOURCES = new Set<string>(Object.values(EligibilitySource));
+
 // A CVSS version with a "v", such as "v3.1", so that it is not read as a
 // score; a version that the pinned contract does not list shows as received
 // (docs/behaviors.md, Unknown Values).
@@ -1308,7 +1311,8 @@ interface ResolutionProps {
 // states, one line says so; otherwise two lines, the second the eligibility
 // score, which without that assessment is the fallback 10.0 (same document,
 // Severity Resolution Cascade; Eligibility Score Resolution). A source that
-// the pinned contract does not list shows the score alone.
+// the pinned contract does not list shows as received after the score
+// (docs/behaviors.md, Unknown Values).
 function Resolution({ assessments }: ResolutionProps) {
   const { severity, eligibility } = assessments;
   if (severity !== null && eligibility.source === "suse") {
@@ -1338,6 +1342,8 @@ function Resolution({ assessments }: ResolutionProps) {
         <Score value={eligibility.score} />
         {eligibility.source === "fallback" &&
           `, the fallback without a SUSE CVSS ${cvssVersion(assessments.default_cvss_version)} assessment`}
+        {!ELIGIBILITY_SOURCES.has(eligibility.source) &&
+          `, ${eligibility.source}`}
       </InlineField>
     </dl>
   );
@@ -1371,13 +1377,19 @@ function Vector({ value }: VectorProps) {
 }
 
 // The columns of the table of the assessments: the provider and the version,
-// which name the assessment; its severity with its score, by the scale of
-// its version; and its vector.
+// which name the assessment; its severity by the scale of its version, which
+// is not the resolved severity, with its score; and its vector. The texts
+// wrap, as in a table whose records have no screen of their own
+// (docs/design-system.md, Tables). Of an assessment of a version that the
+// pinned contract does not list, the severity, whose scale depends on the
+// version, is left out, and its score shows alone (docs/behaviors.md, Unknown
+// Values).
 const ASSESSMENT_COLUMNS: readonly TableColumn<CVSSAssessmentItem>[] = [
   {
     id: "provider",
     name: "Provider",
     isRowHeader: true,
+    wraps: true,
     render: (assessment) => assessment.provider_name,
   },
   {
@@ -1388,10 +1400,16 @@ const ASSESSMENT_COLUMNS: readonly TableColumn<CVSSAssessmentItem>[] = [
   },
   {
     id: "severity",
-    name: "Severity",
-    render: (assessment) => (
-      <ScoredSeverity severity={assessment.severity} score={assessment.score} />
-    ),
+    name: "Assessment severity",
+    render: (assessment) =>
+      CVSS_VERSIONS.has(assessment.cvss_version) ? (
+        <ScoredSeverity
+          severity={assessment.severity}
+          score={assessment.score}
+        />
+      ) : (
+        <Score value={assessment.score} />
+      ),
   },
   {
     id: "vector",
@@ -1407,10 +1425,11 @@ interface CvssPartProps {
 
 // The CVSS assessments of the CVE of the Ticket, from Get CVSS Assessments
 // for a CVE, read-only: what they resolve, then the table of the
-// assessments in the order of the API, by version, then by provider (same
-// document, Version Precedence), or "No CVSS assessments." without any. The
-// part reads them on its own, and their loading and their errors show in its
-// place (docs/behaviors.md, Loading; Where Errors Appear).
+// assessments in the order of the API, by version, then by provider (Sentinel
+// docs/features/tickets/cvss-scoring.md, Version Precedence), or "No CVSS
+// assessments." without any. The part reads them on its own, and their
+// loading and their errors show in its place (docs/behaviors.md, Loading;
+// Where Errors Appear).
 function CvssPart({ read }: CvssPartProps) {
   return (
     <Part id={CVSS_ANCHOR} heading="CVSS assessments">
