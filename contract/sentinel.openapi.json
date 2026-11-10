@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.20.0"
+    "version": "0.22.0"
   },
   "paths": {
     "/health": {
@@ -4052,13 +4052,91 @@
         }
       }
     },
+    "/api/v1/tickets/{ticket_id}/actors": {
+      "get": {
+        "tags": [
+          "Ticket Audit Log"
+        ],
+        "summary": "List the users who acted on a Ticket",
+        "description": "Returns, unpaginated, each user who is the actor of at least one audit event of the Ticket, once, as the current User reference, ordered by username in Unicode code-point order. Events without an actor (system events) add no entry. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).",
+        "operationId": "list_ticket_actors_api_v1_tickets__ticket_id__actors_get",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`.",
+              "examples": [
+                "SNTL-42"
+              ],
+              "title": "Ticket Id"
+            },
+            "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketActorListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`TICKET_NOT_FOUND`: Ticket identifier is malformed, does not exist, or identifies a Ticket inaccessible to the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tickets": {
       "get": {
         "tags": [
           "Tickets"
         ],
         "summary": "List Tickets",
-        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
+        "description": "Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, ignore reason, CNA, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.",
         "operationId": "list_tickets_api_v1_tickets_get",
         "parameters": [
           {
@@ -4095,6 +4173,43 @@
               "title": "Status"
             },
             "description": "Filter by Ticket status: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored."
+          },
+          {
+            "name": "ignore_reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "not_shipped",
+                  "cve_rejected",
+                  "cna_policy",
+                  "other"
+                ],
+                "maxLength": 500
+              },
+              "description": "Filter by ignore reason: `not_shipped`, `cve_rejected`, `cna_policy`, `other`. `cna_policy` lists the Tickets that the CNA auto-ignore policy ignored. A Ticket that is not `ignored` has no reason and matches no value. Repeatable; OR semantics. Invalid values are ignored.",
+              "title": "Ignore Reason"
+            },
+            "description": "Filter by ignore reason: `not_shipped`, `cve_rejected`, `cna_policy`, `other`. `cna_policy` lists the Tickets that the CNA auto-ignore policy ignored. A Ticket that is not `ignored` has no reason and matches no value. Repeatable; OR semantics. Invalid values are ignored."
+          },
+          {
+            "name": "cna",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+                "maxLength": 500
+              },
+              "description": "Filter by the CNA that owns the record of the Ticket's CVE. `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Repeatable; OR semantics. A malformed value fails validation; an unknown CNA yields no match. A Ticket without a CVE, or whose CVE has no CNA, matches no value.",
+              "title": "Cna"
+            },
+            "description": "Filter by the CNA that owns the record of the Ticket's CVE. `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Repeatable; OR semantics. A malformed value fails validation; an unknown CNA yields no match. A Ticket without a CVE, or whose CVE has no CNA, matches no value."
           },
           {
             "name": "assignee",
@@ -5012,7 +5127,7 @@
           "Tickets"
         ],
         "summary": "Ignore Ticket",
-        "description": "Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
+        "description": "Moves a `new` or `analysis` Ticket to `ignored` (manual zone) with the `reason` why it is ignored, which the Ticket carries as `ignore_reason` until it is reopened. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.",
         "operationId": "ignore_ticket_api_v1_tickets__ticket_id__ignore_post",
         "parameters": [
           {
@@ -5030,6 +5145,16 @@
             "description": "Canonical Ticket identity (`SNTL-{n}`), matching `^SNTL-[1-9][0-9]*$` with `n` at most 2147483647. Any other value returns `404 TICKET_NOT_FOUND`."
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketIgnoreRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -5072,7 +5197,7 @@
             }
           },
           "409": {
-            "description": "`TICKET_INVALID_TRANSITION`: the Ticket is `analyzed` or `resolved`. `TICKET_NOT_MUTABLE`: the Ticket is already Ignored or Duplicated.",
+            "description": "`TICKET_NOT_MUTABLE`: the Ticket is already Ignored or Duplicated. `TICKET_INVALID_TRANSITION`: the Ticket is `analyzed` or `resolved`. `TICKET_CVE_NOT_REJECTED`: `reason` is `cve_rejected` and the Ticket has no CVE or its CVE is not `rejected`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5082,7 +5207,7 @@
             }
           },
           "422": {
-            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "description": "`VALIDATION_ERROR`: the request fails validation, for example `reason` is missing, `null`, or not one of `not_shipped`, `cve_rejected`, and `other`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5746,7 +5871,7 @@
           "Tickets"
         ],
         "summary": "List Access Grants",
-        "description": "Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Requires `manage_confidentiality`.",
+        "description": "Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Every caller who can see the Ticket lists its grants, whatever the caller's capabilities; granting and revoking require `manage_confidentiality`.",
         "operationId": "list_ticket_access_grants_api_v1_tickets__ticket_id__access_get",
         "parameters": [
           {
@@ -5777,16 +5902,6 @@
           },
           "401": {
             "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "`AUTH_INSUFFICIENT_PERMISSION`: the caller lacks the required capability.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8250,7 +8365,7 @@
           "CVEs"
         ],
         "summary": "List CVEs",
-        "description": "Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.",
+        "description": "Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, repeatable CNA, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.",
         "operationId": "list_cves_api_v1_cves_get",
         "parameters": [
           {
@@ -8314,6 +8429,22 @@
               "title": "Has Ticket"
             },
             "description": "`true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket."
+          },
+          {
+            "name": "cna",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+                "maxLength": 500
+              },
+              "description": "Filter by the CNA that owns the CVE Record. `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Repeatable; OR semantics. A malformed value fails validation; an unknown CNA yields no match. A CVE without a CNA matches no value.",
+              "title": "Cna"
+            },
+            "description": "Filter by the CNA that owns the CVE Record. `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Repeatable; OR semantics. A malformed value fails validation; an unknown CNA yields no match. A CVE without a CNA matches no value."
           },
           {
             "name": "from_date",
@@ -9290,6 +9421,481 @@
           },
           "503": {
             "description": "`CVE_FETCH_FAILED`: no enabled source supports single-CVE fetch. `CELERY_UNAVAILABLE`: no publication attempt was confirmed by the task broker and no source is already pending; the detail is fixed and the tasks may still run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cnas": {
+      "get": {
+        "tags": [
+          "CNAs"
+        ],
+        "summary": "List CNAs",
+        "description": "Returns a paginated list of the CVE Numbering Authorities (CNAs) that own, or have owned, the record of an ingested CVE, with their display name, short name, the organization name, types, and plain-text scope of the CVE Program CNA list, and whether their new Tickets are ignored automatically. Supports search, an auto-ignore filter, and sorting. Requires authentication (JWT session or API key).",
+        "operationId": "list_cnas_api_v1_cnas_get",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Case-insensitive substring of the short name or the organization name. Outer whitespace is trimmed; a whitespace-only value is ignored. `%`, `_`, and backslash are literal.",
+              "title": "Search",
+              "maxLength": 500
+            },
+            "description": "Case-insensitive substring of the short name or the organization name. Outer whitespace is trimmed; a whitespace-only value is ignored. `%`, `_`, and backslash are literal."
+          },
+          {
+            "name": "auto_ignore",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "`true`: only the CNAs under the auto-ignore policy; `false`: only the others.",
+              "title": "Auto Ignore"
+            },
+            "description": "`true`: only the CNAs under the auto-ignore policy; `false`: only the others."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 1,
+              "description": "Page number.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number."
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page; maximum 100.",
+              "default": 20,
+              "title": "Per Page"
+            },
+            "description": "Items per page; maximum 100."
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/CNASortField",
+              "description": "Sort field (default `name`): `name` (the display name) and `short_name` in Unicode code-point order, or `created_at`. `null` values sort last in both directions.",
+              "default": "name",
+              "maxLength": 500
+            },
+            "description": "Sort field (default `name`): `name` (the display name) and `short_name` in Unicode code-point order, or `created_at`. `null` values sort last in both directions."
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "description": "`asc` (default) or `desc`.",
+              "default": "asc",
+              "maxLength": 500
+            },
+            "description": "`asc` (default) or `desc`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CNAListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cnas/{org_id}": {
+      "get": {
+        "tags": [
+          "CNAs"
+        ],
+        "summary": "Get CNA",
+        "description": "Returns one CNA, identified by its CVE Services UUID (`org_id`). Requires authentication (JWT session or API key).",
+        "operationId": "get_cna_api_v1_cnas__org_id__get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "CVE Services UUID of the CNA in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Any other value returns `404 CNA_NOT_FOUND`.",
+              "examples": [
+                "00000000-0000-4000-8000-0000000000a1"
+              ],
+              "title": "Org Id"
+            },
+            "description": "CVE Services UUID of the CNA in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Any other value returns `404 CNA_NOT_FOUND`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CNADetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`CNA_NOT_FOUND`: `{org_id}` is malformed or identifies no CNA.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/cnas/{org_id}": {
+      "patch": {
+        "tags": [
+          "CNAs"
+        ],
+        "summary": "Set CNA auto-ignore",
+        "description": "Places a CNA under the auto-ignore policy or removes it, and records one CNA audit event for an effective change. The change applies to the Tickets that ingestion creates, or whose CNA it records, after the change; no existing Ticket changes. An unchanged request is an idempotent success with no audit event. Requires the manage_settings capability.",
+        "operationId": "set_cna_auto_ignore_api_v1_admin_cnas__org_id__patch",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "CVE Services UUID of the CNA in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Any other value returns `404 CNA_NOT_FOUND`.",
+              "examples": [
+                "00000000-0000-4000-8000-0000000000a1"
+              ],
+              "title": "Org Id"
+            },
+            "description": "CVE Services UUID of the CNA in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Any other value returns `404 CNA_NOT_FOUND`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CNAAutoIgnoreRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CNADetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`AUTH_INSUFFICIENT_PERMISSION`: the caller lacks the required capability. `AUTH_CROSS_ORIGIN_REJECTED`: a browser sent the request for a page of an origin that is neither the API's own nor a configured browser client.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`CNA_NOT_FOUND`: `{org_id}` is malformed or identifies no CNA.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/cnas/audit-log": {
+      "get": {
+        "tags": [
+          "CNAs"
+        ],
+        "summary": "List CNA audit events",
+        "description": "Returns a paginated, fixed reverse-chronological list of the auto-ignore policy changes of CNAs. Supports filtering by event type, CNA, actor, and date range. Requires the manage_settings capability.",
+        "operationId": "list_cna_audit_events_api_v1_admin_cnas_audit_log_get",
+        "parameters": [
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "auto_ignore_enabled",
+                  "auto_ignore_disabled"
+                ],
+                "maxLength": 500
+              },
+              "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.",
+              "title": "Event Type"
+            },
+            "description": "Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page."
+          },
+          {
+            "name": "cna",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "`org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. A malformed value fails validation; an unknown CNA yields an empty page.",
+              "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+              "title": "Cna",
+              "maxLength": 500
+            },
+            "description": "`org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. A malformed value fails validation; an unknown CNA yields an empty page."
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Actor UUID, exact username, or 'system'. An unknown actor yields an empty page.",
+              "title": "Actor",
+              "maxLength": 500
+            },
+            "description": "Actor UUID, exact username, or 'system'. An unknown actor yields an empty page."
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO 8601 date/datetime; inclusive lower bound.",
+              "title": "From Date",
+              "maxLength": 500
+            },
+            "description": "ISO 8601 date/datetime; inclusive lower bound."
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO 8601 date/datetime; inclusive upper bound.",
+              "title": "To Date",
+              "maxLength": 500
+            },
+            "description": "ISO 8601 date/datetime; inclusive upper bound."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 1,
+              "description": "Page number.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number."
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page; maximum 100.",
+              "default": 20,
+              "title": "Per Page"
+            },
+            "description": "Items per page; maximum 100."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CNAAuditListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`DATE_RANGE_INVERTED`: `from_date` is after `to_date`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`AUTH_INSUFFICIENT_PERMISSION`: the caller lacks the required capability.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -10467,6 +11073,270 @@
         "title": "AssignmentEligibility",
         "description": "For which Tickets a user is eligible to be the assignee.\n\nCategory B \u2014 classification (Python Enum only, never stored in the\ndatabase; derived per request from the user's active status, bot\nmarker, and roles). The values are the wire values. See\n`docs/features/identity/rbac.md` (Assignment Eligibility Wire Format)."
       },
+      "CNAAuditEventData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "event_type": {
+            "$ref": "#/components/schemas/CNAAuditEventType"
+          },
+          "cna": {
+            "$ref": "#/components/schemas/CNASummary",
+            "description": "Current reference of the CNA."
+          },
+          "detail": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detail",
+            "description": "`cna_name`: the display name of the CNA when the event was recorded, or `null` when it had none.",
+            "examples": [
+              {
+                "cna_name": "Fictional Plugin Foundation"
+              }
+            ]
+          },
+          "actor": {
+            "$ref": "#/components/schemas/UserReference"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "event_type",
+          "cna",
+          "detail",
+          "actor",
+          "created_at"
+        ],
+        "title": "CNAAuditEventData",
+        "description": "One event of the CNA audit log (cna.md, List CNA Audit Events).\n\n`cna` is the current reference of the CNA; `detail.cna_name` is its\ndisplay name when the event was recorded. `actor` is always the\ncomplete current user reference, because every CNA audit event has a\nhuman actor and users are never deleted."
+      },
+      "CNAAuditEventType": {
+        "type": "string",
+        "enum": [
+          "auto_ignore_enabled",
+          "auto_ignore_disabled"
+        ],
+        "title": "CNAAuditEventType",
+        "description": "Classifies the action recorded in a `CNAAuditEvent`.\n\nCategory B \u2014 classification (Python Enum only, no CHECK constraint;\nadding a value requires only a code change). See\n`docs/data-model.md` (CNAAuditEventType Enum) and\n`docs/features/tickets/cna.md` (CNA Audit Log) for the event type\ncontract."
+      },
+      "CNAAuditListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CNAAuditEventData"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "CNAAuditListResponse",
+        "description": "Response body for `GET /api/v1/admin/cnas/audit-log` (paginated)."
+      },
+      "CNAAutoIgnoreRequest": {
+        "properties": {
+          "auto_ignore": {
+            "type": "boolean",
+            "title": "Auto Ignore",
+            "description": "`true` places the CNA under the auto-ignore policy, so that the Tickets that ingestion creates for its published CVEs, or whose CNA ingestion records afterwards, are ignored with the reason `cna_policy` while they are `new` and not confidential; `false` removes it. Applies only to later ingestions; no existing Ticket changes. Required.",
+            "examples": [
+              true
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "auto_ignore"
+        ],
+        "title": "CNAAutoIgnoreRequest",
+        "description": "Request body of `PATCH /api/v1/admin/cnas/{org_id}` (cna.md, Set CNA\nAuto-Ignore).\n\nThe single field is required (single-field PATCH, `docs/api-spec.md`,\nPartial Update Semantics) and strict (JSON Request Body Scalar Types):\nan omitted field, `null`, or a value of another type is the global\n`422 VALIDATION_ERROR`."
+      },
+      "CNADetailResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CNAResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "CNADetailResponse",
+        "description": "Response body for `GET /api/v1/cnas/{org_id}`."
+      },
+      "CNAListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CNAResponse"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "CNAListResponse",
+        "description": "Response body for `GET /api/v1/cnas` (paginated)."
+      },
+      "CNAResponse": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Org Id",
+            "description": "CVE Services UUID of the CNA, lowercase hyphenated form."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Display name: the organization name from the CVE Program CNA list, otherwise the short name of the CNA's CVE Records; `null` while the CNA has no short name. Never an identifier."
+          },
+          "short_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Name",
+            "description": "Short name of the CNA in its CVE Records; `null` until a record supplies one."
+          },
+          "organization_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Name",
+            "description": "Organization name from the CVE Program CNA list."
+          },
+          "types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Types",
+            "description": "CNA types from the CVE Program CNA list, in ascending Unicode code-point order; empty when unknown. Values are those of the list, such as `Vendor`, `Open Source`, or `Researcher`, and are not a closed set."
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope",
+            "description": "Scope from the CVE Program CNA list as plain text, which may contain line feeds; never markup."
+          },
+          "auto_ignore": {
+            "type": "boolean",
+            "title": "Auto Ignore",
+            "description": "Whether the new Tickets of the CNA are ignored automatically (auto-ignore policy)."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When Sentinel recorded the CNA (UTC)."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Last change of the row (UTC)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "name",
+          "short_name",
+          "organization_name",
+          "types",
+          "scope",
+          "auto_ignore",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CNAResponse",
+        "description": "One CNA (cna.md, Response Schemas > CNAResponse)."
+      },
+      "CNASortField": {
+        "type": "string",
+        "enum": [
+          "name",
+          "short_name",
+          "created_at"
+        ],
+        "title": "CNASortField",
+        "description": "Sortable fields for the CNA list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/tickets/cna.md` (List CNAs,\n`list_cnas()`): `name` is the display name; the two names sort in\nUnicode code-point order with `NULL` last."
+      },
+      "CNASummary": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Org Id",
+            "description": "CVE Services UUID of the CNA, lowercase hyphenated form; locates the CNA in `GET /api/v1/cnas/{org_id}`."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Display name: the organization name from the CVE Program CNA list, otherwise the short name of the CNA's CVE Records; `null` while the CNA has no short name. Never an identifier."
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "name"
+        ],
+        "title": "CNASummary",
+        "description": "Compact reference to the CNA that owns a CVE Record (cna.md,\nResponse Schemas > CNASummary)."
+      },
       "CVEAffectedVersionEntry": {
         "properties": {
           "vendor": {
@@ -10877,6 +11747,17 @@
             ],
             "description": "Unified CVE severity: `critical`, `high`, `medium`, `low`, or `none` (CVSS score 0.0, informational), or `null` when unresolved (no CVSS data). `none` is distinct from `null`."
           },
+          "cna": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CNASummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CNA that owns the CVE Record, with its display name; `null` when no CNA is recorded."
+          },
           "external_identifiers": {
             "items": {
               "$ref": "#/components/schemas/CVEExternalIdentifierResponse"
@@ -10937,6 +11818,7 @@
           "cve_state",
           "date_rejected",
           "severity",
+          "cna",
           "external_identifiers",
           "kev",
           "epss",
@@ -11103,6 +11985,17 @@
             "title": "Published Date",
             "description": "CVE publication date (UTC)."
           },
+          "cna": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CNASummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CNA that owns the CVE Record, with its display name; `null` when no CNA is recorded."
+          },
           "ticket": {
             "anyOf": [
               {
@@ -11135,6 +12028,7 @@
           "severity",
           "cve_state",
           "published_date",
+          "cna",
           "ticket",
           "created_at",
           "updated_at"
@@ -11306,6 +12200,17 @@
             ],
             "description": "Unified CVE severity: `critical`, `high`, `medium`, `low`, or `none` (CVSS score 0.0, informational), or `null` when unresolved (no CVSS data). `none` is distinct from `null`."
           },
+          "cna": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CNASummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CNA that owns the CVE Record, with its display name; `null` when no CNA is recorded."
+          },
           "external_identifiers": {
             "items": {
               "$ref": "#/components/schemas/CVEExternalIdentifierResponse"
@@ -11377,6 +12282,7 @@
           "cve_state",
           "date_rejected",
           "severity",
+          "cna",
           "external_identifiers",
           "kev",
           "epss",
@@ -11679,13 +12585,25 @@
             ],
             "title": "Description",
             "description": "Vulnerability description."
+          },
+          "cna": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CNASummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CNA that owns the CVE Record, with its display name; `null` when no CNA is recorded."
           }
         },
         "type": "object",
         "required": [
           "cve_id",
           "title",
-          "description"
+          "description",
+          "cna"
         ],
         "title": "CVESummary",
         "description": "Compact CVE representation for list views."
@@ -14718,6 +15636,30 @@
             "title": "Is Eligible Override",
             "description": "`true` if an authorized acting user manually set eligibility."
           },
+          "eligibility_override_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current profile of the user who set the current eligibility override, including `active = false` when deactivated; `null` when `is_eligible_override` is `false`."
+          },
+          "eligibility_override_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Override At",
+            "description": "When the current eligibility override was set (UTC): the time of the change that set its current value, equal to the `created_at` of that change's `product_eligibility_changed` audit event; `null` when `is_eligible_override` is `false`."
+          },
           "released_at": {
             "anyOf": [
               {
@@ -14779,6 +15721,8 @@
           "product_name",
           "eligible",
           "is_eligible_override",
+          "eligibility_override_by",
+          "eligibility_override_at",
           "released_at",
           "lifecycle_phase",
           "deleted_at",
@@ -14831,6 +15775,30 @@
             "title": "Is Eligible Override",
             "description": "`true` if an authorized acting user manually set eligibility; `false` when eligibility is calculated automatically."
           },
+          "eligibility_override_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current profile of the user who set the current eligibility override, including `active = false` when deactivated; `null` when `is_eligible_override` is `false`."
+          },
+          "eligibility_override_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Override At",
+            "description": "When the current eligibility override was set (UTC): the time of the change that set its current value, equal to the `created_at` of that change's `product_eligibility_changed` audit event; `null` when `is_eligible_override` is `false`."
+          },
           "lifecycle_phase": {
             "anyOf": [
               {
@@ -14869,6 +15837,8 @@
           "product_name",
           "eligible",
           "is_eligible_override",
+          "eligibility_override_by",
+          "eligibility_override_at",
           "lifecycle_phase",
           "actionable",
           "non_actionable_reason"
@@ -15854,6 +16824,23 @@
         "title": "TicketAccessGrantResponse",
         "description": "One explicit access grant (`docs/features/tickets/tickets.md`,\nTicketAccessGrantResponse).\n\nBoth user references are complete current profiles (`docs/api-spec.md`,\nUser References in Responses): a deactivated user is projected with\n`active = false`, and neither inactivity nor reactivation rewrites the\ngrant's provenance."
       },
+      "TicketActorListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/UserReference"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "TicketActorListResponse",
+        "description": "Response body for `GET /api/v1/tickets/{ticket_id}/actors`.\n\nUnpaginated: each user who is the actor of at least one event of the\nTicket, once, as the complete current User reference, ordered by\n`username` in Unicode code-point order."
+      },
       "TicketAssigneeUpdateRequest": {
         "properties": {
           "user_id": {
@@ -16261,6 +17248,17 @@
             "$ref": "#/components/schemas/TicketStatusValue",
             "description": "Ticket status: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, or `duplicated`."
           },
+          "ignore_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketIgnoreReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the Ticket is ignored: `not_shipped` (SUSE ships none of the affected software), `cve_rejected` (the associated CVE is rejected), `cna_policy` (the CNA of the associated CVE is under the auto-ignore policy; set only by the system), or `other`; `null` unless `status` is `ignored`. Only `cve_rejected` reopens the Ticket automatically, when the rejection of its CVE is reverted."
+          },
           "severity": {
             "anyOf": [
               {
@@ -16500,6 +17498,7 @@
         "required": [
           "ticket_id",
           "status",
+          "ignore_reason",
           "severity",
           "priority",
           "priority_automatic",
@@ -16558,6 +17557,34 @@
         ],
         "title": "TicketDuplicateRequest",
         "description": "Request body of `POST /api/v1/tickets/{ticket_id}/duplicate`.\n\nSee `docs/features/tickets/tickets.md` (Mark Ticket as Duplicate) and\n`docs/api-spec.md` (Ticket Identifier Resolution): a request-body\nTicket field uses the canonical `SNTL-{n}` grammar with ordinary\nPydantic semantics, so a missing, `null`, non-string, or malformed\nvalue (lowercase prefix, whitespace, zero padding, overflow, a\nTicket UUID, ...) fails with the global `422 VALIDATION_ERROR`. A\nwell-formed target that is missing or inaccessible is a\n`404 TICKET_NOT_FOUND` decided by the service, not here. The Core\nparser enforces the grammar, including the range that no pattern\nexpresses; the field publishes the pattern and the length bound\n(`docs/api-spec.md`, Published Input Constraints)."
+      },
+      "TicketIgnoreReason": {
+        "type": "string",
+        "enum": [
+          "not_shipped",
+          "cve_rejected",
+          "cna_policy",
+          "other"
+        ],
+        "title": "TicketIgnoreReason",
+        "description": "Why a Ticket is ignored, set exactly while it is `Ignored`.\n\nCategory A \u2014 state-machine (`Ticket.ignore_reason`, VARCHAR + CHECK\nconstraint `chk_ticket_ignore_reason_valid`): the value decides which\nautomatic exit from `Ignored` applies. Adding a value requires an\nAlembic migration. The API wire values equal the stored values. See\n`docs/data-model.md` (TicketIgnoreReason Enum) and\n`docs/features/tickets/tickets.md` (Ignore Reason)."
+      },
+      "TicketIgnoreRequest": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/UserTicketIgnoreReasonValue",
+            "description": "Why the Ticket is ignored: `not_shipped` (SUSE ships none of the affected software; software that SUSE ships but the issue does not affect is recorded with `not_affected` tracks instead), `cve_rejected` (the associated CVE is rejected; accepted only while the Ticket has a CVE whose `cve_state` is `rejected`), or `other`. Required.",
+            "examples": [
+              "not_shipped"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "TicketIgnoreRequest",
+        "description": "Request body of `POST /api/v1/tickets/{ticket_id}/ignore`.\n\nSee `docs/features/tickets/tickets.md` (Ignore Ticket, Ignore Reason).\n`reason` is required and typed with the reasons that a user may choose,\nso an omitted member, `null`, or any other value fails with the global\n`422 VALIDATION_ERROR`. Whether `cve_rejected` applies depends on the\nstored CVE state, which the service decides\n(`409 TICKET_CVE_NOT_REJECTED`)."
       },
       "TicketListResponse": {
         "properties": {
@@ -16985,6 +18012,17 @@
             "$ref": "#/components/schemas/TicketStatusValue",
             "description": "Ticket status: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, or `duplicated`."
           },
+          "ignore_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketIgnoreReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the Ticket is ignored: `not_shipped` (SUSE ships none of the affected software), `cve_rejected` (the associated CVE is rejected), `cna_policy` (the CNA of the associated CVE is under the auto-ignore policy; set only by the system), or `other`; `null` unless `status` is `ignored`. Only `cve_rejected` reopens the Ticket automatically, when the rejection of its CVE is reverted."
+          },
           "severity": {
             "anyOf": [
               {
@@ -17230,6 +18268,7 @@
         "required": [
           "ticket_id",
           "status",
+          "ignore_reason",
           "severity",
           "priority",
           "priority_automatic",
@@ -17566,6 +18605,30 @@
             "title": "Is Eligible Override",
             "description": "`true` if an authorized acting user manually set eligibility."
           },
+          "eligibility_override_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current profile of the user who set the current eligibility override, including `active = false` when deactivated; `null` when `is_eligible_override` is `false`."
+          },
+          "eligibility_override_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Override At",
+            "description": "When the current eligibility override was set (UTC): the time of the change that set its current value, equal to the `created_at` of that change's `product_eligibility_changed` audit event; `null` when `is_eligible_override` is `false`."
+          },
           "lifecycle_phase": {
             "anyOf": [
               {
@@ -17601,6 +18664,8 @@
           "product_name",
           "eligible",
           "is_eligible_override",
+          "eligibility_override_by",
+          "eligibility_override_at",
           "lifecycle_phase",
           "actionable",
           "non_actionable_reason"
@@ -18203,6 +19268,14 @@
         ],
         "title": "UserSortField",
         "description": "Sortable fields for the administrator user list query.\n\nCategory B \u2014 classification (Python Enum only; never stored in the\ndatabase). See `docs/features/identity/user-management.md` (List\nUsers (Admin)) for the supported fields and NULL-placement rule for\n`full_name`."
+      },
+      "UserTicketIgnoreReasonValue": {
+        "type": "string",
+        "enum": [
+          "not_shipped",
+          "cve_rejected",
+          "other"
+        ]
       },
       "UserType": {
         "type": "string",

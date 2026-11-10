@@ -1471,6 +1471,7 @@ describe("the table", () => {
         cve_id: "CVE-2099-0018",
         title: "Fictional authentication bypass",
         description: null,
+        cna: null,
       },
       triage_due_at: new Date(Date.now() + 3.5 * DAY).toISOString(),
       package_names: ["fictional-curl", "fictional-libcurl4"],
@@ -1650,7 +1651,12 @@ describe("the table", () => {
           }),
           fictionalTicket({
             ticket_id: "SNTL-6",
-            cve: { cve_id: "CVE-2099-0006", title: null, description: null },
+            cve: {
+              cve_id: "CVE-2099-0006",
+              title: null,
+              description: null,
+              cna: null,
+            },
           }),
         ]),
     });
@@ -1676,7 +1682,12 @@ describe("the table", () => {
       list: () =>
         ticketPage([
           fictionalTicket({
-            cve: { cve_id: "CVE-2099-0001", title, description: null },
+            cve: {
+              cve_id: "CVE-2099-0001",
+              title,
+              description: null,
+              cna: null,
+            },
           }),
         ]),
     });

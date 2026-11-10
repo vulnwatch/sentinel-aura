@@ -3,6 +3,7 @@
  * Do not edit by hand: run `scripts/tooling.sh generate`.
  */
 import type { ListTicketsCurrentPhaseItem } from "./list-tickets-current-phase-item";
+import type { ListTicketsIgnoreReasonItem } from "./list-tickets-ignore-reason-item";
 import type { ListTicketsOverdueItem } from "./list-tickets-overdue-item";
 import type { ListTicketsPriorityItem } from "./list-tickets-priority-item";
 import type { ListTicketsSeverityItem } from "./list-tickets-severity-item";
@@ -21,6 +22,17 @@ export type ListTicketsParams = {
    * @items.maxLength 500
    */
   status?: ListTicketsStatusItem[];
+  /**
+   * Filter by ignore reason: `not_shipped`, `cve_rejected`, `cna_policy`, `other`. `cna_policy` lists the Tickets that the CNA auto-ignore policy ignored. A Ticket that is not `ignored` has no reason and matches no value. Repeatable; OR semantics. Invalid values are ignored.
+   * @items.maxLength 500
+   */
+  ignore_reason?: ListTicketsIgnoreReasonItem[];
+  /**
+   * Filter by the CNA that owns the record of the Ticket's CVE. `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Repeatable; OR semantics. A malformed value fails validation; an unknown CNA yields no match. A Ticket without a CVE, or whose CVE has no CNA, matches no value.
+   * @items.maxLength 500
+   * @items.pattern ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$
+   */
+  cna?: string[];
   /**
    * Filter by assignee: user UUID, exact username, or `none` for unassigned Tickets. An unknown user yields an empty page.
    * @maxLength 500

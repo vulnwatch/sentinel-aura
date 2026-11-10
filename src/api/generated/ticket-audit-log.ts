@@ -18,6 +18,7 @@ import type {
 import type {
   ErrorResponse,
   ListTicketEventsParams,
+  TicketActorListResponse,
   TicketAuditListResponse,
   ValidationErrorResponse,
 } from "./model";
@@ -252,6 +253,178 @@ export function useListTicketEvents<
     params,
     options,
   );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListTicketActorsUrl = (ticketId: string) => {
+  return `/api/v1/tickets/${encodeURIComponent(String(ticketId))}/actors`;
+};
+
+/**
+ * Returns, unpaginated, each user who is the actor of at least one audit event of the Ticket, once, as the current User reference, ordered by username in Unicode code-point order. Events without an actor (system events) add no entry. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
+ * @summary List the users who acted on a Ticket
+ */
+export const listTicketActors = async (
+  ticketId: string,
+  options?: Parameters<typeof apiRequest>[1],
+): Promise<TicketActorListResponse> => {
+  return apiRequest<TicketActorListResponse>(getListTicketActorsUrl(ticketId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTicketActorsQueryKey = (ticketId: string) => {
+  return [`/api/v1/tickets/${ticketId}/actors`] as const;
+};
+
+export const getListTicketActorsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTicketActors>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listTicketActors>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListTicketActorsQueryKey(ticketId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listTicketActors>>
+  > = ({ signal }) => listTicketActors(ticketId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: ticketId !== null && ticketId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTicketActors>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListTicketActorsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTicketActors>>
+>;
+export type ListTicketActorsQueryError = ErrorType<
+  ErrorResponse | ValidationErrorResponse
+>;
+
+export function useListTicketActors<
+  TData = Awaited<ReturnType<typeof listTicketActors>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  ticketId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listTicketActors>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTicketActors>>,
+          TError,
+          Awaited<ReturnType<typeof listTicketActors>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListTicketActors<
+  TData = Awaited<ReturnType<typeof listTicketActors>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listTicketActors>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTicketActors>>,
+          TError,
+          Awaited<ReturnType<typeof listTicketActors>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListTicketActors<
+  TData = Awaited<ReturnType<typeof listTicketActors>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listTicketActors>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List the users who acted on a Ticket
+ */
+
+export function useListTicketActors<
+  TData = Awaited<ReturnType<typeof listTicketActors>>,
+  TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
+>(
+  ticketId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listTicketActors>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListTicketActorsQueryOptions(ticketId, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,

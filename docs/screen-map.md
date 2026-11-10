@@ -139,7 +139,7 @@ under the path of the screen, and its screen document records it.
 |---|---|---|---|
 | Sign-in | Sign in | `/login` | Local sign-in (Sentinel `docs/features/identity/local-authentication.md`, Login) |
 | Tickets | Ticket list | `/tickets` | The Tickets, in the views of Ticket List Views; the landing (Landing) |
-| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, with the CVE's CVSS assessments, sources, and affected versions; its package tree, references, IBS requests, and audit log; the tracks that wait for the signed-in user's submission, when they maintain one of its packages; and, with `manage_confidentiality`, its access grants |
+| Tickets | Ticket | `/tickets/{ticket_id}` | One Ticket: its CVE, with the CVE's CVSS assessments, sources, and affected versions; its package tree, references, IBS requests, and audit log; the tracks that wait for the signed-in user's submission, when they maintain one of its packages; and, for a confidential Ticket, its access grants, which a user with `manage_confidentiality` grants and revokes (Sentinel `docs/features/tickets/tickets.md`, Access Grant Management) |
 | My packages | My packages | `/my-packages` | The signed-in user's maintainer workbench: pending, in-progress, and completed work |
 | Users | Users | `/users` | The user directory, and, with `manage_users`, the complete profile of each user and the creation of a local user |
 | Users | User | `/users/{user_id}` | One user: their directory entry, the Tickets assigned to them, and the Tickets of the packages that they maintain; with `manage_users`, also the complete profile, its administration, and the user's API keys and identity events |
