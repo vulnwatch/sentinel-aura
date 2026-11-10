@@ -93,11 +93,9 @@ details above the CVE.
   the CVE ID encoded in the path (`docs/behaviors.md`, Links to Other Sites,
   Composed addresses).
 - The title, when Sentinel returns one, and below it the description, cut to
-  its first four lines with Show more (`docs/design-system.md`, Main
-  Content), or "No description." in `fg-muted`. The description keeps its
-  line breaks and shows as written, Markdown included, with its runs of
-  spaces collapsed; the title and the description break a word longer than
-  their place.
+  its first four lines with Show more (`docs/design-system.md`, Main Content),
+  or "No description." in `fg-muted`. The description keeps its line breaks
+  and shows as written, Markdown included, with its runs of spaces collapsed.
 - On one line that wraps, each value after its term in `fg-muted`: Published
   and Modified, each a date and time; Rejected, the date and time of the
   rejection, while the CVE is rejected; CWE, the identifiers of the
@@ -137,15 +135,15 @@ details above the CVE.
   Overview shows the loading indicator until the Ticket arrives, and the value
   of Duplicates until its read arrives (`docs/behaviors.md`, Loading).
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
-  The failure of the first read of Get Ticket replaces the screen, its
-  heading row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that
-  does not exist or that the user cannot see, shows Not found
-  (`docs/behaviors.md`, Missing and Inaccessible Records). A later read of
-  the Ticket that fails, such as when the tab returns to the foreground,
-  keeps the Ticket shown, with its warning at the top of the panel of the
-  tab, unless it is a `403` or a `404`, which replaces the screen. The failure of the read of the duplicates shows in
-  place of their value, with Try again where the failure offers it, and leaves
-  the rest of the screen usable. The screen handles no error code
+  The failure of the first read of Get Ticket replaces the screen, its heading
+  row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
+  exist or that the user cannot see, shows Not found (`docs/behaviors.md`,
+  Missing and Inaccessible Records). A later read of the Ticket that fails,
+  such as when the tab returns to the foreground, keeps the Ticket shown, with
+  its warning at the top of the panel of the tab, unless it is a `403` or a
+  `404`, which replaces the screen. The failure of the read of the duplicates
+  shows in place of their value, with Try again where the failure offers it,
+  and leaves the rest of the screen usable. The screen handles no error code
   specifically.
 - **Reflow.** At 320 CSS px the page does not scroll horizontally
   (`docs/behaviors.md`, Accessibility, Reflow and text size).

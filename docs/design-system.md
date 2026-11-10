@@ -1255,11 +1255,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   of its place, 24 px below the message area and the compact heading, as it
   starts 24 px below the line of the tabs, until the end of the page comes
   into view, and then scrolls with the page to its own end, so that its first
-  sections stay beside the parts. When an element of
-  the side column that is out of view takes the focus, or is the target of an
-  anchor, the page scrolls until it shows, which for the last sections of a
-  side column taller than the window can be the end of the page. With one
-  column, the side column scrolls with the page.
+  sections stay beside the parts. When an element of the side column that is
+  out of view takes the focus, or is the target of an anchor, the page scrolls
+  until it shows, which for the last sections of a side column taller than the
+  window can be the end of the page. With one column, the side column scrolls
+  with the page.
 - On a screen with a side column, while the main content is wide enough for
   two columns, on each of its tabs, also one that takes the whole width, the
   heading row stays at the top of the window once the page has scrolled it
