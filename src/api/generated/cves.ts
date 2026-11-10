@@ -62,7 +62,7 @@ export const getListCvesUrl = (params?: ListCvesParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["severity"];
+    const explodeParameters = ["severity", "cna"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
@@ -84,7 +84,7 @@ export const getListCvesUrl = (params?: ListCvesParams) => {
 };
 
 /**
- * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
+ * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, repeatable CNA, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary List CVEs
  */
 export const listCves = async (

@@ -4,6 +4,7 @@
  */
 import type { LifecyclePhaseValue } from "./lifecycle-phase-value";
 import type { ProductReasonValue } from "./product-reason-value";
+import type { UserReference } from "./user-reference";
 
 /**
  * One Product occurrence of a track-status mutation response.
@@ -19,6 +20,10 @@ export interface TrackStatusProduct {
   eligible: boolean;
   /** `true` if an authorized acting user manually set eligibility. */
   is_eligible_override: boolean;
+  /** Current profile of the user who set the current eligibility override, including `active = false` when deactivated; `null` when `is_eligible_override` is `false`. */
+  eligibility_override_by: UserReference | null;
+  /** When the current eligibility override was set (UTC): the time of the change that set its current value, equal to the `created_at` of that change's `product_eligibility_changed` audit event; `null` when `is_eligible_override` is `false`. */
+  eligibility_override_at: string | null;
   /** Product lifecycle phase for the mutation's UTC evaluation date; `null` when lifecycle data is unavailable. */
   lifecycle_phase: LifecyclePhaseValue | null;
   /** Whether the Product currently participates in operational decisions: no manual exclusion at package, track, or Product level, and not end-of-life. */

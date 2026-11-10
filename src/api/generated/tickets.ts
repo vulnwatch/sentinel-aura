@@ -33,6 +33,7 @@ import type {
   TicketCreateRequest,
   TicketDetailResponse,
   TicketDuplicateRequest,
+  TicketIgnoreRequest,
   TicketListResponse,
   TicketPriorityUpdateRequest,
   TicketSeverityUpdateRequest,
@@ -68,6 +69,8 @@ export const getListTicketsUrl = (params?: ListTicketsParams) => {
   Object.entries(params || {}).forEach(([key, value]) => {
     const explodeParameters = [
       "status",
+      "ignore_reason",
+      "cna",
       "severity",
       "priority",
       "overdue",
@@ -94,7 +97,7 @@ export const getListTicketsUrl = (params?: ListTicketsParams) => {
 };
 
 /**
- * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
+ * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, ignore reason, CNA, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
  */
 export const listTickets = async (
@@ -1009,16 +1012,43 @@ export const getIgnoreTicketUrl = (ticketId: string) => {
 };
 
 /**
- * Moves a `new` or `analysis` Ticket to `ignored` (manual zone). No request body. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
+ * Moves a `new` or `analysis` Ticket to `ignored` (manual zone) with the `reason` why it is ignored, which the Ticket carries as `ignore_reason` until it is reopened. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Ignore Ticket
  */
 export const ignoreTicket = async (
   ticketId: string,
+  ticketIgnoreRequest: TicketIgnoreRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
   return apiRequest<TicketDetailResponse>(getIgnoreTicketUrl(ticketId), {
     ...options,
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(ticketIgnoreRequest),
   });
 };
 
@@ -1054,9 +1084,9 @@ export const getIgnoreTicketMutationOptions = <
     Awaited<ReturnType<typeof ignoreTicket>>,
     IgnoreTicketMutationVariables
   > = (props) => {
-    const { ticketId } = props ?? {};
+    const { ticketId, data } = props ?? {};
 
-    return ignoreTicket(ticketId, requestOptions);
+    return ignoreTicket(ticketId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1065,11 +1095,14 @@ export const getIgnoreTicketMutationOptions = <
 export type IgnoreTicketMutationResult = NonNullable<
   Awaited<ReturnType<typeof ignoreTicket>>
 >;
-
+export type IgnoreTicketMutationBody = TicketIgnoreRequest;
 export type IgnoreTicketMutationError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
-export type IgnoreTicketMutationVariables = { ticketId: string };
+export type IgnoreTicketMutationVariables = {
+  ticketId: string;
+  data: TicketIgnoreRequest;
+};
 
 /**
  * @summary Ignore Ticket
@@ -1780,7 +1813,7 @@ export const getListTicketAccessGrantsUrl = (ticketId: string) => {
 };
 
 /**
- * Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Requires `manage_confidentiality`.
+ * Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Every caller who can see the Ticket lists its grants, whatever the caller's capabilities; granting and revoking require `manage_confidentiality`.
  * @summary List Access Grants
  */
 export const listTicketAccessGrants = async (

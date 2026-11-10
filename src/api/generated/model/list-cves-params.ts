@@ -26,6 +26,12 @@ export type ListCvesParams = {
   /** `true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket. */
   has_ticket?: boolean;
   /**
+   * Filter by the CNA that owns the CVE Record. `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Repeatable; OR semantics. A malformed value fails validation; an unknown CNA yields no match. A CVE without a CNA matches no value.
+   * @items.maxLength 500
+   * @items.pattern ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$
+   */
+  cna?: string[];
+  /**
    * ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded.
    * @maxLength 500
    */

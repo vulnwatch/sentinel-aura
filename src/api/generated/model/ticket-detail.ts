@@ -8,6 +8,7 @@ import type { CVEDetail } from "./cvedetail";
 import type { PackageDetail } from "./package-detail";
 import type { PriorityBasis } from "./priority-basis";
 import type { SeverityValue } from "./severity-value";
+import type { TicketIgnoreReason } from "./ticket-ignore-reason";
 import type { TicketPriorityValue } from "./ticket-priority-value";
 import type { TicketStatusValue } from "./ticket-status-value";
 import type { UserReference } from "./user-reference";
@@ -25,6 +26,8 @@ export interface TicketDetail {
   ticket_id: string;
   /** Ticket status: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, or `duplicated`. */
   status: TicketStatusValue;
+  /** Why the Ticket is ignored: `not_shipped` (SUSE ships none of the affected software), `cve_rejected` (the associated CVE is rejected), `cna_policy` (the CNA of the associated CVE is under the auto-ignore policy; set only by the system), or `other`; `null` unless `status` is `ignored`. Only `cve_rejected` reopens the Ticket automatically, when the rejection of its CVE is reverted. */
+  ignore_reason: TicketIgnoreReason | null;
   /** Resolved severity (the CVE severity for a Ticket with a CVE, otherwise the manual severity): `critical`, `high`, `medium`, `low`, or `none` (CVSS score 0.0, informational), or `null` when unresolved (no CVSS data and no manual severity set). `none` is distinct from `null`. */
   severity: SeverityValue | null;
   /** Effective priority: `priority_override` when set, otherwise `priority_automatic`. `p1`-`p4`, or `null` when not yet prioritizable. */
