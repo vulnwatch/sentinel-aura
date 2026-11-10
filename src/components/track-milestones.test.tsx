@@ -176,15 +176,22 @@ test("shows a pending current phase on info-soft, its circle in info-icon, and t
 });
 
 test("is on neutral-soft under the pointer and while Phases is open", async () => {
-  const { pipeline } = await renderMilestones(track());
+  const { screen, pipeline } = await renderMilestones(track());
 
   await pipeline.hover();
-  expect(getComputedStyle(pipeline.element()).backgroundColor).toBe(
-    NEUTRAL_SOFT,
-  );
+  await expect
+    .poll(() => getComputedStyle(pipeline.element()).backgroundColor)
+    .toBe(NEUTRAL_SOFT);
   await pipeline.click();
+  await expect
+    .element(screen.getByRole("dialog", { name: "Phases" }))
+    .toHaveFocus();
   await page.elementLocator(document.body).hover({ position: { x: 1, y: 1 } });
 
+  // Open, but no longer under the pointer.
+  await expect
+    .poll(() => pipeline.element().matches("[data-hovered]"))
+    .toBe(false);
   expect(getComputedStyle(pipeline.element()).backgroundColor).toBe(
     NEUTRAL_SOFT,
   );
@@ -248,8 +255,9 @@ test("shows in Phases a phase without a due date with its state alone, and a sta
 
   await pipeline.click();
 
-  const lines = screen
-    .getByRole("dialog", { name: "Phases" })
+  const phases = screen.getByRole("dialog", { name: "Phases" });
+  await expect.element(phases).toHaveFocus();
+  const lines = phases
     .getByRole("listitem")
     .elements()
     .map((element) => element.textContent);

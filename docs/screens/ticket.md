@@ -152,11 +152,12 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: …", whose Phases
     holds no more than the design system states; and its deadline badge, on
     its fields, by `docs/behaviors.md` (Deadlines), the Release badge of a
-    current phase of `null` only while the track still has work. A track has
-    work when it is actionable and in Analysis, or Affected or Fixed with a
-    Product that is actionable and eligible; a track without work, Not
-    affected and Won't fix included, shows no pipeline and no Delivery
-    Pending, and a Ticket without due dates shows no pipeline.
+    current phase of `null` only while its Ticket is not Resolved and the
+    track is not resolution-complete. A track has work when it is actionable
+    and in Analysis, or Affected or Fixed with a Product that is actionable
+    and eligible; a track without work, Not affected and Won't fix included,
+    shows no pipeline and no Delivery Pending, and a Ticket without due dates
+    shows no pipeline.
 - Its Products are a list below the track, with a border line at their left,
   each on a line that wraps: its name, which wraps, in `fg-muted` when it is
   not eligible; `user-pen` when its eligibility is set by hand, read as ",
@@ -164,19 +165,22 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   release, in `text-13`, `fg-muted`: "Released" with the date and time of
   `released_at` on a released Product, and on an actionable, eligible
   Product of a track in Analysis, Affected, or Fixed, "Not released", or
-  "Release not observed" below a Git track, where Sentinel never sets the
-  release (Sentinel `docs/features/packages/package-model.md`,
-  Workflow-Agnostic vs Workflow-Specific). A Product that does not take part
-  or is not eligible receives no release, and a track of a workflow that the
-  pinned contract does not list shows no release that is not observed.
+  "Release not observed" below a Git track and on a Ticket without a CVE,
+  where Sentinel never sets the release (Sentinel
+  `docs/features/packages/package-model.md`, Workflow-Agnostic vs
+  Workflow-Specific; Sentinel
+  `docs/features/packages/ibs-product-release-detection.md`, Scope). A
+  Product that does not take part or is not eligible receives no release,
+  and a track of a workflow that the pinned contract does not list shows no
+  release that is not observed.
 - The name of a Product opens its details (`docs/design-system.md`, Menus,
   Popovers, and Tooltips): its CPE in monospace below the name, then
   Eligibility, "Eligible" or "Not eligible", followed by " · automatic", or
   " · set by hand" after `user-pen`; Lifecycle, the phase of `lifecycle_phase`
   (Pre-release, General support, Extended support, Reactive support, EOL),
-  or "Not available" without lifecycle data; Release, "Released" with its
-  date and time, "Not released" below an IBS track, or "Not observed" below
-  a Git track; and, for a Product that is not actionable, Actionable, "No,"
+  or "Not available" without lifecycle data; Release, where its line shows
+  one, "Released" with its date and time, "Not released", or "Not
+  observed"; and, for a Product that is not actionable, Actionable, "No,"
   followed by the first reason that applies: "it is excluded from this
   track", "its track is excluded", "its package is excluded", or "it has
   reached its end of life" (Sentinel `docs/features/packages/package-model.md`,
@@ -235,9 +239,11 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   above the package tree says "The tracks that wait for you couldn't be
   shown.", followed by the message of its status, with Try again where the
   failure offers it, and the package tree stays usable; a later read of it
-  that fails says that it couldn't be updated, and keeps the marks, unless it
-  is a `403` or a `404`, which removes them (`docs/behaviors.md`, Where
-  Errors Appear). The screen handles no error code specifically.
+  that fails keeps the marks and says "The tracks that wait for you couldn't
+  be updated.", followed by the message of its status, unless it is a `403`
+  or a `404`, which removes them; while it is sent again, the marks that
+  stay shown are marked as being updated (`docs/behaviors.md`, Where Errors
+  Appear; Loading). The screen handles no error code specifically.
 - **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
   names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow
   and text size).
@@ -269,6 +275,7 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   Details for Ticket
 - Sentinel `docs/features/packages/product-catalog.md` — Product Lifecycle
   Phases
+- Sentinel `docs/features/packages/ibs-product-release-detection.md` — Scope
 - Sentinel `docs/features/tickets/ticket-priority.md` — Automatic Priority
   Basis; Manual Override
 - Sentinel `docs/features/tickets/cve-tracking.md` — Get CVE; External

@@ -1349,8 +1349,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   Unconfirmed Changes), and `danger` for an error.
 - When data stays shown after a new read of it failed, or after a read that
   only adds marks to it failed, a `warning` message above the data says that
-  it could not be updated, or what could not be shown, followed 8 px below by
-  Try again as a secondary button when the failure offers it
+  it could not be updated, or what could not be shown or updated, followed
+  8 px below by Try again as a secondary button when the failure offers it
   (`docs/behaviors.md`, Where Errors Appear). The button stands outside the
   message, on the background of the screen or of its part, against which its
   boundary keeps its contrast (Contrast Table).

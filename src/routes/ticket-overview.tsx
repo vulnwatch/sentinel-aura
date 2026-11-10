@@ -49,6 +49,7 @@ import { Label } from "../components/label";
 import { Link } from "../components/link";
 import { Maintainers } from "../components/maintainers";
 import { MarkedValue, type MarkedName } from "../components/marked-value";
+import { UpdatingBar } from "../components/loading";
 import { marksPlace, PartRead, type Read } from "../components/read-view";
 import { useFocusHeadingOnRemoval } from "../components/screen-heading";
 import { Switch } from "../components/switch";
@@ -690,6 +691,73 @@ function receivesFix(product: ProductDetail): boolean {
   return product.actionable && product.eligible;
 }
 
+// Whether Sentinel observes the release of the Products of a track: below an
+// IBS track of a Ticket with a CVE, and never below a Git track or on a
+// Ticket without a CVE, where it never sets the release (Sentinel
+// docs/features/packages/package-model.md, Workflow-Agnostic vs
+// Workflow-Specific; Sentinel
+// docs/features/packages/ibs-product-release-detection.md, Scope); undefined
+// for a workflow that the pinned contract does not list.
+function releaseObserved(
+  track: TrackDetail,
+  ticket: TicketDetail,
+): boolean | undefined {
+  if (track.workflow_type === "git") {
+    return false;
+  }
+  if (track.workflow_type === "ibs") {
+    return ticket.cve !== null;
+  }
+  return undefined;
+}
+
+// The release of a Product that its line and its details show: when it was
+// released, on every released Product; and, on a Product that receives the
+// fix under a track that expects one, that it is not released, or that its
+// release is not observed where Sentinel does not observe it; otherwise
+// none, as for a workflow that the pinned contract does not list.
+type Release =
+  | { kind: "released"; at: string }
+  | { kind: "not-released" }
+  | { kind: "not-observed" };
+
+function releaseOf(
+  product: ProductDetail,
+  track: TrackDetail,
+  observed: boolean | undefined,
+): Release | undefined {
+  if (product.released_at !== null) {
+    return { kind: "released", at: product.released_at };
+  }
+  if (
+    observed === undefined ||
+    !receivesFix(product) ||
+    !EXPECTS_FIX.has(track.status)
+  ) {
+    return undefined;
+  }
+  return observed ? { kind: "not-released" } : { kind: "not-observed" };
+}
+
+interface ReleaseTextProps {
+  release: Release;
+  // The words of a release that Sentinel does not observe.
+  notObserved: string;
+}
+
+// A release in words: "Released" and its date and time, "Not released", or
+// the words of a release that is not observed.
+function ReleaseText({ release, notObserved }: ReleaseTextProps) {
+  if (release.kind === "released") {
+    return (
+      <>
+        Released <DateTime value={release.at} />
+      </>
+    );
+  }
+  return release.kind === "not-released" ? "Not released" : notObserved;
+}
+
 // Whether a track has work: actionable and in Analysis, or Affected or Fixed
 // with a Product that is actionable and eligible. A track without work, a
 // hidden one included, shows no pipeline and no "Delivery Pending".
@@ -744,7 +812,7 @@ function showsBadge(track: TrackDetail, ticket: TicketDetail): boolean {
 // actionable: excluded, directly or through its parent, at the end of its
 // life, or holding no record that is actionable (Sentinel
 // docs/features/packages/package-model.md, Derived Actionability).
-export function hiddenCount(packages: readonly PackageDetail[]): number {
+function hiddenCount(packages: readonly PackageDetail[]): number {
   let count = 0;
   for (const ticketPackage of packages) {
     if (!ticketPackage.actionable) {
@@ -795,26 +863,15 @@ function mutedIf(hidden: boolean): string {
 
 interface ProductDetailsProps {
   product: ProductDetail;
-  track: TrackDetail;
+  release: Release | undefined;
 }
 
 // The details of a Product, as its popover shows them: its eligibility,
 // automatic or set by hand; its lifecycle phase, or "Not available" without
-// lifecycle data; its release; and, for a Product that takes no part, why.
-// Values that the pinned contract does not list show as received.
-function ProductDetails({ product, track }: ProductDetailsProps) {
-  let release: ReactNode = <AbsentValue />;
-  if (product.released_at !== null) {
-    release = (
-      <>
-        Released <DateTime value={product.released_at} />
-      </>
-    );
-  } else if (track.workflow_type === "ibs") {
-    release = "Not released";
-  } else if (track.workflow_type === "git") {
-    release = "Not observed";
-  }
+// lifecycle data; its release, where its line shows one; and, for a Product
+// that takes no part, why. Values that the pinned contract does not list
+// show as received.
+function ProductDetails({ product, release }: ProductDetailsProps) {
   return (
     <DescriptionList>
       <DescriptionItem term="Eligibility">
@@ -837,7 +894,11 @@ function ProductDetails({ product, track }: ProductDetailsProps) {
           product.lifecycle_phase)
         )}
       </DescriptionItem>
-      <DescriptionItem term="Release">{release}</DescriptionItem>
+      {release !== undefined && (
+        <DescriptionItem term="Release">
+          <ReleaseText release={release} notObserved="Not observed" />
+        </DescriptionItem>
+      )}
       {!product.actionable && (
         <DescriptionItem term="Actionable">
           {product.non_actionable_reason === null
@@ -855,37 +916,27 @@ interface ProductItemProps {
   track: TrackDetail;
   // Whether the track that holds the Product is hidden.
   trackHidden: boolean;
+  // Whether Sentinel observes the release of the Products of the track
+  // (releaseObserved).
+  releaseObserved: boolean | undefined;
 }
 
 // A Product of a track: its name, which opens its details, in fg-muted when
 // it is hidden or not eligible, and wraps; user-pen at 14 px in fg-muted when
 // its eligibility is set by hand, read as ", eligibility set by hand"; the
 // label Not eligible, and the labels of its own hidden state; and at the end
-// its release, in text-13, fg-muted: "Released" with the date and time, on
-// every released Product; and, on a Product that receives the fix under a
-// track that expects one, "Not released", or "Release not observed" below a
-// Git track, where Sentinel never sets the release (Sentinel
-// docs/features/packages/package-model.md, Workflow-Agnostic vs
-// Workflow-Specific). A track of a workflow that the pinned contract does not
-// list shows no release that is not observed.
-function ProductItem({ product, track, trackHidden }: ProductItemProps) {
+// its release (releaseOf), in text-13, fg-muted: "Released" with the date and
+// time, "Not released", or "Release not observed".
+function ProductItem({
+  product,
+  track,
+  trackHidden,
+  releaseObserved: observed,
+}: ProductItemProps) {
   const ref = useRef<HTMLLIElement>(null);
   useFocusHeadingOnRemoval(ref);
   const hidden = trackHidden || !product.actionable;
-  let release: ReactNode = null;
-  if (product.released_at !== null) {
-    release = (
-      <>
-        Released <DateTime value={product.released_at} />
-      </>
-    );
-  } else if (receivesFix(product) && EXPECTS_FIX.has(track.status)) {
-    if (track.workflow_type === "ibs") {
-      release = "Not released";
-    } else if (track.workflow_type === "git") {
-      release = "Release not observed";
-    }
-  }
+  const release = releaseOf(product, track, observed);
   return (
     <li
       ref={ref}
@@ -898,7 +949,7 @@ function ProductItem({ product, track, trackHidden }: ProductItemProps) {
           name={product.product_name}
           identifier={<span className="font-mono">{product.product_cpe}</span>}
         >
-          <ProductDetails product={product} track={track} />
+          <ProductDetails product={product} release={release} />
         </DetailsName>
         {product.is_eligible_override && (
           <>
@@ -912,8 +963,10 @@ function ProductItem({ product, track, trackHidden }: ProductItemProps) {
           eol={product.lifecycle_phase === "eol"}
         />
       </span>
-      {release !== null && (
-        <span className="text-13 text-fg-muted">{release}</span>
+      {release !== undefined && (
+        <span className="text-13 text-fg-muted">
+          <ReleaseText release={release} notObserved="Release not observed" />
+        </span>
       )}
     </li>
   );
@@ -1008,6 +1061,7 @@ function TrackItem({
               product={product}
               track={track}
               trackHidden={hidden}
+              releaseObserved={releaseObserved(track, ticket)}
             />
           ))}
         </ul>
@@ -1153,10 +1207,10 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
   const { hidden } = ticketOverviewRoute.useSearch();
   const navigate = useNavigate();
   const showHidden = hidden === HIDDEN_SHOWN;
-  const { marks, warning } = marksPlace(
-    yourWork,
-    "The tracks that wait for you couldn't be shown.",
-  );
+  const { marks, warning, updating } = marksPlace(yourWork, {
+    notShown: "The tracks that wait for you couldn't be shown.",
+    notUpdated: "The tracks that wait for you couldn't be updated.",
+  });
   const waiting = new Set(
     (marks?.data.pending ?? []).map((item) =>
       trackKey(item.package_name, item.reference),
@@ -1193,27 +1247,30 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
         ) : undefined
       }
     >
-      <output className="block">{warning}</output>
-      {ticket.packages.length === 0 && (
-        <p className="text-fg-muted">No packages.</p>
-      )}
-      {ticket.packages.length > 0 && packages.length === 0 && (
-        <p className="text-fg-muted">All packages are hidden.</p>
-      )}
-      {packages.length > 0 && (
-        <ul className="flex flex-col gap-8">
-          {packages.map((ticketPackage) => (
-            <PackageGroup
-              key={ticketPackage.id}
-              ticket={ticket}
-              ticketPackage={ticketPackage}
-              waiting={waiting}
-              showHidden={showHidden}
-              now={now}
-            />
-          ))}
-        </ul>
-      )}
+      <div className="relative">
+        {updating && <UpdatingBar />}
+        <output className="block">{warning}</output>
+        {ticket.packages.length === 0 && (
+          <p className="text-fg-muted">No packages.</p>
+        )}
+        {ticket.packages.length > 0 && packages.length === 0 && (
+          <p className="text-fg-muted">All packages are hidden.</p>
+        )}
+        {packages.length > 0 && (
+          <ul className="flex flex-col gap-8">
+            {packages.map((ticketPackage) => (
+              <PackageGroup
+                key={ticketPackage.id}
+                ticket={ticket}
+                ticketPackage={ticketPackage}
+                waiting={waiting}
+                showHidden={showHidden}
+                now={now}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
     </Part>
   );
 }

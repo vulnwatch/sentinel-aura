@@ -165,39 +165,53 @@ export interface MarksPlace<TData> {
   // warning of a read of the marks that failed, which goes while the read is
   // sent again, or null.
   warning: ReactNode;
+  // Whether the marks, which stay shown after a later read of them failed,
+  // are read again, and so are marked as being updated (UpdatingBar).
+  updating: boolean;
+}
+
+// What the warning of a failed read of marks says, before the message of the
+// failure.
+export interface MarksWarnings {
+  // Before the read has shown its marks, such as "The tracks that wait for
+  // you couldn't be shown."
+  notShown: string;
+  // Once it has, such as "The tracks that wait for you couldn't be updated."
+  notUpdated: string;
 }
 
 // The marks of a read and the warning of its failure: before the read has
 // shown its marks, a warning that says what couldn't be shown, followed by
 // the message of the failure, and Try again when the failure offers it; once
 // it has, a later read of them is a new read of the same data, whose failure
-// says that they could not be updated, unless it is a 403 or a 404, which
-// removes them as for the first read.
+// keeps the marks and says what couldn't be updated, unless it is a 403 or a
+// 404, which removes them as for the first read. The marks that stay shown
+// are marked as being updated while they are read again.
 export function marksPlace<TData>(
   read: Read<TData>,
-  // What the marks would have shown, such as "The tracks that wait for you
-  // couldn't be shown."
-  notShown: string,
+  { notShown, notUpdated }: MarksWarnings,
 ): MarksPlace<TData> {
   const marks = dataShown(read);
   const onRetry = () => {
     retry(read);
   };
+  const failed = read.status === "error";
   let warning: ReactNode = null;
-  if (read.status === "error" && !read.isFetching) {
+  if (failed && !read.isFetching) {
+    const what = marks === undefined ? notShown : notUpdated;
     warning = (
       <UpdateFailed
         error={read.error}
         onRetry={onRetry}
-        text={
-          marks === undefined
-            ? (message) => `${notShown} ${message}`
-            : updateFailedText
-        }
+        text={(message) => `${what} ${message}`}
       />
     );
   }
-  return { marks, warning };
+  return {
+    marks,
+    warning,
+    updating: failed && marks !== undefined && read.isFetching,
+  };
 }
 
 interface DataProps<TData> {

@@ -144,9 +144,9 @@ test("shows its name in a tooltip on keyboard focus, and is on surface-hover und
     .element(screen.getByRole("tooltip"))
     .toHaveTextContent("1 maintainer of fictional-openssl");
   await button.hover();
-  expect(getComputedStyle(button.element()).backgroundColor).toBe(
-    SURFACE_HOVER,
-  );
+  await expect
+    .poll(() => getComputedStyle(button.element()).backgroundColor)
+    .toBe(SURFACE_HOVER);
 });
 
 test("opens the maintainers in a popover that takes the focus, each in the full form with the username, and returns the focus on Escape", async () => {

@@ -85,7 +85,9 @@ test("is a button in the style of the text around it, with a dotted underline in
 
   await name.hover();
 
-  expect(getComputedStyle(name.element()).textDecorationColor).toBe(FG);
+  await expect
+    .poll(() => getComputedStyle(name.element()).textDecorationColor)
+    .toBe(FG);
 });
 
 test("wraps where its place is too narrow", async () => {
@@ -150,4 +152,31 @@ test("moves the focus to the screen's heading when the name leaves the page whil
   await screen.rerender(<Record shown={false} />);
 
   await expect.element(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+});
+
+test("stays within a narrow window", async () => {
+  await page.viewport(320, 640);
+  const screen = await render(<Record width="w-full" />);
+
+  await screen.getByRole("button", { name: NAME }).click();
+
+  const popover = screen.getByRole("dialog", { name: NAME });
+  await expect.element(popover).toHaveFocus();
+  const box = popover.element().parentElement!.getBoundingClientRect();
+  expect(box.left).toBeGreaterThanOrEqual(0);
+  expect(box.right).toBeLessThanOrEqual(320);
+});
+
+test("scrolls its content within it in a window shorter than it is", async () => {
+  await page.viewport(1280, 160);
+  const screen = await render(<Record />);
+
+  await screen.getByRole("button", { name: NAME }).click();
+
+  const popover = screen.getByRole("dialog", { name: NAME });
+  await expect.element(popover).toHaveFocus();
+  const frame = popover.element().parentElement!;
+  expect(getComputedStyle(frame).overflowY).toBe("auto");
+  expect(frame.scrollHeight).toBeGreaterThan(frame.clientHeight);
+  expect(frame.getBoundingClientRect().bottom).toBeLessThanOrEqual(160);
 });

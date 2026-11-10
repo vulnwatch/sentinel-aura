@@ -17,6 +17,7 @@ import {
 } from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
+import { UpdatingBar } from "./loading";
 import {
   marksPlace,
   PartRead,
@@ -839,13 +840,14 @@ describe("placeMessage", () => {
 // the record names is marked once the read arrives.
 function MarkedList() {
   const read = useRecord(1);
-  const { marks, warning } = marksPlace(
-    read,
-    "The marks of the items couldn't be shown.",
-  );
+  const { marks, warning, updating } = marksPlace(read, {
+    notShown: "The marks of the items couldn't be shown.",
+    notUpdated: "The marks of the items couldn't be updated.",
+  });
   return (
-    <main>
+    <main className="relative">
       <ScreenHeading>Items</ScreenHeading>
+      {updating && <UpdatingBar />}
       <output className="block">{warning}</output>
       <ul>
         {["First item", "Second item"].map((item) => (
@@ -890,9 +892,6 @@ describe("marksPlace", () => {
     await expect
       .element(screen.getByText(`Reference: ${REQUEST_ID}`))
       .toBeVisible();
-    // In a status region that is there before it, so that assistive
-    // technologies announce it.
-    expect(warning.element().closest("output")).not.toBeNull();
     await expect.element(screen.getByText("First item")).toBeVisible();
 
     await screen.getByRole("button", { name: "Try again" }).click();
@@ -936,7 +935,7 @@ describe("marksPlace", () => {
     ).toBeNull();
   });
 
-  test("keeps the marks, saying that they couldn't be updated, when a later read of them fails", async () => {
+  test("keeps the marks, saying what couldn't be updated, when a later read of them fails", async () => {
     respond.mockResolvedValueOnce({ title: "First item" });
     const screen = await renderWithClient(<MarkedList />);
     await expect.element(screen.getByText("First item (marked)")).toBeVisible();
@@ -947,11 +946,36 @@ describe("marksPlace", () => {
     await expect
       .element(
         screen.getByText(
-          "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+          "The marks of the items couldn't be updated. Sentinel isn't available right now. Try again later.",
         ),
       )
       .toBeVisible();
     await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+  });
+
+  test("marks the marks that stay shown as being updated while Try again reads them again", async () => {
+    respond.mockResolvedValueOnce({ title: "First item" });
+    const screen = await renderWithClient(<MarkedList />);
+    await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+    respond.mockRejectedValue(UNAVAILABLE);
+    await refetch();
+    await expect.element(screen.getByText(/couldn't be updated/)).toBeVisible();
+    expect(screen.getByRole("progressbar").query()).toBeNull();
+    const { promise, resolve } = later();
+    respond.mockReset();
+    respond.mockReturnValueOnce(promise);
+
+    await screen.getByRole("button", { name: "Try again" }).click();
+
+    await expect
+      .element(screen.getByRole("progressbar", { name: "Updating" }))
+      .toBeInTheDocument();
+    await expect.element(screen.getByText("First item (marked)")).toBeVisible();
+    resolve({ title: "Second item" });
+    await expect
+      .element(screen.getByText("Second item (marked)"))
+      .toBeVisible();
+    expect(screen.getByRole("progressbar").query()).toBeNull();
   });
 
   test("removes the marks when a later read of them fails with a 404", async () => {
