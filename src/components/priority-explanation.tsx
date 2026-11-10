@@ -253,29 +253,42 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
 
 interface ExplainedPriorityProps {
   ticket: PriorityFields;
+  // Where the priority shows: in a cell of a table, whose whole cell is the
+  // button, or in the text around it, such as the heading row of a detail
+  // screen, where the box is the button (docs/design-system.md, Priority,
+  // Explanation).
+  placement?: "cell" | "inline";
+  // The word that the screen document gives a priority of null, which also
+  // names the button, such as in a heading row, where no column header
+  // names it (docs/behaviors.md, Absent Values).
+  absentName?: string;
 }
 
-// The priority of a Ticket in a cell of a table, whose whole cell is the
-// button of its explanation: the button fills the cell, the nearest
-// positioned element around it, so that the cell holds no smaller target
-// beside it once the focus is in it, and is named by the priority, as the
-// level followed by ", override" for an override. In the cell, the priority,
-// with the icon of an override, shows in a box 24 px high and at least 24 px
-// wide, with 4 px of side padding that keeps the level where the priority
-// shows without a button, and a 4 px radius, on neutral-soft under the
-// pointer and while the popover is open, with the focus ring around it. A
-// click, a tap, Enter, or Space opens the explanation in a popover 288 px
-// wide, with 16 px of padding, in text-14, below the box and aligned to its
-// start, or above it where the window has no room below, moved toward the
-// start where it would pass the end of the window, and scrolling within it in
-// a window shorter than it is. The explanation holds no control and takes the
-// focus itself, with the focus ring around its content on keyboard focus,
-// named by its title; while it is open, the rest of the page is
-// out of reach. Escape or a click outside closes it, and the focus returns to
-// the priority.
-export function ExplainedPriority({ ticket }: ExplainedPriorityProps) {
+// The priority of a Ticket as the button of its explanation, named by the
+// priority, as the level followed by ", override" for an override. In a cell
+// of a table, the button fills the cell, the nearest positioned element
+// around it, so that the cell holds no smaller target beside it once the
+// focus is in it; elsewhere, the button is the box. The priority, with the
+// icon of an override, shows in a box 24 px high and at least 24 px wide,
+// with 4 px of side padding that keeps the level where the priority shows
+// without a button, and a 4 px radius, on neutral-soft under the pointer and
+// while the popover is open, with the focus ring around it. A click, a tap,
+// Enter, or Space opens the explanation in a popover 288 px wide, with 16 px
+// of padding, in text-14, below the box and aligned to its start, or above it
+// where the window has no room below, moved toward the start where it would
+// pass the end of the window, and scrolling within it in a window shorter
+// than it is. The explanation holds no control and takes the focus itself,
+// with the focus ring around its content on keyboard focus, named by its
+// title; while it is open, the rest of the page is out of reach. Escape or a
+// click outside closes it, and the focus returns to the priority.
+export function ExplainedPriority({
+  ticket,
+  placement = "cell",
+  absentName,
+}: ExplainedPriorityProps) {
   const dialogId = useId();
-  const box = useRef<HTMLSpanElement>(null);
+  const cellBox = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
   // When the priority leaves the page while its explanation holds the focus,
   // such as a row that a read of the list removes, the focus moves to the
   // screen's heading (docs/behaviors.md, Accessibility, Focus after an
@@ -291,27 +304,49 @@ export function ExplainedPriority({ ticket }: ExplainedPriorityProps) {
     [dialogId],
   );
   const isOverride = ticket.priority_override !== null;
-  const name = priorityName(ticket.priority);
+  const name =
+    ticket.priority === null && absentName !== undefined
+      ? absentName
+      : priorityName(ticket.priority);
+  const label = isOverride ? `${name}, override` : name;
   return (
     <DialogTrigger>
-      {/* Before the box, whose look follows its state (peer). It extends a
-          pixel beyond the cell, whose bounds include part of the border lines
-          between its row and the rows around it, so that the cell is covered
-          whole, except below the last row, which has no line below it, so
-          that the button does not reach past the table. */}
-      <AriaButton
-        aria-label={isOverride ? `${name}, override` : name}
-        className="peer absolute -inset-px cursor-default outline-none in-[tr:last-child]:bottom-0"
-      />
-      <span
-        ref={box}
-        aria-hidden
-        className="-mx-1 inline-flex h-6 min-w-6 items-center rounded px-1 align-middle peer-data-hovered:bg-neutral-soft peer-aria-expanded:bg-neutral-soft peer-data-focus-visible:outline-2 peer-data-focus-visible:outline-offset-2 peer-data-focus-visible:outline-focus"
-      >
-        <Priority priority={ticket.priority} isOverride={isOverride} />
-      </span>
+      {placement === "cell" ? (
+        <>
+          {/* Before the box, whose look follows its state (peer). It extends
+              a pixel beyond the cell, whose bounds include part of the border
+              lines between its row and the rows around it, so that the cell
+              is covered whole, except below the last row, which has no line
+              below it, so that the button does not reach past the table. */}
+          <AriaButton
+            aria-label={label}
+            className="peer absolute -inset-px cursor-default outline-none in-[tr:last-child]:bottom-0"
+          />
+          <span
+            ref={cellBox}
+            aria-hidden
+            className="-mx-1 inline-flex h-6 min-w-6 items-center rounded px-1 align-middle peer-data-hovered:bg-neutral-soft peer-aria-expanded:bg-neutral-soft peer-data-focus-visible:outline-2 peer-data-focus-visible:outline-offset-2 peer-data-focus-visible:outline-focus"
+          >
+            <Priority priority={ticket.priority} isOverride={isOverride} />
+          </span>
+        </>
+      ) : (
+        <AriaButton
+          ref={button}
+          aria-label={label}
+          className={`-mx-1 inline-flex h-6 min-w-6 cursor-default items-center rounded px-1 align-middle data-hovered:bg-neutral-soft aria-expanded:bg-neutral-soft ${FOCUS_RING}`}
+        >
+          <span aria-hidden className="contents">
+            <Priority
+              priority={ticket.priority}
+              isOverride={isOverride}
+              absentName={absentName}
+            />
+          </span>
+        </AriaButton>
+      )}
       <Popover
-        triggerRef={box}
+        triggerRef={placement === "cell" ? cellBox : button}
         placement="bottom start"
         offset={4}
         className="w-72 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-4 text-14 text-fg shadow-lg outline-none"

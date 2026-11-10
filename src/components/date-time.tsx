@@ -80,3 +80,18 @@ export function DateTime({ value }: DateTimeProps) {
     </time>
   );
 }
+
+interface CalendarDateProps {
+  // A date without a time of the API, such as 2026-10-09.
+  value: string;
+}
+
+// A date without a time of the API, as the API returns it (formatDate), with
+// tabular figures.
+export function CalendarDate({ value }: CalendarDateProps) {
+  return (
+    <time dateTime={value} className="tabular-nums">
+      {formatDate(value)}
+    </time>
+  );
+}

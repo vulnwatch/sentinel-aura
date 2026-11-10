@@ -20,10 +20,17 @@ function useDelayPassed(): boolean {
   return passed;
 }
 
+interface LoadingProps {
+  // Whether the place is a value of a description list, such as a field of
+  // the details of a record, which the indicator takes without the space of
+  // a part above and below it.
+  inValue?: boolean;
+}
+
 // The loading indicator of a part that waits for its data, centered in its
 // place (docs/design-system.md, Loading). The spinner stands still when the
 // browser reports a preference for reduced motion (Focus and Motion).
-export function Loading() {
+export function Loading({ inValue = false }: LoadingProps) {
   const shown = useDelayPassed();
   if (!shown) {
     return null;
@@ -31,7 +38,7 @@ export function Loading() {
   return (
     <ProgressBar
       isIndeterminate
-      className="flex items-center justify-center gap-2 py-10 text-fg-muted"
+      className={`flex items-center justify-center gap-2 text-fg-muted ${inValue ? "" : "py-10"}`}
     >
       <LoaderCircle
         aria-hidden

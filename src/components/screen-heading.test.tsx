@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { afterEach, expect, test } from "vitest";
 import { render } from "vitest-browser-react";
+import "../styles.css";
 import {
   focusScreenHeading,
   ScreenHeading,
@@ -26,6 +27,18 @@ test("names the screen with a level-one heading and titles the page after it", a
     .element(screen.getByRole("heading", { level: 1, name: "Fetcher run" }))
     .toBeVisible();
   expect(document.title).toBe("Fetcher run – Sentinel");
+});
+
+test("is in text-20, or in text-16 in the compact heading of a detail screen", async () => {
+  const screen = await render(<ScreenHeading>SNTL-42</ScreenHeading>);
+  const heading = screen.getByRole("heading", { level: 1, name: "SNTL-42" });
+  await expect.element(heading).toBeVisible();
+  expect(getComputedStyle(heading.element()).fontSize).toBe("20px");
+
+  await screen.rerender(<ScreenHeading compact>SNTL-42</ScreenHeading>);
+
+  expect(getComputedStyle(heading.element()).fontSize).toBe("16px");
+  expect(getComputedStyle(heading.element()).fontWeight).toBe("600");
 });
 
 test("titles the page after a heading that changes", async () => {

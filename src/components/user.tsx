@@ -1,5 +1,6 @@
 import type { UserReference } from "../api/generated/model";
 import { Avatar, NoActorPicture, type AvatarSize } from "./avatar";
+import { Label } from "./label";
 
 // The representation of a user (docs/behaviors.md, Representation of a User;
 // docs/design-system.md, Representation of a User).
@@ -30,24 +31,11 @@ export function compactName(user: UserFields): string {
   return `${displayName(user)}${bot}${inactive}`;
 }
 
-interface LabelProps {
-  children: string;
-}
-
-// The label Bot or Inactive after the name of a user.
-function Label({ children }: LabelProps) {
-  return (
-    <span className="shrink-0 rounded border border-border-strong px-1 text-12 font-medium text-fg-muted">
-      {children}
-    </span>
-  );
-}
-
 interface LabelsProps {
   user: UserFields;
 }
 
-// The labels of a user: Bot, then Inactive.
+// The labels of a user after the name: Bot, then Inactive.
 function Labels({ user }: LabelsProps) {
   return (
     <>

@@ -630,15 +630,18 @@ Sidebar).
   the main action of the screen at its end. It wraps when the width runs
   short.
 - Running text, such as a CVE description, is at most 720 px wide. A word or
-  an address longer than its place, such as a URL, breaks where it must.
-  A text is cut to its place, with an ellipsis, only in a table cell, in a
+  an address longer than its place, such as a URL, breaks where it must. A
+  text is cut to its place, with an ellipsis, only in a table cell, in a
   user's name (Tables; Representation of a User), and in the description of a
   record on its detail screen, such as that of a CVE, where a screen document
   states it: the description shows its first four lines, the last ending with
-  an ellipsis, and below them Show more, a button in `link`, `text-14`,
-  weight 500, which shows the text whole and becomes Show less. Assistive
-  technologies read the description whole, and Show more states whether it
-  is expanded.
+  an ellipsis, and below them Show more, a button in `link`, `text-14`, weight
+  500, which shows the text whole and becomes Show less. Assistive
+  technologies read the description whole, and Show more states whether it is
+  expanded. Such a description keeps its line breaks, and a run of spaces
+  shows as one; it shows as written, as plain text, Markdown included, since
+  the UI interprets no text of the API (`docs/behaviors.md`, Links to Other
+  Sites, No address in a text; `docs/conventions.md`, No Raw HTML Injection).
 - In every layout, the order of the page, which the keyboard and assistive
   technologies follow, is the order on the screen: no layout moves a part to
   another place with CSS alone (`docs/behaviors.md`, Accessibility; WCAG 2.2,
@@ -893,19 +896,21 @@ Milestones), show as a pipeline: the icon of the status of each phase at
 ### Confidential Tickets
 
 A confidential Ticket shows `lock` at 14 px in `fg-muted`, 4 px after its
-identifier, with the accessible name "Confidential". A detail screen also
-writes "Confidential" next to it.
+identifier, with the accessible name "Confidential". On its own detail
+screen, the heading row follows the lock with the label Confidential
+(Labels), which assistive technologies read in place of the name of the lock.
 
 ### Labels
 
 - A label names a short state or kind beside a value or a name: Inactive and
-  Bot after the name of a user (Representation of a User), and, as a screen
-  document states them, such as the workflow of a track, IBS or Git, Excluded,
-  EOL, Disabled, Not eligible, or a type of a CNA. It is in `text-12`, weight
-  500, `fg-muted`, with a 1 px `border-strong` boundary, a 4 px radius, and
-  4 px of side padding, 6 px after what it follows; a second label follows the
-  first, 6 px later. Its text carries its meaning, and assistive technologies
-  read it as text.
+  Bot after the name of a user (Representation of a User), Confidential after
+  the lock of a confidential Ticket in the heading row of its detail screen
+  (Confidential Tickets), and, as a screen document states them, such as the
+  workflow of a track, IBS or Git, Excluded, EOL, Disabled, Not eligible, or a
+  type of a CNA. It is in `text-12`, weight 500, `fg-muted`, with a 1 px
+  `border-strong` boundary, a 4 px radius, and 4 px of side padding, 6 px
+  after what it follows; a second label follows the first, 6 px later. Its
+  text carries its meaning, and assistive technologies read it as text.
 - A label that tells the signed-in user that a record waits for them, such as
   the label of a track of a package tree that waits for their submission
   (`docs/screen-map.md`, Areas and Screens), is 20 px high, in `text-12`,
@@ -1150,14 +1155,20 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Detail Screens
 
-- The heading row holds the identifier of the record as the level-one
-  heading, followed on the same line by its main values, such as the status,
-  severity, and priority of a Ticket, and ends with the screen's actions.
-  Several actions are one menu, Actions, a secondary button that opens them
-  as a menu (Buttons and Links; Menus, Popovers, and Tooltips), shown to a
-  user who can take at least one of them (`docs/screen-map.md`, Roles); an
-  action that changes one field of the record's description list is the
-  pencil of that field instead (below).
+- The heading row holds the identifier of the record as the level-one heading,
+  followed on the same line by its main values, such as the status, severity,
+  and priority of a Ticket, and ends with the screen's actions. The main
+  values follow the identifier 16 px apart, the rows 8 px apart where the
+  heading row wraps. No column header names them there, so each is named for
+  assistive technologies by a term that does not show, such as Severity, and a
+  value that is absent shows the word that the screen document gives it, such
+  as "Severity not set", rather than a dash, or nothing where the screen
+  document leaves it out, such as the CVE ID of a Ticket without a CVE
+  (`docs/behaviors.md`, Absent Values). Several actions are one menu, Actions,
+  a secondary button that opens them as a menu (Buttons and Links; Menus,
+  Popovers, and Tooltips), shown to a user who can take at least one of them
+  (`docs/screen-map.md`, Roles); an action that changes one field of the
+  record's description list is the pencil of that field instead (below).
 - A screen document can show the parts of a long record one at a time, as
   tabs at paths under the path of the screen (`docs/screen-map.md`, Areas and
   Screens). The tabs follow the heading row, 12 px below it, in a row with a
@@ -1173,12 +1184,15 @@ states it, such as that of a Ticket; the other audit logs are tables
   the focus stays on it. Its content follows 24 px below the line, and a
   tab that the user opens shows the start of its content, below the compact
   heading where the page had scrolled past it.
-- The fields of the record show as a description list: each term on the
-  line of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px
-  before the value in `text-14`, `fg`, fields 8 px apart; where the list is
-  narrower than 280 px, each term stands above its value. A popover that
-  shows the details of a record uses the same list (Menus, Popovers, and
-  Tooltips).
+- The fields of the record show as a description list: each term on the line
+  of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px before
+  the value in `text-14`, `fg`, fields 8 px apart; where the list is narrower
+  than 280 px, each term stands above its value. A group of fields under one
+  term, such as the deadlines of a Ticket, has its term on a line of its own,
+  then its fields 4 px apart, their terms in the style of the values, indented
+  by 12 px in the column of the terms, or above their values, indented the
+  same, where the list is narrower than 280 px. A popover that shows the
+  details of a record uses the same list (Menus, Popovers, and Tooltips).
 - A field that a user can change shows that user a pencil at the end of its
   line: an icon button of 24 px with `pencil` at 14 px, named by its action,
   such as "Edit assignee", which its tooltip shows. It opens the control of
@@ -1247,17 +1261,18 @@ states it, such as that of a Ticket; the other audit logs are tables
   Accessibility, Focus after an action); elsewhere it stays where it is, and
   the page keeps its scroll position as the browser adjusts it.
 - With two columns, while the page scrolls, the side column stays at the top
-  of its place, below the message area and the compact heading, until the
-  end of the page comes into view, and then scrolls with the page to its own
-  end, so that its first sections stay beside the parts. When an element of
-  the side column that is out of view takes the focus, or is the target of an
-  anchor, the page scrolls until it shows, which for the last sections of a
-  side column taller than the window can be the end of the page. With one
-  column, the side column scrolls with the page.
+  of its place, 24 px below the message area and the compact heading, as it
+  starts 24 px below the line of the tabs, until the end of the page comes
+  into view, and then scrolls with the page to its own end, so that its first
+  sections stay beside the parts. When an element of the side column that is
+  out of view takes the focus, or is the target of an anchor, the page scrolls
+  until it shows, which for the last sections of a side column taller than the
+  window can be the end of the page. With one column, the side column scrolls
+  with the page.
 - On a screen with a side column, while the main content is wide enough for
   two columns, on each of its tabs, also one that takes the whole width, the
-  heading row stays at the top of the window once it has scrolled out of
-  view, below the message area, as the compact heading, on `surface` above a
+  heading row stays at the top of the window once the page has scrolled it
+  there, below the message area, as the compact heading, on `surface` above a
   `border` line across the width, without a shadow (Spacing and Sizes,
   Shadows): 10 px of space, the level-one heading in `text-16` with the main
   values, and the actions as buttons 32 px high, then right below them the

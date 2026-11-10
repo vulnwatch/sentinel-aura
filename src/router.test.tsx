@@ -170,6 +170,10 @@ describe("Not found", () => {
 
   test.each([
     ["a path that matches no screen", "/fictional/path"],
+    [
+      "a path under the path of a screen that matches none of its tabs",
+      "/tickets/SNTL-42/fictional",
+    ],
     ["/auth/callback, which is reserved", "/auth/callback?code=fictional"],
     // The paths of screens that docs/screen-map.md (Areas and Screens) no
     // longer has.
@@ -187,7 +191,6 @@ describe("Not found", () => {
     // The paths of the screens that are not built yet, with or without a
     // route (src/routes/unbuilt.ts), and the address of a CVE.
     ...[
-      "/tickets/SNTL-42",
       "/my-packages",
       "/users",
       "/users/00000000-0000-0000-0000-000000000002",
@@ -219,6 +222,10 @@ describe("Not found", () => {
       .toBeVisible();
     expect(document.title).toBe("Not found – Sentinel");
     await expect.element(screen.getByRole("main")).toBeVisible();
+    // In place of every screen, whose own heading does not show.
+    expect(screen.getByRole("heading", { level: 1 }).elements()).toHaveLength(
+      1,
+    );
   });
 });
 

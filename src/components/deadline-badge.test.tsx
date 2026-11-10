@@ -3,7 +3,12 @@ import { afterEach, describe, expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
-import { deadline, DeadlineBadge, type DeadlineTicket } from "./deadline-badge";
+import {
+  deadline,
+  DeadlineBadge,
+  dueState,
+  type DeadlineTicket,
+} from "./deadline-badge";
 
 // The deadline badge of a Ticket (docs/behaviors.md, Deadlines;
 // docs/design-system.md, Deadline Badge), in the light theme.
@@ -393,5 +398,36 @@ describe("badge", () => {
 
     expect(screen.getByRole("cell").element().textContent).toBe("");
     expect(figure.element().getBoundingClientRect().width).toBe(0);
+  });
+});
+
+describe("the state of a due date", () => {
+  const due = "2026-10-08T09:30:00.123456Z";
+
+  test.each([
+    [
+      "more than a day ahead",
+      TRIAGE_DUE - 3 * DAY,
+      "success",
+      3,
+      "due in 3 days",
+    ],
+    ["one day ahead", TRIAGE_DUE - DAY, "success", 1, "due in 1 day"],
+    ["in its last day", TRIAGE_DUE - 1, "warning", 0, "due in less than a day"],
+    ["just past", TRIAGE_DUE + 1, "danger", -1, "overdue by 1 day"],
+    [
+      "past by two days begun",
+      TRIAGE_DUE + DAY + 1,
+      "danger",
+      -2,
+      "overdue by 2 days",
+    ],
+  ])("counts the days of the badge %s", (_, now, tone, days, words) => {
+    expect(dueState(due, now)).toEqual({ tone, days, words });
+  });
+
+  test("is undefined without a date, or for a value that is not one", () => {
+    expect(dueState(null, TRIAGE_DUE)).toBeUndefined();
+    expect(dueState("not a date", TRIAGE_DUE)).toBeUndefined();
   });
 });

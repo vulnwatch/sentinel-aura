@@ -1,7 +1,12 @@
 import { expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { DateTime, formatDate, formatDateTime } from "./date-time";
+import {
+  CalendarDate,
+  DateTime,
+  formatDate,
+  formatDateTime,
+} from "./date-time";
 
 // A date and time of the API (docs/behaviors.md, Dates and Times, Display),
 // in the time zone of the browser, whatever it is: each instant of the tests
@@ -50,5 +55,14 @@ test("shows a date and time in a time element, with tabular figures", async () =
 
   expect(time.tagName).toBe("TIME");
   expect(time.getAttribute("datetime")).toBe(value);
+  expect(getComputedStyle(time).fontVariantNumeric).toBe("tabular-nums");
+});
+
+test("shows a date without a time in a time element, as the API returns it, with tabular figures", async () => {
+  const screen = await render(<CalendarDate value="2026-10-09" />);
+  const time = screen.getByText("9 Oct 2026").element();
+
+  expect(time.tagName).toBe("TIME");
+  expect(time.getAttribute("datetime")).toBe("2026-10-09");
   expect(getComputedStyle(time).fontVariantNumeric).toBe("tabular-nums");
 });

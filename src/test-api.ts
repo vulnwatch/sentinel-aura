@@ -1,8 +1,11 @@
 import { vi } from "vitest";
 import type {
+  CVEDetail,
   CurrentUserResponse,
   ErrorResponse,
   LoginResponse,
+  TicketDetail,
+  TicketDetailResponse,
   TicketListResponse,
   TicketSummary,
   ValidationErrorResponse,
@@ -137,6 +140,87 @@ export function fictionalTicket(
     updated_at: "2099-10-09T14:05:09Z",
     ...fields,
   };
+}
+
+// A fictional Ticket, as Get Ticket returns it: SNTL-12, Analyzed, with a
+// CVE, assigned, without packages, its current phase Submission, with the
+// fields that a test sets. Its automatic priority P2 follows from its High
+// severity and the SSVC exploitation poc of its CVE (Sentinel
+// docs/features/tickets/ticket-priority.md, Decision Table; Automatic
+// Priority Basis).
+export function fictionalTicketDetail(
+  fields: Partial<TicketDetail> = {},
+): TicketDetail {
+  return {
+    ticket_id: "SNTL-12",
+    status: "analyzed",
+    severity: "high",
+    priority: "p2",
+    priority_automatic: "p2",
+    priority_override: null,
+    priority_override_by: null,
+    priority_override_at: null,
+    priority_automatic_basis: {
+      severity: "high",
+      exploitation: "likely",
+      evidence: [{ kind: "ssvc_exploitation", value: "poc" }],
+    },
+    assignee: {
+      id: "00000000-0000-0000-0000-000000000003",
+      username: "asmith",
+      full_name: "Alice Smith",
+      active: true,
+      bot: false,
+    },
+    cve: fictionalCve(),
+    duplicate_of_ticket_id: null,
+    is_confidential: false,
+    coordinated_release_at: null,
+    triage_due_at: "2099-10-12T14:05:09Z",
+    submission_due_at: "2099-10-27T14:05:09Z",
+    um_due_at: "2099-10-30T14:05:09Z",
+    qa_due_at: "2099-11-08T14:05:09Z",
+    release_due_at: "2099-11-08T14:05:09Z",
+    current_phase: "submission",
+    current_phase_milestone: "pending",
+    packages: [],
+    created_at: "2099-10-09T14:05:09Z",
+    updated_at: "2099-10-10T09:30:00Z",
+    ...fields,
+  };
+}
+
+// The CVE of a fictional Ticket, as Get Ticket returns it, with the fields
+// that a test sets.
+export function fictionalCve(fields: Partial<CVEDetail> = {}): CVEDetail {
+  return {
+    cve_id: "CVE-2099-0012",
+    title: "Fictional flaw CVE-2099-0012",
+    description: "A fictional description of CVE-2099-0012.",
+    published_date: "2099-10-01T08:00:00Z",
+    modified_date: "2099-10-08T08:00:00Z",
+    cve_state: "published",
+    date_rejected: null,
+    severity: "high",
+    external_identifiers: [],
+    kev: null,
+    epss: null,
+    ssvc: {
+      exploitation: "poc",
+      automatable: "no",
+      technical_impact: "partial",
+      version: "2.0.3",
+      assessed_at: "2099-10-06T10:15:00Z",
+    },
+    cwes: [],
+    ...fields,
+  };
+}
+
+// Get Ticket's response for a Ticket.
+export function ticketResponse(ticket: TicketDetail): Response {
+  const body: TicketDetailResponse = { data: ticket };
+  return jsonResponse(200, body);
 }
 
 // A page of List Tickets: the Tickets, of a list of total Tickets.

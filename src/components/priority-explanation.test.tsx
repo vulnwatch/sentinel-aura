@@ -834,3 +834,63 @@ test("scrolls its content within it in a window shorter than it is", async () =>
   expect(popover.scrollHeight).toBeGreaterThan(popover.clientHeight);
   expect(popover.getBoundingClientRect().bottom).toBeLessThanOrEqual(160);
 });
+
+// The priority in the text around it, such as the heading row of a detail
+// screen, whose box is the button.
+async function renderInline(ticket: PriorityFields) {
+  const screen = await render(
+    <div className="p-8">
+      <h1 tabIndex={-1}>SNTL-42</h1>
+      <Button onPress={() => {}}>Before</Button>
+      <p className="flex items-center gap-4">
+        <span>High</span>
+        <ExplainedPriority ticket={ticket} placement="inline" />
+      </p>
+    </div>,
+  );
+  return screen;
+}
+
+test("makes the box the button in the text around it, 24 px high, named by the priority, with the focus ring around it", async () => {
+  const screen = await renderInline(OVERRIDE_ABOVE);
+  const button = screen.getByRole("button", { name: "P1, override" });
+  screen.getByRole("button", { name: "Before" }).element().focus();
+
+  await userEvent.keyboard("{Tab}");
+
+  await expect.element(button).toHaveFocus();
+  const box = button.element().getBoundingClientRect();
+  expect(box.height).toBe(24);
+  expect(box.width).toBeGreaterThanOrEqual(24);
+  const style = getComputedStyle(button.element());
+  expect([style.outlineStyle, style.outlineWidth, style.outlineColor]).toEqual([
+    "solid",
+    "2px",
+    FOCUS,
+  ]);
+  // The level stays where it shows without a button, 16 px after the text
+  // before it, the side padding of the box outside it.
+  const level = screen.getByText("P1", { exact: true }).element();
+  const before = screen.getByText("High").element();
+  expect(
+    level.getBoundingClientRect().left - before.getBoundingClientRect().right,
+  ).toBeCloseTo(16 + 6 + 14);
+});
+
+test("opens the explanation from the box in the text, which returns the focus to it on Escape", async () => {
+  const screen = await renderInline(OVERRIDE_ABOVE);
+  const button = screen.getByRole("button", { name: "P1, override" });
+
+  await button.click();
+
+  const dialog = page.getByRole("dialog", { name: "P1, override" });
+  await expect.element(dialog).toHaveFocus();
+  expect(getComputedStyle(button.element()).backgroundColor).toBe(NEUTRAL_SOFT);
+  // Below the box, aligned to its start.
+  const popover = popoverOf(dialog).getBoundingClientRect();
+  const box = button.element().getBoundingClientRect();
+  expect(popover.top).toBeGreaterThanOrEqual(box.bottom);
+  expect(popover.left).toBeCloseTo(box.left, 0);
+  await userEvent.keyboard("{Escape}");
+  await expect.element(button).toHaveFocus();
+});

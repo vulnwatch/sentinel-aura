@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
-import { ConfidentialMark } from "./confidential-mark";
+import { ConfidentialLabel, ConfidentialMark } from "./confidential-mark";
 
 // The mark of a confidential Ticket (docs/design-system.md, Confidential
 // Tickets), after the identifier of a Ticket in a cell of a table, as the
@@ -13,8 +13,9 @@ afterEach(() => {
 });
 
 // fg-muted of the light theme, as text and as the color of the lines of the
-// mark, and canvas, the page.
+// mark, border-strong, the boundary of a label, and canvas, the page.
 const FG_MUTED = "rgb(89, 99, 110)";
+const BORDER_STRONG = "rgb(129, 139, 152)";
 const MUTED = "#59636e";
 const CANVAS = "#f6f8fa";
 
@@ -82,4 +83,45 @@ test("draws lock in fg-muted", async () => {
       picture.at((x * picture.width) / 24, (y * picture.height) / 24),
     ),
   ).toEqual([MUTED, MUTED, MUTED, MUTED, CANVAS]);
+});
+
+test("follows the lock with the label Confidential on a detail screen, which assistive technologies read once", async () => {
+  const screen = await render(
+    <p className="flex items-center gap-1">
+      <span>SNTL-42</span>
+      <ConfidentialLabel />
+    </p>,
+  );
+  const label = screen.getByText("Confidential", { exact: true }).element();
+  const lock = label.parentElement?.querySelector("svg");
+  const style = getComputedStyle(label);
+
+  expect(screen.getByRole("img").elements()).toHaveLength(0);
+  expect(lock?.getAttribute("aria-hidden")).toBe("true");
+  expect(lock?.getBoundingClientRect().width).toBe(14);
+  expect(lock && getComputedStyle(lock).color).toBe(FG_MUTED);
+  // A label (docs/design-system.md, Labels), 6 px after the lock.
+  expect([
+    style.fontSize,
+    style.fontWeight,
+    style.color,
+    style.borderTopWidth,
+    style.borderTopColor,
+    style.borderTopLeftRadius,
+    style.paddingLeft,
+    style.paddingRight,
+  ]).toEqual([
+    "12px",
+    "500",
+    FG_MUTED,
+    "1px",
+    BORDER_STRONG,
+    "4px",
+    "4px",
+    "4px",
+  ]);
+  expect(
+    label.getBoundingClientRect().left -
+      (lock?.getBoundingClientRect().right ?? 0),
+  ).toBeCloseTo(6);
 });
