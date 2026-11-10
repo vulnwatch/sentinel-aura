@@ -182,10 +182,11 @@ test.describe("for an analyst", () => {
 
     await expect(heading(page, "SNTL-21")).toBeVisible();
     await expect(part(page, "CVE").getByText("No CVE.")).toBeVisible();
-    const duplicate = (await detail(page, "Duplicates")).getByRole("link", {
-      name: "SNTL-22",
-    });
-    await expect(duplicate).toBeVisible();
+    // SNTL-32, a duplicate of SNTL-22, was repointed to SNTL-21 when SNTL-22
+    // became its duplicate (Tickets).
+    const duplicates = (await detail(page, "Duplicates")).getByRole("link");
+    await expect(duplicates).toHaveText(["SNTL-22", "SNTL-32"]);
+    const duplicate = duplicates.filter({ hasText: "SNTL-22" });
     await expectScreenshot(page, "ticket-without-cve.png");
 
     await duplicate.click();
@@ -367,11 +368,17 @@ test.describe("for an analyst", () => {
     await signIn(page, "asmith");
     await page.goto("/tickets/SNTL-16#packages");
 
-    // The SUSE:FLES-15-SP3:Update track of SNTL-16 is not actionable, as its
-    // only Product is EOL (Tickets; Packages, Tracks, and Maintainers).
+    // The package tree of SNTL-16 holds a direct exclusion at each level and
+    // every reason for a record not to be actionable: of its three packages,
+    // only fictional-kernel and its SUSE:FLES-15-SP5:Update track show, whose
+    // Server 15 SP7 is excluded (Packages, Tracks, and Maintainers).
     const packages = part(page, "Packages");
+    await expect(packages.getByRole("heading", { level: 3 })).toHaveText([
+      "fictional-kernel",
+    ]);
     await expect(packages.getByText("SUSE:FLES-15-SP5:Update")).toBeVisible();
     await expect(packages.getByText("SUSE:FLES-15-SP3:Update")).toHaveCount(0);
+    await expect(packages.getByText("SUSE:FLES-15-SP4:Update")).toHaveCount(0);
     // The SP5 track is Affected without a Product that is eligible, so it
     // has no work: no pipeline and no Delivery Pending.
     await expect(
@@ -382,29 +389,67 @@ test.describe("for an analyst", () => {
       packages.getByRole("button", { name: /^Phases of/ }),
     ).toHaveCount(0);
 
-    await packages.getByText("Show hidden 1").click();
+    // asmith set the eligibility of Server LTSS 15 SP5 by hand.
+    const ltss = packages.getByRole("button", {
+      name: "Fictional Linux Enterprise Server LTSS 15 SP5",
+    });
+    await ltss.click();
+    await expect(
+      page
+        .getByRole("dialog", {
+          name: "Fictional Linux Enterprise Server LTSS 15 SP5",
+        })
+        .getByRole("definition"),
+    ).toHaveText(["Not eligible · set by hand", "Extended support"]);
+    await page.keyboard.press("Escape");
+    await expect(ltss).toBeFocused();
+
+    // Five hidden records whose parent shows: Server 15 SP7, the SP3 and the
+    // excluded SP4 tracks of fictional-kernel, the excluded
+    // fictional-kernel-firmware, and fictional-kernel-compat, whose only
+    // track holds only the EOL Server 15 SP3.
+    await packages.getByText("Show hidden 5").click();
 
     await expect(
-      page.getByRole("switch", { name: "Show hidden 1" }),
+      page.getByRole("switch", { name: "Show hidden 5" }),
     ).toBeChecked();
     await expect(page).toHaveURL("/tickets/SNTL-16?hidden=shown#packages");
-    const eol = packages
+    await expect(packages.getByRole("heading", { level: 3 })).toHaveText([
+      "fictional-kernel",
+      "fictional-kernel-compat",
+      "fictional-kernel-firmware",
+    ]);
+    // The label Excluded on each record that its own marker excludes, and
+    // EOL on each Server 15 SP3, also under a hidden parent.
+    await expect(packages.getByText("Excluded", { exact: true })).toHaveCount(
+      3,
+    );
+    await expect(packages.getByText("EOL", { exact: true })).toHaveCount(2);
+    const sp5 = packages
       .getByRole("listitem")
       .filter({
-        has: page.getByRole("button", {
-          name: "Fictional Linux Enterprise Server 15 SP3",
-        }),
+        has: page.getByText("SUSE:FLES-15-SP5:Update", { exact: true }),
       })
       .last();
-    await expect(eol.getByText("EOL", { exact: true })).toBeVisible();
+    await expect(
+      sp5
+        .getByRole("listitem")
+        .filter({
+          has: page.getByRole("button", {
+            name: "Fictional Linux Enterprise Server 15 SP7",
+          }),
+        })
+        .getByText("Excluded", { exact: true }),
+    ).toBeVisible();
     await expectScreenshot(page, "ticket-hidden-records.png");
 
     await page.reload();
 
     await expect(
-      page.getByRole("switch", { name: "Show hidden 1" }),
+      page.getByRole("switch", { name: "Show hidden 5" }),
     ).toBeChecked();
-    await expect(packages.getByText("SUSE:FLES-15-SP3:Update")).toBeVisible();
+    await expect(packages.getByText("SUSE:FLES-15-SP3:Update")).toHaveCount(2);
+    await expect(packages.getByText("SUSE:FLES-15-SP4:Update")).toBeVisible();
   });
 
   test("keeps the compact heading at the top of the window while the page scrolls", async ({
