@@ -35,6 +35,7 @@ import {
   ticketPage,
   ticketResponse,
   ticketWorkResponse,
+  urlOf,
 } from "../test-api";
 // The package tree and the CVSS assessments of Overview, the first tab of the
 // Ticket screen (docs/screens/ticket.md), at the browser's default text size,
@@ -2214,6 +2215,13 @@ describe("the CVSS assessments", () => {
         "10.0, the fallback without a SUSE CVSS v3.1 assessment",
       ],
     ]);
+    // The eligibility score starts a line below the severity.
+    const [severity, eligibility] = cvssPart(screen)
+      .getByRole("term")
+      .elements();
+    expect(boxOf(eligibility!).top).toBeGreaterThanOrEqual(
+      boxOf(severity!).bottom,
+    );
   });
 
   test("name the default version that the eligibility score lacks when a SUSE assessment of another version sets the severity", async () => {
@@ -2282,6 +2290,13 @@ describe("the CVSS assessments", () => {
         "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
       ],
     ]);
+    // The scores align in their column, in tabular figures
+    // (docs/design-system.md, Type Scale).
+    expect(
+      getComputedStyle(
+        cvssPart(screen).getByText("7.5", { exact: true }).element(),
+      ).fontVariantNumeric,
+    ).toBe("tabular-nums");
     // Assistive technologies name each row by its provider and its version.
     expect(
       table
@@ -2372,7 +2387,12 @@ describe("the CVSS assessments", () => {
       .element(screen.getByRole("region", { name: "CVE", exact: true }))
       .toBeVisible();
     expect(cvssPart(screen).query()).toBeNull();
-    expect(requestsTo(spy, CVSS)).toBe(0);
+    // No read of the CVSS assessments of any CVE.
+    expect(
+      spy.mock.calls
+        .map(([input]) => urlOf(input).pathname)
+        .filter((path) => /^\/api\/v1\/cves\/.*\/cvss$/.test(path)),
+    ).toEqual([]);
   });
 
   test("show the loading indicator in their place until their read arrives", async () => {

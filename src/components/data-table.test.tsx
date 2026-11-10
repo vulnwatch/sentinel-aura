@@ -563,7 +563,10 @@ describe("FramedTable", () => {
     // The cell of the long title holds several lines, 8 px from the lines
     // between the rows.
     const cell = rows.nth(1).getByRole("gridcell").element();
-    expect(cell.getBoundingClientRect().height).toBeGreaterThan(36);
+    const line = Number.parseFloat(getComputedStyle(cell).lineHeight);
+    expect(cell.getBoundingClientRect().height).toBeGreaterThanOrEqual(
+      2 * line + 16,
+    );
     expect(getComputedStyle(cell).paddingTop).toBe("8px");
     expect(rows.nth(2).element().getBoundingClientRect().height).toBeLessThan(
       40,
