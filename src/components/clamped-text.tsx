@@ -45,7 +45,7 @@ function Clamped({ children }: ClampedTextProps) {
       <p
         ref={text}
         id={id}
-        className={`whitespace-pre-line wrap-break-word ${expanded ? "" : "line-clamp-4"}`}
+        className={`max-w-full whitespace-pre-line wrap-break-word ${expanded ? "" : "line-clamp-4"}`}
       >
         {children}
       </p>

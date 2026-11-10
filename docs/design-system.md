@@ -1173,16 +1173,17 @@ states it, such as that of a Ticket; the other audit logs are tables
   the focus stays on it. Its content follows 24 px below the line, and a
   tab that the user opens shows the start of its content, below the compact
   heading where the page had scrolled past it.
-- The fields of the record show as a description list: each term on the
-  line of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px
-  before the value in `text-14`, `fg`, fields 8 px apart; where the list is
-  narrower than 280 px, each term stands above its value. A group of fields
-  under one term, such as the deadlines of a Ticket, has its term on a line
-  of its own, then its fields 4 px apart, their terms in the style of the
-  values, indented by 12 px in the column of the terms, or above their
-  values, indented the same, where the list is narrower than 280 px. A popover that shows
-  the details of a record uses the same list (Menus, Popovers, and
-  Tooltips).
+- The fields of the record show as a description list: each term on the line
+  of its value, in `text-13`, `fg-muted`, in a column of 104 px, 12 px before
+  the value in `text-14`, `fg`, fields 8 px apart; where the list is narrower
+  than 280 px, each term stands above its value. A user in a value wraps their
+  name instead of ending with an ellipsis, as the record's screen may show it
+  nowhere else whole (Representation of a User). A group of fields under one
+  term, such as the deadlines of a Ticket, has its term on a line of its own,
+  then its fields 4 px apart, their terms in the style of the values, indented
+  by 12 px in the column of the terms, or above their values, indented the
+  same, where the list is narrower than 280 px. A popover that shows the
+  details of a record uses the same list (Menus, Popovers, and Tooltips).
 - A field that a user can change shows that user a pencil at the end of its
   line: an icon button of 24 px with `pencil` at 14 px, named by its action,
   such as "Edit assignee", which its tooltip shows. It opens the control of
@@ -1447,9 +1448,9 @@ where the labels show, a group of users, and the user card.
   where it follows the name. An inactive user's name is in `fg-muted`, and
   its avatar is gray (Avatar). Where the place is too narrow, only the name,
   with the username that follows it, ends with an ellipsis, unless a table,
-  the account menu, the user card, or the explanation of a priority wraps it
-  (Tables; Account Menu; User card; Priority, Explanation); the labels always
-  show.
+  the account menu, the user card, the explanation of a priority, or the
+  description list of a detail screen wraps it (Tables; Account Menu; User
+  card; Priority, Explanation; Detail Screens); the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
 - **Group of users:** the users of a group, such as the participants of a

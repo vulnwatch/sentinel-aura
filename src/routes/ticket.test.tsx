@@ -1226,12 +1226,14 @@ describe("the anchor of the URL", () => {
     showing(fictionalTicketDetail({ cve: longCve() }));
     const { screen } = await renderTicket("/tickets/SNTL-12#details");
 
+    // The page scrolls to the details, which start below the tabs.
+    await expect.poll(() => window.scrollY).toBeGreaterThan(0);
     const details = region(screen, "Details");
+    const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
+    expect(boxOf(details).top).toBeGreaterThanOrEqual(Math.max(tabs.bottom, 0));
     await expect
       .element(details.getByRole("heading", { level: 2, name: "Details" }))
       .toBeInViewport();
-    const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
-    expect(boxOf(details).top).toBeGreaterThanOrEqual(Math.max(tabs.bottom, 0));
   });
 
   test("shows its part on a duplicate, whose duplicates the tab does not read", async () => {

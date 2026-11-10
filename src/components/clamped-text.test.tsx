@@ -137,3 +137,45 @@ test("measures another text again, which starts cut", async () => {
     .element(screen.getByRole("button", { name: "Show more" }))
     .toHaveAttribute("aria-expanded", "false");
 });
+
+test("keeps the line breaks of the text, collapses its runs of spaces, and breaks a word longer than its place", async () => {
+  await page.viewport(320, 640);
+  const word = "fictional_function_".repeat(6);
+  const screen = await render(
+    <ClampedText>{`First    line.\nSecond line ${word}.`}</ClampedText>,
+  );
+  const paragraph = screen.getByText(/First/);
+  await expect.element(paragraph).toBeVisible();
+  const text = paragraph.element();
+  const node = text.firstChild!;
+
+  const first = document.createRange();
+  first.setStart(node, 0);
+  first.setEnd(node, "First    line.".length);
+  const second = document.createRange();
+  second.setStart(node, "First    line.\n".length);
+  second.setEnd(node, "First    line.\nSecond".length);
+  // The line break starts a new line, and the first sentence, its spaces
+  // collapsed to one, takes less than the width of the text.
+  expect(first.getClientRects()).toHaveLength(1);
+  expect(second.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    first.getBoundingClientRect().bottom - 1,
+  );
+  expect(first.getBoundingClientRect().width).toBeLessThan(
+    text.getBoundingClientRect().width / 2,
+  );
+  // The long word breaks within the width of the text, which stays within
+  // the window.
+  const long = document.createRange();
+  long.setStart(node, node.textContent!.indexOf(word));
+  long.setEnd(node, node.textContent!.indexOf(word) + word.length);
+  expect(long.getBoundingClientRect().right).toBeLessThanOrEqual(
+    text.getBoundingClientRect().right + 1,
+  );
+  expect(text.getBoundingClientRect().right).toBeLessThanOrEqual(
+    window.innerWidth,
+  );
+  expect(document.documentElement.scrollWidth).toBe(
+    document.documentElement.clientWidth,
+  );
+});
