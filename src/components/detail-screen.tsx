@@ -69,8 +69,8 @@ interface DetailHeadingProps {
 // a shadow, with 10 px of space above it (docs/design-system.md, Detail
 // Screens). It is the heading row itself, not a copy, and its place in the
 // page keeps the height of the heading row and the tabs, so that the content
-// does not move when it becomes compact or returns. The window then scrolls
-// the element with the focus, and the target of an anchor, below it too
+// does not move when it becomes compact or returns. The window scrolls the
+// element with the focus, and the target of an anchor, below it too
 // (src/components/fixed-top.ts). Narrower, it scrolls with the page.
 export function DetailHeading({ sticky, children }: DetailHeadingProps) {
   // An element at the place where the heading row starts, which shows
@@ -117,7 +117,10 @@ export function DetailHeading({ sticky, children }: DetailHeadingProps) {
       observer.disconnect();
     };
   }, [compact]);
-  useFixedTopHeight("--compact-heading-height", heading, compact);
+  // Its height counts as soon as it can stay at the top, so that the window
+  // scrolls an element into view, such as the target of an anchor, below
+  // the compact heading that the scroll itself brings.
+  useFixedTopHeight("--compact-heading-height", heading, sticky);
 
   let className = "";
   if (compact) {

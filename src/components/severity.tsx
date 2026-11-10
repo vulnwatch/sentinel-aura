@@ -29,6 +29,10 @@ interface SeverityProps {
   // Severity Resolution; Sentinel docs/features/tickets/cvss-scoring.md,
   // Unified CVE Severity).
   severity: string | null;
+  // The word that the screen document gives a severity of null, such as in
+  // a heading row, where no column header names it; an en dash otherwise
+  // (docs/behaviors.md, Absent Values).
+  absentName?: string;
 }
 
 // A severity (docs/design-system.md, Severity): a dot of 8 px in its mark,
@@ -36,9 +40,9 @@ interface SeverityProps {
 // technologies, which read the name. null is an absent value, and a value
 // that the pinned contract does not list shows as received after a hollow
 // dot in neutral-icon (docs/behaviors.md, Unknown Values).
-export function Severity({ severity }: SeverityProps) {
+export function Severity({ severity, absentName }: SeverityProps) {
   if (severity === null) {
-    return <AbsentValue />;
+    return <AbsentValue name={absentName} />;
   }
   const known = SEVERITIES.get(severity);
   return (

@@ -11,9 +11,9 @@ import { useLayoutEffect, type RefObject } from "react";
 // screen (src/styles.css).
 export type FixedTop = "--message-area-height" | "--compact-heading-height";
 
-// The height that the element at the top of the window gives to its custom
-// property while it stays there; without it, the property is unset, which
-// counts as no height.
+// The height that the element gives to its custom property while it stays,
+// or can stay, at the top of the window; otherwise the property is unset,
+// which counts as no height.
 export function useFixedTopHeight(
   property: FixedTop,
   element: RefObject<HTMLElement | null>,

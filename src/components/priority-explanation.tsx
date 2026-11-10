@@ -258,6 +258,10 @@ interface ExplainedPriorityProps {
   // screen, where the box is the button (docs/design-system.md, Priority,
   // Explanation).
   placement?: "cell" | "inline";
+  // The word that the screen document gives a priority of null, which also
+  // names the button, such as in a heading row, where no column header
+  // names it (docs/behaviors.md, Absent Values).
+  absentName?: string;
 }
 
 // The priority of a Ticket as the button of its explanation, named by the
@@ -280,6 +284,7 @@ interface ExplainedPriorityProps {
 export function ExplainedPriority({
   ticket,
   placement = "cell",
+  absentName,
 }: ExplainedPriorityProps) {
   const dialogId = useId();
   const cellBox = useRef<HTMLSpanElement>(null);
@@ -299,7 +304,10 @@ export function ExplainedPriority({
     [dialogId],
   );
   const isOverride = ticket.priority_override !== null;
-  const name = priorityName(ticket.priority);
+  const name =
+    ticket.priority === null && absentName !== undefined
+      ? absentName
+      : priorityName(ticket.priority);
   const label = isOverride ? `${name}, override` : name;
   return (
     <DialogTrigger>
@@ -329,7 +337,11 @@ export function ExplainedPriority({
           className={`-mx-1 inline-flex h-6 min-w-6 cursor-default items-center rounded px-1 align-middle data-hovered:bg-neutral-soft aria-expanded:bg-neutral-soft ${FOCUS_RING}`}
         >
           <span aria-hidden className="contents">
-            <Priority priority={ticket.priority} isOverride={isOverride} />
+            <Priority
+              priority={ticket.priority}
+              isOverride={isOverride}
+              absentName={absentName}
+            />
           </span>
         </AriaButton>
       )}

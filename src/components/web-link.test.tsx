@@ -167,6 +167,46 @@ describe("a link to another site", () => {
   });
 });
 
+describe("the underline of a link", () => {
+  test("shows under the pointer and on keyboard focus in a table or a list, and always in running text", async () => {
+    const { screen } = await renderLink(
+      <>
+        <WebLink address="https://github.com/advisories/GHSA-2c4f-7h9j-mqrv">
+          GHSA-2c4f-7h9j-mqrv
+        </WebLink>{" "}
+        <WebLink
+          address="https://www.suse.com/security/cve/CVE-2099-0012.html"
+          placement="text"
+        >
+          SUSE CVE page
+        </WebLink>
+      </>,
+    );
+    const listed = screen.getByRole("link", {
+      name: "GHSA-2c4f-7h9j-mqrv (another site)",
+    });
+    const inText = screen.getByRole("link", {
+      name: "SUSE CVE page (another site)",
+    });
+    const decoration = () =>
+      getComputedStyle(listed.element()).textDecorationLine;
+
+    await expect.element(listed).toBeVisible();
+    expect(getComputedStyle(inText.element()).textDecorationLine).toBe(
+      "underline",
+    );
+    await userEvent.unhover(listed);
+    await expect.poll(decoration).toBe("none");
+    await listed.hover();
+    await expect.poll(decoration).toBe("underline");
+    await userEvent.unhover(listed);
+    await expect.poll(decoration).toBe("none");
+    await userEvent.keyboard("{Tab}");
+    await expect.element(listed).toHaveFocus();
+    await expect.poll(decoration).toBe("underline");
+  });
+});
+
 describe("a link on the UI's own origin", () => {
   test("has no mark, and the browser loads it as a new page, not the router", async () => {
     const load = vi

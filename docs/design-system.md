@@ -1179,7 +1179,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   narrower than 280 px, each term stands above its value. A group of fields
   under one term, such as the deadlines of a Ticket, has its term on a line
   of its own, then its fields 4 px apart, their terms in the style of the
-  values, indented by 12 px in the column of the terms. A popover that shows
+  values, indented by 12 px in the column of the terms, or above their
+  values, indented the same, where the list is narrower than 280 px. A popover that shows
   the details of a record uses the same list (Menus, Popovers, and
   Tooltips).
 - A field that a user can change shows that user a pencil at the end of its

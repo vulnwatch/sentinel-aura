@@ -31,7 +31,7 @@ import {
 import { DetailColumns, Part, SideSection } from "../components/detail-screen";
 import { Label } from "../components/label";
 import { Link } from "../components/link";
-import { PartRead } from "../components/read-view";
+import { PartRead, type Read } from "../components/read-view";
 import { User } from "../components/user";
 import { WebLink } from "../components/web-link";
 import { sameSearch } from "../search-params";
@@ -281,7 +281,8 @@ interface DetailsProps {
 }
 
 // The details of the Ticket, read-only, as a description list
-// (docs/design-system.md, Detail Screens): the assignee in the full form, or
+// (docs/design-system.md, Detail Screens): the assignee in the full form,
+// whose name wraps, since nothing else on the screen shows it whole, or
 // "Unassigned"; the Coordinated Release Date while the Ticket is
 // confidential, as an absent value without a date, and while it has one,
 // also after it became non-confidential (Sentinel
@@ -298,7 +299,7 @@ function Details({ ticket, now, duplicates }: DetailsProps) {
           {ticket.assignee === null ? (
             <AbsentValue name="Unassigned" />
           ) : (
-            <User user={ticket.assignee} />
+            <User user={ticket.assignee} wrap />
           )}
         </DescriptionItem>
         {(ticket.is_confidential || ticket.coordinated_release_at !== null) && (
@@ -509,7 +510,7 @@ function Facts({ cve }: FactsProps) {
       </InlineField>
       {cve.external_identifiers.length > 0 && (
         <InlineField term="External identifiers">
-          <ul className="flex flex-wrap gap-x-3">
+          <ul className="flex flex-wrap gap-x-3 gap-y-1">
             {cve.external_identifiers.map((external) => (
               <li key={`${external.source}-${external.identifier}`}>
                 <WebLink address={external.url}>{external.identifier}</WebLink>
@@ -530,7 +531,8 @@ interface CvePartProps {
 // the heading of the part, with the label Rejected while the CVE is rejected,
 // or its state as received when the pinned contract does not list it, and
 // next to it a link to the public CVE page of SUSE; its title and its
-// description, cut to four lines with Show more; its dates and identifiers;
+// description, which break a word longer than their place, the description
+// cut to four lines with Show more; its dates and identifiers;
 // and its exploitation. A Ticket without a CVE shows "No CVE." in its place.
 function CvePart({ cve }: CvePartProps) {
   if (cve === null) {
@@ -573,7 +575,7 @@ function CvePart({ cve }: CvePartProps) {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           {cve.title !== null && (
-            <p className="max-w-180 font-medium">{cve.title}</p>
+            <p className="max-w-180 wrap-break-word">{cve.title}</p>
           )}
           {cve.description === null ? (
             <p className="text-fg-muted">No description.</p>
@@ -602,14 +604,22 @@ const SCROLL_KEYS = new Set([
   " ",
 ]);
 
+// A read of the tab, which has settled once it has its data or its error, or
+// when it is not sent, such as the duplicates of a duplicate.
+type TabRead = Pick<Read<unknown>, "status" | "isFetching">;
+
+function settled(read: TabRead): boolean {
+  return read.status !== "pending" || !read.isFetching;
+}
+
 // Shows the target of the anchor of the URL once every read of the tab has
-// settled, with its data or its error, unless the user has scrolled
-// meanwhile, so that a read that arrives later does not move the target out
+// settled, unless the user has scrolled meanwhile, so that a read that arrives later does not move the target out
 // of view; the window scrolls it below what stays at the top of the window
 // (src/components/fixed-top.ts). An anchor whose target the Ticket lacks,
 // such as a part that it does not have, shows the top of the screen
 // (docs/design-system.md, Main Content).
-function useAnchorTarget(settled: boolean) {
+function useAnchorTarget(reads: readonly TabRead[]) {
+  const ready = reads.every(settled);
   const hash = useRouterState({ select: (state) => state.location.hash });
   const scrolled = useRef(false);
   const shown = useRef(false);
@@ -632,7 +642,7 @@ function useAnchorTarget(settled: boolean) {
     };
   }, []);
   useEffect(() => {
-    if (!settled || shown.current) {
+    if (!ready || shown.current) {
       return;
     }
     shown.current = true;
@@ -645,7 +655,7 @@ function useAnchorTarget(settled: boolean) {
     } else {
       target.scrollIntoView();
     }
-  }, [settled, hash]);
+  }, [ready, hash]);
 }
 
 // ----------------------------------------------------------------------------
@@ -654,9 +664,7 @@ function useAnchorTarget(settled: boolean) {
 function TicketOverview() {
   const { ticket, now, twoColumns } = useShownTicket();
   const duplicates = useDuplicates(ticket);
-  useAnchorTarget(
-    ticket.duplicate_of_ticket_id !== null || duplicates.status !== "pending",
-  );
+  useAnchorTarget([duplicates]);
   return (
     <DetailColumns
       twoColumns={twoColumns}

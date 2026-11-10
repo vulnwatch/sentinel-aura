@@ -25,7 +25,7 @@ Ticket that Get Ticket returns to the user, whose scope, access grants, and
 package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
-The screen offers no action yet, so it is the same for every user.
+The screen offers no action, so it is the same for every user.
 
 ## Navigation
 
@@ -39,15 +39,13 @@ The screen offers no action yet, so it is the same for every user.
   parameter: it removes every one from its URL, in place of the URL in the
   browser history, and keeps its anchor (`docs/behaviors.md`, Invalid Search
   Parameters).
-- Anchors: `#cve`, the CVE, and `#details`, the details. Every Ticket has them;
-  the screen shows the target of an anchor once the reads of Overview have
-  arrived or failed, unless the user has scrolled meanwhile, and an anchor
-  whose target the Ticket lacks shows the top of the screen
+- Anchors: `#cve`, the CVE, and `#details`, the details, which every Ticket
+  has; the reads of Overview are the Ticket and its duplicates
   (`docs/design-system.md`, Main Content).
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
-  leads to this screen (`docs/screen-map.md`, Links Between Areas). Users show
-  without a link to their screen.
+  would lead to this screen (`docs/screen-map.md`, Links Between Areas). Users
+  show without a link to their screen.
 
 ## Content
 
@@ -64,22 +62,21 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
   Tickets); assistive technologies read the word.
 - The main values, 16 px apart, each named for assistive technologies: the
   CVE ID in `fg-muted`, at the size of the heading, for a Ticket with a CVE;
-  the status; the severity; the effective priority, whose box is the button
-  of its explanation (`docs/design-system.md`, Priority, Explanation); and the
-  deadline badge, when the Ticket has one (`docs/behaviors.md`, Deadlines),
-  which compares the dates with the instant at which the Ticket arrived.
+  the status; the severity, or "Severity not set" without one; the effective
+  priority, whose box is the button of its explanation
+  (`docs/design-system.md`, Priority, Explanation), or "Not yet
+  prioritizable" without one, which also names the button; and the deadline
+  badge, when the Ticket has one (`docs/behaviors.md`, Deadlines), which
+  compares the dates with the instant at which the Ticket arrived. No column
+  header names the severity and the priority here, so their absence is named
+  precisely, in `fg-muted` (`docs/behaviors.md`, Absent Values).
 - The row wraps when the width runs short.
 
-**Tabs**: Overview, named "Ticket" for assistive technologies.
+**Tabs**, named "Ticket" for assistive technologies: Overview.
 
-**Layout of Overview**: two columns while the main content is at least 960 px
-wide, the CVE in the main column and the details in the side column, which
-sticks while the page scrolls, and the heading row becomes the compact heading
-at the top of the window; one column otherwise, the details above the CVE,
-first in the order of the page too, and the heading row scrolls with the page
-(`docs/design-system.md`, Detail Screens). When the layout changes while the
-screen is open, the details move to their new place, and the focus, when it
-was in the details, moves to the heading.
+**Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE in
+the main column and the details in the side column; in one column, the
+details above the CVE.
 
 **CVE**, the first part of the main column, from `cve` of Get Ticket (Sentinel
 `docs/features/tickets/tickets.md`, CVEDetail):
@@ -95,9 +92,12 @@ was in the details, moves to the heading.
   `https://www.suse.com`: `https://www.suse.com/security/cve/{cve_id}.html`,
   the CVE ID encoded in the path (`docs/behaviors.md`, Links to Other Sites,
   Composed addresses).
-- The title, at weight 500, when Sentinel returns one, and below it the
-  description, cut to its first four lines with Show more
-  (`docs/design-system.md`, Main Content), or "No description." in `fg-muted`.
+- The title, when Sentinel returns one, and below it the description, cut to
+  its first four lines with Show more (`docs/design-system.md`, Main
+  Content), or "No description." in `fg-muted`. The description keeps its
+  line breaks and shows as written, Markdown included, with its runs of
+  spaces collapsed; the title and the description break a word longer than
+  their place.
 - On one line that wraps, each value after its term in `fg-muted`: Published
   and Modified, each a date and time; Rejected, the date and time of the
   rejection, while the CVE is rejected; CWE, the identifiers of the
@@ -123,11 +123,11 @@ was in the details, moves to the heading.
 
 | Term | Value |
 |---|---|
-| Assignee | The assignee in the full form at the small size, or "Unassigned" |
+| Assignee | The assignee in the full form at the small size, the name wrapping instead of ending with an ellipsis, since nothing else on the screen shows it whole, or "Unassigned" |
 | Coordinated Release Date | While the Ticket is confidential, or while it has a Coordinated Release Date, also after it became non-confidential: the date and time, or an absent value (Sentinel `docs/features/tickets/tickets.md`, Coordinated Release Date) |
 | Deadlines | A line per phase, Triage, Submission, UM, and QA, with its due date and time; the QA line reads "QA, release" while the QA due date is the final release deadline, and a line Release follows it otherwise. The phases before the current phase are in `fg-muted`; the current phase is at weight 600, with the state of its milestone below its date, as `docs/behaviors.md` (Deadlines) words it; the later phases are plain. When the current phase is done, every phase is in `fg-muted`; when it is `null` with due dates, Triage is in `fg-muted` and the other phases are plain; a current phase that the pinned contract does not list marks no phase. Without due dates, an absent value (Sentinel `docs/features/tickets/ticket-deadlines.md`, Null Due Dates; Ticket Current Phase) |
 | Original | For a duplicate, `duplicate_of_ticket_id`, a link to its screen, without the lock, which the identifier does not carry (Sentinel `docs/features/tickets/tickets.md`, Identifier Disclosure Boundary) |
-| Duplicates | For every other Ticket, its visible duplicates, each a link to its screen followed by the lock of a confidential one, from List Tickets, `GET /api/v1/tickets`, with `duplicate_of_ticket_id`, `sort_by=ticket_id`, `sort_order=asc`, and `per_page=100`, the largest page (Sentinel `docs/features/tickets/tickets.md`, List Tickets, Duplicate filter; Sentinel `docs/api-spec.md`, Pagination); beyond the page, "and N more", without a link; "None" without any. A duplicate has no duplicates, so its read is not sent |
+| Duplicates | For every other Ticket, its visible duplicates, each a link to its screen followed by the lock of a confidential one, from List Tickets, `GET /api/v1/tickets`, with `duplicate_of_ticket_id`, `sort_by=ticket_id`, `sort_order=asc`, and `per_page=100`, the largest page (Sentinel `docs/features/tickets/tickets.md`, List Tickets, Duplicate filter; Sentinel `docs/api-spec.md`, Pagination); beyond the page, "and N more", without a link; "None" without any. A duplicate has no duplicates, so its read is not sent (Sentinel `docs/features/tickets/tickets.md`, Duplicate Handling, Invariant) |
 | Created | `created_at`, a date and time |
 | Last modified | `updated_at`, a date and time |
 
@@ -137,16 +137,18 @@ was in the details, moves to the heading.
   Overview shows the loading indicator until the Ticket arrives, and the value
   of Duplicates until its read arrives (`docs/behaviors.md`, Loading).
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
-  The failure of Get Ticket replaces the screen, its heading row and tabs
-  included; `404 TICKET_NOT_FOUND`, for a Ticket that does not exist or that
-  the user cannot see, shows Not found (`docs/behaviors.md`, Missing and
-  Inaccessible Records). The failure of the read of the duplicates shows in
+  The failure of the first read of Get Ticket replaces the screen, its
+  heading row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that
+  does not exist or that the user cannot see, shows Not found
+  (`docs/behaviors.md`, Missing and Inaccessible Records). A later read of
+  the Ticket that fails, such as when the tab returns to the foreground,
+  keeps the Ticket shown, with its warning at the top of the panel of the
+  tab, unless it is a `403` or a `404`, which replaces the screen. The failure of the read of the duplicates shows in
   place of their value, with Try again where the failure offers it, and leaves
   the rest of the screen usable. The screen handles no error code
   specifically.
-- **Reflow.** At 320 CSS px the screen is one column, the terms of the details
-  stand above their values, the columns of the exploitation one below the
-  other, and the page does not scroll horizontally.
+- **Reflow.** At 320 CSS px the page does not scroll horizontally
+  (`docs/behaviors.md`, Accessibility, Reflow and text size).
 
 ## Cross-references
 
@@ -168,7 +170,6 @@ was in the details, moves to the heading.
   Basis; Manual Override
 - Sentinel `docs/features/tickets/cve-tracking.md` — Get CVE; External
   Identifiers; CVE Rejection Handling
-- Sentinel `docs/features/tickets/cve-sync-epss.md` — Algorithm
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility
 - Sentinel `docs/api-spec.md` — Ticket Identifier Resolution; Pagination

@@ -73,6 +73,10 @@ interface PriorityProps {
   // Whether the effective priority is an override, a Ticket whose
   // priority_override is set.
   isOverride?: boolean;
+  // The word that the screen document gives a priority of null, such as in
+  // a heading row, where no column header names it; an en dash otherwise
+  // (docs/behaviors.md, Absent Values).
+  absentName?: string;
 }
 
 // The name of a priority, which assistive technologies read: its level, such
@@ -92,13 +96,17 @@ export function priorityName(priority: string | null): string {
 // names it, as the level followed by ", override", such as the button of the
 // explanation of the priority, because a text hidden on the screen would
 // read as a part of its own, "P1 , override".
-export function Priority({ priority, isOverride = false }: PriorityProps) {
+export function Priority({
+  priority,
+  isOverride = false,
+  absentName,
+}: PriorityProps) {
   if (!isOverride) {
-    return <PriorityValue priority={priority} />;
+    return <PriorityValue priority={priority} absentName={absentName} />;
   }
   return (
     <span className="inline-flex items-center gap-1 align-middle">
-      <PriorityValue priority={priority} />
+      <PriorityValue priority={priority} absentName={absentName} />
       <UserPen aria-hidden className="size-3.5 shrink-0 text-fg-muted" />
     </span>
   );
@@ -106,6 +114,7 @@ export function Priority({ priority, isOverride = false }: PriorityProps) {
 
 interface PriorityValueProps {
   priority: string | null;
+  absentName: string | undefined;
 }
 
 // The value of a priority: P1 as its red mark, then "P1" in fg at weight 600;
@@ -113,9 +122,9 @@ interface PriorityValueProps {
 // filled, then the level in fg-muted; the mark 6 px before the level. null is
 // an absent value, and a value that the pinned contract does not list shows
 // as received, in fg, without a mark (docs/behaviors.md, Unknown Values).
-function PriorityValue({ priority }: PriorityValueProps) {
+function PriorityValue({ priority, absentName }: PriorityValueProps) {
   if (priority === null) {
-    return <AbsentValue />;
+    return <AbsentValue name={absentName} />;
   }
   const level = LEVELS.get(priority);
   if (level === undefined) {

@@ -41,30 +41,40 @@ export function isTicketId(value: string): boolean {
   );
 }
 
-// The Ticket that the screen shows, for its tabs.
-export interface ShownTicket {
-  ticket: TicketDetail;
-  // The instant at which the data of the Ticket arrived, in milliseconds
-  // since the epoch, with which the screen compares its due dates
-  // (docs/behaviors.md, Deadlines).
-  now: number;
+// What the screen gives its tabs: the identifier of the Ticket, from the
+// path, and whether the main content is wide enough for two columns
+// (useTwoColumns).
+interface TicketScreenState {
+  ticketId: string;
+  twoColumns: boolean;
 }
 
-const ShownTicketContext = createContext<ShownTicket | null>(null);
+const TicketScreenContext = createContext<TicketScreenState | null>(null);
 
-// Whether the main content is wide enough for two columns, for the tab that
-// shows (useTwoColumns).
-const TwoColumnsContext = createContext<boolean | null>(null);
-
-// The Ticket that the screen shows, and whether the main content is wide
-// enough for two columns, which a tab uses once the Ticket has arrived.
-export function useShownTicket(): ShownTicket & { twoColumns: boolean } {
-  const shown = use(ShownTicketContext);
-  const twoColumns = use(TwoColumnsContext);
-  if (shown === null || twoColumns === null) {
+// The Ticket that the screen shows, for a tab, which shows once the Ticket
+// has arrived: the read of the screen, which this hook never sends itself,
+// so that the data stays in the query cache (docs/conventions.md, Data Read
+// from the API), with the instant at which its data arrived, in
+// milliseconds since the epoch, with which the screen compares its due dates
+// (docs/behaviors.md, Deadlines); and whether the main content is wide
+// enough for two columns.
+export function useShownTicket(): {
+  ticket: TicketDetail;
+  now: number;
+  twoColumns: boolean;
+} {
+  const screen = use(TicketScreenContext);
+  const read = useGetTicket(screen?.ticketId ?? "", {
+    query: { enabled: false },
+  });
+  if (screen === null || read.data === undefined) {
     throw new Error("A tab of the Ticket screen shows outside its screen");
   }
-  return { ...shown, twoColumns };
+  return {
+    ticket: read.data.data,
+    now: read.dataUpdatedAt,
+    twoColumns: screen.twoColumns,
+  };
 }
 
 // The tabs of the screen, each at a path under the path of the Ticket.
@@ -101,9 +111,11 @@ interface MainValuesProps {
 }
 
 // The main values of the Ticket after its identifier: its CVE ID in
-// fg-muted, not a link, since the address of the CVE leads to this screen
-// (docs/screen-map.md, Links Between Areas); its status, severity, and
-// priority, which opens its explanation; and its deadline badge, when it has
+// fg-muted, not a link, since the address of the CVE would lead to this
+// screen (docs/screen-map.md, Links Between Areas); its status, severity, and
+// priority, which opens its explanation, an absent severity and priority
+// named precisely, since no column header names them here
+// (docs/behaviors.md, Absent Values); and its deadline badge, when it has
 // one (docs/behaviors.md, Deadlines). They wrap with the heading row.
 function MainValues({ ticket, now, compact }: MainValuesProps) {
   return (
@@ -119,10 +131,14 @@ function MainValues({ ticket, now, compact }: MainValuesProps) {
         <TicketStatus status={ticket.status} />
       </Value>
       <Value term="Severity">
-        <Severity severity={ticket.severity} />
+        <Severity severity={ticket.severity} absentName="Severity not set" />
       </Value>
       <Value term="Priority">
-        <ExplainedPriority ticket={ticket} placement="inline" />
+        <ExplainedPriority
+          ticket={ticket}
+          placement="inline"
+          absentName="Not yet prioritizable"
+        />
       </Value>
       {deadline(ticket, now) !== undefined && (
         <Value term="Deadline">
@@ -182,7 +198,9 @@ function TicketFrame({ ticketId, ticket, now, children }: TicketFrameProps) {
         </DetailHeading>
         <DetailTabPanel selected="overview">
           {twoColumns !== undefined && (
-            <TwoColumnsContext value={twoColumns}>{children}</TwoColumnsContext>
+            <TicketScreenContext value={{ ticketId, twoColumns }}>
+              {children}
+            </TicketScreenContext>
           )}
         </DetailTabPanel>
       </DetailTabs>
@@ -213,13 +231,7 @@ function TicketRead({ ticketId }: TicketReadProps) {
         </TicketFrame>
       )}
     >
-      {(data) => (
-        <ShownTicketContext
-          value={{ ticket: data.data, now: read.dataUpdatedAt }}
-        >
-          <Outlet />
-        </ShownTicketContext>
-      )}
+      {() => <Outlet />}
     </ScreenRead>
   );
 }

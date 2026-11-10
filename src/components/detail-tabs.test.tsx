@@ -154,13 +154,23 @@ test("opens a tab on a click, Enter, or Space, not when the arrow keys move the 
   expect(router.state.location.pathname).toBe("/tickets");
   await expect.element(auditLog).toHaveFocus();
 
-  await overview.click();
+  await userEvent.keyboard("{ArrowLeft}");
+  await expect.element(overview).toHaveFocus();
+  expect(router.state.location.pathname).toBe("/tickets");
+  await userEvent.keyboard(" ");
 
   await expect
     .element(screen.getByText("The content of overview"))
     .toBeVisible();
+  expect(router.state.location.pathname).toBe("/");
+
+  await auditLog.click();
+
+  await expect
+    .element(screen.getByText("The content of audit-log"))
+    .toBeVisible();
   expect(
-    screen.getByRole("tabpanel", { name: "Overview" }).elements(),
+    screen.getByRole("tabpanel", { name: "Audit log" }).elements(),
   ).toHaveLength(1);
 });
 

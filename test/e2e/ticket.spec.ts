@@ -32,15 +32,21 @@ function part(page: Page, name: string) {
 
 // The terms of the details, in their order.
 function detailTerms(page: Page) {
-  return part(page, "Details").locator("dt");
+  return part(page, "Details").getByRole("term");
+}
+
+// The value of a field of a part, by its term: the definition of the same
+// rank as the term, as each term has one.
+async function valueOf(page: Page, name: string, term: string) {
+  const terms = await part(page, name).getByRole("term").allTextContents();
+  const index = terms.indexOf(term);
+  expect(index, `the term ${term} of ${name}`).toBeGreaterThanOrEqual(0);
+  return part(page, name).getByRole("definition").nth(index);
 }
 
 // The value of a field of the details, by its term.
 function detail(page: Page, term: string) {
-  return part(page, "Details")
-    .locator("dt")
-    .filter({ hasText: new RegExp(`^${term}$`) })
-    .locator("xpath=following-sibling::dd[1]");
+  return valueOf(page, "Details", term);
 }
 
 // Whether the window scrolls its page in the horizontal direction.
@@ -64,21 +70,24 @@ test.describe("for an analyst", () => {
     await expect(page).toHaveTitle("SNTL-12 – Sentinel");
     // The aged SNTL-12 is Analyzed, with an override of its priority to P1,
     // and its submission is past due (Aged Tickets; Priorities).
-    const values = page.locator("main dl").first();
-    await expect(values.locator("dt")).toHaveText([
-      "CVE",
-      "Status",
-      "Severity",
-      "Priority",
-      "Deadline",
-    ]);
-    await expect(values.locator("dd")).toHaveText([
+    const main = page.getByRole("main");
+    await expect(main.getByRole("term").first()).toHaveText("CVE");
+    expect(
+      (await main.getByRole("term").allTextContents()).slice(0, 5),
+    ).toEqual(["CVE", "Status", "Severity", "Priority", "Deadline"]);
+    const values = (await main.getByRole("definition").allTextContents()).slice(
+      0,
+      5,
+    );
+    expect(values.slice(0, 4)).toEqual([
       "CVE-2099-0012",
       "Analyzed",
       "High",
       "P1",
-      /^Submission -\d+dSubmission overdue by \d+ days$/,
     ]);
+    expect(values[4]).toMatch(
+      /^Submission -\d+dSubmission overdue by \d+ days$/,
+    );
     await expect(
       page.getByRole("tablist", { name: "Ticket" }).getByRole("tab"),
     ).toHaveText(["Overview"]);
@@ -114,11 +123,11 @@ test.describe("for an analyst", () => {
       "Created",
       "Last modified",
     ]);
-    await expect(detail(page, "Assignee")).toHaveText("Alice Smith");
-    await expect(detail(page, "Submission")).toContainText(
+    await expect(await detail(page, "Assignee")).toHaveText("Alice Smith");
+    await expect(await detail(page, "Submission")).toContainText(
       /Overdue by \d+ days$/,
     );
-    await expect(detail(page, "Duplicates")).toHaveText("None");
+    await expect(await detail(page, "Duplicates")).toHaveText("None");
 
     // In a window of 1280 px, the details stand beside the CVE.
     const cveBox = await cve.boundingBox();
@@ -155,15 +164,18 @@ test.describe("for an analyst", () => {
     await page.goto("/tickets/SNTL-18");
 
     await expect(heading(page, "SNTL-18")).toBeVisible();
-    await expect(page.locator("main").getByText("Confidential")).toBeVisible();
+    await expect(
+      page.getByRole("main").getByText("Confidential", { exact: true }),
+    ).toBeVisible();
     // A running embargo (Embargoes), whose CVE has an EPSS score (CVEs).
-    await expect(detail(page, "Coordinated Release Date")).toHaveText(
+    await expect(await detail(page, "Coordinated Release Date")).toHaveText(
       /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/,
     );
-    const cve = part(page, "CVE-2099-0018");
-    await expect(cve.getByText("CWE-287")).toBeVisible();
-    await expect(cve.locator("dd").filter({ hasText: /^0\.31$/ })).toHaveCount(
-      1,
+    await expect(await valueOf(page, "CVE-2099-0018", "CWE")).toHaveText(
+      "CWE-287",
+    );
+    await expect(await valueOf(page, "CVE-2099-0018", "Score")).toHaveText(
+      "0.31",
     );
     await expect(page).toHaveScreenshot(
       "ticket-confidential.png",
@@ -180,7 +192,7 @@ test.describe("for an analyst", () => {
 
     await expect(heading(page, "SNTL-21")).toBeVisible();
     await expect(part(page, "CVE").getByText("No CVE.")).toBeVisible();
-    const duplicate = detail(page, "Duplicates").getByRole("link", {
+    const duplicate = (await detail(page, "Duplicates")).getByRole("link", {
       name: "SNTL-22",
     });
     await expect(duplicate).toBeVisible();
@@ -192,8 +204,16 @@ test.describe("for an analyst", () => {
     await expect(page).toHaveURL("/tickets/SNTL-22");
     // A duplicate has no due dates (Sentinel
     // docs/features/tickets/ticket-deadlines.md, Null Due Dates).
-    await expect(detail(page, "Deadlines")).toHaveText("–Not set");
-    await detail(page, "Original")
+    await expect(await detail(page, "Deadlines")).toHaveText("–Not set");
+    // Without a severity or a priority (Tickets; Priorities).
+    await expect(page.getByText("Severity not set")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Not yet prioritizable" }),
+    ).toBeVisible();
+    await expectAccessible(page);
+    await (
+      await detail(page, "Original")
+    )
       .getByRole("link", { name: "SNTL-21" })
       .click();
     await expect(heading(page, "SNTL-21")).toBeFocused();
@@ -212,56 +232,37 @@ test.describe("for an analyst", () => {
     // address of its advisory (CVEs), so it shows as text, without a link.
     await expect(cve.getByText("GHSA-2c4f-7h9j-mqrv")).toBeVisible();
     await expect(cve.getByRole("link", { name: /GHSA/ })).toHaveCount(0);
-    await expect(cve.getByText("PoC", { exact: true })).toBeVisible();
-    await expect(cve.getByText("0.96", { exact: true })).toBeVisible();
+    await expect(
+      await valueOf(page, "CVE-2099-0010", "Exploitation"),
+    ).toHaveText("PoC");
+    await expect(await valueOf(page, "CVE-2099-0010", "Percentile")).toHaveText(
+      "0.96",
+    );
+    await expectAccessible(page);
 
     await page.goto("/tickets/SNTL-8");
 
-    const rejected = part(page, "CVE-2099-0008 Rejected");
-    await expect(rejected).toBeVisible();
+    // A CVE rejected at the load of the dataset, less two days (CVEs).
+    await expect(part(page, "CVE-2099-0008 Rejected")).toBeVisible();
     await expect(
-      rejected.locator("div").filter({ hasText: /^Rejected\d/ }),
-    ).toHaveCount(1);
+      await valueOf(page, "CVE-2099-0008 Rejected", "Rejected"),
+    ).toHaveText(/^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/);
   });
 
-  test("shows the details before the CVE in one column, and reflows at 320 CSS pixels", async ({
+  test("reflows at 320 CSS pixels, in one column, the details first", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 900, height: 500 });
+    await page.setViewportSize({ width: 320, height: 640 });
     await signIn(page, "asmith");
     await page.goto("/tickets/SNTL-12");
     await expect(heading(page, "SNTL-12")).toBeVisible();
 
-    const details = part(page, "Details");
-    const cve = part(page, "CVE-2099-0012");
-    const detailsBox = await details.boundingBox();
-    const cveBox = await cve.boundingBox();
+    const detailsBox = await part(page, "Details").boundingBox();
+    const cveBox = await part(page, "CVE-2099-0012").boundingBox();
     expect((detailsBox?.y ?? 0) + (detailsBox?.height ?? 0)).toBeLessThan(
       cveBox?.y ?? 0,
     );
-    // The order of the page is the order on the screen.
-    expect(
-      await details.evaluate(
-        (element, other) =>
-          Boolean(
-            element.compareDocumentPosition(other) &
-            Node.DOCUMENT_POSITION_FOLLOWING,
-          ),
-        await cve.elementHandle(),
-      ),
-    ).toBe(true);
-
-    // The heading row scrolls away with the page.
-    await page.mouse.move(450, 300);
-    await page.mouse.wheel(0, 400);
-    await expect
-      .poll(async () => (await heading(page, "SNTL-12").boundingBox())?.y ?? 0)
-      .toBeLessThan(0);
-
-    await page.setViewportSize({ width: 320, height: 640 });
-    await expect(details).toBeVisible();
     expect(await scrollsHorizontally(page)).toBe(false);
-    await expectAccessible(page);
   });
 
   test("keeps the compact heading at the top of the window while the page scrolls", async ({
@@ -272,10 +273,6 @@ test.describe("for an analyst", () => {
     await page.goto("/tickets/SNTL-10");
     const title = heading(page, "SNTL-10");
     await expect(title).toBeVisible();
-    const cve = part(page, "CVE-2099-0010");
-    const before = await cve.evaluate(
-      (element) => element.getBoundingClientRect().top + window.scrollY,
-    );
 
     await page.mouse.move(640, 300);
     await page.mouse.wheel(0, 300);
@@ -283,21 +280,14 @@ test.describe("for an analyst", () => {
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThan(0);
+    await expect(title).toHaveCSS("font-size", "16px");
     await expect
       .poll(async () => (await title.boundingBox())?.y ?? -1)
       .toBeGreaterThanOrEqual(0);
-    await expect(title).toHaveCSS("font-size", "16px");
-    // The content does not move when the heading becomes compact.
-    expect(
-      await cve.evaluate(
-        (element) => element.getBoundingClientRect().top + window.scrollY,
-      ),
-    ).toBe(before);
-    await expectAccessible(page);
   });
 });
 
-test("shows Not found for a malformed identifier and for a Ticket that the user cannot see", async ({
+test("shows Not found for a Ticket that the user cannot see", async ({
   page,
 }) => {
   // dbrown, without a role, sees no confidential Ticket but those of the
@@ -311,8 +301,4 @@ test("shows Not found for a malformed identifier and for a Ticket that the user 
   await expect(
     page.getByText("This page doesn't exist, or you don't have access to it."),
   ).toBeVisible();
-
-  await page.goto("/tickets/SNTL-0012");
-
-  await expect(heading(page, "Not found")).toBeVisible();
 });

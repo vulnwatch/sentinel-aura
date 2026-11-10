@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent, type Locator } from "vitest/browser";
@@ -128,16 +128,30 @@ function region(screen: Screen, name: string) {
   return screen.getByRole("region", { name, exact: true });
 }
 
-// The value of a field of the details, by its term.
+// The value of a field of the details, by its term: the definition of the
+// same rank as the term, as each term has one.
 function valueOf(screen: Screen, term: string): HTMLElement {
-  const element = region(screen, "Details")
+  const details = region(screen, "Details");
+  const index = details
     .getByRole("term")
     .elements()
-    .find((candidate) => candidate.textContent === term)?.nextElementSibling;
-  if (!(element instanceof HTMLElement)) {
+    .findIndex((candidate) => candidate.textContent === term);
+  const element = details.getByRole("definition").elements()[index];
+  if (index === -1 || !(element instanceof HTMLElement)) {
     throw new Error(`The details have no field ${term}`);
   }
   return element;
+}
+
+// A CVE with many weaknesses, so that the main column is longer than the
+// side column, which then sticks while the page scrolls.
+function longCve(): CVEDetail {
+  return fictionalCve({
+    cwes: Array.from({ length: 200 }, (_, index) => ({
+      cwe_id: `CWE-${index + 1000}`,
+      sources: ["nvd"],
+    })),
+  });
 }
 
 // The terms of a list, in their order.
@@ -193,6 +207,13 @@ describe("the read of the Ticket", () => {
     await expect
       .element(screen.getByRole("tab", { name: "Overview" }))
       .toHaveAttribute("href", "/tickets/SNTL-12");
+    await expect
+      .element(
+        screen
+          .getByRole("tabpanel", { name: "Overview" })
+          .getByRole("progressbar", { name: "Loading" }),
+      )
+      .toBeVisible();
 
     response.resolve(ticketResponse(fictionalTicketDetail()));
 
@@ -322,6 +343,36 @@ describe("the heading row", () => {
     expect(boxOf(label).left - boxOf(heading(screen, "SNTL-12")).right).toBe(4);
   });
 
+  test("names a severity and a priority that are not set, which no column header names here", async () => {
+    showing(
+      fictionalTicketDetail({
+        severity: null,
+        priority: null,
+        priority_automatic: null,
+        priority_automatic_basis: {
+          severity: null,
+          exploitation: "unknown",
+          evidence: [],
+        },
+      }),
+    );
+
+    const { screen } = await renderTicket();
+
+    expect(textsOf(screen.getByRole("definition")).slice(1, 4)).toEqual([
+      "Analyzed",
+      "Severity not set",
+      "Not yet prioritizable",
+    ]);
+    const priority = screen.getByRole("button", {
+      name: "Not yet prioritizable",
+    });
+    await priority.click();
+    await expect
+      .element(screen.getByRole("dialog", { name: "Not yet prioritizable" }))
+      .toBeVisible();
+  });
+
   test("shows no CVE ID for a Ticket without a CVE, and no badge without a deadline", async () => {
     showing(
       fictionalTicketDetail({
@@ -417,16 +468,27 @@ describe("the layout", () => {
     ).toBeTruthy();
   });
 
-  test("moves the focus from the details to the heading of the screen when the layout changes, and leaves it elsewhere", async () => {
-    showing(fictionalTicketDetail({ duplicate_of_ticket_id: "SNTL-21" }));
+  test("moves the focus from the details to the heading of the screen, which comes into view, when the layout changes, and leaves it elsewhere", async () => {
+    await page.viewport(1280, 300);
+    showing(
+      fictionalTicketDetail({
+        duplicate_of_ticket_id: "SNTL-21",
+        cve: longCve(),
+      }),
+    );
     const { screen } = await renderTicket();
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await expect.poll(() => window.scrollY).toBeGreaterThan(200);
     const original = screen.getByRole("link", { name: "SNTL-21" });
     original.element().focus();
     await expect.element(original).toHaveFocus();
 
-    await page.viewport(900, 800);
+    await page.viewport(900, 300);
 
-    await expect.element(heading(screen, "SNTL-12")).toHaveFocus();
+    const title = heading(screen, "SNTL-12");
+    await expect.element(title).toHaveFocus();
+    expect(boxOf(title).top).toBeGreaterThanOrEqual(0);
+    expect(boxOf(title).bottom).toBeLessThanOrEqual(window.innerHeight);
     expect(boxOf(region(screen, "Details")).bottom).toBeLessThan(
       boxOf(region(screen, "CVE-2099-0012")).top,
     );
@@ -435,7 +497,7 @@ describe("the layout", () => {
       name: "SUSE CVE page (another site)",
     });
     suse.element().focus();
-    await page.viewport(1280, 800);
+    await page.viewport(1280, 300);
 
     await expect
       .poll(
@@ -449,23 +511,22 @@ describe("the layout", () => {
 
   test("keeps the compact heading at the top of the window with two columns, in its place in the page, and the details below it", async () => {
     await page.viewport(1280, 300);
-    // A CVE with many weaknesses, so that the main column is longer than
-    // the side column, which then sticks while the page scrolls.
-    showing(
-      fictionalTicketDetail({
-        cve: fictionalCve({
-          cwes: Array.from({ length: 200 }, (_, index) => ({
-            cwe_id: `CWE-${index + 1000}`,
-            sources: ["nvd"],
-          })),
-        }),
-      }),
-    );
+    showing(fictionalTicketDetail({ cve: longCve() }));
     const { screen } = await renderTicket();
     const title = heading(screen, "SNTL-12");
     const cve = region(screen, "CVE-2099-0012");
     const cveTop = boxOf(cve).top + window.scrollY;
     expect(getComputedStyle(title.element()).fontSize).toBe("20px");
+    // The window scrolls an element into view below the heading row, which
+    // can stay at the top of the window.
+    expect(
+      Number.parseFloat(
+        getComputedStyle(document.documentElement).scrollPaddingTop,
+      ),
+    ).toBe(
+      boxOf(screen.getByRole("tab", { name: "Overview" })).bottom -
+        boxOf(title).top,
+    );
 
     window.scrollTo(0, 120);
 
@@ -495,9 +556,6 @@ describe("the layout", () => {
     await expect
       .poll(() => getComputedStyle(title.element()).fontSize)
       .toBe("20px");
-    expect(getComputedStyle(document.documentElement).scrollPaddingTop).toBe(
-      "0px",
-    );
   });
 
   test("lets the heading row scroll away in one column", async () => {
@@ -510,6 +568,9 @@ describe("the layout", () => {
 
     await expect.poll(() => boxOf(title).bottom).toBeLessThan(0);
     expect(getComputedStyle(title.element()).fontSize).toBe("20px");
+    expect(getComputedStyle(document.documentElement).scrollPaddingTop).toBe(
+      "0px",
+    );
   });
 
   test("reflows at 320 CSS pixels without scrolling in two directions, the terms of the details above their values", async () => {
@@ -518,6 +579,9 @@ describe("the layout", () => {
       fictionalTicketDetail({
         is_confidential: true,
         coordinated_release_at: "2099-11-01T12:00:00Z",
+        cve: fictionalCve({
+          title: `Fictional flaw in ${"fictional_function_".repeat(4)}name`,
+        }),
       }),
     );
 
@@ -536,12 +600,50 @@ describe("the layout", () => {
 });
 
 describe("the details", () => {
-  test("show the assignee in the full form, or Unassigned", async () => {
+  test("are a part of the side column with a level-two heading", async () => {
+    showing(fictionalTicketDetail());
+    const { screen } = await renderTicket();
+
+    await expect
+      .element(
+        region(screen, "Details").getByRole("heading", {
+          level: 2,
+          name: "Details",
+        }),
+      )
+      .toBeVisible();
+  });
+
+  test("show the assignee in the full form", async () => {
     showing(fictionalTicketDetail());
     const { screen } = await renderTicket();
 
     expect(valueOf(screen, "Assignee").textContent).toBe("Alice Smith");
     expect(valueOf(screen, "Assignee").querySelector("svg")).not.toBeNull();
+  });
+
+  test("show the name of the assignee whole, wrapping where it is longer than its place", async () => {
+    showing(
+      fictionalTicketDetail({
+        assignee: {
+          id: "00000000-0000-0000-0000-000000000004",
+          username: "apapadopoulou",
+          full_name: "Alexandra Konstantina Papadopoulou-Fictional",
+          active: false,
+          bot: false,
+        },
+      }),
+    );
+    const { screen } = await renderTicket();
+
+    const name = screen.getByText(
+      "Alexandra Konstantina Papadopoulou-Fictional",
+    );
+    await expect.element(name).toBeVisible();
+    expect(name.element().scrollWidth).toBeLessThanOrEqual(
+      name.element().clientWidth,
+    );
+    expect(boxOf(name).height).toBeGreaterThan(20);
   });
 
   test("show Unassigned for a Ticket without an assignee", async () => {
@@ -773,10 +875,8 @@ describe("the details", () => {
       await expect
         .element(screen.getByRole("link", { name: "SNTL-30" }))
         .toHaveAttribute("href", "/tickets/SNTL-30");
-      const value = valueOf(screen, "Duplicates");
-      expect(
-        [...value.querySelectorAll("a")].map((link) => link.textContent),
-      ).toEqual(["SNTL-22", "SNTL-30"]);
+      const value = page.elementLocator(valueOf(screen, "Duplicates"));
+      expect(textsOf(value.getByRole("link"))).toEqual(["SNTL-22", "SNTL-30"]);
       expect(
         screen.getByRole("img", { name: "Confidential" }).elements(),
       ).toHaveLength(1);
@@ -910,6 +1010,18 @@ describe("the CVE", () => {
     expect(textsOf(part.getByRole("term"))).not.toContain(
       "External identifiers",
     );
+  });
+
+  test("cuts a longer description to four lines with Show more", async () => {
+    const description = Array.from(
+      { length: 40 },
+      (_, index) => `Fictional sentence ${index + 1} of a long description.`,
+    ).join(" ");
+    const { part } = await renderCve({ description });
+
+    const more = part.getByRole("button", { name: "Show more" });
+    await expect.element(more).toHaveAttribute("aria-expanded", "false");
+    expect(boxOf(part.getByText(description)).height).toBe(4 * 24);
   });
 
   test("shows absent values, and no description, where Sentinel returns none", async () => {
@@ -1085,6 +1197,43 @@ describe("the anchor of the URL", () => {
     expect(Math.round(boxOf(region(screen, "CVE-2099-0012")).top)).toBe(0);
   });
 
+  test("shows its part below the compact heading with two columns", async () => {
+    await page.viewport(1280, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket("/tickets/SNTL-12#cve");
+
+    await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+    const title = heading(screen, "SNTL-12");
+    await expect
+      .poll(() => getComputedStyle(title.element()).fontSize)
+      .toBe("16px");
+    const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
+    expect(boxOf(region(screen, "CVE-2099-0012")).top).toBeGreaterThanOrEqual(
+      tabs.bottom,
+    );
+    await expect
+      .element(
+        region(screen, "CVE-2099-0012").getByRole("heading", { level: 2 }),
+      )
+      .toBeInViewport();
+  });
+
+  test.each([
+    ["two columns", 1280],
+    ["one column", 900],
+  ])("shows the details in %s", async (_, width) => {
+    await page.viewport(width, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket("/tickets/SNTL-12#details");
+
+    const details = region(screen, "Details");
+    await expect
+      .element(details.getByRole("heading", { level: 2, name: "Details" }))
+      .toBeInViewport();
+    const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
+    expect(boxOf(details).top).toBeGreaterThanOrEqual(Math.max(tabs.bottom, 0));
+  });
+
   test("shows its part on a duplicate, whose duplicates the tab does not read", async () => {
     await page.viewport(900, 300);
     showing(
@@ -1163,7 +1312,11 @@ describe("the anchor of the URL", () => {
 });
 
 test("gives a tab the Ticket only on the Ticket screen", async () => {
-  await expect(renderHook(() => useShownTicket())).rejects.toThrow(
-    "A tab of the Ticket screen shows outside its screen",
-  );
+  await expect(
+    renderHook(() => useShownTicket(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    }),
+  ).rejects.toThrow("A tab of the Ticket screen shows outside its screen");
 });
