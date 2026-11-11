@@ -1,3 +1,4 @@
+import { RefreshCw } from "lucide-react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -50,6 +51,27 @@ test("cannot be pressed while it is disabled", async () => {
   await button.click({ force: true });
 
   expect(onPress).not.toHaveBeenCalled();
+});
+
+test("shows its icon at 16 px before its label, 8 px apart, hidden from assistive technologies", async () => {
+  const screen = await render(
+    <>
+      <Button size="small" icon={RefreshCw}>
+        Refetch all
+      </Button>
+      <Button size="small">Refetch all</Button>
+    </>,
+  );
+  const [withIcon, without] = screen
+    .getByRole("button", { name: "Refetch all" })
+    .elements();
+
+  // The icon of 16 px and the space of 8 px after it.
+  expect(
+    withIcon!.getBoundingClientRect().width -
+      without!.getBoundingClientRect().width,
+  ).toBe(24);
+  expect(screen.getByRole("img").query()).toBeNull();
 });
 
 test("is 36 px high, in text-15, with 12 px of side padding", async () => {
@@ -180,6 +202,28 @@ describe("busy", () => {
     await commands.emulateReducedMotion(true);
 
     expect(animationsIn(button.element())).toEqual([]);
+  });
+
+  test("shows its spinner in place of its icon, at the same width", async () => {
+    const screen = await render(
+      <>
+        <Button size="small" icon={RefreshCw}>
+          Refetch all
+        </Button>
+        <Button size="small" icon={RefreshCw} isBusy>
+          Refetch all
+        </Button>
+      </>,
+    );
+    const [idle, busy] = screen
+      .getByRole("button", { name: "Refetch all" })
+      .elements();
+
+    expect(animationsIn(idle!)).toEqual([]);
+    expect(animationsIn(busy!)).toEqual(["spin"]);
+    expect(busy!.getBoundingClientRect().width).toBe(
+      idle!.getBoundingClientRect().width,
+    );
   });
 
   test("shows no spinner while its action is not in progress", async () => {

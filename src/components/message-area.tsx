@@ -10,12 +10,21 @@ import {
   type ReactNode,
 } from "react";
 import { useFixedTopHeight } from "./fixed-top";
+import { Link } from "./link";
 import { Message, type MessageTone } from "./message";
+import { screenOptions, type ScreenHref } from "./router-links";
 import { useFocusHeadingOnRemoval } from "./screen-heading";
 
 // The message area at the top of the main content, which every screen with
 // the sidebar shares (docs/behaviors.md, Outcome of a Change;
 // docs/design-system.md, Main Content; Messages).
+
+// The record that the outcome of a change concerns: its name, such as
+// SNTL-42, and the address of its screen.
+export interface MessageRecord {
+  name: string;
+  href: ScreenHref;
+}
 
 // A message to show in the message area.
 export interface AreaMessage {
@@ -23,6 +32,9 @@ export interface AreaMessage {
   text: string;
   // The request identifier of an error.
   reference?: string | undefined;
+  // The record of the outcome of a change, which the message names when it
+  // appears on a screen other than the record's own.
+  record?: MessageRecord | undefined;
 }
 
 interface ShownMessage extends AreaMessage {
@@ -30,6 +42,12 @@ interface ShownMessage extends AreaMessage {
   // The path of the screen on which the message appeared: it goes when the
   // user opens another screen.
   path: string;
+}
+
+// Whether the path is that of the screen of the record, or of one of its
+// tabs, at paths under it.
+function onScreenOf(path: string, screen: string): boolean {
+  return path === screen || path.startsWith(`${screen}/`);
 }
 
 interface MessageAreaState {
@@ -53,14 +71,25 @@ export function MessageAreaProvider({ children }: MessageAreaProviderProps) {
   const nextId = useRef(0);
 
   // A message appears on the screen that the user is on when it is shown,
-  // also for a change that ends after the user left its screen.
+  // also for a change that ends after the user left its screen, and then
+  // names the record that it concerns, with a link to it.
   const show = useCallback(
     (message: AreaMessage) => {
       nextId.current += 1;
+      const path = router.state.location.pathname;
+      const { record } = message;
       const shown = {
         ...message,
+        record:
+          record !== undefined &&
+          !onScreenOf(
+            path,
+            router.buildLocation(screenOptions(record.href)).pathname,
+          )
+            ? record
+            : undefined,
         id: nextId.current,
-        path: router.state.location.pathname,
+        path,
       };
       setMessages((current) => [shown, ...current]);
     },
@@ -106,9 +135,11 @@ interface DismissibleMessageProps {
   onDismiss: (id: number) => void;
 }
 
-// A message of the area, which ends with Dismiss. When Dismiss removes it,
-// the focus moves to the screen's heading (docs/behaviors.md, Accessibility,
-// Focus after an action).
+// A message of the area, which ends with Dismiss, and starts with the record
+// that it concerns, as a link to its screen, followed by a colon, when it
+// names one, such as "SNTL-42: Priority changed to P2.". When Dismiss
+// removes it, the focus moves to the screen's heading (docs/behaviors.md,
+// Accessibility, Focus after an action).
 function DismissibleMessage({ message, onDismiss }: DismissibleMessageProps) {
   const ref = useRef<HTMLDivElement>(null);
   useFocusHeadingOnRemoval(ref);
@@ -121,6 +152,14 @@ function DismissibleMessage({ message, onDismiss }: DismissibleMessageProps) {
           onDismiss(message.id);
         }}
       >
+        {message.record !== undefined && (
+          <>
+            <Link placement="message" href={message.record.href}>
+              {message.record.name}
+            </Link>
+            :{" "}
+          </>
+        )}
         {message.text}
       </Message>
     </div>

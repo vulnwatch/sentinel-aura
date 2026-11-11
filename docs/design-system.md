@@ -448,6 +448,7 @@ that the code imports ship.
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
 | A deadline that has passed, an overdue milestone | `clock-alert` |
 | The other statuses of a milestone: done, pending, not applicable, not observed (Track Milestones); an observation never made (Other Values) | `circle-check`, `circle`, `circle-minus`, `circle-dashed` |
+| The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
 | A confidential Ticket | `lock` |
 | A priority override, an eligibility set by hand | `user-pen` |
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
@@ -458,7 +459,7 @@ that the code imports ship.
 | Refetch | `refresh-cw` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy, an operation in progress (Other Values) | `loader-circle` |
-| A Ticket status, a milestone status, or a kind of event that the pinned contract does not list | `circle-question-mark` |
+| A Ticket status, a milestone status, a status of a source of a CVE, or a kind of event that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
 | A link to another site | `external-link` |
 
@@ -614,7 +615,7 @@ Sidebar).
   the top of the window when the content scrolls, so that a message that
   appears is always in view. It takes at most a third of the window's height,
   beyond which its messages scroll within it, and the content scrolls so that
-  the element with the focus never lies under it, nor under the compact
+  the element with keyboard focus never lies under it, nor under the compact
   heading of a detail screen below it (Detail Screens), and so that the
   target of an anchor of the page shows below both (`docs/behaviors.md`,
   Accessibility). While it holds a message, the area is on `canvas`, with
@@ -912,7 +913,8 @@ screen, the heading row follows the lock with the label Confidential
   (Confidential Tickets), and, as a screen document states them, such as
   Excluded, EOL, Disabled, Not eligible, or a type of a CNA. It is in
   `text-12`, weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a
-  4 px radius, and 4 px of side padding, 6 px after what it follows; a second
+  4 px radius, and 4 px of side padding, 6 px after what it follows, or at
+  the end of the first line of a source of a CVE (Other Values); a second
   label follows the first, 6 px later. Its text carries its meaning, and
   assistive technologies read it as text.
 - A label that tells the signed-in user that a record waits for them, such as
@@ -940,6 +942,30 @@ screen, the heading row follows the lock with the label Confidential
   `neutral-icon` in place of its dot, as a phase that Sentinel does not
   observe does (Track Milestones), so that it is not taken for a value that
   the pinned contract does not list.
+- The status of a source of a CVE shows its mark alone, without its name,
+  centered in a place of 24 px at the start of the line of the source, 8 px
+  before the name of the source; assistive technologies read the name of the
+  status, in place of the mark, after the name of the source. Its marks: a
+  dot of 10 px in `success-icon` for `success` and in `danger-icon` for
+  `failure`; and, at 12 px, `circle` in `neutral-icon` for `missing`, an
+  attempt that found nothing, the marks of `pending` and `not_attempted`
+  above, and `circle-question-mark` in `neutral-icon` for a status that the
+  pinned contract does not list, and assistive technologies read the value
+  as received (`docs/behaviors.md`, Unknown Values). Color is not alone
+  between the two dots (Principles): Sentinel records the start of a failure
+  streak with every failure (Sentinel `docs/features/tickets/cve-service.md`,
+  CVESource Management), which a `failure` always shows below the name of
+  its source, and a `success` never does. For a user who can refetch the
+  source, the same place holds the icon button of its refetch, of 24 px with
+  `refresh-cw` at 14 px (Buttons and Links), which takes the place of the
+  mark while the button has the focus, while it is busy, and while the
+  pointer is over the line of the source, which itself does not respond to a
+  press, until Escape brings the mark back while the pointer stays there
+  (WCAG 2.2, 1.4.13 Content on Hover or Focus). Otherwise the button is
+  transparent, a press of the pointer does not reach it, and it stays in the
+  order of the focus and for assistive technologies. Where the primary
+  pointer does not hover, such as on a touch screen, a tap neither shows the
+  button nor reaches it.
 - An absent value shows as an en dash, "–", in `fg-muted`, read as "Not
   set", or as the word that names the absence precisely, also in `fg-muted`
   (`docs/behaviors.md`, Absent Values).
@@ -958,7 +984,7 @@ screen, the heading row follows the lock with the label Confidential
 |---|---|---|
 | Primary | `accent` fill, `on-accent` text, `accent-hover` under the pointer | The main action of a screen, a form, or a dialog; one per screen part |
 | Secondary | `surface` fill, `border-strong` boundary, `fg` text, `surface-hover` under the pointer | Other actions, and Cancel in a dialog |
-| Quiet | No fill or boundary, `fg` text, `surface-hover` under the pointer | Cancel in a form |
+| Quiet | No fill or boundary, `fg` text, `surface-hover` under the pointer | Cancel in a form, Clear filters (Lists), and Refetch all of the sources of a CVE |
 | Danger | `danger-solid` fill, `on-danger-solid` text, `danger-solid-hover` under the pointer | The button that confirms an action that cannot be undone, that ends another person's access, or that discards input (`docs/behaviors.md`, Confirmation); a confirmed change of a fetcher uses Primary |
 | Icon | A quiet button with an icon alone, named by its accessible name and its tooltip | Compact actions, such as dismiss and the sidebar buttons |
 
@@ -1275,10 +1301,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   starts 24 px below the line of the tabs, until the end of the page comes
   into view, and then scrolls with the page to its own end, so that its first
   sections stay beside the parts. When an element of the side column that is
-  out of view takes the focus, or is the target of an anchor, the page scrolls
-  until it shows, which for the last sections of a side column taller than the
-  window can be the end of the page. With one column, the side column scrolls
-  with the page.
+  out of view takes keyboard focus, or is the target of an anchor, the page
+  scrolls until it shows, which for the last sections of a side column
+  taller than the window can be the end of the page; a pointer that focuses
+  the control that it presses leaves the page where it is, so that the press
+  ends on the control. With one column, the side column scrolls with the
+  page.
 - On a screen with a side column, while the main content is wide enough for
   two columns, on each of its tabs, also one that takes the whole width, the
   heading row stays at the top of the window once the page has scrolled it

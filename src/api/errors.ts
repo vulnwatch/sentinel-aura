@@ -148,6 +148,61 @@ function presentErrorResponse(
   }
 }
 
+// The message of a change that failed in the message area, with whether
+// Sentinel left its outcome unknown, after a network failure or a 5xx, which
+// shows as a warning rather than an error (docs/behaviors.md, Retries and
+// Unconfirmed Changes; docs/design-system.md, Messages).
+export interface ChangeFailurePresentation {
+  message: string;
+  reference: string | undefined;
+  unconfirmed: boolean;
+}
+
+// The presentation of a change that failed, or undefined for a 401
+// (presentFailure).
+export function presentChangeFailure(
+  failure: RequestFailure,
+): ChangeFailurePresentation | undefined {
+  const presentation = presentFailure(failure, "change");
+  if (presentation === undefined) {
+    return undefined;
+  }
+  return {
+    message: presentation.message,
+    reference: presentation.reference,
+    unconfirmed:
+      failure instanceof NetworkError ||
+      (failure instanceof ApiError && failure.status >= 500),
+  };
+}
+
+// The message of a refetch of a CVE that Sentinel answers with 503
+// CVE_FETCH_FAILED: no enabled source can refetch the CVE, and Sentinel
+// published nothing, so the change did not take effect (Sentinel
+// docs/features/tickets/cve-tracking.md, Re-fetch CVE Data).
+const MESSAGE_NO_REFETCHABLE_SOURCE = "No enabled source can refetch this CVE.";
+
+// The presentation of a refetch of a CVE that failed (docs/screens/ticket.md,
+// States): 503 CVE_FETCH_FAILED says that no source can refetch it, with the
+// reference of a 5xx (docs/behaviors.md, Default Presentation by Status), and
+// every other failure gets the presentation of a change.
+export function presentRefetchFailure(
+  failure: RequestFailure,
+): ChangeFailurePresentation | undefined {
+  if (
+    failure instanceof ApiError &&
+    failure.status === 503 &&
+    failure.code === "CVE_FETCH_FAILED"
+  ) {
+    return {
+      message: MESSAGE_NO_REFETCHABLE_SOURCE,
+      reference: failure.requestId,
+      unconfirmed: false,
+    };
+  }
+  return presentChangeFailure(failure);
+}
+
 // The message of a field error of a VALIDATION_ERROR response
 // (docs/behaviors.md, Where Errors Appear).
 export const MESSAGE_INVALID_VALUE = "This value isn't valid.";

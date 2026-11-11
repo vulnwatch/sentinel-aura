@@ -1,4 +1,4 @@
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   Button as AriaButton,
@@ -12,10 +12,14 @@ export type ButtonProps = Omit<
 > & {
   // The label of the button.
   children: ReactNode;
+  // The icon before the label, at 16 px, hidden from assistive technologies,
+  // since the label names the action.
+  icon?: LucideIcon | undefined;
   // Primary for the main action of a screen, a form, or a dialog, one per
   // screen part; secondary for every other action, such as Try again; quiet,
-  // without a fill or a boundary, for Cancel in a form and Clear filters
-  // (docs/design-system.md, Buttons and Links).
+  // without a fill or a boundary, for Cancel in a form, Clear filters, and
+  // Refetch all of the sources of a CVE (docs/design-system.md, Buttons and
+  // Links).
   variant?: "primary" | "secondary" | "quiet";
   // Large in forms and dialogs, 40 px high; small in the toolbar of a list,
   // 32 px high, in text-14; medium elsewhere, 36 px high.
@@ -38,17 +42,18 @@ const SIZES = {
 } as const;
 
 // A button (docs/design-system.md, Buttons and Links). While the change that
-// it started is in progress, it is busy: it shows loader-circle before its
-// label, which it keeps, and cannot be pressed, but it keeps the focus
-// (docs/behaviors.md, Loading). A busy submit button does not submit its
-// form; Enter in a field of a form with a single field still does, so such a
-// form guards its submission itself. The spinner stands still under reduced
-// motion (docs/design-system.md, Focus and Motion). React Aria's own pending
-// state is not used: it announces the button through a reference to it, which
-// stays behind in the page when the button leaves it, as Sign in does once it
-// succeeds.
+// it started is in progress, it is busy: it shows loader-circle in place of
+// its icon, or before its label without one, keeps its label, and cannot be
+// pressed, but it keeps the focus (docs/behaviors.md, Loading). A busy submit
+// button does not submit its form; Enter in a field of a form with a single
+// field still does, so such a form guards its submission itself. The spinner
+// stands still under reduced motion (docs/design-system.md, Focus and
+// Motion). React Aria's own pending state is not used: it announces the
+// button through a reference to it, which stays behind in the page when the
+// button leaves it, as Sign in does once it succeeds.
 export function Button({
   children,
+  icon: Icon,
   variant = "secondary",
   size = "medium",
   isBusy = false,
@@ -64,11 +69,13 @@ export function Button({
       aria-disabled={isBusy || undefined}
       className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium data-disabled:opacity-60 ${VARIANTS[variant]} ${SIZES[size]} ${FOCUS_RING}`}
     >
-      {isBusy && (
+      {isBusy ? (
         <LoaderCircle
           aria-hidden
           className="size-4 animate-spin motion-reduce:animate-none"
         />
+      ) : (
+        Icon !== undefined && <Icon aria-hidden className="size-4" />
       )}
       {children}
     </AriaButton>

@@ -3,6 +3,10 @@ import type {
   CVECVSSAssessments,
   CVECVSSAssessmentsResponse,
   CVEDetail,
+  CVERefetchResponse,
+  CVERefetchResult,
+  CVESourceStatusItem,
+  CVESourceStatusResponse,
   CVSS31Assessment,
   CurrentUserResponse,
   ErrorResponse,
@@ -303,6 +307,69 @@ export function cvssResponse(
 ): Response {
   const body: CVECVSSAssessmentsResponse = { data: assessments };
   return jsonResponse(200, body);
+}
+
+// A fictional source of CVE-2099-0012, as CVE Source Status returns it: NVD,
+// registered, refetchable, and enabled, whose last attempt succeeded, with
+// the fields that a test sets.
+export function fictionalSource(
+  fields: Partial<CVESourceStatusItem> = {},
+): CVESourceStatusItem {
+  return {
+    source: "nvd",
+    status: "success",
+    fetched_at: "2099-10-08T08:00:00Z",
+    first_failed_at: null,
+    registered: true,
+    refetchable: true,
+    enabled: true,
+    ...fields,
+  };
+}
+
+// The sources of CVE-2099-0012, in the order of the API, by source: CISA KEV,
+// which cannot be refetched, without an entry; MITRE, failing since two days
+// before its last attempt; and NVD, whose last attempt succeeded.
+export function fictionalSources(): CVESourceStatusItem[] {
+  return [
+    fictionalSource({
+      source: "kev",
+      status: "missing",
+      fetched_at: "2099-10-08T04:00:00Z",
+      refetchable: false,
+    }),
+    fictionalSource({
+      source: "mitre",
+      status: "failure",
+      fetched_at: "2099-10-08T06:00:00Z",
+      first_failed_at: "2099-10-06T06:00:00Z",
+    }),
+    fictionalSource(),
+  ];
+}
+
+// CVE Source Status's response.
+export function sourcesResponse(
+  sources: CVESourceStatusItem[] = fictionalSources(),
+): Response {
+  const body: CVESourceStatusResponse = { data: sources };
+  return jsonResponse(200, body);
+}
+
+// Re-fetch CVE Data's 202 response, with the sources that a test lists.
+export function refetchResponse(
+  fields: Partial<CVERefetchResult> = {},
+): Response {
+  const body: CVERefetchResponse = {
+    data: {
+      sources_enqueued: [],
+      sources_already_pending: [],
+      sources_disabled: [],
+      sources_failed: [],
+      ...fields,
+    },
+  };
+  return jsonResponse(202, body);
 }
 
 // A fictional Product occurrence of a track, as the package tree returns it:

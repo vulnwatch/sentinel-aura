@@ -13,11 +13,12 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 The Ticket screen shows one Ticket: its heading row with its main values, and
 in the tab Overview its CVE, its package tree, the CVSS assessments of its
-CVE, and its details. Vulnerability and restricted analysts work in it all
-day; every other user reads it, as a package maintainer does a Ticket of one
-of their packages that an analyst shares, and finds in its package tree the
-tracks that wait for them (`docs/screen-map.md`, Users and Frequent Tasks;
-Areas and Screens). It shows the same Ticket to every user who can see it.
+CVE, its details, and the sources of its CVE, which an analyst refetches.
+Vulnerability and restricted analysts work in it all day; every other user
+reads it, as a package maintainer does a Ticket of one of their packages that
+an analyst shares, and finds in its package tree the tracks that wait for
+them (`docs/screen-map.md`, Users and Frequent Tasks; Areas and Screens). It
+shows the same Ticket to every user who can see it.
 
 ## Access
 
@@ -26,8 +27,10 @@ Ticket that Get Ticket returns to the user, whose scope, access grants, and
 package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
-The screen offers no action, so it is the same for every user, except that it
-marks for a maintainer the tracks that wait for them (Packages).
+The screen is the same for every user, except that it offers Refetch to a
+user who holds `triage_ticket` (Actions; Sentinel
+`docs/features/identity/rbac.md`, Endpoint Permission Map (CVEs)), and marks
+for a maintainer the tracks that wait for them (Packages).
 
 ## Navigation
 
@@ -43,9 +46,10 @@ marks for a maintainer the tracks that wait for them (Packages).
   of the URL in the browser history, and keeps its anchor
   (`docs/behaviors.md`, Invalid Search Parameters).
 - Anchors: `#cve`, the CVE, `#packages`, the package tree, `#cvss`, the CVSS
-  assessments, which a Ticket without a CVE lacks, and `#details`, the
-  details; the reads of Overview are the Ticket, its duplicates, the CVSS
-  assessments of its CVE, and, for a maintainer, their work on the Ticket
+  assessments, `#details`, the details, and `#sources`, the sources of the
+  CVE; a Ticket without a CVE lacks the CVSS assessments and the sources. The
+  reads of Overview are the Ticket, its duplicates, the CVSS assessments and
+  the sources of its CVE, and, for a maintainer, their work on the Ticket
   (`docs/design-system.md`, Main Content).
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
@@ -80,7 +84,10 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
 
 **Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE, the
 package tree, and the CVSS assessments in the main column, in this order, and
-the details in the side column; in one column, the details above the CVE.
+the details and the sources of the CVE in the side column; in one column, the
+details above the CVE, and the sources below the CVSS assessments. The
+sources keep their place in the order of the page in both layouts, so they
+stay, with the focus and a refetch in progress, when the layout changes.
 
 **CVE**, the first part of the main column, from `cve` of Get Ticket (Sentinel
 `docs/features/tickets/tickets.md`, CVEDetail):
@@ -206,7 +213,8 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 - **The tracks that wait for the signed-in user.** For a user whom
   `maintainers` lists for a package that is not excluded, the screen reads
   their work on the Ticket, `GET /api/v1/my/packages/tickets/{ticket_id}`,
-  when Overview opens and whenever the tab returns to the foreground, and
+  when Overview opens, whenever the tab returns to the foreground, and when a
+  fetch of a source of the CVE ends (Sources of the CVE), and
   marks each track that it returns as pending, matched by package name and
   reference, with the label "Needs your action" and a bar of 3 px in `link`
   in place of its line (`docs/design-system.md`, Labels; Sentinel
@@ -268,13 +276,102 @@ contract does not list shows as received, without the "v"
 | Created | `created_at`, a date and time |
 | Last modified | `updated_at`, a date and time |
 
+**Sources of the CVE**, the last section of the side column, for a Ticket
+with a CVE, from CVE Source Status, `GET /api/v1/cves/{cve_id}/sources`, in
+the order of the API, by source, as a list (Sentinel
+`docs/features/tickets/cve-service.md`, CVE Source Status):
+
+- Each source on a line of its own: the mark of its status alone, which
+  names the status for assistive technologies after the name of the source
+  (`docs/design-system.md`, Other Values): Success a green dot, Failure a red
+  dot, Missing a hollow circle, Pending turning, as an operation in progress,
+  and Not attempted a dashed circle, as an observation never made; a status
+  that the pinned contract does not list shows a circle with a question mark
+  (`docs/behaviors.md`, Unknown Values). Then the name of the source, at
+  weight 500, as Sentinel names it, NVD, MITRE, Linux Kernel CNA, GHSA, Red
+  Hat, OSV, CISA KEV, or EPSS (Sentinel
+  `docs/features/tickets/cve-tracking.md`, CVE Sources), or as received for a
+  source that the pinned contract does not list; and, at the end of the line,
+  the label Disabled for a registered source that is not enabled, or Retired
+  for one that is no longer registered (`docs/design-system.md`, Labels).
+- Below the name, each on a line of its own across the width of the line, in
+  `text-13` and `fg-muted`: "Last attempt" and the date and time of the last
+  completed attempt, `fetched_at`, or an absent value without one
+  (`docs/behaviors.md`, Absent Values), or, for CISA KEV in Success,
+  "Updated" and the date and time of the last change of its evidence, which
+  is what `fetched_at` then is; and, during a failure streak, "Failing since"
+  and the date and time of its start, `first_failed_at`, which a fetch in
+  progress keeps (Sentinel `docs/features/tickets/cve-service.md`, CVE Source
+  Status, Response schema).
+- Refetch of the source in place of its mark, and Refetch all at the end of
+  the heading (Actions).
+- Without sources, "No sources.".
+- While the read shows a source Pending, the sources are read again every
+  5 seconds (`docs/behaviors.md`, Loading). When a read no longer shows
+  Pending a source that an earlier read of the screen showed so, the screen
+  announces what it shows of each such source, in one announcement in the
+  order of the sources, such as "MITRE: Failure. NVD: Success.", or "NVD: no
+  new result." when its `fetched_at` is the one of the read that showed it
+  Pending, as when Sentinel did not run the fetch or cannot tell that it is
+  still pending (Sentinel `docs/features/tickets/cve-service.md`, CVE Source
+  Status, Completed timestamps during pending; Redis graceful degradation);
+  it then reads again the Ticket, its duplicates, the work of a maintainer on
+  it, and the CVSS assessments (`docs/behaviors.md`, Outcome of a Change).
+
+## Actions
+
+**Refetch**, Re-fetch CVE Data, `POST /api/v1/cves/{cve_id}/refetch`, for a
+user who holds `triage_ticket` (Sentinel
+`docs/features/tickets/cve-tracking.md`, Re-fetch CVE Data):
+
+- Refetch of a source, in the place of the mark of its status
+  (`docs/design-system.md`, Other Values), named after the source, such as
+  "Refetch NVD", sends the request with `source`. It is offered for a source that is registered,
+  refetchable, and enabled, whose status is not Pending nor one that the
+  pinned contract does not list (`docs/behaviors.md`, Unknown Values): not
+  for CISA KEV, which cannot fetch one CVE, nor for a disabled or retired
+  source. A read that shows its source Pending removes it, also while its
+  request is in progress, whose message still shows. Where the primary
+  pointer does not hover, such as on a touch screen, Refetch all refetches
+  the sources.
+- A press of the pointer on Refetch of a source leaves the focus where it
+  was. When a new read removes Refetch of a source while it has the focus, as when its source
+  turns Pending after a press of the keyboard, the focus moves to the
+  screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
+  action); otherwise the focus stays where it is, also after an assistive
+  technology pressed it without moving the focus.
+- Refetch all, a quiet button with `refresh-cw` at the end of the heading of
+  the section (`docs/design-system.md`, Buttons and Links), sends
+  the request without `source`, for every source that can be refetched,
+  which Sentinel skips while its fetch is pending (Sentinel
+  `docs/features/tickets/cve-service.md`, Database-Free Publication). It
+  shows while a source is registered, refetchable, and enabled.
+- Neither asks for confirmation (`docs/behaviors.md`, Confirmation). Each is
+  busy while its request is in progress (`docs/behaviors.md`, Loading).
+- Sentinel accepts the refetch with `202`, and one message says that it
+  started (`docs/behaviors.md`, Outcome of a Change): "Refetch of NVD
+  started." or "Refetch started.", or, when Sentinel returns no source as
+  newly enqueued, "Refetch of NVD was already in progress." or "Refetch was
+  already in progress."; followed by the sources that it skipped, such as
+  "OSV is disabled and was skipped." or "GHSA and OSV are disabled and were
+  skipped."; and by the sources whose fetch Sentinel did not confirm, such
+  as "Sentinel didn't confirm the refetch of MITRE: it may still start."
+  (Sentinel `docs/features/tickets/cve-service.md`, `FetchDispatchResult`).
+  The message is in the `warning` tone when it names such a source, and in
+  the `info` tone otherwise. A message that shows after the user left the
+  screen starts with the Ticket, as a link to its screen, such as "SNTL-42:
+  Refetch of NVD started.".
+- Whatever its outcome, the screen then reads its data again, the sources
+  included.
+
 ## States
 
 - **Loading.** The heading row and the tabs show at once; the panel of
   Overview shows the loading indicator until the Ticket arrives, the value of
-  Duplicates until its read arrives, and the part CVSS assessments until
-  theirs arrives (`docs/behaviors.md`, Loading). Until the read of the work
-  of a maintainer arrives, no track is marked.
+  Duplicates until its read arrives, and the part CVSS assessments and the
+  section Sources of the CVE until theirs arrives (`docs/behaviors.md`,
+  Loading). Until the read of the work of a maintainer arrives, no track is
+  marked.
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -283,19 +380,30 @@ contract does not list shows as received, without the "v"
   such as when the tab returns to the foreground, keeps the Ticket shown, with
   its warning at the top of the panel of the tab, unless it is a `403` or a
   `404`, which replaces the screen. The failure of the read of the duplicates
-  shows in place of their value, and that of the read of the CVSS
-  assessments in place of the part (`docs/design-system.md`, Tables), each
-  with Try again where the failure offers it, and leaves the rest of the
-  screen usable. When the read of the work of a maintainer fails, a
-  `warning` message above the package tree says "The tracks that wait for
-  you couldn't be shown.", followed by the message of its status, with Try
-  again where the failure offers it, and the package tree stays usable; once
+  shows in place of their value, that of the read of the CVSS assessments in
+  place of the part (`docs/design-system.md`, Tables), and that of the read
+  of the sources in place of the section, without Refetch all, each with Try
+  again where the failure offers it, and leaves the rest of the screen
+  usable. When the read of the work of a maintainer fails, a `warning`
+  message above the package tree says "The tracks that wait for you couldn't
+  be shown.", followed by the message of its status, with Try again where
+  the failure offers it, and the package tree stays usable; once
   a read of it has succeeded, a later read that fails keeps its marks and
   says "The tracks that wait for you couldn't be updated.", followed by the
   message of its status, unless it is a `403` or a `404`, which removes them;
   while it is sent again, the marks that stay shown are marked as being
-  updated (`docs/behaviors.md`, Where Errors Appear; Loading). The screen
-  handles no error code specifically.
+  updated (`docs/behaviors.md`, Where Errors Appear; Loading).
+- **Errors of Refetch.** A failure follows the default presentation of a
+  change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
+  after which the fetch may still run (`docs/behaviors.md`, Retries and
+  Unconfirmed Changes). The screen handles one error code specifically:
+  `503 CVE_FETCH_FAILED`, which says that no enabled source can refetch the
+  CVE, so that Sentinel started nothing, shows "No enabled source can
+  refetch this CVE." with its reference, in the `danger` tone rather than as
+  a change that Sentinel did not confirm (Sentinel
+  `docs/features/tickets/cve-tracking.md`, Re-fetch CVE Data). Like any
+  other, its message names the Ticket when it shows after the user left the
+  screen.
 - **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
   names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow
   and text size).
@@ -306,11 +414,13 @@ contract does not list shows as received, without the "v"
   Between Areas; Browser History; Contract URLs; Roles
 - `docs/behaviors.md` — Errors; Invalid Search Parameters; Unknown Values;
   Links to Other Sites; Loading and Empty States; Dates and Times;
-  Accessibility; Wording; Representation of a User
-- `docs/design-system.md` — Font; Main Content; Values; Severity; Deadline
-  Badge; Track Milestones; Labels; Other Values; Buttons and Links; Tables;
-  Detail Screens; Forms; Messages; Loading; Errors in Place of Content; Menus,
-  Popovers, and Tooltips; Icons by Need; Representation of a User
+  Confirmations and Outcomes; Accessibility; Wording; Representation of a
+  User
+- `docs/design-system.md` — Font; Focus and Motion; Main Content; Values;
+  Severity; Deadline Badge; Track Milestones; Labels; Other Values; Buttons
+  and Links; Tables; Detail Screens; Forms; Messages; Loading; Errors in
+  Place of Content; Menus, Popovers, and Tooltips; Icons by Need;
+  Representation of a User
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
   Transitions; Duplicate Handling; Confidential Tickets (Identifier
   Disclosure Boundary; Coordinated Release Date); Response Schemas (Shared
@@ -328,12 +438,16 @@ contract does not list shows as received, without the "v"
   Phases
 - Sentinel `docs/features/tickets/ticket-priority.md` — Automatic Priority
   Basis; Manual Override
-- Sentinel `docs/features/tickets/cve-tracking.md` — Get CVE; External
-  Identifiers; CVE Rejection Handling
+- Sentinel `docs/features/tickets/cve-tracking.md` — CVE Sources; Get CVE;
+  External Identifiers; CVE Rejection Handling; Re-fetch CVE Data
+- Sentinel `docs/features/tickets/cve-service.md` — Fetch Orchestration:
+  `trigger_on_demand_fetch()` (Database-Free Publication;
+  `FetchDispatchResult`); CVE Source Status
 - Sentinel `docs/features/tickets/cvss-scoring.md` — Core Distinctions;
   Version Precedence; Severity; Eligibility Score Resolution; API Endpoints
   (Shared Assessment Item; Get CVSS Assessments for a CVE)
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility; Endpoint Permission Map (CVEs)
 - Sentinel `docs/api-spec.md` — Ticket Identifier Resolution; CVE Identifier
-  Resolution; CVE Accessibility Check; Pagination
+  Resolution; CVE Accessibility Check; Pagination; Infrastructure Dependency
+  Errors (HTTP 503)

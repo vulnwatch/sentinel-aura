@@ -3,6 +3,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  linkOptions,
   Outlet,
   RouterProvider,
   type AnyRouter,
@@ -18,6 +19,7 @@ import {
   MessageAreaProvider,
   useShowMessage,
 } from "./message-area";
+import { RouterLinks } from "./router-links";
 import { ScreenHeading } from "./screen-heading";
 
 // The message area at the top of the main content (docs/behaviors.md,
@@ -64,6 +66,25 @@ function MessageScreen({ title }: { title: string }) {
       >
         Start a change
       </Button>
+      <Button
+        onPress={() => {
+          endChange = () => {
+            show({
+              tone: "success",
+              text: "Priority changed to P2.",
+              record: {
+                name: "SNTL-42",
+                href: linkOptions({
+                  to: "/tickets/$ticketId",
+                  params: { ticketId: "SNTL-42" },
+                }),
+              },
+            });
+          };
+        }}
+      >
+        Start a change of SNTL-42
+      </Button>
       <div className="h-[200dvh]" />
       <Button>Next control</Button>
       <div className="h-dvh" />
@@ -71,15 +92,17 @@ function MessageScreen({ title }: { title: string }) {
   );
 }
 
-function createTestRouter(): AnyRouter {
+function createTestRouter(path: string): AnyRouter {
   const root = createRootRoute({
     component: () => (
-      <MessageAreaProvider>
-        <main>
-          <MessageArea />
-          <Outlet />
-        </main>
-      </MessageAreaProvider>
+      <RouterLinks>
+        <MessageAreaProvider>
+          <main>
+            <MessageArea />
+            <Outlet />
+          </main>
+        </MessageAreaProvider>
+      </RouterLinks>
     ),
   });
   const first = createRoute({
@@ -92,17 +115,41 @@ function createTestRouter(): AnyRouter {
     path: "/second",
     component: () => <MessageScreen title="Second" />,
   });
+  // The screen of a record, and a tab of it at a path under its path.
+  const record = createRoute({
+    getParentRoute: () => root,
+    path: "/tickets/SNTL-42",
+    component: () => <MessageScreen title="SNTL-42" />,
+  });
+  const recordTab = createRoute({
+    getParentRoute: () => root,
+    path: "/tickets/SNTL-42/audit-log",
+    component: () => <MessageScreen title="Audit log of SNTL-42" />,
+  });
+  // A record whose path starts with that of the record, which is another
+  // screen.
+  const otherRecord = createRoute({
+    getParentRoute: () => root,
+    path: "/tickets/SNTL-420",
+    component: () => <MessageScreen title="SNTL-420" />,
+  });
   return createRouter({
-    routeTree: root.addChildren([first, second]),
-    history: createMemoryHistory({ initialEntries: ["/first"] }),
+    routeTree: root.addChildren([
+      first,
+      second,
+      record,
+      recordTab,
+      otherRecord,
+    ]),
+    history: createMemoryHistory({ initialEntries: [path] }),
   });
 }
 
-async function renderArea() {
-  const router = createTestRouter();
+async function renderArea(path = "/first", title = "First") {
+  const router = createTestRouter(path);
   const screen = await render(<RouterProvider router={router} />);
   await expect
-    .element(screen.getByRole("heading", { level: 1, name: "First" }))
+    .element(screen.getByRole("heading", { level: 1, name: title }))
     .toBeVisible();
   return { router, screen };
 }
@@ -210,7 +257,9 @@ test("shows a message on the screen that the user is on when it appears, until a
 
 test("shows the message of a change that ends after the user left its screen on the screen that the user is on", async () => {
   const { router, screen } = await renderArea();
-  await screen.getByRole("button", { name: "Start a change" }).click();
+  await screen
+    .getByRole("button", { name: "Start a change", exact: true })
+    .click();
   router.history.push("/second");
   await expect
     .element(screen.getByRole("heading", { level: 1, name: "Second" }))
@@ -227,6 +276,76 @@ test("shows the message of a change that ends after the user left its screen on 
     .element(screen.getByText("First: change ended."))
     .not.toBeInTheDocument();
 });
+
+test.each([
+  ["another screen", "/second", "Second"],
+  [
+    "the screen of a record whose path starts with that of the record",
+    "/tickets/SNTL-420",
+    "SNTL-420",
+  ],
+])(
+  "names the record of a change that ends on %s, with a link to its screen in the color of the text, underlined, at weight 500",
+  async (_, path, title) => {
+    const { router, screen } = await renderArea("/tickets/SNTL-42", "SNTL-42");
+    await screen
+      .getByRole("button", { name: "Start a change of SNTL-42" })
+      .click();
+    router.history.push(path);
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: title }))
+      .toBeVisible();
+
+    endChange?.();
+
+    const message = screen.getByText("SNTL-42: Priority changed to P2.");
+    await expect.element(message).toBeVisible();
+    const link = message.getByRole("link", { name: "SNTL-42" });
+    await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-42");
+    const style = getComputedStyle(link.element());
+    expect(style.color).toBe(getComputedStyle(message.element()).color);
+    expect([style.textDecorationLine, style.fontWeight]).toEqual([
+      "underline",
+      "500",
+    ]);
+
+    await link.click();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "SNTL-42" }))
+      .toBeVisible();
+  },
+);
+
+test.each([
+  ["on its own screen", undefined, "SNTL-42"],
+  [
+    "on a tab of its screen",
+    "/tickets/SNTL-42/audit-log",
+    "Audit log of SNTL-42",
+  ],
+])(
+  "does not name the record of a change that ends %s",
+  async (_, path, title) => {
+    const { router, screen } = await renderArea("/tickets/SNTL-42", "SNTL-42");
+    await screen
+      .getByRole("button", { name: "Start a change of SNTL-42" })
+      .click();
+    if (path !== undefined) {
+      router.history.push(path);
+    }
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: title }))
+      .toBeVisible();
+
+    endChange?.();
+
+    await expect
+      .element(screen.getByText("Priority changed to P2.", { exact: true }))
+      .toBeVisible();
+    expect(screen.getByRole("link").query()).toBeNull();
+  },
+);
 
 test("keeps its messages when the search of the same screen changes", async () => {
   const { router, screen } = await renderArea();
@@ -269,8 +388,9 @@ test("keeps the element that takes the focus out from under it while it stays at
   await expect
     .poll(() => next.element().getBoundingClientRect().top)
     .toBeLessThan(area());
+  // The control before Next control.
   screen
-    .getByRole("button", { name: "Start a change" })
+    .getByRole("button", { name: "Start a change of SNTL-42" })
     .element()
     .focus({ preventScroll: true });
 

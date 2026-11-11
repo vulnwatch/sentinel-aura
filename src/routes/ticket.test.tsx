@@ -18,10 +18,12 @@ import {
   cvssResponse,
   errorResponse,
   fictionalCve,
+  fictionalSource,
   fictionalTicket,
   fictionalTicketDetail,
   jsonResponse,
   OTHER_USER,
+  sourcesResponse,
   stubApi,
   ticketPage,
   ticketResponse,
@@ -34,6 +36,7 @@ import {
 const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
 const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
+const SOURCES = "/api/v1/cves/CVE-2099-0012/sources";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -71,16 +74,20 @@ interface Stub {
   duplicates: (query: URLSearchParams) => Response | Promise<Response>;
   // The response to the read of the CVSS assessments of the CVE.
   cvss: () => Response | Promise<Response>;
+  // The response to the read of the sources of the CVE.
+  sources: () => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst, Get Ticket, the read
-// of the duplicates, and the read of the CVSS assessments, as the test sets
-// them, and returns the spy, whose calls name the requests.
+// of the duplicates, the read of the CVSS assessments, and the read of the
+// sources of the CVE, as the test sets them, and returns the spy, whose calls
+// name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     ticket: () => ticketResponse(fictionalTicketDetail()),
     duplicates: () => ticketPage([]),
     cvss: () => cvssResponse(),
+    sources: () => sourcesResponse(),
     ...fields,
   };
   return stubApi((request) => {
@@ -95,6 +102,9 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path === CVSS) {
       return stub.cvss();
+    }
+    if (request.path === SOURCES) {
+      return stub.sources();
     }
     return errorResponse(404, "RESOURCE_NOT_FOUND");
   });
@@ -162,6 +172,19 @@ function longCve(): CVEDetail {
   });
 }
 
+// Every source of a CVE, each that can be refetched but CISA KEV, so that
+// the side column is taller than a short window.
+const EVERY_SOURCE = [
+  "epss",
+  "ghsa",
+  "kernel",
+  "kev",
+  "mitre",
+  "nvd",
+  "osv",
+  "redhat",
+].map((source) => fictionalSource({ source, refetchable: source !== "kev" }));
+
 // The terms of a list, in their order.
 function textsOf(locator: Locator): (string | null)[] {
   return locator.elements().map((element) => element.textContent);
@@ -200,6 +223,16 @@ function boxOf(locator: Locator): DOMRect {
   return locator.element().getBoundingClientRect();
 }
 
+// The scroll padding of the page, in CSS pixels. It follows the height of the
+// heading row through a ResizeObserver (src/components/fixed-top.ts), which
+// reports a change in the next frame, after the commit that makes it, so a
+// test reads it, and what sticks below it, with an assertion that retries.
+function scrollPaddingTop(): number {
+  return Number.parseFloat(
+    getComputedStyle(document.documentElement).scrollPaddingTop,
+  );
+}
+
 describe("the read of the Ticket", () => {
   test("names the screen Ticket until the Ticket arrives, with its tabs, then by its identifier", async () => {
     const response = later();
@@ -233,6 +266,7 @@ describe("the read of the Ticket", () => {
         `${TICKETS}/SNTL-12`,
         `${TICKETS}?${DUPLICATES_OF_SNTL_12}`,
         CVSS,
+        SOURCES,
       ]);
   });
 
@@ -533,14 +567,12 @@ describe("the layout", () => {
     expect(getComputedStyle(title.element()).fontSize).toBe("20px");
     // The window scrolls an element into view below the heading row, which
     // can stay at the top of the window.
-    expect(
-      Number.parseFloat(
-        getComputedStyle(document.documentElement).scrollPaddingTop,
-      ),
-    ).toBe(
-      boxOf(screen.getByRole("tab", { name: "Overview" })).bottom -
-        boxOf(title).top,
-    );
+    await expect
+      .poll(scrollPaddingTop)
+      .toBe(
+        boxOf(screen.getByRole("tab", { name: "Overview" })).bottom -
+          boxOf(title).top,
+      );
 
     window.scrollTo(0, 120);
 
@@ -554,12 +586,10 @@ describe("the layout", () => {
     // The window scrolls an element into view below the compact heading,
     // whose line the tabs stand on, and the details stay 24 px below it.
     const bottom = boxOf(screen.getByRole("tab", { name: "Overview" })).bottom;
-    expect(
-      Number.parseFloat(
-        getComputedStyle(document.documentElement).scrollPaddingTop,
-      ),
-    ).toBe(bottom);
-    expect(boxOf(region(screen, "Details")).top).toBe(bottom + 24);
+    await expect.poll(scrollPaddingTop).toBe(bottom);
+    await expect
+      .poll(() => boxOf(region(screen, "Details")).top)
+      .toBe(bottom + 24);
     // The tabs, in the compact heading, are 36 px high.
     expect(boxOf(screen.getByRole("tab", { name: "Overview" })).height).toBe(
       36,
@@ -570,6 +600,61 @@ describe("the layout", () => {
     await expect
       .poll(() => getComputedStyle(title.element()).fontSize)
       .toBe("20px");
+  });
+
+  test("scrolls the page until an element of a side column taller than the window shows when it takes the focus from the keyboard, at the end of the page and back above it, below the compact heading", async () => {
+    await page.viewport(1280, 300);
+    stubTicket({
+      ticket: () => ticketResponse(fictionalTicketDetail({ cve: longCve() })),
+      sources: () => sourcesResponse(EVERY_SOURCE),
+    });
+    const { screen } = await renderTicket();
+    const sources = region(screen, "Sources of the CVE");
+    const last = sources.getByRole("button", { name: "Refetch Red Hat" });
+    await expect.element(last).toBeVisible();
+    expect(boxOf(last).top).toBeGreaterThan(window.innerHeight);
+
+    last.element().focus({ focusVisible: true });
+
+    await expect.element(last).toBeInViewport({ ratio: 1 });
+    await expect.element(last).toHaveFocus();
+
+    // Back to Refetch all, which the end of the page leaves above the
+    // compact heading.
+    const all = sources.getByRole("button", { name: "Refetch all" });
+    const tabs = () => boxOf(screen.getByRole("tab", { name: "Overview" }));
+    expect(boxOf(all).top).toBeLessThan(tabs().bottom);
+
+    all.element().focus({ focusVisible: true });
+
+    await expect
+      .poll(() => boxOf(all).top)
+      .toBeGreaterThanOrEqual(tabs().bottom);
+    await expect.element(all).toBeInViewport({ ratio: 1 });
+  });
+
+  test("leaves the page where it is when a pointer, not the keyboard, gives the focus to an element of the side column out of view", async () => {
+    await page.viewport(1280, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket();
+    const refetch = region(screen, "Sources of the CVE").getByRole("button", {
+      name: "Refetch NVD",
+    });
+    await expect.element(refetch).toBeVisible();
+    // The last interaction is a pointer's, after which the browser does not
+    // show the focus that a script moves.
+    await region(screen, "CVE-2099-0012")
+      .getByText("A fictional description of CVE-2099-0012.")
+      .click();
+
+    refetch.element().focus();
+    const scrolled = window.scrollY;
+    await new Promise((done) => requestAnimationFrame(done));
+    await new Promise((done) => requestAnimationFrame(done));
+
+    await expect.element(refetch).toHaveFocus();
+    expect(refetch.element().matches(":focus-visible")).toBe(false);
+    expect(window.scrollY).toBe(scrolled);
   });
 
   test("lets the heading row scroll away in one column", async () => {
@@ -600,6 +685,14 @@ describe("the layout", () => {
     );
 
     const { screen } = await renderTicket();
+    // The sources, which the screen reads on their own, with Refetch all.
+    await expect
+      .element(
+        region(screen, "Sources of the CVE").getByRole("button", {
+          name: "Refetch all",
+        }),
+      )
+      .toBeVisible();
 
     expect(document.documentElement.scrollWidth).toBe(
       document.documentElement.clientWidth,
@@ -881,7 +974,7 @@ describe("the details", () => {
       const link = screen.getByRole("link", { name: "SNTL-21" });
       await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-21");
       expect(valueOf(screen, "Original").contains(link.element())).toBe(true);
-      expect(requestsOf(spy)).toEqual([`${TICKETS}/SNTL-12`, CVSS]);
+      expect(requestsOf(spy)).toEqual([`${TICKETS}/SNTL-12`, CVSS, SOURCES]);
     });
 
     test("link to each duplicate, with the lock of a confidential one", async () => {
@@ -1298,26 +1391,63 @@ describe("the anchor of the URL", () => {
       .toBeInViewport();
   });
 
-  test("shows the top of the screen when the Ticket lacks its target", async () => {
-    await page.viewport(900, 300);
-    const duplicates = later();
-    // The CVSS assessments of a Ticket without a CVE.
-    stubTicket({
-      ticket: () => ticketResponse(fictionalTicketDetail({ cve: null })),
-      duplicates: () => duplicates.promise,
-    });
-    const { screen } = await renderTicket("/tickets/SNTL-12#cvss");
-    // The page lies elsewhere, without the user having scrolled it.
-    window.scrollTo(0, 10);
-    await expect.poll(() => window.scrollY).toBe(10);
+  test.each([
+    ["two columns", 1280],
+    ["one column", 900],
+  ])(
+    "shows the sources of the CVE in %s once their read has settled",
+    async (_, width) => {
+      await page.viewport(width, 300);
+      const sources = later();
+      stubTicket({
+        ticket: () => ticketResponse(fictionalTicketDetail({ cve: longCve() })),
+        sources: () => sources.promise,
+      });
+      const { screen } = await renderTicket("/tickets/SNTL-12#sources");
+      await expect
+        .poll(() => valueOf(screen, "Duplicates").textContent)
+        .toBe("None");
+      expect(window.scrollY).toBe(0);
 
-    duplicates.resolve(ticketPage([]));
+      // Every source, so that the window shows the start of the sources
+      // before the end of the page.
+      sources.resolve(sourcesResponse(EVERY_SOURCE));
 
-    await expect
-      .poll(() => valueOf(screen, "Duplicates").textContent)
-      .toBe("None");
-    await expect.poll(() => window.scrollY).toBe(0);
-  });
+      await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+      const title = region(screen, "Sources of the CVE").getByRole("heading", {
+        level: 2,
+        name: "Sources of the CVE",
+      });
+      await expect.element(title).toBeInViewport();
+      // Below the tabs, and so below the compact heading with two columns.
+      const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
+      expect(boxOf(title).top).toBeGreaterThanOrEqual(tabs.bottom);
+    },
+  );
+
+  test.each(["cvss", "sources"])(
+    "shows the top of the screen when the Ticket lacks the target %s",
+    async (anchor) => {
+      await page.viewport(900, 300);
+      const duplicates = later();
+      // The CVSS assessments and the sources of a Ticket without a CVE.
+      stubTicket({
+        ticket: () => ticketResponse(fictionalTicketDetail({ cve: null })),
+        duplicates: () => duplicates.promise,
+      });
+      const { screen } = await renderTicket(`/tickets/SNTL-12#${anchor}`);
+      // The page lies elsewhere, without the user having scrolled it.
+      window.scrollTo(0, 10);
+      await expect.poll(() => window.scrollY).toBe(10);
+
+      duplicates.resolve(ticketPage([]));
+
+      await expect
+        .poll(() => valueOf(screen, "Duplicates").textContent)
+        .toBe("None");
+      await expect.poll(() => window.scrollY).toBe(0);
+    },
+  );
 
   test("leaves the page where the user scrolled it with the keyboard meanwhile", async () => {
     await page.viewport(900, 300);
