@@ -1591,7 +1591,9 @@ type SourcesRead = ReturnType<typeof useCveSources>;
 // Reads again the data of the tab of a Ticket with a CVE, as when the tab
 // returns to the foreground: the Ticket, its duplicates, the work of a
 // maintainer on it, and the CVSS assessments of its CVE, with its sources
-// where asked. A read that the tab does not send, such as the duplicates of a
+// where asked; the same reads as those of the tab that the anchor of the URL
+// waits for (TicketOverview), so that a read added to the tab is added to
+// both. A read that the tab does not send, such as the duplicates of a
 // duplicate, is not sent.
 function useReadAgain(ticketId: string, cveId: string) {
   const client = useQueryClient();
@@ -1629,8 +1631,8 @@ function pendingOf(sources: readonly CVESourceStatusItem[]): PendingSources {
 }
 
 // What a read shows of the fetches that an earlier read showed pending and
-// that it no longer shows so, in the order of the sources, such as "NVD:
-// Failure. MITRE: no new result.": the status of each, or that it shows no
+// that it no longer shows so, in the order of the sources, such as "MITRE:
+// no new result. NVD: Failure.": the status of each, or that it shows no
 // new result when the time of its last completed attempt has not changed,
 // as when Sentinel did not run the fetch, or does not tell that it is still
 // pending (Sentinel docs/features/tickets/cve-service.md, CVE Source Status,
@@ -1854,7 +1856,7 @@ function SourceItem({ source, refetch }: SourceItemProps) {
   return (
     <li className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="font-medium wrap-break-word">
             {sourceName(source.source)}
           </span>
@@ -1972,13 +1974,13 @@ function settled(read: TabRead): boolean {
 }
 
 // Shows the target of the anchor of the URL once every read of the tab has
-// settled, unless the user has scrolled meanwhile, so that a read that arrives later does not move the target out
-// of view; the window scrolls it below what stays at the top of the window
-// (src/components/fixed-top.ts), also in the side column, which can show it
-// only toward the end of the page (showAnchorTarget). An anchor whose target
-// the Ticket lacks,
-// such as a part that it does not have, shows the top of the screen
-// (docs/design-system.md, Main Content).
+// settled, unless the user has scrolled meanwhile, so that a read that
+// arrives later does not move the target out of view; the window scrolls it
+// below what stays at the top of the window (src/components/fixed-top.ts),
+// also in the side column, which can show it only toward the end of the page
+// (showAnchorTarget). An anchor whose target the Ticket lacks, such as a part
+// that it does not have, shows the top of the screen (docs/design-system.md,
+// Main Content).
 function useAnchorTarget(reads: readonly TabRead[]) {
   const ready = reads.every(settled);
   const hash = useRouterState({ select: (state) => state.location.hash });
@@ -2028,6 +2030,7 @@ function TicketOverview() {
   const yourWork = useYourWork(ticket);
   const cvss = useCvssAssessments(ticket);
   const sources = useCveSources(ticket);
+  // The reads of the tab, which useReadAgain reads again too.
   useAnchorTarget([duplicates, yourWork.read, cvss, sources]);
   return (
     <DetailColumns

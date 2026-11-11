@@ -50,9 +50,7 @@ for a maintainer the tracks that wait for them (Packages).
   CVE; a Ticket without a CVE lacks the CVSS assessments and the sources. The
   reads of Overview are the Ticket, its duplicates, the CVSS assessments and
   the sources of its CVE, and, for a maintainer, their work on the Ticket
-  (`docs/design-system.md`, Main Content). With two columns, the window shows
-  the sources at the end of a side column taller than it only toward the end
-  of the page (`docs/design-system.md`, Detail Screens).
+  (`docs/design-system.md`, Main Content).
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
   would lead to this screen (`docs/screen-map.md`, Links Between Areas). Users
@@ -331,23 +329,24 @@ user who holds `triage_ticket` (Sentinel
   When a new read removes it while it has the focus, the focus moves to the
   screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
   action).
-- Refetch all, a small secondary button with `refresh-cw` at the end of the
-  heading of the section, sends the request without `source`, for every
-  source that can be refetched. It shows while one can.
+- Refetch all, a secondary button with `refresh-cw` at the end of the heading
+  of the section, sends the request without `source`, for every source that
+  can be refetched. It shows while one can.
 - Neither asks for confirmation (`docs/behaviors.md`, Confirmation). Each is
   busy while its request is in progress (`docs/behaviors.md`, Loading).
-- Sentinel accepts the refetch with `202`, and the message area says that it
-  started, in the `info` tone (`docs/behaviors.md`, Outcome of a Change):
-  "Refetch of NVD started." or "Refetch started.", or, when Sentinel
-  returns no source as newly enqueued, "Refetch of NVD was already in
-  progress." or "Refetch was already in progress."; followed by the sources
-  that it skipped, such as "OSV is disabled and was skipped." or "GHSA and
-  OSV are disabled and were skipped."; and, in the `warning` tone, the
-  sources whose fetch Sentinel did not confirm, such as "Sentinel didn't
-  confirm the refetch of MITRE: it may still start." (Sentinel
-  `docs/features/tickets/cve-service.md`, `FetchDispatchResult`). A message
-  that shows after the user left the screen starts with the Ticket, as a
-  link to its screen, such as "SNTL-42: Refetch of NVD started.".
+- Sentinel accepts the refetch with `202`, and one message says that it
+  started (`docs/behaviors.md`, Outcome of a Change): "Refetch of NVD
+  started." or "Refetch started.", or, when Sentinel returns no source as
+  newly enqueued, "Refetch of NVD was already in progress." or "Refetch was
+  already in progress."; followed by the sources that it skipped, such as
+  "OSV is disabled and was skipped." or "GHSA and OSV are disabled and were
+  skipped."; and by the sources whose fetch Sentinel did not confirm, such
+  as "Sentinel didn't confirm the refetch of MITRE: it may still start."
+  (Sentinel `docs/features/tickets/cve-service.md`, `FetchDispatchResult`).
+  The message is in the `warning` tone when it names such a source, and in
+  the `info` tone otherwise. A message that shows after the user left the
+  screen starts with the Ticket, as a link to its screen, such as "SNTL-42:
+  Refetch of NVD started.".
 - Whatever its outcome, the screen then reads its data again, the sources
   included.
 
@@ -371,31 +370,26 @@ user who holds `triage_ticket` (Sentinel
   place of the part (`docs/design-system.md`, Tables), and that of the read
   of the sources in place of the section, without Refetch all, each with Try
   again where the failure offers it, and leaves the rest of the screen
-  usable. Once the sources have shown, a later read of them that fails, such
-  as a read at intervals, keeps them shown with its warning, and no further
-  read at intervals is sent until a read of them succeeds
-  (`docs/behaviors.md`, Loading). When the read of the work of a maintainer
-  fails, a
-  `warning` message above the package tree says "The tracks that wait for
-  you couldn't be shown.", followed by the message of its status, with Try
-  again where the failure offers it, and the package tree stays usable; once
+  usable. When the read of the work of a maintainer fails, a `warning`
+  message above the package tree says "The tracks that wait for you couldn't
+  be shown.", followed by the message of its status, with Try again where
+  the failure offers it, and the package tree stays usable; once
   a read of it has succeeded, a later read that fails keeps its marks and
   says "The tracks that wait for you couldn't be updated.", followed by the
   message of its status, unless it is a `403` or a `404`, which removes them;
   while it is sent again, the marks that stay shown are marked as being
   updated (`docs/behaviors.md`, Where Errors Appear; Loading).
-- **Errors of Refetch.** A failure shows in the message area, as the failure
-  of a change (`docs/behaviors.md`, Where Errors Appear; Default
-  Presentation by Status): in the `warning` tone, after a network failure or
-  a `5xx`, whose outcome is unknown, such as `503 CELERY_UNAVAILABLE`, after
-  which the fetch may still run (`docs/behaviors.md`, Retries and
-  Unconfirmed Changes); in the `danger` tone otherwise. The screen handles
-  one error code specifically: `503 CVE_FETCH_FAILED`, which says that no
-  enabled source can refetch the CVE, so that Sentinel started nothing,
-  shows "No enabled source can refetch this CVE." with its reference, in the
-  `danger` tone (Sentinel `docs/features/tickets/cve-tracking.md`, Re-fetch
-  CVE Data). Like any other, its message names the Ticket when it shows after
-  the user left the screen.
+- **Errors of Refetch.** A failure follows the default presentation of a
+  change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
+  after which the fetch may still run (`docs/behaviors.md`, Retries and
+  Unconfirmed Changes). The screen handles one error code specifically:
+  `503 CVE_FETCH_FAILED`, which says that no enabled source can refetch the
+  CVE, so that Sentinel started nothing, shows "No enabled source can
+  refetch this CVE." with its reference, in the `danger` tone rather than as
+  a change that Sentinel did not confirm (Sentinel
+  `docs/features/tickets/cve-tracking.md`, Re-fetch CVE Data). Like any
+  other, its message names the Ticket when it shows after the user left the
+  screen.
 - **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
   names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow
   and text size).

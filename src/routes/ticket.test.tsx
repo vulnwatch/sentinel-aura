@@ -18,6 +18,7 @@ import {
   cvssResponse,
   errorResponse,
   fictionalCve,
+  fictionalSource,
   fictionalTicket,
   fictionalTicketDetail,
   jsonResponse,
@@ -170,6 +171,19 @@ function longCve(): CVEDetail {
     })),
   });
 }
+
+// Every source of a CVE, each that can be refetched but CISA KEV, so that
+// the side column is taller than a short window.
+const EVERY_SOURCE = [
+  "epss",
+  "ghsa",
+  "kernel",
+  "kev",
+  "mitre",
+  "nvd",
+  "osv",
+  "redhat",
+].map((source) => fictionalSource({ source, refetchable: source !== "kev" }));
 
 // The terms of a list, in their order.
 function textsOf(locator: Locator): (string | null)[] {
@@ -582,29 +596,38 @@ describe("the layout", () => {
       .toBe("20px");
   });
 
-  test("scrolls the page until an element at the end of a side column taller than the window shows when it takes the focus, and back up to one above it", async () => {
+  test("scrolls the page until an element of a side column taller than the window shows when it takes the focus from the keyboard, at the end of the page and back above it, below the compact heading", async () => {
     await page.viewport(1280, 300);
-    showing(fictionalTicketDetail({ cve: longCve() }));
+    stubTicket({
+      ticket: () => ticketResponse(fictionalTicketDetail({ cve: longCve() })),
+      sources: () => sourcesResponse(EVERY_SOURCE),
+    });
     const { screen } = await renderTicket();
     const sources = region(screen, "Sources of the CVE");
-    const refetch = sources.getByRole("button", { name: "Refetch NVD" });
-    await expect.element(refetch).toBeVisible();
-    expect(boxOf(refetch).top).toBeGreaterThan(window.innerHeight);
+    const last = sources.getByRole("button", { name: "Refetch Red Hat" });
+    await expect.element(last).toBeVisible();
+    expect(boxOf(last).top).toBeGreaterThan(window.innerHeight);
 
-    refetch.element().focus();
+    last.element().focus({ focusVisible: true });
 
-    await expect.element(refetch).toBeInViewport({ ratio: 1 });
-    await expect.element(refetch).toHaveFocus();
+    await expect.element(last).toBeInViewport({ ratio: 1 });
+    await expect.element(last).toHaveFocus();
 
-    // Back to the first field of the side column, above the window.
-    const assignee = region(screen, "Details").getByText("Alice Smith");
-    expect(boxOf(assignee).bottom).toBeLessThan(0);
+    // Back to Refetch all, which the end of the page leaves above the
+    // compact heading.
     const all = sources.getByRole("button", { name: "Refetch all" });
-    all.element().focus();
+    const tabs = () => boxOf(screen.getByRole("tab", { name: "Overview" }));
+    expect(boxOf(all).top).toBeLessThan(tabs().bottom);
+
+    all.element().focus({ focusVisible: true });
+
+    await expect
+      .poll(() => boxOf(all).top)
+      .toBeGreaterThanOrEqual(tabs().bottom);
     await expect.element(all).toBeInViewport({ ratio: 1 });
   });
 
-  test("leaves the page where it is when the focus leaves the side column within the same frame", async () => {
+  test("leaves the page where it is when a pointer, not the keyboard, gives the focus to an element of the side column out of view", async () => {
     await page.viewport(1280, 300);
     showing(fictionalTicketDetail({ cve: longCve() }));
     const { screen } = await renderTicket();
@@ -612,14 +635,19 @@ describe("the layout", () => {
       name: "Refetch NVD",
     });
     await expect.element(refetch).toBeVisible();
+    // The last interaction is a pointer's, after which the browser does not
+    // show the focus that a script moves.
+    await region(screen, "CVE-2099-0012")
+      .getByText("A fictional description of CVE-2099-0012.")
+      .click();
 
     refetch.element().focus();
     const scrolled = window.scrollY;
-    refetch.element().blur();
     await new Promise((done) => requestAnimationFrame(done));
     await new Promise((done) => requestAnimationFrame(done));
 
-    expect(document.activeElement).toBe(document.body);
+    await expect.element(refetch).toHaveFocus();
+    expect(refetch.element().matches(":focus-visible")).toBe(false);
     expect(window.scrollY).toBe(scrolled);
   });
 
@@ -651,6 +679,14 @@ describe("the layout", () => {
     );
 
     const { screen } = await renderTicket();
+    // The sources, which the screen reads on their own, with Refetch all.
+    await expect
+      .element(
+        region(screen, "Sources of the CVE").getByRole("button", {
+          name: "Refetch all",
+        }),
+      )
+      .toBeVisible();
 
     expect(document.documentElement.scrollWidth).toBe(
       document.documentElement.clientWidth,
@@ -1367,17 +1403,19 @@ describe("the anchor of the URL", () => {
         .toBe("None");
       expect(window.scrollY).toBe(0);
 
-      sources.resolve(sourcesResponse());
+      // Every source, so that the window shows the start of the sources
+      // before the end of the page.
+      sources.resolve(sourcesResponse(EVERY_SOURCE));
 
       await expect.poll(() => window.scrollY).toBeGreaterThan(0);
-      await expect
-        .element(
-          region(screen, "Sources of the CVE").getByRole("heading", {
-            level: 2,
-            name: "Sources of the CVE",
-          }),
-        )
-        .toBeInViewport();
+      const title = region(screen, "Sources of the CVE").getByRole("heading", {
+        level: 2,
+        name: "Sources of the CVE",
+      });
+      await expect.element(title).toBeInViewport();
+      // Below the tabs, and so below the compact heading with two columns.
+      const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
+      expect(boxOf(title).top).toBeGreaterThanOrEqual(tabs.bottom);
     },
   );
 

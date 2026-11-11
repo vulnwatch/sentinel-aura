@@ -595,13 +595,14 @@ test.describe("for an analyst", () => {
       /^Red Hat\s*Not attempted\s*Disabled$/,
     ]);
     await expect(sources(page).getByRole("button")).toHaveCount(0);
+    // ticket-cvss-empty.png shows the same screen, at the same scroll
+    // position, with its failing source.
     await expect(
       sources(page).getByRole("heading", {
         level: 2,
         name: "Sources of the CVE",
       }),
     ).toBeInViewport();
-    await expectScreenshot(page, "ticket-failing-source.png");
   });
 
   test("keeps the compact heading at the top of the window while the page scrolls", async ({

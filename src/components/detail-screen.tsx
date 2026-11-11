@@ -290,12 +290,19 @@ function releasedTop(element: Element, { column, columns }: StickyColumn) {
   );
 }
 
+// While the side column sticks, its elements stay below what stays at the
+// top of the window, and the window, which scrolls an element without
+// moving it, cannot show one below the bottom of the window; once the side
+// column scrolls with the page, toward its end, the window scrolls each of
+// its elements as any other. So only an element below the bottom of the
+// window needs the page to scroll further.
+
 // Shows the target of an anchor of the page below what stays at the top of
-// the window (docs/design-system.md, Main Content). The window scrolls an
-// element of the side column, while it sticks, without moving it, so when
-// the start of such a target still lies out of view, the page scrolls until
-// it shows, which for the last sections of a side column taller than the
-// window can be the end of the page (docs/design-system.md, Detail Screens).
+// the window (docs/design-system.md, Main Content). When the start of a
+// target of the side column still lies below the window, the page scrolls
+// until it shows, which for the last sections of a side column taller than
+// the window can be the end of the page (docs/design-system.md, Detail
+// Screens).
 export function showAnchorTarget(target: Element) {
   target.scrollIntoView();
   const column = target.closest(`[${STICKY_SIDE_COLUMN}]`);
@@ -303,8 +310,7 @@ export function showAnchorTarget(target: Element) {
   if (column === null || columns == null) {
     return;
   }
-  const top = target.getBoundingClientRect().top;
-  if (top < fixedTop() || top >= window.innerHeight) {
+  if (target.getBoundingClientRect().top >= window.innerHeight) {
     window.scrollTo(
       0,
       Math.floor(releasedTop(target, { column, columns }) - fixedTop()),
@@ -312,16 +318,13 @@ export function showAnchorTarget(target: Element) {
   }
 }
 
-// After an element of the side column takes the focus, scrolls the page
-// until it shows when it lies out of view, as the window scrolls any other
-// element with the focus: its top below what stays at the top of the window,
-// or its bottom at the bottom of the window (docs/behaviors.md,
-// Accessibility, Keyboard).
+// After an element of the side column takes the focus from the keyboard,
+// scrolls the page until it shows, its bottom at the bottom of the window,
+// when it lies below the window (docs/behaviors.md, Accessibility,
+// Keyboard).
 function showFocused(element: Element, sticky: StickyColumn) {
   const box = element.getBoundingClientRect();
-  if (box.top < fixedTop()) {
-    window.scrollTo(0, Math.floor(releasedTop(element, sticky) - fixedTop()));
-  } else if (box.bottom > window.innerHeight) {
+  if (box.bottom > window.innerHeight) {
     window.scrollTo(
       0,
       Math.ceil(releasedTop(element, sticky) + box.height - window.innerHeight),
@@ -346,8 +349,9 @@ function showFocused(element: Element, sticky: StickyColumn) {
 // the trailing sections, whose place in that order is the same in both
 // layouts, stay, with what they hold, such as the focus or a change in
 // progress. With two columns, when an element of the side column that is out
-// of view takes the focus, the page scrolls until it shows (showFocused), once
-// the window has scrolled it as any element with the focus.
+// of view takes the focus from the keyboard, the page scrolls until it shows
+// (showFocused), once the window has scrolled it as any element with the
+// focus.
 export function DetailColumns({
   twoColumns,
   leadingSections,
@@ -364,12 +368,19 @@ export function DetailColumns({
     }
     let frame = 0;
     // The element with the focus once the window has scrolled it, in the
-    // next frame, unless the focus has left the side column meanwhile.
+    // next frame, unless the focus has left the side column meanwhile. Only
+    // the focus from the keyboard, which the browser shows: a pointer
+    // focuses the control that it presses where it is, and moving that
+    // control away would end the press outside it, which cancels it.
     const onFocus = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const element = document.activeElement;
-        if (element !== null && column.contains(element)) {
+        if (
+          element !== null &&
+          column.contains(element) &&
+          element.matches(":focus-visible")
+        ) {
           showFocused(element, { column, columns });
         }
       });

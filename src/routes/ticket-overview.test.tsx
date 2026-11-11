@@ -2860,6 +2860,15 @@ describe("the sources of the CVE", () => {
       getComputedStyle(failing).fontSize,
       getComputedStyle(failing).color,
     ]).toEqual(["13px", FG_MUTED]);
+    // The status 6 px after the name, and the label 6 px after the status
+    // (docs/design-system.md, Labels).
+    const osv = sourceOf(screen, "OSV");
+    const name = boxOf(osv.getByText("OSV", { exact: true }));
+    const status = boxOf(osv.getByText("Success", { exact: true }));
+    const label = boxOf(osv.getByText("Disabled", { exact: true }));
+    // The dot of the status, 8 px, and its 6 px before its name.
+    expect(status.left - 8 - 6 - name.right).toBeCloseTo(6, 1);
+    expect(label.left - status.right).toBeCloseTo(6, 1);
   });
 
   test("mark each status in the color of its tone, never by the color alone, the pending fetch turning and standing still under reduced motion", async () => {
@@ -3003,14 +3012,15 @@ describe("the sources of the CVE", () => {
     await expect.element(sourceOf(screen, "NVD")).toBeVisible();
   });
 
-  test("remove the sources and Refetch all when a new read of them is refused with a 404", async () => {
+  test("remove the sources and Refetch all when a new read of them is refused with a 404, the focus on Refetch all moving to the screen's heading", async () => {
     let refused = false;
     stubTicket({
       sources: () =>
         refused ? errorResponse(404, "CVE_NOT_FOUND") : sourcesResponse(),
     });
     const { screen } = await renderSources();
-    await expect.element(refetchAll(screen)).toBeVisible();
+    refetchAll(screen).element().focus();
+    await expect.element(refetchAll(screen)).toHaveFocus();
     refused = true;
 
     returnToForeground();
@@ -3024,6 +3034,11 @@ describe("the sources of the CVE", () => {
       .toBeVisible();
     expect(refetchAll(screen).query()).toBeNull();
     expect(sourcesPart(screen).getByRole("listitem").query()).toBeNull();
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "SNTL-12", exact: true }),
+      )
+      .toHaveFocus();
   });
 
   test("offer Refetch of each source that can be refetched, named after it, and Refetch all, to a user with triage_ticket", async () => {
@@ -3109,7 +3124,12 @@ describe("the sources of the CVE", () => {
     // Pressing it again while it is busy sends nothing.
     await userEvent.keyboard("{Enter}");
     expect(requestsTo(spy, REFETCH)).toBe(1);
+    // Only the button that started the refetch is busy.
+    expect(refetchAll(screen).element().getAttribute("aria-disabled")).toBe(
+      null,
+    );
     const sourcesRead = requestsTo(spy, SOURCES);
+    const ticketRead = requestsTo(spy, TICKET);
 
     response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
 
@@ -3121,6 +3141,37 @@ describe("the sources of the CVE", () => {
     await expect
       .poll(() => requestsTo(spy, SOURCES))
       .toBeGreaterThan(sourcesRead);
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(ticketRead + 1);
+  });
+
+  test("refetch every source with Refetch all, busy until Sentinel answers", async () => {
+    const response = later();
+    stubTicket({ refetch: () => response.promise });
+    const { screen } = await renderSources();
+    // CISA KEV, Missing here, shows when its last attempt was, as in every
+    // status but Success, whose date is the last change of its evidence.
+    expect(sourceLines(screen)[0]).toBe(
+      `CISA KEV Missing Last attempt ${formatDateTime("2099-10-08T04:00:00Z")}`,
+    );
+
+    await press(refetchAll(screen));
+
+    await expect
+      .element(refetchAll(screen))
+      .toHaveAttribute("aria-disabled", "true");
+    expect(animationsIn(refetchAll(screen).element())).toEqual(["spin"]);
+    expect(
+      refetchOf(screen, "NVD").element().getAttribute("aria-disabled"),
+    ).toBe(null);
+
+    response.resolve(refetchResponse({ sources_enqueued: ["mitre", "nvd"] }));
+
+    await expect
+      .element(screen.getByText("Refetch started.", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(refetchAll(screen))
+      .not.toHaveAttribute("aria-disabled");
   });
 
   test.each<[string, string, Parameters<typeof refetchResponse>[0], string]>([
@@ -3279,7 +3330,7 @@ describe("the sources of the CVE", () => {
     },
   );
 
-  test("end the session after a 401 of a refetch, without a message", async () => {
+  test("end the session after a 401 of a refetch, without a failure of the UI", async () => {
     stubTicket({ refetch: () => errorResponse(401, "AUTH_NOT_AUTHENTICATED") });
     const { screen } = await renderSources();
 
@@ -3288,7 +3339,6 @@ describe("the sources of the CVE", () => {
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
       .toBeVisible();
-    expect(screen.getByText(/Refetch/).query()).toBeNull();
   });
 
   test("leave an answer of a refetch that the UI cannot show to the page of a failure of the UI", async () => {
@@ -3334,6 +3384,30 @@ describe("the sources of the CVE", () => {
         screen.getByRole("heading", { level: 1, name: "SNTL-12", exact: true }),
       )
       .toBeVisible();
+  });
+
+  test("name the Ticket in the message of a failed refetch that ends after the user left its screen", async () => {
+    const response = later();
+    stubTicket({ refetch: () => response.promise });
+    const { router, screen } = await renderSources();
+    await press(refetchOf(screen, "NVD"));
+    await router.navigate({ to: "/tickets" });
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+
+    response.resolve(errorResponse(409, "FETCHER_DISABLED"));
+
+    await expect
+      .element(
+        screen.getByText(
+          "SNTL-12: This can't be done in the current state, which may have changed. Check it and try again.",
+        ),
+      )
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("link", { name: "SNTL-12", exact: true }))
+      .toHaveAttribute("href", "/tickets/SNTL-12");
   });
 
   test("are read again every 5 seconds while a fetch is pending, not while the tab is hidden, and no longer once none is", async () => {
@@ -3416,6 +3490,7 @@ describe("the sources of the CVE", () => {
       .element(cvssPart(screen).getByRole("grid", { name: "CVSS assessments" }))
       .toBeVisible();
     const ticketRead = requestsTo(spy, TICKET);
+    const duplicatesRead = requestsTo(spy, TICKETS);
     const cvssRead = requestsTo(spy, CVSS);
     sources = [
       sources[0]!,
@@ -3433,10 +3508,28 @@ describe("the sources of the CVE", () => {
       `MITRE Failure Last attempt ${formatDateTime(LATER_ATTEMPT)} Failing since ${formatDateTime(FAILING_SINCE)}`,
     );
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(ticketRead + 1);
+    await expect.poll(() => requestsTo(spy, TICKETS)).toBe(duplicatesRead + 1);
     await expect.poll(() => requestsTo(spy, CVSS)).toBe(cvssRead + 1);
     // The sources themselves are not read again, nor at intervals.
     vi.advanceTimersByTime(30_000);
     expect(requestsTo(spy, SOURCES)).toBe(2);
+  });
+
+  test("read again the work of a maintainer when a fetch ends", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let sources = [fictionalSource({ status: "pending" })];
+    const spy = showing(
+      [fictionalPackage()],
+      {},
+      { user: MAINTAINER, sources: () => sourcesResponse(sources) },
+    );
+    await renderSources("Pending");
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(1);
+    sources = [fictionalSource({ fetched_at: LATER_ATTEMPT })];
+
+    vi.advanceTimersByTime(5_000);
+
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(2);
   });
 
   test("announce each end in a node of its own, so that the same words are announced again", async () => {
