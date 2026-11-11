@@ -680,7 +680,8 @@ The resolved severity of a Ticket or a CVE is `critical`, `high`, `medium`,
 
 - A known severity shows as a dot of 8 px in its mark (Severity Marks)
   followed, 6 px later, by its name in `fg`: Critical, High, Medium, Low, or
-  None.
+  None. The name stands on the baseline of the text around it, and the dot is
+  centered on the line.
 - `null` is an absent value (`docs/behaviors.md`, Absent Values).
 - A value that the pinned contract does not list shows as received, in
   `fg`, 6 px after a hollow dot of 8 px with a 1 px edge in `neutral-icon`
@@ -1228,7 +1229,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   then its fields 4 px apart, their terms in the style of the values, indented
   by 12 px in the column of the terms, or above their values, indented the
   same, where the list is narrower than 280 px. A popover that shows the
-  details of a record uses the same list (Menus, Popovers, and Tooltips).
+  details of a record uses the same list, and that of a value with its terms
+  as wide as the longest one (Menus, Popovers, and Tooltips).
 - A field that a user can change shows that user a pencil at the end of its
   line: an icon button of 24 px with `pencil` at 14 px, named by its action,
   such as "Edit assignee", which its tooltip shows. It opens the control of
@@ -1471,6 +1473,15 @@ states it, such as that of a Ticket; the other audit logs are tables
   is gone (`docs/behaviors.md`, Accessibility), and its outcome shows as
   that of any other change (`docs/behaviors.md`, Where Errors Appear;
   Outcome of a Change).
+- A value that opens a popover with what it encodes, such as the vector of a
+  CVSS assessment with its metrics in words, is a button in the style of a
+  name that opens a popover, in the type of the value, such as monospace, and
+  its popover is that of such a name, without actions: its title names the
+  record of the value; below it, in `text-13`, `fg-muted`, the value itself,
+  which the user can select and copy; and the details as a description list
+  whose terms take the width of the longest one, rather than 104 px, so that
+  none wraps (Detail Screens). A link to another site that explains the value
+  follows the details, below another `border` line.
 
 ## Representation of a User
 

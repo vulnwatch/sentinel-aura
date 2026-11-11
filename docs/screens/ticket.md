@@ -12,8 +12,8 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 ## Purpose
 
 The Ticket screen shows one Ticket: its heading row with its main values, and
-in the tab Overview its CVE, its package tree, the CVSS assessments of its
-CVE, its details, and the sources of its CVE, which an analyst refetches.
+in the tab Overview its CVE, the CVSS assessments of its CVE, its package
+tree, its details, and the sources of its CVE, which an analyst refetches.
 Vulnerability and restricted analysts work in it all day; every other user
 reads it, as a package maintainer does a Ticket of one of their packages that
 an analyst shares, and finds in its package tree the tracks that wait for
@@ -45,8 +45,8 @@ for a maintainer the tracks that wait for them (Packages).
   the screen removes every other parameter and value from its URL, in place
   of the URL in the browser history, and keeps its anchor
   (`docs/behaviors.md`, Invalid Search Parameters).
-- Anchors: `#cve`, the CVE, `#packages`, the package tree, `#cvss`, the CVSS
-  assessments, `#details`, the details, and `#sources`, the sources of the
+- Anchors: `#cve`, the CVE, `#cvss`, the CVSS assessments, `#packages`, the
+  package tree, `#details`, the details, and `#sources`, the sources of the
   CVE; a Ticket without a CVE lacks the CVSS assessments and the sources. The
   reads of Overview are the Ticket, its duplicates, the CVSS assessments and
   the sources of its CVE, and, for a maintainer, their work on the Ticket
@@ -83,9 +83,9 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
 **Tabs**, named "Ticket" for assistive technologies: Overview.
 
 **Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE, the
-package tree, and the CVSS assessments in the main column, in this order, and
+CVSS assessments, and the package tree in the main column, in this order, and
 the details and the sources of the CVE in the side column; in one column, the
-details above the CVE, and the sources below the CVSS assessments. The
+details above the CVE, and the sources below the package tree. The
 sources keep their place in the order of the page in both layouts, so they
 stay, with the focus and a refetch in progress, when the layout changes.
 
@@ -127,7 +127,76 @@ stay, with the focus and a refetch in progress, when the layout changes.
 - A Ticket without a CVE shows the heading "CVE" and "No CVE.".
 - Absent values show as such (`docs/behaviors.md`, Absent Values).
 
-**Packages**, the second part of the main column, the package tree of the
+**CVSS assessments**, the second part of the main column, for a Ticket with a
+CVE, from Get CVSS Assessments for a CVE, `GET /api/v1/cves/{cve_id}/cvss`,
+read-only (Sentinel `docs/features/tickets/cvss-scoring.md`, Get CVSS
+Assessments for a CVE; Shared Assessment Item). A score shows with one
+decimal and tabular figures; a CVSS version shows with a "v", such as "v3.1",
+so that it is not read as a score, and a version that the pinned contract
+does not list shows as received, without the "v" (`docs/behaviors.md`,
+Unknown Values).
+
+- What the assessments resolve, which Sentinel resolves apart (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Core Distinctions), on lines whose
+  term in `fg-muted` precedes the value; a severity shows with its mark
+  (`docs/design-system.md`, Severity), followed by its score in parentheses.
+  When the SUSE assessment of the default CVSS version sets both the severity
+  and the eligibility score, as the source `suse` of `eligibility` states, one
+  line, such as "Severity High (8.1) from SUSE CVSS v3.1, which also sets the
+  eligibility score of the Products". Otherwise two: Severity, from
+  `severity`, such as "Critical (9.3) from NVD CVSS v4.0", and Eligibility
+  score, which with the source `fallback` reads such as "10.0, the fallback
+  without a SUSE CVSS v3.1 assessment", with the version of
+  `default_cvss_version` (same document, Severity Resolution Cascade;
+  Eligibility Score Resolution); a source that the pinned contract does not
+  list follows the score as received, such as "7.0, fictional_source".
+- Below them, the table "CVSS assessments" (`docs/design-system.md`,
+  Tables), in the order of the API, by version, then by provider (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Version Precedence): Provider,
+  `provider_name`; Version; Base score, the score, then the severity of the
+  assessment by the scale of its version, which is not the resolved severity,
+  with its mark, such as "7.8 High", the scores ending at the same place, so
+  that the marks align in a column; and Vector, `vector_string`, in
+  monospace, which wraps only after a "/" where its column is narrower than
+  it. The provider and the version name the row for assistive technologies.
+  An assessment of a version that the pinned contract does not list shows its
+  score without its severity, whose scale depends on the version, and its
+  vector as text (`docs/behaviors.md`, Unknown Values).
+- The vector of an assessment of a version that the pinned contract lists is
+  a value that opens its metrics (`docs/design-system.md`, Menus, Popovers,
+  and Tooltips): the title of the popover is the provider and the version,
+  such as "NVD CVSS v3.1", with the vector below it, then the metrics of
+  `metrics`, each by the name that Sentinel gives the metric, and its value in
+  sentence case, such as `adjacent_network` as "Adjacent network", or as
+  received when the pinned contract does not list it (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, CVSS v2.0 Base Metrics; CVSS v3.0
+  and v3.1 Base Metrics; CVSS v4.0 Base Metrics). They show in the groups of
+  FIRST's specifications of each version, each group a term with its metrics
+  below it:
+  - v2.0: Exploitability, with Access vector, Access complexity, and
+    Authentication; and Impact, with Confidentiality, Integrity, and
+    Availability;
+  - v3.0 and v3.1: Exploitability, with Attack vector, Attack complexity,
+    Privileges required, and User interaction; Scope, a single metric, on
+    the line of its term; and Impact, with Confidentiality, Integrity, and
+    Availability;
+  - v4.0: Exploitability, with Attack vector, Attack complexity, Attack
+    requirements, Privileges required, and User interaction; Vulnerable
+    system and Subsequent system, each with Confidentiality, Integrity, and
+    Availability.
+- For v3.0, v3.1, and v4.0, the popover ends with "Open in the FIRST
+  calculator", a link to the calculator of the version on the site of FIRST,
+  which explains each metric and value: an address composed with the fixed
+  origin `https://www.first.org`, `https://www.first.org/cvss/calculator/3-0`,
+  `3-1`, or `4-0`, with the vector as its fragment, from which the calculator
+  reads it (`docs/behaviors.md`, Links to Other Sites, Composed addresses).
+  FIRST has no such calculator for v2.0, whose popover has no link.
+- Without assessments, "No CVSS assessments.", without the lines and the
+  table.
+- A Ticket without a CVE has no CVSS assessments: the part does not show, and
+  its read is not sent.
+
+**Packages**, the third part of the main column, the package tree of the
 Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 (Sentinel `docs/features/tickets/tickets.md`, Shared Sub-Schemas; Sentinel
 `docs/features/packages/package-model.md`, List Ticket Packages):
@@ -224,45 +293,6 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   track is marked, also once a user no longer maintains a package that is
   not excluded.
 - A Ticket without packages shows "No packages.", without the switch.
-
-**CVSS assessments**, the third part of the main column, for a Ticket with a
-CVE, from Get CVSS Assessments for a CVE, `GET /api/v1/cves/{cve_id}/cvss`,
-read-only (Sentinel `docs/features/tickets/cvss-scoring.md`, Get CVSS
-Assessments for a CVE; Shared Assessment Item). A severity shows with its
-mark (`docs/design-system.md`, Severity), followed by its score with one
-decimal, such as "High 8.1"; a CVSS version shows with a "v", such as
-"v3.1", so that it is not read as a score, and a version that the pinned
-contract does not list shows as received, without the "v"
-(`docs/behaviors.md`, Unknown Values).
-
-- What the assessments resolve, which Sentinel resolves apart (Sentinel
-  `docs/features/tickets/cvss-scoring.md`, Core Distinctions), on lines whose
-  term in `fg-muted` precedes the value. When the SUSE assessment of the
-  default CVSS version sets both the severity and the eligibility score, as
-  the source `suse` of `eligibility` states, one line, such as "Severity
-  High 8.1 from SUSE CVSS v3.1, which also sets the eligibility score of the
-  Products". Otherwise two: Severity, from `severity`, such as "Critical
-  9.3 from NVD CVSS v4.0", and Eligibility score, which with the source
-  `fallback` reads such as "10.0, the fallback without a SUSE CVSS v3.1
-  assessment", with the version of `default_cvss_version` (same document,
-  Severity Resolution Cascade; Eligibility Score Resolution); a source that
-  the pinned contract does not list follows the score as received, such as
-  "7.0, fictional_source".
-- Below them, the table "CVSS assessments" (`docs/design-system.md`,
-  Tables), in the order of the API, by version, then by provider (Sentinel
-  `docs/features/tickets/cvss-scoring.md`, Version Precedence): Provider,
-  `provider_name`; Version; Assessment severity, the severity of the
-  assessment by the scale of its version, which is not the resolved
-  severity, and its score; and Vector, `vector_string`, in monospace, which
-  wraps only after a "/" where its column is narrower than it. The provider
-  and the version name the row for assistive technologies. An assessment of
-  a version that the pinned contract does not list shows its score without
-  its severity, whose scale depends on the version (`docs/behaviors.md`,
-  Unknown Values).
-- Without assessments, "No CVSS assessments.", without the lines and the
-  table.
-- A Ticket without a CVE has no CVSS assessments: the part does not show, and
-  its read is not sent.
 
 **Details**, the section of the side column, as a description list:
 
@@ -444,8 +474,10 @@ user who holds `triage_ticket` (Sentinel
   `trigger_on_demand_fetch()` (Database-Free Publication;
   `FetchDispatchResult`); CVE Source Status
 - Sentinel `docs/features/tickets/cvss-scoring.md` — Core Distinctions;
-  Version Precedence; Severity; Eligibility Score Resolution; API Endpoints
-  (Shared Assessment Item; Get CVSS Assessments for a CVE)
+  Accepted Base Vectors (Version Precedence; CVSS v2.0 Base Metrics; CVSS
+  v3.0 and v3.1 Base Metrics; CVSS v4.0 Base Metrics); Severity; Eligibility
+  Score Resolution; API Endpoints (Shared Assessment Item; Get CVSS
+  Assessments for a CVE)
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility; Endpoint Permission Map (CVEs)
 - Sentinel `docs/api-spec.md` — Ticket Identifier Resolution; CVE Identifier
