@@ -675,14 +675,17 @@ A confirmation dialog:
   that shows its progress, when one does.
 - A screen that follows an operation in progress by reading it again (Loading;
   `docs/design-system.md`, Other Values), such as the pending fetch of a
-  source of a CVE or a fetcher run, shows the outcome of the operation in
-  place of its progress once a read shows that it has ended, whoever started
-  it, without a message. The screen announces the outcome, such as "NVD:
-  Failure." (Accessibility, Announcements), and reads again the other data
-  that the operation changes, such as the Ticket and the CVSS assessments of a
-  CVE after the fetch of one of its sources. A read that shows an operation as
-  ended, when no earlier read of the screen showed it in progress, such as
-  the first read of the screen, announces nothing.
+  source of a CVE or a fetcher run, shows what a read returns in place of the
+  progress once the read no longer shows the operation in progress, whoever
+  started it, without a message. The screen announces what the read shows,
+  such as "NVD: Failure.", or that it shows no new result where the operation
+  ended without one, such as "NVD: no new result." (Accessibility,
+  Announcements); one announcement states every operation that one read
+  shows ended, in the order of the screen. The screen then reads its data
+  again (Loading). A read announces nothing of an operation that no earlier
+  read of the screen showed in progress: the first read after the screen
+  opens announces nothing, also where the screen shows the data of an
+  earlier visit until that read arrives.
 - A change that fails follows Errors.
 
 ## Accessibility
@@ -735,11 +738,12 @@ also meets these requirements, which they cannot check:
   that opened it, or follows Focus after an action when that element is
   gone.
 - **Announcements.** A message that appears without a navigation, such as the
-  outcome of a change or the error of an action, and the outcome of an
-  operation that a screen follows, once a read shows it (Outcome of a
-  Change), are announced without moving the focus (4.1.3 Status Messages). After a form is submitted with errors,
-  the focus moves to the message at the top of the form, or, when only fields
-  have errors, to the first of them (3.3.1 Error Identification).
+  outcome of a change or the error of an action, is announced without moving
+  the focus, and so is the end of an operation that a screen follows, once a
+  read shows it (Outcome of a Change; 4.1.3 Status Messages). After a form is
+  submitted with errors, the focus moves to the message at the top of the
+  form, or, when only fields have errors, to the first of them (3.3.1 Error
+  Identification).
 - **Reflow and text size.** Screens work at a width of 320 CSS pixels without
   scrolling in two directions, except data tables, which scroll within
   themselves, and text enlarged to 200 % loses no content or function (1.4.4
