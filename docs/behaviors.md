@@ -427,12 +427,18 @@ returns, whatever Sentinel guarantees for its field:
   (Where Errors Appear). Data that stays shown after a read of it failed is
   marked in the same way while it is read again.
 - A screen reads its data again when the tab returns to the foreground after
-  being hidden and after a change (Outcome of a Change), and at intervals only
-  where its screen document says so, such as for a fetcher run in progress. A
-  screen's read whose error shows in place of content, because it failed
-  before it showed any data, is not read again when the tab returns: its
-  error stays until Try again, where the error offers it, or until the screen
-  opens again (Where Errors Appear).
+  being hidden, after a change, and when an operation that it follows ends
+  (Outcome of a Change), and at intervals only where its screen document says
+  so, such as while a fetcher run is in progress. A screen's read whose error
+  shows in place of content, because it failed before it showed any data, is
+  not read again when the tab returns: its error stays until Try again, where
+  the error offers it, or until the screen opens again (Where Errors Appear).
+- A read at intervals is not sent while the tab is hidden, since the screen
+  reads its data again when the tab returns. Once a read at intervals has
+  failed, its error shows as Where Errors Appear states, and no further read
+  at intervals is sent until a read of the same data succeeds, such as after
+  Try again or when the tab returns to the foreground, so that a lasting
+  failure does not show and announce its message again at every interval.
 - A screen whose read itself depends on a capability of the signed-in user,
   such as Users, which reads the complete profiles with `manage_users` and the
   directory otherwise (`docs/screen-map.md`, Areas and Screens), also reads its
@@ -667,6 +673,16 @@ A confirmation dialog:
 - An operation that Sentinel accepts with `202` has started, not finished:
   its message says so, such as "Refetch started.", and links to the screen
   that shows its progress, when one does.
+- A screen that follows an operation in progress by reading it again (Loading;
+  `docs/design-system.md`, Other Values), such as the pending fetch of a
+  source of a CVE or a fetcher run, shows the outcome of the operation in
+  place of its progress once a read shows that it has ended, whoever started
+  it, without a message. The screen announces the outcome, such as "NVD:
+  Failure." (Accessibility, Announcements), and reads again the other data
+  that the operation changes, such as the Ticket and the CVSS assessments of a
+  CVE after the fetch of one of its sources. A read that shows an operation as
+  ended, when no earlier read of the screen showed it in progress, such as
+  the first read of the screen, announces nothing.
 - A change that fails follows Errors.
 
 ## Accessibility
@@ -719,8 +735,9 @@ also meets these requirements, which they cannot check:
   that opened it, or follows Focus after an action when that element is
   gone.
 - **Announcements.** A message that appears without a navigation, such as the
-  outcome of a change or the error of an action, is announced without moving
-  the focus (4.1.3 Status Messages). After a form is submitted with errors,
+  outcome of a change or the error of an action, and the outcome of an
+  operation that a screen follows, once a read shows it (Outcome of a
+  Change), are announced without moving the focus (4.1.3 Status Messages). After a form is submitted with errors,
   the focus moves to the message at the top of the form, or, when only fields
   have errors, to the first of them (3.3.1 Error Identification).
 - **Reflow and text size.** Screens work at a width of 320 CSS pixels without
