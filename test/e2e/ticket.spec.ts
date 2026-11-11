@@ -42,6 +42,13 @@ function detail(page: Page, term: string) {
   return valueOf(page, "Details", term);
 }
 
+// The table of the CVSS assessments.
+function cvssTable(page: Page) {
+  return part(page, "CVSS assessments").getByRole("grid", {
+    name: "CVSS assessments",
+  });
+}
+
 // Whether the window scrolls its page in the horizontal direction.
 function scrollsHorizontally(page: Page): Promise<boolean> {
   return page.evaluate(
@@ -128,6 +135,9 @@ test.describe("for an analyst", () => {
     expect(detailsBox?.x).toBeGreaterThan(
       (cveBox?.x ?? 0) + (cveBox?.width ?? 0),
     );
+    // The CVSS assessments, which the screen reads on their own, have
+    // arrived.
+    await expect(cvssTable(page)).toBeVisible();
     await expectScreenshot(page, "ticket.png");
   });
 
@@ -170,6 +180,7 @@ test.describe("for an analyst", () => {
     await expect(await valueOf(page, "CVE-2099-0018", "Score")).toHaveText(
       "0.31",
     );
+    await expect(cvssTable(page)).toBeVisible();
     await expectScreenshot(page, "ticket-confidential.png");
   });
 
@@ -182,6 +193,8 @@ test.describe("for an analyst", () => {
 
     await expect(heading(page, "SNTL-21")).toBeVisible();
     await expect(part(page, "CVE").getByText("No CVE.")).toBeVisible();
+    // Without a CVE, the Ticket has no CVSS assessments.
+    await expect(part(page, "CVSS assessments")).toHaveCount(0);
     // SNTL-32, a duplicate of SNTL-22, was repointed to SNTL-21 when SNTL-22
     // became its duplicate (Tickets).
     const duplicates = (await detail(page, "Duplicates")).getByRole("link");
@@ -247,6 +260,7 @@ test.describe("for an analyst", () => {
     await signIn(page, "asmith");
     await page.goto("/tickets/SNTL-12");
     await expect(heading(page, "SNTL-12")).toBeVisible();
+    await expect(cvssTable(page)).toBeVisible();
 
     const detailsBox = await part(page, "Details").boundingBox();
     const cveBox = await part(page, "CVE-2099-0012").boundingBox();
@@ -453,6 +467,87 @@ test.describe("for an analyst", () => {
     await expect(packages.getByText("SUSE:FLES-15-SP4:Update")).toBeVisible();
   });
 
+  test("shows the CVSS assessments of a CVE, whose SUSE assessment sets its severity and the eligibility score", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+
+    await page.goto("/tickets/SNTL-16#cvss");
+    await expect(cvssTable(page)).toBeVisible();
+
+    // The SUSE assessment of CVE-2099-0016, v3.1 as the default version,
+    // scores it lower than NVD's (CVEs; System Settings).
+    await expect(
+      await valueOf(page, "CVSS assessments", "Severity"),
+    ).toHaveText(
+      "Medium 5.5 from SUSE CVSS v3.1, which also sets the eligibility score of the Products",
+    );
+    await expect(part(page, "CVSS assessments").getByRole("term")).toHaveCount(
+      1,
+    );
+    await expect(cvssTable(page).getByRole("columnheader")).toHaveText([
+      "Provider",
+      "Version",
+      "Assessment severity",
+      "Vector",
+    ]);
+    await expect(cvssTable(page).getByRole("rowheader")).toHaveText([
+      "NVD",
+      "v3.1",
+      "SUSE",
+      "v3.1",
+    ]);
+    await expect(cvssTable(page).getByRole("gridcell")).toHaveText([
+      "High 7.8",
+      "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "Medium 5.5",
+      "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+    ]);
+    await expect(
+      part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
+    ).toBeInViewport();
+    await expectScreenshot(page, "ticket-cvss.png");
+  });
+
+  test("shows the CVSS assessments of a CVE without a SUSE assessment, and of a CVE without any", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+
+    await page.goto("/tickets/SNTL-7#cvss");
+    await expect(cvssTable(page)).toBeVisible();
+
+    // NVD's v4.0 assessment of CVE-2099-0007 sets its severity, and without a
+    // SUSE assessment of the default version v3.1, the eligibility score is
+    // the fallback (CVEs; System Settings).
+    await expect(
+      await valueOf(page, "CVSS assessments", "Severity"),
+    ).toHaveText("Critical 9.3 from NVD CVSS v4.0");
+    await expect(
+      await valueOf(page, "CVSS assessments", "Eligibility score"),
+    ).toHaveText("10.0, the fallback without a SUSE CVSS v3.1 assessment");
+    await expect(cvssTable(page).getByRole("rowheader")).toHaveText([
+      "NVD",
+      "v4.0",
+    ]);
+    await expect(
+      part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
+    ).toBeInViewport();
+    await expectScreenshot(page, "ticket-cvss-without-suse.png");
+    await expectAccessible(page);
+
+    await page.goto("/tickets/SNTL-6#cvss");
+
+    // No source supplies CVSS data for CVE-2099-0006 (CVEs).
+    await expect(
+      part(page, "CVSS assessments").getByText("No CVSS assessments."),
+    ).toBeVisible();
+    await expect(part(page, "CVSS assessments").getByRole("grid")).toHaveCount(
+      0,
+    );
+    await expectScreenshot(page, "ticket-cvss-empty.png");
+  });
+
   test("keeps the compact heading at the top of the window while the page scrolls", async ({
     page,
   }) => {
@@ -483,7 +578,8 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
   // Tracks, and Maintainers).
   await signIn(page, "dbrown");
 
-  await page.goto("/tickets/SNTL-12#packages");
+  // At the top of the screen, which shows the package tree whole.
+  await page.goto("/tickets/SNTL-12");
 
   const packages = part(page, "Packages");
   const waiting = packages.getByText("Needs your action", { exact: true });
@@ -497,6 +593,7 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
       .last()
       .getByText("Needs your action"),
   ).toBeVisible();
+  await expect(cvssTable(page)).toBeVisible();
   await expectScreenshot(page, "ticket-maintainer.png");
 });
 

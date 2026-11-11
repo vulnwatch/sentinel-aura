@@ -684,6 +684,10 @@ The resolved severity of a Ticket or a CVE is `critical`, `high`, `medium`,
 - A value that the pinned contract does not list shows as received, in
   `fg`, 6 px after a hollow dot of 8 px with a 1 px edge in `neutral-icon`
   (`docs/behaviors.md`, Unknown Values).
+- The severity of one CVSS assessment, by the scale of its version, is not
+  the resolved severity (Sentinel `docs/features/tickets/cvss-scoring.md`,
+  Core Distinctions; Version-Specific Assessment Severity), but it has the
+  same values, and shows in the same way.
 
 ### Priority
 
@@ -1115,7 +1119,13 @@ keep the search, the filters, and the sorting.
   only to a user who can take them (`docs/screen-map.md`, Roles), and Delete
   asks for confirmation (`docs/behaviors.md`, Confirmation).
 - The loading indicator, an error in place of the data, and an empty state
-  show inside the frame, below the header row.
+  show inside the frame, below the header row. A table within a part of a
+  detail screen whose rows come with the read of the part, without pages,
+  filters, or sorting of their own, follows the part instead (Detail
+  Screens): the loading indicator and an error show in place of the part,
+  below its heading, and a part without items shows its short line without
+  the table (Loading; Errors in Place of Content; `docs/behaviors.md`, Empty
+  States).
 - Rows have no colored marks other than those of their values.
 
 ### Timelines

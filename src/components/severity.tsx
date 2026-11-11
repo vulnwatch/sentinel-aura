@@ -1,4 +1,7 @@
-import type { SeverityValue } from "../api/generated/model";
+import type {
+  CVSSAssessmentSeverity,
+  SeverityValue,
+} from "../api/generated/model";
 import { AbsentValue } from "./absent-value";
 
 interface KnownSeverity {
@@ -19,7 +22,7 @@ const SEVERITIES = new Map<string, KnownSeverity>(
     medium: { name: "Medium", mark: "fill-mark-medium" },
     low: { name: "Low", mark: "fill-mark-low" },
     none: { name: "None", mark: "fill-mark-none" },
-  } satisfies Record<SeverityValue, KnownSeverity>),
+  } satisfies Record<SeverityValue | CVSSAssessmentSeverity, KnownSeverity>),
 );
 
 interface SeverityProps {
@@ -27,7 +30,9 @@ interface SeverityProps {
   // another value that a later Sentinel release returns, or null when no
   // assessment resolves it (Sentinel docs/features/tickets/tickets.md,
   // Severity Resolution; Sentinel docs/features/tickets/cvss-scoring.md,
-  // Unified CVE Severity).
+  // Unified CVE Severity). Or the severity of one CVSS assessment, a value of
+  // CVSSAssessmentSeverity, which has the same values and shows in the same
+  // way (same document, Version-Specific Assessment Severity).
   severity: string | null;
   // The word that the screen document gives a severity of null, such as in
   // a heading row, where no column header names it; an en dash otherwise

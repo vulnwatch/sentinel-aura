@@ -16,6 +16,7 @@ import { Button } from "./button";
 import {
   DataTable,
   EmptyState,
+  FramedTable,
   type TableColumn,
   type TableSort,
 } from "./data-table";
@@ -497,5 +498,81 @@ describe("EmptyState", () => {
         .element()
         .getBoundingClientRect().top,
     ).toBeGreaterThan(message.getBoundingClientRect().bottom);
+  });
+});
+
+describe("FramedTable", () => {
+  const WRAPPING: readonly TableColumn<FictionalRecord>[] = [
+    {
+      id: "id",
+      name: "Record",
+      isRowHeader: true,
+      render: (record) => record.id,
+    },
+    {
+      id: "title",
+      name: "Title",
+      wraps: true,
+      render: (record) => record.title,
+    },
+  ];
+
+  async function renderFramed(records: FictionalRecord[]) {
+    const screen = await render(
+      <FramedTable
+        label="Records"
+        columns={WRAPPING}
+        rows={records}
+        rowId={(record) => record.id}
+      />,
+    );
+    const table = screen.getByRole("grid", { name: "Records" });
+    await expect.element(table).toBeVisible();
+    let frame = table.element().parentElement;
+    while (frame !== null && getComputedStyle(frame).borderTopWidth !== "1px") {
+      frame = frame.parentElement;
+    }
+    return { table, frame: frame! };
+  }
+
+  test("shows its rows in the frame of a table, on surface with a border line and an 8 px radius", async () => {
+    const { table, frame } = await renderFramed([
+      { id: "R-1", title: "Fictional R-1" },
+      { id: "R-2", title: "Fictional R-2" },
+    ]);
+
+    expect(
+      table
+        .getByRole("rowheader")
+        .elements()
+        .map((cell) => cell.textContent),
+    ).toEqual(["R-1", "R-2"]);
+    expect(getComputedStyle(frame).backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(getComputedStyle(frame).borderTopColor).toBe("rgb(216, 222, 228)");
+    expect(getComputedStyle(frame).borderTopLeftRadius).toBe("8px");
+  });
+
+  test("wraps the text of a wrapping column, whose row grows, so that the table keeps to its place", async () => {
+    await page.viewport(320, 600);
+    const { table, frame } = await renderFramed([
+      { id: "R-1", title: `Fictional ${"long ".repeat(60)}title` },
+      { id: "R-2", title: "Fictional R-2" },
+    ]);
+    const rows = table.getByRole("row");
+
+    // The cell of the long title holds several lines, 8 px from the lines
+    // between the rows.
+    const cell = rows.nth(1).getByRole("gridcell").element();
+    const line = Number.parseFloat(getComputedStyle(cell).lineHeight);
+    expect(cell.getBoundingClientRect().height).toBeGreaterThanOrEqual(
+      2 * line + 16,
+    );
+    expect(getComputedStyle(cell).paddingTop).toBe("8px");
+    expect(rows.nth(2).element().getBoundingClientRect().height).toBeLessThan(
+      40,
+    );
+    const scroller = frame.firstElementChild!;
+    expect(getComputedStyle(scroller).overflowX).toBe("auto");
+    expect(scroller.scrollWidth).toBe(scroller.clientWidth);
   });
 });
