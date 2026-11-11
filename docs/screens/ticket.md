@@ -116,20 +116,21 @@ stay, with the focus and a refetch in progress, when the layout changes.
 - The CNA, from `cna` of the CVE, shows by its name, `name`, as a name that
   opens its details (`docs/design-system.md`, Menus, Popovers, and Tooltips;
   Sentinel `docs/features/tickets/cna.md`, CNA of a CVE; Display Name). The
-  popover reads them from Get CNA, `GET /api/v1/cnas/{org_id}`, when it opens
-  without them, as it first does (same document, Get CNA). Its title is the
-  name, and below it the short name, `short_name`, unless it is absent or is
-  the name, as it is while the CNA list of the CVE Program has not given the
-  CNA an organization name. Then:
-  - Types, each type of `types` as a label, as received, since Sentinel does
-    not close their set (`docs/design-system.md`, Labels), or an absent value
-    without any;
+  popover reads them from Get CNA, `GET /api/v1/cnas/{org_id}`, each time it
+  opens, so that they follow the CNA as Sentinel describes it then (same
+  document, Get CNA). Its title is the name, and below it the short name,
+  `short_name`, unless it is absent or is the name, as it is while the CNA
+  list of the CVE Program has not given the CNA an organization name. Then:
+  - Types, the types of `types` as a list of labels (`docs/design-system.md`,
+    Labels), each as received, since Sentinel does not close their set
+    (Sentinel `docs/features/tickets/cna.md`, Response Schemas), or an absent
+    value without any;
   - Auto-ignore, from `auto_ignore`: "Yes, new Tickets are ignored
     automatically" or "No", which says nothing of the Ticket shown, since a
     change of the policy changes no existing Ticket (same document, Flag);
-  - Scope, `scope`, as plain text, whose line feeds show and whose addresses
-    stay text, cut to its first four lines with Show more, or an absent value
-    (same document, Security).
+  - Scope, `scope`, as text (same document, Security), cut to its first four
+    lines with Show more (`docs/design-system.md`, Main Content), or an
+    absent value.
 
   A CNA without a name, which Sentinel knows only by its identifier, shows
   "Unnamed CNA" in `fg-muted`, without a popover, and a CVE without a CNA an
@@ -427,9 +428,9 @@ user who holds `triage_ticket` (Sentinel
   Duplicates until its read arrives, and the part CVSS assessments and the
   section Sources of the CVE until theirs arrives (`docs/behaviors.md`,
   Loading). Until the read of the work of a maintainer arrives, no track is
-  marked. The popover of the CNA shows its title at once, and the loading
-  indicator in place of its details until Get CNA arrives, with the short
-  name.
+  marked. The popover of the CNA shows its title at once; its short name and
+  its details show once Get CNA arrives, with the loading indicator in place
+  of the details until then.
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -453,8 +454,9 @@ user who holds `triage_ticket` (Sentinel
   updated (`docs/behaviors.md`, Where Errors Appear; Loading). When Get CNA
   fails, whatever its status, the popover of the CNA says "Other details
   aren't available." in place of its details, as a user card does
-  (`docs/behaviors.md`, Representation of a User, User card), and announces
-  it; its next opening sends the read again.
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips), and announces it,
+  since the popover holds the focus (`docs/behaviors.md`, Accessibility,
+  Announcements).
 - **Errors of Refetch.** A failure follows the default presentation of a
   change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
   after which the fetch may still run (`docs/behaviors.md`, Retries and
