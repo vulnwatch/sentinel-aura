@@ -944,20 +944,26 @@ screen, the heading row follows the lock with the label Confidential
   the pinned contract does not list.
 - The status of a source of a CVE shows its mark alone, without its name,
   centered in a place of 24 px at the start of the line of the source, 8 px
-  before the name of the source; the name of the status is the accessible
-  name of the mark, which assistive technologies read after the name of the
-  source. Its marks: a dot of 10 px in `success-icon` for `success` and in
-  `danger-icon` for `failure`; and, at 12 px, `circle` in `neutral-icon` for
-  `missing`, an attempt that found nothing, the marks of `pending` and
-  `not_attempted` above, and `circle-question-mark` in `neutral-icon` for a
-  status that the pinned contract does not list, whose value as received is
-  then its accessible name (`docs/behaviors.md`, Unknown Values). Color is
-  not alone between the two dots (Principles): Sentinel records the start of
-  a failure streak with every failure (Sentinel
+  before the name of the source; assistive technologies read the name of the
+  status, in place of the mark, after the name of the source. Its marks: a
+  dot of 10 px in `success-icon` for `success` and in `danger-icon` for
+  `failure`; and, at 12 px, `circle` in `neutral-icon` for `missing`, an
+  attempt that found nothing, the marks of `pending` and `not_attempted`
+  above, and `circle-question-mark` in `neutral-icon` for a status that the
+  pinned contract does not list, whose value as received assistive
+  technologies read (`docs/behaviors.md`, Unknown Values). Color is not
+  alone between the two dots (Principles): Sentinel records the start of a
+  failure streak with every failure (Sentinel
   `docs/features/tickets/cve-service.md`, CVESource Management), which a
   `failure` always shows below the name of its source, and a `success` never
-  does. The labels of the source stand at the end of its first line
-  (Labels).
+  does. For a user who can refetch the source, the same place holds the
+  icon button of its refetch, of 24 px with `refresh-cw` at 14 px (Buttons
+  and Links), which takes the place of the mark while the pointer is over
+  the line of the source, while the button has the focus, and while it is
+  busy; otherwise the button is transparent, and stays in the order of the
+  focus and for assistive technologies. Where the primary pointer does not
+  hover, such as on a touch screen, a tap neither shows the button nor
+  reaches it.
 - An absent value shows as an en dash, "–", in `fg-muted`, read as "Not
   set", or as the word that names the absence precisely, also in `fg-muted`
   (`docs/behaviors.md`, Absent Values).

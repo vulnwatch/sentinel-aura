@@ -345,8 +345,8 @@ from the API):
   `docs/design-system.md` (Values), without the label, icon, or color of a
   known value; it is also its accessible name. The status of a source of a
   CVE, which shows its mark alone, is the exception: an unknown status shows
-  the mark of an unknown value, and the value as received is only its
-  accessible name (`docs/design-system.md`, Other Values);
+  the mark of an unknown value, and only assistive technologies read the
+  value as received (`docs/design-system.md`, Other Values);
 - a record whose kind is an unknown value, such as an audit event of an
   unknown type or a CVSS assessment of an unknown version, shows its kind as
   received and the fields whose meaning does not depend on the kind, such as

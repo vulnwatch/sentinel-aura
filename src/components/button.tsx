@@ -17,8 +17,9 @@ export type ButtonProps = Omit<
   icon?: LucideIcon | undefined;
   // Primary for the main action of a screen, a form, or a dialog, one per
   // screen part; secondary for every other action, such as Try again; quiet,
-  // without a fill or a boundary, for Cancel in a form and Clear filters
-  // (docs/design-system.md, Buttons and Links).
+  // without a fill or a boundary, for Cancel in a form, Clear filters, and
+  // Refetch all of the sources of a CVE (docs/design-system.md, Buttons and
+  // Links).
   variant?: "primary" | "secondary" | "quiet";
   // Large in forms and dialogs, 40 px high; small in the toolbar of a list,
   // 32 px high, in text-14; medium elsewhere, 36 px high.

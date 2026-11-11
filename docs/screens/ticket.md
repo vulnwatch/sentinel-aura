@@ -294,15 +294,15 @@ the order of the API, by source, as a list (Sentinel
   source that the pinned contract does not list; and, at the end of the line,
   the label Disabled for a registered source that is not enabled, or Retired
   for one that is no longer registered (`docs/design-system.md`, Labels).
-- Below the name, in `text-13` and `fg-muted`, "Last attempt" and the date
-  and time of the last completed attempt, `fetched_at`, or an absent value
-  without one (`docs/behaviors.md`, Absent Values), or, for CISA KEV in
-  Success, "Updated" and the date and time of the last change of its
-  evidence, which is what `fetched_at` then is; and, during a failure streak,
-  "Failing since" and the date and time of its start, `first_failed_at`,
-  which a fetch in progress keeps (Sentinel
-  `docs/features/tickets/cve-service.md`, CVE Source Status, Response
-  schema).
+- Below the name, each on a line of its own across the width of the line, in
+  `text-13` and `fg-muted`: "Last attempt" and the date and time of the last
+  completed attempt, `fetched_at`, or an absent value without one
+  (`docs/behaviors.md`, Absent Values), or, for CISA KEV in Success,
+  "Updated" and the date and time of the last change of its evidence, which
+  is what `fetched_at` then is; and, during a failure streak, "Failing since"
+  and the date and time of its start, `first_failed_at`, which a fetch in
+  progress keeps (Sentinel `docs/features/tickets/cve-service.md`, CVE Source
+  Status, Response schema).
 - Refetch of the source in place of its mark, and Refetch all at the end of
   the heading (Actions).
 - Without sources, "No sources.".
@@ -324,23 +324,25 @@ the order of the API, by source, as a list (Sentinel
 user who holds `triage_ticket` (Sentinel
 `docs/features/tickets/cve-tracking.md`, Re-fetch CVE Data):
 
-- Refetch of a source, an icon button of 24 px with `refresh-cw` at 14 px,
-  named after the source, such as "Refetch NVD", sends the request with
-  `source`. It takes the place of the mark of the status while the pointer
-  is over the line of the source, while it has the focus, and while it is
-  busy, and stays in the order of the focus and for assistive technologies
-  otherwise; only the button responds to a press. A press of the pointer
-  leaves the focus where it was. On a screen without a pointer that hovers,
-  such as a touch screen, the button does not show and a tap does not reach
-  it, and Refetch all refetches the sources. It is offered for a source that
-  is registered, refetchable, and enabled, whose status is not Pending nor
-  one that the pinned contract does not list (`docs/behaviors.md`, Unknown
-  Values): not for CISA KEV, which cannot fetch one CVE, nor for a disabled
-  or retired source. When a new read removes it while it has the focus, as
-  when its source turns Pending, the focus moves to the screen's heading
-  (`docs/behaviors.md`, Accessibility, Focus after an action).
-- Refetch all, a quiet button 32 px high with `refresh-cw` at the end of the
-  heading of the section (`docs/design-system.md`, Buttons and Links), sends
+- Refetch of a source, in the place of the mark of its status
+  (`docs/design-system.md`, Other Values), named after the source, such as
+  "Refetch NVD", sends the request with `source`; only the button, not the
+  line, responds to a press. It is offered for a source that is registered,
+  refetchable, and enabled, whose status is not Pending nor one that the
+  pinned contract does not list (`docs/behaviors.md`, Unknown Values): not
+  for CISA KEV, which cannot fetch one CVE, nor for a disabled or retired
+  source. A read that shows its source Pending removes it, also while its
+  request is in progress, whose message still shows. Where the primary
+  pointer does not hover, such as on a touch screen, Refetch all refetches
+  the sources.
+- A press of the pointer leaves the focus where it was. When a new read
+  removes Refetch of a source while it has the focus, as when its source
+  turns Pending after a press of the keyboard, the focus moves to the
+  screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
+  action); otherwise the focus stays where it is, also after an assistive
+  technology pressed it without moving the focus.
+- Refetch all, a quiet button with `refresh-cw` at the end of the heading of
+  the section (`docs/design-system.md`, Buttons and Links), sends
   the request without `source`, for every source that can be refetched,
   which Sentinel skips while its fetch is pending (Sentinel
   `docs/features/tickets/cve-service.md`, Database-Free Publication). It

@@ -3213,6 +3213,10 @@ describe("the sources of the CVE", () => {
     await screen.getByRole("heading", { level: 2, name: "Details" }).hover();
     expect(seen(refetch)).toBe(true);
     expect(seen(refetchOf(screen, "MITRE"))).toBe(false);
+    // The dot gives way to the spinner, whose center shows the page.
+    expect((await screenshot(sourceOf(screen, "NVD"))).at(12, 12)).toBe(
+      "#f6f8fa",
+    );
 
     sources = [
       fictionalSource({ source: "mitre" }),
