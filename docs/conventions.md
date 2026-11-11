@@ -401,8 +401,10 @@ that needs it; content of another kind needs a new row first.
   check and the browser read the same address. A composed address takes the
   fixed origin that its screen document states, and holds the value of the
   API, or the part of it that the screen document names, only encoded,
-  within a path segment, as the value of a query parameter, or as the
-  fragment, where the screen document names it. No other code
+  within a path segment or as the value of a query parameter, each encoded
+  as a component, or as the fragment, where the screen document names it,
+  encoded as the URL parser encodes a fragment, which keeps such characters
+  as `:` and `/`. No other code
   passes a value of the API as the address of a link or of a navigation,
   such as an `href`, `window.location`, or `window.open`.
 - No code looks for addresses inside a text of the API to turn them into

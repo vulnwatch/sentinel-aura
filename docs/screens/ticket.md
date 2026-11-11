@@ -165,9 +165,12 @@ Unknown Values).
 - The vector of an assessment of a version that the pinned contract lists is
   a value that opens its metrics (`docs/design-system.md`, Menus, Popovers,
   and Tooltips): the title of the popover is the provider and the version,
-  such as "NVD CVSS v3.1", with the vector below it, then the metrics of
-  `metrics`, each by the name that Sentinel gives the metric, and its value in
-  sentence case, such as `adjacent_network` as "Adjacent network", or as
+  such as "NVD CVSS v3.1", with the vector below it, in monospace, wrapping
+  as in the table, then the metrics of `metrics`, each by the name that
+  Sentinel gives the metric without what the term of its group says, such as
+  Confidentiality for Confidentiality Impact under Impact, or for Vulnerable
+  System Confidentiality under Vulnerable system, and its value in sentence
+  case, such as `adjacent_network` as "Adjacent network", or as
   received when the pinned contract does not list it (Sentinel
   `docs/features/tickets/cvss-scoring.md`, CVSS v2.0 Base Metrics; CVSS v3.0
   and v3.1 Base Metrics; CVSS v4.0 Base Metrics). They show in the groups of
@@ -187,9 +190,11 @@ Unknown Values).
 - For v3.0, v3.1, and v4.0, the popover ends with "Open in the FIRST
   calculator", a link to the calculator of the version on the site of FIRST,
   which explains each metric and value: an address composed with the fixed
-  origin `https://www.first.org`, `https://www.first.org/cvss/calculator/3-0`,
-  `3-1`, or `4-0`, with the vector as its fragment, from which the calculator
-  reads it (`docs/behaviors.md`, Links to Other Sites, Composed addresses).
+  origin `https://www.first.org`, `https://www.first.org/cvss/calculator/3.0`,
+  `3.1`, or `4.0`, with the vector as its fragment, such as
+  `https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H`,
+  from which the calculator reads it as it is, without decoding it
+  (`docs/behaviors.md`, Links to Other Sites, Composed addresses).
   FIRST has no such calculator for v2.0, whose popover has no link.
 - Without assessments, "No CVSS assessments.", without the lines and the
   table.
