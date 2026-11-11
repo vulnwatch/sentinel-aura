@@ -11,9 +11,11 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 ## Purpose
 
-The Ticket screen shows one Ticket: its heading row with its main values, and
-in the tab Overview its CVE, the CVSS assessments of its CVE, its package
-tree, its details, and the sources of its CVE, which an analyst refetches.
+The Ticket screen shows one Ticket: its heading row with its main values; in
+the tab Overview its CVE, the CVSS assessments of its CVE, its package tree,
+its details, and the sources of its CVE, which an analyst refetches; and in
+the tab Audit log its history, which an analyst searches and filters to
+reconstruct who changed what and what Sentinel did by itself.
 Vulnerability and restricted analysts work in it all day; every other user
 reads it, as a package maintainer does a Ticket of one of their packages that
 an analyst shares, and finds in its package tree the tracks that wait for
@@ -45,6 +47,27 @@ for a maintainer the tracks that wait for them (Packages).
   the screen removes every other parameter and value from its URL, in place
   of the URL in the browser history, and keeps its anchor
   (`docs/behaviors.md`, Invalid Search Parameters).
+- Audit log is at `/tickets/{ticket_id}/audit-log`, with these search
+  parameters, each value as text and a parameter with several values once for
+  each, such as `kind=status&kind=packages`:
+
+  | Parameter | Values | Without it |
+  |---|---|---|
+  | `search` | The search term, at most 500 characters, without surrounding whitespace and without U+0000 (Sentinel `docs/api-spec.md`, Query Parameter Length Limit; Inadmissible Characters in Request Input) | No search |
+  | `actor` | `system`, or the `id` of a user who acted on the Ticket, never the username, which can change and can be `system` (Sentinel `docs/api-spec.md`, User Identifier Resolution) | Any actor |
+  | `kind` | One or more of `status`, `assignment`, `packages`, `cve`, `priority`, `confidentiality`, `references` (Audit log) | Every kind |
+  | `from`, `to` | A date, such as `2026-11-08`, from 1 Jan 1970 to 30 Dec 9999; `from` not after `to` | No bound |
+  | `page` | A whole number from 1 to 2147483647 (Sentinel `docs/api-spec.md`, Pagination) | The first page |
+
+  The screen removes every other parameter and value, a parameter other than
+  `kind` that the URL gives more than once, and a range whose start follows
+  its end, keeps the kinds that it knows once each in the order of the table
+  above, removes `page=1`, and removes an `actor` that is not among the users
+  who acted on the Ticket once their read arrives, all in place of the URL in
+  the browser history (`docs/behaviors.md`, Invalid Search Parameters). A
+  search, a change of the filters, and a page are each an entry of the
+  browser history (`docs/design-system.md`, Lists). A tab opens at its path
+  without parameters.
 - Anchors: `#cve`, the CVE, `#cvss`, the CVSS assessments, `#packages`, the
   package tree, `#details`, the details, and `#sources`, the sources of the
   CVE; a Ticket without a CVE lacks the CVSS assessments and the sources. The
@@ -80,7 +103,8 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
   compares the dates with the instant at which the Ticket arrived.
 - The row wraps when the width runs short.
 
-**Tabs**, named "Ticket" for assistive technologies: Overview.
+**Tabs**, named "Ticket" for assistive technologies: Overview and Audit
+log.
 
 **Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE, the
 CVSS assessments, and the package tree in the main column, in this order, and
@@ -375,6 +399,107 @@ the order of the API, by source, as a list (Sentinel
   it then reads again the Ticket, its duplicates, the work of a maintainer on
   it, and the CVSS assessments (`docs/behaviors.md`, Outcome of a Change).
 
+**Audit log**, a tab that takes the whole width, without a side column
+(`docs/design-system.md`, Detail Screens): the events of the Ticket as a
+timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
+`GET /api/v1/tickets/{ticket_id}/audit-log`, newest first, 50 a page
+(Sentinel `docs/features/tickets/ticket-audit-log.md`, List Ticket Events).
+
+- **The toolbar**, at the end of the line above the timeline
+  (`docs/design-system.md`, Lists): the search field, "Search events", which
+  takes at most 500 characters and sends `search`; Filters; and Clear
+  filters. Sentinel matches the term, without regard to case, against the
+  values as it records them, such as `NOT_AFFECTED` for a track that is Not
+  affected, not against the sentences or the names of the actors (same
+  section). Filters holds, in this order:
+  - **Actor**, a select (`docs/design-system.md`, Forms) that sends `actor`:
+    Any actor, System, which sends `system`, and the signed-in user with the
+    label You (`docs/design-system.md`, Labels) when they acted on the
+    Ticket; then, after a line, the other users who acted on it, from List
+    Ticket Actors, `GET /api/v1/tickets/{ticket_id}/actors`, in its order, by
+    username (same document, List Ticket Actors), bot accounts and inactive
+    users included. Each user shows in the full form with the username and
+    the labels, and sends their `id`. List Ticket Actors is read when the tab
+    opens; while it loads, or when it fails, the select shows Any actor,
+    System, and in place of the users the loading indicator or the message
+    of the failure.
+  - **Kind**, a group of checkboxes, each with the icon of its kind
+    (`docs/design-system.md`, Icons by Need), that sends the event types of
+    each kind chosen as `event_type`:
+
+    | Kind | Event types |
+    |---|---|
+    | Status | `ticket_created`, `status_change`, `duplicate_set`, `duplicate_removed`, `duplicate_target_changed` |
+    | Assignment | `assignment` |
+    | Packages | `package_added`, `package_maintainer_added`, `package_excluded`, `package_restored`, `track_status_changed`, `track_excluded`, `track_restored`, `product_released`, `product_eligibility_changed`, `product_excluded`, `product_restored` |
+    | CVE and CVSS | `cve_associated`, `cvss_assessment_changed`, `severity_changed` |
+    | Priority | `priority_changed` |
+    | Confidentiality | `confidentiality_changed`, `coordinated_release_changed`, `access_grant_added`, `access_grant_removed` |
+    | References | `reference_added`, `reference_deleted`, `reference_url_changed`, `reference_type_changed`, `reference_title_changed`, `reference_description_changed` |
+
+  - **Period**, the date fields From and To, in the order day, month, year,
+    each covering its whole day in the time zone of the browser, which send
+    `from_date` and `to_date` as the first and the last instant of that day
+    in UTC (`docs/behaviors.md`, Input; Sentinel `docs/api-spec.md`, Date
+    Range Interpretation). A start after the end says "This date is before
+    the start." at To.
+- **The events**, grouped by day, each day a level-two heading. Each event
+  shows its time, the icon of its kind, or `circle-question-mark` for an
+  event type that the pinned contract does not list, and its sentence, which
+  starts with its actor, or System without one (`docs/behaviors.md`,
+  Representation of a User). A user whom an event names only by the username
+  that it recorded, such as the assignee of an `assignment`, shows as `@`
+  and that username, at weight 500, without an avatar or labels. A value
+  that the table names shows by its name in sentence case, such as `AFFECTED`
+  as Affected or `not_shipped` as Not shipped; any other value, and a value
+  that the pinned contract does not list, as received, and an absent
+  severity or priority as Not set. A Ticket identifier is a link to its
+  screen, the address of a reference a link to it (`docs/behaviors.md`,
+  Links to Other Sites), and a date and time shows as such
+  (`docs/behaviors.md`, Display). In the table, *Package · track* is the
+  `package` and the `track` of `detail`, and *Product* its `product_name`
+  (Sentinel `docs/features/tickets/ticket-audit-log.md`, Event Type
+  Contract; detail JSONB Schema Contract):
+
+  | Event type | Sentence after the actor |
+  |---|---|
+  | `ticket_created` | "created the Ticket from its CVE, ingested from NVD", with the source of the comment `CVE ingested from NVD`; otherwise "created the Ticket" |
+  | `status_change` | "changed the status from Analysis to Analyzed"; into Ignored with a reason in `detail`, "ignored the Ticket as Not shipped, from New", the reason being Not shipped, CVE rejected, CNA policy, or Other (Sentinel `docs/features/tickets/tickets.md`, Ignore Reason) |
+  | `assignment` | "assigned the Ticket to @asmith"; "reassigned the Ticket from @asmith to @bwilson"; "unassigned @asmith"; for an unassignment by the system, "unassigned @eblack: user deactivated", from its comment (Sentinel `docs/features/tickets/ticket-audit-log.md`, Canonical Automatic Comment Vocabulary) |
+  | `duplicate_set` | "marked the Ticket as a duplicate of SNTL-21" |
+  | `duplicate_removed` | "reverted the duplicate of SNTL-21" |
+  | `duplicate_target_changed` | "changed the original from SNTL-22 to SNTL-21, as SNTL-22 was marked as a duplicate" |
+  | `package_added` | "added the package fictional-openssl" |
+  | `package_maintainer_added` | "added the maintainer @ghill to fictional-openssl" |
+  | `package_excluded`, `package_restored` | "excluded the package fictional-openssl", "restored the package fictional-openssl" |
+  | `track_status_changed` | "set *Package · track* from Analysis to Affected" |
+  | `track_excluded`, `track_restored` | "excluded the track *Package · track*", "restored the track *Package · track*" |
+  | `product_released` | "recorded the release of *Product* of *Package · track* on 8 Nov 2026, 13:05, in SUSE-SU-2099:0001-1", with `advisory_id` |
+  | `product_eligibility_changed` | "made *Product* of *Package · track* eligible", or "not eligible", followed by its reason: "after a change of the CVSS assessments" (`cvss`), "after a change of its CVSS threshold" (`threshold`), "after a change of its lifecycle phase" (`reactive_ltss`), "as the Ticket became active again" (`reactivation`), or the reason as received; set by hand (`va_override`), "set *Product* of *Package · track* as eligible by hand", or "as not eligible", and "returned *Product* of *Package · track* to automatic eligibility, eligible" when the override is cleared |
+  | `product_excluded`, `product_restored` | "excluded *Product* from *Package · track*", "restored *Product* on *Package · track*" |
+  | `cve_associated` | "associated CVE-2099-0021" |
+  | `severity_changed` | "set the severity to High"; "changed the severity from High to Critical"; "removed the severity High" |
+  | `priority_changed` | "set the priority to P3"; "changed the priority from P3 to P2"; for an override, "overrode the priority from P3 to P1", "changed the priority override from P1 to P2", or "cleared the priority override, from P1 to P3" (Sentinel `docs/features/tickets/ticket-priority.md`, Manual Override) |
+  | `cvss_assessment_changed` | "added the NVD CVSS v3.1 assessment 8.1, CVSS:3.1/AV:N/…", "changed the SUSE CVSS v3.1 assessment from 7.5, CVSS:3.1/… to 8.1, CVSS:3.1/…", or "deleted the SUSE CVSS v3.1 assessment 8.1, CVSS:3.1/…", the vector in monospace, from the canonical values (Sentinel `docs/features/tickets/ticket-audit-log.md`, Rules); a value of another form as received |
+  | `confidentiality_changed` | "made the Ticket confidential", "made the Ticket non-confidential" |
+  | `coordinated_release_changed` | "set the Coordinated Release Date to 25 Nov 2026, 14:00"; "changed the Coordinated Release Date from … to …"; "removed the Coordinated Release Date 25 Nov 2026, 14:00" |
+  | `access_grant_added`, `access_grant_removed` | "granted access to @cwhite", "revoked the access of @cwhite" |
+  | `reference_added`, `reference_deleted` | "added the reference https://…", "deleted the reference https://…" |
+  | `reference_url_changed` | "changed the address of a reference from https://… to https://…" |
+  | `reference_type_changed` | "changed the type of https://… from Article to Advisory", a type without a value being Uncategorized (Sentinel `docs/features/tickets/ticket-references.md`, ReferenceType) |
+  | `reference_title_changed`, `reference_description_changed` | "changed the title of https://… from “Fictional advisory draft” to “Fictional advisory”"; "set the title of https://… to “…”" without an earlier one; "removed the title “…” of https://…" without a new one; and so for the description |
+
+  An event whose fields lack what its sentence needs, such as a
+  `status_change` into Ignored recorded before the reason existed, says what
+  its fields hold, such as "changed the status from New to Ignored". An event
+  type that the pinned contract does not list shows its type as received,
+  with its time and its actor, and none of its values (`docs/behaviors.md`,
+  Unknown Values). Every other comment, such as `CVE package resolution` of
+  a package added by the system, follows the sentence
+  (`docs/design-system.md`, Timelines).
+- **Pagination**, below the timeline, when the events have more than one
+  page (`docs/design-system.md`, Lists).
+
 ## Actions
 
 **Refetch**, Re-fetch CVE Data, `POST /api/v1/cves/{cve_id}/refetch`, for a
@@ -423,8 +548,8 @@ user who holds `triage_ticket` (Sentinel
 
 ## States
 
-- **Loading.** The heading row and the tabs show at once; the panel of
-  Overview shows the loading indicator until the Ticket arrives, the value of
+- **Loading.** The heading row and the tabs show at once; the panel of the
+  tab shows the loading indicator until the Ticket arrives, the value of
   Duplicates until its read arrives, and the part CVSS assessments and the
   section Sources of the CVE until theirs arrives (`docs/behaviors.md`,
   Loading). Until the read of the work of a maintainer arrives, no track is
@@ -457,6 +582,26 @@ user who holds `triage_ticket` (Sentinel
   (`docs/design-system.md`, Menus, Popovers, and Tooltips), and announces it,
   since the popover holds the focus (`docs/behaviors.md`, Accessibility,
   Announcements).
+- **Audit log.** Once the Ticket has arrived, the toolbar shows, and the
+  loading indicator in place of the events until they arrive. Another search, filter, or page
+  keeps the events shown, marked as being updated, until the new ones arrive,
+  and then announces what the timeline shows, "12 events", "1–50 of 63
+  events", or the message of the empty state, with the focus where it was
+  (`docs/behaviors.md`, Loading; Accessibility, Focus after a navigation). A
+  Ticket without events says "No events.", events that do not match say "No
+  events match the search." when only a search applies and "No events match
+  the filters." otherwise, with Clear filters, and a page beyond the last
+  says "There are no events on this page." with "Go to the first page"
+  (`docs/behaviors.md`, Empty States). The failure of the read of the events
+  shows in place of the events, and that of a new read of the events shown
+  above them, each with Try again where the failure offers it, and the
+  failure of List Ticket Actors in the select (Audit log); the screen handles
+  no error code specifically (Sentinel
+  `docs/features/tickets/ticket-audit-log.md`, List Ticket Events; List
+  Ticket Actors). When Clear filters, the pagination, or the action of an
+  empty state leaves the page while it holds the focus, the focus moves to
+  the screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
+  action).
 - **Errors of Refetch.** A failure follows the default presentation of a
   change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
   after which the fetch may still run (`docs/behaviors.md`, Retries and
@@ -482,13 +627,18 @@ user who holds `triage_ticket` (Sentinel
   User
 - `docs/design-system.md` — Font; Focus and Motion; Main Content; Values;
   Severity; Deadline Badge; Track Milestones; Labels; Other Values; Buttons
-  and Links; Tables; Detail Screens; Forms; Messages; Loading; Errors in
-  Place of Content; Menus, Popovers, and Tooltips; Icons by Need;
-  Representation of a User
+  and Links; Lists; Tables; Timelines; Detail Screens; Forms; Messages;
+  Loading; Empty States; Errors in Place of Content; Menus, Popovers, and
+  Tooltips; Icons by Need; Representation of a User
+- Sentinel `docs/features/tickets/ticket-audit-log.md` — Event Type Contract
+  (Rules); Canonical Automatic Comment Vocabulary; detail JSONB Schema
+  Contract; List Ticket Events; List Ticket Actors
+- Sentinel `docs/features/tickets/ticket-references.md` — ReferenceType
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
   Transitions; Duplicate Handling; Confidential Tickets (Identifier
-  Disclosure Boundary; Coordinated Release Date); Response Schemas (Shared
-  Sub-Schemas; TicketDetail); Get Ticket; List Tickets (Duplicate filter)
+  Disclosure Boundary; Coordinated Release Date); Ignore Reason; Response
+  Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket; List Tickets
+  (Duplicate filter)
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Null Due
   Dates); Track Milestones (Observability of Later Phases; Completion
   Evidence); Ticket Current Phase
@@ -517,6 +667,8 @@ user who holds `triage_ticket` (Sentinel
   Assessments for a CVE)
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility; Endpoint Permission Map (CVEs)
-- Sentinel `docs/api-spec.md` — Ticket Identifier Resolution; CVE Identifier
-  Resolution; CNA Identifier Resolution; CVE Accessibility Check; Pagination;
-  Infrastructure Dependency Errors (HTTP 503)
+- Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
+  Characters in Request Input; Ticket Identifier Resolution; User Identifier
+  Resolution; CVE Identifier Resolution; CNA Identifier Resolution; CVE
+  Accessibility Check; Pagination; Enum Filter Validation; Date Range
+  Interpretation; Infrastructure Dependency Errors (HTTP 503)

@@ -462,6 +462,7 @@ that the code imports ship.
 | A Ticket status, a milestone status, a status of a source of a CVE, or a kind of event that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
 | A link to another site | `external-link` |
+| The kinds of event of the timeline of a Ticket: Status, Assignment, Packages, CVE and CVSS, Priority, Confidentiality, References | `circle-dot`, `user-check`, `package`, `gauge`, `flag`, `eye-off`, `link` |
 
 A need that the table does not list takes the Lucide icon that names it best,
 and the change adds its row.
@@ -1085,7 +1086,15 @@ A list screen, such as the Ticket list, shows from top to bottom:
      as a status, is a group of checkboxes (Forms): its name in `text-12`,
      weight 500, `fg-muted`, and 4 px below it its checkboxes in a row that
      wraps, 16 px apart, each its box then, 6 px later, its label in
-     `text-14`, the name of the value with its mark (Values).
+     `text-14`, the name of the value with its mark (Values), or with the
+     icon of its kind at 14 px in `fg-muted`, such as a kind of event of a
+     timeline (Timelines). A filter of one value among many, such as the
+     actor of the events of a timeline, is a select (Forms), and a range of
+     dates two date fields 160 px wide, 12 px apart, each named by its end,
+     such as From and To; each field has its name above it in the style of
+     the name of a group of checkboxes, 4 px apart. A range whose start
+     follows its end is not applied, and its end shows the error of a field
+     (Forms) until the user changes either date.
    - Clear filters, a quiet button 32 px high with `x`, removes the search and
      the filters, and keeps the view and the sorting of the list.
 3. The table (Tables), 16 px below.
@@ -1183,9 +1192,14 @@ states it, such as that of a Ticket; the other audit logs are tables
   is hidden from assistive technologies, which read the sentence.
 - The sentence, in `text-14`, starts with its actor in the full form at the
   small size, the name at weight 500 (Representation of a User), and says
-  what the actor did, such as "Alice Smith set fictional-zlib · fles-16.0 to
-  Affected"; the screen document gives the sentence of each kind. A row has
-  8 px of space above and below it.
+  what the actor did, such as "Alice Smith set fictional-zlib · fles-16.0
+  from Analysis to Affected"; the screen document gives the sentence of each
+  kind. The objects of the sentence, such as a package with its track, a
+  Product, a reference, or a user, are at weight 500 too, so that the eye
+  finds what changed, and its values, such as a status, stay at weight 400.
+  A comment that the event carries and that its sentence does not already
+  say follows the sentence after " · ", in `fg-muted`, as received. A row
+  has 8 px of space above and below it.
 - An event without an actor starts with System and the Sentinel mark
   (Representation of a User, No recorded actor), in `text-13` and `fg-muted`,
   with the boundary of its marker in `border` and its icon in `fg-muted`, and
@@ -1194,7 +1208,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   pinned contract does not list shows its kind as received
   (`docs/behaviors.md`, Unknown Values).
 - Above the timeline, the toolbar of a list without views: the search field,
-  Filters, and Clear filters; below it, the pagination of a list (Lists).
+  Filters, and Clear filters, at the end of its line, as they are in a list;
+  below it, the pagination of a list (Lists). The loading indicator, an
+  error, and an empty state show in place of the events, as in a list,
+  without the frame of a table (Loading; Errors in Place of Content; Empty
+  States).
 
 ### Detail Screens
 
@@ -1348,7 +1366,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   then the action that submits it, primary or danger.
 - Other controls follow the field: a multi-line field is at least 88 px
   high, three lines of text; a select is a field-like button that ends with
-  `chevron-down` and opens its options as a menu; a combobox is a field that
+  `chevron-down` and opens its options as a menu below it, at least as wide
+  as it, its options that are users in the full form at the small size, and
+  its groups of options separated by `border` lines; while options that it
+  reads load, or when their read fails, it shows in their place the loading
+  indicator or the message of the failure, and keeps the options that do not
+  depend on the read; a combobox is a field that
   opens its options below it, showing users in the full form at the small
   size, and while they load, when none matches, or when their read fails,
   shows in their place the loading indicator, a line such as "No users
@@ -1415,8 +1438,8 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Empty States
 
-- An empty list shows, in place of the rows and inside the table's frame, its
-  message (`docs/behaviors.md`, Empty States) in `fg`, centered, with 40 px of
+- An empty list shows, in place of the rows and inside the table's frame, or
+  in place of the events of a timeline (Timelines), its message (`docs/behaviors.md`, Empty States) in `fg`, centered, with 40 px of
   space above and below, and its action below it as a secondary button, such
   as "Create Ticket" with `plus` or "Clear filters" with `x`.
 - A part of a screen without items shows its short line in `fg-muted`.
