@@ -9,6 +9,7 @@ import type {
   CVECVSSAssessments,
   CVESourceStatusItem,
   CVSS20Assessment,
+  CVSS30Assessment,
   CVSS40Assessment,
   CurrentUserResponse,
   PackageDetail,
@@ -1602,7 +1603,18 @@ describe("the hidden records", () => {
 
   test("keeps the scroll position when Show hidden changes, also with an anchor in the URL", async () => {
     await page.viewport(1280, 400);
-    showing(withHiddenRecords());
+    // More packages after them, so that the page goes on below the package
+    // tree, which the anchor can then scroll to the top of the window.
+    showing([
+      ...withHiddenRecords(),
+      ...["fictional-curl", "fictional-zlib", "fictional-libxml2"].map(
+        (name, index) =>
+          fictionalPackage({
+            id: `00000000-0000-0000-0000-0000000000b${index}`,
+            package_name: name,
+          }),
+      ),
+    ]);
     const { router, screen } = await renderTree("/tickets/SNTL-12#packages");
     // Once the reads of the tab have settled, the page has shown the target
     // of the anchor; it then lies elsewhere.
@@ -2220,8 +2232,48 @@ function linesOfText(element: Element): string[] {
     .map(([, text]) => text.trim());
 }
 
+// The vector of fictionalAssessment, NVD's v3.1 assessment.
+const NVD_V31_VECTOR = "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H";
+
+// The terms of the popover of a vector, each with the definition of the
+// same rank, as each term has one: a group's definition holds the terms of
+// its metrics, which follow it.
+function fieldsOf(popover: Locator): [Element, Element][] {
+  const definitions = popover.getByRole("definition").elements();
+  return popover
+    .getByRole("term")
+    .elements()
+    .flatMap((term, index): [Element, Element][] => {
+      const definition = definitions[index];
+      return definition === undefined ? [] : [[term, definition]];
+    });
+}
+
+// Whether a definition is that of a group, which holds terms of its own.
+function isGroup(definition: Element): boolean {
+  return (
+    page.elementLocator(definition).getByRole("term").elements().length > 0
+  );
+}
+
+// The metrics of the popover of a vector, in their order: the term of each
+// group, and each metric as its term and its value.
+function metricsOf(popover: Locator): (string | string[])[] {
+  return fieldsOf(popover).map(([term, definition]) =>
+    isGroup(definition)
+      ? (term.textContent ?? "")
+      : [term.textContent ?? "", definition.textContent ?? ""],
+  );
+}
+
+// The terms and the values of the metrics of the popover of a vector, each
+// group's term left out.
+function metricFieldsOf(popover: Locator): [Element, Element][] {
+  return fieldsOf(popover).filter(([, definition]) => !isGroup(definition));
+}
+
 describe("the CVSS assessments", () => {
-  test("follow the package tree, under a level-two heading", async () => {
+  test("follow the CVE and precede the package tree, under a level-two heading", async () => {
     stubTicket();
     const { screen } = await renderCvss("SUSE");
 
@@ -2234,7 +2286,11 @@ describe("the CVSS assessments", () => {
       )
       .toBeVisible();
     expect(boxOf(cvssPart(screen)).top).toBeGreaterThan(
-      boxOf(packagesPart(screen)).bottom,
+      boxOf(screen.getByRole("region", { name: "CVE-2099-0012", exact: true }))
+        .bottom,
+    );
+    expect(boxOf(cvssPart(screen)).bottom).toBeLessThan(
+      boxOf(packagesPart(screen)).top,
     );
   });
 
@@ -2245,7 +2301,7 @@ describe("the CVSS assessments", () => {
     expect(linesOf(screen)).toEqual([
       [
         "Severity",
-        "Medium 5.5 from SUSE CVSS v3.1, which also sets the eligibility score of the Products",
+        "Medium (5.5) from SUSE CVSS v3.1, which also sets the eligibility score of the Products",
       ],
     ]);
   });
@@ -2266,7 +2322,7 @@ describe("the CVSS assessments", () => {
     const { screen } = await renderCvss("NVD");
 
     expect(linesOf(screen)).toEqual([
-      ["Severity", "Critical 9.3 from NVD CVSS v4.0"],
+      ["Severity", "Critical (9.3) from NVD CVSS v4.0"],
       [
         "Eligibility score",
         "10.0, the fallback without a SUSE CVSS v3.1 assessment",
@@ -2291,7 +2347,7 @@ describe("the CVSS assessments", () => {
     const { screen } = await renderCvss("SUSE");
 
     expect(linesOf(screen)).toEqual([
-      ["Severity", "Medium 5.5 from SUSE CVSS v3.1"],
+      ["Severity", "Medium (5.5) from SUSE CVSS v3.1"],
       [
         "Eligibility score",
         "10.0, the fallback without a SUSE CVSS v4.0 assessment",
@@ -2309,16 +2365,21 @@ describe("the CVSS assessments", () => {
     const { screen } = await renderCvss("SUSE");
 
     expect(linesOf(screen)).toEqual([
-      ["Severity", "High 8.1 from NVD CVSS 5.0"],
+      ["Severity", "High (8.1) from NVD CVSS 5.0"],
       ["Eligibility score", "7.0, fictional_source"],
     ]);
   });
 
-  test("list the assessments in the order of the API, by provider and version, with the severity of each by its version and its vector", async () => {
-    // An order that neither the version nor the provider gives.
+  test("list the assessments in the order of the API, by provider and version, with the Base score and the severity of each by its version, and its vector", async () => {
+    // An order that neither the version nor the provider gives, and the
+    // widest score, so that the severities align after scores of two widths.
     showingCvss(
       fictionalCvssAssessments({
-        assessments: [fictionalSuseAssessment(), CNA_V20, NVD_V40],
+        assessments: [
+          fictionalSuseAssessment(),
+          { ...CNA_V20, score: 10 },
+          NVD_V40,
+        ],
       }),
     );
     const { screen } = await renderCvss("Fictional CNA");
@@ -2331,29 +2392,41 @@ describe("the CVSS assessments", () => {
         .getByRole("columnheader")
         .elements()
         .map((header) => header.textContent),
-    ).toEqual(["Provider", "Version", "Assessment severity", "Vector"]);
+    ).toEqual(["Provider", "Version", "Base score", "Vector"]);
     expect(rowsOf(screen)).toEqual([
       [
         "SUSE",
         "v3.1",
-        "Medium 5.5",
+        "5.5 Medium",
         "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
       ],
-      ["Fictional CNA", "v2.0", "High 7.5", "AV:N/AC:L/Au:N/C:P/I:P/A:P"],
+      ["Fictional CNA", "v2.0", "10.0 High", "AV:N/AC:L/Au:N/C:P/I:P/A:P"],
       [
         "NVD",
         "v4.0",
-        "Critical 9.3",
+        "9.3 Critical",
         "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
       ],
     ]);
     // The scores align in their column, in tabular figures
-    // (docs/design-system.md, Type Scale).
+    // (docs/design-system.md, Type Scale), and end at the same place, so
+    // that the severities after them align too.
+    const scores = ["5.5", "10.0", "9.3"].map((score) =>
+      table.getByText(score, { exact: true }),
+    );
+    for (const score of scores) {
+      expect(getComputedStyle(score.element()).fontVariantNumeric).toBe(
+        "tabular-nums",
+      );
+    }
+    expect(new Set(scores.map((score) => boxOf(score).right)).size).toBe(1);
     expect(
-      getComputedStyle(
-        cvssPart(screen).getByText("7.5", { exact: true }).element(),
-      ).fontVariantNumeric,
-    ).toBe("tabular-nums");
+      new Set(
+        ["Medium", "High", "Critical"].map(
+          (name) => boxOf(table.getByText(name, { exact: true })).left,
+        ),
+      ).size,
+    ).toBe(1);
     // Assistive technologies name each row by its provider and its version.
     expect(
       table
@@ -2389,10 +2462,23 @@ describe("the CVSS assessments", () => {
       [
         "SUSE",
         "v3.1",
-        "fictional_severity 5.5",
+        "5.5 fictional_severity",
         "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
       ],
     ]);
+    // The metrics of an unlisted version depend on it, so its vector shows
+    // as text, without the popover of its metrics, which a listed version
+    // opens.
+    expect(
+      cvssPart(screen).getByRole("button", { name: "CVSS:5.0/AV:N" }).query(),
+    ).toBeNull();
+    await expect
+      .element(
+        cvssPart(screen).getByRole("button", {
+          name: "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+        }),
+      )
+      .toBeVisible();
   });
 
   test("show the vector in monospace, wrapping only after a slash where its column is narrower than it", async () => {
@@ -2430,6 +2516,219 @@ describe("the CVSS assessments", () => {
         cvssPart(screen).getByText(provider, { exact: true }).element(),
       ),
     ).toEqual(["Fictional", "Coordinated", "Disclosure", "Team"]);
+  });
+
+  test("open the metrics of a v3.1 vector in a popover, which takes the focus, with the vector and a link to the calculator of FIRST", async () => {
+    stubTicket();
+    const { screen } = await renderCvss("SUSE");
+    const vector = cvssPart(screen).getByRole("button", {
+      name: NVD_V31_VECTOR,
+      exact: true,
+    });
+
+    await vector.click();
+
+    const metrics = screen.getByRole("dialog", { name: "NVD CVSS v3.1" });
+    await expect.element(metrics).toHaveFocus();
+    expect(metricsOf(metrics)).toEqual([
+      "Exploitability",
+      ["Attack vector", "Network"],
+      ["Attack complexity", "High"],
+      ["Privileges required", "None"],
+      ["User interaction", "None"],
+      ["Scope", "Unchanged"],
+      "Impact",
+      ["Confidentiality", "High"],
+      ["Integrity", "High"],
+      ["Availability", "High"],
+    ]);
+    // The vector, which the user can select and copy, in monospace.
+    const shown = metrics.getByText(NVD_V31_VECTOR, { exact: true }).element();
+    expect(getComputedStyle(shown).fontFamily).toContain("monospace");
+    expect(getComputedStyle(shown).userSelect).not.toBe("none");
+    // The calculator of FIRST reads the vector from the fragment as it is.
+    expect(
+      metrics
+        .getByRole("link", {
+          name: "Open in the FIRST calculator (another site)",
+        })
+        .element()
+        .getAttribute("href"),
+    ).toBe(`https://www.first.org/cvss/calculator/3.1#${NVD_V31_VECTOR}`);
+
+    await userEvent.keyboard("{Escape}");
+
+    await expect.element(metrics).not.toBeInTheDocument();
+    await expect.element(vector).toHaveFocus();
+  });
+
+  test("open the metrics of a v4.0 vector in its groups, their terms in a column as wide as the longest one", async () => {
+    showingCvss(fictionalCvssAssessments({ assessments: [NVD_V40] }));
+    const { screen } = await renderCvss("NVD");
+
+    await cvssPart(screen)
+      .getByRole("button", { name: NVD_V40.vector_string, exact: true })
+      .click();
+
+    const metrics = screen.getByRole("dialog", { name: "NVD CVSS v4.0" });
+    await expect.element(metrics).toBeVisible();
+    expect(metricsOf(metrics)).toEqual([
+      "Exploitability",
+      ["Attack vector", "Network"],
+      ["Attack complexity", "Low"],
+      ["Attack requirements", "None"],
+      ["Privileges required", "None"],
+      ["User interaction", "None"],
+      "Vulnerable system",
+      ["Confidentiality", "High"],
+      ["Integrity", "High"],
+      ["Availability", "High"],
+      "Subsequent system",
+      ["Confidentiality", "None"],
+      ["Integrity", "None"],
+      ["Availability", "None"],
+    ]);
+    // No term wraps, and the values of every group start at the same place.
+    const fields = metricFieldsOf(metrics);
+    for (const [term] of fields) {
+      expect(linesOfText(term)).toHaveLength(1);
+    }
+    expect(new Set(fields.map(([, value]) => boxOf(value).left)).size).toBe(1);
+    // The vector wraps only after a slash, as in the table.
+    const texts = linesOfText(
+      metrics.getByText(NVD_V40.vector_string, { exact: true }).element(),
+    );
+    expect(texts.length).toBeGreaterThan(1);
+    expect(texts.slice(0, -1).every((text) => text.endsWith("/"))).toBe(true);
+    expect(
+      metrics
+        .getByRole("link", {
+          name: "Open in the FIRST calculator (another site)",
+        })
+        .element()
+        .getAttribute("href"),
+    ).toBe(
+      `https://www.first.org/cvss/calculator/4.0#${NVD_V40.vector_string}`,
+    );
+  });
+
+  test("open the metrics of a v2.0 vector without a link, for which FIRST has no calculator, and show a value that the pinned contract does not list as received", async () => {
+    showingCvss({
+      ...fictionalCvssAssessments(),
+      assessments: [
+        {
+          ...CNA_V20,
+          metrics: { ...CNA_V20.metrics, access_vector: "fictional_vector" },
+        },
+      ],
+    });
+    const { screen } = await renderCvss("Fictional CNA");
+
+    await cvssPart(screen)
+      .getByRole("button", { name: CNA_V20.vector_string, exact: true })
+      .click();
+
+    const metrics = screen.getByRole("dialog", {
+      name: "Fictional CNA CVSS v2.0",
+    });
+    await expect.element(metrics).toBeVisible();
+    expect(metricsOf(metrics)).toEqual([
+      "Exploitability",
+      ["Access vector", "fictional_vector"],
+      ["Access complexity", "Low"],
+      ["Authentication", "None"],
+      "Impact",
+      ["Confidentiality", "Partial"],
+      ["Integrity", "Partial"],
+      ["Availability", "Partial"],
+    ]);
+    expect(metrics.getByRole("link").query()).toBeNull();
+  });
+
+  test("open the metrics of a v3.0 vector in the groups of v3.1, with a link to the calculator of FIRST for v3.0", async () => {
+    const vector = "CVSS:3.0/AV:A/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N";
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [
+          {
+            ...fictionalAssessment(),
+            provider_name: "Fictional CNA",
+            cvss_version: "3.0",
+            score: 5.4,
+            severity: "medium",
+            vector_string: vector,
+            metrics: {
+              attack_vector: "adjacent",
+              attack_complexity: "low",
+              privileges_required: "low",
+              user_interaction: "required",
+              scope: "changed",
+              confidentiality_impact: "low",
+              integrity_impact: "low",
+              availability_impact: "none",
+            },
+          } satisfies CVSS30Assessment,
+        ],
+      }),
+    );
+    const { screen } = await renderCvss("Fictional CNA");
+
+    await cvssPart(screen)
+      .getByRole("button", { name: vector, exact: true })
+      .click();
+
+    const metrics = screen.getByRole("dialog", {
+      name: "Fictional CNA CVSS v3.0",
+    });
+    await expect.element(metrics).toBeVisible();
+    expect(metricsOf(metrics)).toEqual([
+      "Exploitability",
+      ["Attack vector", "Adjacent"],
+      ["Attack complexity", "Low"],
+      ["Privileges required", "Low"],
+      ["User interaction", "Required"],
+      ["Scope", "Changed"],
+      "Impact",
+      ["Confidentiality", "Low"],
+      ["Integrity", "Low"],
+      ["Availability", "None"],
+    ]);
+    expect(
+      metrics
+        .getByRole("link", {
+          name: "Open in the FIRST calculator (another site)",
+        })
+        .element()
+        .getAttribute("href"),
+    ).toBe(`https://www.first.org/cvss/calculator/3.0#${vector}`);
+  });
+
+  test("show a metric value of several words in sentence case", async () => {
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [
+          {
+            ...CNA_V20,
+            vector_string: "AV:A/AC:L/Au:N/C:P/I:P/A:P",
+            metrics: { ...CNA_V20.metrics, access_vector: "adjacent_network" },
+          },
+        ],
+      }),
+    );
+    const { screen } = await renderCvss("Fictional CNA");
+
+    await cvssPart(screen)
+      .getByRole("button", { name: "AV:A/AC:L/Au:N/C:P/I:P/A:P", exact: true })
+      .click();
+
+    const metrics = screen.getByRole("dialog", {
+      name: "Fictional CNA CVSS v2.0",
+    });
+    await expect.element(metrics).toBeVisible();
+    expect(metricsOf(metrics)[1]).toEqual([
+      "Access vector",
+      "Adjacent network",
+    ]);
   });
 
   test("move the focus to the screen's heading when a new read leaves no table where it was", async () => {
@@ -2763,24 +3062,27 @@ describe("the sources of the CVE", () => {
     ).toBeTruthy();
   });
 
-  test("follow the CVSS assessments in one column, last in the order of the page, after a border line 32 px below them", async () => {
+  test("follow the package tree in one column, last in the order of the page, after a border line 32 px below it", async () => {
     await page.viewport(900, 800);
     stubTicket();
     const { screen } = await renderSources();
-    const cvss = cvssPart(screen);
+    const packages = packagesPart(screen);
     await expect
-      .element(cvss.getByRole("grid", { name: "CVSS assessments" }))
+      .element(cvssPart(screen).getByRole("grid", { name: "CVSS assessments" }))
       .toBeVisible();
     const part = sourcesPart(screen);
 
     expect(
-      cvss.element().compareDocumentPosition(part.element()) &
+      packages.element().compareDocumentPosition(part.element()) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(boxOf(part).width).toBe(boxOf(cvss).width);
-    // 32 px below the content of the CVSS assessments, a border line, and the
+    expect(boxOf(part).width).toBe(boxOf(packages).width);
+    // 32 px below the content of the package tree, a border line, and the
     // section 16 px below it.
-    expect(boxOf(part).top - boxOf(cvss).bottom).toBeCloseTo(32 + 1 + 16, 1);
+    expect(boxOf(part).top - boxOf(packages).bottom).toBeCloseTo(
+      32 + 1 + 16,
+      1,
+    );
   });
 
   test("stay in their place, with the focus and a refetch in progress, when the layout changes", async () => {
@@ -2795,7 +3097,8 @@ describe("the sources of the CVE", () => {
 
     await expect
       .poll(
-        () => boxOf(sourcesPart(screen)).top > boxOf(cvssPart(screen)).bottom,
+        () =>
+          boxOf(sourcesPart(screen)).top > boxOf(packagesPart(screen)).bottom,
       )
       .toBe(true);
     await expect.element(refetch).toHaveFocus();

@@ -55,23 +55,31 @@ function Mark({ marked, alone }: MarkProps) {
     return (
       <LoaderCircle
         aria-hidden
-        className="size-3 shrink-0 animate-spin text-info-icon motion-reduce:animate-none"
+        className="size-3 shrink-0 self-center animate-spin text-info-icon motion-reduce:animate-none"
       />
     );
   }
   if (marked?.mark === "unobserved") {
     return (
-      <CircleDashed aria-hidden className="size-3 shrink-0 text-neutral-icon" />
+      <CircleDashed
+        aria-hidden
+        className="size-3 shrink-0 self-center text-neutral-icon"
+      />
     );
   }
   if (marked?.mark === "empty") {
-    return <Circle aria-hidden className="size-3 shrink-0 text-neutral-icon" />;
+    return (
+      <Circle
+        aria-hidden
+        className="size-3 shrink-0 self-center text-neutral-icon"
+      />
+    );
   }
   if (marked === undefined && alone) {
     return (
       <CircleQuestionMark
         aria-hidden
-        className="size-3 shrink-0 text-neutral-icon"
+        className="size-3 shrink-0 self-center text-neutral-icon"
       />
     );
   }
@@ -79,7 +87,7 @@ function Mark({ marked, alone }: MarkProps) {
     <svg
       aria-hidden
       viewBox="0 0 8 8"
-      className={`${alone ? "size-2.5" : "size-2"} shrink-0`}
+      className={`${alone ? "size-2.5" : "size-2"} shrink-0 self-center`}
     >
       {marked === undefined ? (
         <circle
@@ -107,12 +115,14 @@ interface MarkedValueProps {
 }
 
 // The mark of the value, then, 6 px later, the name of the value in the
-// color of the text around it. A value that the pinned contract does not
-// list shows as received.
+// color of the text around it, on the baseline of the text around it, with
+// the mark centered on the line, as a severity shows (docs/design-system.md,
+// Severity). A value that the pinned contract does not list shows as
+// received.
 export function MarkedValue({ value, known }: MarkedValueProps) {
   const marked = known.get(value);
   return (
-    <span className="inline-flex items-center gap-1.5 align-middle">
+    <span className="inline-flex items-baseline gap-1.5">
       <Mark marked={marked} alone={false} />
       <span>{marked === undefined ? value : marked.name}</span>
     </span>

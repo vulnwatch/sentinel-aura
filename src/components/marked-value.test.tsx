@@ -293,3 +293,28 @@ test("shows the mark of a value that the pinned contract does not list alone as 
   );
   expect(await iconColor(missing.figure, [12, 7])).toBe(CANVAS);
 });
+
+// The box of the glyphs of a text node, which text of one font on one
+// baseline shares.
+function textBox(node: Node | null): DOMRect {
+  const range = document.createRange();
+  if (node !== null) {
+    range.selectNodeContents(node);
+  }
+  return range.getBoundingClientRect();
+}
+
+test("stands on the baseline of the text around it, as a severity does", async () => {
+  const screen = await render(
+    <p className="text-14">
+      Before <MarkedValue value="running" known={KNOWN} /> after
+    </p>,
+  );
+  const around = textBox(screen.getByRole("paragraph").element().firstChild);
+  const name = textBox(
+    screen.getByText("Running", { exact: true }).element().firstChild,
+  );
+
+  expect(name.top).toBe(around.top);
+  expect(name.bottom).toBe(around.bottom);
+});
