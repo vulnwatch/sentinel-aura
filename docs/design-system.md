@@ -448,6 +448,7 @@ that the code imports ship.
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
 | A deadline that has passed, an overdue milestone | `clock-alert` |
 | The other statuses of a milestone: done, pending, not applicable, not observed (Track Milestones); an observation never made (Other Values) | `circle-check`, `circle`, `circle-minus`, `circle-dashed` |
+| The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
 | A confidential Ticket | `lock` |
 | A priority override, an eligibility set by hand | `user-pen` |
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
@@ -458,7 +459,7 @@ that the code imports ship.
 | Refetch | `refresh-cw` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy, an operation in progress (Other Values) | `loader-circle` |
-| A Ticket status, a milestone status, or a kind of event that the pinned contract does not list | `circle-question-mark` |
+| A Ticket status, a milestone status, a status of a source of a CVE, or a kind of event that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
 | A link to another site | `external-link` |
 
@@ -912,7 +913,8 @@ screen, the heading row follows the lock with the label Confidential
   (Confidential Tickets), and, as a screen document states them, such as
   Excluded, EOL, Disabled, Not eligible, or a type of a CNA. It is in
   `text-12`, weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a
-  4 px radius, and 4 px of side padding, 6 px after what it follows; a second
+  4 px radius, and 4 px of side padding, 6 px after what it follows, or at
+  the end of the first line of a source of a CVE (Other Values); a second
   label follows the first, 6 px later. Its text carries its meaning, and
   assistive technologies read it as text.
 - A label that tells the signed-in user that a record waits for them, such as
@@ -940,6 +942,22 @@ screen, the heading row follows the lock with the label Confidential
   `neutral-icon` in place of its dot, as a phase that Sentinel does not
   observe does (Track Milestones), so that it is not taken for a value that
   the pinned contract does not list.
+- The status of a source of a CVE shows its mark alone, without its name,
+  centered in a place of 24 px at the start of the line of the source, 8 px
+  before the name of the source; the name of the status is the accessible
+  name of the mark, which assistive technologies read after the name of the
+  source. Its marks: a dot of 10 px in `success-icon` for `success` and in
+  `danger-icon` for `failure`; and, at 12 px, `circle` in `neutral-icon` for
+  `missing`, an attempt that found nothing, the marks of `pending` and
+  `not_attempted` above, and `circle-question-mark` in `neutral-icon` for a
+  status that the pinned contract does not list, whose value as received is
+  then its accessible name (`docs/behaviors.md`, Unknown Values). Color is
+  not alone between the two dots (Principles): Sentinel records the start of
+  a failure streak with every failure (Sentinel
+  `docs/features/tickets/cve-service.md`, CVESource Management), which a
+  `failure` always shows below the name of its source, and a `success` never
+  does. The labels of the source stand at the end of its first line
+  (Labels).
 - An absent value shows as an en dash, "–", in `fg-muted`, read as "Not
   set", or as the word that names the absence precisely, also in `fg-muted`
   (`docs/behaviors.md`, Absent Values).
@@ -958,7 +976,7 @@ screen, the heading row follows the lock with the label Confidential
 |---|---|---|
 | Primary | `accent` fill, `on-accent` text, `accent-hover` under the pointer | The main action of a screen, a form, or a dialog; one per screen part |
 | Secondary | `surface` fill, `border-strong` boundary, `fg` text, `surface-hover` under the pointer | Other actions, and Cancel in a dialog |
-| Quiet | No fill or boundary, `fg` text, `surface-hover` under the pointer | Cancel in a form |
+| Quiet | No fill or boundary, `fg` text, `surface-hover` under the pointer | Cancel in a form, Clear filters (Lists), and Refetch all of the sources of a CVE |
 | Danger | `danger-solid` fill, `on-danger-solid` text, `danger-solid-hover` under the pointer | The button that confirms an action that cannot be undone, that ends another person's access, or that discards input (`docs/behaviors.md`, Confirmation); a confirmed change of a fetcher uses Primary |
 | Icon | A quiet button with an icon alone, named by its accessible name and its tooltip | Compact actions, such as dismiss and the sidebar buttons |
 
