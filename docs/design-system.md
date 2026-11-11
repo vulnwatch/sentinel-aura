@@ -959,8 +959,10 @@ screen, the heading row follows the lock with the label Confidential
   does. For a user who can refetch the source, the same place holds the
   icon button of its refetch, of 24 px with `refresh-cw` at 14 px (Buttons
   and Links), which takes the place of the mark while the pointer is over
-  the line of the source, while the button has the focus, and while it is
-  busy; otherwise the button is transparent, and stays in the order of the
+  the line of the source, until Escape brings the mark back while the
+  pointer stays there (WCAG 2.2, 1.4.13 Content on Hover or Focus), while
+  the button has the focus, and while it is busy; otherwise the button is
+  transparent, and stays in the order of the
   focus and for assistive technologies. Where the primary pointer does not
   hover, such as on a touch screen, a tap neither shows the button nor
   reaches it.

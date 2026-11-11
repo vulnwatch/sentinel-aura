@@ -1817,31 +1817,61 @@ function useRefetch({ ticketId, cveId, source, readAgain }: RefetchTarget) {
 
 // Refetch of one source, an icon button of 24 px named after the source, such
 // as "Refetch NVD", in the place of the mark of its status, which it takes
-// while the pointer is over the line of the source, while it has the focus,
-// and while it is busy. Otherwise it is transparent, but stays in the order
-// of the focus and for assistive technologies; until the pointer is over the
-// line, a press does not reach it, so that a tap of a touch screen, which
-// shows nothing on hover, does not start a refetch that it cannot see. A
-// press of the pointer leaves the focus where it was, so that the button,
-// which the read after the refetch removes as the source turns Pending, does
-// not send the focus to the screen's heading. When a new read removes it
-// while it has the focus from the keyboard, the focus moves there
-// (docs/behaviors.md, Accessibility, Focus after an action).
+// while the pointer is over the line of the source, until Escape brings the
+// mark back while the pointer stays there (WCAG 2.2, 1.4.13 Content on Hover
+// or Focus), while it has the focus, and while it is busy. Otherwise it is
+// transparent, but stays in the order of the focus and for assistive
+// technologies; until the pointer shows it, a press does not reach it, so
+// that a tap of a touch screen, which shows nothing on hover, does not start
+// a refetch that it cannot see. A press of the pointer leaves the focus where
+// it was, so that the button, which the read after the refetch removes as
+// the source turns Pending, does not send the focus to the screen's heading.
+// When a new read removes it while it has the focus from the keyboard, the
+// focus moves there (docs/behaviors.md, Accessibility, Focus after an
+// action).
 function RefetchSource({
   mark,
   ...target
 }: RefetchTarget & { source: string; mark: ReactNode }) {
   const refetch = useRefetch(target);
+  const place = useRef<HTMLDivElement>(null);
+  // Whether Escape brought the mark back while the pointer is over the line.
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => {
+    const line = place.current?.closest("li");
+    if (line == null) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && line.matches(":hover")) {
+        setDismissed(true);
+      }
+    };
+    const onPointerLeave = () => {
+      setDismissed(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    line.addEventListener("pointerleave", onPointerLeave);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      line.removeEventListener("pointerleave", onPointerLeave);
+    };
+  }, []);
+  let markClass = "group-focus-within:opacity-0 group-hover:opacity-0";
+  let buttonClass =
+    "pointer-events-none opacity-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100";
+  if (refetch.busy) {
+    markClass = "opacity-0";
+    buttonClass = "";
+  } else if (dismissed) {
+    markClass = "group-focus-within:opacity-0";
+    buttonClass =
+      "pointer-events-none opacity-0 group-focus-within:opacity-100";
+  }
   return (
     <>
-      <span
-        className={`flex ${refetch.busy ? "opacity-0" : "group-focus-within:opacity-0 group-hover:opacity-0"}`}
-      >
-        {mark}
-      </span>
-      <div
-        className={`absolute inset-0 flex ${refetch.busy ? "" : "pointer-events-none opacity-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"}`}
-      >
+      <span className={`flex ${markClass}`}>{mark}</span>
+      <div ref={place} className={`absolute inset-0 flex ${buttonClass}`}>
         <FocusHandOff>
           <IconButton
             label={`Refetch ${sourceName(target.source)}`}

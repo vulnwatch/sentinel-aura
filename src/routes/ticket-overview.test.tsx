@@ -3175,6 +3175,26 @@ describe("the sources of the CVE", () => {
     expect(seen(refetchOf(screen, "MITRE"))).toBe(false);
   });
 
+  test("bring the mark back in place of Refetch of a source with Escape while the pointer stays over the line, until the pointer leaves it", async () => {
+    stubTicket();
+    const { screen } = await renderSources();
+    const refetch = refetchOf(screen, "NVD");
+    const line = sourceOf(screen, "NVD").getByText(/^Last attempt/);
+    await line.hover();
+    await expect.poll(() => seen(refetch)).toBe(true);
+
+    await userEvent.keyboard("{Escape}");
+
+    await expect.poll(() => seen(refetch)).toBe(false);
+    expect(refetch.element().contains(atMarkOf(screen, "NVD"))).toBe(false);
+
+    await screen.getByRole("heading", { level: 2, name: "Details" }).hover();
+    await line.hover();
+
+    await expect.poll(() => seen(refetch)).toBe(true);
+    expect(refetch.element().contains(atMarkOf(screen, "NVD"))).toBe(true);
+  });
+
   test("show Refetch of a source in place of its mark while it has the focus", async () => {
     stubTicket();
     const { screen } = await renderSources();
