@@ -223,6 +223,16 @@ function boxOf(locator: Locator): DOMRect {
   return locator.element().getBoundingClientRect();
 }
 
+// The scroll padding of the page, in CSS pixels. It follows the height of the
+// heading row through a ResizeObserver (src/components/fixed-top.ts), which
+// reports a change in the next frame, after the commit that makes it, so a
+// test reads it, and what sticks below it, with an assertion that retries.
+function scrollPaddingTop(): number {
+  return Number.parseFloat(
+    getComputedStyle(document.documentElement).scrollPaddingTop,
+  );
+}
+
 describe("the read of the Ticket", () => {
   test("names the screen Ticket until the Ticket arrives, with its tabs, then by its identifier", async () => {
     const response = later();
@@ -557,14 +567,12 @@ describe("the layout", () => {
     expect(getComputedStyle(title.element()).fontSize).toBe("20px");
     // The window scrolls an element into view below the heading row, which
     // can stay at the top of the window.
-    expect(
-      Number.parseFloat(
-        getComputedStyle(document.documentElement).scrollPaddingTop,
-      ),
-    ).toBe(
-      boxOf(screen.getByRole("tab", { name: "Overview" })).bottom -
-        boxOf(title).top,
-    );
+    await expect
+      .poll(scrollPaddingTop)
+      .toBe(
+        boxOf(screen.getByRole("tab", { name: "Overview" })).bottom -
+          boxOf(title).top,
+      );
 
     window.scrollTo(0, 120);
 
@@ -578,12 +586,10 @@ describe("the layout", () => {
     // The window scrolls an element into view below the compact heading,
     // whose line the tabs stand on, and the details stay 24 px below it.
     const bottom = boxOf(screen.getByRole("tab", { name: "Overview" })).bottom;
-    expect(
-      Number.parseFloat(
-        getComputedStyle(document.documentElement).scrollPaddingTop,
-      ),
-    ).toBe(bottom);
-    expect(boxOf(region(screen, "Details")).top).toBe(bottom + 24);
+    await expect.poll(scrollPaddingTop).toBe(bottom);
+    await expect
+      .poll(() => boxOf(region(screen, "Details")).top)
+      .toBe(bottom + 24);
     // The tabs, in the compact heading, are 36 px high.
     expect(boxOf(screen.getByRole("tab", { name: "Overview" })).height).toBe(
       36,
