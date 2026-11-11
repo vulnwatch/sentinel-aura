@@ -25,6 +25,10 @@ interface IconButtonProps {
   tooltipPlacement?: "top" | "end";
   // Whether the change that the button started is in progress.
   isBusy?: boolean;
+  // Whether a press of the pointer leaves the focus where it was, for a
+  // button that shows only under the pointer or with the focus, which the
+  // keyboard reaches in the order of the focus.
+  preventFocusOnPress?: boolean;
   onPress: () => void;
   ref?: Ref<HTMLButtonElement> | undefined;
 }
@@ -42,6 +46,7 @@ export function IconButton({
   size,
   tooltipPlacement = "top",
   isBusy = false,
+  preventFocusOnPress = false,
   onPress,
   ref,
 }: IconButtonProps) {
@@ -51,6 +56,18 @@ export function IconButton({
       <AriaButton
         ref={ref}
         aria-label={label}
+        preventFocusOnPress={preventFocusOnPress}
+        // React Aria gives the focus back to the element that had it, which
+        // does nothing when no element had it; the browser then leaves it on
+        // the button. Without the default action of the press, the browser
+        // moves no focus.
+        onMouseDown={
+          preventFocusOnPress
+            ? (event) => {
+                event.preventDefault();
+              }
+            : undefined
+        }
         onPress={isBusy ? undefined : onPress}
         aria-disabled={isBusy || undefined}
         className={`inline-flex shrink-0 items-center justify-center rounded-md data-hovered:bg-surface-hover ${SIZES[size].target} ${FOCUS_RING}`}

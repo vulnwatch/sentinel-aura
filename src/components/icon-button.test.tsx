@@ -154,3 +154,35 @@ test("acts and shows no spinner while it is not busy", async () => {
   expect(animationsIn(button.element())).toEqual([]);
   expect(press).toHaveBeenCalledTimes(1);
 });
+
+test.each([
+  ["no element", false],
+  ["another button", true],
+])(
+  "leaves the focus where it was, on %s, when the pointer presses it while it prevents the focus on a press",
+  async (_, focused) => {
+    const press = vi.fn();
+    const screen = await render(
+      <>
+        <Button>Before</Button>
+        <IconButton
+          label="Refetch NVD"
+          icon={RefreshCw}
+          size="inline"
+          preventFocusOnPress
+          onPress={press}
+        />
+      </>,
+    );
+    const before = screen.getByRole("button", { name: "Before" });
+    if (focused) {
+      before.element().focus();
+    }
+    const active = document.activeElement;
+
+    await screen.getByRole("button", { name: "Refetch NVD" }).click();
+
+    expect(press).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(active);
+  },
+);

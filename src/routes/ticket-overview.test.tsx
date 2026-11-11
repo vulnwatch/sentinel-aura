@@ -2633,6 +2633,19 @@ function sourceOf(screen: Screen, name: string): Locator {
     .filter({ has: page.getByText(name, { exact: true }) });
 }
 
+// Whether the user sees the element: neither it nor an element that holds it
+// is transparent.
+function seen(locator: Locator): boolean {
+  return locator.element().checkVisibility({ opacityProperty: true });
+}
+
+// The element that a press reaches at the center of the mark of a source, in
+// the middle of the place of 24 px at the start of its line.
+function atMarkOf(screen: Screen, name: string): Element | null {
+  const item = boxOf(sourceOf(screen, name));
+  return document.elementFromPoint(item.left + 12, item.top + 12);
+}
+
 // The texts of an element, apart by a space.
 function wordsOf(element: Element): string {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -2843,9 +2856,12 @@ describe("the sources of the CVE", () => {
     const attempted = formatDateTime(ATTEMPTED);
     const since = formatDateTime(FAILING_SINCE);
 
+    // The name of each status follows the name of its source for assistive
+    // technologies; an absent date reads "Not set" (docs/behaviors.md,
+    // Absent Values).
     expect(sourceLines(screen)).toEqual([
-      "EPSS Not attempted Disabled",
-      "GHSA Pending",
+      "EPSS Not attempted Disabled Last attempt – Not set",
+      "GHSA Pending Last attempt – Not set",
       `Linux Kernel CNA Missing Last attempt ${attempted}`,
       `CISA KEV Success Updated ${formatDateTime(KEV_UPDATED)}`,
       `MITRE Failure Last attempt ${attempted} Failing since ${since}`,
@@ -2866,15 +2882,24 @@ describe("the sources of the CVE", () => {
       getComputedStyle(failing).fontSize,
       getComputedStyle(failing).color,
     ]).toEqual(["13px", FG_MUTED]);
-    // The status 6 px after the name, and the label 6 px after the status
-    // (docs/design-system.md, Labels).
+    // The mark alone in a place of 24 px, the name 8 px after it, and the
+    // name of the status only for assistive technologies.
     const osv = sourceOf(screen, "OSV");
+    const item = boxOf(osv);
     const name = boxOf(osv.getByText("OSV", { exact: true }));
-    const status = boxOf(osv.getByText("Success", { exact: true }));
+    expect(name.left - item.left).toBe(24 + 8);
+    expect(boxOf(osv.getByText("Success")).width).toBeLessThanOrEqual(1);
+    // The label at the end of the first line, centered on it
+    // (docs/design-system.md, Labels).
     const label = boxOf(osv.getByText("Disabled", { exact: true }));
-    // The dot of the status, 8 px, and its 6 px before its name.
-    expect(status.left - 8 - 6 - name.right).toBeCloseTo(6, 1);
-    expect(label.left - status.right).toBeCloseTo(6, 1);
+    expect(label.right).toBeCloseTo(item.right, 1);
+    expect((label.top + label.bottom) / 2).toBeCloseTo(item.top + 12, 0);
+    // The dates below the name, across the width of the line, the place of
+    // the label included.
+    const date = boxOf(osv.getByText(/^Last attempt/));
+    expect(date.left).toBe(name.left);
+    expect(date.right).toBeCloseTo(item.right, 1);
+    expect(date.top).toBeGreaterThanOrEqual(label.bottom);
   });
 
   test("mark each status in the color of its tone, never by the color alone, the pending fetch turning and standing still under reduced motion", async () => {
@@ -2901,24 +2926,23 @@ describe("the sources of the CVE", () => {
         ]),
     });
     const { screen } = await renderSources();
-    // The color at the center of the mark of a status, whose dot of 8 px ends
-    // 6 px before its name, and whose icon of 12 px ends there too.
-    const markAt = async (name: string, status: string, size: number) => {
-      const item = sourceOf(screen, name);
-      const picture = await screenshot(item);
-      const text = boxOf(item.getByText(status, { exact: true }));
-      const box = boxOf(item);
-      return picture.at(
-        text.left - box.left - 6 - size / 2,
-        (text.top + text.bottom) / 2 - box.top,
-      );
+    // The color at the center of the mark of a status, in the middle of its
+    // place of 24 px at the start of the line; the shapes and sizes of the
+    // marks are those of src/components/marked-value.test.tsx.
+    const markAt = async (name: string) => {
+      const picture = await screenshot(sourceOf(screen, name));
+      return picture.at(12, 12);
     };
 
-    expect(await markAt("NVD", "Success", 8)).toBe("#1a7f37");
-    expect(await markAt("MITRE", "Failure", 8)).toBe("#cf222e");
-    expect(await markAt("Linux Kernel CNA", "Missing", 8)).toBe("#6e7781");
-    // The dashed circle of Not attempted is hollow, unlike a dot.
-    expect(await markAt("EPSS", "Not attempted", 12)).toBe("#f6f8fa");
+    expect(await markAt("NVD")).toBe("#1a7f37");
+    expect(await markAt("MITRE")).toBe("#cf222e");
+    // Failure differs from Success also by the start of its failure streak.
+    expect(sourceLines(screen)[3]).toMatch(/Failing since/);
+    expect(sourceLines(screen)[4]).not.toMatch(/Failing since/);
+    // The circle of Missing and the dashed circle of Not attempted are
+    // hollow, unlike a dot.
+    expect(await markAt("Linux Kernel CNA")).toBe("#f6f8fa");
+    expect(await markAt("EPSS")).toBe("#f6f8fa");
     expect(animationsIn(sourceOf(screen, "EPSS").element())).toEqual([]);
     expect(animationsIn(sourceOf(screen, "GHSA").element())).toEqual(["spin"]);
 
@@ -2949,6 +2973,14 @@ describe("the sources of the CVE", () => {
       `fictional_source Success Retired Last attempt ${attempted}`,
       `NVD fictional_status Last attempt ${attempted}`,
     ]);
+    // The status as received only for assistive technologies, after the
+    // mark of an unknown value (docs/behaviors.md, Unknown Values), and no
+    // Refetch of a source whose status the screen cannot tell.
+    expect(
+      boxOf(sourceOf(screen, "NVD").getByText("fictional_status")).width,
+    ).toBeLessThanOrEqual(1);
+    expect(refetchOf(screen, "NVD").query()).toBeNull();
+    await expect.element(refetchAll(screen)).toBeVisible();
   });
 
   test("say No sources. without any, without Refetch all", async () => {
@@ -3047,7 +3079,7 @@ describe("the sources of the CVE", () => {
       .toHaveFocus();
   });
 
-  test("offer Refetch of each source that can be refetched, named after it, and Refetch all, to a user with triage_ticket", async () => {
+  test("offer Refetch of each source that can be refetched and is not pending, named after it, and Refetch all, to a user with triage_ticket", async () => {
     stubTicket({
       sources: () =>
         sourcesResponse([
@@ -3076,16 +3108,27 @@ describe("the sources of the CVE", () => {
         .map(
           (button) => button.getAttribute("aria-label") ?? button.textContent,
         ),
-    ).toEqual(["Refetch all", "Refetch MITRE", "Refetch NVD"]);
-    // A target of 24 px at the end of the first line of its source, and
-    // Refetch all a small secondary button at the end of the heading.
+    ).toEqual(["Refetch all", "Refetch NVD"]);
+    // A target of 24 px in the place of the mark, at the start of the line
+    // of its source, and Refetch all a quiet button 32 px high at the end of
+    // the heading.
     const refetch = boxOf(refetchOf(screen, "NVD"));
+    const item = boxOf(sourceOf(screen, "NVD"));
     expect([refetch.width, refetch.height]).toEqual([24, 24]);
-    expect(refetch.right).toBeCloseTo(boxOf(sourcesPart(screen)).right, 1);
-    const all = boxOf(refetchAll(screen));
-    expect(all.height).toBe(32);
-    expect(all.right).toBeCloseTo(boxOf(sourcesPart(screen)).right, 1);
-    expect(all.bottom).toBeLessThanOrEqual(boxOf(sourceOf(screen, "EPSS")).top);
+    expect([refetch.left, refetch.top]).toEqual([item.left, item.top]);
+    const all = refetchAll(screen).element();
+    expect(boxOf(refetchAll(screen)).height).toBe(32);
+    expect([
+      getComputedStyle(all).borderTopWidth,
+      getComputedStyle(all).backgroundColor,
+    ]).toEqual(["0px", "rgba(0, 0, 0, 0)"]);
+    expect(boxOf(refetchAll(screen)).right).toBeCloseTo(
+      boxOf(sourcesPart(screen)).right,
+      1,
+    );
+    expect(boxOf(refetchAll(screen)).bottom).toBeLessThanOrEqual(
+      boxOf(sourceOf(screen, "EPSS")).top,
+    );
   });
 
   test.each<[string, CurrentUserResponse]>([
@@ -3109,6 +3152,104 @@ describe("the sources of the CVE", () => {
     const { screen } = await renderSources();
 
     expect(sourcesPart(screen).getByRole("button").query()).toBeNull();
+  });
+
+  test("show Refetch of a source in place of its mark while the pointer is over the line of the source, and let the pointer reach it only then", async () => {
+    stubTicket();
+    const { screen } = await renderSources();
+    const refetch = refetchOf(screen, "NVD");
+    await screen.getByRole("heading", { level: 2, name: "Details" }).hover();
+
+    // Transparent, and a press at its place, such as a tap, does not reach
+    // it, while it stays for the keyboard and assistive technologies.
+    expect(seen(refetch)).toBe(false);
+    expect(refetch.element().contains(atMarkOf(screen, "NVD"))).toBe(false);
+
+    await sourceOf(screen, "NVD")
+      .getByText(/^Last attempt/)
+      .hover();
+
+    await expect.poll(() => seen(refetch)).toBe(true);
+    expect(refetch.element().contains(atMarkOf(screen, "NVD"))).toBe(true);
+    // The other sources keep their marks.
+    expect(seen(refetchOf(screen, "MITRE"))).toBe(false);
+  });
+
+  test("show Refetch of a source in place of its mark while it has the focus", async () => {
+    stubTicket();
+    const { screen } = await renderSources();
+    const refetch = refetchOf(screen, "NVD");
+    expect((await screenshot(sourceOf(screen, "NVD"))).at(12, 12)).toBe(
+      "#1a7f37",
+    );
+
+    refetch.element().focus({ focusVisible: true });
+
+    await expect.element(refetch).toHaveFocus();
+    expect(seen(refetch)).toBe(true);
+    // The dot gives way to refresh-cw, whose center shows the page.
+    expect((await screenshot(sourceOf(screen, "NVD"))).at(12, 12)).toBe(
+      "#f6f8fa",
+    );
+  });
+
+  test("keep Refetch of a source shown while it is busy, and leave the focus where it was after a press of the pointer, when the read after it shows the source Pending", async () => {
+    const response = later();
+    let sources = [fictionalSource({ source: "mitre" }), fictionalSource()];
+    stubTicket({
+      refetch: () => response.promise,
+      sources: () => sourcesResponse(sources),
+    });
+    const { screen } = await renderSources();
+    const refetch = refetchOf(screen, "NVD");
+    await sourceOf(screen, "NVD")
+      .getByText(/^Last attempt/)
+      .hover();
+
+    await refetch.click();
+
+    await expect.element(refetch).toHaveAttribute("aria-disabled", "true");
+    expect(refetch.element()).not.toBe(document.activeElement);
+    await screen.getByRole("heading", { level: 2, name: "Details" }).hover();
+    expect(seen(refetch)).toBe(true);
+    expect(seen(refetchOf(screen, "MITRE"))).toBe(false);
+
+    sources = [
+      fictionalSource({ source: "mitre" }),
+      fictionalSource({ status: "pending" }),
+    ];
+    response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
+
+    await expect
+      .element(screen.getByText("Refetch of NVD started."))
+      .toBeVisible();
+    await expect.poll(() => refetch.query()).toBeNull();
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "SNTL-12", exact: true }),
+      )
+      .not.toHaveFocus();
+  });
+
+  test("move the focus to the screen's heading when the read after a refetch from the keyboard shows its source Pending", async () => {
+    let sources = [fictionalSource()];
+    stubTicket({
+      refetch: () => {
+        sources = [fictionalSource({ status: "pending" })];
+        return refetchResponse({ sources_enqueued: ["nvd"] });
+      },
+      sources: () => sourcesResponse(sources),
+    });
+    const { screen } = await renderSources();
+
+    await press(refetchOf(screen, "NVD"));
+
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "SNTL-12", exact: true }),
+      )
+      .toHaveFocus();
+    expect(refetchOf(screen, "NVD").query()).toBeNull();
   });
 
   test("refetch a source with Re-fetch CVE Data, busy until Sentinel answers, then say that it started and read the sources again", async () => {

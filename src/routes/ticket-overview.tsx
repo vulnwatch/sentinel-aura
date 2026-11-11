@@ -79,7 +79,11 @@ import { IconButton } from "../components/icon-button";
 import { Label } from "../components/label";
 import { Link } from "../components/link";
 import { Maintainers } from "../components/maintainers";
-import { MarkedValue, type MarkedName } from "../components/marked-value";
+import {
+  MarkedValue,
+  ValueMark,
+  type MarkedName,
+} from "../components/marked-value";
 import { UpdatingBar } from "../components/loading";
 import { useShowMessage, type MessageRecord } from "../components/message-area";
 import type { MessageTone } from "../components/message";
@@ -1534,16 +1538,16 @@ function sourceName(source: string): string {
 }
 
 // The status of a source, with the tone of its meaning: Success green,
-// Failure red, Missing gray, Pending blue, turning, as an operation that the
-// screen follows by reading it again, and Not attempted with a dashed circle,
-// as an observation never made (docs/design-system.md, Other Values;
-// Sentinel docs/features/tickets/cve-service.md, CVE Source Status, Status
-// values).
+// Failure red, Missing a hollow circle, as an attempt that found nothing,
+// Pending blue, turning, as an operation that the screen follows by reading
+// it again, and Not attempted with a dashed circle, as an observation never
+// made (docs/design-system.md, Other Values; Sentinel
+// docs/features/tickets/cve-service.md, CVE Source Status, Status values).
 const SOURCE_STATUSES = new Map<string, MarkedName>(
   Object.entries({
     success: { name: "Success", tone: "success" },
     failure: { name: "Failure", tone: "danger" },
-    missing: { name: "Missing", tone: "neutral" },
+    missing: { name: "Missing", tone: "neutral", mark: "empty" },
     pending: { name: "Pending", tone: "info", mark: "progress" },
     not_attempted: {
       name: "Not attempted",
@@ -1562,6 +1566,17 @@ function statusName(status: string): string {
 // CVE Data). CISA KEV, which downloads its whole catalog, cannot.
 function canRefetch(source: CVESourceStatusItem): boolean {
   return source.registered && source.refetchable && source.enabled;
+}
+
+// Whether Refetch of the source is offered: it can be refetched, and its
+// status is neither Pending, whose fetch is in progress, nor one that the
+// pinned contract does not list (docs/behaviors.md, Unknown Values).
+function offersRefetch(source: CVESourceStatusItem): boolean {
+  return (
+    canRefetch(source) &&
+    source.status !== "pending" &&
+    SOURCE_STATUSES.has(source.status)
+  );
 }
 
 // The read of the sources of the CVE of the Ticket, sent only for a Ticket
@@ -1800,33 +1815,56 @@ function useRefetch({ ticketId, cveId, source, readAgain }: RefetchTarget) {
   };
 }
 
-// Refetch of one source, an icon button at the end of its line, named after
-// the source, such as "Refetch NVD", busy while its refetch is in progress.
-// When a new read removes it while it has the focus, such as after the source
-// became disabled, the focus moves to the screen's heading
+// Refetch of one source, an icon button of 24 px named after the source, such
+// as "Refetch NVD", in the place of the mark of its status, which it takes
+// while the pointer is over the line of the source, while it has the focus,
+// and while it is busy. Otherwise it is transparent, but stays in the order
+// of the focus and for assistive technologies; until the pointer is over the
+// line, a press does not reach it, so that a tap of a touch screen, which
+// shows nothing on hover, does not start a refetch that it cannot see. A
+// press of the pointer leaves the focus where it was, so that the button,
+// which the read after the refetch removes as the source turns Pending, does
+// not send the focus to the screen's heading. When a new read removes it
+// while it has the focus from the keyboard, the focus moves there
 // (docs/behaviors.md, Accessibility, Focus after an action).
-function RefetchSource(target: RefetchTarget & { source: string }) {
+function RefetchSource({
+  mark,
+  ...target
+}: RefetchTarget & { source: string; mark: ReactNode }) {
   const refetch = useRefetch(target);
   return (
-    <FocusHandOff>
-      <IconButton
-        label={`Refetch ${sourceName(target.source)}`}
-        icon={RefreshCw}
-        size="inline"
-        isBusy={refetch.busy}
-        onPress={refetch.start}
-      />
-    </FocusHandOff>
+    <>
+      <span
+        className={`flex ${refetch.busy ? "opacity-0" : "group-focus-within:opacity-0 group-hover:opacity-0"}`}
+      >
+        {mark}
+      </span>
+      <div
+        className={`absolute inset-0 flex ${refetch.busy ? "" : "pointer-events-none opacity-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"}`}
+      >
+        <FocusHandOff>
+          <IconButton
+            label={`Refetch ${sourceName(target.source)}`}
+            icon={RefreshCw}
+            size="inline"
+            isBusy={refetch.busy}
+            preventFocusOnPress
+            onPress={refetch.start}
+          />
+        </FocusHandOff>
+      </div>
+    </>
   );
 }
 
-// Refetch of every source that can be refetched, a small secondary button in
-// the heading of the section, busy while its refetch is in progress.
+// Refetch of every source that can be refetched, a quiet button in the
+// heading of the section, busy while its refetch is in progress.
 function RefetchAll(target: RefetchTarget) {
   const refetch = useRefetch(target);
   return (
     <FocusHandOff>
       <Button
+        variant="quiet"
         size="small"
         icon={RefreshCw}
         isBusy={refetch.busy}
@@ -1840,43 +1878,55 @@ function RefetchAll(target: RefetchTarget) {
 
 interface SourceItemProps {
   source: CVESourceStatusItem;
-  // Refetch of the source, for a user who can take it.
-  refetch: ReactNode;
+  // The refetch of the source, for a user who can take it.
+  refetch: (RefetchTarget & { source: string }) | undefined;
 }
 
-// A source of the CVE, as a list item: its name, then its status, by its
-// mark and its name, and the label Disabled of a source that is disabled, or
-// Retired of one that is no longer registered; below them, in text-13 and
-// fg-muted, the date and time of its last completed attempt, or, for the
-// evidence of CISA KEV, of its last change, and the start of its failure
-// streak (Sentinel docs/features/tickets/cve-service.md, CVE Source Status);
-// and at the end of its first line, Refetch.
+// A source of the CVE, as a list item (docs/design-system.md, Other Values):
+// the mark of its status alone, in a place of 24 px, or Refetch in its place;
+// 8 px later its name, followed for assistive technologies by the name of
+// its status; at the end of its first line, the label Disabled of a source
+// that is disabled, or Retired of one that is no longer registered; below
+// them, across the width of the line, in text-13 and fg-muted, the date and
+// time of its last completed attempt, or of the last change of the evidence
+// of CISA KEV, or an absent value, and the start of its failure streak
+// (Sentinel docs/features/tickets/cve-service.md, CVE Source Status).
 function SourceItem({ source, refetch }: SourceItemProps) {
   const kevEvidence = source.source === "kev" && source.status === "success";
+  const mark = <ValueMark value={source.status} known={SOURCE_STATUSES} />;
   return (
-    <li className="flex items-start gap-2">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          <span className="font-medium wrap-break-word">
-            {sourceName(source.source)}
-          </span>
-          <MarkedValue value={source.status} known={SOURCE_STATUSES} />
-          {!source.registered && <Label>Retired</Label>}
-          {source.registered && !source.enabled && <Label>Disabled</Label>}
-        </div>
-        {source.fetched_at !== null && (
-          <p className="text-13 text-fg-muted">
-            {kevEvidence ? "Updated" : "Last attempt"}{" "}
-            <DateTime value={source.fetched_at} />
-          </p>
+    <li className="group flex items-start gap-2">
+      <div className="relative flex size-6 shrink-0 items-center justify-center">
+        {refetch === undefined ? (
+          mark
+        ) : (
+          <RefetchSource {...refetch} mark={mark} />
         )}
+      </div>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 wrap-break-word">
+            <span className="font-medium">{sourceName(source.source)}</span>
+            <span className="sr-only"> {statusName(source.status)}</span>
+          </p>
+          {(!source.registered || !source.enabled) && (
+            <Label>{source.registered ? "Disabled" : "Retired"}</Label>
+          )}
+        </div>
+        <p className="text-13 text-fg-muted">
+          {kevEvidence ? "Updated" : "Last attempt"}{" "}
+          {source.fetched_at === null ? (
+            <AbsentValue />
+          ) : (
+            <DateTime value={source.fetched_at} />
+          )}
+        </p>
         {source.first_failed_at !== null && (
           <p className="text-13 text-fg-muted">
             Failing since <DateTime value={source.first_failed_at} />
           </p>
         )}
       </div>
-      {refetch !== undefined && <div className="-my-0.5">{refetch}</div>}
     </li>
   );
 }
@@ -1891,8 +1941,8 @@ interface SourcesSectionProps {
 // from CVE Source Status, in the order of the API, by source, a source of
 // the CVE per line (Sentinel docs/features/tickets/cve-service.md, CVE
 // Source Status), or "No sources." without any. With triage_ticket, Refetch
-// of each source that can be refetched, and Refetch all while one can
-// (docs/screen-map.md, Roles, Principles). The section reads them on its
+// of each source that offers it, and Refetch all while a source can be
+// refetched (docs/screen-map.md, Roles, Principles). The section reads them on its
 // own, and their loading and their errors show in its place
 // (docs/behaviors.md, Loading; Where Errors Appear). The end of a fetch that
 // it follows is announced in a status region of its own, which is there
@@ -1923,20 +1973,20 @@ function SourcesSection({ ticketId, cveId, read }: SourcesSectionProps) {
           data.length === 0 ? (
             <p className="text-14 text-fg-muted">No sources.</p>
           ) : (
-            <ul className="flex flex-col gap-2 text-14">
+            <ul className="flex flex-col gap-1 text-14">
               {data.map((source) => (
                 <SourceItem
                   key={source.source}
                   source={source}
                   refetch={
-                    triage && canRefetch(source) ? (
-                      <RefetchSource
-                        ticketId={ticketId}
-                        cveId={cveId}
-                        source={source.source}
-                        readAgain={readAgain}
-                      />
-                    ) : undefined
+                    triage && offersRefetch(source)
+                      ? {
+                          ticketId,
+                          cveId,
+                          source: source.source,
+                          readAgain,
+                        }
+                      : undefined
                   }
                 />
               ))}

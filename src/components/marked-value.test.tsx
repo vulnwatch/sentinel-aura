@@ -4,7 +4,12 @@ import { commands, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
-import { MarkedValue, type MarkedName, type Tone } from "./marked-value";
+import {
+  MarkedValue,
+  ValueMark,
+  type MarkedName,
+  type Tone,
+} from "./marked-value";
 
 declare module "vitest/browser" {
   interface BrowserCommands {
@@ -32,7 +37,7 @@ const CANVAS = "#f6f8fa";
 const NEUTRAL_ICON = "#6e7781";
 
 // The values of a fictional enum, one of each tone, an operation in
-// progress, and an observation never made.
+// progress, an observation never made, and an attempt that found nothing.
 const KNOWN = new Map<string, MarkedName>(
   Object.entries({
     idle: { name: "Idle", tone: "neutral" },
@@ -42,6 +47,7 @@ const KNOWN = new Map<string, MarkedName>(
     failed: { name: "Failed", tone: "danger" },
     pending: { name: "Pending", tone: "info", mark: "progress" },
     unseen: { name: "Not attempted", tone: "neutral", mark: "unobserved" },
+    none: { name: "Missing", tone: "neutral", mark: "empty" },
   }),
 );
 const INFO_ICON = "#0969da";
@@ -217,3 +223,73 @@ test.each(["paused", "constructor"])(
     expect(dot.outside).toEqual([CANVAS, CANVAS]);
   },
 );
+
+test("shows an attempt that found nothing with circle of 12 px in neutral-icon, hollow, its name 6 px after it", async () => {
+  const { screen, figure } = await renderValue(
+    <MarkedValue value="none" known={KNOWN} />,
+    SCALE,
+  );
+  await expect
+    .element(screen.getByRole("cell", { name: "Missing", exact: true }))
+    .toBeVisible();
+
+  // Its edge at the middle of its right side, at 22 of its 24 units, and
+  // 22.5 degrees above it, where a dashed circle leaves a gap between two
+  // dashes; and its empty center.
+  expect(await iconColor(figure, [22, 12])).toBe(NEUTRAL_ICON);
+  expect(await iconColor(figure, [21.24, 8.17])).toBe(NEUTRAL_ICON);
+  expect(await iconColor(figure, [12, 12])).toBe(CANVAS);
+  const name = figure.getByText("Missing", { exact: true });
+  expect(
+    name.element().getBoundingClientRect().left -
+      figure.element().getBoundingClientRect().left,
+  ).toBe(18 * SCALE);
+});
+
+// The mark of a value alone, without its name, as the status of a source of
+// a CVE shows it (docs/design-system.md, Other Values): the screen names the
+// value for assistive technologies itself.
+test.each<[string, string, number, [number, number]]>([
+  // A dot is filled at its center.
+  ["passed", "#1a7f37", 10, [5, 5]],
+  ["failed", "#cf222e", 10, [5, 5]],
+  // An icon draws its edge at the middle of its right side, at 21 to 22 of
+  // its 24 units, half a pixel each.
+  ["none", NEUTRAL_ICON, 12, [11, 6]],
+  ["pending", INFO_ICON, 12, [10.5, 6]],
+  ["unseen", NEUTRAL_ICON, 12, [10.9, 6]],
+  ["paused", NEUTRAL_ICON, 12, [11, 6]],
+])(
+  "shows the mark of %s alone, in %s, %i px wide, without a name",
+  async (value, color, size, [x, y]) => {
+    // The spinner of an operation in progress stands still, where its arc
+    // starts.
+    await commands.emulateReducedMotion(true);
+    const { figure } = await renderValue(
+      <ValueMark value={value} known={KNOWN} />,
+      SCALE,
+    );
+    const picture = await screenshot(figure);
+
+    expect(figure.element().textContent).toBe("");
+    expect(picture.width).toBe(size * SCALE);
+    expect(picture.at(x * SCALE, y * SCALE)).toBe(color);
+  },
+);
+
+test("shows the mark of a value that the pinned contract does not list alone as circle-question-mark, unlike the hollow circle of an attempt that found nothing", async () => {
+  const unknown = await renderValue(
+    <ValueMark value="paused" known={KNOWN} />,
+    SCALE,
+  );
+  // The top of the curve of the question mark, at 7 of the 24 units, above
+  // the center.
+  expect(await iconColor(unknown.figure, [12, 7])).toBe(NEUTRAL_ICON);
+  await unknown.screen.unmount();
+
+  const missing = await renderValue(
+    <ValueMark value="none" known={KNOWN} />,
+    SCALE,
+  );
+  expect(await iconColor(missing.figure, [12, 7])).toBe(CANVAS);
+});

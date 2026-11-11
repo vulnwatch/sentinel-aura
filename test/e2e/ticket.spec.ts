@@ -63,6 +63,14 @@ async function expectSources(page: Page) {
 // A date and time as the screen shows it, such as 9 Oct 2026, 14:05.
 const DATE_TIME = String.raw`\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}`;
 
+// The line of a disabled source that Sentinel has not attempted, whose
+// absent date reads "Not set".
+function notAttempted(name: string): RegExp {
+  return new RegExp(
+    String.raw`^${name}\s*Not attempted\s*Disabled\s*Last attempt\s*–\s*Not set$`,
+  );
+}
+
 // Whether the window scrolls its page in the horizontal direction.
 function scrollsHorizontally(page: Page): Promise<boolean> {
   return page.evaluate(
@@ -579,20 +587,21 @@ test.describe("for an analyst", () => {
     // NVD fetcher failed on it; no other source has fetched it, and every
     // fetcher is disabled after the load, so even an analyst has no source
     // to refetch (CVEs; Fetcher Runs and CVE Source Records; Fetchers;
-    // Operating a Dataset Backend).
+    // Operating a Dataset Backend). The name of each status follows the name
+    // of its source for assistive technologies.
     await expect(sources(page).getByRole("listitem")).toHaveText([
-      /^EPSS\s*Not attempted\s*Disabled$/,
-      /^GHSA\s*Not attempted\s*Disabled$/,
-      /^Linux Kernel CNA\s*Not attempted\s*Disabled$/,
-      /^CISA KEV\s*Not attempted\s*Disabled$/,
+      notAttempted("EPSS"),
+      notAttempted("GHSA"),
+      notAttempted("Linux Kernel CNA"),
+      notAttempted("CISA KEV"),
       new RegExp(
         String.raw`^MITRE\s*Success\s*Disabled\s*Last attempt ${DATE_TIME}$`,
       ),
       new RegExp(
         String.raw`^NVD\s*Failure\s*Disabled\s*Last attempt ${DATE_TIME}\s*Failing since ${DATE_TIME}$`,
       ),
-      /^OSV\s*Not attempted\s*Disabled$/,
-      /^Red Hat\s*Not attempted\s*Disabled$/,
+      notAttempted("OSV"),
+      notAttempted("Red Hat"),
     ]);
     await expect(sources(page).getByRole("button")).toHaveCount(0);
     // ticket-cvss-empty.png shows the same screen, at the same scroll

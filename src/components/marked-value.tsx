@@ -1,4 +1,9 @@
-import { CircleDashed, LoaderCircle } from "lucide-react";
+import {
+  Circle,
+  CircleDashed,
+  CircleQuestionMark,
+  LoaderCircle,
+} from "lucide-react";
 
 // A value of a response enum that a screen document marks with a tone
 // (docs/design-system.md, Other Values; Tones), such as the affectedness of a
@@ -20,25 +25,32 @@ const DOTS = {
 // progress, which the screen follows by reading it again, such as the
 // pending fetch of a source of a CVE, in the info tone; unobserved for an
 // observation never made, such as a source that Sentinel has not attempted,
-// in the neutral tone (docs/design-system.md, Other Values).
+// in the neutral tone; empty for an attempt that found nothing, such as a
+// source that does not have the CVE, in the neutral tone
+// (docs/design-system.md, Other Values).
 export interface MarkedName {
   name: string;
   tone: Tone;
-  mark?: "progress" | "unobserved";
+  mark?: "progress" | "unobserved" | "empty";
 }
 
 interface MarkProps {
   marked: MarkedName | undefined;
+  // Whether the mark shows without the name of its value, as the status of a
+  // source of a CVE does.
+  alone: boolean;
 }
 
-// The mark before the name of a value, hidden from assistive technologies,
-// which read the name: a dot of 8 px in the icon color of its tone;
+// The mark of a value, hidden from assistive technologies, which read the
+// name: a dot in the icon color of its tone, of 8 px, or 10 px alone;
 // loader-circle at 12 px in info-icon, turning, which stands still under
-// reduced motion (docs/design-system.md, Focus and Motion); circle-dashed at
-// 12 px in neutral-icon; or, for a value that the pinned contract does not
-// list, a hollow dot of 8 px with a 1 px edge in neutral-icon
-// (docs/behaviors.md, Unknown Values).
-function Mark({ marked }: MarkProps) {
+// reduced motion (docs/design-system.md, Focus and Motion); circle-dashed or
+// circle at 12 px in neutral-icon; or, for a value that the pinned contract
+// does not list, a hollow dot of 8 px with a 1 px edge in neutral-icon, or
+// alone circle-question-mark at 12 px in neutral-icon, so that it is not
+// taken for an attempt that found nothing (docs/behaviors.md, Unknown
+// Values).
+function Mark({ marked, alone }: MarkProps) {
   if (marked?.mark === "progress") {
     return (
       <LoaderCircle
@@ -52,8 +64,23 @@ function Mark({ marked }: MarkProps) {
       <CircleDashed aria-hidden className="size-3 shrink-0 text-neutral-icon" />
     );
   }
+  if (marked?.mark === "empty") {
+    return <Circle aria-hidden className="size-3 shrink-0 text-neutral-icon" />;
+  }
+  if (marked === undefined && alone) {
+    return (
+      <CircleQuestionMark
+        aria-hidden
+        className="size-3 shrink-0 text-neutral-icon"
+      />
+    );
+  }
   return (
-    <svg aria-hidden viewBox="0 0 8 8" className="size-2 shrink-0">
+    <svg
+      aria-hidden
+      viewBox="0 0 8 8"
+      className={`${alone ? "size-2.5" : "size-2"} shrink-0`}
+    >
       {marked === undefined ? (
         <circle
           cx={4}
@@ -86,8 +113,14 @@ export function MarkedValue({ value, known }: MarkedValueProps) {
   const marked = known.get(value);
   return (
     <span className="inline-flex items-center gap-1.5 align-middle">
-      <Mark marked={marked} />
+      <Mark marked={marked} alone={false} />
       <span>{marked === undefined ? value : marked.name}</span>
     </span>
   );
+}
+
+// The mark of the value alone, without its name, which the screen gives
+// assistive technologies itself (docs/design-system.md, Other Values).
+export function ValueMark({ value, known }: MarkedValueProps) {
+  return <Mark marked={known.get(value)} alone />;
 }
