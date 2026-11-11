@@ -1,9 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
   isRequestFailure,
+  presentChangeFailure,
   presentFailure,
+  presentRefetchFailure,
   presentSignInFailure,
   validationErrorFields,
+  type ChangeFailurePresentation,
   type FailurePresentation,
   type RequestFailure,
 } from "./errors";
@@ -297,6 +300,88 @@ function validationError(errors: unknown): ApiError {
 function entry(loc: unknown) {
   return { loc, msg: "A fictional message", type: "string_type" };
 }
+
+// A change whose outcome Sentinel left unknown shows as a warning, every
+// other failure of a change as an error (docs/behaviors.md, Retries and
+// Unconfirmed Changes; docs/design-system.md, Messages).
+const CHANGE_FAILURES: [string, RequestFailure, ChangeFailurePresentation][] = [
+  [
+    "a network failure",
+    new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    { message: UNCONFIRMED, reference: undefined, unconfirmed: true },
+  ],
+  [
+    "503 CELERY_UNAVAILABLE",
+    errorResponse(503, "CELERY_UNAVAILABLE"),
+    { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+  ],
+  [
+    "500 without a code",
+    errorResponse(500),
+    { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+  ],
+  [
+    "409",
+    errorResponse(409, "FETCHER_DISABLED"),
+    { message: CONFLICT, reference: undefined, unconfirmed: false },
+  ],
+  [
+    "a 4xx that no row names",
+    errorResponse(418, "FICTIONAL_CONDITION"),
+    { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+  ],
+  [
+    "a successful response that the UI cannot read",
+    new UnreadableResponseError(202, REQUEST_ID, {
+      cause: new SyntaxError("Unexpected token"),
+    }),
+    { message: INTERNAL, reference: REQUEST_ID, unconfirmed: false },
+  ],
+];
+
+describe("presentChangeFailure", () => {
+  test.each(CHANGE_FAILURES)(
+    "presents %s, and whether its outcome is unknown",
+    (_, failure, presentation) => {
+      expect(presentChangeFailure(failure)).toEqual(presentation);
+    },
+  );
+
+  test("presents no message for a 401", () => {
+    expect(
+      presentChangeFailure(errorResponse(401, "AUTH_NOT_AUTHENTICATED")),
+    ).toBeUndefined();
+  });
+});
+
+describe("presentRefetchFailure", () => {
+  test("says that no source can refetch the CVE after 503 CVE_FETCH_FAILED, with its reference, as a failure whose outcome is known", () => {
+    expect(
+      presentRefetchFailure(errorResponse(503, "CVE_FETCH_FAILED")),
+    ).toEqual({
+      message: "No enabled source can refetch this CVE.",
+      reference: REQUEST_ID,
+      unconfirmed: false,
+    });
+  });
+
+  test.each(CHANGE_FAILURES)(
+    "presents %s as any other change",
+    (_, failure, presentation) => {
+      expect(presentRefetchFailure(failure)).toEqual(presentation);
+    },
+  );
+
+  test("presents CVE_FETCH_FAILED with another status by its status", () => {
+    expect(
+      presentRefetchFailure(errorResponse(500, "CVE_FETCH_FAILED")),
+    ).toEqual({
+      message: UNCONFIRMED,
+      reference: REQUEST_ID,
+      unconfirmed: true,
+    });
+  });
+});
 
 describe("validationErrorFields", () => {
   const FIELDS = ["username", "password"] as const;

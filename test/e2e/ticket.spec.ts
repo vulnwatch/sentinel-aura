@@ -49,6 +49,20 @@ function cvssTable(page: Page) {
   });
 }
 
+// The sources of the CVE, the last section of the side column.
+function sources(page: Page) {
+  return part(page, "Sources of the CVE");
+}
+
+// Waits until the sources of the CVE, which the screen reads on their own,
+// have arrived.
+async function expectSources(page: Page) {
+  await expect(sources(page).getByRole("listitem").first()).toBeVisible();
+}
+
+// A date and time as the screen shows it, such as 9 Oct 2026, 14:05.
+const DATE_TIME = String.raw`\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}`;
+
 // Whether the window scrolls its page in the horizontal direction.
 function scrollsHorizontally(page: Page): Promise<boolean> {
   return page.evaluate(
@@ -135,9 +149,10 @@ test.describe("for an analyst", () => {
     expect(detailsBox?.x).toBeGreaterThan(
       (cveBox?.x ?? 0) + (cveBox?.width ?? 0),
     );
-    // The CVSS assessments, which the screen reads on their own, have
-    // arrived.
+    // The CVSS assessments and the sources, which the screen reads on their
+    // own, have arrived.
     await expect(cvssTable(page)).toBeVisible();
+    await expectSources(page);
     await expectScreenshot(page, "ticket.png");
   });
 
@@ -181,6 +196,7 @@ test.describe("for an analyst", () => {
       "0.31",
     );
     await expect(cvssTable(page)).toBeVisible();
+    await expectSources(page);
     await expectScreenshot(page, "ticket-confidential.png");
   });
 
@@ -456,6 +472,7 @@ test.describe("for an analyst", () => {
         })
         .getByText("Excluded", { exact: true }),
     ).toBeVisible();
+    await expectSources(page);
     await expectScreenshot(page, "ticket-hidden-records.png");
 
     await page.reload();
@@ -506,6 +523,7 @@ test.describe("for an analyst", () => {
     await expect(
       part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
     ).toBeInViewport();
+    await expectSources(page);
     await expectScreenshot(page, "ticket-cvss.png");
   });
 
@@ -533,6 +551,7 @@ test.describe("for an analyst", () => {
     await expect(
       part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
     ).toBeInViewport();
+    await expectSources(page);
     await expectScreenshot(page, "ticket-cvss-without-suse.png");
     await expectAccessible(page);
 
@@ -545,7 +564,44 @@ test.describe("for an analyst", () => {
     await expect(part(page, "CVSS assessments").getByRole("grid")).toHaveCount(
       0,
     );
+    await expectSources(page);
     await expectScreenshot(page, "ticket-cvss-empty.png");
+  });
+
+  test("shows the sources of a CVE, with a failing source, every source disabled and so without Refetch", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+
+    await page.goto("/tickets/SNTL-6#sources");
+
+    // CVE-2099-0006 was first ingested from MITRE, and the last run of the
+    // NVD fetcher failed on it; no other source has fetched it, and every
+    // fetcher is disabled after the load, so even an analyst has no source
+    // to refetch (CVEs; Fetcher Runs and CVE Source Records; Fetchers;
+    // Operating a Dataset Backend).
+    await expect(sources(page).getByRole("listitem")).toHaveText([
+      /^EPSS\s*Not attempted\s*Disabled$/,
+      /^GHSA\s*Not attempted\s*Disabled$/,
+      /^Linux Kernel CNA\s*Not attempted\s*Disabled$/,
+      /^CISA KEV\s*Not attempted\s*Disabled$/,
+      new RegExp(
+        String.raw`^MITRE\s*Success\s*Disabled\s*Last attempt ${DATE_TIME}$`,
+      ),
+      new RegExp(
+        String.raw`^NVD\s*Failure\s*Disabled\s*Last attempt ${DATE_TIME}\s*Failing since ${DATE_TIME}$`,
+      ),
+      /^OSV\s*Not attempted\s*Disabled$/,
+      /^Red Hat\s*Not attempted\s*Disabled$/,
+    ]);
+    await expect(sources(page).getByRole("button")).toHaveCount(0);
+    await expect(
+      sources(page).getByRole("heading", {
+        level: 2,
+        name: "Sources of the CVE",
+      }),
+    ).toBeInViewport();
+    await expectScreenshot(page, "ticket-failing-source.png");
   });
 
   test("keeps the compact heading at the top of the window while the page scrolls", async ({
@@ -594,6 +650,7 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
       .getByText("Needs your action"),
   ).toBeVisible();
   await expect(cvssTable(page)).toBeVisible();
+  await expectSources(page);
   await expectScreenshot(page, "ticket-maintainer.png");
 });
 

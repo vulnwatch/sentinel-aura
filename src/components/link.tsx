@@ -5,24 +5,23 @@ import {
 import { FOCUS_RING } from "./focus-ring";
 
 export type LinkProps = Omit<AriaLinkProps, "className" | "style"> & {
-  // In running text, underlined; in a table or a list, where it is an
-  // identifier, a name, or an address, underlined under the pointer and on
-  // focus.
-  placement?: "text" | "list";
+  // In running text, in link, underlined; in a table or a list, where it is
+  // an identifier, a name, or an address, in link, underlined under the
+  // pointer and on focus; in a message, in the color of its text,
+  // underlined, at weight 500.
+  placement?: "text" | "list" | "message";
 };
 
 const PLACEMENTS = {
-  text: "underline",
-  list: "data-focus-visible:underline data-hovered:underline",
+  text: "text-link underline",
+  list: "text-link data-focus-visible:underline data-hovered:underline",
+  message: "font-medium underline",
 } as const;
 
-// A link, in link (docs/design-system.md, Buttons and Links), which navigates
-// through the router (src/components/router-links.tsx).
+// A link (docs/design-system.md, Buttons and Links; Messages), which
+// navigates through the router (src/components/router-links.tsx).
 export function Link({ placement = "text", ...props }: LinkProps) {
   return (
-    <AriaLink
-      {...props}
-      className={`text-link ${PLACEMENTS[placement]} ${FOCUS_RING}`}
-    />
+    <AriaLink {...props} className={`${PLACEMENTS[placement]} ${FOCUS_RING}`} />
   );
 }

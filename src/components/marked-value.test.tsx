@@ -1,10 +1,16 @@
 import type { ReactNode } from "react";
 import { afterEach, expect, test } from "vitest";
-import type { Locator } from "vitest/browser";
+import { commands, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
 import { MarkedValue, type MarkedName, type Tone } from "./marked-value";
+
+declare module "vitest/browser" {
+  interface BrowserCommands {
+    emulateReducedMotion: (reduce: boolean) => Promise<void>;
+  }
+}
 
 // A value of a response enum that a screen document marks with a tone
 // (docs/design-system.md, Other Values; Tones), in the light theme. Each
@@ -14,8 +20,9 @@ import { MarkedValue, type MarkedName, type Tone } from "./marked-value";
 // to 48 px, three times the default, which enlarges the dot to 24 px, so
 // that each point that they read lies well inside a shape.
 
-afterEach(() => {
+afterEach(async () => {
   document.documentElement.style.removeProperty("font-size");
+  await commands.emulateReducedMotion(false);
 });
 
 const SCALE = 3;
@@ -24,7 +31,8 @@ const FG_MUTED = "rgb(89, 99, 110)";
 const CANVAS = "#f6f8fa";
 const NEUTRAL_ICON = "#6e7781";
 
-// The values of a fictional enum, one of each tone.
+// The values of a fictional enum, one of each tone, an operation in
+// progress, and an observation never made.
 const KNOWN = new Map<string, MarkedName>(
   Object.entries({
     idle: { name: "Idle", tone: "neutral" },
@@ -32,8 +40,29 @@ const KNOWN = new Map<string, MarkedName>(
     passed: { name: "Passed", tone: "success" },
     late: { name: "Late", tone: "warning" },
     failed: { name: "Failed", tone: "danger" },
+    pending: { name: "Pending", tone: "info", mark: "progress" },
+    unseen: { name: "Not attempted", tone: "neutral", mark: "unobserved" },
   }),
 );
+const INFO_ICON = "#0969da";
+
+// The names of the animations that run in an element and its descendants.
+function animationsIn(element: Element): string[] {
+  return element
+    .getAnimations({ subtree: true })
+    .map((animation) =>
+      animation instanceof CSSAnimation ? animation.animationName : "",
+    );
+}
+
+// The color at a point of an icon of 12 units before the name, in the units
+// of Lucide's grid of 24, enlarged three times.
+async function iconColor(figure: Locator, [x, y]: [number, number]) {
+  const picture = await screenshot(figure);
+  // The icon is centered on the line of the name.
+  const top = (picture.height - 12 * SCALE) / 2;
+  return picture.at((x / 2) * SCALE, top + (y / 2) * SCALE);
+}
 
 async function renderValue(node: ReactNode, scale = 1) {
   document.documentElement.style.fontSize = `${16 * scale}px`;
@@ -123,6 +152,51 @@ test("shows the name 6 px after the dot of 8 px", async () => {
     name.element().getBoundingClientRect().left -
       figure.element().getBoundingClientRect().left,
   ).toBe(14);
+});
+
+test("shows an operation in progress with loader-circle of 12 px in info-icon, turning, which stands still under reduced motion, its name 6 px after it", async () => {
+  const { screen, figure } = await renderValue(
+    <MarkedValue value="pending" known={KNOWN} />,
+    SCALE,
+  );
+  await expect
+    .element(screen.getByRole("cell", { name: "Pending", exact: true }))
+    .toBeVisible();
+  expect(animationsIn(figure.element())).toEqual(["spin"]);
+
+  await commands.emulateReducedMotion(true);
+
+  expect(animationsIn(figure.element())).toEqual([]);
+  // The arc of loader-circle starts at the middle of its right side, at 21
+  // of its 24 units, and leaves the center empty.
+  expect(await iconColor(figure, [21, 12])).toBe(INFO_ICON);
+  expect(await iconColor(figure, [12, 12])).toBe(CANVAS);
+  const name = figure.getByText("Pending", { exact: true });
+  expect(
+    name.element().getBoundingClientRect().left -
+      figure.element().getBoundingClientRect().left,
+  ).toBe(18 * SCALE);
+});
+
+test("shows an observation never made with circle-dashed of 12 px in neutral-icon, still, its name 6 px after it", async () => {
+  const { screen, figure } = await renderValue(
+    <MarkedValue value="unseen" known={KNOWN} />,
+    SCALE,
+  );
+  await expect
+    .element(screen.getByRole("cell", { name: "Not attempted", exact: true }))
+    .toBeVisible();
+
+  expect(animationsIn(figure.element())).toEqual([]);
+  // The dash at the middle of its right side, at 21.8 of its 24 units, and
+  // its empty center.
+  expect(await iconColor(figure, [21.8, 12])).toBe(NEUTRAL_ICON);
+  expect(await iconColor(figure, [12, 12])).toBe(CANVAS);
+  const name = figure.getByText("Not attempted", { exact: true });
+  expect(
+    name.element().getBoundingClientRect().left -
+      figure.element().getBoundingClientRect().left,
+  ).toBe(18 * SCALE);
 });
 
 test.each(["paused", "constructor"])(

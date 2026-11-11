@@ -23,7 +23,8 @@ declare module "react-aria-components" {
   }
 }
 
-function toOptions(href: ScreenHref): ToOptions {
+// The router's options of the address of a screen.
+export function screenOptions(href: ScreenHref): ToOptions {
   return href === undefined || typeof href === "string" ? { to: href } : href;
 }
 
@@ -51,12 +52,12 @@ export function RouterLinks({ onNavigate, children }: RouterLinksProps) {
           href.load();
           return;
         }
-        void router.navigate({ ...options, ...toOptions(href) });
+        void router.navigate({ ...options, ...screenOptions(href) });
       }}
       useHref={(href) =>
         href instanceof WebAddress
           ? href.url.href
-          : router.buildLocation(toOptions(href)).href
+          : router.buildLocation(screenOptions(href)).href
       }
     >
       {children}

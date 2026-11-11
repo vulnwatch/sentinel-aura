@@ -85,7 +85,9 @@ function UpdateFailed({
 
 // The data that the place of a read shows: the data that has arrived, also
 // while other data loads, but none after a 403 or a 404, which replaces it.
-function dataShown<TData>(read: Read<TData>): TData | undefined {
+// What the screen shows with that data, such as the actions of a part,
+// follows it.
+export function dataShown<TData>(read: Read<TData>): TData | undefined {
   return read.status === "error" && replacesShownData(read.error)
     ? undefined
     : read.data;

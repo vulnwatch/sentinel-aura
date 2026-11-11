@@ -22,6 +22,7 @@ import {
   fictionalTicketDetail,
   jsonResponse,
   OTHER_USER,
+  sourcesResponse,
   stubApi,
   ticketPage,
   ticketResponse,
@@ -34,6 +35,7 @@ import {
 const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
 const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
+const SOURCES = "/api/v1/cves/CVE-2099-0012/sources";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -71,16 +73,20 @@ interface Stub {
   duplicates: (query: URLSearchParams) => Response | Promise<Response>;
   // The response to the read of the CVSS assessments of the CVE.
   cvss: () => Response | Promise<Response>;
+  // The response to the read of the sources of the CVE.
+  sources: () => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst, Get Ticket, the read
-// of the duplicates, and the read of the CVSS assessments, as the test sets
-// them, and returns the spy, whose calls name the requests.
+// of the duplicates, the read of the CVSS assessments, and the read of the
+// sources of the CVE, as the test sets them, and returns the spy, whose calls
+// name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     ticket: () => ticketResponse(fictionalTicketDetail()),
     duplicates: () => ticketPage([]),
     cvss: () => cvssResponse(),
+    sources: () => sourcesResponse(),
     ...fields,
   };
   return stubApi((request) => {
@@ -95,6 +101,9 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path === CVSS) {
       return stub.cvss();
+    }
+    if (request.path === SOURCES) {
+      return stub.sources();
     }
     return errorResponse(404, "RESOURCE_NOT_FOUND");
   });
@@ -233,6 +242,7 @@ describe("the read of the Ticket", () => {
         `${TICKETS}/SNTL-12`,
         `${TICKETS}?${DUPLICATES_OF_SNTL_12}`,
         CVSS,
+        SOURCES,
       ]);
   });
 
@@ -572,6 +582,47 @@ describe("the layout", () => {
       .toBe("20px");
   });
 
+  test("scrolls the page until an element at the end of a side column taller than the window shows when it takes the focus, and back up to one above it", async () => {
+    await page.viewport(1280, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket();
+    const sources = region(screen, "Sources of the CVE");
+    const refetch = sources.getByRole("button", { name: "Refetch NVD" });
+    await expect.element(refetch).toBeVisible();
+    expect(boxOf(refetch).top).toBeGreaterThan(window.innerHeight);
+
+    refetch.element().focus();
+
+    await expect.element(refetch).toBeInViewport({ ratio: 1 });
+    await expect.element(refetch).toHaveFocus();
+
+    // Back to the first field of the side column, above the window.
+    const assignee = region(screen, "Details").getByText("Alice Smith");
+    expect(boxOf(assignee).bottom).toBeLessThan(0);
+    const all = sources.getByRole("button", { name: "Refetch all" });
+    all.element().focus();
+    await expect.element(all).toBeInViewport({ ratio: 1 });
+  });
+
+  test("leaves the page where it is when the focus leaves the side column within the same frame", async () => {
+    await page.viewport(1280, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket();
+    const refetch = region(screen, "Sources of the CVE").getByRole("button", {
+      name: "Refetch NVD",
+    });
+    await expect.element(refetch).toBeVisible();
+
+    refetch.element().focus();
+    const scrolled = window.scrollY;
+    refetch.element().blur();
+    await new Promise((done) => requestAnimationFrame(done));
+    await new Promise((done) => requestAnimationFrame(done));
+
+    expect(document.activeElement).toBe(document.body);
+    expect(window.scrollY).toBe(scrolled);
+  });
+
   test("lets the heading row scroll away in one column", async () => {
     await page.viewport(900, 300);
     showing(fictionalTicketDetail());
@@ -881,7 +932,7 @@ describe("the details", () => {
       const link = screen.getByRole("link", { name: "SNTL-21" });
       await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-21");
       expect(valueOf(screen, "Original").contains(link.element())).toBe(true);
-      expect(requestsOf(spy)).toEqual([`${TICKETS}/SNTL-12`, CVSS]);
+      expect(requestsOf(spy)).toEqual([`${TICKETS}/SNTL-12`, CVSS, SOURCES]);
     });
 
     test("link to each duplicate, with the lock of a confidential one", async () => {
@@ -1298,26 +1349,61 @@ describe("the anchor of the URL", () => {
       .toBeInViewport();
   });
 
-  test("shows the top of the screen when the Ticket lacks its target", async () => {
-    await page.viewport(900, 300);
-    const duplicates = later();
-    // The CVSS assessments of a Ticket without a CVE.
-    stubTicket({
-      ticket: () => ticketResponse(fictionalTicketDetail({ cve: null })),
-      duplicates: () => duplicates.promise,
-    });
-    const { screen } = await renderTicket("/tickets/SNTL-12#cvss");
-    // The page lies elsewhere, without the user having scrolled it.
-    window.scrollTo(0, 10);
-    await expect.poll(() => window.scrollY).toBe(10);
+  test.each([
+    ["two columns", 1280],
+    ["one column", 900],
+  ])(
+    "shows the sources of the CVE in %s once their read has settled",
+    async (_, width) => {
+      await page.viewport(width, 300);
+      const sources = later();
+      stubTicket({
+        ticket: () => ticketResponse(fictionalTicketDetail({ cve: longCve() })),
+        sources: () => sources.promise,
+      });
+      const { screen } = await renderTicket("/tickets/SNTL-12#sources");
+      await expect
+        .poll(() => valueOf(screen, "Duplicates").textContent)
+        .toBe("None");
+      expect(window.scrollY).toBe(0);
 
-    duplicates.resolve(ticketPage([]));
+      sources.resolve(sourcesResponse());
 
-    await expect
-      .poll(() => valueOf(screen, "Duplicates").textContent)
-      .toBe("None");
-    await expect.poll(() => window.scrollY).toBe(0);
-  });
+      await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+      await expect
+        .element(
+          region(screen, "Sources of the CVE").getByRole("heading", {
+            level: 2,
+            name: "Sources of the CVE",
+          }),
+        )
+        .toBeInViewport();
+    },
+  );
+
+  test.each(["cvss", "sources"])(
+    "shows the top of the screen when the Ticket lacks the target %s",
+    async (anchor) => {
+      await page.viewport(900, 300);
+      const duplicates = later();
+      // The CVSS assessments and the sources of a Ticket without a CVE.
+      stubTicket({
+        ticket: () => ticketResponse(fictionalTicketDetail({ cve: null })),
+        duplicates: () => duplicates.promise,
+      });
+      const { screen } = await renderTicket(`/tickets/SNTL-12#${anchor}`);
+      // The page lies elsewhere, without the user having scrolled it.
+      window.scrollTo(0, 10);
+      await expect.poll(() => window.scrollY).toBe(10);
+
+      duplicates.resolve(ticketPage([]));
+
+      await expect
+        .poll(() => valueOf(screen, "Duplicates").textContent)
+        .toBe("None");
+      await expect.poll(() => window.scrollY).toBe(0);
+    },
+  );
 
   test("leaves the page where the user scrolled it with the keyboard meanwhile", async () => {
     await page.viewport(900, 300);

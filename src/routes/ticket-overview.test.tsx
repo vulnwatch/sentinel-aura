@@ -1,12 +1,13 @@
 import { focusManager, type QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { page, type Locator } from "vitest/browser";
+import { commands, page, userEvent, type Locator } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
 import type {
   CVECVSSAssessments,
+  CVESourceStatusItem,
   CVSS20Assessment,
   CVSS40Assessment,
   CurrentUserResponse,
@@ -21,30 +22,45 @@ import { createAppRouter } from "../router";
 import {
   cvssResponse,
   errorResponse,
+  FICTIONAL_USER,
   fictionalAssessment,
   fictionalCvssAssessments,
   fictionalPackage,
   fictionalProduct,
+  fictionalSource,
   fictionalSuseAssessment,
   fictionalTicketDetail,
   fictionalTrack,
   jsonResponse,
   OTHER_USER,
+  refetchResponse,
   requestsTo,
+  sourcesResponse,
   stubApi,
   ticketPage,
   ticketResponse,
   ticketWorkResponse,
   urlOf,
 } from "../test-api";
-// The package tree and the CVSS assessments of Overview, the first tab of the
-// Ticket screen (docs/screens/ticket.md), at the browser's default text size,
-// in the light theme.
+import { screenshot } from "../test-screenshot";
+
+declare module "vitest/browser" {
+  interface BrowserCommands {
+    emulateReducedMotion: (reduce: boolean) => Promise<void>;
+  }
+}
+
+// The package tree, the CVSS assessments, and the sources of the CVE of
+// Overview, the first tab of the Ticket screen (docs/screens/ticket.md), at
+// the browser's default text size, in the light theme.
 
 const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
+const TICKET = "/api/v1/tickets/SNTL-12";
 const YOUR_WORK = "/api/v1/my/packages/tickets/SNTL-12";
 const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
+const SOURCES = "/api/v1/cves/CVE-2099-0012/sources";
+const REFETCH = "/api/v1/cves/CVE-2099-0012/refetch";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -91,7 +107,9 @@ afterEach(async () => {
   await cleanup();
   client.clear();
   vi.restoreAllMocks();
+  vi.useRealTimers();
   focusManager.setFocused(undefined);
+  await commands.emulateReducedMotion(false);
   document.title = "Sentinel";
   window.scrollTo(0, 0);
   await page.viewport(414, 896);
@@ -107,18 +125,25 @@ interface Stub {
   yourWork: () => Response | Promise<Response>;
   // The response to the read of the CVSS assessments of the CVE.
   cvss: () => Response | Promise<Response>;
+  // The response to the read of the sources of the CVE.
+  sources: () => Response | Promise<Response>;
+  // The response to a refetch of the CVE, given its query.
+  refetch: (query: URLSearchParams) => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst who maintains no
 // package unless the test says otherwise, Get Ticket, the read of the
-// duplicates, the read of the work of the user, and the read of the CVSS
-// assessments, and returns the spy, whose calls name the requests.
+// duplicates, the read of the work of the user, the read of the CVSS
+// assessments, the read of the sources of the CVE, and its refetch, and
+// returns the spy, whose calls name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: OTHER_USER,
     ticket: () => ticketResponse(fictionalTicketDetail()),
     yourWork: () => ticketWorkResponse(),
     cvss: () => cvssResponse(),
+    sources: () => sourcesResponse(),
+    refetch: () => refetchResponse({ sources_enqueued: ["nvd"] }),
     ...fields,
   };
   return stubApi((request) => {
@@ -136,6 +161,12 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path === CVSS) {
       return stub.cvss();
+    }
+    if (request.path === SOURCES) {
+      return stub.sources();
+    }
+    if (request.path === REFETCH && request.method === "POST") {
+      return stub.refetch(request.query);
     }
     return errorResponse(404, "RESOURCE_NOT_FOUND");
   });
@@ -2535,5 +2566,985 @@ describe("the CVSS assessments", () => {
       .toBeVisible();
     expect(requestsTo(spy, CVSS)).toBe(4);
     expect(rowsOf(screen)).toHaveLength(2);
+  });
+});
+
+// The dates and times of the sources of the tests.
+const ATTEMPTED = "2099-10-08T08:00:00Z";
+const LATER_ATTEMPT = "2099-10-09T09:30:00Z";
+const FAILING_SINCE = "2099-10-06T06:00:00Z";
+const KEV_UPDATED = "2099-10-07T04:00:00Z";
+
+// The backgrounds of the messages of each tone in the light theme
+// (docs/design-system.md, Tones).
+const MESSAGE_TONES = {
+  info: "rgb(221, 244, 255)",
+  warning: "rgb(255, 248, 197)",
+  danger: "rgb(255, 235, 233)",
+} as const;
+
+// The reference of the errors of the tests (src/test-api.ts).
+const REFERENCE = "Reference: 01890a5d-ac96-774b-bcce-b302099a8057";
+
+// An administrator who operates the fetchers, without triage_ticket.
+const FETCHER_ADMIN: CurrentUserResponse = {
+  data: {
+    ...OTHER_USER.data,
+    roles: ["admin"],
+    capabilities: ["manage_fetchers"],
+    assignment_eligibility: "none",
+  },
+};
+
+// Waits until no read of the sources is in progress, so that a read at
+// intervals is not merged into it.
+async function sourcesSettled() {
+  await expect.poll(() => client.isFetching({ queryKey: [SOURCES] })).toBe(0);
+}
+
+function sourcesPart(screen: Screen) {
+  return screen.getByRole("region", {
+    name: "Sources of the CVE",
+    exact: true,
+  });
+}
+
+// Renders the screen of SNTL-12 and waits until its sources show the text.
+async function renderSources(text = "NVD", path = "/tickets/SNTL-12") {
+  const rendered = await renderApp(path);
+  await expect
+    .element(
+      sourcesPart(rendered.screen).getByText(text, { exact: true }).first(),
+    )
+    .toBeVisible();
+  return rendered;
+}
+
+// The list item of a source, by its name.
+function sourceOf(screen: Screen, name: string): Locator {
+  return sourcesPart(screen)
+    .getByRole("listitem")
+    .filter({ has: page.getByText(name, { exact: true }) });
+}
+
+// The texts of an element, apart by a space.
+function wordsOf(element: Element): string {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const texts: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    texts.push(node.textContent ?? "");
+  }
+  return texts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+// The line of each source, in the order of the page.
+function sourceLines(screen: Screen): string[] {
+  return sourcesPart(screen).getByRole("listitem").elements().map(wordsOf);
+}
+
+// What the status regions of the sources say, other than nothing.
+function statusesOf(screen: Screen): string[] {
+  return sourcesPart(screen)
+    .getByRole("status")
+    .elements()
+    .map((region) => region.textContent ?? "")
+    .filter((text) => text !== "");
+}
+
+function refetchOf(screen: Screen, name: string) {
+  return sourcesPart(screen).getByRole("button", {
+    name: `Refetch ${name}`,
+    exact: true,
+  });
+}
+
+function refetchAll(screen: Screen) {
+  return sourcesPart(screen).getByRole("button", {
+    name: "Refetch all",
+    exact: true,
+  });
+}
+
+// Presses a button from the keyboard, which keeps the focus on it.
+async function press(button: Locator) {
+  button.element().focus();
+  await userEvent.keyboard("{Enter}");
+}
+
+// The color behind an element: the background of the nearest element, itself
+// or one that contains it, that has one.
+function backgroundBehind(element: Element): string {
+  for (
+    let current: Element | null = element;
+    current;
+    current = current.parentElement
+  ) {
+    const background = getComputedStyle(current).backgroundColor;
+    if (background !== "rgba(0, 0, 0, 0)") {
+      return background;
+    }
+  }
+  return "transparent";
+}
+
+// The names of the animations that run in an element and its descendants.
+function animationsIn(element: Element): string[] {
+  return element
+    .getAnimations({ subtree: true })
+    .map((animation) =>
+      animation instanceof CSSAnimation ? animation.animationName : "",
+    );
+}
+
+// The pending fetch of MITRE and of NVD, and CISA KEV, which cannot be
+// refetched.
+function pendingSources(): CVESourceStatusItem[] {
+  return [
+    fictionalSource({
+      source: "kev",
+      status: "missing",
+      refetchable: false,
+    }),
+    fictionalSource({
+      source: "mitre",
+      status: "pending",
+      first_failed_at: FAILING_SINCE,
+    }),
+    fictionalSource({ status: "pending", fetched_at: null }),
+  ];
+}
+
+describe("the sources of the CVE", () => {
+  test("follow the details in the side column, 288 px wide, under a level-two heading, after a border line", async () => {
+    stubTicket();
+    const { screen } = await renderSources();
+    const details = screen.getByRole("region", { name: "Details" });
+    const part = sourcesPart(screen);
+
+    await expect
+      .element(
+        part.getByRole("heading", { level: 2, name: "Sources of the CVE" }),
+      )
+      .toBeVisible();
+    expect(boxOf(part).width).toBe(288);
+    expect(boxOf(part).left).toBe(boxOf(details).left);
+    expect(boxOf(part).top).toBeCloseTo(boxOf(details).bottom, 1);
+    // 16 px below the content of the details, a border line, and the section
+    // 16 px below it.
+    const above = getComputedStyle(details.element());
+    expect([
+      above.paddingBottom,
+      above.borderBottomWidth,
+      above.borderBottomColor,
+    ]).toEqual(["16px", "1px", BORDER]);
+    expect(getComputedStyle(part.element()).paddingTop).toBe("16px");
+    expect(
+      details.element().compareDocumentPosition(part.element()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  test("follow the CVSS assessments in one column, last in the order of the page, after a border line 32 px below them", async () => {
+    await page.viewport(900, 800);
+    stubTicket();
+    const { screen } = await renderSources();
+    const cvss = cvssPart(screen);
+    await expect
+      .element(cvss.getByRole("grid", { name: "CVSS assessments" }))
+      .toBeVisible();
+    const part = sourcesPart(screen);
+
+    expect(
+      cvss.element().compareDocumentPosition(part.element()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(boxOf(part).width).toBe(boxOf(cvss).width);
+    // 32 px below the content of the CVSS assessments, a border line, and the
+    // section 16 px below it.
+    expect(boxOf(part).top - boxOf(cvss).bottom).toBeCloseTo(32 + 1 + 16, 1);
+  });
+
+  test("stay in their place, with the focus and a refetch in progress, when the layout changes", async () => {
+    const response = later();
+    stubTicket({ refetch: () => response.promise });
+    const { screen } = await renderSources();
+    const refetch = refetchOf(screen, "NVD");
+    await press(refetch);
+    await expect.element(refetch).toHaveAttribute("aria-disabled", "true");
+
+    await page.viewport(900, 800);
+
+    await expect
+      .poll(
+        () => boxOf(sourcesPart(screen)).top > boxOf(cvssPart(screen)).bottom,
+      )
+      .toBe(true);
+    await expect.element(refetch).toHaveFocus();
+    expect(refetch.element().getAttribute("aria-disabled")).toBe("true");
+
+    response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
+
+    await expect.element(refetch).not.toHaveAttribute("aria-disabled");
+  });
+
+  test("show each source in the order of the API: its name, its status, its labels, and the dates of its last attempt and of the start of its failure streak", async () => {
+    stubTicket({
+      sources: () =>
+        sourcesResponse([
+          fictionalSource({
+            source: "epss",
+            status: "not_attempted",
+            fetched_at: null,
+            enabled: false,
+          }),
+          fictionalSource({
+            source: "ghsa",
+            status: "pending",
+            fetched_at: null,
+          }),
+          fictionalSource({
+            source: "kernel",
+            status: "missing",
+          }),
+          fictionalSource({
+            source: "kev",
+            status: "success",
+            fetched_at: KEV_UPDATED,
+            refetchable: false,
+          }),
+          fictionalSource({
+            source: "mitre",
+            status: "failure",
+            first_failed_at: FAILING_SINCE,
+          }),
+          // A retry in flight keeps the dates of the last attempt and of the
+          // failure streak.
+          fictionalSource({
+            status: "pending",
+            first_failed_at: FAILING_SINCE,
+          }),
+          fictionalSource({ source: "osv", enabled: false }),
+          fictionalSource({
+            source: "redhat",
+            status: "missing",
+            registered: false,
+            refetchable: false,
+            enabled: false,
+          }),
+        ]),
+    });
+    const { screen } = await renderSources();
+    const attempted = formatDateTime(ATTEMPTED);
+    const since = formatDateTime(FAILING_SINCE);
+
+    expect(sourceLines(screen)).toEqual([
+      "EPSS Not attempted Disabled",
+      "GHSA Pending",
+      `Linux Kernel CNA Missing Last attempt ${attempted}`,
+      `CISA KEV Success Updated ${formatDateTime(KEV_UPDATED)}`,
+      `MITRE Failure Last attempt ${attempted} Failing since ${since}`,
+      `NVD Pending Last attempt ${attempted} Failing since ${since}`,
+      `OSV Success Disabled Last attempt ${attempted}`,
+      `Red Hat Missing Retired Last attempt ${attempted}`,
+    ]);
+    expect(sourcesPart(screen).getByRole("list").elements()).toHaveLength(1);
+    // The name of the source at weight 500, the dates in text-13 and
+    // fg-muted.
+    const mitre = sourceOf(screen, "MITRE");
+    expect(
+      getComputedStyle(mitre.getByText("MITRE", { exact: true }).element())
+        .fontWeight,
+    ).toBe("500");
+    const failing = mitre.getByText(/^Failing since/).element();
+    expect([
+      getComputedStyle(failing).fontSize,
+      getComputedStyle(failing).color,
+    ]).toEqual(["13px", FG_MUTED]);
+  });
+
+  test("mark each status in the color of its tone, never by the color alone, the pending fetch turning and standing still under reduced motion", async () => {
+    stubTicket({
+      sources: () =>
+        sourcesResponse([
+          fictionalSource({
+            source: "epss",
+            status: "not_attempted",
+            fetched_at: null,
+          }),
+          fictionalSource({
+            source: "ghsa",
+            status: "pending",
+            fetched_at: null,
+          }),
+          fictionalSource({ source: "kernel", status: "missing" }),
+          fictionalSource({
+            source: "mitre",
+            status: "failure",
+            first_failed_at: FAILING_SINCE,
+          }),
+          fictionalSource(),
+        ]),
+    });
+    const { screen } = await renderSources();
+    // The color at the center of the mark of a status, whose dot of 8 px ends
+    // 6 px before its name, and whose icon of 12 px ends there too.
+    const markAt = async (name: string, status: string, size: number) => {
+      const item = sourceOf(screen, name);
+      const picture = await screenshot(item);
+      const text = boxOf(item.getByText(status, { exact: true }));
+      const box = boxOf(item);
+      return picture.at(
+        text.left - box.left - 6 - size / 2,
+        (text.top + text.bottom) / 2 - box.top,
+      );
+    };
+
+    expect(await markAt("NVD", "Success", 8)).toBe("#1a7f37");
+    expect(await markAt("MITRE", "Failure", 8)).toBe("#cf222e");
+    expect(await markAt("Linux Kernel CNA", "Missing", 8)).toBe("#6e7781");
+    // The dashed circle of Not attempted is hollow, unlike a dot.
+    expect(await markAt("EPSS", "Not attempted", 12)).toBe("#f6f8fa");
+    expect(animationsIn(sourceOf(screen, "EPSS").element())).toEqual([]);
+    expect(animationsIn(sourceOf(screen, "GHSA").element())).toEqual(["spin"]);
+
+    await commands.emulateReducedMotion(true);
+
+    expect(animationsIn(sourceOf(screen, "GHSA").element())).toEqual([]);
+  });
+
+  test("show a source and a status that the pinned contract does not list as received", async () => {
+    stubTicket({
+      sources: () =>
+        jsonResponse(200, {
+          data: [
+            fictionalSource({
+              source: "fictional_source",
+              registered: false,
+              refetchable: false,
+              enabled: false,
+            }),
+            { ...fictionalSource(), status: "fictional_status" },
+          ],
+        }),
+    });
+    const { screen } = await renderSources("fictional_source");
+    const attempted = formatDateTime(ATTEMPTED);
+
+    expect(sourceLines(screen)).toEqual([
+      `fictional_source Success Retired Last attempt ${attempted}`,
+      `NVD fictional_status Last attempt ${attempted}`,
+    ]);
+  });
+
+  test("say No sources. without any, without Refetch all", async () => {
+    stubTicket({ sources: () => sourcesResponse([]) });
+    const { screen } = await renderSources("No sources.");
+
+    expect(refetchAll(screen).query()).toBeNull();
+    expect(sourcesPart(screen).getByRole("list").query()).toBeNull();
+  });
+
+  test("are neither read nor shown for a Ticket without a CVE", async () => {
+    const spy = showing([fictionalPackage()], { cve: null });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(screen.getByRole("region", { name: "Details" }))
+      .toBeVisible();
+    expect(sourcesPart(screen).query()).toBeNull();
+    expect(
+      spy.mock.calls
+        .map(([input]) => urlOf(input).pathname)
+        .filter((path) => path.startsWith("/api/v1/cves/")),
+    ).toEqual([]);
+  });
+
+  test("show the loading indicator in their place until their read arrives, and the failure of their read in their place, with Try again", async () => {
+    const first = later();
+    let read = 0;
+    let fails = true;
+    const spy = stubTicket({
+      sources: () => {
+        read += 1;
+        if (read === 1) {
+          return first.promise;
+        }
+        return fails ? errorResponse(500, "INTERNAL_ERROR") : sourcesResponse();
+      },
+    });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        sourcesPart(screen).getByRole("progressbar", { name: "Loading" }),
+      )
+      .toBeVisible();
+
+    first.resolve(errorResponse(500, "INTERNAL_ERROR"));
+
+    await expect
+      .element(
+        sourcesPart(screen).getByText(
+          "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.",
+        ),
+      )
+      .toBeVisible();
+    expect(requestsTo(spy, SOURCES)).toBe(3);
+    expect(refetchAll(screen).query()).toBeNull();
+    await expect
+      .element(screen.getByRole("region", { name: "Details" }))
+      .toBeVisible();
+
+    fails = false;
+    await sourcesPart(screen)
+      .getByRole("button", { name: "Try again" })
+      .click();
+
+    await expect.element(sourceOf(screen, "NVD")).toBeVisible();
+  });
+
+  test("remove the sources and Refetch all when a new read of them is refused with a 404", async () => {
+    let refused = false;
+    stubTicket({
+      sources: () =>
+        refused ? errorResponse(404, "CVE_NOT_FOUND") : sourcesResponse(),
+    });
+    const { screen } = await renderSources();
+    await expect.element(refetchAll(screen)).toBeVisible();
+    refused = true;
+
+    returnToForeground();
+
+    await expect
+      .element(
+        sourcesPart(screen).getByText(
+          "This no longer exists, or you no longer have access to it.",
+        ),
+      )
+      .toBeVisible();
+    expect(refetchAll(screen).query()).toBeNull();
+    expect(sourcesPart(screen).getByRole("listitem").query()).toBeNull();
+  });
+
+  test("offer Refetch of each source that can be refetched, named after it, and Refetch all, to a user with triage_ticket", async () => {
+    stubTicket({
+      sources: () =>
+        sourcesResponse([
+          fictionalSource({ source: "epss", enabled: false }),
+          fictionalSource({
+            source: "kev",
+            status: "missing",
+            refetchable: false,
+          }),
+          fictionalSource({
+            source: "legacy_source",
+            registered: false,
+            refetchable: false,
+            enabled: false,
+          }),
+          fictionalSource({ source: "mitre", status: "pending" }),
+          fictionalSource(),
+        ]),
+    });
+    const { screen } = await renderSources();
+
+    expect(
+      sourcesPart(screen)
+        .getByRole("button", { name: /^Refetch/ })
+        .elements()
+        .map(
+          (button) => button.getAttribute("aria-label") ?? button.textContent,
+        ),
+    ).toEqual(["Refetch all", "Refetch MITRE", "Refetch NVD"]);
+    // A target of 24 px at the end of the first line of its source, and
+    // Refetch all a small secondary button at the end of the heading.
+    const refetch = boxOf(refetchOf(screen, "NVD"));
+    expect([refetch.width, refetch.height]).toEqual([24, 24]);
+    expect(refetch.right).toBeCloseTo(boxOf(sourcesPart(screen)).right, 1);
+    const all = boxOf(refetchAll(screen));
+    expect(all.height).toBe(32);
+    expect(all.right).toBeCloseTo(boxOf(sourcesPart(screen)).right, 1);
+    expect(all.bottom).toBeLessThanOrEqual(boxOf(sourceOf(screen, "EPSS")).top);
+  });
+
+  test.each<[string, CurrentUserResponse]>([
+    ["a reader", FICTIONAL_USER],
+    ["a user without triage_ticket", FETCHER_ADMIN],
+  ])("offer no Refetch to %s", async (_, user) => {
+    stubTicket({ user });
+    const { screen } = await renderSources();
+
+    expect(sourcesPart(screen).getByRole("button").query()).toBeNull();
+  });
+
+  test("offer no Refetch all when no source can be refetched", async () => {
+    stubTicket({
+      sources: () =>
+        sourcesResponse([
+          fictionalSource({ source: "mitre", enabled: false }),
+          fictionalSource({ enabled: false }),
+        ]),
+    });
+    const { screen } = await renderSources();
+
+    expect(sourcesPart(screen).getByRole("button").query()).toBeNull();
+  });
+
+  test("refetch a source with Re-fetch CVE Data, busy until Sentinel answers, then say that it started and read the sources again", async () => {
+    const response = later();
+    const spy = stubTicket({ refetch: () => response.promise });
+    const { screen } = await renderSources();
+    const refetch = refetchOf(screen, "NVD");
+
+    await press(refetch);
+
+    await expect.element(refetch).toHaveAttribute("aria-disabled", "true");
+    expect(animationsIn(refetch.element())).toEqual(["spin"]);
+    const requests = spy.mock.calls
+      .map(([input, init]) => [init?.method, urlOf(input)] as const)
+      .filter(([, url]) => url.pathname === REFETCH);
+    expect(requests.map(([method, url]) => [method, url.search])).toEqual([
+      ["POST", "?source=nvd"],
+    ]);
+    // Pressing it again while it is busy sends nothing.
+    await userEvent.keyboard("{Enter}");
+    expect(requestsTo(spy, REFETCH)).toBe(1);
+    const sourcesRead = requestsTo(spy, SOURCES);
+
+    response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
+
+    const message = screen.getByText("Refetch of NVD started.");
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.info);
+    await expect.element(refetch).not.toHaveAttribute("aria-disabled");
+    await expect.element(refetch).toHaveFocus();
+    await expect
+      .poll(() => requestsTo(spy, SOURCES))
+      .toBeGreaterThan(sourcesRead);
+  });
+
+  test.each<[string, string, Parameters<typeof refetchResponse>[0], string]>([
+    [
+      "NVD",
+      "?source=nvd",
+      { sources_already_pending: ["nvd"] },
+      "Refetch of NVD was already in progress.",
+    ],
+    [
+      "all",
+      "",
+      { sources_enqueued: ["mitre", "nvd"], sources_disabled: ["osv"] },
+      "Refetch started. OSV is disabled and was skipped.",
+    ],
+    [
+      "all",
+      "",
+      {
+        sources_enqueued: ["nvd"],
+        sources_already_pending: ["mitre"],
+        sources_disabled: ["ghsa", "fictional_source"],
+      },
+      "Refetch started. GHSA and fictional_source are disabled and were skipped.",
+    ],
+    [
+      "all",
+      "",
+      { sources_already_pending: ["mitre", "nvd"] },
+      "Refetch was already in progress.",
+    ],
+  ])(
+    "say what a refetch of %s (%s) started: %j",
+    async (name, search, result, text) => {
+      const spy = stubTicket({ refetch: () => refetchResponse(result) });
+      const { screen } = await renderSources();
+
+      await press(
+        name === "all" ? refetchAll(screen) : refetchOf(screen, name),
+      );
+
+      const message = screen.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.info);
+      const [input] = spy.mock.calls.find(
+        ([request]) => urlOf(request).pathname === REFETCH,
+      )!;
+      expect(urlOf(input).search).toBe(search);
+    },
+  );
+
+  test.each<[Parameters<typeof refetchResponse>[0], string]>([
+    [
+      {
+        sources_enqueued: ["nvd"],
+        sources_disabled: ["osv"],
+        sources_failed: ["mitre"],
+      },
+      "Refetch started. OSV is disabled and was skipped. Sentinel didn't confirm the refetch of MITRE: it may still start.",
+    ],
+    [
+      { sources_already_pending: ["nvd"], sources_failed: ["mitre", "redhat"] },
+      "Refetch was already in progress. Sentinel didn't confirm the refetch of MITRE and Red Hat: they may still start.",
+    ],
+  ])(
+    "warn of the sources whose refetch Sentinel did not confirm: %j",
+    async (result, text) => {
+      stubTicket({ refetch: () => refetchResponse(result) });
+      const { screen } = await renderSources();
+
+      await press(refetchAll(screen));
+
+      const message = screen.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.warning);
+    },
+  );
+
+  test.each<
+    [
+      string,
+      () => Response | Promise<Response>,
+      string,
+      keyof typeof MESSAGE_TONES,
+      boolean,
+    ]
+  >([
+    [
+      "503 CVE_FETCH_FAILED",
+      () => errorResponse(503, "CVE_FETCH_FAILED"),
+      "No enabled source can refetch this CVE.",
+      "danger",
+      true,
+    ],
+    [
+      "503 CELERY_UNAVAILABLE",
+      () => errorResponse(503, "CELERY_UNAVAILABLE"),
+      "Sentinel didn't confirm this change. It may have taken effect: check before trying again.",
+      "warning",
+      true,
+    ],
+    [
+      "a network failure",
+      () => Promise.reject(new TypeError("Failed to fetch")),
+      "Sentinel didn't confirm this change. It may have taken effect: check before trying again.",
+      "warning",
+      false,
+    ],
+    [
+      "409 FETCHER_DISABLED",
+      () => errorResponse(409, "FETCHER_DISABLED"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+      false,
+    ],
+    [
+      "404 CVE_NOT_FOUND",
+      () => errorResponse(404, "CVE_NOT_FOUND"),
+      "This no longer exists, or you no longer have access to it.",
+      "danger",
+      false,
+    ],
+    [
+      "422 CVE_INVALID_SOURCE",
+      () => errorResponse(422, "CVE_INVALID_SOURCE"),
+      "Sentinel didn't accept this request.",
+      "danger",
+      false,
+    ],
+    [
+      "a status and a code that the pinned contract does not list",
+      () => errorResponse(418, "FICTIONAL_CODE"),
+      "Sentinel didn't accept this request.",
+      "danger",
+      false,
+    ],
+  ])(
+    "show the failure of a refetch, %s, in the message area, and read the sources again",
+    async (_, respond, text, tone, reference) => {
+      const spy = stubTicket({ refetch: respond });
+      const { screen } = await renderSources();
+      const sourcesRead = requestsTo(spy, SOURCES);
+
+      await press(refetchOf(screen, "NVD"));
+
+      const message = screen.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
+      expect(screen.getByText(REFERENCE).query() !== null).toBe(reference);
+      await expect
+        .poll(() => requestsTo(spy, SOURCES))
+        .toBeGreaterThan(sourcesRead);
+      // A change is never sent again by itself (docs/behaviors.md, Retries
+      // and Unconfirmed Changes).
+      expect(requestsTo(spy, REFETCH)).toBe(1);
+    },
+  );
+
+  test("end the session after a 401 of a refetch, without a message", async () => {
+    stubTicket({ refetch: () => errorResponse(401, "AUTH_NOT_AUTHENTICATED") });
+    const { screen } = await renderSources();
+
+    await press(refetchOf(screen, "NVD"));
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+    expect(screen.getByText(/Refetch/).query()).toBeNull();
+  });
+
+  test("leave an answer of a refetch that the UI cannot show to the page of a failure of the UI", async () => {
+    // The answer of a later release that lacks the lists, which the
+    // message cannot name.
+    stubTicket({ refetch: () => jsonResponse(202, { data: {} }) });
+    const { screen } = await renderSources();
+
+    await press(refetchOf(screen, "NVD"));
+
+    await expect
+      .element(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "Something went wrong",
+        }),
+      )
+      .toBeVisible();
+  });
+
+  test("name the Ticket with a link in the message of a refetch that ends after the user left its screen", async () => {
+    const response = later();
+    stubTicket({ refetch: () => response.promise });
+    const { router, screen } = await renderSources();
+    await press(refetchOf(screen, "NVD"));
+    await router.navigate({ to: "/tickets" });
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+
+    response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
+
+    await expect
+      .element(screen.getByText("SNTL-12: Refetch of NVD started."))
+      .toBeVisible();
+    const link = screen.getByRole("link", { name: "SNTL-12", exact: true });
+    await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-12");
+
+    await link.click();
+
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "SNTL-12", exact: true }),
+      )
+      .toBeVisible();
+  });
+
+  test("are read again every 5 seconds while a fetch is pending, not while the tab is hidden, and no longer once none is", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let sources = pendingSources();
+    const spy = stubTicket({ sources: () => sourcesResponse(sources) });
+    await renderSources();
+    expect(requestsTo(spy, SOURCES)).toBe(1);
+
+    vi.advanceTimersByTime(4_999);
+    expect(requestsTo(spy, SOURCES)).toBe(1);
+    vi.advanceTimersByTime(1);
+    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(2);
+    await sourcesSettled();
+
+    // While the tab is hidden, no read at intervals is sent.
+    focusManager.setFocused(false);
+    vi.advanceTimersByTime(15_000);
+    expect(requestsTo(spy, SOURCES)).toBe(2);
+    // The tab returns to the foreground, where the sources are read again.
+    focusManager.setFocused(true);
+    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(3);
+    await sourcesSettled();
+
+    sources = pendingSources().map((source) =>
+      source.status === "pending"
+        ? { ...source, status: "success", fetched_at: LATER_ATTEMPT }
+        : source,
+    );
+    vi.advanceTimersByTime(5_000);
+    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(4);
+
+    vi.advanceTimersByTime(30_000);
+    expect(requestsTo(spy, SOURCES)).toBe(4);
+  });
+
+  test("stop the reads at intervals after one fails, keeping the sources shown with a warning, until a read of them succeeds", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let fails = false;
+    const spy = stubTicket({
+      sources: () =>
+        fails
+          ? errorResponse(503, "SERVICE_UNAVAILABLE")
+          : sourcesResponse(pendingSources()),
+    });
+    const { screen } = await renderSources();
+    fails = true;
+
+    vi.advanceTimersByTime(5_000);
+
+    const warning = sourcesPart(screen).getByText(
+      "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+    );
+    await expect.element(warning).toBeVisible();
+    // The read and its two retries (docs/behaviors.md, Retries and
+    // Unconfirmed Changes).
+    expect(requestsTo(spy, SOURCES)).toBe(4);
+    await expect.element(sourceOf(screen, "NVD")).toBeVisible();
+    vi.advanceTimersByTime(30_000);
+    expect(requestsTo(spy, SOURCES)).toBe(4);
+
+    fails = false;
+    await sourcesPart(screen)
+      .getByRole("button", { name: "Try again" })
+      .click();
+    await expect.element(warning).not.toBeInTheDocument();
+    expect(requestsTo(spy, SOURCES)).toBe(5);
+    await sourcesSettled();
+
+    vi.advanceTimersByTime(5_000);
+    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(6);
+  });
+
+  test("announce what a read shows of the fetches that ended, in one announcement in the order of the sources, and read the data of the tab again", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let sources = pendingSources();
+    const spy = stubTicket({ sources: () => sourcesResponse(sources) });
+    const { screen } = await renderSources();
+    await expect
+      .element(cvssPart(screen).getByRole("grid", { name: "CVSS assessments" }))
+      .toBeVisible();
+    const ticketRead = requestsTo(spy, TICKET);
+    const cvssRead = requestsTo(spy, CVSS);
+    sources = [
+      sources[0]!,
+      { ...sources[1]!, status: "failure", fetched_at: LATER_ATTEMPT },
+      { ...sources[2]!, status: "success", fetched_at: LATER_ATTEMPT },
+    ];
+
+    vi.advanceTimersByTime(5_000);
+
+    await expect
+      .poll(() => statusesOf(screen))
+      .toEqual(["MITRE: Failure. NVD: Success."]);
+    // The text in its place, without a message.
+    expect(sourceLines(screen)[1]).toBe(
+      `MITRE Failure Last attempt ${formatDateTime(LATER_ATTEMPT)} Failing since ${formatDateTime(FAILING_SINCE)}`,
+    );
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(ticketRead + 1);
+    await expect.poll(() => requestsTo(spy, CVSS)).toBe(cvssRead + 1);
+    // The sources themselves are not read again, nor at intervals.
+    vi.advanceTimersByTime(30_000);
+    expect(requestsTo(spy, SOURCES)).toBe(2);
+  });
+
+  test("announce each end in a node of its own, so that the same words are announced again", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const pending = [fictionalSource({ status: "pending" })];
+    const ended = [fictionalSource({ fetched_at: LATER_ATTEMPT })];
+    let sources = pending;
+    stubTicket({ sources: () => sourcesResponse(sources) });
+    const { screen } = await renderSources();
+    sources = ended;
+    vi.advanceTimersByTime(5_000);
+    await expect.poll(() => statusesOf(screen)).toEqual(["NVD: Success."]);
+    const first = sourcesPart(screen).getByText("NVD: Success.").element();
+
+    // Another fetch, which ends in the same way.
+    sources = pending;
+    returnToForeground();
+    await expect
+      .element(sourceOf(screen, "NVD").getByText("Pending"))
+      .toBeVisible();
+    await sourcesSettled();
+    sources = ended;
+    vi.advanceTimersByTime(5_000);
+
+    await expect
+      .poll(() => sourcesPart(screen).getByText("NVD: Success.").element())
+      .not.toBe(first);
+  });
+
+  test("announce a status that the pinned contract does not list as received", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let sources: object[] = [fictionalSource({ status: "pending" })];
+    stubTicket({ sources: () => jsonResponse(200, { data: sources }) });
+    const { screen } = await renderSources();
+    sources = [
+      { ...fictionalSource({ fetched_at: LATER_ATTEMPT }), status: "paused" },
+    ];
+
+    vi.advanceTimersByTime(5_000);
+
+    await expect.poll(() => statusesOf(screen)).toEqual(["NVD: paused."]);
+  });
+
+  test("announce no new result for a fetch that ended without a new attempt", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let sources = pendingSources();
+    stubTicket({ sources: () => sourcesResponse(sources) });
+    const { screen } = await renderSources();
+    // MITRE goes back to the status of its last attempt, as when Sentinel
+    // did not run its fetch, and NVD stays without one.
+    sources = [
+      sources[0]!,
+      { ...sources[1]!, status: "failure" },
+      { ...sources[2]!, status: "not_attempted" },
+    ];
+
+    vi.advanceTimersByTime(5_000);
+
+    await expect
+      .poll(() => statusesOf(screen))
+      .toEqual(["MITRE: no new result. NVD: no new result."]);
+  });
+
+  test("announce nothing of a fetch that no read of the screen showed pending, such as one that the screen showed from an earlier visit", async () => {
+    let sources = pendingSources();
+    const spy = stubTicket({ sources: () => sourcesResponse(sources) });
+    const { router, screen } = await renderSources("Pending");
+    await router.navigate({ to: "/tickets" });
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+    sources = pendingSources().map((source) =>
+      source.status === "pending"
+        ? { ...source, status: "success", fetched_at: LATER_ATTEMPT }
+        : source,
+    );
+    const sourcesRead = requestsTo(spy, SOURCES);
+
+    await router.navigate({
+      to: "/tickets/$ticketId",
+      params: { ticketId: "SNTL-12" },
+    });
+
+    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(sourcesRead + 1);
+    await expect
+      .element(sourceOf(screen, "NVD").getByText("Success"))
+      .toBeVisible();
+    expect(statusesOf(screen)).toEqual([]);
+  });
+
+  test("move the focus to the screen's heading when a new read removes the Refetch that has it", async () => {
+    let sources = [fictionalSource()];
+    stubTicket({ sources: () => sourcesResponse(sources) });
+    const { screen } = await renderSources();
+    refetchOf(screen, "NVD").element().focus();
+    await expect.element(refetchOf(screen, "NVD")).toHaveFocus();
+    // Meanwhile NVD was disabled.
+    sources = [fictionalSource({ enabled: false })];
+
+    returnToForeground();
+
+    await expect
+      .element(sourceOf(screen, "NVD").getByText("Disabled"))
+      .toBeVisible();
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "SNTL-12", exact: true }),
+      )
+      .toHaveFocus();
   });
 });

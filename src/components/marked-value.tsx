@@ -1,3 +1,5 @@
+import { CircleDashed, LoaderCircle } from "lucide-react";
+
 // A value of a response enum that a screen document marks with a tone
 // (docs/design-system.md, Other Values; Tones), such as the affectedness of a
 // track.
@@ -13,10 +15,58 @@ const DOTS = {
   danger: "fill-danger-icon",
 } as const satisfies Record<Tone, string>;
 
-// The name and the tone of a value that the pinned contract lists.
+// The name and the tone of a value that the pinned contract lists, and, for
+// a value that the dot does not mark, its mark: progress for an operation in
+// progress, which the screen follows by reading it again, such as the
+// pending fetch of a source of a CVE, in the info tone; unobserved for an
+// observation never made, such as a source that Sentinel has not attempted,
+// in the neutral tone (docs/design-system.md, Other Values).
 export interface MarkedName {
   name: string;
   tone: Tone;
+  mark?: "progress" | "unobserved";
+}
+
+interface MarkProps {
+  marked: MarkedName | undefined;
+}
+
+// The mark before the name of a value, hidden from assistive technologies,
+// which read the name: a dot of 8 px in the icon color of its tone;
+// loader-circle at 12 px in info-icon, turning, which stands still under
+// reduced motion (docs/design-system.md, Focus and Motion); circle-dashed at
+// 12 px in neutral-icon; or, for a value that the pinned contract does not
+// list, a hollow dot of 8 px with a 1 px edge in neutral-icon
+// (docs/behaviors.md, Unknown Values).
+function Mark({ marked }: MarkProps) {
+  if (marked?.mark === "progress") {
+    return (
+      <LoaderCircle
+        aria-hidden
+        className="size-3 shrink-0 animate-spin text-info-icon motion-reduce:animate-none"
+      />
+    );
+  }
+  if (marked?.mark === "unobserved") {
+    return (
+      <CircleDashed aria-hidden className="size-3 shrink-0 text-neutral-icon" />
+    );
+  }
+  return (
+    <svg aria-hidden viewBox="0 0 8 8" className="size-2 shrink-0">
+      {marked === undefined ? (
+        <circle
+          cx={4}
+          cy={4}
+          r={3.5}
+          strokeWidth={1}
+          className="fill-none stroke-neutral-icon"
+        />
+      ) : (
+        <circle cx={4} cy={4} r={4} className={DOTS[marked.tone]} />
+      )}
+    </svg>
+  );
 }
 
 interface MarkedValueProps {
@@ -29,28 +79,14 @@ interface MarkedValueProps {
   known: ReadonlyMap<string, MarkedName>;
 }
 
-// A dot of 8 px in the icon color of its tone, then, 6 px later, the name of
-// the value in the color of the text around it. The dot is hidden from
-// assistive technologies, which read the name. A value that the pinned
-// contract does not list shows as received after a hollow dot of 8 px with a
-// 1 px edge in neutral-icon (docs/behaviors.md, Unknown Values).
+// The mark of the value, then, 6 px later, the name of the value in the
+// color of the text around it. A value that the pinned contract does not
+// list shows as received.
 export function MarkedValue({ value, known }: MarkedValueProps) {
   const marked = known.get(value);
   return (
     <span className="inline-flex items-center gap-1.5 align-middle">
-      <svg aria-hidden viewBox="0 0 8 8" className="size-2 shrink-0">
-        {marked === undefined ? (
-          <circle
-            cx={4}
-            cy={4}
-            r={3.5}
-            strokeWidth={1}
-            className="fill-none stroke-neutral-icon"
-          />
-        ) : (
-          <circle cx={4} cy={4} r={4} className={DOTS[marked.tone]} />
-        )}
-      </svg>
+      <Mark marked={marked} />
       <span>{marked === undefined ? value : marked.name}</span>
     </span>
   );
