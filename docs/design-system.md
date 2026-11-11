@@ -633,16 +633,18 @@ Sidebar).
 - Running text, such as a CVE description, is at most 720 px wide. A word or
   an address longer than its place, such as a URL, breaks where it must. A
   text is cut to its place, with an ellipsis, only in a table cell, in a
-  user's name (Tables; Representation of a User), and in the description of a
-  record on its detail screen, such as that of a CVE, where a screen document
-  states it: the description shows its first four lines, the last ending with
-  an ellipsis, and below them Show more, a button in `link`, `text-14`, weight
-  500, which shows the text whole and becomes Show less. Assistive
-  technologies read the description whole, and Show more states whether it is
-  expanded. Such a description keeps its line breaks, and a run of spaces
-  shows as one; it shows as written, as plain text, Markdown included, since
-  the UI interprets no text of the API (`docs/behaviors.md`, Links to Other
-  Sites, No address in a text; `docs/conventions.md`, No Raw HTML Injection).
+  user's name (Tables; Representation of a User), and, where a screen
+  document states it, in the description of a record on its detail screen,
+  such as that of a CVE, and in a long field of the details of a popover,
+  such as the scope of a CNA (Menus, Popovers, and Tooltips): the text shows
+  its first four lines, the last ending with an ellipsis, and below them Show
+  more, a button in `link`, `text-14`, weight 500, which shows the text whole
+  and becomes Show less. Assistive technologies read the text whole, and Show
+  more states whether it is expanded. Such a text keeps its line breaks, and
+  a run of spaces shows as one; it shows as written, as plain text, Markdown
+  included, since the UI interprets no text of the API (`docs/behaviors.md`,
+  Links to Other Sites, No address in a text; `docs/conventions.md`, No Raw
+  HTML Injection).
 - In every layout, the order of the page, which the keyboard and assistive
   technologies follow, is the order on the screen: no layout moves a part to
   another place with CSS alone (`docs/behaviors.md`, Accessibility; WCAG 2.2,
@@ -917,8 +919,11 @@ screen, the heading row follows the lock with the label Confidential
   `text-12`, weight 500, `fg-muted`, with a 1 px `border-strong` boundary, a
   4 px radius, and 4 px of side padding, 6 px after what it follows, or at
   the end of the first line of a source of a CVE (Other Values); a second
-  label follows the first, 6 px later. Its text carries its meaning, and
-  assistive technologies read it as text.
+  label follows the first, 6 px later. A value made of labels alone, such as
+  the types of a CNA, is a list of them, whose labels wrap to the next line,
+  4 px below, and a label wider than the value wraps its text within its
+  boundary. Its text carries its meaning, and assistive technologies read it
+  as text.
 - A label that tells the signed-in user that a record waits for them, such as
   the label of a track of a package tree that waits for their submission
   (`docs/screen-map.md`, Areas and Screens), is 20 px high, in `text-12`,
@@ -1460,7 +1465,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   `text-13`, `fg-muted`, what identifies the record further, such as a CPE; a
   `border` line with 12 px of space above and below it; the details as a
   description list (Detail Screens); and, with actions, another such line and
-  the actions as menu items. Details that the popover reads as it first
+  the actions as menu items. A field of the details whose value can run to
+  many lines, such as the scope of a CNA, comes last, its term above its
+  value, as in a list narrower than 280 px, across the width of the list,
+  and, where its screen document states it, cut to its first four lines with
+  Show more (Main Content). Details that the popover reads as it first
   opens, such as those of a CNA, load and fail as those of the user card do
   (`docs/behaviors.md`, Representation of a User, User card), with the
   loading indicator (Loading) or the line of the failure in `fg-muted` in

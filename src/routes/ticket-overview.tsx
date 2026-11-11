@@ -16,6 +16,7 @@ import {
 } from "react";
 import { z } from "zod";
 import { isRequestFailure, presentRefetchFailure } from "../api/errors";
+import { useGetCna } from "../api/generated/cnas";
 import {
   getGetCveCvssAssessmentsQueryKey,
   getGetCveSourceStatusQueryKey,
@@ -44,6 +45,7 @@ import {
   EligibilitySource,
 } from "../api/generated/model";
 import type {
+  CNASummary,
   CVECVSSAssessments,
   CVEDetail,
   CVEEPSSResponse,
@@ -91,7 +93,7 @@ import {
 } from "../components/detail-screen";
 import { DetailsName, DetailsValue } from "../components/details-popover";
 import { IconButton } from "../components/icon-button";
-import { Label } from "../components/label";
+import { Label, LabelList } from "../components/label";
 import { Link } from "../components/link";
 import { Maintainers } from "../components/maintainers";
 import {
@@ -99,7 +101,7 @@ import {
   ValueMark,
   type MarkedName,
 } from "../components/marked-value";
-import { UpdatingBar } from "../components/loading";
+import { Loading, UpdatingBar } from "../components/loading";
 import { useShowMessage, type MessageRecord } from "../components/message-area";
 import type { MessageTone } from "../components/message";
 import {
@@ -577,14 +579,118 @@ function Exploitation({ cve }: ExploitationProps) {
   );
 }
 
+// The read of the details of a CNA, Get CNA, which its popover sends each
+// time it opens, so that they follow the CNA as Sentinel describes it then:
+// the query goes when the popover closes, and the details are not read again
+// while it is open (docs/screens/ticket.md, CVE; Sentinel
+// docs/features/tickets/cna.md, Get CNA).
+function useCna(orgId: string) {
+  return useGetCna(orgId, {
+    query: { gcTime: 0, refetchOnWindowFocus: false },
+  });
+}
+
+interface CnaShortNameProps {
+  orgId: string;
+  name: string;
+}
+
+// The short name of a CNA below the title of its popover, once its details
+// arrive, unless it is absent or is the name, as it is while the CNA list of
+// the CVE Program has not given the CNA an organization name.
+function CnaShortName({ orgId, name }: CnaShortNameProps) {
+  const shortName = useCna(orgId).data?.data.short_name ?? null;
+  return shortName === null || shortName === name ? null : shortName;
+}
+
+interface CnaDetailsProps {
+  orgId: string;
+}
+
+// The details of a CNA in its popover, as a description list: its types, a
+// list of labels as received, since Sentinel does not close their set;
+// whether its new Tickets are ignored automatically; and its scope, plain
+// text that can run to many lines, last, below its term, cut to four lines
+// with Show more (Sentinel docs/features/tickets/cna.md, Response Schemas;
+// Flag; Security). While they load, the loading indicator takes their place,
+// and when their read fails, the line of the failure of a user card, which a
+// status region announces, since the popover holds the focus
+// (docs/design-system.md, Menus, Popovers, and Tooltips; docs/behaviors.md,
+// Accessibility, Announcements).
+function CnaDetails({ orgId }: CnaDetailsProps) {
+  const read = useCna(orgId);
+  const cna = read.data?.data;
+  return (
+    <>
+      <output className="block">
+        {cna === undefined && read.status === "error" && (
+          <span className="text-fg-muted">Other details aren't available.</span>
+        )}
+      </output>
+      {cna === undefined ? (
+        read.status === "pending" && <Loading inValue />
+      ) : (
+        <DescriptionList>
+          <DescriptionItem term="Types">
+            {cna.types.length === 0 ? (
+              <AbsentValue />
+            ) : (
+              <LabelList labels={cna.types} />
+            )}
+          </DescriptionItem>
+          <DescriptionItem term="Auto-ignore">
+            {cna.auto_ignore
+              ? "Yes, new Tickets are ignored automatically"
+              : "No"}
+          </DescriptionItem>
+          <DescriptionItem term="Scope" stacked>
+            {cna.scope === null ? (
+              <AbsentValue />
+            ) : (
+              <ClampedText>{cna.scope}</ClampedText>
+            )}
+          </DescriptionItem>
+        </DescriptionList>
+      )}
+    </>
+  );
+}
+
+interface CnaProps {
+  cna: CNASummary | null;
+}
+
+// The CNA that owns the record of the CVE, by its name, which opens its
+// details, with its short name below the title of the popover; never by an
+// identifier. A CNA without a name, which Sentinel knows only by its
+// identifier, shows "Unnamed CNA" without a popover, and a CVE without a CNA
+// an absent value (Sentinel docs/features/tickets/cna.md, Display Name).
+function Cna({ cna }: CnaProps) {
+  if (cna === null) {
+    return <AbsentValue />;
+  }
+  if (cna.name === null) {
+    return <AbsentValue name="Unnamed CNA" />;
+  }
+  return (
+    <DetailsName
+      name={cna.name}
+      identifier={<CnaShortName orgId={cna.org_id} name={cna.name} />}
+    >
+      <CnaDetails orgId={cna.org_id} />
+    </DetailsName>
+  );
+}
+
 interface FactsProps {
   cve: CVEDetail;
 }
 
 // The dates and the identifiers of the CVE, on one line that wraps: when it
 // was published and last modified, and when it was rejected, each with its
-// time (docs/behaviors.md, Dates and Times, Display); its weaknesses; and its
-// external identifiers, such as a GHSA identifier, as links to other sites.
+// time (docs/behaviors.md, Dates and Times, Display); its CNA; its
+// weaknesses; and its external identifiers, such as a GHSA identifier, as
+// links to other sites.
 function Facts({ cve }: FactsProps) {
   return (
     <dl className="flex flex-wrap gap-x-6 gap-y-1 text-14">
@@ -599,6 +705,9 @@ function Facts({ cve }: FactsProps) {
           <MaybeDateTime value={cve.date_rejected} />
         </InlineField>
       )}
+      <InlineField term="CNA">
+        <Cna cna={cve.cna} />
+      </InlineField>
       <InlineField term="CWE">
         {cve.cwes.length === 0 ? (
           <AbsentValue />

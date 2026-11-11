@@ -66,18 +66,32 @@ interface DescriptionItemProps {
   // The value, which a field without one shows as an absent value
   // (docs/behaviors.md, Absent Values).
   children: ReactNode;
+  // Whether the term stands above the value, which takes the width of the
+  // list, as in a list narrower than 280 px: for a value that can run to
+  // many lines, such as the scope of a CNA in its popover, which comes last
+  // (docs/design-system.md, Menus, Popovers, and Tooltips).
+  stacked?: boolean;
 }
 
 // A field: its term, then its value, which starts on the line of the term,
-// aligned with it on its first line.
-export function DescriptionItem({ term, children }: DescriptionItemProps) {
+// aligned with it on its first line, or below the term when it is stacked.
+export function DescriptionItem({
+  term,
+  children,
+  stacked = false,
+}: DescriptionItemProps) {
+  const grid = useFieldGrid();
   return (
-    <div className={`${useFieldGrid()} items-baseline`}>
+    <div className={stacked ? STACKED : `${grid} items-baseline`}>
       <dt className="text-13 text-fg-muted">{term}</dt>
       <dd className="min-w-0 text-14 text-fg">{children}</dd>
     </div>
   );
 }
+
+// The grid of a stacked field: one column, across the columns of a list
+// whose terms take the width of the longest one.
+const STACKED = "col-span-full grid grid-cols-[minmax(0,1fr)]";
 
 interface DescriptionGroupProps {
   term: string;

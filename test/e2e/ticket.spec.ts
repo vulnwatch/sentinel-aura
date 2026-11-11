@@ -5,6 +5,7 @@ import {
   expectScreenshot,
   signIn,
   test,
+  withFixedDates,
 } from "./fixtures";
 
 // The Ticket screen (docs/screens/ticket.md), against a backend loaded with
@@ -275,6 +276,97 @@ test.describe("for an analyst", () => {
     await expect(
       await valueOf(page, "CVE-2099-0008 Rejected", "Rejected"),
     ).toHaveText(/^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/);
+  });
+
+  test("shows the CNA of a CVE, whose name opens its details", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+
+    // The CVE of SNTL-6 belongs to fictional-plugins, under the auto-ignore
+    // policy, with two types and a scope of two lines (CNAs).
+    await page.goto("/tickets/SNTL-6");
+
+    const cve = part(page, "CVE-2099-0006");
+    const name = cve.getByRole("button", {
+      name: "Fictional Plugin Foundation",
+      exact: true,
+    });
+    const popover = page.getByRole("dialog", {
+      name: "Fictional Plugin Foundation",
+    });
+    // The popover takes its place below the name as it opens, so the
+    // reference opens it while the dates before the name have their fixed
+    // widths, once the other reads of the screen have arrived.
+    await expectSources(page);
+    await expect(
+      part(page, "CVSS assessments").getByText("No CVSS assessments."),
+    ).toBeVisible();
+    await expect(await detail(page, "Duplicates")).toHaveText("None");
+    await withFixedDates(page, async () => {
+      await name.click();
+      await expect(
+        popover.getByText("fictional-plugins", { exact: true }),
+      ).toBeVisible();
+      await expectScreenshot(page, "ticket-cna.png");
+    });
+    await page.keyboard.press("Escape");
+    await expect(name).toBeFocused();
+
+    await name.click();
+    await expect(popover).toBeFocused();
+    await expect(
+      popover.getByText("fictional-plugins", { exact: true }),
+    ).toBeVisible();
+    await expect(popover.getByRole("term")).toHaveText([
+      "Types",
+      "Auto-ignore",
+      "Scope",
+    ]);
+    await expect(popover.getByRole("listitem")).toHaveText([
+      "Open Source",
+      "Researcher",
+    ]);
+    const values = popover.getByRole("definition");
+    await expect(values.nth(1)).toHaveText(
+      "Yes, new Tickets are ignored automatically",
+    );
+    // The scope keeps its two lines, and its address stays text.
+    expect(await values.nth(2).innerText()).toBe(
+      "Plugins of the fictional plugin directory.\nPlugin list: https://plugins.example.com",
+    );
+    await expect(popover.getByRole("link")).toHaveCount(0);
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(name).toBeFocused();
+
+    // The CVE of SNTL-10 belongs to Example Corporation, which is not under
+    // the policy.
+    await page.goto("/tickets/SNTL-10");
+    await part(page, "CVE-2099-0010")
+      .getByRole("button", { name: "Example Corporation", exact: true })
+      .click();
+    const example = page.getByRole("dialog", { name: "Example Corporation" });
+    await expect(example.getByRole("definition").nth(1)).toHaveText("No");
+    await expectAccessible(page);
+
+    // The CVE of SNTL-13 belongs to a CNA without a name.
+    await page.goto("/tickets/SNTL-13");
+    await expect(part(page, "CVE-2099-0013")).toBeVisible();
+    await expect(await valueOf(page, "CVE-2099-0013", "CNA")).toHaveText(
+      "Unnamed CNA",
+    );
+    await expect(
+      part(page, "CVE-2099-0013").getByRole("button", { name: /CNA/ }),
+    ).toHaveCount(0);
+    await expectAccessible(page);
+
+    // The CVE of SNTL-12 has no CNA.
+    await page.goto("/tickets/SNTL-12");
+    await expect(part(page, "CVE-2099-0012")).toBeVisible();
+    await expect(await valueOf(page, "CVE-2099-0012", "CNA")).toHaveText(
+      "–Not set",
+    );
   });
 
   test("reflows at 320 CSS pixels, in one column, the details first", async ({
