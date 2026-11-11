@@ -507,8 +507,8 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
   type that the pinned contract does not list shows its actor followed by
   its type as received, such as "John Doe fictional_event", with its time
   and none of its values (`docs/behaviors.md`, Unknown Values). Every comment
-  that the sentence of its event does not use, such as `CVE package resolution` of a
-  package added by the system, follows the sentence
+  that the sentence of its event does not use, such as `CVE package
+  resolution` of a package added by the system, follows the sentence
   (`docs/design-system.md`, Timelines).
 - **Pagination**, below the timeline, when the events have more than one
   page (`docs/design-system.md`, Lists), with the behavior of the pagination

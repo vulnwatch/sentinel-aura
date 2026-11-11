@@ -1,9 +1,15 @@
-import { useState } from "react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { useState, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { FilterGroup, Filters, type FilterOption } from "./filters";
+import {
+  FilterGroup,
+  Filters,
+  FilterSelect,
+  type FilterOption,
+  type SelectOption,
+} from "./filters";
 
 // The filters of a list (docs/design-system.md, Lists; Menus, Popovers, and
 // Tooltips), at a wide window, in the light theme.
@@ -319,4 +325,260 @@ test("scrolls its filters within it in a window shorter than they are, as at a h
     .poll(() => last.element().getBoundingClientRect().bottom)
     .toBeLessThanOrEqual(popover.getBoundingClientRect().bottom);
   expect(popover.getBoundingClientRect().bottom).toBeLessThanOrEqual(160);
+});
+
+// The options of a fictional select of the actor: Any actor and System, then
+// two users, each by the label that the screen gives it.
+const ACTORS: readonly (readonly SelectOption<string>[])[] = [
+  [
+    { value: "any", text: "Any actor", label: "Any actor" },
+    { value: "system", text: "System", label: "System" },
+  ],
+  [
+    { value: "agarcia", text: "Ana Garcia", label: "Ana Garcia" },
+    { value: "rlee", text: "Robert Lee", label: <i>Robert Lee</i> },
+  ],
+];
+
+interface ActorFiltersProps {
+  // The groups of the options.
+  groups?: readonly (readonly SelectOption<string>[])[];
+  // The value that applies as the list starts.
+  initial?: string;
+  // In place of the options that the filter reads.
+  status?: ReactNode;
+  // Called with the value that the user chooses.
+  onChange?: (value: string) => void;
+}
+
+// The filters of a fictional list whose first filter is a select of the
+// actor, which applies the value that the user chooses, as the URL of a list
+// keeps it.
+function ActorFilters({
+  groups = ACTORS,
+  initial = "any",
+  status,
+  onChange,
+}: ActorFiltersProps) {
+  const [selected, setSelected] = useState(initial);
+  return (
+    <div className="flex justify-end p-8">
+      <Filters applied={0} status="">
+        <FilterSelect
+          label="Actor"
+          groups={groups}
+          status={status}
+          selected={selected}
+          unlisted={<span>Fictional unknown actor</span>}
+          onChange={(value) => {
+            onChange?.(value);
+            setSelected(value);
+          }}
+        />
+        <FilterGroup
+          label="Severity"
+          options={SEVERITIES}
+          selected={[]}
+          onChange={() => {}}
+        />
+      </Filters>
+    </div>
+  );
+}
+
+// The select of the actor in the popover of the filters, named by the option
+// that it shows and its name.
+function actorSelect(dialog: Locator) {
+  return dialog.getByRole("button", { name: /Actor$/ });
+}
+
+// Opens the options of the select, and returns them.
+async function openOptions(dialog: Locator) {
+  await actorSelect(dialog).click();
+  const options = page.getByRole("listbox", { name: "Actor" });
+  await expect.element(options).toBeVisible();
+  return options;
+}
+
+describe("a select", () => {
+  test("is a field-like button 40 px high on surface with a border-strong boundary, named by its name above it and showing the option that applies, which takes the focus as the filters open", async () => {
+    const screen = await render(<ActorFilters />);
+
+    const dialog = await openFilters(
+      screen.getByRole("button", { name: "Filters" }),
+    );
+
+    const select = actorSelect(dialog);
+    await expect.element(select).toHaveAccessibleName("Any actor Actor");
+    await expect.element(select).toHaveFocus();
+    const box = select.element().getBoundingClientRect();
+    const style = getComputedStyle(select.element());
+    expect([
+      box.height,
+      style.backgroundColor,
+      style.borderTopColor,
+      style.fontSize,
+    ]).toEqual([40, SURFACE, BORDER_STRONG, "15px"]);
+    // Its name in the style of the name of a group of checkboxes, 4 px
+    // above it, and the select 16 px above the next filter.
+    const name = dialog.getByText("Actor", { exact: true }).element();
+    const nameStyle = getComputedStyle(name);
+    expect([nameStyle.fontSize, nameStyle.fontWeight, nameStyle.color]).toEqual(
+      ["12px", "500", FG_MUTED],
+    );
+    expect(box.top - name.getBoundingClientRect().bottom).toBe(4);
+    expect(
+      dialog
+        .getByRole("group", { name: "Severity" })
+        .element()
+        .getBoundingClientRect().top - box.bottom,
+    ).toBe(16);
+    // chevron-down at its end, hidden from assistive technologies.
+    const chevron = [...select.element().querySelectorAll("svg")].at(-1);
+    expect(chevron?.getAttribute("aria-hidden")).toBe("true");
+    // Its 16 px of side padding inside its boundary of 1 px.
+    expect(box.right - (chevron?.getBoundingClientRect().right ?? 0)).toBe(17);
+  });
+
+  test("opens its options below it, at least as wide as it, in their groups and order, a line in border between two groups, with the option that applies selected", async () => {
+    const screen = await render(<ActorFilters />);
+    const dialog = await openFilters(
+      screen.getByRole("button", { name: "Filters" }),
+    );
+
+    const options = await openOptions(dialog);
+
+    const items = options.getByRole("option");
+    expect(items.elements().map((item) => item.textContent)).toEqual([
+      "Any actor",
+      "System",
+      "Ana Garcia",
+      "Robert Lee",
+    ]);
+    await expect
+      .element(items.first())
+      .toHaveAttribute("aria-selected", "true");
+    await expect
+      .element(items.nth(1))
+      .toHaveAttribute("aria-selected", "false");
+    // The groups, the second with its line at its top.
+    const groups = options.getByRole("group");
+    expect(groups.elements()).toHaveLength(2);
+    const line = groups.nth(1).element().getBoundingClientRect();
+    expect(line.top).toBeGreaterThanOrEqual(
+      items.nth(1).element().getBoundingClientRect().bottom,
+    );
+    expect(line.top).toBeLessThanOrEqual(
+      items.nth(2).element().getBoundingClientRect().top,
+    );
+    expect(getComputedStyle(groups.nth(1).element()).borderTopColor).toBe(
+      BORDER,
+    );
+    expect(getComputedStyle(groups.nth(1).element()).borderTopWidth).toBe(
+      "1px",
+    );
+    expect(getComputedStyle(groups.first().element()).borderTopWidth).toBe(
+      "0px",
+    );
+    const button = actorSelect(dialog).element().getBoundingClientRect();
+    const menu = page
+      .getByRole("dialog", { name: "Actor" })
+      .element()
+      .getBoundingClientRect();
+    expect(menu.top).toBeGreaterThan(button.bottom);
+    expect(menu.width).toBeGreaterThanOrEqual(button.width);
+    // Each option at least 36 px high.
+    expect(items.first().element().getBoundingClientRect().height).toBe(36);
+  });
+
+  test("shows no group without options, and no line for it", async () => {
+    const [fixed = []] = ACTORS;
+    const screen = await render(<ActorFilters groups={[fixed, []]} />);
+    const dialog = await openFilters(
+      screen.getByRole("button", { name: "Filters" }),
+    );
+
+    const options = await openOptions(dialog);
+
+    expect(
+      options
+        .getByRole("option")
+        .elements()
+        .map((item) => item.textContent),
+    ).toEqual(["Any actor", "System"]);
+    expect(options.getByRole("group").elements()).toHaveLength(1);
+  });
+
+  test("applies the option that the user chooses at once, and shows it as the option shows", async () => {
+    const onChange = vi.fn<(value: string) => void>();
+    const screen = await render(<ActorFilters onChange={onChange} />);
+    const dialog = await openFilters(
+      screen.getByRole("button", { name: "Filters" }),
+    );
+    const options = await openOptions(dialog);
+
+    await options.getByRole("option", { name: "Robert Lee" }).click();
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("rlee");
+    await expect.element(options).not.toBeInTheDocument();
+    await expect
+      .element(actorSelect(dialog))
+      .toHaveAccessibleName("Robert Lee Actor");
+    // As the option shows it, in its own markup.
+    expect(actorSelect(dialog).element().querySelector("i")?.textContent).toBe(
+      "Robert Lee",
+    );
+    // The popover of the filters stays.
+    await expect.element(dialog).toBeVisible();
+  });
+
+  test("finds an option by its text from the keyboard", async () => {
+    const onChange = vi.fn<(value: string) => void>();
+    const screen = await render(<ActorFilters onChange={onChange} />);
+    await openFilters(screen.getByRole("button", { name: "Filters" }));
+
+    await userEvent.keyboard("{ArrowDown}");
+    await expect
+      .element(page.getByRole("listbox", { name: "Actor" }))
+      .toBeVisible();
+    await userEvent.keyboard("rob");
+    await userEvent.keyboard("{Enter}");
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("rlee");
+  });
+
+  test("shows what the screen gives for a value that applies but is not among its options", async () => {
+    const screen = await render(<ActorFilters initial="fictional-actor" />);
+
+    const dialog = await openFilters(
+      screen.getByRole("button", { name: "Filters" }),
+    );
+
+    await expect
+      .element(actorSelect(dialog))
+      .toHaveAccessibleName("Fictional unknown actor Actor");
+  });
+
+  test("shows the status of the options that it reads after its options, such as the message of a failure", async () => {
+    const screen = await render(
+      <ActorFilters
+        groups={ACTORS.slice(0, 1)}
+        status={<p>Fictional failure of the read of the users.</p>}
+      />,
+    );
+    const dialog = await openFilters(
+      screen.getByRole("button", { name: "Filters" }),
+    );
+
+    const options = await openOptions(dialog);
+
+    const status = page.getByText(
+      "Fictional failure of the read of the users.",
+    );
+    await expect.element(status).toBeVisible();
+    expect(status.element().getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      options.getByRole("option").last().element().getBoundingClientRect()
+        .bottom,
+    );
+  });
 });

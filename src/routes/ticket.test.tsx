@@ -310,6 +310,24 @@ describe("the read of the Ticket", () => {
       ]);
   });
 
+  test("shows the tabs Overview and Audit log, named Ticket, with Overview selected at the path of the Ticket", async () => {
+    stubTicket();
+
+    const { screen } = await renderTicket();
+
+    const tabs = screen.getByRole("tablist", { name: "Ticket" });
+    expect(textsOf(tabs.getByRole("tab"))).toEqual(["Overview", "Audit log"]);
+    await expect
+      .element(tabs.getByRole("tab", { name: "Overview" }))
+      .toHaveAttribute("aria-selected", "true");
+    await expect
+      .element(tabs.getByRole("tab", { name: "Audit log" }))
+      .toHaveAttribute("aria-selected", "false");
+    await expect
+      .element(tabs.getByRole("tab", { name: "Audit log" }))
+      .toHaveAttribute("href", "/tickets/SNTL-12/audit-log");
+  });
+
   test.each([
     ["with a leading zero", "SNTL-0012"],
     ["in lower case", "sntl-12"],

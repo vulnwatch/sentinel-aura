@@ -14,11 +14,15 @@ import type {
   MaintainerTicketWorkResponse,
   PackageDetail,
   ProductDetail,
+  TicketActorListResponse,
+  TicketAuditEventData,
+  TicketAuditListResponse,
   TicketDetail,
   TicketDetailResponse,
   TicketListResponse,
   TicketSummary,
   TrackDetail,
+  UserReference,
   ValidationErrorResponse,
 } from "./api/generated/model";
 
@@ -497,6 +501,88 @@ export function ticketPage(
     data: tickets,
     meta: { total, page, per_page: perPage },
   };
+  return jsonResponse(200, body);
+}
+
+// A signed-in user as a user reference, as an event of an audit log names
+// its actor.
+export function referenceOf({ data }: CurrentUserResponse): UserReference {
+  return {
+    id: data.id,
+    username: data.username,
+    full_name: data.full_name,
+    active: data.active,
+    bot: data.bot,
+  };
+}
+
+// The users who acted on SNTL-12, as List Ticket Actors returns them, in its
+// order, by username: Ana Garcia; Alice Smith, the user of OTHER_USER; a bot
+// account; and an inactive user.
+export const FICTIONAL_ACTORS: readonly UserReference[] = [
+  {
+    id: "00000000-0000-0000-0000-000000000005",
+    username: "agarcia",
+    full_name: "Ana Garcia",
+    active: true,
+    bot: false,
+  },
+  referenceOf(OTHER_USER),
+  {
+    id: "00000000-0000-0000-0000-000000000006",
+    username: "fictional-bot",
+    full_name: "Fictional Bot",
+    active: true,
+    bot: true,
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000007",
+    username: "rlee",
+    full_name: "Robert Lee",
+    active: false,
+    bot: false,
+  },
+];
+
+// A fictional event of the audit log of SNTL-12, as List Ticket Events
+// returns it: Alice Smith, the user of OTHER_USER, changed its status from
+// Analysis to Analyzed, with the fields that a test sets. Sentinel records a
+// status by the name of its enum member (Sentinel
+// docs/features/tickets/ticket-audit-log.md, Event Type Contract, Rules).
+export function fictionalEvent(
+  fields: Partial<TicketAuditEventData> = {},
+): TicketAuditEventData {
+  return {
+    id: "00000000-0000-7000-8000-0000000000e1",
+    ticket_id: "SNTL-12",
+    event_type: "status_change",
+    old_value: "Analysis",
+    new_value: "Analyzed",
+    comment: null,
+    detail: null,
+    created_at: "2099-10-10T09:30:00Z",
+    actor: referenceOf(OTHER_USER),
+    ...fields,
+  };
+}
+
+// A page of List Ticket Events: the events, of a log of total events.
+export function eventPage(
+  events: TicketAuditEventData[],
+  { total = events.length, page = 1, perPage = 50 } = {},
+): Response {
+  const body: TicketAuditListResponse = {
+    data: events,
+    meta: { total, page, per_page: perPage },
+  };
+  return jsonResponse(200, body);
+}
+
+// List Ticket Actors's response.
+export function actorsResponse(
+  actors: readonly UserReference[] = FICTIONAL_ACTORS,
+): Response {
+  const body: TicketActorListResponse = { data: [...actors] };
   return jsonResponse(200, body);
 }
 

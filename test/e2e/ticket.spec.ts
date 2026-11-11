@@ -113,7 +113,7 @@ test.describe("for an analyst", () => {
     );
     await expect(
       page.getByRole("tablist", { name: "Ticket" }).getByRole("tab"),
-    ).toHaveText(["Overview"]);
+    ).toHaveText(["Overview", "Audit log"]);
     await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -786,6 +786,135 @@ test.describe("for an analyst", () => {
     await expect
       .poll(async () => (await title.boundingBox())?.y ?? -1)
       .toBeGreaterThanOrEqual(0);
+  });
+});
+
+// The timeline of the tab Audit log: the events of each day as a list.
+function events(page: Page) {
+  return page
+    .getByRole("tabpanel", { name: "Audit log" })
+    .getByRole("listitem");
+}
+
+// The event of the timeline whose sentence holds the text.
+function event(page: Page, text: string) {
+  return events(page).filter({ hasText: text });
+}
+
+test.describe("the audit log", () => {
+  test("shows the events of a Ticket as a timeline, from the tab Audit log", async ({
+    page,
+  }) => {
+    // SNTL-12: bwilson assigns it to asmith and overrides its priority;
+    // asmith adds, edits, and deletes its references, adds its packages, of
+    // which the system adds the maintainers, and sets their tracks to
+    // AFFECTED (Sentinel docs/features/platform/example-dataset.md, Tickets;
+    // References; Packages, Tracks, and Maintainers).
+    await signIn(page);
+    await page.goto("/tickets/SNTL-12");
+    await expect(heading(page, "SNTL-12")).toBeVisible();
+
+    await page.getByRole("tab", { name: "Audit log" }).click();
+
+    await expect(page).toHaveURL("/tickets/SNTL-12/audit-log");
+    await expect(
+      page.getByRole("tab", { name: "Audit log", selected: true }),
+    ).toBeVisible();
+    await expect(
+      event(page, "Bob Wilson assigned the Ticket to @asmith"),
+    ).toBeVisible();
+    await expect(
+      event(page, "Bob Wilson overrode the priority from P3 to P1"),
+    ).toBeVisible();
+    await expect(
+      event(page, "System added the maintainer @dbrown to fictional-openssl"),
+    ).toBeVisible();
+    await expect(
+      event(
+        page,
+        "Alice Smith set fictional-zlib · fles-16.0 from Analysis to Affected",
+      ),
+    ).toBeVisible();
+    await expect(
+      event(page, "Alice Smith deleted the reference").getByRole("link", {
+        name: "https://lists.example.com/fictional-openssl/2099-0012 (another site)",
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+    await expectScreenshot(page, "ticket-audit-log.png");
+  });
+
+  test("filters the events by actor and kind, with the signed-in user first as You", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12/audit-log");
+    await expect(event(page, "Bob Wilson assigned")).toBeVisible();
+
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filters.getByRole("button", { name: /Actor/ }).click();
+    const options = page.getByRole("listbox").getByRole("option");
+    await expect(options).toHaveText([
+      "Any actor",
+      "System",
+      /^Alice Smith @asmith\s*You$/,
+      "Bob Wilson @bwilson",
+    ]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-audit-log-actors.png");
+
+    await options.filter({ hasText: "Alice Smith" }).click();
+    await filters
+      .getByRole("group", { name: "Kind" })
+      .getByText("References", { exact: true })
+      .click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(
+      new RegExp(
+        String.raw`/tickets/SNTL-12/audit-log\?actor=[0-9a-f-]{36}&kind=references$`,
+      ),
+    );
+    await expect(event(page, "Alice Smith added the reference")).toHaveCount(3);
+    await expect(event(page, "Bob Wilson")).toHaveCount(0);
+    await expect(event(page, "System")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Filters 2 applied" }),
+    ).toBeVisible();
+    await expectScreenshot(page, "ticket-audit-log-filtered.png");
+  });
+
+  test("searches the values of the events, and shows a bot account as such", async ({
+    page,
+  }) => {
+    // security-scanner, a bot account, adds the reference of SNTL-10
+    // (References).
+    await signIn(page);
+    await page.goto("/tickets/SNTL-10/audit-log");
+    await expect(
+      event(
+        page,
+        "Bot added the reference https://scanner.example.com/findings/CVE-2099-0010",
+      ),
+    ).toBeVisible();
+
+    await page.goto("/tickets/SNTL-12/audit-log");
+    await expect(event(page, "Bob Wilson assigned")).toBeVisible();
+    const search = page.getByRole("searchbox", { name: "Search events" });
+    await search.fill("fictional-zlib");
+    await search.press("Enter");
+
+    await expect(page).toHaveURL(
+      "/tickets/SNTL-12/audit-log?search=fictional-zlib",
+    );
+    await expect(
+      event(
+        page,
+        "Alice Smith set fictional-zlib · fles-16.0 from Analysis to Affected",
+      ),
+    ).toBeVisible();
+    await expect(event(page, "fictional-openssl")).toHaveCount(0);
   });
 });
 
