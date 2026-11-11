@@ -1865,8 +1865,9 @@ function RefetchSource({
     buttonClass = "";
   } else if (dismissed) {
     markClass = "group-focus-within:opacity-0";
+    // The button that has the focus still shows, and the pointer reaches it.
     buttonClass =
-      "pointer-events-none opacity-0 group-focus-within:opacity-100";
+      "pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100";
   }
   return (
     <>

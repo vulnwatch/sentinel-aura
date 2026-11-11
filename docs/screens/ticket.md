@@ -326,8 +326,7 @@ user who holds `triage_ticket` (Sentinel
 
 - Refetch of a source, in the place of the mark of its status
   (`docs/design-system.md`, Other Values), named after the source, such as
-  "Refetch NVD", sends the request with `source`; only the button, not the
-  line, responds to a press. It is offered for a source that is registered,
+  "Refetch NVD", sends the request with `source`. It is offered for a source that is registered,
   refetchable, and enabled, whose status is not Pending nor one that the
   pinned contract does not list (`docs/behaviors.md`, Unknown Values): not
   for CISA KEV, which cannot fetch one CVE, nor for a disabled or retired
@@ -335,8 +334,8 @@ user who holds `triage_ticket` (Sentinel
   request is in progress, whose message still shows. Where the primary
   pointer does not hover, such as on a touch screen, Refetch all refetches
   the sources.
-- A press of the pointer leaves the focus where it was. When a new read
-  removes Refetch of a source while it has the focus, as when its source
+- A press of the pointer on Refetch of a source leaves the focus where it
+  was. When a new read removes Refetch of a source while it has the focus, as when its source
   turns Pending after a press of the keyboard, the focus moves to the
   screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
   action); otherwise the focus stays where it is, also after an assistive

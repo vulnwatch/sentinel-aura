@@ -3175,7 +3175,7 @@ describe("the sources of the CVE", () => {
     expect(seen(refetchOf(screen, "MITRE"))).toBe(false);
   });
 
-  test("bring the mark back in place of Refetch of a source with Escape while the pointer stays over the line, until the pointer leaves it", async () => {
+  test("bring the mark back in place of Refetch of a source with Escape while the pointer stays over the line, until the pointer leaves it, except while Refetch has the focus", async () => {
     stubTicket();
     const { screen } = await renderSources();
     const refetch = refetchOf(screen, "NVD");
@@ -3187,6 +3187,13 @@ describe("the sources of the CVE", () => {
 
     await expect.poll(() => seen(refetch)).toBe(false);
     expect(refetch.element().contains(atMarkOf(screen, "NVD"))).toBe(false);
+    // The focus shows it again, and the pointer reaches it, still over the
+    // line.
+    refetch.element().focus({ focusVisible: true });
+    await expect.element(refetch).toHaveFocus();
+    expect(seen(refetch)).toBe(true);
+    expect(refetch.element().contains(atMarkOf(screen, "NVD"))).toBe(true);
+    refetch.element().blur();
 
     await screen.getByRole("heading", { level: 2, name: "Details" }).hover();
     await line.hover();

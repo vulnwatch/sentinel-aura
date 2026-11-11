@@ -950,22 +950,22 @@ screen, the heading row follows the lock with the label Confidential
   `failure`; and, at 12 px, `circle` in `neutral-icon` for `missing`, an
   attempt that found nothing, the marks of `pending` and `not_attempted`
   above, and `circle-question-mark` in `neutral-icon` for a status that the
-  pinned contract does not list, whose value as received assistive
-  technologies read (`docs/behaviors.md`, Unknown Values). Color is not
-  alone between the two dots (Principles): Sentinel records the start of a
-  failure streak with every failure (Sentinel
-  `docs/features/tickets/cve-service.md`, CVESource Management), which a
-  `failure` always shows below the name of its source, and a `success` never
-  does. For a user who can refetch the source, the same place holds the
-  icon button of its refetch, of 24 px with `refresh-cw` at 14 px (Buttons
-  and Links), which takes the place of the mark while the pointer is over
-  the line of the source, until Escape brings the mark back while the
-  pointer stays there (WCAG 2.2, 1.4.13 Content on Hover or Focus), while
-  the button has the focus, and while it is busy; otherwise the button is
-  transparent, and stays in the order of the
-  focus and for assistive technologies. Where the primary pointer does not
-  hover, such as on a touch screen, a tap neither shows the button nor
-  reaches it.
+  pinned contract does not list, and assistive technologies read the value
+  as received (`docs/behaviors.md`, Unknown Values). Color is not alone
+  between the two dots (Principles): Sentinel records the start of a failure
+  streak with every failure (Sentinel `docs/features/tickets/cve-service.md`,
+  CVESource Management), which a `failure` always shows below the name of
+  its source, and a `success` never does. For a user who can refetch the
+  source, the same place holds the icon button of its refetch, of 24 px with
+  `refresh-cw` at 14 px (Buttons and Links), which takes the place of the
+  mark while the button has the focus, while it is busy, and while the
+  pointer is over the line of the source, which itself does not respond to a
+  press, until Escape brings the mark back while the pointer stays there
+  (WCAG 2.2, 1.4.13 Content on Hover or Focus). Otherwise the button is
+  transparent, a press of the pointer does not reach it, and it stays in the
+  order of the focus and for assistive technologies. Where the primary
+  pointer does not hover, such as on a touch screen, a tap neither shows the
+  button nor reaches it.
 - An absent value shows as an en dash, "–", in `fg-muted`, read as "Not
   set", or as the word that names the absence precisely, also in `fg-muted`
   (`docs/behaviors.md`, Absent Values).
