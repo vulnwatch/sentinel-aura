@@ -172,3 +172,31 @@ test("shows each term of a list whose terms take the width of the longest one ab
   expect(rectOf(value).top).toBeGreaterThanOrEqual(rectOf(term).bottom);
   expect(rectOf(value).left).toBe(rectOf(term).left);
 });
+
+test("stacks the term of a field above its value, which takes the width of the list, also where the list is 280 px wide or more", async () => {
+  const screen = await render(
+    <div className={WIDTHS.side}>
+      <DescriptionList>
+        <DescriptionItem term="Types">Vendor</DescriptionItem>
+        <DescriptionItem term="Scope" stacked>
+          Fictional products of Example Corporation only.
+        </DescriptionItem>
+      </DescriptionList>
+    </div>,
+  );
+  const term = screen.getByText("Scope").element();
+  const value = screen.getByRole("definition").last().element();
+  const list = value.closest("dl")!;
+
+  expect(rectOf(value).top).toBeGreaterThanOrEqual(rectOf(term).bottom);
+  expect(rectOf(value).left).toBe(rectOf(list).left);
+  expect(rectOf(value).width).toBe(rectOf(list).width);
+  expect([
+    getComputedStyle(term).fontSize,
+    getComputedStyle(term).color,
+  ]).toEqual(["13px", FG_MUTED]);
+  // The other fields keep their term on the line of their value.
+  const types = screen.getByText("Types").element();
+  const vendor = screen.getByText("Vendor").element();
+  expect(rectOf(vendor).left - rectOf(types).left).toBe(116);
+});

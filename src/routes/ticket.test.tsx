@@ -1,4 +1,8 @@
-import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClientProvider,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent, type Locator } from "vitest/browser";
@@ -6,6 +10,7 @@ import { cleanup, render, renderHook } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
 import type {
+  CNAResponse,
   CVEDetail,
   TicketDetail,
   TicketSummary,
@@ -37,6 +42,7 @@ const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
 const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
 const SOURCES = "/api/v1/cves/CVE-2099-0012/sources";
+const CNAS = "/api/v1/cnas/";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -76,18 +82,21 @@ interface Stub {
   cvss: () => Response | Promise<Response>;
   // The response to the read of the sources of the CVE.
   sources: () => Response | Promise<Response>;
+  // The response to Get CNA of the path.
+  cna: (path: string) => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst, Get Ticket, the read
-// of the duplicates, the read of the CVSS assessments, and the read of the
-// sources of the CVE, as the test sets them, and returns the spy, whose calls
-// name the requests.
+// of the duplicates, the read of the CVSS assessments, the read of the
+// sources of the CVE, and Get CNA, as the test sets them, and returns the
+// spy, whose calls name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     ticket: () => ticketResponse(fictionalTicketDetail()),
     duplicates: () => ticketPage([]),
     cvss: () => cvssResponse(),
     sources: () => sourcesResponse(),
+    cna: () => cnaResponse(),
     ...fields,
   };
   return stubApi((request) => {
@@ -105,6 +114,9 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path === SOURCES) {
       return stub.sources();
+    }
+    if (request.path.startsWith(CNAS)) {
+      return stub.cna(request.path);
     }
     return errorResponse(404, "RESOURCE_NOT_FOUND");
   });
@@ -197,6 +209,31 @@ function requestsOf(spy: ReturnType<typeof stubApi>): string[] {
     .map(([input]) => urlOf(input))
     .filter((url) => url.pathname !== ME)
     .map((url) => `${url.pathname}${url.search}`);
+}
+
+// The CNA of the CVE in the tests, under the auto-ignore policy, as Get
+// CNA returns it, with the fields that a test sets.
+const ORG_ID = "00000000-0000-4000-8000-0000000000a2";
+const CNA_NAME = "Fictional Plugin Foundation";
+
+function fictionalCna(fields: Partial<CNAResponse> = {}): CNAResponse {
+  return {
+    org_id: ORG_ID,
+    name: CNA_NAME,
+    short_name: "fictional-plugins",
+    organization_name: CNA_NAME,
+    types: ["Open Source", "Researcher"],
+    scope:
+      "Plugins of the fictional plugin directory.\nPlugin list: https://plugins.example.com",
+    auto_ignore: true,
+    created_at: "2099-10-01T08:00:00Z",
+    updated_at: "2099-10-01T08:05:00Z",
+    ...fields,
+  };
+}
+
+function cnaResponse(fields: Partial<CNAResponse> = {}): Response {
+  return jsonResponse(200, { data: fictionalCna(fields) });
 }
 
 // A response that the test gives when it chooses.
@@ -1114,14 +1151,16 @@ describe("the CVE", () => {
       .element(part.getByText("A fictional description of CVE-2099-0012."))
       .toBeVisible();
     const facts = textsOf(part.getByRole("definition"));
-    expect(facts.slice(0, 3)).toEqual([
+    expect(facts.slice(0, 4)).toEqual([
       formatDateTime("2099-10-01T08:00:00Z"),
       formatDateTime("2099-10-08T08:00:00Z"),
+      "–Not set",
       "CWE-79, CWE-787",
     ]);
-    expect(textsOf(part.getByRole("term")).slice(0, 3)).toEqual([
+    expect(textsOf(part.getByRole("term")).slice(0, 4)).toEqual([
       "Published",
       "Modified",
+      "CNA",
       "CWE",
     ]);
     // Without external identifiers, the CVE has no such field.
@@ -1298,6 +1337,307 @@ describe("the CVE", () => {
 
     const part = region(screen, "CVE");
     await expect.element(part.getByText("No CVE.")).toBeVisible();
+  });
+});
+
+// Renders the screen of a Ticket whose CVE has the CNA of the tests, with
+// the name that its summary gives, and Get CNA as the test sets it.
+async function renderCna(
+  cna: (path: string) => Response | Promise<Response> = () => cnaResponse(),
+  name: string | null = CNA_NAME,
+) {
+  const spy = stubTicket({
+    ticket: () =>
+      ticketResponse(
+        fictionalTicketDetail({
+          cve: fictionalCve({ cna: { org_id: ORG_ID, name } }),
+        }),
+      ),
+    cna,
+  });
+  const { screen } = await renderTicket();
+  return { spy, screen, part: region(screen, "CVE-2099-0012") };
+}
+
+// The reads of Get CNA that the screen sent.
+function cnaReads(spy: ReturnType<typeof stubApi>): string[] {
+  return requestsOf(spy).filter((path) => path.startsWith(CNAS));
+}
+
+// Opens the popover of the CNA, which takes the focus.
+async function openCna(screen: Screen, name = CNA_NAME) {
+  await screen.getByRole("button", { name, exact: true }).click();
+  const popover = screen.getByRole("dialog", { name });
+  await expect.element(popover).toHaveFocus();
+  return popover;
+}
+
+// The value of a field of the popover of the CNA, by its term.
+function cnaValue(popover: Locator, term: string): HTMLElement {
+  const terms = popover.getByRole("term").elements();
+  const index = terms.findIndex((candidate) => candidate.textContent === term);
+  const value = popover.getByRole("definition").elements()[index];
+  if (index === -1 || !(value instanceof HTMLElement)) {
+    throw new Error(`The popover of the CNA has no field ${term}`);
+  }
+  return value;
+}
+
+describe("the CNA of the CVE", () => {
+  test("shows the CNA by its name, after the dates and before the weaknesses, without reading its details", async () => {
+    const { spy, part } = await renderCna();
+
+    const terms = textsOf(part.getByRole("term"));
+    expect(terms.slice(0, 4)).toEqual(["Published", "Modified", "CNA", "CWE"]);
+    await expect
+      .element(part.getByRole("button", { name: CNA_NAME, exact: true }))
+      .toBeVisible();
+    expect(cnaReads(spy)).toEqual([]);
+  });
+
+  test("opens its details from Get CNA: the short name below the title, the types as a list of labels, the auto-ignore policy, and the scope last, as text", async () => {
+    const { spy, screen } = await renderCna(() =>
+      cnaResponse({ types: ["Open Source", "Fictional type"] }),
+    );
+
+    const popover = await openCna(screen);
+
+    await expect
+      .element(popover.getByText("fictional-plugins", { exact: true }))
+      .toBeVisible();
+    expect(cnaReads(spy)).toEqual([`${CNAS}${ORG_ID}`]);
+    expect(textsOf(popover.getByRole("term"))).toEqual([
+      "Types",
+      "Auto-ignore",
+      "Scope",
+    ]);
+    // Each type a label of its own, as received, also one that the examples
+    // of the contract do not name.
+    expect(
+      textsOf(
+        page.elementLocator(cnaValue(popover, "Types")).getByRole("listitem"),
+      ),
+    ).toEqual(["Open Source", "Fictional type"]);
+    expect(cnaValue(popover, "Auto-ignore").textContent).toBe(
+      "Yes, new Tickets are ignored automatically",
+    );
+    // The scope keeps its line feed, and its address stays text.
+    const scope = cnaValue(popover, "Scope");
+    expect(scope.innerText).toContain(
+      "Plugins of the fictional plugin directory.\nPlugin list: https://plugins.example.com",
+    );
+    expect(popover.getByRole("link").elements()).toHaveLength(0);
+    // Below its term, across the width of the list.
+    const scopeTerm = popover.getByRole("term").last().element();
+    expect(boxOf(page.elementLocator(scope)).top).toBeGreaterThanOrEqual(
+      boxOf(page.elementLocator(scopeTerm)).bottom,
+    );
+    expect(boxOf(page.elementLocator(scope)).left).toBe(
+      boxOf(page.elementLocator(scopeTerm)).left,
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    await expect
+      .element(screen.getByRole("button", { name: CNA_NAME, exact: true }))
+      .toHaveFocus();
+  });
+
+  test("says No for a CNA whose new Tickets are not ignored, and shows absent values without a short name for a CNA that the CNA list has not described yet", async () => {
+    const { screen } = await renderCna(
+      () =>
+        cnaResponse({
+          name: "fictional-plugins",
+          organization_name: null,
+          types: [],
+          scope: null,
+          auto_ignore: false,
+        }),
+      "fictional-plugins",
+    );
+
+    const popover = await openCna(screen, "fictional-plugins");
+
+    await expect
+      .element(popover.getByRole("term").first())
+      .toHaveTextContent("Types");
+    expect(cnaValue(popover, "Types").textContent).toBe("–Not set");
+    expect(cnaValue(popover, "Auto-ignore").textContent).toBe("No");
+    expect(cnaValue(popover, "Scope").textContent).toBe("–Not set");
+    // The short name is the title, which shows it once.
+    expect(
+      popover.getByText("fictional-plugins", { exact: true }).elements(),
+    ).toHaveLength(1);
+  });
+
+  test("cuts a long scope to its first four lines with Show more", async () => {
+    const scope = Array.from(
+      { length: 20 },
+      (_, index) => `Fictional product line ${index + 1} of the foundation.`,
+    ).join(" ");
+    const { screen } = await renderCna(() => cnaResponse({ scope }));
+
+    const popover = await openCna(screen);
+
+    const more = popover.getByRole("button", { name: "Show more" });
+    await expect.element(more).toHaveAttribute("aria-expanded", "false");
+    expect(boxOf(popover.getByText(scope)).height).toBe(4 * 20);
+
+    await more.click();
+
+    await expect
+      .element(popover.getByRole("button", { name: "Show less" }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(boxOf(popover.getByText(scope)).height).toBeGreaterThan(4 * 20);
+  });
+
+  test("shows the loading indicator in place of the details until Get CNA arrives, with the short name", async () => {
+    const response = later();
+    const { screen } = await renderCna(() => response.promise);
+
+    const popover = await openCna(screen);
+
+    await expect.element(popover.getByRole("progressbar")).toBeVisible();
+    expect(popover.getByRole("term").elements()).toHaveLength(0);
+    expect(popover.getByText("fictional-plugins").elements()).toHaveLength(0);
+
+    response.resolve(cnaResponse());
+
+    await expect
+      .element(popover.getByText("fictional-plugins", { exact: true }))
+      .toBeVisible();
+    expect(popover.getByRole("progressbar").elements()).toHaveLength(0);
+    expect(textsOf(popover.getByRole("term"))).toHaveLength(3);
+  });
+
+  test("says that other details aren't available when Get CNA fails, and announces it", async () => {
+    const { spy, screen } = await renderCna(() =>
+      errorResponse(500, "INTERNAL_ERROR"),
+    );
+
+    const popover = await openCna(screen);
+
+    await expect
+      .element(popover.getByRole("status"))
+      .toHaveTextContent("Other details aren't available.");
+    expect(popover.getByRole("term").elements()).toHaveLength(0);
+    // Sent again twice after a 5xx, as every read (docs/behaviors.md,
+    // Retries and Unconfirmed Changes).
+    expect(cnaReads(spy)).toHaveLength(3);
+  });
+
+  test("says the same for a CNA that Sentinel no longer finds", async () => {
+    const { screen } = await renderCna(() =>
+      errorResponse(404, "CNA_NOT_FOUND"),
+    );
+
+    const popover = await openCna(screen);
+
+    await expect
+      .element(popover.getByRole("status"))
+      .toHaveTextContent("Other details aren't available.");
+  });
+
+  test("reads the details again each time the popover opens, without showing those of the earlier opening meanwhile", async () => {
+    const second = later();
+    let reads = 0;
+    const { spy, screen } = await renderCna(() => {
+      reads += 1;
+      return reads === 1
+        ? cnaResponse({ scope: "Fictional scope as first read." })
+        : second.promise;
+    });
+    let popover = await openCna(screen);
+    await expect
+      .element(popover.getByText("Fictional scope as first read."))
+      .toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await expect.element(popover).not.toBeInTheDocument();
+
+    popover = await openCna(screen);
+
+    await expect.element(popover.getByRole("progressbar")).toBeVisible();
+    expect(
+      popover.getByText("Fictional scope as first read.").elements(),
+    ).toHaveLength(0);
+    expect(cnaReads(spy)).toHaveLength(2);
+
+    second.resolve(cnaResponse({ scope: "Fictional scope as read again." }));
+
+    await expect
+      .element(popover.getByText("Fictional scope as read again."))
+      .toBeVisible();
+  });
+
+  test("does not read the details again while the popover is open, also when the tab returns to the foreground", async () => {
+    const { spy, screen } = await renderCna();
+    const popover = await openCna(screen);
+    await expect
+      .element(popover.getByText("fictional-plugins", { exact: true }))
+      .toBeVisible();
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    // The Ticket is read again, which shows that the return took effect.
+    await expect
+      .poll(
+        () =>
+          requestsOf(spy).filter((path) => path === "/api/v1/tickets/SNTL-12")
+            .length,
+      )
+      .toBe(2);
+    expect(cnaReads(spy)).toHaveLength(1);
+    focusManager.setFocused(undefined);
+  });
+
+  test("reads the details again after a failure when the popover opens again", async () => {
+    let fail = true;
+    const { screen } = await renderCna(() =>
+      fail ? errorResponse(404, "CNA_NOT_FOUND") : cnaResponse(),
+    );
+    let popover = await openCna(screen);
+    await expect
+      .element(popover.getByRole("status"))
+      .toHaveTextContent("Other details aren't available.");
+    await userEvent.keyboard("{Escape}");
+    await expect.element(popover).not.toBeInTheDocument();
+
+    fail = false;
+    popover = await openCna(screen);
+
+    await expect
+      .element(popover.getByText("fictional-plugins", { exact: true }))
+      .toBeVisible();
+    expect(popover.getByRole("status").element().textContent).toBe("");
+  });
+
+  test("shows Unnamed CNA without a popover for a CNA without a name", async () => {
+    const { spy, part } = await renderCna(() => cnaResponse(), null);
+
+    const terms = textsOf(part.getByRole("term"));
+    const definitions = textsOf(part.getByRole("definition"));
+    expect(definitions[terms.indexOf("CNA")]).toBe("Unnamed CNA");
+    expect(part.getByRole("button", { name: /CNA/ }).elements()).toHaveLength(
+      0,
+    );
+    expect(cnaReads(spy)).toEqual([]);
+  });
+
+  test("shows no identifier of a CNA", async () => {
+    const { screen } = await renderCna();
+
+    await openCna(screen);
+    await expect
+      .element(page.getByText("fictional-plugins", { exact: true }))
+      .toBeVisible();
+
+    expect(document.body.textContent).not.toContain(ORG_ID);
+    expect(
+      Array.from(document.querySelectorAll("[href]")).map((element) =>
+        element.getAttribute("href"),
+      ),
+    ).not.toContainEqual(expect.stringContaining(ORG_ID));
   });
 });
 

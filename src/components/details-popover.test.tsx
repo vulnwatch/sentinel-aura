@@ -141,6 +141,33 @@ test("opens its popover, 320 px wide, which takes the focus, with its title, wha
   await expect.element(name).toHaveFocus();
 });
 
+// What identifies a record further while it has nothing to show, such as the
+// short name of a CNA until its details arrive.
+function Nothing() {
+  return null;
+}
+
+test("gives what identifies the record no room while it shows nothing", async () => {
+  const screen = await render(
+    <DetailsName name={NAME} identifier={<Nothing />}>
+      <DescriptionList>
+        <DescriptionItem term="Lifecycle">General support</DescriptionItem>
+      </DescriptionList>
+    </DetailsName>,
+  );
+
+  await screen.getByRole("button", { name: NAME }).click();
+
+  const popover = screen.getByRole("dialog", { name: NAME });
+  await expect.element(popover).toHaveFocus();
+  const title = popover.getByRole("heading", { name: NAME }).element();
+  const line = popover.getByRole("separator").element();
+  // The line 12 px below the title, as without an identifier.
+  expect(
+    line.getBoundingClientRect().top - title.getBoundingClientRect().bottom,
+  ).toBe(12);
+});
+
 test("moves the focus to the screen's heading when the name leaves the page while its popover holds the focus", async () => {
   const screen = await render(<Record />);
   await screen.getByRole("button", { name: NAME }).click();
