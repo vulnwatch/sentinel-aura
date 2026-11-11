@@ -422,8 +422,9 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
     and sends their `id`. List Ticket Actors is read when the tab opens; while
     it loads, or when it fails, the select shows Any actor, System, and in
     place of the users the loading indicator or the message of the failure.
-    A chosen user whom the read does not return, or whom it has not returned
-    yet, shows as "Unknown user" in `fg-muted`: the events of an `actor` that
+    While the read loads, a chosen user shows the loading indicator in the
+    select, and once it has arrived without that user, or has failed, as
+    "Unknown user" in `fg-muted`: the events of an `actor` that
     did not act on the Ticket are none, which Sentinel returns without an
     error (same document, `list_ticket_events()`), so the screen reads the
     events without waiting for the actors.
@@ -448,7 +449,8 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
     parts says "Enter the day, the month, and the year.", one outside the
     dates that it takes "Enter a date from 1 Jan 1970 to 30 Dec 9999.", and a
     start after the end "This date is before the start." at To; none of them
-    applies.
+    applies, and each goes as its field returns to the applied date when the
+    focus leaves it (`docs/design-system.md`, Lists).
 - **The events**, grouped by day, each day a level-two heading. Each event
   shows its time, the icon of its kind, or `circle-question-mark` for an
   event type that the pinned contract does not list, and its sentence, which
@@ -474,7 +476,7 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
   | Event type | Sentence after the actor |
   |---|---|
   | `ticket_created` | "created the Ticket from its CVE, ingested from NVD", with the source of the comment `CVE ingested from NVD`; otherwise "created the Ticket", which the comment `Ticket created manually` does not follow |
-  | `status_change` | "changed the status from Analysis to Analyzed"; into Ignored with a reason in `detail`, "ignored the Ticket as Not shipped, from New", the reason being Not shipped, CVE rejected, CNA policy, or Other (Sentinel `docs/features/tickets/tickets.md`, Ignore Reason), which the comments `CVE rejected` and `CNA auto-ignore policy` do not follow |
+  | `status_change` | "changed the status from Analysis to Analyzed"; into Ignored with a reason in `detail`, "ignored the Ticket as Not shipped, from New", the reason being Not shipped, CVE rejected, CNA policy, or Other (Sentinel `docs/features/tickets/tickets.md`, Ignore Reason), which the comments `CVE rejected` and `CNA auto-ignore policy` then do not follow, while they follow the sentence of an event without a reason |
   | `assignment` | "assigned the Ticket to @asmith"; "reassigned the Ticket from @asmith to @bwilson"; "unassigned @asmith"; for an unassignment by the system, "unassigned @eblack: user deactivated", from its comment (Sentinel `docs/features/tickets/ticket-audit-log.md`, Canonical Automatic Comment Vocabulary) |
   | `duplicate_set` | "marked the Ticket as a duplicate of SNTL-21" |
   | `duplicate_removed` | "reverted the duplicate of SNTL-21" |
@@ -505,7 +507,7 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
   type that the pinned contract does not list shows its actor followed by
   its type as received, such as "John Doe fictional_event", with its time
   and none of its values (`docs/behaviors.md`, Unknown Values). Every comment
-  that the table does not name, such as `CVE package resolution` of a
+  that the sentence of its event does not use, such as `CVE package resolution` of a
   package added by the system, follows the sentence
   (`docs/design-system.md`, Timelines).
 - **Pagination**, below the timeline, when the events have more than one
@@ -598,7 +600,8 @@ user who holds `triage_ticket` (Sentinel
   Announcements).
 - **Audit log.** The toolbar shows at once with the tabs, and the loading
   indicator in place of the events until they arrive, while the screen
-  reads the Ticket too. Another search, filter, or page
+  reads the Ticket too; a failure of the events shows once the Ticket has
+  arrived, so that a Ticket that the user cannot see shows Not found. Another search, filter, or page
   keeps the events shown, marked as being updated, until the new ones arrive,
   and then announces what the timeline shows, "12 events", "1–50 of 63
   events", or the message of the empty state, with the focus where it was

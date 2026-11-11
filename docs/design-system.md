@@ -1095,7 +1095,8 @@ A list screen, such as the Ticket list, shows from top to bottom:
      has its name above it in the style of the name of a group of
      checkboxes, 4 px apart. A range whose start follows its end is not
      applied, and its end shows the error of a field (Forms) until the user
-     changes either date.
+     changes either date, or until the focus leaves both fields, which return
+     to the applied range, as a typed value that is not applied does.
    - Clear filters, a quiet button 32 px high with `x`, removes the search and
      the filters, and keeps the view and the sorting of the list.
 3. The table (Tables), 16 px below.
