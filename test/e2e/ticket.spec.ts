@@ -5,6 +5,7 @@ import {
   expectScreenshot,
   signIn,
   test,
+  withFixedDates,
 } from "./fixtures";
 
 // The Ticket screen (docs/screens/ticket.md), against a backend loaded with
@@ -291,10 +292,28 @@ test.describe("for an analyst", () => {
       name: "Fictional Plugin Foundation",
       exact: true,
     });
-    await name.click();
     const popover = page.getByRole("dialog", {
       name: "Fictional Plugin Foundation",
     });
+    // The popover takes its place below the name as it opens, so the
+    // reference opens it while the dates before the name have their fixed
+    // widths, once the other reads of the screen have arrived.
+    await expectSources(page);
+    await expect(
+      part(page, "CVSS assessments").getByText("No CVSS assessments."),
+    ).toBeVisible();
+    await expect(await detail(page, "Duplicates")).toHaveText("None");
+    await withFixedDates(page, async () => {
+      await name.click();
+      await expect(
+        popover.getByText("fictional-plugins", { exact: true }),
+      ).toBeVisible();
+      await expectScreenshot(page, "ticket-cna.png");
+    });
+    await page.keyboard.press("Escape");
+    await expect(name).toBeFocused();
+
+    await name.click();
     await expect(popover).toBeFocused();
     await expect(
       popover.getByText("fictional-plugins", { exact: true }),
@@ -318,7 +337,6 @@ test.describe("for an analyst", () => {
     );
     await expect(popover.getByRole("link")).toHaveCount(0);
     await expectAccessible(page);
-    await expectScreenshot(page, "ticket-cna.png");
     await page.keyboard.press("Escape");
     await expect(name).toBeFocused();
 
@@ -330,6 +348,7 @@ test.describe("for an analyst", () => {
       .click();
     const example = page.getByRole("dialog", { name: "Example Corporation" });
     await expect(example.getByRole("definition").nth(1)).toHaveText("No");
+    await expectAccessible(page);
 
     // The CVE of SNTL-13 belongs to a CNA without a name.
     await page.goto("/tickets/SNTL-13");
@@ -340,6 +359,7 @@ test.describe("for an analyst", () => {
     await expect(
       part(page, "CVE-2099-0013").getByRole("button", { name: /CNA/ }),
     ).toHaveCount(0);
+    await expectAccessible(page);
 
     // The CVE of SNTL-12 has no CNA.
     await page.goto("/tickets/SNTL-12");

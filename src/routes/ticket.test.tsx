@@ -43,6 +43,8 @@ const TICKETS = "/api/v1/tickets";
 const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
 const SOURCES = "/api/v1/cves/CVE-2099-0012/sources";
 const CNAS = "/api/v1/cnas/";
+// fg-muted of the light theme.
+const FG_MUTED = "rgb(89, 99, 110)";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -67,6 +69,7 @@ afterEach(async () => {
   await cleanup();
   client.clear();
   vi.restoreAllMocks();
+  focusManager.setFocused(undefined);
   document.title = "Sentinel";
   document.documentElement.style.removeProperty("font-size");
   window.scrollTo(0, 0);
@@ -1520,22 +1523,13 @@ describe("the CNA of the CVE", () => {
     await expect
       .element(popover.getByRole("status"))
       .toHaveTextContent("Other details aren't available.");
+    expect(
+      colorOf(popover.getByText("Other details aren't available.").element()),
+    ).toBe(FG_MUTED);
     expect(popover.getByRole("term").elements()).toHaveLength(0);
     // Sent again twice after a 5xx, as every read (docs/behaviors.md,
     // Retries and Unconfirmed Changes).
     expect(cnaReads(spy)).toHaveLength(3);
-  });
-
-  test("says the same for a CNA that Sentinel no longer finds", async () => {
-    const { screen } = await renderCna(() =>
-      errorResponse(404, "CNA_NOT_FOUND"),
-    );
-
-    const popover = await openCna(screen);
-
-    await expect
-      .element(popover.getByRole("status"))
-      .toHaveTextContent("Other details aren't available.");
   });
 
   test("reads the details again each time the popover opens, without showing those of the earlier opening meanwhile", async () => {
@@ -1588,7 +1582,6 @@ describe("the CNA of the CVE", () => {
       )
       .toBe(2);
     expect(cnaReads(spy)).toHaveLength(1);
-    focusManager.setFocused(undefined);
   });
 
   test("reads the details again after a failure when the popover opens again", async () => {

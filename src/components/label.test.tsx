@@ -66,7 +66,7 @@ test("wraps the labels to the next line, 4 px below, and the text of a label wid
   expect(rectOf(wide!).top - rectOf(vendor!).bottom).toBe(4);
   // Within the value, on several lines.
   expect(rectOf(wide!).right).toBeLessThanOrEqual(
-    rectOf(wide!.parentElement!).right,
+    rectOf(screen.getByRole("list").element()).right,
   );
   expect(rectOf(wide!).height).toBeGreaterThan(2 * rectOf(vendor!).height);
 });

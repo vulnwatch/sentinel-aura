@@ -13,9 +13,7 @@ interface DetailsNameProps {
   // The name of the record, which the button and the title of its popover
   // show.
   name: string;
-  // What identifies the record further, such as a CPE, below the title; it
-  // takes no room while it renders nothing, such as the short name of a CNA
-  // until its details arrive.
+  // What identifies the record further, such as a CPE, below the title.
   identifier?: ReactNode;
   // The details of the record, as a description list
   // (src/components/description-list.tsx).
@@ -35,9 +33,7 @@ export function DetailsName({ name, identifier, children }: DetailsNameProps) {
       <InfoPopover width="wide">
         <PopoverTitle>{name}</PopoverTitle>
         {identifier !== undefined && (
-          <p className="text-13 wrap-anywhere text-fg-muted empty:hidden">
-            {identifier}
-          </p>
+          <p className="text-13 wrap-anywhere text-fg-muted">{identifier}</p>
         )}
         <PopoverLine />
         {children}
