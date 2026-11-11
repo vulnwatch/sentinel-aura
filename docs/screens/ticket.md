@@ -108,11 +108,32 @@ stay, with the focus and a refetch in progress, when the layout changes.
   or "No description." in `fg-muted`.
 - On one line that wraps, each value after its term in `fg-muted`: Published
   and Modified, each a date and time; Rejected, the date and time of the
-  rejection, while the CVE is rejected; CWE, the identifiers of the
-  weaknesses, separated by commas; and, when the CVE has any, External
-  identifiers, each its identifier as a link to the address of its advisory,
-  or as text when that address is not a web address (`docs/behaviors.md`,
-  Links to Other Sites).
+  rejection, while the CVE is rejected; CNA, the CNA that owns the record of
+  the CVE (below); CWE, the identifiers of the weaknesses, separated by
+  commas; and, when the CVE has any, External identifiers, each its
+  identifier as a link to the address of its advisory, or as text when that
+  address is not a web address (`docs/behaviors.md`, Links to Other Sites).
+- The CNA, from `cna` of the CVE, shows by its name, `name`, as a name that
+  opens its details (`docs/design-system.md`, Menus, Popovers, and Tooltips;
+  Sentinel `docs/features/tickets/cna.md`, CNA of a CVE; Display Name). The
+  popover reads them from Get CNA, `GET /api/v1/cnas/{org_id}`, when it opens
+  without them, as it first does (same document, Get CNA). Its title is the
+  name, and below it the short name, `short_name`, unless it is absent or is
+  the name, as it is while the CNA list of the CVE Program has not given the
+  CNA an organization name. Then:
+  - Types, each type of `types` as a label, as received, since Sentinel does
+    not close their set (`docs/design-system.md`, Labels), or an absent value
+    without any;
+  - Auto-ignore, from `auto_ignore`: "Yes, new Tickets are ignored
+    automatically" or "No", which says nothing of the Ticket shown, since a
+    change of the policy changes no existing Ticket (same document, Flag);
+  - Scope, `scope`, as plain text, whose line feeds show and whose addresses
+    stay text, cut to its first four lines with Show more, or an absent value
+    (same document, Security).
+
+  A CNA without a name, which Sentinel knows only by its identifier, shows
+  "Unnamed CNA" in `fg-muted`, without a popover, and a CVE without a CNA an
+  absent value. The screen shows no identifier of a CNA.
 - The exploitation, in a box with three columns, one below the other where
   the part is narrower than 576 px:
   - CISA KEV: "Not listed", or Added and the date of the entry, never that the
@@ -406,7 +427,9 @@ user who holds `triage_ticket` (Sentinel
   Duplicates until its read arrives, and the part CVSS assessments and the
   section Sources of the CVE until theirs arrives (`docs/behaviors.md`,
   Loading). Until the read of the work of a maintainer arrives, no track is
-  marked.
+  marked. The popover of the CNA shows its title at once, and the loading
+  indicator in place of its details until Get CNA arrives, with the short
+  name.
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -427,7 +450,11 @@ user who holds `triage_ticket` (Sentinel
   says "The tracks that wait for you couldn't be updated.", followed by the
   message of its status, unless it is a `403` or a `404`, which removes them;
   while it is sent again, the marks that stay shown are marked as being
-  updated (`docs/behaviors.md`, Where Errors Appear; Loading).
+  updated (`docs/behaviors.md`, Where Errors Appear; Loading). When Get CNA
+  fails, whatever its status, the popover of the CNA says "Other details
+  aren't available." in place of its details, as a user card does
+  (`docs/behaviors.md`, Representation of a User, User card), and announces
+  it; its next opening sends the read again.
 - **Errors of Refetch.** A failure follows the default presentation of a
   change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
   after which the fetch may still run (`docs/behaviors.md`, Retries and
@@ -478,6 +505,9 @@ user who holds `triage_ticket` (Sentinel
 - Sentinel `docs/features/tickets/cve-service.md` — Fetch Orchestration:
   `trigger_on_demand_fetch()` (Database-Free Publication;
   `FetchDispatchResult`); CVE Source Status
+- Sentinel `docs/features/tickets/cna.md` — CNA of a CVE (The CNA Entity;
+  Display Name); Auto-Ignore Policy (Flag); Security; API Endpoints
+  (Response Schemas; Get CNA)
 - Sentinel `docs/features/tickets/cvss-scoring.md` — Core Distinctions;
   Accepted Base Vectors (Version Precedence; CVSS v2.0 Base Metrics; CVSS
   v3.0 and v3.1 Base Metrics; CVSS v4.0 Base Metrics); Severity; Eligibility
@@ -486,5 +516,5 @@ user who holds `triage_ticket` (Sentinel
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility; Endpoint Permission Map (CVEs)
 - Sentinel `docs/api-spec.md` — Ticket Identifier Resolution; CVE Identifier
-  Resolution; CVE Accessibility Check; Pagination; Infrastructure Dependency
-  Errors (HTTP 503)
+  Resolution; CNA Identifier Resolution; CVE Accessibility Check; Pagination;
+  Infrastructure Dependency Errors (HTTP 503)
