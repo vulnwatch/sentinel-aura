@@ -108,3 +108,67 @@ test("shows each term above its value where the list is narrower than 280 px", a
   expect(rectOf(value).top).toBeGreaterThanOrEqual(rectOf(term).bottom);
   expect(rectOf(value).left).toBe(rectOf(term).left);
 });
+
+// A list whose terms take the width of the longest one, as the popover of a
+// value shows it (docs/design-system.md, Menus, Popovers, and Tooltips), in
+// a place of 288 px, or narrower than 280 px.
+function renderFittedList(width: "side" | "narrow") {
+  return render(
+    <div className={WIDTHS[width]}>
+      <DescriptionList fittedTerms>
+        <DescriptionGroup term="Exploitability">
+          <GroupedItem term="Privileges required">None</GroupedItem>
+          <GroupedItem term="Attack vector">Network</GroupedItem>
+        </DescriptionGroup>
+        <DescriptionItem term="Scope">Unchanged</DescriptionItem>
+        <DescriptionGroup term="Impact">
+          <GroupedItem term="Integrity">High</GroupedItem>
+        </DescriptionGroup>
+      </DescriptionList>
+    </div>,
+  );
+}
+
+test("gives the column of the terms the width of the longest one, 12 px before the values, without wrapping a term", async () => {
+  const screen = await renderFittedList("side");
+  const longest = screen.getByText("Privileges required").element();
+  const values = ["None", "Network", "Unchanged", "High"].map((value) =>
+    screen.getByText(value, { exact: true }).element(),
+  );
+
+  // Every value starts at the same place, 12 px after the longest term,
+  // which stays on one line.
+  expect(new Set(values.map((value) => rectOf(value).left)).size).toBe(1);
+  expect(rectOf(values[0]!).left - textRectOf(longest).right).toBeCloseTo(
+    12,
+    0,
+  );
+  expect(textRectOf(longest).height).toBeLessThanOrEqual(20);
+  expect(textRectOf(longest).width).toBeGreaterThan(104 - 12);
+  // The groups keep their term on a line of its own, their fields indented
+  // by 12 px and 4 px apart, and the fields 8 px apart.
+  const exploitability = screen.getByText("Exploitability").element();
+  expect(rectOf(longest).top).toBeGreaterThanOrEqual(
+    rectOf(exploitability).bottom,
+  );
+  expect(textRectOf(longest).left - rectOf(exploitability).left).toBe(12);
+  const vector = screen.getByText("Attack vector").element();
+  // 4 px and 8 px, whatever the rounding of the lines.
+  expect(
+    Math.abs(rectOf(vector).top - rectOf(longest).bottom - 4),
+  ).toBeLessThanOrEqual(1);
+  const scope = screen.getByText("Scope").element();
+  expect(
+    Math.abs(rectOf(scope).top - rectOf(vector).bottom - 8),
+  ).toBeLessThanOrEqual(1);
+  expect(getComputedStyle(scope).color).toBe(FG_MUTED);
+});
+
+test("shows each term of a list whose terms take the width of the longest one above its value where the list is narrower than 280 px", async () => {
+  const screen = await renderFittedList("narrow");
+  const term = screen.getByText("Scope").element();
+  const value = screen.getByText("Unchanged").element();
+
+  expect(rectOf(value).top).toBeGreaterThanOrEqual(rectOf(term).bottom);
+  expect(rectOf(value).left).toBe(rectOf(term).left);
+});

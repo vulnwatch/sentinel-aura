@@ -41,7 +41,8 @@ interface SeverityProps {
 }
 
 // A severity (docs/design-system.md, Severity): a dot of 8 px in its mark,
-// then, 6 px later, its name in fg. The dot is hidden from assistive
+// then, 6 px later, its name in fg, on the baseline of the text around it,
+// with the dot centered on the line. The dot is hidden from assistive
 // technologies, which read the name. null is an absent value, and a value
 // that the pinned contract does not list shows as received after a hollow
 // dot in neutral-icon (docs/behaviors.md, Unknown Values).
@@ -51,8 +52,12 @@ export function Severity({ severity, absentName }: SeverityProps) {
   }
   const known = SEVERITIES.get(severity);
   return (
-    <span className="inline-flex items-center gap-1.5 align-middle text-fg">
-      <svg aria-hidden viewBox="0 0 8 8" className="size-2 shrink-0">
+    <span className="inline-flex items-baseline gap-1.5 text-fg">
+      <svg
+        aria-hidden
+        viewBox="0 0 8 8"
+        className="size-2 shrink-0 self-center"
+      >
         {known === undefined ? (
           <circle
             cx={4}

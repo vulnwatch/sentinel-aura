@@ -3,7 +3,7 @@ import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { DescriptionItem, DescriptionList } from "./description-list";
-import { DetailsName } from "./details-popover";
+import { DetailsName, DetailsValue } from "./details-popover";
 import { ScreenHeading } from "./screen-heading";
 
 // A name that opens a popover with the details of its record
@@ -179,4 +179,102 @@ test("scrolls its content within it in a window shorter than it is", async () =>
   expect(getComputedStyle(frame).overflowY).toBe("auto");
   expect(frame.scrollHeight).toBeGreaterThan(frame.clientHeight);
   expect(frame.getBoundingClientRect().bottom).toBeLessThanOrEqual(160);
+});
+
+const VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H";
+
+interface ValueProps {
+  // Whether the popover ends with a link.
+  link?: boolean;
+}
+
+// A fictional CVSS vector, in monospace, that opens its metrics.
+function Value({ link = false }: ValueProps) {
+  return (
+    <main className="p-4">
+      <p className="w-96 text-14">
+        <DetailsValue
+          value={<span className="font-mono">{VECTOR}</span>}
+          title="NVD CVSS v3.1"
+          link={
+            link ? (
+              <a href="https://www.example.com/">Explanation</a>
+            ) : undefined
+          }
+        >
+          <DescriptionList fittedTerms>
+            <DescriptionItem term="Scope">Unchanged</DescriptionItem>
+          </DescriptionList>
+        </DetailsValue>
+      </p>
+    </main>
+  );
+}
+
+test("shows a value as a button in its type, with the dotted underline of a name, at least 24 px high", async () => {
+  const screen = await render(<Value />);
+  const value = screen.getByRole("button", { name: VECTOR });
+
+  const style = getComputedStyle(value.element());
+  expect(style.textDecorationStyle).toBe("dotted");
+  expect(style.textDecorationColor).toBe(BORDER_STRONG);
+  expect(
+    getComputedStyle(value.getByText(VECTOR).element()).fontFamily,
+  ).toContain("monospace");
+  expect(value.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(
+    24,
+  );
+});
+
+test("opens the popover of a value, which takes the focus, with its title, the value in text-13 and fg-muted, a line, and the details, without a link", async () => {
+  const screen = await render(<Value />);
+  const value = screen.getByRole("button", { name: VECTOR });
+
+  await value.click();
+
+  const popover = screen.getByRole("dialog", { name: "NVD CVSS v3.1" });
+  await expect.element(popover).toHaveFocus();
+  expect(popover.element().parentElement!.getBoundingClientRect().width).toBe(
+    320,
+  );
+  const shown = popover.getByText(VECTOR, { exact: true }).element();
+  const line = shown.parentElement!;
+  expect(getComputedStyle(line).fontSize).toBe("13px");
+  expect(getComputedStyle(line).color).toBe(FG_MUTED);
+  expect(getComputedStyle(shown).fontFamily).toContain("monospace");
+  const separators = popover.getByRole("separator").elements();
+  expect(separators).toHaveLength(1);
+  expect(
+    line.compareDocumentPosition(separators[0]!) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  await expect
+    .element(popover.getByRole("definition"))
+    .toHaveTextContent("Unchanged");
+  expect(popover.getByRole("link").query()).toBeNull();
+
+  await userEvent.keyboard("{Escape}");
+
+  await expect.element(value).toHaveFocus();
+});
+
+test("ends the popover of a value with its link, below another line", async () => {
+  const screen = await render(<Value link />);
+
+  await screen.getByRole("button", { name: VECTOR }).click();
+
+  const popover = screen.getByRole("dialog", { name: "NVD CVSS v3.1" });
+  await expect.element(popover).toHaveFocus();
+  const separators = popover.getByRole("separator").elements();
+  expect(separators).toHaveLength(2);
+  const definition = popover.getByRole("definition").element();
+  const link = popover.getByRole("link", { name: "Explanation" }).element();
+  expect(
+    definition.compareDocumentPosition(separators[1]!) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    separators[1]!.compareDocumentPosition(link) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });

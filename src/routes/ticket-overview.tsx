@@ -27,7 +27,22 @@ import {
   getGetTicketPackageWorkQueryKey,
   useGetTicketPackageWork,
 } from "../api/generated/maintainer-operations";
-import { CVSSVersionValue, EligibilitySource } from "../api/generated/model";
+import {
+  CVSS2AccessComplexity,
+  CVSS2AccessVector,
+  CVSS2Authentication,
+  CVSS2Impact,
+  CVSS3Scope,
+  CVSS3UserInteraction,
+  CVSS4AttackRequirements,
+  CVSS4UserInteraction,
+  CVSSAttackComplexity,
+  CVSSAttackVector,
+  CVSSImpact,
+  CVSSPrivilegesRequired,
+  CVSSVersionValue,
+  EligibilitySource,
+} from "../api/generated/model";
 import type {
   CVECVSSAssessments,
   CVEDetail,
@@ -74,7 +89,7 @@ import {
   showAnchorTarget,
   SideSection,
 } from "../components/detail-screen";
-import { DetailsName } from "../components/details-popover";
+import { DetailsName, DetailsValue } from "../components/details-popover";
 import { IconButton } from "../components/icon-button";
 import { Label } from "../components/label";
 import { Link } from "../components/link";
@@ -107,7 +122,7 @@ import { useSignedInUser } from "../session-gate";
 import { ticketRoute, useShownTicket } from "./ticket";
 
 // Overview, the first tab of the Ticket screen (docs/screens/ticket.md): the
-// CVE, the package tree, and the CVSS assessments of the Ticket in the main
+// CVE, the CVSS assessments, and the package tree of the Ticket in the main
 // column, and its details and the sources of its CVE in the side column, in
 // two columns where the main content is wide enough, and otherwise in one,
 // the details first and the sources last (docs/design-system.md, Detail
@@ -1330,12 +1345,38 @@ interface ScoredSeverityProps {
   score: number;
 }
 
-// A severity followed by the score that gives it, such as "High 8.1".
+// A severity followed by the score that gives it in parentheses, such as
+// "High (8.1)".
 function ScoredSeverity({ severity, score }: ScoredSeverityProps) {
   return (
     <>
-      <Severity severity={severity} /> <Score value={score} />
+      <Severity severity={severity} /> (<Score value={score} />)
     </>
+  );
+}
+
+interface BaseScoreProps {
+  score: number;
+  // The severity of the assessment, or null where it is left out.
+  severity: string | null;
+}
+
+// The score of an assessment, then its severity, such as "7.8 High". The
+// score ends a place as wide as "10.0", the widest score, so that the
+// severities of the rows of a column align.
+function BaseScore({ score, severity }: BaseScoreProps) {
+  return (
+    <span className="whitespace-nowrap">
+      <span className="inline-block min-w-[4ch] text-end tabular-nums">
+        {SCORE.format(score)}
+      </span>
+      {severity !== null && (
+        <>
+          {" "}
+          <Severity severity={severity} />
+        </>
+      )}
+    </span>
   );
 }
 
@@ -1428,13 +1469,290 @@ function Vector({ value }: VectorProps) {
   );
 }
 
+// A metric of a vector in words: the name that Sentinel gives the metric,
+// without what the term of its group says, and its value.
+interface Metric {
+  name: string;
+  value: string;
+}
+
+// A metric and its value, which shows in sentence case, such as
+// adjacent_network as "Adjacent network", or as received when the pinned
+// contract does not list it among the values of the metric
+// (docs/behaviors.md, Domain Terms; Unknown Values).
+function metricInWords(
+  name: string,
+  value: string,
+  values: Readonly<Record<string, string>>,
+): Metric {
+  if (!new Set(Object.values(values)).has(value)) {
+    return { name, value };
+  }
+  const words = value.replaceAll("_", " ");
+  return { name, value: words.charAt(0).toUpperCase() + words.slice(1) };
+}
+
+// A group of the metrics of a vector, by the term of the group.
+interface MetricGroup {
+  term: string;
+  metrics: readonly Metric[];
+}
+
+// The metrics of an assessment, from metrics of the API, in the groups of
+// FIRST's specification of its version, by Sentinel's names of the metrics
+// (Sentinel docs/features/tickets/cvss-scoring.md, CVSS v2.0 Base Metrics;
+// CVSS v3.0 and v3.1 Base Metrics; CVSS v4.0 Base Metrics). An assessment of
+// a version that the pinned contract does not list has none.
+function metricGroups(assessment: CVSSAssessmentItem): MetricGroup[] {
+  switch (assessment.cvss_version) {
+    case "2.0": {
+      const metrics = assessment.metrics;
+      return [
+        {
+          term: "Exploitability",
+          metrics: [
+            metricInWords(
+              "Access vector",
+              metrics.access_vector,
+              CVSS2AccessVector,
+            ),
+            metricInWords(
+              "Access complexity",
+              metrics.access_complexity,
+              CVSS2AccessComplexity,
+            ),
+            metricInWords(
+              "Authentication",
+              metrics.authentication,
+              CVSS2Authentication,
+            ),
+          ],
+        },
+        {
+          term: "Impact",
+          metrics: [
+            metricInWords(
+              "Confidentiality",
+              metrics.confidentiality_impact,
+              CVSS2Impact,
+            ),
+            metricInWords("Integrity", metrics.integrity_impact, CVSS2Impact),
+            metricInWords(
+              "Availability",
+              metrics.availability_impact,
+              CVSS2Impact,
+            ),
+          ],
+        },
+      ];
+    }
+    case "3.0":
+    case "3.1": {
+      const metrics = assessment.metrics;
+      return [
+        {
+          term: "Exploitability",
+          metrics: [
+            metricInWords(
+              "Attack vector",
+              metrics.attack_vector,
+              CVSSAttackVector,
+            ),
+            metricInWords(
+              "Attack complexity",
+              metrics.attack_complexity,
+              CVSSAttackComplexity,
+            ),
+            metricInWords(
+              "Privileges required",
+              metrics.privileges_required,
+              CVSSPrivilegesRequired,
+            ),
+            metricInWords(
+              "User interaction",
+              metrics.user_interaction,
+              CVSS3UserInteraction,
+            ),
+          ],
+        },
+        {
+          term: "Scope",
+          metrics: [metricInWords("Scope", metrics.scope, CVSS3Scope)],
+        },
+        {
+          term: "Impact",
+          metrics: [
+            metricInWords(
+              "Confidentiality",
+              metrics.confidentiality_impact,
+              CVSSImpact,
+            ),
+            metricInWords("Integrity", metrics.integrity_impact, CVSSImpact),
+            metricInWords(
+              "Availability",
+              metrics.availability_impact,
+              CVSSImpact,
+            ),
+          ],
+        },
+      ];
+    }
+    case "4.0": {
+      const metrics = assessment.metrics;
+      return [
+        {
+          term: "Exploitability",
+          metrics: [
+            metricInWords(
+              "Attack vector",
+              metrics.attack_vector,
+              CVSSAttackVector,
+            ),
+            metricInWords(
+              "Attack complexity",
+              metrics.attack_complexity,
+              CVSSAttackComplexity,
+            ),
+            metricInWords(
+              "Attack requirements",
+              metrics.attack_requirements,
+              CVSS4AttackRequirements,
+            ),
+            metricInWords(
+              "Privileges required",
+              metrics.privileges_required,
+              CVSSPrivilegesRequired,
+            ),
+            metricInWords(
+              "User interaction",
+              metrics.user_interaction,
+              CVSS4UserInteraction,
+            ),
+          ],
+        },
+        {
+          term: "Vulnerable system",
+          metrics: [
+            metricInWords(
+              "Confidentiality",
+              metrics.vulnerable_system_confidentiality,
+              CVSSImpact,
+            ),
+            metricInWords(
+              "Integrity",
+              metrics.vulnerable_system_integrity,
+              CVSSImpact,
+            ),
+            metricInWords(
+              "Availability",
+              metrics.vulnerable_system_availability,
+              CVSSImpact,
+            ),
+          ],
+        },
+        {
+          term: "Subsequent system",
+          metrics: [
+            metricInWords(
+              "Confidentiality",
+              metrics.subsequent_system_confidentiality,
+              CVSSImpact,
+            ),
+            metricInWords(
+              "Integrity",
+              metrics.subsequent_system_integrity,
+              CVSSImpact,
+            ),
+            metricInWords(
+              "Availability",
+              metrics.subsequent_system_availability,
+              CVSSImpact,
+            ),
+          ],
+        },
+      ];
+    }
+    default:
+      return [];
+  }
+}
+
+// The paths of the calculators of FIRST, by the version that each
+// calculates: FIRST has none for v2.0.
+const CALCULATORS = new Map<string, string>([
+  ["3.0", "3.0"],
+  ["3.1", "3.1"],
+  ["4.0", "4.0"],
+]);
+
+// The calculator of FIRST for the vector of an assessment, composed with the
+// fixed origin https://www.first.org and the vector as its fragment, encoded
+// as the URL parser encodes a fragment, which keeps its ":" and "/": the
+// calculator reads the vector from the fragment as it is, without decoding it
+// (docs/screens/ticket.md, CVSS assessments; docs/conventions.md, Links from
+// the API). Undefined for a version without a calculator.
+function firstCalculator(assessment: CVSSAssessmentItem): string | undefined {
+  const path = CALCULATORS.get(assessment.cvss_version);
+  if (path === undefined) {
+    return undefined;
+  }
+  const address = new URL(`https://www.first.org/cvss/calculator/${path}`);
+  address.hash = assessment.vector_string;
+  return address.href;
+}
+
+interface VectorMetricsProps {
+  assessment: CVSSAssessmentItem;
+}
+
+// The vector of an assessment as a value that opens a popover with its
+// metrics (docs/design-system.md, Menus, Popovers, and Tooltips): its title
+// the provider and the version, such as "NVD CVSS v3.1", the vector below it,
+// its metrics by group, each group a term with its metrics below it, or a
+// group of one metric on the line of its term, such as Scope, and, for a
+// version with a calculator of FIRST, the link to it.
+function VectorMetrics({ assessment }: VectorMetricsProps) {
+  const calculator = firstCalculator(assessment);
+  return (
+    <DetailsValue
+      value={<Vector value={assessment.vector_string} />}
+      title={`${assessment.provider_name} CVSS ${cvssVersion(assessment.cvss_version)}`}
+      link={
+        calculator === undefined ? undefined : (
+          <WebLink address={calculator}>Open in the FIRST calculator</WebLink>
+        )
+      }
+    >
+      <DescriptionList fittedTerms>
+        {metricGroups(assessment).map(({ term, metrics }) => {
+          const [only] = metrics;
+          return metrics.length === 1 && only !== undefined ? (
+            <DescriptionItem key={term} term={term}>
+              {only.value}
+            </DescriptionItem>
+          ) : (
+            <DescriptionGroup key={term} term={term}>
+              {metrics.map(({ name, value }) => (
+                <GroupedItem key={name} term={name}>
+                  {value}
+                </GroupedItem>
+              ))}
+            </DescriptionGroup>
+          );
+        })}
+      </DescriptionList>
+    </DetailsValue>
+  );
+}
+
 // The columns of the table of the assessments: the provider and the version,
-// which name the assessment; its severity by the scale of its version, which
-// is not the resolved severity, with its score; and its vector. The texts
-// wrap, as in a table whose records have no screen of their own
-// (docs/design-system.md, Tables). Of an assessment of a version that the
-// pinned contract does not list, the severity, whose scale depends on the
-// version, is left out, and its score shows alone (docs/behaviors.md, Unknown
+// which name the assessment; its Base score, then its severity by the scale
+// of its version, which is not the resolved severity; and its vector, which
+// opens its metrics. The texts wrap, as in a table whose records have no
+// screen of their own (docs/design-system.md, Tables). Of an assessment of a
+// version that the pinned contract does not list, the severity, whose scale
+// depends on the version, is left out, and its score shows alone, and its
+// vector shows as text, without its metrics (docs/behaviors.md, Unknown
 // Values).
 const ASSESSMENT_COLUMNS: readonly TableColumn<CVSSAssessmentItem>[] = [
   {
@@ -1451,23 +1769,29 @@ const ASSESSMENT_COLUMNS: readonly TableColumn<CVSSAssessmentItem>[] = [
     render: (assessment) => cvssVersion(assessment.cvss_version),
   },
   {
-    id: "severity",
-    name: "Assessment severity",
-    render: (assessment) =>
-      CVSS_VERSIONS.has(assessment.cvss_version) ? (
-        <ScoredSeverity
-          severity={assessment.severity}
-          score={assessment.score}
-        />
-      ) : (
-        <Score value={assessment.score} />
-      ),
+    id: "score",
+    name: "Base score",
+    render: (assessment) => (
+      <BaseScore
+        score={assessment.score}
+        severity={
+          CVSS_VERSIONS.has(assessment.cvss_version)
+            ? assessment.severity
+            : null
+        }
+      />
+    ),
   },
   {
     id: "vector",
     name: "Vector",
     wraps: true,
-    render: (assessment) => <Vector value={assessment.vector_string} />,
+    render: (assessment) =>
+      CVSS_VERSIONS.has(assessment.cvss_version) ? (
+        <VectorMetrics assessment={assessment} />
+      ) : (
+        <Vector value={assessment.vector_string} />
+      ),
   },
 ];
 
@@ -2131,8 +2455,8 @@ function TicketOverview() {
       parts={
         <>
           <CvePart cve={ticket.cve} />
-          <PackagesPart ticket={ticket} now={now} yourWork={yourWork} />
           {ticket.cve !== null && <CvssPart read={cvss} />}
+          <PackagesPart ticket={ticket} now={now} yourWork={yourWork} />
         </>
       }
     />

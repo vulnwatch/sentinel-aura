@@ -505,7 +505,7 @@ test.describe("for an analyst", () => {
     await expect(
       await valueOf(page, "CVSS assessments", "Severity"),
     ).toHaveText(
-      "Medium 5.5 from SUSE CVSS v3.1, which also sets the eligibility score of the Products",
+      "Medium (5.5) from SUSE CVSS v3.1, which also sets the eligibility score of the Products",
     );
     await expect(part(page, "CVSS assessments").getByRole("term")).toHaveCount(
       1,
@@ -513,7 +513,7 @@ test.describe("for an analyst", () => {
     await expect(cvssTable(page).getByRole("columnheader")).toHaveText([
       "Provider",
       "Version",
-      "Assessment severity",
+      "Base score",
       "Vector",
     ]);
     await expect(cvssTable(page).getByRole("rowheader")).toHaveText([
@@ -523,9 +523,9 @@ test.describe("for an analyst", () => {
       "v3.1",
     ]);
     await expect(cvssTable(page).getByRole("gridcell")).toHaveText([
-      "High 7.8",
+      "7.8 High",
       "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
-      "Medium 5.5",
+      "5.5 Medium",
       "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
     ]);
     await expect(
@@ -533,6 +533,65 @@ test.describe("for an analyst", () => {
     ).toBeInViewport();
     await expectSources(page);
     await expectScreenshot(page, "ticket-cvss.png");
+  });
+
+  test("opens the metrics of the vector of a CVSS assessment, with a link to the calculator of FIRST", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    // The package tree of SNTL-16 with its hidden records is long enough for
+    // the page to scroll the assessments to the top of the window, so that
+    // the popover opens below the vector, and the dates of the CVE, whose
+    // masks would show over the compact heading, above the window.
+    await page.goto("/tickets/SNTL-16?hidden=shown#cvss");
+    await expect(cvssTable(page)).toBeVisible();
+    await expectSources(page);
+    const anchored = await page.evaluate(() => window.scrollY);
+    await page.evaluate(() => window.scrollBy(0, 100));
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBe(anchored + 100);
+    // NVD's v3.1 assessment of CVE-2099-0016 (CVEs).
+    const vector = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H";
+    const opener = cvssTable(page).getByRole("button", {
+      name: vector,
+      exact: true,
+    });
+
+    await opener.click();
+
+    const metrics = page.getByRole("dialog", { name: "NVD CVSS v3.1" });
+    await expect(metrics).toBeFocused();
+    await expect(metrics.getByRole("term")).toHaveText([
+      "Exploitability",
+      "Attack vector",
+      "Attack complexity",
+      "Privileges required",
+      "User interaction",
+      "Scope",
+      "Impact",
+      "Confidentiality",
+      "Integrity",
+      "Availability",
+    ]);
+    await expect(metrics.getByRole("definition").last()).toHaveText("High");
+    await expect(metrics.getByText("Local", { exact: true })).toBeVisible();
+    await expect(
+      metrics.getByRole("link", {
+        name: "Open in the FIRST calculator (another site)",
+      }),
+    ).toHaveAttribute(
+      "href",
+      `https://www.first.org/cvss/calculator/3.1#${vector}`,
+    );
+    await expectSources(page);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-cvss-vector.png");
+
+    await page.keyboard.press("Escape");
+
+    await expect(metrics).toHaveCount(0);
+    await expect(opener).toBeFocused();
   });
 
   test("shows the CVSS assessments of a CVE without a SUSE assessment, and of a CVE without any", async ({
@@ -548,7 +607,7 @@ test.describe("for an analyst", () => {
     // the fallback (CVEs; System Settings).
     await expect(
       await valueOf(page, "CVSS assessments", "Severity"),
-    ).toHaveText("Critical 9.3 from NVD CVSS v4.0");
+    ).toHaveText("Critical (9.3) from NVD CVSS v4.0");
     await expect(
       await valueOf(page, "CVSS assessments", "Eligibility score"),
     ).toHaveText("10.0, the fallback without a SUSE CVSS v3.1 assessment");
@@ -604,8 +663,7 @@ test.describe("for an analyst", () => {
       notAttempted("Red Hat"),
     ]);
     await expect(sources(page).getByRole("button")).toHaveCount(0);
-    // ticket-cvss-empty.png shows the same screen, at the same scroll
-    // position, with its failing source.
+    // ticket-cvss-empty.png shows the same screen with its failing source.
     await expect(
       sources(page).getByRole("heading", {
         level: 2,
@@ -644,7 +702,7 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
   // Tracks, and Maintainers).
   await signIn(page, "dbrown");
 
-  // At the top of the screen, which shows the package tree whole.
+  // At the top of the screen, which shows the track that waits for them.
   await page.goto("/tickets/SNTL-12");
 
   const packages = part(page, "Packages");
