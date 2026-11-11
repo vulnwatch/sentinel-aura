@@ -546,6 +546,9 @@ test.describe("for an analyst", () => {
     await page.goto("/tickets/SNTL-16?hidden=shown#cvss");
     await expect(cvssTable(page)).toBeVisible();
     await expectSources(page);
+    // The duplicates, the other read for which the anchor waits, so that
+    // the page no longer scrolls by itself.
+    await expect(await detail(page, "Duplicates")).toHaveText("None");
     const anchored = await page.evaluate(() => window.scrollY);
     await page.evaluate(() => window.scrollBy(0, 100));
     await expect

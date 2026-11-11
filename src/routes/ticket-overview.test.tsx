@@ -9,6 +9,7 @@ import type {
   CVECVSSAssessments,
   CVESourceStatusItem,
   CVSS20Assessment,
+  CVSS30Assessment,
   CVSS40Assessment,
   CurrentUserResponse,
   PackageDetail,
@@ -2234,33 +2235,41 @@ function linesOfText(element: Element): string[] {
 // The vector of fictionalAssessment, NVD's v3.1 assessment.
 const NVD_V31_VECTOR = "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H";
 
-// The metrics of the popover of a vector, in their order: the term of each
-// group, and each metric as its term and its value.
-function metricsOf(popover: Locator): (string | string[])[] {
+// The terms of the popover of a vector, each with the definition of the
+// same rank, as each term has one: a group's definition holds the terms of
+// its metrics, which follow it.
+function fieldsOf(popover: Locator): [Element, Element][] {
+  const definitions = popover.getByRole("definition").elements();
   return popover
     .getByRole("term")
     .elements()
-    .map((term) => {
-      const value = term.nextElementSibling;
-      const text = term.textContent ?? "";
-      return value === null || value.querySelector("dt") !== null
-        ? text
-        : [text, value.textContent ?? ""];
+    .flatMap((term, index): [Element, Element][] => {
+      const definition = definitions[index];
+      return definition === undefined ? [] : [[term, definition]];
     });
+}
+
+// Whether a definition is that of a group, which holds terms of its own.
+function isGroup(definition: Element): boolean {
+  return (
+    page.elementLocator(definition).getByRole("term").elements().length > 0
+  );
+}
+
+// The metrics of the popover of a vector, in their order: the term of each
+// group, and each metric as its term and its value.
+function metricsOf(popover: Locator): (string | string[])[] {
+  return fieldsOf(popover).map(([term, definition]) =>
+    isGroup(definition)
+      ? (term.textContent ?? "")
+      : [term.textContent ?? "", definition.textContent ?? ""],
+  );
 }
 
 // The terms and the values of the metrics of the popover of a vector, each
 // group's term left out.
 function metricFieldsOf(popover: Locator): [Element, Element][] {
-  return popover
-    .getByRole("term")
-    .elements()
-    .flatMap((term): [Element, Element][] => {
-      const value = term.nextElementSibling;
-      return value === null || value.querySelector("dt") !== null
-        ? []
-        : [[term, value]];
-    });
+  return fieldsOf(popover).filter(([, definition]) => !isGroup(definition));
 }
 
 describe("the CVSS assessments", () => {
@@ -2634,6 +2643,92 @@ describe("the CVSS assessments", () => {
       ["Availability", "Partial"],
     ]);
     expect(metrics.getByRole("link").query()).toBeNull();
+  });
+
+  test("open the metrics of a v3.0 vector in the groups of v3.1, with a link to the calculator of FIRST for v3.0", async () => {
+    const vector = "CVSS:3.0/AV:A/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N";
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [
+          {
+            ...fictionalAssessment(),
+            provider_name: "Fictional CNA",
+            cvss_version: "3.0",
+            score: 5.4,
+            severity: "medium",
+            vector_string: vector,
+            metrics: {
+              attack_vector: "adjacent",
+              attack_complexity: "low",
+              privileges_required: "low",
+              user_interaction: "required",
+              scope: "changed",
+              confidentiality_impact: "low",
+              integrity_impact: "low",
+              availability_impact: "none",
+            },
+          } satisfies CVSS30Assessment,
+        ],
+      }),
+    );
+    const { screen } = await renderCvss("Fictional CNA");
+
+    await cvssPart(screen)
+      .getByRole("button", { name: vector, exact: true })
+      .click();
+
+    const metrics = screen.getByRole("dialog", {
+      name: "Fictional CNA CVSS v3.0",
+    });
+    await expect.element(metrics).toBeVisible();
+    expect(metricsOf(metrics)).toEqual([
+      "Exploitability",
+      ["Attack vector", "Adjacent"],
+      ["Attack complexity", "Low"],
+      ["Privileges required", "Low"],
+      ["User interaction", "Required"],
+      ["Scope", "Changed"],
+      "Impact",
+      ["Confidentiality", "Low"],
+      ["Integrity", "Low"],
+      ["Availability", "None"],
+    ]);
+    expect(
+      metrics
+        .getByRole("link", {
+          name: "Open in the FIRST calculator (another site)",
+        })
+        .element()
+        .getAttribute("href"),
+    ).toBe(`https://www.first.org/cvss/calculator/3.0#${vector}`);
+  });
+
+  test("show a metric value of several words in sentence case", async () => {
+    showingCvss(
+      fictionalCvssAssessments({
+        assessments: [
+          {
+            ...CNA_V20,
+            vector_string: "AV:A/AC:L/Au:N/C:P/I:P/A:P",
+            metrics: { ...CNA_V20.metrics, access_vector: "adjacent_network" },
+          },
+        ],
+      }),
+    );
+    const { screen } = await renderCvss("Fictional CNA");
+
+    await cvssPart(screen)
+      .getByRole("button", { name: "AV:A/AC:L/Au:N/C:P/I:P/A:P", exact: true })
+      .click();
+
+    const metrics = screen.getByRole("dialog", {
+      name: "Fictional CNA CVSS v2.0",
+    });
+    await expect.element(metrics).toBeVisible();
+    expect(metricsOf(metrics)[1]).toEqual([
+      "Access vector",
+      "Adjacent network",
+    ]);
   });
 
   test("move the focus to the screen's heading when a new read leaves no table where it was", async () => {
