@@ -614,7 +614,7 @@ Sidebar).
   the top of the window when the content scrolls, so that a message that
   appears is always in view. It takes at most a third of the window's height,
   beyond which its messages scroll within it, and the content scrolls so that
-  the element with the focus never lies under it, nor under the compact
+  the element with keyboard focus never lies under it, nor under the compact
   heading of a detail screen below it (Detail Screens), and so that the
   target of an anchor of the page shows below both (`docs/behaviors.md`,
   Accessibility). While it holds a message, the area is on `canvas`, with
@@ -1275,12 +1275,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   starts 24 px below the line of the tabs, until the end of the page comes
   into view, and then scrolls with the page to its own end, so that its first
   sections stay beside the parts. When an element of the side column that is
-  out of view takes the focus from the keyboard, or is the target of an
-  anchor, the page scrolls until it shows, which for the last sections of a
-  side column taller than the window can be the end of the page; a pointer
-  that focuses the control that it presses leaves the page where it is, so
-  that the press ends on the control. With one column, the side column
-  scrolls with the page.
+  out of view takes keyboard focus, or is the target of an anchor, the page
+  scrolls until it shows, which for the last sections of a side column
+  taller than the window can be the end of the page; a pointer that focuses
+  the control that it presses leaves the page where it is, so that the press
+  ends on the control. With one column, the side column scrolls with the
+  page.
 - On a screen with a side column, while the main content is wide enough for
   two columns, on each of its tabs, also one that takes the whole width, the
   heading row stays at the top of the window once the page has scrolled it

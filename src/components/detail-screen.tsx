@@ -318,7 +318,7 @@ export function showAnchorTarget(target: Element) {
   }
 }
 
-// After an element of the side column takes the focus from the keyboard,
+// After an element of the side column takes keyboard focus,
 // scrolls the page until it shows, its bottom at the bottom of the window,
 // when it lies below the window (docs/behaviors.md, Accessibility,
 // Keyboard).
@@ -349,7 +349,7 @@ function showFocused(element: Element, sticky: StickyColumn) {
 // the trailing sections, whose place in that order is the same in both
 // layouts, stay, with what they hold, such as the focus or a change in
 // progress. With two columns, when an element of the side column that is out
-// of view takes the focus from the keyboard, the page scrolls until it shows
+// of view takes keyboard focus, the page scrolls until it shows
 // (showFocused), once the window has scrolled it as any element with the
 // focus.
 export function DetailColumns({

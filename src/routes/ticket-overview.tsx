@@ -1591,10 +1591,10 @@ type SourcesRead = ReturnType<typeof useCveSources>;
 // Reads again the data of the tab of a Ticket with a CVE, as when the tab
 // returns to the foreground: the Ticket, its duplicates, the work of a
 // maintainer on it, and the CVSS assessments of its CVE, with its sources
-// where asked; the same reads as those of the tab that the anchor of the URL
-// waits for (TicketOverview), so that a read added to the tab is added to
-// both. A read that the tab does not send, such as the duplicates of a
-// duplicate, is not sent.
+// where asked: the reads of the tab that the anchor of the URL waits for
+// (TicketOverview), and the Ticket, so that a read added to the tab is
+// added to both. A read that the tab does not send, such as the duplicates
+// of a duplicate, is not sent.
 function useReadAgain(ticketId: string, cveId: string) {
   const client = useQueryClient();
   return useCallback(
