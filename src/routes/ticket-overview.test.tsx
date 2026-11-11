@@ -19,6 +19,7 @@ import type {
 import { formatDateTime } from "../components/date-time";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
+import { RETURN_URL_KEY, SESSION_RECORD_KEY } from "../session";
 import {
   cvssResponse,
   errorResponse,
@@ -110,6 +111,11 @@ afterEach(async () => {
   vi.useRealTimers();
   focusManager.setFocused(undefined);
   await commands.emulateReducedMotion(false);
+  // What the session leaves in the storage, which the tab keeps for the test
+  // files after this one: the record of the session, and the URL of the
+  // screen that a test saves when it ends the session.
+  window.localStorage.removeItem(SESSION_RECORD_KEY);
+  window.sessionStorage.removeItem(RETURN_URL_KEY);
   document.title = "Sentinel";
   window.scrollTo(0, 0);
   await page.viewport(414, 896);
