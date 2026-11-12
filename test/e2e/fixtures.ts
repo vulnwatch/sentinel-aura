@@ -162,10 +162,11 @@ function dateTimes(page: Page): Locator {
 // in its column, does not move with the width of its text, which changes
 // with the date of the run, such as 9 Nov and 10 Nov. Each width is at least
 // that of the widest text of its kind in Inter with tabular figures, such as
-// 28 May 2026, 23:59, about 9.9 em, and 28 May 2026, 6.5 em; the text is
+// 28 May 2026, 23:59, about 9.9 em, 28 May 2026, 6.5 em, and 23:59, the
+// time alone of a record grouped by day, about 3 em; the text is
 // transparent, so that none shows beside its mask if it were wider. A date
 // and time of the API carries a time, after the T of its value; a date
-// without a time does not.
+// without a time does not; a time alone has no date, so no hyphen.
 const DATE_TIMES_STYLE = `
   time {
     display: inline-block;
@@ -175,6 +176,9 @@ const DATE_TIMES_STYLE = `
   }
   time[datetime*="T"] {
     width: 10em;
+  }
+  time:not([datetime*="-"]) {
+    width: 3.5em;
   }
 `;
 

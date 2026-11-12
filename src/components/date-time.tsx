@@ -29,6 +29,39 @@ export function formatDateTime(value: string): string {
   return `${part("day")} ${part("month")} ${part("year")}, ${part("hour")}:${part("minute")}`;
 }
 
+// The time alone of a date and time of the API, in the time zone of the
+// browser, as 14:05, for records grouped by the day of their date
+// (docs/behaviors.md, Dates and Times, Display). A value that is not a date
+// and time shows as received.
+export function formatTime(value: string): string {
+  const instant = Date.parse(value);
+  if (Number.isNaN(instant)) {
+    return value;
+  }
+  const parts = new Map(
+    PARTS.formatToParts(instant).map((part) => [part.type, part.value]),
+  );
+  return `${parts.get("hour") ?? ""}:${parts.get("minute") ?? ""}`;
+}
+
+// The day of a date and time of the API in the time zone of the browser: its
+// date, such as 2026-10-09, which names the day as a time element does, and
+// its text, as 9 Oct 2026. A value that is not a date and time is a day of
+// its own, named as received.
+export function dayOf(value: string): { date: string; text: string } {
+  const instant = Date.parse(value);
+  if (Number.isNaN(instant)) {
+    return { date: value, text: value };
+  }
+  const local = new Date(instant);
+  const date = [
+    String(local.getFullYear()).padStart(4, "0"),
+    String(local.getMonth() + 1).padStart(2, "0"),
+    String(local.getDate()).padStart(2, "0"),
+  ].join("-");
+  return { date, text: formatDateTime(value).split(",")[0] ?? value };
+}
+
 // The parts of a date without a time, read in UTC, so that the date shows as
 // the API returns it, whatever the time zone of the browser.
 const DATE_PARTS = new Intl.DateTimeFormat("en-US", {

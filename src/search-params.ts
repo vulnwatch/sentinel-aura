@@ -133,3 +133,24 @@ export function valueListParam<const T extends readonly [string, ...string[]]>(
     )
     .catch(undefined);
 }
+
+// The last page of a list that Sentinel accepts (Sentinel docs/api-spec.md,
+// Pagination).
+export const LAST_PAGE = 2_147_483_647;
+
+// The longest search term that Sentinel accepts (Sentinel docs/api-spec.md,
+// Query Parameter Length Limit).
+export const SEARCH_MAX_LENGTH = 500;
+
+// The search term of a list, without its surrounding whitespace: at most the
+// length that Sentinel accepts and without U+0000, which Sentinel rejects
+// (Sentinel docs/api-spec.md, Query Parameter Length Limit; Inadmissible
+// Characters in Request Input). An empty term counts as absent.
+export const searchTermParam = z
+  .string()
+  .trim()
+  .max(SEARCH_MAX_LENGTH)
+  .refine((term) => !term.includes("\u0000"))
+  .transform((term) => (term === "" ? undefined : term))
+  .optional()
+  .catch(undefined);

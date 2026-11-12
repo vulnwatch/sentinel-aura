@@ -800,6 +800,7 @@ dependencies that reach the browser bring about 30 packages in total.
 | `@tanstack/react-query` | Server state | Yes |
 | `react-aria-components` | Accessible components | Yes |
 | `zod` | Validation of search parameters and form input | Yes |
+| `@internationalized/date` | The dates of React Aria's date fields, which `react-aria-components` brings without exporting them | Yes |
 | `@fontsource-variable/inter` | The font of the design system, Inter (`docs/design-system.md`, Font) | Yes |
 | `lucide-react` | The icon set of the design system, Lucide (`docs/design-system.md`, Icon Set) | Yes |
 | `typescript`, `@types/react`, `@types/react-dom` | Language and type check | No |

@@ -1,14 +1,21 @@
-import { ListFilter } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { Check, ChevronDown, ListFilter } from "lucide-react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import {
+  Button as AriaButton,
   CheckboxGroup,
   Dialog,
   DialogTrigger,
   Label,
+  ListBox,
+  ListBoxItem,
+  ListBoxSection,
   Popover,
+  Select,
+  SelectValue,
 } from "react-aria-components";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
+import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 
 // The filters of a list (docs/design-system.md, Lists): Filters in the
 // toolbar, which opens a popover with a group of checkboxes for each filter.
@@ -52,7 +59,7 @@ export function FilterGroup<T extends string>({
       }}
       className="flex flex-col gap-1"
     >
-      <Label className="text-12 font-medium text-fg-muted">{label}</Label>
+      <Label className={FILTER_NAME}>{label}</Label>
       <div className="flex flex-wrap gap-x-4 gap-y-1">
         {options.map((option) => (
           <Checkbox key={option.value} value={option.value}>
@@ -64,16 +71,130 @@ export function FilterGroup<T extends string>({
   );
 }
 
+// The name of a filter, above its field or its checkboxes.
+const FILTER_NAME = "text-12 font-medium text-fg-muted";
+
+export interface SelectOption<T extends string> {
+  // The value that the filter sends.
+  value: T;
+  // The text of the option, which the keyboard finds it by.
+  text: string;
+  // Its label, such as a user in the full form.
+  label: ReactNode;
+}
+
+interface FilterSelectProps<T extends string> {
+  // The name of the filter, above its field.
+  label: string;
+  // Its options, in groups that a line separates, in their order; an empty
+  // group shows nothing.
+  groups: readonly (readonly SelectOption<T>[])[];
+  // In place of the options that the filter reads, while they load or when
+  // their read fails: the loading indicator or the message of the failure.
+  status?: ReactNode;
+  // The value that applies.
+  selected: T;
+  // What the field shows when the value that applies is not among the
+  // options, such as a user whom the read of the options does not return.
+  unlisted: ReactNode;
+  // Applies the value that the user chooses.
+  onChange: (value: T) => void;
+}
+
+// A filter of one value among a short list that the screen reads, as a
+// select (docs/design-system.md, Lists; Forms): its name above it, then a
+// field-like button 40 px high that shows the option that applies and ends
+// with chevron-down, which opens the options below it as a menu, at least as
+// wide as the button, each 36 px high with check at its end when it applies,
+// and the groups separated by border lines. A choice applies at once.
+export function FilterSelect<T extends string>({
+  label,
+  groups,
+  status,
+  selected,
+  unlisted,
+  onChange,
+}: FilterSelectProps<T>) {
+  const shown = groups.filter((group) => group.length > 0);
+  const statusId = useId();
+  return (
+    <Select
+      value={selected}
+      onChange={(key) => {
+        const option = shown.flat().find((item) => item.value === key);
+        if (option !== undefined) {
+          onChange(option.value);
+        }
+      }}
+      className="flex flex-col gap-1"
+    >
+      <Label className={FILTER_NAME}>{label}</Label>
+      <AriaButton
+        className={`flex h-10 items-center justify-between gap-2 rounded-md border border-border-strong bg-surface px-4 text-start text-15 text-fg ${FOCUS_RING}`}
+      >
+        <SelectValue className="flex min-w-0 items-center">
+          {({ isPlaceholder }) =>
+            isPlaceholder
+              ? unlisted
+              : shown.flat().find((option) => option.value === selected)?.label
+          }
+        </SelectValue>
+        <ChevronDown aria-hidden className="size-4 shrink-0 text-fg-muted" />
+      </AriaButton>
+      <Popover
+        offset={4}
+        className="max-h-80 max-w-[calc(100vw-1rem)] min-w-(--trigger-width) overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
+      >
+        {/* The status describes the options, so that it is read as the
+            menu opens, also when it was there before. */}
+        <ListBox aria-describedby={statusId} className="outline-none">
+          {shown.map((group, index) => (
+            <ListBoxSection
+              // oxlint-disable-next-line react/no-array-index-key -- the groups have no other key, and their order is fixed
+              key={index}
+              className={index === 0 ? "" : "mt-1 border-t border-border pt-1"}
+            >
+              {group.map((option) => (
+                <ListBoxItem
+                  key={option.value}
+                  id={option.value}
+                  textValue={option.text}
+                  className={`group flex min-h-9 cursor-default items-center justify-between gap-2 rounded-md px-2.5 text-15 text-fg data-focused:bg-surface-hover ${INSIDE_FOCUS_RING}`}
+                >
+                  <span className="flex min-w-0 items-center">
+                    {option.label}
+                  </span>
+                  <Check
+                    aria-hidden
+                    className="invisible size-4 shrink-0 group-data-selected:visible"
+                  />
+                </ListBoxItem>
+              ))}
+            </ListBoxSection>
+          ))}
+        </ListBox>
+        {/* A status region that is there before what it holds, so that
+            assistive technologies announce the loading or the failure of the
+            options while the menu holds the focus. */}
+        <output className="block">
+          <div id={statusId}>{status}</div>
+        </output>
+      </Popover>
+    </Select>
+  );
+}
+
 interface FirstFieldFocusProps {
   children: ReactNode;
 }
 
 // The content of a dialog, whose first field takes the focus as the dialog
-// opens (docs/behaviors.md, Accessibility, Dialogs).
+// opens (docs/behaviors.md, Accessibility, Dialogs): a checkbox, or the
+// button of a select.
 function FirstFieldFocus({ children }: FirstFieldFocusProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>("input")?.focus();
+    ref.current?.querySelector<HTMLElement>("input, button")?.focus();
   }, []);
   return (
     <div ref={ref} className="contents">

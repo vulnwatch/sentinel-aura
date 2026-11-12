@@ -6,6 +6,7 @@ import { landingRoute } from "./routes/landing";
 import { rootRoute } from "./routes/root";
 import { signInRoute } from "./routes/sign-in";
 import { ticketRoute } from "./routes/ticket";
+import { ticketAuditLogRoute } from "./routes/ticket-audit-log";
 import { ticketOverviewRoute } from "./routes/ticket-overview";
 import { ticketListRoute } from "./routes/tickets";
 import { unbuiltScreenRoutes } from "./routes/unbuilt";
@@ -16,7 +17,7 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   authCallbackRoute,
   ticketListRoute,
-  ticketRoute.addChildren([ticketOverviewRoute]),
+  ticketRoute.addChildren([ticketOverviewRoute, ticketAuditLogRoute]),
   ...unbuiltScreenRoutes,
 ]);
 

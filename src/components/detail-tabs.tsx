@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { Tab, TabList, TabPanel, Tabs } from "react-aria-components";
+import { fixedTopHeight } from "./fixed-top";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import type { ScreenHref } from "./router-links";
 
@@ -45,6 +46,9 @@ export function DetailTabList({ label, tabs, compact }: DetailTabsProps) {
           key={tab.id}
           id={tab.id}
           href={tab.href}
+          // The page stays where it is; the panel that opens shows its start
+          // (DetailTabPanel).
+          routerOptions={{ resetScroll: false }}
           className={`-mb-px inline-flex cursor-default items-center rounded-t border-b-2 border-transparent px-2 text-14 text-fg-muted data-hovered:text-fg data-selected:border-link data-selected:font-semibold data-selected:text-fg ${FOCUS_RING}`}
         >
           {tab.label}
@@ -86,13 +90,37 @@ interface DetailTabPanelProps {
 }
 
 // The panel of the tab that shows, 24 px below the line of the tabs: a panel
-// of its own for each tab, which the tabs then name.
+// of its own for each tab, which the tabs then name. A panel that a tab opens
+// where the page had scrolled past its start shows its start, 24 px below
+// the message area and the compact heading (docs/design-system.md, Detail
+// Screens).
 export function DetailTabPanel({ selected, children }: DetailTabPanelProps) {
   return (
+    <ShownPanel key={selected} selected={selected}>
+      {children}
+    </ShownPanel>
+  );
+}
+
+function ShownPanel({ selected, children }: DetailTabPanelProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const panel = ref.current;
+    if (panel === null) {
+      return;
+    }
+    const fixed =
+      fixedTopHeight("--message-area-height") +
+      fixedTopHeight("--compact-heading-height");
+    if (panel.getBoundingClientRect().top < fixed) {
+      panel.scrollIntoView({ block: "start" });
+    }
+  }, []);
+  return (
     <TabPanel
+      ref={ref}
       id={selected}
-      key={selected}
-      className={`mt-6 ${INSIDE_FOCUS_RING}`}
+      className={`mt-6 scroll-mt-6 ${INSIDE_FOCUS_RING}`}
     >
       {children}
     </TabPanel>

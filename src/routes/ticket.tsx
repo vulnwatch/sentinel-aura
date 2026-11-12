@@ -1,6 +1,14 @@
-import { createRoute, linkOptions, Outlet } from "@tanstack/react-router";
+import {
+  createRoute,
+  linkOptions,
+  Outlet,
+  useChildMatches,
+} from "@tanstack/react-router";
 import { createContext, use, useRef, type ReactNode } from "react";
-import type { TicketDetail } from "../api/generated/model";
+import type {
+  TicketDetail,
+  TicketDetailResponse,
+} from "../api/generated/model";
 import { useGetTicket } from "../api/generated/tickets";
 import { ConfidentialLabel } from "../components/confidential-mark";
 import { deadline, DeadlineBadge } from "../components/deadline-badge";
@@ -13,7 +21,13 @@ import {
 } from "../components/detail-tabs";
 import { NotFound } from "../components/not-found";
 import { ExplainedPriority } from "../components/priority-explanation";
-import { ScreenRead } from "../components/read-view";
+import { UpdatingBar } from "../components/loading";
+import {
+  dataPlace,
+  PartRead,
+  ScreenRead,
+  type Read,
+} from "../components/read-view";
 import { ScreenHeading } from "../components/screen-heading";
 import { Severity } from "../components/severity";
 import { TicketStatus } from "../components/ticket-status";
@@ -22,7 +36,8 @@ import { rootRoute } from "./root";
 // The Ticket screen (docs/screens/ticket.md): one Ticket, from Get Ticket
 // (Sentinel docs/features/tickets/tickets.md, Get Ticket), with its heading
 // row and its tabs, each at a path under the path of the screen. Overview, at
-// the path of the screen, is its first tab (src/routes/ticket-overview.tsx).
+// the path of the screen, is its first tab (src/routes/ticket-overview.tsx),
+// and Audit log its second (src/routes/ticket-audit-log.tsx).
 
 // The canonical identity of a Ticket, SNTL-{n} with n at most the largest
 // positive INTEGER of PostgreSQL (Sentinel docs/api-spec.md, Ticket
@@ -78,12 +93,22 @@ export function useShownTicket(): {
 }
 
 // The tabs of the screen, each at a path under the path of the Ticket.
+type TabId = "overview" | "audit-log";
+
 function tabsOf(ticketId: string): readonly DetailTab[] {
   return [
     {
       id: "overview",
       label: "Overview",
       href: linkOptions({ to: "/tickets/$ticketId", params: { ticketId } }),
+    },
+    {
+      id: "audit-log",
+      label: "Audit log",
+      href: linkOptions({
+        to: "/tickets/$ticketId/audit-log",
+        params: { ticketId },
+      }),
     },
   ];
 }
@@ -151,6 +176,8 @@ function MainValues({ ticket, now, compact }: MainValuesProps) {
 
 interface TicketFrameProps {
   ticketId: string;
+  // The tab that shows.
+  selected: TabId;
   // The Ticket once it has arrived.
   ticket: TicketDetail | undefined;
   now: number;
@@ -166,12 +193,18 @@ interface TicketFrameProps {
 // later, the lock and the label Confidential for a confidential Ticket, then
 // its main values, 16 px apart; the tabs follow 12 px below the row, or right
 // below it in the compact heading (docs/design-system.md, Detail Screens).
-function TicketFrame({ ticketId, ticket, now, children }: TicketFrameProps) {
+function TicketFrame({
+  ticketId,
+  selected,
+  ticket,
+  now,
+  children,
+}: TicketFrameProps) {
   const root = useRef<HTMLDivElement>(null);
   const twoColumns = useTwoColumns(root);
   return (
     <div ref={root}>
-      <DetailTabs selected="overview">
+      <DetailTabs selected={selected}>
         <DetailHeading sticky={twoColumns === true}>
           {(compact) => (
             <>
@@ -196,7 +229,7 @@ function TicketFrame({ ticketId, ticket, now, children }: TicketFrameProps) {
             </>
           )}
         </DetailHeading>
-        <DetailTabPanel selected="overview">
+        <DetailTabPanel selected={selected}>
           {twoColumns !== undefined && (
             <TicketScreenContext value={{ ticketId, twoColumns }}>
               {children}
@@ -204,6 +237,26 @@ function TicketFrame({ ticketId, ticket, now, children }: TicketFrameProps) {
           )}
         </DetailTabPanel>
       </DetailTabs>
+    </div>
+  );
+}
+
+interface TicketUpdatesProps {
+  read: Read<TicketDetailResponse>;
+  children: ReactNode;
+}
+
+// The panel of a tab that shows at once, without waiting for the Ticket:
+// once the Ticket shows, the warning of a new read of it that failed, at the
+// top of the panel, and the mark of the Ticket that is read again after it
+// failed (docs/behaviors.md, Where Errors Appear; Loading).
+function TicketUpdates({ read, children }: TicketUpdatesProps) {
+  const place = dataPlace(read);
+  return (
+    <div className="relative">
+      {place.updating && <UpdatingBar />}
+      <output className="block">{place.warning}</output>
+      {children}
     </div>
   );
 }
@@ -216,23 +269,42 @@ interface TicketReadProps {
 // failure replaces the screen, its heading and tabs included, and a Ticket
 // that does not exist or that the user cannot see shows Not found alike
 // (docs/behaviors.md, Where Errors Appear; Missing and Inaccessible Records).
+// Overview waits for the Ticket; Audit log, whose content does not depend on
+// it, shows at once (docs/screens/ticket.md, States).
 function TicketRead({ ticketId }: TicketReadProps) {
   const read = useGetTicket(ticketId);
+  // The tab of the child that the outlet renders, rather than of the URL
+  // that the router last resolved, which still names the tab of the screen
+  // before a navigation from it, such as Audit log of another Ticket.
+  const selected = useChildMatches({
+    select: (matches): TabId =>
+      matches.some((match) => match.routeId === "/tickets/$ticketId/audit-log")
+        ? "audit-log"
+        : "overview",
+  });
   return (
     <ScreenRead
       read={read}
       renderFrame={(place, data) => (
         <TicketFrame
           ticketId={ticketId}
+          selected={selected}
           ticket={data?.data}
           now={read.dataUpdatedAt}
         >
           {place}
         </TicketFrame>
       )}
-    >
-      {() => <Outlet />}
-    </ScreenRead>
+      renderPlace={(ticket) =>
+        selected === "audit-log" ? (
+          <TicketUpdates read={ticket}>
+            <Outlet />
+          </TicketUpdates>
+        ) : (
+          <PartRead read={ticket}>{() => <Outlet />}</PartRead>
+        )
+      }
+    />
   );
 }
 
