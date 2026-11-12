@@ -165,12 +165,12 @@ loopback interface (`docs/conventions.md`, End-to-End Tests).
 through `scripts/ci.sh e2e` (Local run), which first builds the image with
 `scripts/image.sh build`, and so installs the dependencies when they changed,
 before the two checks that follow run at the same time and would otherwise
-install them at once. `scripts/dev-env.sh e2e` builds the image again, a
-new production build in layers that come from the cache, then, for
-Chromium and Firefox at the same time, creates an end-to-end environment with
-Docker Compose: a new backend from Sentinel's image at the pinned version and
-digest, loaded with the example dataset, the UI's image, and the reverse
-proxy in front of them, whose network namespace the tests share
+install them at once. `scripts/dev-env.sh e2e` runs the production build
+again and builds the image from cached layers, then, for Chromium and Firefox
+at the same time, creates an end-to-end environment with Docker Compose: a
+new backend from Sentinel's image at the pinned version and digest, loaded
+with the example dataset, the UI's image, and the reverse proxy in front of
+them, whose network namespace the tests share
 (`docs/architecture.md`, Development Environment). In each, it runs the tests
 of `test/e2e/` except those of the UI's image alone, `image.spec.ts`, several
 at once; the tests compare the reference screenshots in Chromium
@@ -183,8 +183,8 @@ network namespace of the development server, the same-origin checks that the
 browsers run against the reverse proxy (`docs/conventions.md`, End-to-End
 Tests). Each line of the output of the browsers names its browser, and the
 output and the outcome of the development proxy test follow theirs, also
-when they fail. The job needs no
-permission beyond reading the repository, and no secret:
+when they fail. The job needs no permission beyond reading the repository,
+and no secret:
 
 - when a check fails, it retains `test-results/e2e/` — the report of each
   Playwright project, in `test-results/e2e/<project>/report/`, with the
