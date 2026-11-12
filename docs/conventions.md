@@ -166,6 +166,7 @@ rules; review enforces the rest.
 |---|---|
 | `src/main.tsx` | The entry point: global configuration, then the mounting of the application |
 | `src/zod.ts` | Zod's global configuration, which `src/main.tsx` imports first |
+| `src/trusted-types.ts` | The Trusted Types policy `default` (`docs/architecture.md`, Security Headers), which `src/main.tsx` imports after Zod's configuration and before the modules that render |
 | `src/styles.css` | The stylesheet: the Tailwind CSS entry point, with the tokens, the themes, and the font of `docs/design-system.md` |
 | `src/preferences.ts` | The preferences of the browser in the origin's local storage (`docs/behaviors.md`, Preferences): how a stored value reads and changes in every open tab, and the preference of the sidebar |
 | `src/theme.ts` | The theme preference (`docs/behaviors.md`, Preferences): how a stored value reads, and the theme that the page shows while it runs |

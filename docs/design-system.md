@@ -1080,8 +1080,11 @@ A list screen, such as the Ticket list, shows from top to bottom:
      the place of the data says of the failure of its read.
    - A filter applies as soon as its field changes; a combobox, when the user
      chooses an option; and a field that the user types into, such as a text
-     or a date field, when the user presses Enter, which in either field of a
-     range, such as two dates, applies both. A typed value that is not applied
+     or a date field, when the user presses Enter, or a date field when the
+     user chooses a day of its calendar (Forms), which in either field of a
+     range, such as two dates, applies both. A date that the user did not
+     change, such as one of the URL that its field does not take, applies
+     again as it is. A typed value that is not applied
      returns to the applied one when the focus leaves its field, or, for a
      range, both of its fields. A filter whose values the contract lists, such
      as a status, is a group of checkboxes (Forms): its name in `text-12`,
@@ -1094,12 +1097,11 @@ A list screen, such as the Ticket list, shows from top to bottom:
      (Forms), and a range of dates two date fields 160 px wide, 12 px apart,
      each named by its end, such as From and To; a select and each date field
      has its name above it in the style of the name of a group of
-     checkboxes, 4 px apart. A date field also applies when the user chooses
-     a day of its calendar (Forms), which in either field of a range applies
-     both, and the calendar of the start disables the days after the applied
-     end, that of the end the days before the applied start. A range whose
-     start follows its end is not applied, and its end shows the error of a
-     field (Forms) until the user changes either date, or until the focus
+     checkboxes, 4 px apart. The calendar of the start also disables the
+     days after the applied end, and that of the end the days before the
+     applied start, days that the fields still take when typed: a range
+     whose start follows its end is not applied, and its end shows the error
+     of a field (Forms) until the user changes either date, or until the focus
      leaves both fields, which return to the applied range, as a typed value
      that is not applied does. The calendar is part of its field: the focus
      in it has not left the field, and Escape closes the calendar alone,
@@ -1388,25 +1390,28 @@ states it, such as that of a Ticket; the other audit logs are tables
   4 px radius or round, and when selected an `accent` fill with its mark in
   `on-accent`; a date field shows its parts as `docs/behaviors.md` (Input)
   orders them and ends with a quiet icon button 24 px square with `calendar`
-  at 16 px in `fg-muted`, named "Open the calendar", which its tooltip
-  shows; and a search field
-  starts with `search` at 16 px and, with a value, ends with a clear button.
+  at 16 px in `fg-muted`, named "Calendar" followed by the name of its
+  field, such as "Calendar From", and whose tooltip shows "Calendar"; and a
+  search field starts with `search` at 16 px and, with a value, ends with a
+  clear button.
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips) with 12 px of padding, below the field and aligned to its start,
-  or above it where the window has no room below. At its top, the month and
-  the year in `text-14`, weight 600, between Previous and Next, quiet icon
-  buttons 32 px square with `chevron-left` and `chevron-right` at 16 px in
-  `fg-muted`, named "Previous month" and "Next month", which their tooltips
-  show, each disabled where the month beyond it holds no day that the field
-  takes. Below, 8 px apart, the days of the month in
-  weeks from Monday, under the initials of the days of the week in
+  or above it where the window has no room below, and moved toward the
+  start where it would pass the end of the window. At its top, the month
+  and the year in `text-14`, weight 600, between Previous and Next, quiet
+  icon buttons 32 px square with `chevron-left` and `chevron-right` at
+  16 px in `fg-muted`, named "Previous month" and "Next month", which their
+  tooltips show, each disabled where the months beyond it hold no day that
+  the calendar enables; the one that becomes disabled while it holds the
+  focus hands the focus to the days. Below, 8 px apart, the days of the
+  month in weeks from Monday, under the initials of the days of the week in
   `text-12`, weight 500, `fg-muted`: each day a cell 32 px square with a
   6 px radius, its number in `text-14` and `tabular-nums`, `surface-hover`
   under the pointer and the focus ring on keyboard focus (Focus and Motion).
   The chosen day has an `accent` fill with its number in `on-accent`, today
-  its number at weight 600, and a day that the field does not take shows
-  at 60 % opacity, as a disabled button does (Buttons and Links). The days
-  of the months around it are left out.
+  its number at weight 600, and a day that the calendar disables
+  (`docs/behaviors.md`, Input) shows at 60 % opacity, as a disabled button
+  does (Buttons and Links). The days of the months around it are left out.
 - A switch turns a choice of a screen on or off at once, outside a form, such
   as showing the hidden records of a part: a rail 28 by 16 px, round, with a
   1 px `border-strong` boundary on `neutral-soft` and a knob of 12 px in
@@ -1486,7 +1491,8 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 - A menu or a popover is on `surface`, with a `border` line, an 8 px radius,
   a shadow, and 4 px of padding, or 16 px for a popover that holds fields,
-  such as that of Filters (Lists). A menu item is 36 px high with a 6 px radius
+  such as that of Filters (Lists), or 12 px for the calendar of a date field
+  (Forms). A menu item is 36 px high with a 6 px radius
   and 10 px of side padding, its icon at 16 px in `fg-muted` before its label
   in `text-15`, and `surface-hover` under the pointer and on focus, with the
   focus ring inside it on keyboard focus (Focus and Motion). The

@@ -216,6 +216,7 @@ message follows Wording.
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
 | A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again. Once a read of them has succeeded, a later read of them that fails keeps its marks, as a new read of the same data does, but its message names them, such as "The tracks that wait for you couldn't be updated.", so that it is not read as a failure of the data that they mark; a `403` or `404` removes them as for the first read |
+| A read that only gives a field its initial value or its limits, such as the first day of a period | Nowhere: the field stays usable without them, with its widest limits, and takes them once a later read of them succeeds |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
 | A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
 | Any other change | In the message area (Outcome of a Change) |
@@ -512,12 +513,19 @@ actor of a recorded action (Representation of a User) are exceptions.
 - A date field also offers a calendar. A click anywhere on the field, the
   button at its end, which Tab reaches after the parts of the date, or
   Alt+Down Arrow opens it on the month of the field's date, or without one
-  on the current month, or the nearest month that the field takes; the days
-  that the field does not take are disabled. Choosing a day sets the date
-  and closes the calendar. Escape closes it without a change. Either way the
-  focus returns where it was in the field, such as the part that the user
-  clicked, so that the user can still type the date; from the keyboard, Tab
-  reaches each part of it without opening the calendar.
+  on the current month; when the calendar enables no day of that month, on
+  the nearest month in which it enables one. The calendar disables the days
+  that the field does not take, and those that its screen states, such as
+  the days beyond the other end of a range (`docs/design-system.md`,
+  Lists). The focus moves to the day of the field's date, or without one to
+  today, or, when that day is disabled, to the nearest day that the calendar
+  enables. Choosing a day sets the date and closes the calendar, and Escape
+  closes it without a change; the focus then returns where it was in the
+  field, such as the part that the user clicked. A click outside the
+  calendar also closes it without a change, and a click on the field that
+  closes it does not open it again: a part that the user clicks then takes
+  the focus. So the user can still type the date, and from the keyboard
+  Tab reaches each part of it without opening the calendar.
 - A date that the user enters as a filter covers that whole day in the time
   zone of the browser: the URL keeps the date, and the UI sends the first and
   the last instant of that day converted to UTC (Sentinel `docs/api-spec.md`,
