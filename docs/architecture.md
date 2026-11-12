@@ -568,14 +568,16 @@ once (Sentinel `docs/features/identity/authentication.md`, Concurrent
 sessions) and does not limit the rate of requests (Sentinel
 `docs/api-spec.md`, Rate Limiting), and each test is independent of the tests
 that run beside it (`docs/conventions.md`, End-to-End Tests). Each browser
-takes half of the cores of the host for its workers, at most four: with both
-browsers at once, more workers shorten the run little while they add to the
-load of the backend that they share.
+takes a quarter of the cores of the host for its workers, at least one and
+at most four, since each browser and its backend share half of them. On four
+cores, as on GitHub's runners, more workers slow every test down beyond what
+they gain, toward the timeouts of the tests; above four workers, a run
+shortens little while the load of the backend grows.
 
 | Option | Impact |
 |---|---|
 | One browser after the other, and the tests of each one at a time | No test runs beside another, so none can disturb another. The duration is the sum of those of every test in both browsers, and grows with each |
-| **The browsers at the same time, and the tests of each in several workers** (chosen) | A fraction of that duration, which grows more slowly with the tests. Every test must stay independent of the tests that run beside it, a dependence that a run one at a time would not reveal, and the browsers and their backends share the cores of the host |
+| **The browsers at the same time, and the tests of each in several workers** (chosen) | On a host of many cores, such as a developer's, a fraction of that duration, which grows more slowly with the tests; on a runner of four cores, one worker for each browser, and the duration of the slower browser. Every test must stay independent of the tests that run beside it, a dependence that a run one at a time would not reveal, and the browsers and their backends share the cores of the host |
 | A job of CI for each browser | No sharing of the cores of a runner, but a required status check for each browser, and the preparation of a runner, its images and dependencies, for each |
 | A backend for each worker | No data shared between the workers, at the cost of the start of a backend, about half a minute, and its memory for each |
 

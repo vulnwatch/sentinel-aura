@@ -14,13 +14,15 @@ import { defineConfig, devices } from "@playwright/test";
 const VIEWPORT = { width: 1280, height: 800 };
 // The workers of a run: the tests of a browser run at the same time against
 // its backend (docs/conventions.md, End-to-End Tests), and both browsers run
-// at the same time (`scripts/dev-env.sh e2e`), so each takes half of the
-// cores of the host, at most 4: with both browsers at once, more workers
-// shorten the run little while they add to the load of the backend that their
-// tests share. --workers overrides it.
+// at the same time, each with its backend (`scripts/dev-env.sh e2e`), so each
+// takes a quarter of the cores of the host, at least 1 and at most 4. On 4
+// cores, as on GitHub's runners, more workers slow every test down beyond
+// what they gain, toward the timeouts of the tests; above 4 workers, a run
+// shortens little while the load of the backend grows. --workers overrides
+// it.
 const WORKERS = Math.min(
   4,
-  Math.max(1, Math.floor(availableParallelism() / 2)),
+  Math.max(1, Math.floor(availableParallelism() / 4)),
 );
 // The modules of the projects that check how the UI is served: the same
 // origin of the UI and the API, and the UI's image.
