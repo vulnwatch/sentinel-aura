@@ -946,7 +946,10 @@ test.describe("the audit log", () => {
       "/tickets/SNTL-12/audit-log?search=fictional-nothing",
     );
     await expect(
-      panel.getByText("No events match the search.", { exact: true }),
+      // The message of the empty state, not its announcement.
+      panel
+        .getByRole("paragraph")
+        .filter({ hasText: "No events match the search." }),
     ).toBeVisible();
     await expect(events(page)).toHaveCount(0);
     // The one of the toolbar, and the one of the empty state.
@@ -960,7 +963,10 @@ test.describe("the audit log", () => {
 
     await expect(heading(page, "SNTL-12")).toBeVisible();
     await expect(
-      panel.getByText("There are no events on this page.", { exact: true }),
+      // The message of the empty state, not its announcement.
+      panel
+        .getByRole("paragraph")
+        .filter({ hasText: "There are no events on this page." }),
     ).toBeVisible();
     await expect(
       panel.getByRole("link", { name: "Go to the first page" }),
