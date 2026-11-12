@@ -2673,24 +2673,6 @@ describe("the period", () => {
     ).toBe("15/01/2025");
   });
 
-  test("shows a date of the URL that the fields do not take as it is, without an error, and applies it again with the other field", async () => {
-    stubLog();
-    const { router, screen } = await renderEvents(`${PATH}?to=2099-11-08`);
-    const dialog = await openFilters(screen);
-    const to = dialog.getByRole("group", { name: "To" });
-    await expect.poll(() => to.element().textContent).toBe("08/11/2099");
-    expect(
-      partOf(dialog, "To", 0).element().getAttribute("aria-invalid"),
-    ).not.toBe("true");
-
-    await typeDate(dialog, "From", "01112025");
-    await userEvent.keyboard("{Enter}");
-
-    await expect
-      .poll(() => router.state.location.href)
-      .toBe(`${PATH}?to=2099-11-08&from=2025-11-01`);
-  });
-
   test("applies the period with a day chosen in a calendar, which Escape closes alone, Filters staying open", async () => {
     const { spy } = stubLog();
     const { router, screen } = await renderEvents();

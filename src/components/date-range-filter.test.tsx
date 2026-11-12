@@ -162,7 +162,8 @@ function enabledDays(): number[] {
 }
 
 // The heading of the calendar that is open, the month and the year that it
-// shows, which assistive technologies read in the name of the calendar.
+// shows, which assistive technologies read in the name of the calendar, as
+// React Aria hides the heading from them; so it is found by its place.
 function headingOf(): Element {
   const heading = calendar().element().querySelector("header h2");
   if (heading === null) {
@@ -915,13 +916,18 @@ test("shows the calendar in a popover with 12 px of padding below the field and 
     expect(getComputedStyle(button).color).toBe(FG_MUTED);
     expect(button.querySelector("svg")?.getBoundingClientRect().width).toBe(16);
   }
+  // The heading takes the room between them, 8 px from each, whatever the
+  // month.
   const headingBox = heading.getBoundingClientRect();
-  expect(previous.getBoundingClientRect().right).toBeLessThan(headingBox.left);
-  expect(next.getBoundingClientRect().left).toBeGreaterThan(headingBox.right);
+  expect(headingBox.left - previous.getBoundingClientRect().right).toBe(8);
+  expect(next.getBoundingClientRect().left - headingBox.right).toBe(8);
+  expect(getComputedStyle(heading).textAlign).toBe("center");
   // The month beyond the last day holds no day that the calendar enables.
   expect(next.hasAttribute("disabled")).toBe(true);
   expect(getComputedStyle(next).opacity).toBe("0.6");
 
+  // Hidden from assistive technologies, which read the day of the week in
+  // the name of each day, so found by their place.
   const headers = [...calendar().element().querySelectorAll("thead th")];
   const weekdays = headers.map((cell) => cell.textContent);
   expect(weekdays).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
