@@ -587,6 +587,13 @@ describe("a select", () => {
     await expect
       .element(page.getByRole("dialog", { name: "Actor" }).getByRole("status"))
       .toHaveTextContent("Fictional failure of the read of the users.");
+    // And it describes the options, so that it is read as the menu opens,
+    // also when the status was there before it opened.
+    await expect
+      .element(page.getByRole("listbox", { name: "Actor" }))
+      .toHaveAccessibleDescription(
+        "Fictional failure of the read of the users.",
+      );
   });
 
   test("keeps the status region of its menu before its status arrives, so that the region announces it", async () => {

@@ -2109,6 +2109,10 @@ describe("the actor", () => {
   });
 
   test("reads List Ticket Actors once, as the tab opens, however often Filters opens", async () => {
+    // The tab stays in the foreground, whatever focus events the browser
+    // sends as the popovers open and close, which would read the actors
+    // again (docs/behaviors.md, Loading).
+    focusManager.setFocused(true);
     const { spy } = stubLog();
     const { screen } = await renderEvents();
     await expect.poll(() => requestsTo(spy, ACTORS)).toBe(1);

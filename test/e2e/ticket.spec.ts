@@ -929,6 +929,34 @@ test.describe("the audit log", () => {
     await expect(event(page, "fictional-openssl")).toHaveCount(0);
   });
 
+  test("says in the period when a date lacks some of its parts", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/tickets/SNTL-12/audit-log");
+    await expect(event(page, "Bob Wilson assigned")).toBeVisible();
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+
+    // The day alone.
+    await filters
+      .getByRole("group", { name: "From" })
+      .getByRole("spinbutton")
+      .first()
+      .click();
+    await page.keyboard.type("01");
+    await page.keyboard.press("Enter");
+
+    await expect(
+      filters.getByText("Enter the day, the month, and the year.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page).toHaveURL("/tickets/SNTL-12/audit-log");
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-audit-log-period-error.png");
+  });
+
   test("says when no event matches the search, and when a page lies beyond the last", async ({
     page,
   }) => {

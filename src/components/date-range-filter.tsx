@@ -109,7 +109,7 @@ function Field({ label, value, error, onTyped, onEdit, onEnter }: FieldProps) {
         {(segment) => (
           <DateSegment
             segment={segment}
-            className="rounded-sm px-px outline-none data-focused:bg-accent data-focused:text-on-accent data-placeholder:text-fg-muted data-[type=literal]:px-0"
+            className="rounded-sm px-px outline-none data-placeholder:text-fg-muted data-focused:bg-accent data-focused:text-on-accent data-focused:data-placeholder:text-on-accent data-[type=literal]:px-0"
           />
         )}
       </DateInput>

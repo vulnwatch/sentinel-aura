@@ -333,3 +333,20 @@ test("keeps the focus in its field once the range that it applied applies", asyn
     .toHaveFocus();
   expect(shownIn(screen, "From")).toBe("01/11/2099");
 });
+
+test("shows the part with the focus in on-accent on accent, also while it waits for its value", async () => {
+  const screen = await render(<Period initial={{}} />);
+
+  // The day, then the month, which the field reaches once the day is typed
+  // and which shows its placeholder.
+  await typeDate(screen, "From", "01");
+
+  const month = fieldOf(screen, "From").getByRole("spinbutton").nth(1);
+  await expect.element(month).toHaveFocus();
+  expect(month.element().textContent).toBe("mm");
+  const style = getComputedStyle(month.element());
+  expect([style.color, style.backgroundColor]).toEqual([
+    "rgb(255, 255, 255)",
+    "rgb(9, 105, 218)",
+  ]);
+});

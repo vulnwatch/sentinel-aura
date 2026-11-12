@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ListFilter } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import {
   Button as AriaButton,
   CheckboxGroup,
@@ -116,6 +116,7 @@ export function FilterSelect<T extends string>({
   onChange,
 }: FilterSelectProps<T>) {
   const shown = groups.filter((group) => group.length > 0);
+  const statusId = useId();
   return (
     <Select
       value={selected}
@@ -144,7 +145,9 @@ export function FilterSelect<T extends string>({
         offset={4}
         className="max-h-80 max-w-[calc(100vw-1rem)] min-w-(--trigger-width) overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
       >
-        <ListBox className="outline-none">
+        {/* The status describes the options, so that it is read as the
+            menu opens, also when it was there before. */}
+        <ListBox aria-describedby={statusId} className="outline-none">
           {shown.map((group, index) => (
             <ListBoxSection
               // oxlint-disable-next-line react/no-array-index-key -- the groups have no other key, and their order is fixed
@@ -173,7 +176,9 @@ export function FilterSelect<T extends string>({
         {/* A status region that is there before what it holds, so that
             assistive technologies announce the loading or the failure of the
             options while the menu holds the focus. */}
-        <output className="block">{status}</output>
+        <output className="block">
+          <div id={statusId}>{status}</div>
+        </output>
       </Popover>
     </Select>
   );
