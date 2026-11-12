@@ -562,12 +562,13 @@ user, while the dataset is restored only by recreating the backend (Sentinel
 `docs/deployment.md`, Loading the Example Dataset): with one backend for both
 browsers, one would find the data that the other changed, and a screen would
 show different data in each. The browsers run at the same time, each in its
-own environment, and so do the tests of a browser, in several Playwright
-workers against its backend: Sentinel allows several sessions of one user at
-once (Sentinel `docs/features/identity/authentication.md`, Concurrent
-sessions) and does not limit the rate of requests (Sentinel
-`docs/api-spec.md`, Rate Limiting), and each test is independent of the tests
-that run beside it (`docs/conventions.md`, End-to-End Tests). Each browser
+own environment, and so do the tests of a browser, in as many Playwright
+workers against its backend as the cores of the host allow: Sentinel allows
+several sessions of one user at once (Sentinel
+`docs/features/identity/authentication.md`, Concurrent sessions) and does
+not limit the rate of requests (Sentinel `docs/api-spec.md`, Rate Limiting),
+and each test is independent of the tests that run beside it
+(`docs/conventions.md`, End-to-End Tests). Each browser
 takes a quarter of the cores of the host for its workers, at least one and
 at most four, since each browser and its backend share half of them. On four
 cores, as on GitHub's runners, a second worker for each browser shortens the

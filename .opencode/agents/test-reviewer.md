@@ -260,9 +260,9 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
   assertion that retries until the expected state appears?
 - Does a test depend on the order of the tests, on state that another test
   leaves, or on the current date outside the dataset's time base? Does an
-  end-to-end test depend on the tests that run beside it, which several
-  workers run at once against the backend of their browser, or on another
-  test of its Playwright project running first?
+  end-to-end test depend on the tests that run beside it, which the workers
+  of a host with enough cores run at once against the backend of their
+  browser, or on another test of its Playwright project running first?
 - Does each test assert the observable outcome that it claims, so that it
   fails when the behavior breaks? A test that only checks that a replaced
   function was called, asserts internal state, still passes with the

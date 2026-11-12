@@ -492,12 +492,11 @@ that needs it; content of another kind needs a new row first.
   dataset, at the same time as the other browser, and as many of its tests
   at once as the cores of the host allow, those of one module too, in any
   order within their Playwright project (`docs/architecture.md`, Development
-  Environment). So a test is
-  independent of the order of the tests of its project and of the tests that
-  run beside it: it shares no state with another test, such as a page, a
-  session, or a variable of its module, and needs no other test of its
-  project to run first; only an earlier project, which runs before it as a
-  whole, comes first (below). A test relies only on the dataset as loaded
+  Environment). So a test is independent of the order of the tests of its
+  project and of the tests that run beside it: it shares no state with
+  another test, such as a page, a session, or a variable of its module, and
+  needs no other test of its project to run first; only an earlier project,
+  which runs before it as a whole, comes first (below). A test relies only on the dataset as loaded
   and on the data that it creates itself, which it finds by what it created,
   not by a count or a position that another test could change. A test that
   changes data changes only data that no other test of its Playwright
