@@ -77,6 +77,7 @@ import { Button } from "../components/button";
 import { ClampedText } from "../components/clamped-text";
 import { ConfidentialMark } from "../components/confidential-mark";
 import { FramedTable, type TableColumn } from "../components/data-table";
+import { CvssVector } from "../components/cvss-vector";
 import { CalendarDate, DateTime } from "../components/date-time";
 import { dueState } from "../components/deadline-badge";
 import {
@@ -1551,33 +1552,6 @@ function Resolution({ assessments }: ResolutionProps) {
   );
 }
 
-interface VectorProps {
-  value: string;
-}
-
-// A CVSS vector in monospace, which users copy character by character
-// (docs/design-system.md, Font), with a place to break after each "/", so
-// that it wraps between its metrics where its column is narrower than it.
-function Vector({ value }: VectorProps) {
-  const metrics = value.split("/");
-  return (
-    <span className="font-mono">
-      {metrics.map((metric, index) => (
-        // The place of a metric keys it, since a vector, which a new read
-        // replaces whole, never reorders its metrics.
-        <span key={index}>
-          {metric}
-          {index < metrics.length - 1 && (
-            <>
-              /<wbr />
-            </>
-          )}
-        </span>
-      ))}
-    </span>
-  );
-}
-
 // A metric of a vector in words: the name that Sentinel gives the metric,
 // without what the term of its group says, and its value.
 interface Metric {
@@ -1824,7 +1798,7 @@ function VectorMetrics({ assessment }: VectorMetricsProps) {
   const calculator = firstCalculator(assessment);
   return (
     <DetailsValue
-      value={<Vector value={assessment.vector_string} />}
+      value={<CvssVector value={assessment.vector_string} />}
       title={`${assessment.provider_name} CVSS ${cvssVersion(assessment.cvss_version)}`}
       link={
         calculator === undefined ? undefined : (
@@ -1899,7 +1873,7 @@ const ASSESSMENT_COLUMNS: readonly TableColumn<CVSSAssessmentItem>[] = [
       CVSS_VERSIONS.has(assessment.cvss_version) ? (
         <VectorMetrics assessment={assessment} />
       ) : (
-        <Vector value={assessment.vector_string} />
+        <CvssVector value={assessment.vector_string} />
       ),
   },
 ];

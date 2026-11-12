@@ -466,8 +466,9 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
   as received, and an absent severity or priority as Not set. A Ticket
   identifier is a link to its screen, the address of a reference a link to it
   (`docs/behaviors.md`, Links to Other Sites), and a date and time shows as
-  such (`docs/behaviors.md`, Display). A value without a place to break, such
-  as an address or a vector, wraps at any character where its line is too
+  such (`docs/behaviors.md`, Display). A vector wraps only after a "/", as in
+  the table of the CVSS assessments; any other value without a place to
+  break, such as an address, wraps at any character where its line is too
   narrow, and a text keeps none of its line breaks. In the table, *Package ·
   track* is the `package` and the `track` of `detail`, and *Product* its
   `product_name` (Sentinel `docs/features/tickets/ticket-audit-log.md`,
@@ -492,7 +493,7 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
   | `cve_associated` | "associated CVE-2099-0021" |
   | `severity_changed` | "set the severity to High"; "changed the severity from High to Critical"; "removed the severity High" |
   | `priority_changed` | "set the priority to P3"; "changed the priority from P3 to P2"; for an override, "overrode the priority from P3 to P1", "changed the priority override from P1 to P2", or "cleared the priority override, from P1 to P3" (Sentinel `docs/features/tickets/ticket-priority.md`, Manual Override) |
-  | `cvss_assessment_changed` | "added the NVD CVSS v3.1 assessment 8.1, CVSS:3.1/AV:N/…", "changed the SUSE CVSS v3.1 assessment from 7.5, CVSS:3.1/… to 8.1, CVSS:3.1/…", or "deleted the SUSE CVSS v3.1 assessment 8.1, CVSS:3.1/…", the vector in monospace, from the canonical values (Sentinel `docs/features/tickets/ticket-audit-log.md`, Event Type Contract, Rules); a value of another form as received |
+  | `cvss_assessment_changed` | "added the NVD CVSS v3.1 assessment 8.1, CVSS:3.1/AV:N/…", "changed the SUSE CVSS v3.1 assessment from 7.5, CVSS:3.1/… to 8.1, CVSS:3.1/…", or "deleted the SUSE CVSS v3.1 assessment 8.1, CVSS:3.1/…", the vector in monospace at the size of the sentence, from the canonical values (Sentinel `docs/features/tickets/ticket-audit-log.md`, Event Type Contract, Rules); a value of another form as received |
   | `confidentiality_changed` | "made the Ticket confidential", "made the Ticket non-confidential" |
   | `coordinated_release_changed` | "set the Coordinated Release Date to 25 Nov 2026, 14:00"; "changed the Coordinated Release Date from … to …"; "removed the Coordinated Release Date 25 Nov 2026, 14:00" |
   | `access_grant_added`, `access_grant_removed` | "granted access to @cwhite", "revoked the access of @cwhite" |

@@ -225,8 +225,36 @@ test.each([
     ]);
     // The field keeps its size with its wider boundary.
     expect(box.height).toBe(40);
+    // Announced in the status region of the range, after the name of its
+    // field.
+    expect(screen.getByRole("status").element().textContent).toBe(
+      `${field}: ${message}`,
+    );
   },
 );
+
+test("announces the errors of both fields in one status region, each after the name of its field, which is there before them and says nothing once they go", async () => {
+  const screen = await render(<Period />);
+  const status = screen.getByRole("status");
+  await expect.element(status).toBeInTheDocument();
+  expect(status.element().textContent).toBe("");
+  const region = status.element();
+  await typeDate(screen, "From", "01");
+  await typeDate(screen, "To", "31129999");
+
+  await userEvent.keyboard("{Enter}");
+
+  await expect
+    .element(status)
+    .toHaveTextContent(`From: ${INCOMPLETE} To: ${OUTSIDE}`);
+  expect(status.element()).toBe(region);
+  // Not a field error of its own: the region takes no room on the screen.
+  expect(status.element().getBoundingClientRect().width).toBeLessThanOrEqual(1);
+
+  screen.getByRole("button", { name: "Clear" }).element().focus();
+
+  await expect.poll(() => status.element().textContent).toBe("");
+});
 
 test("keeps the error and the typed dates while the focus moves from one field to the other, and removes the error when the user changes either date", async () => {
   const screen = await render(<Period />);

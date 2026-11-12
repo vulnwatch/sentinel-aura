@@ -170,7 +170,10 @@ export function FilterSelect<T extends string>({
             </ListBoxSection>
           ))}
         </ListBox>
-        {status}
+        {/* A status region that is there before what it holds, so that
+            assistive technologies announce the loading or the failure of the
+            options while the menu holds the focus. */}
+        <output className="block">{status}</output>
       </Popover>
     </Select>
   );

@@ -30,6 +30,7 @@ import {
 } from "../api/generated/ticket-audit-log";
 import { useGetTicket } from "../api/generated/tickets";
 import { Button } from "../components/button";
+import { CvssVector } from "../components/cvss-vector";
 import { ButtonLink } from "../components/button-link";
 import { EmptyState } from "../components/data-table";
 import { DateRangeFilter } from "../components/date-range-filter";
@@ -274,18 +275,24 @@ const auditLogSearch = auditLogParams.transform((search): AuditLogSearch => {
 });
 
 // The first instant of a day in the time zone of the browser, or its last,
-// in UTC, which the period sends (docs/behaviors.md, Dates and Times, Input).
+// in UTC, which the period sends (docs/behaviors.md, Dates and Times, Input;
+// Sentinel docs/api-spec.md, Date Range Interpretation).
 function instantOf(date: string | undefined, end: boolean): string | undefined {
   const parts = date === undefined ? undefined : partsOf(date);
   if (parts === undefined) {
     return undefined;
   }
   const { year, month, day } = parts;
-  const local = end
-    ? new Date(year, month - 1, day, 23, 59, 59, 999)
-    : new Date(year, month - 1, day, 0, 0, 0, 0);
-  local.setFullYear(year);
-  return local.toISOString();
+  if (!end) {
+    return new Date(year, month - 1, day).toISOString();
+  }
+  // The microsecond before the next day starts, the resolution of the times
+  // of Sentinel, so that the day keeps every event up to its end, also on a
+  // day whose last hour repeats when the clock goes back.
+  const next = new Date(year, month - 1, day + 1);
+  return new Date(next.getTime() - 1)
+    .toISOString()
+    .replace(/\.(\d{3})Z$/, ".$1999Z");
 }
 
 // The number of the filters that apply.
@@ -437,7 +444,7 @@ function Assessment({ value }: { value: string }) {
   }
   return (
     <>
-      {parts.score}, <span className="font-mono text-13">{parts.vector}</span>
+      {parts.score}, <CvssVector value={parts.vector} />
     </>
   );
 }
@@ -957,7 +964,7 @@ function actorOption(actor: UserFields, you: boolean): SelectOption<string> {
     text: `${displayName(actor)} @${actor.username}`,
     label: (
       <span className="inline-flex max-w-full items-center gap-1.5">
-        <User user={actor} withUsername wrap />
+        <User user={actor} withUsername />
         {you && <Label>You</Label>}
       </span>
     ),
@@ -975,7 +982,8 @@ interface ActorFilterProps {
 // it, from List Ticket Actors, in its order.
 function ActorFilter({ ticketId, selected, onChange }: ActorFilterProps) {
   const me = useSignedInUser();
-  const actors = useListTicketActors(ticketId);
+  // The tab reads the actors; the filter shows them as they are cached.
+  const actors = useListTicketActors(ticketId, { query: { enabled: false } });
   const users = actors.data?.data ?? [];
   const mine = users.find((user) => user.id === me?.id);
   const fixed: SelectOption<string>[] = [

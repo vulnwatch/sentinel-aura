@@ -257,6 +257,17 @@ export function DateRangeFilter({
           onEdit={clearErrors}
           onEnter={apply}
         />
+        {/* The errors in a status region that is there before them, so that
+            assistive technologies announce them without moving the focus
+            (docs/behaviors.md, Accessibility, Announcements). */}
+        <output className="sr-only">
+          {[
+            errors.start === undefined ? "" : `${startLabel}: ${errors.start}`,
+            errors.end === undefined ? "" : `${endLabel}: ${errors.end}`,
+          ]
+            .filter((text) => text !== "")
+            .join(" ")}
+        </output>
         <Field
           key={`end-${String(generation)}`}
           label={endLabel}

@@ -2,10 +2,13 @@ import {
   createRoute,
   linkOptions,
   Outlet,
-  useMatchRoute,
+  useChildMatches,
 } from "@tanstack/react-router";
 import { createContext, use, useRef, type ReactNode } from "react";
-import type { TicketDetail } from "../api/generated/model";
+import type {
+  TicketDetail,
+  TicketDetailResponse,
+} from "../api/generated/model";
 import { useGetTicket } from "../api/generated/tickets";
 import { ConfidentialLabel } from "../components/confidential-mark";
 import { deadline, DeadlineBadge } from "../components/deadline-badge";
@@ -18,7 +21,13 @@ import {
 } from "../components/detail-tabs";
 import { NotFound } from "../components/not-found";
 import { ExplainedPriority } from "../components/priority-explanation";
-import { PartRead, ScreenRead } from "../components/read-view";
+import { UpdatingBar } from "../components/loading";
+import {
+  dataPlace,
+  PartRead,
+  ScreenRead,
+  type Read,
+} from "../components/read-view";
 import { ScreenHeading } from "../components/screen-heading";
 import { Severity } from "../components/severity";
 import { TicketStatus } from "../components/ticket-status";
@@ -232,6 +241,26 @@ function TicketFrame({
   );
 }
 
+interface TicketUpdatesProps {
+  read: Read<TicketDetailResponse>;
+  children: ReactNode;
+}
+
+// The panel of a tab that shows at once, without waiting for the Ticket:
+// once the Ticket shows, the warning of a new read of it that failed, at the
+// top of the panel, and the mark of the Ticket that is read again after it
+// failed (docs/behaviors.md, Where Errors Appear; Loading).
+function TicketUpdates({ read, children }: TicketUpdatesProps) {
+  const place = dataPlace(read);
+  return (
+    <div className="relative">
+      {place.updating && <UpdatingBar />}
+      <output className="block">{place.warning}</output>
+      {children}
+    </div>
+  );
+}
+
 interface TicketReadProps {
   ticketId: string;
 }
@@ -244,11 +273,15 @@ interface TicketReadProps {
 // it, shows at once (docs/screens/ticket.md, States).
 function TicketRead({ ticketId }: TicketReadProps) {
   const read = useGetTicket(ticketId);
-  const matchRoute = useMatchRoute();
-  const selected: TabId =
-    matchRoute({ to: "/tickets/$ticketId/audit-log" }) === false
-      ? "overview"
-      : "audit-log";
+  // The tab of the child that the outlet renders, rather than of the URL
+  // that the router last resolved, which still names the tab of the screen
+  // before a navigation from it, such as Audit log of another Ticket.
+  const selected = useChildMatches({
+    select: (matches): TabId =>
+      matches.some((match) => match.routeId === "/tickets/$ticketId/audit-log")
+        ? "audit-log"
+        : "overview",
+  });
   return (
     <ScreenRead
       read={read}
@@ -264,7 +297,9 @@ function TicketRead({ ticketId }: TicketReadProps) {
       )}
       renderPlace={(ticket) =>
         selected === "audit-log" ? (
-          <Outlet />
+          <TicketUpdates read={ticket}>
+            <Outlet />
+          </TicketUpdates>
         ) : (
           <PartRead read={ticket}>{() => <Outlet />}</PartRead>
         )

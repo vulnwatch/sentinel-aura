@@ -24,6 +24,7 @@ import {
   jsonResponse,
   OTHER_USER,
   referenceOf,
+  requestsTo,
   sourcesResponse,
   stubApi,
   ticketPage,
@@ -110,9 +111,12 @@ function startOf(date: string): string {
   return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
 }
 
+// The microsecond before the next local day starts.
 function endOf(date: string): string {
   const [year = 0, month = 0, day = 0] = date.split("-").map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+  return new Date(new Date(year, month - 1, day + 1).getTime() - 1)
+    .toISOString()
+    .replace(/\.(\d{3})Z$/, ".$1999Z");
 }
 
 // The events of a page, each with an identifier of its own and the fields
@@ -164,8 +168,8 @@ type Responder = (query: URLSearchParams) => Response | Promise<Response>;
 interface Stub {
   // The signed-in user.
   user: CurrentUserResponse;
-  // The response to Get Ticket.
-  ticket: () => Response | Promise<Response>;
+  // The response to Get Ticket of the path.
+  ticket: (path: string) => Response | Promise<Response>;
   // The response to List Ticket Events, given its query.
   events: Responder;
   // The response to List Ticket Actors.
@@ -179,7 +183,10 @@ interface Stub {
 function stubLog(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: OTHER_USER,
-    ticket: () => ticketResponse(fictionalTicketDetail()),
+    ticket: (path) =>
+      ticketResponse(
+        fictionalTicketDetail({ ticket_id: path.slice(TICKETS.length + 1) }),
+      ),
     events: () => eventPage(eventsOf({})),
     actors: () => actorsResponse(),
     ...fields,
@@ -194,8 +201,8 @@ function stubLog(fields: Partial<Stub> = {}) {
     if (request.path === ACTORS) {
       return stub.actors();
     }
-    if (request.path === TICKET) {
-      return stub.ticket();
+    if (/^\/api\/v1\/tickets\/SNTL-\d+$/.test(request.path)) {
+      return stub.ticket(request.path);
     }
     if (request.path === TICKETS) {
       return ticketPage([]);
@@ -367,6 +374,12 @@ async function openActors(dialog: Locator) {
   return options;
 }
 
+// The menu of the options of the actor, which a popover of its own holds,
+// named after the filter.
+function actorMenuOf() {
+  return page.getByRole("dialog", { name: "Actor" });
+}
+
 // The names of the options of a listbox, in their order.
 function optionNames(listbox: Locator): string[] {
   return listbox
@@ -395,9 +408,39 @@ async function typeDate(dialog: Locator, field: string, digits: string) {
   await userEvent.keyboard(digits);
 }
 
-// The font weight of an element.
-function weightOf(locator: Locator): string {
-  return getComputedStyle(locator.element()).fontWeight;
+// The number of lines on which an element shows, by the tops of the boxes
+// of its text.
+function linesOf(element: Element): number {
+  return new Set(
+    [...element.getClientRects()].map((box) => Math.round(box.top)),
+  ).size;
+}
+
+// The text of a sentence in runs of one font weight, in their order, as
+// [weight, text], without what it hides from assistive technologies.
+function weightRunsOf(sentence: Element): [string, string][] {
+  const runs: [string, string][] = [];
+  const walker = document.createTreeWalker(sentence, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    const parent = node.parentElement;
+    if (parent === null || parent.closest('[aria-hidden="true"]') !== null) {
+      continue;
+    }
+    const weight = getComputedStyle(parent).fontWeight;
+    const text = node.textContent ?? "";
+    const last = runs.at(-1);
+    if (last?.[0] === weight) {
+      last[1] += text;
+    } else {
+      runs.push([weight, text]);
+    }
+  }
+  return runs
+    .map(([weight, text]): [string, string] => [
+      weight,
+      text.replace(/\s+/g, " ").trim(),
+    ])
+    .filter(([, text]) => text !== "");
 }
 
 // The elements in the order of the page.
@@ -493,6 +536,151 @@ describe("the tab", () => {
 
     await expect.poll(() => router.state.location.href).toBe(PATH);
     await expect.element(searchFieldOf(screen)).toHaveValue("");
+  });
+
+  test.each([
+    [
+      "a click",
+      async (tab: Locator) => {
+        await tab.click();
+      },
+    ],
+    [
+      "Enter",
+      async (tab: Locator) => {
+        tab.element().focus();
+        await userEvent.keyboard("{Enter}");
+      },
+    ],
+  ])(
+    "keeps the focus on Audit log and on Overview, each opened with %s",
+    async (_, open) => {
+      stubLog();
+      const { router, screen } = await renderLog("/tickets/SNTL-12");
+      const tabs = screen.getByRole("tablist", { name: "Ticket" });
+      const auditLog = tabs.getByRole("tab", { name: "Audit log" });
+      const overview = tabs.getByRole("tab", { name: "Overview" });
+      await expect
+        .element(screen.getByRole("region", { name: "Details" }))
+        .toBeVisible();
+
+      await open(auditLog);
+
+      await expect.poll(() => router.state.location.href).toBe(PATH);
+      await expect
+        .poll(() => sentencesOf(screen))
+        .toEqual(["Alice Smith changed the status from Analysis to Analyzed"]);
+      await expect.element(auditLog).toHaveAttribute("aria-selected", "true");
+      await expect.element(auditLog).toHaveFocus();
+
+      await open(overview);
+
+      await expect
+        .poll(() => router.state.location.href)
+        .toBe("/tickets/SNTL-12");
+      await expect
+        .element(screen.getByRole("region", { name: "Details" }))
+        .toBeVisible();
+      await expect.element(overview).toHaveFocus();
+    },
+  );
+
+  test("opens the Overview of the Ticket that a link of an event names, once that Ticket has arrived, and moves the focus to its heading", async () => {
+    showing({
+      event_type: "duplicate_set",
+      old_value: null,
+      new_value: "SNTL-21",
+    });
+    const { router, screen } = await renderEvents();
+    // Every heading that the page shows on the way, such as that of the
+    // failure of the UI itself.
+    const shown = new Set<string>();
+    const observer = new MutationObserver(() => {
+      for (const title of document.querySelectorAll("h1")) {
+        shown.add(title.textContent);
+      }
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    await panelOf(screen).getByRole("link", { name: "SNTL-21" }).click();
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets/SNTL-21");
+    await expect.element(heading(screen, "SNTL-21")).toHaveFocus();
+    await expect
+      .element(screen.getByRole("region", { name: "Details" }))
+      .toBeVisible();
+    observer.disconnect();
+    expect(
+      [...shown].filter((title) => !/^(SNTL-\d+|Ticket)$/.test(title)),
+    ).toEqual([]);
+  });
+
+  test("shows the warning of a later read of the Ticket that fails at the top of the panel, with Try again, and keeps the Ticket and the events", async () => {
+    const { stub } = stubLog();
+    const { screen } = await renderEvents();
+    const panel = panelOf(screen);
+
+    stub.ticket = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+    returnToForeground();
+
+    const warning = panel.getByText(
+      `This couldn't be updated. ${MESSAGE_UNAVAILABLE}`,
+    );
+    await expect.element(warning).toBeVisible();
+    expect(warning.element().closest("output")).not.toBeNull();
+    // Above the toolbar, the first content of the panel.
+    expect(
+      warning
+        .element()
+        .compareDocumentPosition(searchFieldOf(screen).element()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await expect.element(heading(screen, "SNTL-12")).toBeVisible();
+    expect(sentencesOf(screen)).toEqual([
+      "Alice Smith changed the status from Analysis to Analyzed",
+    ]);
+
+    // While the Ticket is read again, it is marked as being updated.
+    const ticket = later();
+    stub.ticket = () => ticket.promise;
+    await panel.getByRole("button", { name: "Try again" }).click();
+
+    await expect
+      .element(panel.getByRole("progressbar", { name: "Updating" }))
+      .toBeVisible();
+    await expect.element(warning).not.toBeInTheDocument();
+
+    ticket.resolve(ticketResponse(fictionalTicketDetail()));
+
+    await expect
+      .element(panel.getByRole("progressbar", { name: "Updating" }))
+      .not.toBeInTheDocument();
+    expect(panel.getByText(/couldn't be updated/).elements()).toHaveLength(0);
+  });
+
+  test("shows Not found in place of the screen when a later read of the Ticket answers that it does not exist or that the user cannot see it", async () => {
+    const { stub } = stubLog();
+    const { screen } = await renderEvents();
+
+    stub.ticket = () => errorResponse(404, "TICKET_NOT_FOUND");
+    returnToForeground();
+
+    await expect.element(heading(screen, "Not found")).toBeVisible();
+    await expect
+      .element(screen.getByRole("tablist", { name: "Ticket" }))
+      .not.toBeInTheDocument();
+    await expect.element(searchFieldOf(screen)).not.toBeInTheDocument();
+    expect(
+      screen
+        .getByText("Alice Smith changed the status from Analysis to Analyzed")
+        .elements(),
+    ).toHaveLength(0);
   });
 });
 
@@ -1291,6 +1479,48 @@ describe("the sentences", () => {
     expect(sentencesOf(screen)).toEqual([sentence]);
   });
 
+  // The override actions of the pinned contract are set, changed, and
+  // cleared (Sentinel docs/features/tickets/ticket-audit-log.md, detail
+  // JSONB Schema Contract).
+  test.each([
+    [
+      "a change of the priority, as the change of an automatic priority",
+      {
+        event_type: "priority_changed",
+        old_value: "P3",
+        new_value: "P1",
+        detail: { override_action: "fictional_action" },
+      },
+      "Alice Smith changed the priority from P3 to P1",
+    ],
+    [
+      "a change of eligibility by hand, as an override that is set",
+      {
+        event_type: "product_eligibility_changed",
+        old_value: "true",
+        new_value: "false",
+        detail: {
+          ...PRODUCT_DETAIL,
+          reason: "va_override",
+          override_action: "fictional_action",
+        },
+      },
+      `Alice Smith set ${OF_TRACK} as not eligible by hand`,
+    ],
+  ] as const)(
+    "say what the actor of %s did with an override action that the pinned contract does not list",
+    async (_, fields, sentence) => {
+      showing(fields);
+
+      const { screen } = await renderEvents();
+
+      expect(sentencesOf(screen)).toEqual([sentence]);
+      expect(panelOf(screen).element().textContent).not.toContain(
+        "fictional_action",
+      );
+    },
+  );
+
   test("show an event type that the pinned contract does not list by its actor and its type as received, with its time and none of its values", async () => {
     const created = at(2099, 11, 8, 14, 10);
     showingUnlisted({
@@ -1424,7 +1654,7 @@ describe("the sentences", () => {
     ]);
   });
 
-  test("show the objects of a sentence and the usernames that an event records at weight 500, and its values at weight 400", async () => {
+  test("show at weight 500 only the actor, the objects of a sentence, and the usernames that an event records, and its values at weight 400", async () => {
     showing(
       { event_type: "assignment", old_value: null, new_value: "bwilson" },
       {
@@ -1437,34 +1667,90 @@ describe("the sentences", () => {
 
     const { screen } = await renderEvents();
 
-    const panel = panelOf(screen);
-    expect(weightOf(panel.getByText("@bwilson", { exact: true }))).toBe("500");
-    expect(weightOf(panel.getByText(ON_TRACK, { exact: true }))).toBe("500");
-    expect(weightOf(panel.getByText("Alice Smith").first())).toBe("500");
-    expect(weightOf(panel.getByRole("paragraph").last())).toBe("400");
+    const [assignment, track] = panelOf(screen)
+      .getByRole("paragraph")
+      .elements();
+    if (assignment === undefined || track === undefined) {
+      throw new Error("The tab shows no two events");
+    }
+    expect(weightRunsOf(assignment)).toEqual([
+      ["500", "Alice Smith"],
+      ["400", "assigned the Ticket to"],
+      ["500", "@bwilson"],
+    ]);
+    expect(weightRunsOf(track)).toEqual([
+      ["500", "Alice Smith"],
+      ["400", "set"],
+      ["500", ON_TRACK],
+      ["400", "from Analysis to Affected"],
+    ]);
     // A username alone, without an avatar or labels.
     expect(
-      panel
+      page
+        .elementLocator(assignment)
         .getByText("@bwilson", { exact: true })
         .element()
         .querySelector("svg"),
     ).toBeNull();
   });
 
-  test("show the vector of an assessment in monospace", async () => {
+  test.each([
+    ["a person", ALICE, "14px"],
+    ["the system", null, "13px"],
+  ])(
+    "show the vector of an assessment that %s changed in monospace, at the size of its sentence",
+    async (_, actor, size) => {
+      showing({
+        event_type: "cvss_assessment_changed",
+        actor,
+        old_value: null,
+        new_value: `NVD v3.1 ${NVD_VECTOR} (8.1)`,
+      });
+
+      const { screen } = await renderEvents();
+
+      const sentence = panelOf(screen).getByRole("paragraph").element();
+      const vector = getComputedStyle(
+        panelOf(screen).getByText(NVD_VECTOR, { exact: true }).element(),
+      );
+      expect(vector.fontFamily).toContain("monospace");
+      expect([getComputedStyle(sentence).fontSize, vector.fontSize]).toEqual([
+        size,
+        size,
+      ]);
+    },
+  );
+
+  test("break a vector only after a slash at 320 CSS pixels, never within a metric", async () => {
+    await page.viewport(320, 640);
+    const vector =
+      "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N";
     showing({
       event_type: "cvss_assessment_changed",
       old_value: null,
-      new_value: `NVD v3.1 ${NVD_VECTOR} (8.1)`,
+      new_value: `SUSE v4.0 ${vector} (9.3)`,
     });
 
     const { screen } = await renderEvents();
 
-    expect(
-      getComputedStyle(
-        panelOf(screen).getByText(NVD_VECTOR, { exact: true }).element(),
-      ).fontFamily,
-    ).toContain("monospace");
+    const shown = panelOf(screen).getByText(vector, { exact: true }).element();
+    // The vector takes several lines of its sentence.
+    expect(linesOf(shown)).toBeGreaterThan(1);
+    // Each metric, with the slash after it, on one line.
+    const metrics = [...shown.children];
+    expect(metrics.map((metric) => metric.textContent)).toEqual(
+      vector
+        .split("/")
+        .map((metric, index, all) =>
+          index < all.length - 1 ? `${metric}/` : metric,
+        ),
+    );
+    for (const metric of metrics) {
+      expect(linesOf(metric)).toBe(1);
+    }
+    expect(document.documentElement.scrollWidth).toBe(
+      document.documentElement.clientWidth,
+    );
   });
 
   test("keep none of the line breaks of a text", async () => {
@@ -1751,8 +2037,10 @@ describe("the actor", () => {
     const options = await openActors(dialog);
 
     expect(optionNames(options)).toEqual(["Any actor", "System"]);
+    // In the status region of the menu, after its options.
+    const status = actorMenuOf().getByRole("status");
     await expect
-      .element(page.getByRole("progressbar", { name: "Loading" }))
+      .element(status.getByRole("progressbar", { name: "Loading" }))
       .toBeVisible();
 
     actors.resolve(actorsResponse());
@@ -1761,6 +2049,7 @@ describe("the actor", () => {
     await expect
       .element(page.getByRole("progressbar", { name: "Loading" }))
       .not.toBeInTheDocument();
+    await expect.element(status).toHaveTextContent("");
   });
 
   test("shows the message of the failure of List Ticket Actors in place of the users, with Any actor and System, and leaves the rest usable", async () => {
@@ -1772,9 +2061,10 @@ describe("the actor", () => {
 
     const options = await openActors(dialog);
 
+    // In the status region of the menu, which announces it.
     await expect
-      .element(page.getByText(MESSAGE_UNAVAILABLE, { exact: true }))
-      .toBeVisible();
+      .element(actorMenuOf().getByRole("status"))
+      .toHaveTextContent(MESSAGE_UNAVAILABLE);
     expect(optionNames(options)).toEqual(["Any actor", "System"]);
 
     await options.getByRole("option", { name: "System" }).click();
@@ -1816,6 +2106,71 @@ describe("the actor", () => {
     await expect
       .element(actorSelectOf(dialog).getByText("Unknown user", { exact: true }))
       .toBeVisible();
+  });
+
+  test("reads List Ticket Actors once, as the tab opens, however often Filters opens", async () => {
+    const { spy } = stubLog();
+    const { screen } = await renderEvents();
+    await expect.poll(() => requestsTo(spy, ACTORS)).toBe(1);
+
+    for (let opening = 0; opening < 2; opening += 1) {
+      const dialog = await openFilters(screen);
+      const options = await openActors(dialog);
+      await expect.poll(() => optionNames(options)).toHaveLength(6);
+      // Closes the options, then the filters.
+      await userEvent.keyboard("{Escape}");
+      await expect.element(options).not.toBeInTheDocument();
+      await userEvent.keyboard("{Escape}");
+      await expect.element(dialog).not.toBeInTheDocument();
+    }
+
+    expect(requestsTo(spy, ACTORS)).toBe(1);
+  });
+
+  test("ends the name of a user too long for the options with an ellipsis, on one line, in a narrow window", async () => {
+    await page.viewport(320, 640);
+    const name = "Alexandra Konstantina Papadopoulou-Fictional";
+    stubLog({
+      actors: () =>
+        actorsResponse([
+          ANA,
+          {
+            id: "00000000-0000-0000-0000-000000000008",
+            username: "apapadopoulou",
+            full_name: name,
+            active: true,
+            bot: false,
+          },
+          ALICE,
+        ]),
+    });
+    const { screen } = await renderEvents();
+    const dialog = await openFilters(screen);
+
+    const options = await openActors(dialog);
+
+    const option = options.getByRole("option", { name: /^Alexandra/ });
+    await expect.element(option).toBeVisible();
+    // The name with the username after it, which ends with the ellipsis.
+    const shown = [...option.element().querySelectorAll("span")].find(
+      (element) => element.firstChild?.textContent === name,
+    );
+    if (shown === undefined) {
+      throw new Error("The option shows no name");
+    }
+    const style = getComputedStyle(shown);
+    expect([style.whiteSpace, style.textOverflow]).toEqual([
+      "nowrap",
+      "ellipsis",
+    ]);
+    expect(shown.scrollWidth).toBeGreaterThan(shown.clientWidth);
+    // An option of one line, 36 px high, within the menu and the window.
+    const box = option.element().getBoundingClientRect();
+    expect(box.height).toBe(36);
+    expect(box.right).toBeLessThanOrEqual(
+      actorMenuOf().element().getBoundingClientRect().right,
+    );
+    expect(box.right).toBeLessThanOrEqual(320);
   });
 });
 
@@ -1984,6 +2339,23 @@ describe("the period", () => {
       .toBeVisible();
   });
 
+  test("sends the first instant of the local day that starts the period, and the microsecond before the local day after its end starts, also at the end of a year", async () => {
+    const { spy } = stubLog();
+
+    await renderEvents(`${PATH}?from=2099-12-31&to=2099-12-31`);
+
+    const read = new URLSearchParams(eventReads(spy).at(-1));
+    const from = read.get("from_date") ?? "";
+    const to = read.get("to_date") ?? "";
+    expect(Date.parse(from)).toBe(new Date(2099, 11, 31).getTime());
+    // Six decimals of the second, the resolution of the times of Sentinel,
+    // the last microsecond of the millisecond before the next day.
+    expect(to).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}999Z$/);
+    expect(Date.parse(to.replace(/999Z$/, "Z")) + 1).toBe(
+      new Date(2100, 0, 1).getTime(),
+    );
+  });
+
   test("removes a bound with Enter in a field that the user emptied", async () => {
     const { spy } = stubLog();
     const { router, screen } = await renderEvents(
@@ -2054,6 +2426,10 @@ describe("the period", () => {
 
       const error = dialog.getByText(message, { exact: true });
       await expect.element(error).toBeVisible();
+      // Announced by the status region of the period, after the name of its
+      // field, the first status region of the popover.
+      const announced = dialog.getByRole("status").first();
+      expect(announced.element().textContent).toBe(`${field}: ${message}`);
       const other = field === "From" ? "To" : "From";
       const errorOf = (name: string) =>
         dialog
@@ -2072,6 +2448,7 @@ describe("the period", () => {
       actorSelectOf(dialog).element().focus();
 
       await expect.element(error).not.toBeInTheDocument();
+      expect(announced.element().textContent).toBe("");
       for (const name of ["From", "To"]) {
         expect(dialog.getByRole("group", { name }).element().textContent).toBe(
           "dd/mm/yyyy",
@@ -2423,6 +2800,50 @@ describe("the empty states", () => {
     },
   );
 
+  test("keep saying that no events match the search, with Clear filters, while the events without it load after Clear filters", async () => {
+    const pending = later();
+    stubLog({
+      events: (query) =>
+        query.has("search") ? eventPage([]) : pending.promise,
+    });
+    const { router, screen } = await renderLog(`${PATH}?search=curl`);
+    const panel = panelOf(screen);
+    const message = panel.getByText("No events match the search.", {
+      exact: true,
+    });
+    await expect.element(message).toBeVisible();
+    const inPlace = screen
+      .getByRole("button", { name: "Clear filters" })
+      .elements()[1];
+    if (!(inPlace instanceof HTMLElement)) {
+      throw new Error("No Clear filters in the empty state");
+    }
+    inPlace.focus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect.poll(() => router.state.location.href).toBe(PATH);
+    await expect
+      .element(panel.getByRole("progressbar", { name: "Updating" }))
+      .toBeVisible();
+    await expect.element(message).toBeVisible();
+    expect(
+      panel.getByText("No events.", { exact: true }).elements(),
+    ).toHaveLength(0);
+    // The action of the empty state stays with its message, and the one of
+    // the toolbar goes with the search.
+    expect(
+      panel.getByRole("button", { name: "Clear filters" }).elements(),
+    ).toHaveLength(1);
+
+    pending.resolve(eventPage(eventsOf({})));
+
+    await expect
+      .poll(() => sentencesOf(screen))
+      .toEqual(["Alice Smith changed the status from Analysis to Analyzed"]);
+    await expect.element(message).not.toBeInTheDocument();
+  });
+
   test("say that a page beyond the last has no events, and lead to the first page, which moves the focus to the heading", async () => {
     stubLog({ events: pagesOf });
     const { router, screen } = await renderLog(`${PATH}?kind=status&page=5`);
@@ -2502,7 +2923,9 @@ describe("the announcements", () => {
     });
     const { screen } = await renderEvents();
     const dialog = await openFilters(screen);
-    const status = dialog.getByRole("status");
+    // The status region of the popover, after that of the errors of the
+    // period.
+    const status = dialog.getByRole("status").last();
     await expect.element(status).toHaveTextContent("");
 
     await toggleKind(dialog, "Status");

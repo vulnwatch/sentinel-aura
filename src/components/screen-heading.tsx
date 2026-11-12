@@ -45,7 +45,9 @@ interface FocusAfterNavigationProps {
 // another page of a list, leaves the focus where it was. So does a screen
 // that follows a path at which no screen showed, as the page loads, where the
 // browser starts the focus at the top of the page, also when the UI leads at
-// once from the URL that the page loaded to Sign in.
+// once from the URL that the page loaded to Sign in. A tab of a detail
+// screen that opens its path keeps the focus, as the screen keeps its
+// heading (docs/design-system.md, Detail Screens).
 export function FocusAfterNavigation({ children }: FocusAfterNavigationProps) {
   const router = useRouter();
   // The paths at which a screen has shown its heading since the router last
@@ -64,6 +66,15 @@ export function FocusAfterNavigation({ children }: FocusAfterNavigationProps) {
     previousPath.current = path;
     const screenShown =
       previous !== undefined && shownPaths.current.has(previous);
+    const active = document.activeElement;
+    if (
+      screenShown &&
+      active instanceof HTMLElement &&
+      active.getAttribute("role") === "tab"
+    ) {
+      shownPaths.current = new Set([path]);
+      return;
+    }
     shownPaths.current = new Set(shownPaths.current.has(path) ? [path] : []);
     if (!screenShown) {
       return;

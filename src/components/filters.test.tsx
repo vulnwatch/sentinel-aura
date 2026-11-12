@@ -580,5 +580,37 @@ describe("a select", () => {
       options.getByRole("option").last().element().getBoundingClientRect()
         .bottom,
     );
+    // In a status region of the menu, which assistive technologies announce
+    // while the menu holds the focus.
+    await expect
+      .element(page.getByRole("dialog", { name: "Actor" }).getByRole("status"))
+      .toHaveTextContent("Fictional failure of the read of the users.");
+  });
+
+  test("keeps the status region of its menu before its status arrives, so that the region announces it", async () => {
+    const screen = await render(<ActorFilters groups={ACTORS.slice(0, 1)} />);
+    const dialog = await openFilters(
+      screen.getByRole("button", { name: "Filters" }),
+    );
+    await openOptions(dialog);
+    const status = page
+      .getByRole("dialog", { name: "Actor" })
+      .getByRole("status");
+    await expect.element(status).toBeInTheDocument();
+    expect(status.element().textContent).toBe("");
+    const region = status.element();
+
+    await screen.rerender(
+      <ActorFilters
+        groups={ACTORS.slice(0, 1)}
+        status={<p>Fictional failure of the read of the users.</p>}
+      />,
+    );
+
+    await expect
+      .element(status)
+      .toHaveTextContent("Fictional failure of the read of the users.");
+    // The same region, which the status fills.
+    expect(status.element()).toBe(region);
   });
 });

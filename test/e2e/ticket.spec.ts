@@ -869,6 +869,17 @@ test.describe("the audit log", () => {
       .getByRole("group", { name: "Kind" })
       .getByText("References", { exact: true })
       .click();
+    await expect(
+      filters.getByRole("button", { name: /^Alice Smith.*Actor$/ }),
+    ).toBeVisible();
+    await expect(
+      filters.getByRole("checkbox", { name: "References" }),
+    ).toBeChecked();
+    await expect(page).toHaveURL(/actor=[0-9a-f-]{36}&kind=references$/);
+    // The status region of the popover, after that of the errors of the
+    // period, says what the timeline shows once the filtered events arrive.
+    await expect(filters.getByRole("status").last()).toHaveText(/ events?$/);
+    await expectAccessible(page);
     await page.keyboard.press("Escape");
 
     await expect(page).toHaveURL(
@@ -898,6 +909,7 @@ test.describe("the audit log", () => {
         "Bot added the reference https://scanner.example.com/findings/CVE-2099-0010",
       ),
     ).toBeVisible();
+    await expectAccessible(page);
 
     await page.goto("/tickets/SNTL-12/audit-log");
     await expect(event(page, "Bob Wilson assigned")).toBeVisible();
@@ -915,6 +927,48 @@ test.describe("the audit log", () => {
       ),
     ).toBeVisible();
     await expect(event(page, "fictional-openssl")).toHaveCount(0);
+  });
+
+  test("says when no event matches the search, and when a page lies beyond the last", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/tickets/SNTL-12/audit-log");
+    await expect(event(page, "Bob Wilson assigned")).toBeVisible();
+    const panel = page.getByRole("tabpanel", { name: "Audit log" });
+    const search = page.getByRole("searchbox", { name: "Search events" });
+
+    // A term that no value of the events of SNTL-12 holds.
+    await search.fill("fictional-nothing");
+    await search.press("Enter");
+
+    await expect(page).toHaveURL(
+      "/tickets/SNTL-12/audit-log?search=fictional-nothing",
+    );
+    await expect(
+      panel.getByText("No events match the search.", { exact: true }),
+    ).toBeVisible();
+    await expect(events(page)).toHaveCount(0);
+    // The one of the toolbar, and the one of the empty state.
+    await expect(
+      panel.getByRole("button", { name: "Clear filters" }),
+    ).toHaveCount(2);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-audit-log-no-match.png");
+
+    await page.goto("/tickets/SNTL-12/audit-log?page=99");
+
+    await expect(heading(page, "SNTL-12")).toBeVisible();
+    await expect(
+      panel.getByText("There are no events on this page.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole("link", { name: "Go to the first page" }),
+    ).toHaveAttribute("href", "/tickets/SNTL-12/audit-log");
+    await expect(
+      page.getByRole("navigation", { name: "Pagination" }),
+    ).toHaveCount(0);
+    await expectScreenshot(page, "ticket-audit-log-beyond-last-page.png");
   });
 });
 
