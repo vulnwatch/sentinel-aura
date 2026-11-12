@@ -19,6 +19,7 @@ import {
   errorResponse,
   eventPage,
   FICTIONAL_ACTORS,
+  fictionalCve,
   fictionalEvent,
   fictionalTicketDetail,
   jsonResponse,
@@ -455,6 +456,62 @@ function inPageOrder(...locators: Locator[]): Element[] {
 }
 
 describe("the tab", () => {
+  test("shows the start of the tab that opens where the page had scrolled past it, 24 px below the compact heading, and keeps the page at its top otherwise", async () => {
+    await page.viewport(1280, 400);
+    stubLog({
+      events: () => pageOfEvents(50, 50),
+      ticket: () =>
+        ticketResponse(
+          fictionalTicketDetail({
+            cve: fictionalCve({
+              cwes: Array.from({ length: 200 }, (_, index) => ({
+                cwe_id: `CWE-${String(index + 1000)}`,
+                sources: ["nvd"],
+              })),
+            }),
+          }),
+        ),
+    });
+    const { screen } = await renderEvents();
+    const tabs = screen.getByRole("tablist", { name: "Ticket" });
+    const tabBottom = () =>
+      tabs
+        .getByRole("tab", { name: "Overview" })
+        .element()
+        .getBoundingClientRect().bottom;
+
+    for (const [from, to] of [
+      ["Audit log", "Overview"],
+      ["Overview", "Audit log"],
+    ] as const) {
+      await expect
+        .element(screen.getByRole("tabpanel", { name: from }))
+        .toBeInTheDocument();
+      window.scrollTo(0, 800);
+      await expect
+        .poll(
+          () => getComputedStyle(heading(screen, "SNTL-12").element()).fontSize,
+        )
+        .toBe("16px");
+
+      await tabs.getByRole("tab", { name: to }).click();
+
+      const panel = screen.getByRole("tabpanel", { name: to });
+      await expect.element(panel).toBeInTheDocument();
+      await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+      await expect
+        .poll(() => panel.element().getBoundingClientRect().top)
+        .toBe(tabBottom() + 24);
+    }
+
+    window.scrollTo(0, 0);
+    await tabs.getByRole("tab", { name: "Overview" }).click();
+    await expect
+      .element(screen.getByRole("tabpanel", { name: "Overview" }))
+      .toBeInTheDocument();
+    expect(window.scrollY).toBe(0);
+  });
+
   test("opens at its path, selected, with Overview leading back to the path of the Ticket", async () => {
     stubLog();
 
