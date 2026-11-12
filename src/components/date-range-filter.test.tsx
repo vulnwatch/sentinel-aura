@@ -27,6 +27,7 @@ const SURFACE = "rgb(255, 255, 255)";
 const BORDER = "rgb(216, 222, 228)";
 const BORDER_STRONG = "rgb(129, 139, 152)";
 const ACCENT = "rgb(9, 105, 218)";
+const FOCUS = "rgb(9, 105, 218)";
 const ON_ACCENT = "rgb(255, 255, 255)";
 const DANGER_ON_SOFT = "rgb(164, 14, 38)";
 const DANGER_ICON = "rgb(207, 34, 46)";
@@ -366,6 +367,21 @@ test.each([
   },
 );
 
+test("takes a typed end before the applied start, which the calendar of the end disables, and says that it is before the start", async () => {
+  const onApply = vi.fn<(range: DateRange) => void>();
+  const screen = await render(
+    <Period initial={{ start: "2099-11-08" }} onApply={onApply} />,
+  );
+
+  await typeDate(screen, "To", "01112099");
+  await userEvent.keyboard("{Enter}");
+
+  await expect
+    .element(screen.getByText(INVERTED, { exact: true }))
+    .toBeVisible();
+  expect(onApply).not.toHaveBeenCalled();
+});
+
 test("applies again as it is a date of the range that applies which its field does not take, while the user does not change it", async () => {
   const onApply = vi.fn<(range: DateRange) => void>();
   const screen = await render(
@@ -565,13 +581,19 @@ test("shows the default of the start again once the focus leaves both fields aft
   await expect.poll(() => shownIn(screen, "From")).toBe("15/01/2099");
 });
 
+interface LateDefaultProps {
+  arrived: boolean;
+  onApply?: (range: DateRange) => void;
+}
+
 // The period with a default of the start that arrives later, as the read of
 // the first event of a timeline.
-function LateDefault({ arrived }: { arrived: boolean }) {
+function LateDefault({ arrived, onApply }: LateDefaultProps) {
   return (
     <Period
       startDefault={arrived ? "2099-01-15" : undefined}
       min={arrived ? MIN : "1970-01-01"}
+      onApply={onApply}
     />
   );
 }
@@ -598,6 +620,25 @@ test("shows a default of the start that arrives while the focus is elsewhere at 
 
   await expect.poll(() => shownIn(typing, "From")).toBe("15/01/2099");
   expect(shownIn(typing, "To")).toBe("dd/mm/yyyy");
+});
+
+test("applies as no bound a start typed on a default that arrived while the focus was in the range, which the start does not show yet", async () => {
+  const onApply = vi.fn<(range: DateRange) => void>();
+  const screen = await render(
+    <LateDefault arrived={false} onApply={onApply} />,
+  );
+  await typeDate(screen, "To", "08");
+
+  await screen.rerender(<LateDefault arrived onApply={onApply} />);
+  expect(shownIn(screen, "From")).toBe("dd/mm/yyyy");
+  await typeDate(screen, "To", "08112099");
+  await typeDate(screen, "From", "15012099");
+  await userEvent.keyboard("{Enter}");
+
+  expect(onApply).toHaveBeenCalledExactlyOnceWith({
+    start: undefined,
+    end: "2099-11-08",
+  });
 });
 
 test.each([
@@ -988,4 +1029,43 @@ test("names the buttons to the previous and the next month in their tooltips", a
   await expect
     .element(page.getByRole("tooltip", { name: "Previous month" }))
     .toBeVisible();
+});
+
+test("shows the focus ring 2 px outside the day with the focus, the chosen day included", async () => {
+  const screen = await render(<Period initial={{ start: "2099-11-08" }} />);
+  const day = partOf(screen, "From", 0).element();
+  if (day instanceof HTMLElement) {
+    day.focus();
+  }
+
+  // From the keyboard alone.
+  await userEvent.keyboard("{Tab}{Tab}{Alt>}{ArrowDown}{/Alt}");
+
+  await expect.element(dayCell(8)).toHaveFocus();
+  const chosen = getComputedStyle(dayCell(8).element());
+  expect([
+    chosen.outlineStyle,
+    chosen.outlineWidth,
+    chosen.outlineOffset,
+    chosen.outlineColor,
+  ]).toEqual(["solid", "2px", "2px", FOCUS]);
+  await userEvent.keyboard("{ArrowRight}");
+  await expect.element(dayCell(9)).toHaveFocus();
+  expect(getComputedStyle(dayCell(9).element()).outlineOffset).toBe("2px");
+  expect(getComputedStyle(dayCell(8).element()).outlineStyle).toBe("none");
+});
+
+test("scrolls the calendar within its popover in a window shorter than it", async () => {
+  await page.viewport(320, 240);
+  const screen = await render(<Period initial={{ start: "2099-11-08" }} />);
+
+  await fieldOf(screen, "From").getByRole("button").click();
+
+  const popover = calendar().element().parentElement;
+  if (popover === null) {
+    throw new Error("No popover");
+  }
+  expect(getComputedStyle(popover).overflowY).toBe("auto");
+  expect(popover.scrollHeight).toBeGreaterThan(popover.clientHeight);
+  expect(popover.getBoundingClientRect().bottom).toBeLessThanOrEqual(240);
 });

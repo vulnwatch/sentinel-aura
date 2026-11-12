@@ -41,7 +41,7 @@ import {
   Popover,
 } from "react-aria-components";
 import { formatDate } from "./date-time";
-import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING } from "./focus-ring";
 import { Tooltip } from "./tooltip";
 
 // A range of dates of a filter of a list, each date field with its calendar
@@ -248,7 +248,7 @@ function Field({
         ref={popoverRef}
         offset={4}
         containerPadding={8}
-        className="rounded-lg border border-border bg-surface p-3 shadow-lg outline-none"
+        className="overflow-y-auto rounded-lg border border-border bg-surface p-3 shadow-lg outline-none"
       >
         <Dialog className="outline-none">
           <Calendar
@@ -260,7 +260,7 @@ function Field({
           >
             <header className="flex items-center justify-between gap-2">
               <MonthButton slot="previous" />
-              <Heading className="text-14 font-semibold text-fg" />
+              <Heading className="flex-1 text-center text-14 font-semibold text-fg" />
               <MonthButton slot="next" />
             </header>
             {/* Six weeks high in every month, so that the calendar keeps
@@ -281,7 +281,7 @@ function Field({
                       className={({ isSelected, isDisabled, isOutsideMonth }) =>
                         [
                           "flex size-8 items-center justify-center rounded-md text-14 tabular-nums",
-                          INSIDE_FOCUS_RING,
+                          FOCUS_RING,
                           isOutsideMonth
                             ? "invisible"
                             : isSelected
@@ -436,7 +436,7 @@ export function DateRangeFilter({
       typedStart.kind === "date" ? typedStart.date.toString() : undefined;
     const range = {
       // The default of the start is what the start shows without a bound.
-      start: startDate === shown.startDefault ? undefined : startDate,
+      start: startDate === startDefault ? undefined : startDate,
       end: typedEnd.kind === "date" ? typedEnd.date.toString() : undefined,
     };
     setOwnApply(range);

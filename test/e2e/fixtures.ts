@@ -155,11 +155,11 @@ function avatars(page: Page): Locator {
 // (src/components/date-time.tsx); a date field shows a date in its parts,
 // each a spinbutton of a type, day, month, or year, unless it shows its
 // placeholder; and a calendar shows the current month by default, in its
-// heading and its days.
+// heading and in its days, which take the same room in every month.
 function dateTimes(page: Page): Locator {
   return page
     .locator("time, [role=spinbutton][data-type]:not([data-placeholder])")
-    .or(page.getByRole("application").locator("header h2, table"));
+    .or(page.getByRole("application").locator("header h2, div:has(> table)"));
 }
 
 // The style of the dates while a reference is taken: each takes a fixed

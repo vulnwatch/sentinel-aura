@@ -947,6 +947,8 @@ test.describe("the audit log", () => {
     await expect(
       page.getByRole("dialog", { name: /Calendar From/ }),
     ).toBeVisible();
+    // Its chosen day, the first day, in the accent fill.
+    await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(from.getByRole("spinbutton").last()).toBeFocused();
     for (let removed = 0; removed < 10; removed += 1) {
@@ -988,6 +990,10 @@ test.describe("the audit log", () => {
     await page.getByRole("button", { name: "Filters" }).click();
     const filters = page.getByRole("dialog", { name: "Filters" });
     const to = filters.getByRole("group", { name: "To" });
+    // From shows the day of the first event once its read has arrived.
+    await expect(filters.getByRole("group", { name: "From" })).toHaveText(
+      `${day}/${month}/${year}`,
+    );
 
     // A click on its day opens the calendar of To on the current month,
     // with the focus on today.

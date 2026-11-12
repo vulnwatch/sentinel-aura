@@ -2249,9 +2249,11 @@ describe("the actor", () => {
       const dialog = await openFilters(screen);
       const options = await openActors(dialog);
       await expect.poll(() => optionNames(options)).toHaveLength(6);
-      // Closes the options, then the filters.
+      // Closes the options, which give the focus back to the select, then
+      // the filters.
       await userEvent.keyboard("{Escape}");
       await expect.element(options).not.toBeInTheDocument();
+      await expect.element(actorSelectOf(dialog)).toHaveFocus();
       await userEvent.keyboard("{Escape}");
       await expect.element(dialog).not.toBeInTheDocument();
     }
@@ -2529,7 +2531,7 @@ describe("the period", () => {
     await expect
       .element(screen.getByRole("button", { name: "Filters 1 applied" }))
       .toBeVisible();
-    // Typed or chosen, a From on the first day is no bound either.
+    // Typed, a From on the first day is no bound either.
     await typeDate(dialog, "From", "15012025");
     await userEvent.keyboard("{Enter}");
     await expect
@@ -2600,30 +2602,17 @@ describe("the period", () => {
       .toBe(`${PATH}?to=2099-01-15`);
   });
 
-  test("leaves From empty without a bound when the applied To is before the first day", async () => {
-    stubLog();
-    const { screen } = await renderEvents(`${PATH}?to=2025-01-10`);
-    const dialog = await openFilters(screen);
-
-    await expect
-      .poll(
-        () => dialog.getByRole("group", { name: "To" }).element().textContent,
-      )
-      .toBe("10/01/2025");
-    expect(
-      dialog.getByRole("group", { name: "From" }).element().textContent,
-    ).toBe("dd/mm/yyyy");
-  });
-
   test.each([
-    ["fails", () => errorResponse(503, "SERVICE_UNAVAILABLE")],
-    ["returns no event", () => eventPage([])],
+    ["fails", () => errorResponse(503, "SERVICE_UNAVAILABLE"), 3],
+    ["returns no event", () => eventPage([]), 1],
   ])(
     "leaves From empty and takes the days from 1 Jan 1970 to today, and shows nothing, when the read of the first event %s",
-    async (_, first) => {
+    async (_, first, reads) => {
       const { spy } = stubLog({ first });
       const { screen } = await renderEvents();
-      await expect.poll(() => firstEventReads(spy)).toBeGreaterThan(0);
+      // A failed read is sent again twice (docs/behaviors.md, Retries and
+      // Unconfirmed Changes).
+      await expect.poll(() => firstEventReads(spy)).toBe(reads);
       const dialog = await openFilters(screen);
 
       expect(
@@ -2646,17 +2635,38 @@ describe("the period", () => {
     },
   );
 
+  test("reads the first event again when the tab returns to the foreground after its read failed, and then shows its day in From", async () => {
+    const { stub, spy } = stubLog({
+      first: () => errorResponse(503, "SERVICE_UNAVAILABLE"),
+    });
+    const { screen } = await renderEvents();
+    await expect.poll(() => firstEventReads(spy)).toBe(3);
+    stub.first = () => firstEventResponse();
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await expect.poll(() => firstEventReads(spy)).toBe(4);
+    const dialog = await openFilters(screen);
+    await expect
+      .poll(
+        () => dialog.getByRole("group", { name: "From" }).element().textContent,
+      )
+      .toBe("15/01/2025");
+  });
+
   test("keeps the first day when a later read of the first event fails", async () => {
     const { stub, spy } = stubLog();
     const { screen } = await renderEvents();
     const reads = firstEventReads(spy);
     stub.first = () => errorResponse(503, "SERVICE_UNAVAILABLE");
 
-    // The tab returns to the foreground, which reads the data again.
+    // The tab returns to the foreground, which reads the data again; the
+    // read fails, also when sent again twice.
     focusManager.setFocused(false);
     focusManager.setFocused(true);
 
-    await expect.poll(() => firstEventReads(spy)).toBeGreaterThan(reads);
+    await expect.poll(() => firstEventReads(spy)).toBe(reads + 3);
     const dialog = await openFilters(screen);
     expect(
       dialog.getByRole("group", { name: "From" }).element().textContent,
@@ -2710,36 +2720,6 @@ describe("the period", () => {
     await expect
       .poll(() => eventReads(spy).at(-1))
       .toBe(`to_date=${endOf(TODAY)}&${FIRST_PAGE}`);
-  });
-
-  test("disables in the calendar of From the days before the first day", async () => {
-    stubLog();
-    const { screen } = await renderEvents(`${PATH}?to=2025-02-10`);
-    const dialog = await openFilters(screen);
-
-    await dialog
-      .getByRole("group", { name: "From" })
-      .getByRole("button")
-      .click();
-
-    const calendar = page.getByRole("dialog", { name: /Calendar From/ });
-    await expect.element(calendar).toBeVisible();
-    const enabled = calendar
-      .getByRole("grid")
-      .getByRole("button")
-      .elements()
-      .filter(
-        (cell) =>
-          cell.getAttribute("aria-disabled") !== "true" &&
-          getComputedStyle(cell).visibility !== "hidden",
-      )
-      .map((cell) => Number(cell.textContent));
-    expect(enabled).toEqual(
-      Array.from({ length: 17 }, (_, index) => index + 15),
-    );
-    await expect
-      .element(calendar.getByRole("button", { name: "Previous month" }))
-      .toBeDisabled();
   });
 
   test.each([

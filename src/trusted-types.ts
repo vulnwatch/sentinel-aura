@@ -29,8 +29,8 @@ export function emptyHtmlOnly(input: string): string | null {
 }
 
 // Creates the policy in a window, the page's by default, unless its browser
-// has no Trusted Types, such as the Firefox Extended Support Release, which
-// then requires none, or the policy exists already.
+// has no Trusted Types, which it then does not require either, or the policy
+// exists already.
 export function createDefaultPolicy(
   target: Pick<Window, "trustedTypes"> = window,
 ): void {

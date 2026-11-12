@@ -1085,10 +1085,13 @@ function TicketAuditLog() {
   // Ordering, Locking, and Rollback). Until a read of it succeeds, the period
   // takes the days from FIRST_DAY, and its failure shows nowhere
   // (docs/behaviors.md, Where Errors Appear).
-  const created = useListTicketEvents(ticketId, {
-    event_type: ["ticket_created"],
-    per_page: 1,
-  }).data?.data[0]?.created_at;
+  // As its failure shows nowhere, the screen reads it again when the tab
+  // returns to the foreground also without data (src/query-client.ts).
+  const created = useListTicketEvents(
+    ticketId,
+    { event_type: ["ticket_created"], per_page: 1 },
+    { query: { refetchOnWindowFocus: true } },
+  ).data?.data[0]?.created_at;
   const firstDay = created === undefined ? undefined : dayOf(created).date;
   const now = today(getLocalTimeZone()).toString();
   // Today, or a first day after it, which a clock of the browser behind

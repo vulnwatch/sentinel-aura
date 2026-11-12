@@ -1399,7 +1399,8 @@ states it, such as that of a Ticket; the other audit logs are tables
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would
-  pass the end of the window. At its top, the month and the year in
+  pass the end of the window; its content scrolls within it in a window
+  shorter than it is. At its top, the month and the year in
   `text-14`, weight 600, between Previous and Next, quiet icon buttons
   32 px square with `chevron-left` and `chevron-right` at 16 px in
   `fg-muted`, named "Previous month" and "Next month", which their tooltips
