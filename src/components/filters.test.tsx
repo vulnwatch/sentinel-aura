@@ -541,10 +541,12 @@ describe("a select", () => {
     await expect
       .element(page.getByRole("listbox", { name: "Actor" }))
       .toBeVisible();
-    await userEvent.keyboard("rob");
+    // The start of the text of Ana Garcia, and not of the value of her
+    // option, agarcia, nor of Any actor, which has the focus.
+    await userEvent.keyboard("ana");
     await userEvent.keyboard("{Enter}");
 
-    expect(onChange).toHaveBeenCalledExactlyOnceWith("rlee");
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("agarcia");
   });
 
   test("shows what the screen gives for a value that applies but is not among its options", async () => {
