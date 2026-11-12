@@ -332,12 +332,13 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   the end of its line, or of the next line where the line wraps: on a Ticket
   with a CVE, an actionable, eligible Product of an actionable Fixed track,
   with a release that is not "Released" (Sentinel
-  `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved). It shows `triangle-alert` at 14 px in `warning-icon`, then,
-  4 px later, "Not released", or "Release not observed" where Sentinel does
-  not observe the QA of the track, such as below a Git track, in `text-13`,
-  weight 500, `warning-on-soft`, so that an analyst sees which Product the
-  Ticket waits for. Another Product shows no release on its line; a Product
-  of a track without due dates, which has no release, shows none either.
+  `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved). It shows
+  `triangle-alert` at 14 px in `warning-icon`, then, 4 px later, "Not
+  released", or "Release not observed" where Sentinel does not observe the
+  QA of the track, such as below a Git track, in `text-13`, weight 500,
+  `warning-on-soft`, so that an analyst sees which Product the Ticket waits
+  for. Another Product shows no release on its line; a Product of a track
+  without due dates, which has no release, shows none either.
 - The name of a Product opens its details (`docs/design-system.md`, Menus,
   Popovers, and Tooltips): its CPE in monospace below the name, then
   Eligibility, "Eligible" or "Not eligible", followed by " · automatic", or
