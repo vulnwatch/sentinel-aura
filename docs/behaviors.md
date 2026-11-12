@@ -509,6 +509,15 @@ actor of a recorded action (Representation of a User) are exceptions.
 
 - A date field shows the day, the month, and the year in this order, and a
   time field the 24-hour clock, both in the time zone of the browser.
+- A date field also offers a calendar. A click anywhere on the field, the
+  button at its end, which Tab reaches after the parts of the date, or
+  Alt+Down Arrow opens it on the month of the field's date, or without one
+  on the current month, or the nearest month that the field takes; the days
+  that the field does not take are disabled. Choosing a day sets the date
+  and closes the calendar. Escape closes it without a change. Either way the
+  focus returns where it was in the field, such as the part that the user
+  clicked, so that the user can still type the date; from the keyboard, Tab
+  reaches each part of it without opening the calendar.
 - A date that the user enters as a filter covers that whole day in the time
   zone of the browser: the URL keeps the date, and the UI sends the first and
   the last instant of that day converted to UTC (Sentinel `docs/api-spec.md`,

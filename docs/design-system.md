@@ -442,7 +442,8 @@ that the code imports ship.
 | Create | `plus` |
 | Filters | `list-filter` |
 | The sort of a column, ascending and descending | `arrow-up`, `arrow-down` |
-| Previous and next page | `chevron-left`, `chevron-right` |
+| Previous and next page, previous and next month of a calendar | `chevron-left`, `chevron-right` |
+| The calendar of a date field | `calendar` |
 | Open a list of options | `chevron-down` |
 | Dismiss or clear | `x` |
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
@@ -1093,10 +1094,16 @@ A list screen, such as the Ticket list, shows from top to bottom:
      (Forms), and a range of dates two date fields 160 px wide, 12 px apart,
      each named by its end, such as From and To; a select and each date field
      has its name above it in the style of the name of a group of
-     checkboxes, 4 px apart. A range whose start follows its end is not
-     applied, and its end shows the error of a field (Forms) until the user
-     changes either date, or until the focus leaves both fields, which return
-     to the applied range, as a typed value that is not applied does.
+     checkboxes, 4 px apart. A date field also applies when the user chooses
+     a day of its calendar (Forms), which in either field of a range applies
+     both, and the calendar of the start disables the days after the applied
+     end, that of the end the days before the applied start. A range whose
+     start follows its end is not applied, and its end shows the error of a
+     field (Forms) until the user changes either date, or until the focus
+     leaves both fields, which return to the applied range, as a typed value
+     that is not applied does. The calendar is part of its field: the focus
+     in it has not left the field, and Escape closes the calendar alone,
+     not Filters.
    - Clear filters, a quiet button 32 px high with `x`, removes the search and
      the filters, and keeps the view and the sorting of the list.
 3. The table (Tables), 16 px below.
@@ -1380,8 +1387,26 @@ states it, such as that of a Ticket; the other audit logs are tables
   checkbox or a radio button is 16 px, with a `border-strong` boundary, a
   4 px radius or round, and when selected an `accent` fill with its mark in
   `on-accent`; a date field shows its parts as `docs/behaviors.md` (Input)
-  orders them; and a search field starts with `search` at 16 px and, with a
-  value, ends with a clear button.
+  orders them and ends with a quiet icon button 24 px square with `calendar`
+  at 16 px in `fg-muted`, named "Open the calendar", which its tooltip
+  shows; and a search field
+  starts with `search` at 16 px and, with a value, ends with a clear button.
+- The calendar of a date field opens in a popover (Menus, Popovers, and
+  Tooltips) with 12 px of padding, below the field and aligned to its start,
+  or above it where the window has no room below. At its top, the month and
+  the year in `text-14`, weight 600, between Previous and Next, quiet icon
+  buttons 32 px square with `chevron-left` and `chevron-right` at 16 px in
+  `fg-muted`, named "Previous month" and "Next month", which their tooltips
+  show, each disabled where the month beyond it holds no day that the field
+  takes. Below, 8 px apart, the days of the month in
+  weeks from Monday, under the initials of the days of the week in
+  `text-12`, weight 500, `fg-muted`: each day a cell 32 px square with a
+  6 px radius, its number in `text-14` and `tabular-nums`, `surface-hover`
+  under the pointer and the focus ring on keyboard focus (Focus and Motion).
+  The chosen day has an `accent` fill with its number in `on-accent`, today
+  its number at weight 600, and a day that the field does not take shows
+  at 60 % opacity, as a disabled button does (Buttons and Links). The days
+  of the months around it are left out.
 - A switch turns a choice of a screen on or off at once, outside a form, such
   as showing the hidden records of a part: a rail 28 by 16 px, round, with a
   1 px `border-strong` boundary on `neutral-soft` and a knob of 12 px in

@@ -387,7 +387,8 @@ that needs it; content of another kind needs a new row first.
 - Lint rejects `dangerouslySetInnerHTML` and evaluated code, and in
   production the Content Security Policy with Trusted Types blocks the
   injection of HTML into the page (`docs/architecture.md`, Security Headers).
-  Neither replaces this rule.
+  Neither replaces this rule. The Trusted Types policy `default`, which lets
+  a library empty an element, allows no exception to it either.
 
 ### Links from the API
 
