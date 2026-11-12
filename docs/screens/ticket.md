@@ -448,17 +448,18 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
     from that of the first event of the Ticket, in the time zone of the
     browser as the timeline groups it, to today: the first event is its
     `ticket_created` (Sentinel `docs/features/tickets/ticket-audit-log.md`,
-    Cross-Event Ordering, Locking, and Rollback), which the screen reads
-    with the events, as the one event of
+    Cross-Event Ordering, Locking, and Rollback), which the screen reads as
+    it reads its data, as the one event of
     `event_type=ticket_created&per_page=1` from List Ticket Events
     (`docs/behaviors.md`, Loading). Without a bound, From shows the day of
     the first event, unless the applied To is before it, and To stays
     empty, up to today: the period that the timeline shows without a
-    filter. A From on the day of the first event that the fields apply is
-    no bound: it sends no `from_date` and leaves the URL without `from`, so
-    it does not count among the filters that apply; a field that the user
-    emptied, which Enter also turns into no bound, shows the day of the
-    first event again once the focus leaves both fields. While that read
+    filter. Whenever the fields apply the period, a From on the day of the
+    first event, typed, chosen, or unchanged from the URL, is no bound: it
+    sends no `from_date` and leaves the URL without `from`, so it does not
+    count among the filters that apply. A From that the user emptied and
+    applied with Enter shows the day of the first event again once the
+    focus leaves both fields. While that read
     loads, when it fails, and when it returns no event, From stays empty and
     the fields take the days from 1 Jan 1970 to today, and a failure shows
     nowhere (`docs/behaviors.md`, Where Errors Appear); a day that arrives

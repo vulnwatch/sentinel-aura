@@ -1082,9 +1082,9 @@ A list screen, such as the Ticket list, shows from top to bottom:
      chooses an option; and a field that the user types into, such as a text
      or a date field, when the user presses Enter, or a date field when the
      user chooses a day of its calendar (Forms), which in either field of a
-     range, such as two dates, applies both. A date that the user did not
-     change, such as one of the URL that its field does not take, applies
-     again as it is. A typed value that is not applied
+     range, such as two dates, applies both. A date of the URL that its field
+     does not take, which the user did not change, applies again as it is. A
+     typed value that is not applied
      returns to the applied one when the focus leaves its field, or, for a
      range, both of its fields. A filter whose values the contract lists, such
      as a status, is a group of checkboxes (Forms): its name in `text-12`,
@@ -1099,7 +1099,9 @@ A list screen, such as the Ticket list, shows from top to bottom:
      has its name above it in the style of the name of a group of
      checkboxes, 4 px apart. The calendar of the start also disables the
      days after the applied end, and that of the end the days before the
-     applied start, days that the fields still take when typed: a range
+     applied start, while that other date is a day that its own field
+     takes, so that a calendar always enables a day; these are days that
+     the fields still take when typed: a range
      whose start follows its end is not applied, and its end shows the error
      of a field (Forms) until the user changes either date, or until the focus
      leaves both fields, which return to the applied range, as a typed value
@@ -1391,19 +1393,18 @@ states it, such as that of a Ticket; the other audit logs are tables
   `on-accent`; a date field shows its parts as `docs/behaviors.md` (Input)
   orders them and ends with a quiet icon button 24 px square with `calendar`
   at 16 px in `fg-muted`, named "Calendar" followed by the name of its
-  field, such as "Calendar From", and whose tooltip shows "Calendar"; and a
+  field, such as "Calendar From", which its tooltip shows; and a
   search field starts with `search` at 16 px and, with a value, ends with a
   clear button.
 - The calendar of a date field opens in a popover (Menus, Popovers, and
-  Tooltips) with 12 px of padding, below the field and aligned to its start,
-  or above it where the window has no room below, and moved toward the
-  start where it would pass the end of the window. At its top, the month
-  and the year in `text-14`, weight 600, between Previous and Next, quiet
-  icon buttons 32 px square with `chevron-left` and `chevron-right` at
-  16 px in `fg-muted`, named "Previous month" and "Next month", which their
-  tooltips show, each disabled where the months beyond it hold no day that
-  the calendar enables; the one that becomes disabled while it holds the
-  focus hands the focus to the days. Below, 8 px apart, the days of the
+  Tooltips), below the field and aligned to its start, or above it where
+  the window has no room below, and moved toward the start where it would
+  pass the end of the window. At its top, the month and the year in
+  `text-14`, weight 600, between Previous and Next, quiet icon buttons
+  32 px square with `chevron-left` and `chevron-right` at 16 px in
+  `fg-muted`, named "Previous month" and "Next month", which their tooltips
+  show, each disabled where the months beyond it hold no day that the
+  calendar enables. Below, 8 px apart, the days of the
   month in weeks from Monday, under the initials of the days of the week in
   `text-12`, weight 500, `fg-muted`: each day a cell 32 px square with a
   6 px radius, its number in `text-14` and `tabular-nums`, `surface-hover`
