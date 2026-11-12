@@ -452,7 +452,7 @@ that the code imports ship.
 | Dismiss or clear | `x` |
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
 | A deadline that has passed, an overdue milestone | `clock-alert` |
-| A record that keeps another from progressing, such as a Product whose missing release keeps its Ticket from Resolved | `triangle-alert` |
+| The missing release of a Product that keeps its Ticket from Resolved | `triangle-alert` |
 | The other statuses of a milestone: done, pending, not applicable, not observed (Track Milestones); an observation never made (Other Values) | `circle-check`, `circle`, `circle-minus`, `circle-dashed` |
 | The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
 | A confidential Ticket | `lock` |
@@ -907,8 +907,9 @@ Milestones), show as a pipeline: the icon of the status of each phase at
   icon of the status starts the line, so the state takes no icon of its own
   (Deadline Badge). A status that the pinned contract does not list shows as
   received (`docs/behaviors.md`, Unknown Values).
-- A screen document states where the pipeline shows, and what more Phases
-  holds, such as the requests that a track has in a phase.
+- A screen document states where the pipeline shows, what more Phases holds,
+  such as the requests that a track has in a phase, and what of it the
+  accessible name of the pipeline states after the state of each phase.
 
 ### Confidential Tickets
 

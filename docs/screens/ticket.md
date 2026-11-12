@@ -276,9 +276,11 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   at its left, on one line that wraps where it is too narrow: its reference
   at weight 500; "Needs your action" when it waits for the signed-in user
   (below); and at the end, in `text-14`, its pipeline or its delivery, then,
-  12 px later, its affectedness, in a place at least 104 px wide, wider than
-  Not affected, so that the pipelines and the affectedness of the tracks line
-  up. IBS and Git tracks show alike.
+  12 px later, its affectedness, at the start of a place at least 104 px
+  wide, wider than Not affected, so that the pipelines and the affectedness
+  of the tracks line up. Where the line wraps, the pipeline or the delivery
+  and the affectedness each stay at the end of their line. IBS and Git tracks
+  show alike.
   - The affectedness is a value with the dot of its tone
     (`docs/design-system.md`, Other Values): Analysis `info`, Affected
     `warning`, Not affected and Fixed `success`, Won't fix `neutral`.
@@ -327,10 +329,10 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   not take part or is not eligible, or whose track has no due dates, has no
   release unless it is released.
 - A Product that keeps the Ticket from Resolved also shows its release at
-  the end of its line: on a Ticket with a CVE, an actionable, eligible
-  Product of an actionable Fixed track, with a release that is not
-  "Released" (Sentinel `docs/features/tickets/tickets.md`, Gate: Analyzed →
-  Resolved). It shows `triangle-alert` at 14 px in `warning-icon`, then,
+  the end of its line, or of the next line where the line wraps: on a Ticket
+  with a CVE, an actionable, eligible Product of an actionable Fixed track,
+  with a release that is not "Released" (Sentinel
+  `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved). It shows `triangle-alert` at 14 px in `warning-icon`, then,
   4 px later, "Not released", or "Release not observed" where Sentinel does
   not observe the QA of the track, such as below a Git track, in `text-13`,
   weight 500, `warning-on-soft`, so that an analyst sees which Product the
@@ -342,8 +344,7 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   " · set by hand" after `user-pen`; Lifecycle, the phase of `lifecycle_phase`
   (Pre-release, General support, Extended support, Reactive support, EOL),
   or "Not available" without lifecycle data; Release, where it has one
-  (above), "Released" with its date and time, "Not released", or "Not
-  observed"; and, for a Product that is not actionable, Actionable, "No,"
+  (above); and, for a Product that is not actionable, Actionable, "No,"
   followed by the reason that Sentinel gives, the first that applies in the
   order "its package is excluded", "its track is excluded", "it is excluded
   from this track", and "it has reached its end of life" (Sentinel
@@ -852,22 +853,22 @@ Access; Revoke Access):
   Links to Other Sites; Loading and Empty States; Dates and Times;
   Confirmations and Outcomes; Accessibility; Wording; Representation of a
   User
-- `docs/design-system.md` — Font; Focus and Motion; Main Content; Values;
-  Severity; Deadline Badge; Track Milestones; Labels; Other Values; Buttons
-  and Links; Lists; Tables; Timelines; Detail Screens; Forms; Dialogs;
-  Messages; Loading; Empty States; Errors in Place of Content; Menus,
-  Popovers, and Tooltips; Icons by Need; Representation of a User
+- `docs/design-system.md` — Tones; Font; Focus and Motion; Main Content;
+  Values; Severity; Deadline Badge; Track Milestones; Labels; Other Values;
+  Buttons and Links; Lists; Tables; Timelines; Detail Screens; Forms;
+  Dialogs; Messages; Loading; Empty States; Errors in Place of Content;
+  Menus, Popovers, and Tooltips; Icons by Need; Representation of a User
 - Sentinel `docs/features/tickets/ticket-audit-log.md` — Event Type Contract
   (Rules); Canonical Automatic Comment Vocabulary; Cross-Event Ordering,
   Locking, and Rollback; detail JSONB Schema Contract; List Ticket Events;
   List Ticket Actors
 - Sentinel `docs/features/tickets/ticket-references.md` — ReferenceType
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
-  Transitions; Gate: Analyzed → Resolved; Duplicate Handling; Confidential Tickets (Identifier
-  Disclosure Boundary; Coordinated Release Date); Ignore Reason; Response
-  Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket; List Tickets
-  (Duplicate filter); Set Confidentiality; Access Grant Management (List
-  Access Grants; Grant Access; Revoke Access)
+  Transitions; Gate: Analyzed → Resolved; Duplicate Handling; Confidential
+  Tickets (Identifier Disclosure Boundary; Coordinated Release Date); Ignore
+  Reason; Response Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket;
+  List Tickets (Duplicate filter); Set Confidentiality; Access Grant
+  Management (List Access Grants; Grant Access; Revoke Access)
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Null Due
   Dates); Track Milestones (Observability of Later Phases; Completion
   Evidence); Ticket Current Phase

@@ -899,7 +899,8 @@ function receivesFix(product: ProductDetail): boolean {
   return product.actionable && product.eligible;
 }
 
-// The release of a Product that its line and its details show: when it was
+// The release of a Product that its details show, and its line where the
+// Product keeps the Ticket from Resolved (ProductItem): when it was
 // released, on every released Product; and, on a Product that receives the
 // fix under a track that expects one (expectsFix), that it is not released
 // where Sentinel observes the QA of the track, which the release of its
@@ -1047,9 +1048,9 @@ interface ProductDetailsProps {
 
 // The details of a Product, as its popover shows them: its eligibility,
 // automatic or set by hand; its lifecycle phase, or "Not available" without
-// lifecycle data; its release, where its line shows one; and, for a Product
-// that takes no part, why. Values that the pinned contract does not list
-// show as received.
+// lifecycle data; its release, where it has one (releaseOf); and, for a
+// Product that takes no part, why. Values that the pinned contract does not
+// list show as received.
 function ProductDetails({ product, release }: ProductDetailsProps) {
   return (
     <DescriptionList>
@@ -1114,7 +1115,8 @@ interface ProductItemProps {
 // (releaseOf) shows in its details; at the end of its line only when the
 // Product keeps the Ticket from Resolved: triangle-alert at 14 px in
 // warning-icon, then "Not released", or "Release not observed", in text-13,
-// weight 500, warning-on-soft.
+// weight 500, warning-on-soft, at the end of the next line where the line
+// wraps.
 function ProductItem({
   product,
   trackHidden,
@@ -1155,7 +1157,7 @@ function ProductItem({
         />
       </span>
       {blocks && (
-        <span className="inline-flex items-center gap-1 text-13 font-medium text-warning-on-soft">
+        <span className="ms-auto inline-flex items-center gap-1 text-13 font-medium text-warning-on-soft">
           <TriangleAlert
             aria-hidden
             className="size-3.5 shrink-0 text-warning-icon"

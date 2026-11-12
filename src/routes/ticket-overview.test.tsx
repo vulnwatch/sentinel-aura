@@ -620,6 +620,7 @@ describe("the part", () => {
         tracks: [
           fictionalTrack({
             reference: "SUSE:FLES-15-SP7:Update:Fictional:Very:Long:Reference",
+            status: "fixed",
             products: [
               fictionalProduct({
                 product_name: `Fictional Linux Enterprise ${"Server".repeat(8)} 15 SP7`,
@@ -651,11 +652,19 @@ describe("the part", () => {
     const reference = boxOf(
       track.getByText("SUSE:FLES-15-SP7:Update:Fictional:Very:Long:Reference"),
     );
-    const affectedness = boxOf(track.getByText("Affected", { exact: true }));
+    const affectedness = boxOf(track.getByText("Fixed", { exact: true }));
     expect(pipeline.top).toBeGreaterThanOrEqual(reference.bottom);
     expect(pipeline.right).toBeCloseTo(end, 0);
     expect(affectedness.top).toBeGreaterThanOrEqual(pipeline.bottom);
     expect(affectedness.left).toBeCloseTo(end - 104 + 8 + 6, 0);
+    // The release of its Product, which keeps the Ticket from Resolved, at
+    // the end of the line below its name.
+    const product = track.getByRole("listitem");
+    const release = boxOf(product.getByText("Not released", { exact: true }));
+    expect(release.top).toBeGreaterThanOrEqual(
+      boxOf(product.getByRole("button")).bottom,
+    );
+    expect(release.right).toBeCloseTo(boxOf(product).right, 0);
   });
 });
 
@@ -1249,11 +1258,20 @@ describe("a track", () => {
 
     const { screen } = await renderTree();
 
-    expect(
-      trackOf(screen, "SUSE:FLES-15-SP7:Update")
-        .getByText("Delivery")
-        .elements(),
-    ).toHaveLength(0);
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    // Neither on its line nor in the name of its pipeline, nor in Phases.
+    const pipeline = track.getByRole("button", { name: /^Phases of/ });
+    await expect.element(pipeline).toBeVisible();
+    expect(track.getByText("Delivery").elements()).toHaveLength(0);
+    expect(pipeline.element().getAttribute("aria-label")).not.toMatch(
+      /delivery/,
+    );
+
+    await pipeline.click();
+
+    const phases = screen.getByRole("dialog", { name: "Phases" });
+    await expect.element(phases).toHaveFocus();
+    expect(phases.getByText("Delivery").elements()).toHaveLength(0);
   });
 
   test("shows only what happened on a track without due dates, whose Ticket has no SLA: no pipeline, no Delivery Pending, and no release that is due", async () => {

@@ -554,6 +554,7 @@ test.describe("for an analyst", () => {
     await expect(phases).toContainText("Submission · Maintainer");
     await expect(phases).toContainText(/DeliveryPending$/);
     await expectAccessible(page);
+    await expectSources(page);
     await expectScreenshot(page, "ticket-phases.png");
     await page.keyboard.press("Escape");
     await expect(pipeline).toBeFocused();
@@ -624,6 +625,7 @@ test.describe("for an analyst", () => {
     await expect(pipeline).toBeVisible();
     await expectSources(page);
     await expectScreenshot(page, "ticket-unreleased-product.png");
+    await expectAccessible(page);
 
     await packages
       .getByRole("button", { name: "Fictional Linux Enterprise Server 16.0" })
@@ -636,7 +638,6 @@ test.describe("for an analyst", () => {
     await expect(product.getByRole("definition").last()).toHaveText(
       "Not observed",
     );
-    await expectAccessible(page);
   });
 
   test("shows the hidden records of a Ticket in gray, with their label", async ({

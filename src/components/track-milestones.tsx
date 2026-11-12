@@ -178,7 +178,7 @@ export function TrackDelivery({ status }: TrackDeliveryProps) {
 
 interface PhasesProps {
   phases: readonly PhaseView[];
-  // The delivery status of the track, where its line shows it.
+  // The delivery status of the track, where the screen shows it.
   delivery: string | undefined;
 }
 
