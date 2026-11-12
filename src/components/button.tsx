@@ -18,9 +18,10 @@ export type ButtonProps = Omit<
   // Primary for the main action of a screen, a form, or a dialog, one per
   // screen part; secondary for every other action, such as Try again; quiet,
   // without a fill or a boundary, for Cancel in a form, Clear filters, and
-  // Refetch all of the sources of a CVE (docs/design-system.md, Buttons and
-  // Links).
-  variant?: "primary" | "secondary" | "quiet";
+  // Refetch all of the sources of a CVE; danger for the button that confirms
+  // an action that cannot be undone or that ends another person's access
+  // (docs/design-system.md, Buttons and Links).
+  variant?: "primary" | "secondary" | "quiet" | "danger";
   // Large in forms and dialogs, 40 px high; small in the toolbar of a list,
   // 32 px high, in text-14; medium elsewhere, 36 px high.
   size?: "small" | "medium" | "large";
@@ -33,6 +34,8 @@ const VARIANTS = {
   secondary:
     "border border-border-strong bg-surface text-fg data-hovered:bg-surface-hover",
   quiet: "text-fg data-hovered:bg-surface-hover",
+  danger:
+    "bg-danger-solid text-on-danger-solid data-hovered:bg-danger-solid-hover",
 } as const;
 
 const SIZES = {

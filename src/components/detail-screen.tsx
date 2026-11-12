@@ -177,7 +177,7 @@ export function Part({
   actions,
   children,
 }: PartProps) {
-  const headingId = `${id}-heading`;
+  const headingId = sectionHeadingId(id);
   return (
     <section id={id} aria-labelledby={headingId} className="@container">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -192,6 +192,12 @@ export function Part({
       <div className="mt-4">{children}</div>
     </section>
   );
+}
+
+// The identifier of the heading of a part or a section, by which an element
+// of it, such as a group of users, is named.
+export function sectionHeadingId(id: string): string {
+  return `${id}-heading`;
 }
 
 interface SideSectionProps {
@@ -221,7 +227,7 @@ export function SideSection({
 }: SideSectionProps) {
   const ref = useRef<HTMLElement>(null);
   useFocusHeadingOnRemoval(ref);
-  const headingId = `${id}-heading`;
+  const headingId = sectionHeadingId(id);
   return (
     <section ref={ref} id={id} aria-labelledby={headingId}>
       <div className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1">

@@ -46,6 +46,11 @@ import {
 import { Label } from "../components/label";
 import { Link } from "../components/link";
 import { Loading, UpdatingBar } from "../components/loading";
+import {
+  OptionsStatus,
+  userOptionText,
+  UserOptionLabel,
+} from "../components/options";
 import { Pagination } from "../components/pagination";
 import { dataPlace, placeMessage } from "../components/read-view";
 import { FocusHandOff } from "../components/screen-heading";
@@ -55,7 +60,7 @@ import {
   TimelineObject,
   type TimelineEvent,
 } from "../components/timeline";
-import { Actor, displayName, User, type UserFields } from "../components/user";
+import { Actor, type UserFields } from "../components/user";
 import { WebAddress, WebLink } from "../components/web-link";
 import {
   LAST_PAGE,
@@ -964,12 +969,12 @@ const ANY_ACTOR = "any";
 function actorOption(actor: UserFields, you: boolean): SelectOption<string> {
   return {
     value: actor.id,
-    text: `${displayName(actor)} @${actor.username}`,
+    text: userOptionText(actor),
     label: (
-      <span className="inline-flex max-w-full items-center gap-1.5">
-        <User user={actor} withUsername />
-        {you && <Label>You</Label>}
-      </span>
+      <UserOptionLabel
+        user={actor}
+        labels={you ? <Label>You</Label> : undefined}
+      />
     ),
   };
 }
@@ -1003,16 +1008,15 @@ function ActorFilter({ ticketId, selected, onChange }: ActorFilterProps) {
     .map((user) => actorOption(user, false));
   let status: ReactNode = null;
   if (actors.data === undefined) {
-    status =
-      actors.status === "error" ? (
-        <p className="px-2.5 py-2 text-14 text-fg-muted">
-          {placeMessage(actors)}
-        </p>
-      ) : (
-        <div className="px-2.5 py-2">
+    status = (
+      <OptionsStatus>
+        {actors.status === "error" ? (
+          <p>{placeMessage(actors)}</p>
+        ) : (
           <Loading inValue />
-        </div>
-      );
+        )}
+      </OptionsStatus>
+    );
   }
   return (
     <FilterSelect

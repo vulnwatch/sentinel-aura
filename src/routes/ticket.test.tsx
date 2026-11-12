@@ -20,8 +20,10 @@ import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { useShownTicket } from "./ticket";
 import {
+  actorsResponse,
   cvssResponse,
   errorResponse,
+  grantsResponse,
   fictionalCve,
   fictionalSource,
   fictionalTicket,
@@ -87,12 +89,15 @@ interface Stub {
   sources: () => Response | Promise<Response>;
   // The response to Get CNA of the path.
   cna: (path: string) => Response | Promise<Response>;
+  // The response to the read of the users who acted on the Ticket.
+  actors: () => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst, Get Ticket, the read
 // of the duplicates, the read of the CVSS assessments, the read of the
-// sources of the CVE, and Get CNA, as the test sets them, and returns the
-// spy, whose calls name the requests.
+// sources of the CVE, and Get CNA, as the test sets them, the users who
+// acted on a Ticket and its access grants with none, and returns the spy,
+// whose calls name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     ticket: () => ticketResponse(fictionalTicketDetail()),
@@ -100,6 +105,7 @@ function stubTicket(fields: Partial<Stub> = {}) {
     cvss: () => cvssResponse(),
     sources: () => sourcesResponse(),
     cna: () => cnaResponse(),
+    actors: () => actorsResponse([]),
     ...fields,
   };
   return stubApi((request) => {
@@ -108,6 +114,12 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path === TICKETS) {
       return stub.duplicates(request.query);
+    }
+    if (request.path.endsWith("/actors")) {
+      return stub.actors();
+    }
+    if (request.path.endsWith("/access")) {
+      return grantsResponse([]);
     }
     if (request.path.startsWith(`${TICKETS}/`)) {
       return stub.ticket(request.path);
@@ -307,6 +319,7 @@ describe("the read of the Ticket", () => {
         `${TICKETS}?${DUPLICATES_OF_SNTL_12}`,
         CVSS,
         SOURCES,
+        `${TICKETS}/SNTL-12/actors`,
       ]);
   });
 
@@ -1032,7 +1045,12 @@ describe("the details", () => {
       const link = screen.getByRole("link", { name: "SNTL-21" });
       await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-21");
       expect(valueOf(screen, "Original").contains(link.element())).toBe(true);
-      expect(requestsOf(spy)).toEqual([`${TICKETS}/SNTL-12`, CVSS, SOURCES]);
+      expect(requestsOf(spy)).toEqual([
+        `${TICKETS}/SNTL-12`,
+        CVSS,
+        SOURCES,
+        `${TICKETS}/SNTL-12/actors`,
+      ]);
     });
 
     test("link to each duplicate, with the lock of a confidential one", async () => {
@@ -1771,6 +1789,37 @@ describe("the anchor of the URL", () => {
       });
       await expect.element(title).toBeInViewport();
       // Below the tabs, and so below the compact heading with two columns.
+      const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
+      expect(boxOf(title).top).toBeGreaterThanOrEqual(tabs.bottom);
+    },
+  );
+
+  test.each([
+    ["two columns", 1280],
+    ["one column", 900],
+  ])(
+    "shows the participants in %s once their read has settled",
+    async (_, width) => {
+      await page.viewport(width, 300);
+      const actors = later();
+      stubTicket({
+        ticket: () => ticketResponse(fictionalTicketDetail({ cve: longCve() })),
+        actors: () => actors.promise,
+      });
+      const { screen } = await renderTicket("/tickets/SNTL-12#participants");
+      await expect
+        .poll(() => valueOf(screen, "Duplicates").textContent)
+        .toBe("None");
+      expect(window.scrollY).toBe(0);
+
+      actors.resolve(actorsResponse([]));
+
+      await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+      const title = region(screen, "Participants").getByRole("heading", {
+        level: 2,
+        name: "Participants",
+      });
+      await expect.element(title).toBeInViewport();
       const tabs = boxOf(screen.getByRole("tab", { name: "Overview" }));
       expect(boxOf(title).top).toBeGreaterThanOrEqual(tabs.bottom);
     },

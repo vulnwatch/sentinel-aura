@@ -1,5 +1,5 @@
-import { Check, ChevronDown, ListFilter } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { ChevronDown, ListFilter } from "lucide-react";
+import { useId, type ReactNode } from "react";
 import {
   Button as AriaButton,
   CheckboxGroup,
@@ -7,7 +7,6 @@ import {
   DialogTrigger,
   Label,
   ListBox,
-  ListBoxItem,
   ListBoxSection,
   Popover,
   Select,
@@ -15,7 +14,9 @@ import {
 } from "react-aria-components";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
-import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING } from "./focus-ring";
+import { FirstFieldFocus } from "./modal-dialog";
+import { Option, OPTIONS_POPOVER } from "./options";
 
 // The filters of a list (docs/design-system.md, Lists): Filters in the
 // toolbar, which opens a popover with a group of checkboxes for each filter.
@@ -141,10 +142,7 @@ export function FilterSelect<T extends string>({
         </SelectValue>
         <ChevronDown aria-hidden className="size-4 shrink-0 text-fg-muted" />
       </AriaButton>
-      <Popover
-        offset={4}
-        className="max-h-80 max-w-[calc(100vw-1rem)] min-w-(--trigger-width) overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
-      >
+      <Popover offset={4} className={OPTIONS_POPOVER}>
         {/* The status describes the options, so that it is read as the
             menu opens, also when it was there before. */}
         <ListBox aria-describedby={statusId} className="outline-none">
@@ -155,20 +153,13 @@ export function FilterSelect<T extends string>({
               className={index === 0 ? "" : "mt-1 border-t border-border pt-1"}
             >
               {group.map((option) => (
-                <ListBoxItem
+                <Option
                   key={option.value}
                   id={option.value}
                   textValue={option.text}
-                  className={`group flex min-h-9 cursor-default items-center justify-between gap-2 rounded-md px-2.5 text-15 text-fg data-focused:bg-surface-hover ${INSIDE_FOCUS_RING}`}
                 >
-                  <span className="flex min-w-0 items-center">
-                    {option.label}
-                  </span>
-                  <Check
-                    aria-hidden
-                    className="invisible size-4 shrink-0 group-data-selected:visible"
-                  />
-                </ListBoxItem>
+                  {option.label}
+                </Option>
               ))}
             </ListBoxSection>
           ))}
@@ -181,25 +172,6 @@ export function FilterSelect<T extends string>({
         </output>
       </Popover>
     </Select>
-  );
-}
-
-interface FirstFieldFocusProps {
-  children: ReactNode;
-}
-
-// The content of a dialog, whose first field takes the focus as the dialog
-// opens (docs/behaviors.md, Accessibility, Dialogs): a checkbox, or the
-// button of a select.
-function FirstFieldFocus({ children }: FirstFieldFocusProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    ref.current?.querySelector<HTMLElement>("input, button")?.focus();
-  }, []);
-  return (
-    <div ref={ref} className="contents">
-      {children}
-    </div>
   );
 }
 

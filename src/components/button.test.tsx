@@ -118,6 +118,7 @@ test.each([
   ["secondary", "rgb(255, 255, 255)", "rgb(31, 35, 40)", "1px"],
   ["primary", "rgb(9, 105, 218)", "rgb(255, 255, 255)", "0px"],
   ["quiet", "rgba(0, 0, 0, 0)", "rgb(31, 35, 40)", "0px"],
+  ["danger", "rgb(207, 34, 46)", "rgb(255, 255, 255)", "0px"],
 ] as const)(
   "shows the %s variant in its colors",
   async (variant, background, color, border) => {

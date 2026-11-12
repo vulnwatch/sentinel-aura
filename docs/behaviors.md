@@ -141,7 +141,10 @@ document that do not take effect yet.
   `docs/features/identity/rbac.md`, Permission Checking), so these reads keep
   current the elements that depend on the capabilities and on the assignment
   eligibility of the user (`docs/screen-map.md`, Roles; Capabilities of the
-  Signed-in User).
+  Signed-in User). An open dialog is the exception: it keeps offering the
+  actions that it offered as it opened, until it closes, so that the error of
+  a change that Sentinel refuses, such as a `403` after the user lost a role,
+  stays in it (Where Errors Appear); it offers them anew as it opens again.
   While the error of a read of the signed-in user shows in place of the
   screen (Session State), it is read again only with Try again, as a screen's
   read whose error shows in place of content is (Loading).
@@ -653,8 +656,10 @@ it:
   deactivating a user, removing a role, or revoking an access grant, or
   changes the operation of a fetcher, such as disabling it; or
 - discards input that the user has not submitted, such as leaving a form or
-  closing a dialog with changes; a term typed in the search or a filter of a
-  list and not applied is not such input, and is dropped without a question.
+  closing a dialog with changes, or with a user chosen in a combobox of users
+  and not yet submitted; a term typed in the search or a filter of a list and
+  not applied, or in a combobox without a choice, is not such input, and is
+  dropped without a question.
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
@@ -749,14 +754,20 @@ also meets these requirements, which they cannot check:
   shows, such as a `403` after the tab returns to the foreground (Where Errors
   Appear), or because a change of layout moved the section that held it
   (`docs/design-system.md`, Detail Screens), the focus moves to the screen's
-  heading.
+  heading. Inside an open dialog, which keeps the rest of the page out of
+  reach, it moves instead to the element that takes the place of the one that
+  disappeared, such as the same action of the next item of a list, or the
+  field that adds such items when no item follows, and otherwise to the
+  dialog itself.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing; a dialog without a field or a button, such as the explanation of a
   priority (`docs/design-system.md`, Priority), takes the focus itself, and so
-  does a popover that shows the details of a record before its actions
-  (`docs/design-system.md`, Menus, Popovers, and Tooltips), so that they are
-  read first. Escape closes it, and the focus then returns to the element
+  do a popover that shows the details of a record before its actions
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips) and a dialog that
+  shows records without a field, whose only button closes it, such as the
+  access grants of a Ticket for a user who cannot change them, so that they
+  are read first. Escape closes it, and the focus then returns to the element
   that opened it, or follows Focus after an action when that element is
   gone.
 - **Announcements.** A message that appears without a navigation, such as the
@@ -883,11 +894,13 @@ complete profile and its manager, and the signed-in user alike: `id`,
   form too, every user shown, so that many fit in a narrow place
   (`docs/design-system.md`, Representation of a User). Every other place shows
   the full form, or the name form where it applies.
-- **Name form.** The full form without the avatar: the display name, the
-  username where the full form shows it, and the labels. It shows a user who
-  is a detail of another value, such as who set a priority override in the
-  explanation of the priority (`docs/design-system.md`, Priority), where an
-  avatar would weigh more than the text around it. The avatar is hidden from
+- **Name form.** The full form without the avatar and the username: the
+  display name and the labels. It shows a user who is a detail of another
+  value, such as who set a priority override in the explanation of the
+  priority (`docs/design-system.md`, Priority) or who granted an access grant
+  of a Ticket, where an avatar would weigh more than the text around it, and
+  the username, also where the user of the value shows it. The avatar is
+  hidden from
   assistive technologies in the full form, so the name form reads the same,
   and its labels still show the state of the user (Accessibility).
 - **Link to the user.** A user, in the full, the compact, or the name form, is
@@ -958,3 +971,12 @@ meanwhile.
   compact form names the user in its tooltip (`docs/design-system.md`,
   Representation of a User). The change that builds User adds the link and
   the card wherever a user shows, and this entry is then removed.
+- **The question before leaving with input.** Confirmation leaves the
+  question before discarding input to the browser's own prompt when the user
+  closes or reloads the page, and asks "Discard changes?" before a navigation
+  of the UI leaves it; no screen asks either yet. Until a change adds them for
+  every screen, a dialog with input asks "Discard changes?" on its own Close
+  and Escape, as the dialog of the access grants of a Ticket does, and
+  closing, reloading, or leaving the page with the browser's Back drops the
+  input without a question. That
+  change then removes this entry.
