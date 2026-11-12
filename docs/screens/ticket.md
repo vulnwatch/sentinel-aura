@@ -457,10 +457,11 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
     filter. Whenever the fields apply the period, a From on the day of the
     first event, typed, chosen, or unchanged from the URL, is no bound: it
     sends no `from_date` and leaves the URL without `from`, so it does not
-    count among the filters that apply. A From that the user emptied and
-    applied with Enter shows the day of the first event again once the
-    focus leaves both fields. While that read
-    loads, when it fails, and when it returns no event, From stays empty and
+    count among the filters that apply. Enter in a field that the user
+    emptied removes its bound, and a From so emptied shows the day of the
+    first event again once the focus leaves both fields. Until a read of the
+    first event succeeds, while it loads, when it fails, and when it returns
+    no event, From stays empty and
     the fields take the days from 1 Jan 1970 to today, and a failure shows
     nowhere (`docs/behaviors.md`, Where Errors Appear); a day that arrives
     while the focus is in the period shows in From once the focus leaves
