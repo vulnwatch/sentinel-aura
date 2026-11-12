@@ -26,8 +26,9 @@
 #                             test-results/sbom/, and no dependency in the
 #                             working tree
 #   scripts/ci.sh e2e         The checks of the End-to-End Tests job: the
-#                             end-to-end tests, then the test of the
-#                             development proxy
+#                             build of the image, then the end-to-end tests
+#                             and, at the same time, the test of the
+#                             development proxy, whose output follows theirs
 #   scripts/ci.sh all         scripts/lint-shell.sh, as the Shell Lint job runs
 #                             it, then ui-checks, then e2e, each even when an
 #                             earlier one failed; fails, with the list of the
@@ -46,9 +47,12 @@ readonly BASE_BRANCH="origin/master"
 readonly SBOM_FILE="test-results/sbom/sentinel-aura.sbom.cdx.json"
 
 # The check that runs, which the exit handler reports when the script ends
-# during it, and the jobs of `all` that failed.
+# during it, the jobs of `all` that failed, and the development proxy test
+# that runs in the background during `e2e`, with the file of its output.
 CURRENT_CHECK=""
 FAILED_JOBS=()
+DEV_PROXY_PID=""
+DEV_PROXY_LOG=""
 
 in_ci() {
     [[ "${GITHUB_ACTIONS:-}" == true ]]
@@ -71,8 +75,17 @@ run_check() {
     CURRENT_CHECK=""
 }
 
-# Reports the check during which the script ends.
+# Stops the development proxy test when it still runs, whose own exit handler
+# then removes its backend, reports the check during which the script ends,
+# and removes the output of the test.
 on_exit() {
+    if [[ -n "${DEV_PROXY_PID}" ]]; then
+        kill -TERM -- "-${DEV_PROXY_PID}" 2>/dev/null || true
+        wait "${DEV_PROXY_PID}" 2>/dev/null || true
+    fi
+    if [[ -n "${DEV_PROXY_LOG}" ]]; then
+        rm -f -- "${DEV_PROXY_LOG}"
+    fi
     if [[ -n "${CURRENT_CHECK}" ]]; then
         if in_ci; then
             echo "::endgroup::"
@@ -325,10 +338,32 @@ cmd_ui_checks() {
     run_check "Verify that no dependency reached the working tree" check_no_dependency_files
 }
 
+# Waits for the development proxy test, which runs in the background, then
+# shows its output and returns its status.
+dev_proxy_result() {
+    local status=0
+    wait "${DEV_PROXY_PID}" || status=$?
+    DEV_PROXY_PID=""
+    cat "${DEV_PROXY_LOG}" >&2
+    return "${status}"
+}
+
+# The development proxy test runs beside the end-to-end tests, each against
+# its own backend, in a process group of its own, which the exit handler stops
+# as a whole when the script ends first. The build of the image comes first:
+# it installs the dependencies when they changed, which the two would
+# otherwise install at the same time; the end-to-end tests then rebuild the
+# image from the cache.
 cmd_e2e() {
     [[ $# -eq 0 ]] || die "e2e: takes no arguments"
+    run_check "Build the image" "${SCRIPTS}/image.sh" build
+    DEV_PROXY_LOG="$(mktemp)"
+    set -m
+    "${SCRIPTS}/dev-env.sh" test >"${DEV_PROXY_LOG}" 2>&1 </dev/null &
+    DEV_PROXY_PID=$!
+    set +m
     run_check "End-to-end tests" "${SCRIPTS}/dev-env.sh" e2e
-    run_check "Development proxy test" "${SCRIPTS}/dev-env.sh" test
+    run_check "Development proxy test" dev_proxy_result
 }
 
 # Runs the job named $1, the command $2..., in its own process, as CI runs
@@ -361,6 +396,9 @@ main() {
     local command="$1"
     shift
     trap on_exit EXIT
+    # An interruption, such as Ctrl+C, runs the exit handler too.
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
     case "${command}" in
         ui-checks) cmd_ui_checks "$@" ;;
         e2e | all) "cmd_${command}" "$@" ;;

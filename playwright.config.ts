@@ -1,3 +1,4 @@
+import { availableParallelism } from "node:os";
 import { defineConfig, devices } from "@playwright/test";
 
 // The end-to-end tests (docs/architecture.md, Static Checks and Tests). Each
@@ -11,6 +12,15 @@ import { defineConfig, devices } from "@playwright/test";
 
 // The viewport of every test, and so of every reference screenshot.
 const VIEWPORT = { width: 1280, height: 800 };
+// The workers of a run: the tests of a browser run at the same time against
+// its backend (docs/conventions.md, End-to-End Tests), and both browsers run
+// at the same time (`scripts/dev-env.sh e2e`), so each takes half of the
+// cores of the host, at most 4, beyond which the backend that its tests share
+// limits the gain more than the cores do. --workers overrides it.
+const WORKERS = Math.min(
+  4,
+  Math.max(1, Math.floor(availableParallelism() / 2)),
+);
 // The modules of the projects that check how the UI is served: the same
 // origin of the UI and the API, and the UI's image.
 const SAME_ORIGIN = "**/same-origin.spec.ts";
@@ -33,10 +43,10 @@ export default defineConfig({
   ],
   forbidOnly: true,
   retries: 0,
-  // Each browser has its own backend, and its tests share it one at a time
-  // (docs/conventions.md, End-to-End Tests).
-  workers: 1,
-  fullyParallel: false,
+  // Each browser has its own backend, and its tests share it at the same time,
+  // those of one module too (docs/conventions.md, End-to-End Tests).
+  workers: WORKERS,
+  fullyParallel: true,
   use: {
     baseURL: "http://localhost:8080",
     trace: "retain-on-failure",

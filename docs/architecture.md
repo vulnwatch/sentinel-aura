@@ -557,11 +557,32 @@ origin for the session cookie (Local Development), and the environment
 publishes no port.
 
 Each browser runs the tests against its own backend, newly loaded with the
-dataset, and its tests share it one at a time. Tests change data, and even a
-sign-in changes the sessions of its user, while the dataset is restored only
-by recreating the backend (Sentinel `docs/deployment.md`, Loading the Example
-Dataset): with one backend for both browsers, the second would find the data
-that the first left, and a screen would show different data in each.
+dataset. Tests change data, and even a sign-in changes the sessions of its
+user, while the dataset is restored only by recreating the backend (Sentinel
+`docs/deployment.md`, Loading the Example Dataset): with one backend for both
+browsers, one would find the data that the other changed, and a screen would
+show different data in each. The browsers run at the same time, each in its
+own environment, and so do the tests of a browser, in several Playwright
+workers against its backend: Sentinel allows several sessions of one user at
+once (Sentinel `docs/features/identity/authentication.md`, Concurrent
+sessions) and does not limit the rate of requests (Sentinel
+`docs/api-spec.md`, Rate Limiting), and each test is independent of the tests
+that run beside it (`docs/conventions.md`, End-to-End Tests). Each browser
+takes half of the cores of the host for its workers, at most four, beyond
+which the backend that they share limits the gain more than the cores do.
+
+| Option | Impact |
+|---|---|
+| One browser after the other, and the tests of each one at a time | No test runs beside another, so none can disturb another. The duration is the sum of those of every test in both browsers, and grows with each |
+| **The browsers at the same time, and the tests of each in several workers** (chosen) | A fraction of that duration, which grows more slowly with the tests. Every test stays independent of the tests that run beside it, which a run one at a time would not reveal, and the browsers and their backends share the cores of the host |
+| A job of CI for each browser | No sharing of the cores of a runner, but a required status check for each browser, and the preparation of a runner, its images and dependencies, for each |
+| A backend for each worker | No data shared between the workers, at the cost of the start of a backend, about half a minute, and its memory for each |
+
+**Rationale:** the tests run on every change, several times while an agent
+works on it, and their duration grows with every screen; running them at the
+same time keeps it short with the environments that exist, while the rules
+of the tests (`docs/conventions.md`, End-to-End Tests) already keep each test
+independent of the others.
 
 **Local preview:** `scripts/dev-env.sh preview` lets a maintainer try a pull
 request before approving its merge. It downloads the production build that

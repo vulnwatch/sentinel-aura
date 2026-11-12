@@ -287,9 +287,12 @@ gate above.
 ### Quality and findings
 
 Every code change must add or update tests for its changed behavior; a
-demonstrably non-behavioral change may rely on existing coverage. Run focused
-checks first, then every complete suite and static check that the repository
-defines for the changed artifacts. Do not skip required tests at the user's
+demonstrably non-behavioral change may rely on existing coverage. While
+iterating, run only the focused checks that `docs/conventions.md` (Checks)
+names for what each step changed, including the end-to-end tests of the
+changed screens in one browser; once the change is complete, and again after
+any later change, run every complete suite and static check that the
+repository defines for the changed artifacts. Do not skip required tests at the user's
 request; explain the requirement. Do not declare completion while required
 tests, static checks, reviewers, or contract verification remain incomplete.
 

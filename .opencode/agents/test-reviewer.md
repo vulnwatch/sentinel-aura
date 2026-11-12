@@ -244,6 +244,10 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
 - Does a test rely only on the dataset as loaded and on the data that it
   creates itself, finding its data by what it created rather than by a count
   or a position that another test could change?
+- Is a test independent of the order of the tests and of those that run
+  beside it, which several workers run at once against the backend of their
+  browser: does it share no state with another test, such as a page, a
+  session, or a variable of its module, and need no other test to run first?
 - Does a test that changes data change only data that no other test of its
   Playwright project relies on, and sit in the project that End-to-End Tests
   assigns to its kind of change? Does a failed sign-in use a user that no

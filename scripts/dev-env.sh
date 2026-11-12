@@ -36,11 +36,16 @@
 #                                    it: the routing of the proxy, the
 #                                    request headers that it forwards, and a
 #                                    sign-in through it
-#   scripts/dev-env.sh e2e [<browser>]
+#   scripts/dev-env.sh e2e [<browser>] [-- <args>]
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and
-#                                    Firefox, or in <browser>, chromium or
-#                                    firefox, each against a new backend
+#                                    Firefox at the same time, each line of
+#                                    their output prefixed with the browser,
+#                                    or in <browser>, chromium or firefox,
+#                                    each against a new backend; the
+#                                    arguments after -- go to Playwright,
+#                                    such as test files, --grep, or
+#                                    --workers, to run some tests only
 #   scripts/dev-env.sh update-screenshots
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and write
@@ -105,10 +110,12 @@ readonly PREVIEW_PROJECT="sentinel-aura-preview-${CLONE_ID}"
 readonly DATASET_USER="jdoe"
 readonly DATASET_PASSWORD="example-dataset-password"
 
-# The state of a run, removed on exit: its directory, and the project of the
-# end-to-end environment or the preview that it created.
+# The state of a run, removed on exit: its directory, the projects of the
+# end-to-end environments or of the preview that it creates, and the
+# processes of the browsers whose tests run at the same time.
 WORK_DIR=""
-RUN_PROJECT=""
+RUN_PROJECTS=()
+BROWSER_PIDS=()
 DEV_SERVER_PID=""
 
 # Fails unless the Compose plugin is at least COMPOSE_MINIMUM. The standalone
@@ -283,6 +290,7 @@ cmd_test() {
     prepare
     WORK_DIR="$(mktemp -d)"
     trap remove_test_state EXIT
+    trap_interruptions
 
     # A backend that an interrupted run left behind.
     remove_backend "${TEST_PROJECT}" >/dev/null 2>&1
@@ -300,40 +308,83 @@ cmd_test() {
     echo "dev-env.sh: every check passed" >&2
 }
 
+# Stops the browsers whose tests run in the background, each with its process
+# group: the commands that it runs, and its tests, to whose container docker
+# forwards the signal. Each removes its container when it ends.
+stop_browsers() {
+    local pid
+    for pid in "${BROWSER_PIDS[@]}"; do
+        kill -TERM -- "-${pid}" 2>/dev/null || true
+    done
+    for pid in "${BROWSER_PIDS[@]}"; do
+        wait "${pid}" 2>/dev/null || true
+    done
+    BROWSER_PIDS=()
+}
+
 remove_run_state() {
-    if [[ -n "${RUN_PROJECT}" ]]; then
-        remove_backend "${RUN_PROJECT}" >/dev/null 2>&1 || true
-    fi
+    stop_browsers
+    local project
+    for project in "${RUN_PROJECTS[@]}"; do
+        remove_backend "${project}" >/dev/null 2>&1 || true
+    done
     if [[ -n "${WORK_DIR}" ]]; then
         rm -rf -- "${WORK_DIR}"
     fi
 }
 
+# Ends the script on an interruption, such as Ctrl+C, so that its exit handler
+# removes what the run created. The interruption of the terminal reaches only
+# the processes in the foreground, so the handler also stops those in the
+# background.
+trap_interruptions() {
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+}
+
+# Prints the project of the end-to-end environment of the browser $1.
+e2e_project() {
+    printf '%s-%s-%s\n' "${E2E_PROJECT_PREFIX}" "$1" "${CLONE_ID}"
+}
+
 # Creates the end-to-end environment of the browser $1 and runs its tests in
-# it, through scripts/tooling.sh with the further arguments of its e2e
-# command, before the container; then removes the environment. A new backend
-# for each browser, so that every test of a browser starts from the dataset
-# that was loaded for it (docs/conventions.md, End-to-End Tests).
+# it, through scripts/tooling.sh, which writes the reference screenshots when
+# $2 is true and passes the further arguments to Playwright; then removes the
+# environment. A new backend for each browser, so that every test of a
+# browser starts from the dataset that was loaded for it (docs/conventions.md,
+# End-to-End Tests).
 run_e2e() {
-    local target="$1" proxy status=0
-    shift
-    RUN_PROJECT="${E2E_PROJECT_PREFIX}-${target}-${CLONE_ID}"
+    local target="$1" update="$2" project proxy status=0
+    shift 2
+    local -a options=()
+    if [[ "${update}" == true ]]; then
+        options=(--update)
+    fi
+    project="$(e2e_project "${target}")"
     # An environment that an interrupted run left behind.
-    remove_backend "${RUN_PROJECT}" >/dev/null 2>&1
-    if ! create_backend "${RUN_PROJECT}" e2e; then
-        COMPOSE_PROFILES=e2e compose "${RUN_PROJECT}" logs --no-color --tail=50 >&2 || true
-        remove_backend "${RUN_PROJECT}" >/dev/null 2>&1 || true
+    remove_backend "${project}" >/dev/null 2>&1 || true
+    if ! create_backend "${project}" e2e; then
+        COMPOSE_PROFILES=e2e compose "${project}" logs --no-color --tail=50 >&2 || true
+        remove_backend "${project}" >/dev/null 2>&1 || true
         warn "the end-to-end environment of ${target} did not start"
         return 1
     fi
-    proxy="$(COMPOSE_PROFILES=e2e compose "${RUN_PROJECT}" ps --quiet proxy)"
-    "${REPO_ROOT}/scripts/tooling.sh" e2e "$@" "${proxy}" "${target}" || status=$?
+    proxy="$(COMPOSE_PROFILES=e2e compose "${project}" ps --quiet proxy)"
+    "${REPO_ROOT}/scripts/tooling.sh" e2e "${options[@]}" "${proxy}" "${target}" "$@" || status=$?
     if ((status != 0)); then
-        COMPOSE_PROFILES=e2e compose "${RUN_PROJECT}" logs --no-color --tail=50 sentinel ui proxy >&2 || true
+        COMPOSE_PROFILES=e2e compose "${project}" logs --no-color --tail=50 sentinel ui proxy >&2 || true
     fi
-    remove_backend "${RUN_PROJECT}" >/dev/null 2>&1 || true
-    RUN_PROJECT=""
+    remove_backend "${project}" >/dev/null 2>&1 || true
     return "${status}"
+}
+
+# Copies the input to the output, each line prefixed with [$1], so that the
+# output of the browsers that run at the same time tells them apart.
+prefix_lines() {
+    local line
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        printf '[%s] %s\n' "$1" "${line}"
+    done
 }
 
 # The results of the browsers in an earlier run, so that only those of this
@@ -342,21 +393,45 @@ remove_e2e_results() {
     rm -rf -- "${REPO_ROOT}/${E2E_RESULTS_DIR}/chromium" "${REPO_ROOT}/${E2E_RESULTS_DIR}/firefox"
 }
 
+# One browser runs in the foreground. Several run at the same time, each in
+# the background, in a process group of its own, which remove_run_state stops
+# as a whole, and without the terminal's input.
 cmd_e2e() {
     local -a browsers=(chromium firefox) failed=()
-    if [[ $# -eq 1 && ("$1" == chromium || "$1" == firefox) ]]; then
+    local usage="e2e: takes the browser, chromium or firefox, then the arguments of Playwright after --"
+    if [[ $# -gt 0 && "$1" != -- ]]; then
+        [[ "$1" == chromium || "$1" == firefox ]] || die "${usage}"
         browsers=("$1")
-    elif [[ $# -ne 0 ]]; then
-        die "e2e: takes no argument, or the browser: chromium or firefox"
+        shift
+    fi
+    if [[ $# -gt 0 ]]; then
+        [[ "$1" == -- ]] || die "${usage}"
+        shift
     fi
     prepare
-    trap remove_run_state EXIT
-    "${REPO_ROOT}/scripts/image.sh" build
-    remove_e2e_results
     local target
     for target in "${browsers[@]}"; do
-        run_e2e "${target}" || failed+=("${target}")
+        RUN_PROJECTS+=("$(e2e_project "${target}")")
     done
+    trap remove_run_state EXIT
+    trap_interruptions
+    "${REPO_ROOT}/scripts/image.sh" build
+    remove_e2e_results
+    if ((${#browsers[@]} == 1)); then
+        run_e2e "${browsers[0]}" false "$@" || failed+=("${browsers[0]}")
+    else
+        set -m
+        for target in "${browsers[@]}"; do
+            (run_e2e "${target}" false "$@" 2>&1 | prefix_lines "${target}") </dev/null &
+            BROWSER_PIDS+=("$!")
+        done
+        set +m
+        local i
+        for i in "${!browsers[@]}"; do
+            wait "${BROWSER_PIDS[i]}" || failed+=("${browsers[i]}")
+        done
+        BROWSER_PIDS=()
+    fi
     if ((${#failed[@]} > 0)); then
         die "the end-to-end tests failed in ${failed[*]}; ${E2E_RESULTS_DIR}/<browser>/report holds the report of each browser"
     fi
@@ -367,10 +442,12 @@ cmd_e2e() {
 cmd_update_screenshots() {
     [[ $# -eq 0 ]] || die "update-screenshots: takes no arguments"
     prepare
+    RUN_PROJECTS=("$(e2e_project chromium)")
     trap remove_run_state EXIT
+    trap_interruptions
     "${REPO_ROOT}/scripts/image.sh" build
     remove_e2e_results
-    run_e2e chromium --update ||
+    run_e2e chromium true ||
         die "the end-to-end tests failed in chromium; ${E2E_RESULTS_DIR}/chromium/report holds the report"
     echo "dev-env.sh: test/e2e/screenshots holds the current references; remove those that no test takes any more" >&2
 }
@@ -453,10 +530,10 @@ cmd_preview() {
     fi
 
     # One preview for each clone: a new one replaces it.
-    RUN_PROJECT="${PREVIEW_PROJECT}"
-    remove_backend "${RUN_PROJECT}" >/dev/null 2>&1
-    if ! create_backend "${RUN_PROJECT}" preview; then
-        COMPOSE_PROFILES=preview compose "${RUN_PROJECT}" logs --no-color --tail=50 >&2 || true
+    RUN_PROJECTS=("${PREVIEW_PROJECT}")
+    remove_backend "${PREVIEW_PROJECT}" >/dev/null 2>&1
+    if ! create_backend "${PREVIEW_PROJECT}" preview; then
+        COMPOSE_PROFILES=preview compose "${PREVIEW_PROJECT}" logs --no-color --tail=50 >&2 || true
         die "the preview did not start"
     fi
     cat >&2 <<EOF
@@ -465,12 +542,11 @@ dev-env.sh: is on http://localhost:${PREVIEW_PORT}, with Sentinel ${SENTINEL_VER
 dev-env.sh: another user of the example dataset, with the password ${DATASET_PASSWORD}.
 dev-env.sh: Ctrl+C stops the preview and removes it with its data. The requests follow.
 EOF
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
+    trap_interruptions
     # nginx's access log, which omits the Cookie header, until Ctrl+C, without
     # the requests of its health check (compose.yaml), which BusyBox's wget
     # sends.
-    COMPOSE_PROFILES=preview compose "${RUN_PROJECT}" logs --follow --no-color \
+    COMPOSE_PROFILES=preview compose "${PREVIEW_PROJECT}" logs --follow --no-color \
         --no-log-prefix --tail=0 preview | grep --line-buffered -v '"Wget" "-"$'
 }
 
