@@ -496,9 +496,10 @@ that needs it; content of another kind needs a new row first.
   project and of the tests that run beside it: it shares no state with
   another test, such as a page, a session, or a variable of its module, and
   needs no other test of its project to run first; only an earlier project,
-  which runs before it as a whole, comes first (below). A test relies only on the dataset as loaded
-  and on the data that it creates itself, which it finds by what it created,
-  not by a count or a position that another test could change. A test that
+  which runs before it as a whole, comes first (below). A test relies only
+  on the dataset as loaded and on the data that it creates itself, which it
+  finds by what it created, not by a count or a position that another test
+  could change. A test that
   changes data changes only data that no other test of its Playwright
   project relies on (the tests that take references run in an earlier
   project, below); a failed sign-in counts toward the lockout of its user
