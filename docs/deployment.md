@@ -172,8 +172,9 @@ new backend from Sentinel's image at the pinned version and digest, loaded
 with the example dataset, the UI's image, and the reverse proxy in front of
 them, whose network namespace the tests share
 (`docs/architecture.md`, Development Environment). In each, it runs the tests
-of `test/e2e/` except those of the UI's image alone, `image.spec.ts`, several
-at once; the tests compare the reference screenshots in Chromium
+of `test/e2e/` except those of the UI's image alone, `image.spec.ts`, as many
+at once as the cores of the runner allow (`docs/architecture.md`,
+Development Environment); the tests compare the reference screenshots in Chromium
 (`docs/conventions.md`, End-to-End Tests). It then removes the environments.
 Meanwhile, `scripts/dev-env.sh test` checks the development proxy against a
 backend of its own: that no container of the backend publishes a port, and

@@ -570,9 +570,9 @@ sessions) and does not limit the rate of requests (Sentinel
 that run beside it (`docs/conventions.md`, End-to-End Tests). Each browser
 takes a quarter of the cores of the host for its workers, at least one and
 at most four, since each browser and its backend share half of them. On four
-cores, as on GitHub's runners, more workers slow every test down beyond what
-they gain, toward the timeouts of the tests; above four workers, a run
-shortens little while the load of the backend grows.
+cores, as on GitHub's runners, a second worker for each browser shortens the
+run a little but brings the slowest tests close to their timeouts; above four
+workers, a run shortens little while the load of the backend grows.
 
 | Option | Impact |
 |---|---|

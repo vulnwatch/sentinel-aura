@@ -489,9 +489,10 @@ that needs it; content of another kind needs a new row first.
   A test waits for such data through a state that the user sees, such as
   the counts, never for a fixed time.
 - Each browser runs the tests against its own backend, newly loaded with the
-  dataset, at the same time as the other browser, and several of its tests
-  at once, those of one module too, in any order within their Playwright
-  project (`docs/architecture.md`, Development Environment). So a test is
+  dataset, at the same time as the other browser, and as many of its tests
+  at once as the cores of the host allow, those of one module too, in any
+  order within their Playwright project (`docs/architecture.md`, Development
+  Environment). So a test is
   independent of the order of the tests of its project and of the tests that
   run beside it: it shares no state with another test, such as a page, a
   session, or a variable of its module, and needs no other test of its

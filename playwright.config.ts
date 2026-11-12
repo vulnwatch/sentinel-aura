@@ -16,10 +16,10 @@ const VIEWPORT = { width: 1280, height: 800 };
 // its backend (docs/conventions.md, End-to-End Tests), and both browsers run
 // at the same time, each with its backend (`scripts/dev-env.sh e2e`), so each
 // takes a quarter of the cores of the host, at least 1 and at most 4. On 4
-// cores, as on GitHub's runners, more workers slow every test down beyond
-// what they gain, toward the timeouts of the tests; above 4 workers, a run
-// shortens little while the load of the backend grows. --workers overrides
-// it.
+// cores, as on GitHub's runners, a second worker for each browser shortens
+// the run a little but brings the slowest tests close to their timeouts;
+// above 4 workers, a run shortens little while the load of the backend
+// grows. --workers overrides it.
 const WORKERS = Math.min(
   4,
   Math.max(1, Math.floor(availableParallelism() / 4)),
