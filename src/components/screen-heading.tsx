@@ -107,13 +107,23 @@ export function FocusAfterNavigation({ children }: FocusAfterNavigationProps) {
 // again after it was pressed, or the screen's heading when an error replaces
 // the screen, the focus moves to the screen's heading once the screen shows
 // what replaces the element (docs/behaviors.md, Accessibility, Focus after an
-// action), with or without an action of the user.
+// action), with or without an action of the user. Inside an open dialog,
+// which keeps the rest of the page out of reach, it moves to the dialog
+// itself instead; when the dialog leaves the page with the element, as it
+// closes, the dialog decides where the focus returns.
 export function useFocusHeadingOnRemoval(ref: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const element = ref.current;
+    const dialog = element?.closest<HTMLElement>('[role="dialog"]') ?? null;
     return () => {
       if (element?.contains(document.activeElement)) {
-        queueMicrotask(focusScreenHeading);
+        queueMicrotask(() => {
+          if (dialog === null) {
+            focusScreenHeading();
+          } else if (dialog.isConnected) {
+            dialog.focus({ preventScroll: true });
+          }
+        });
       }
     };
   }, [ref]);

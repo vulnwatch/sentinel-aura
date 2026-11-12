@@ -14,6 +14,9 @@ import type {
   MaintainerTicketWorkResponse,
   PackageDetail,
   ProductDetail,
+  TicketAccessGrantDataResponse,
+  TicketAccessGrantListResponse,
+  TicketAccessGrantResponse,
   TicketActorListResponse,
   TicketAuditEventData,
   TicketAuditListResponse,
@@ -22,6 +25,8 @@ import type {
   TicketListResponse,
   TicketSummary,
   TrackDetail,
+  UserDirectoryData,
+  UserDirectoryListResponse,
   UserReference,
   ValidationErrorResponse,
 } from "./api/generated/model";
@@ -583,6 +588,74 @@ export function actorsResponse(
   actors: readonly UserReference[] = FICTIONAL_ACTORS,
 ): Response {
   const body: TicketActorListResponse = { data: [...actors] };
+  return jsonResponse(200, body);
+}
+
+// A fictional access grant of SNTL-12, as List Access Grants returns it: to
+// Carol White, granted by Alice Smith, the user of OTHER_USER, with the
+// fields that a test sets.
+export function fictionalGrant(
+  fields: Partial<TicketAccessGrantResponse> = {},
+): TicketAccessGrantResponse {
+  return {
+    user: {
+      id: "00000000-0000-0000-0000-000000000008",
+      username: "cwhite",
+      full_name: "Carol White",
+      active: true,
+      bot: false,
+    },
+    granted_at: "2099-10-10T11:00:00Z",
+    granted_by: referenceOf(OTHER_USER),
+    ...fields,
+  };
+}
+
+// List Access Grants's response.
+export function grantsResponse(
+  grants: readonly TicketAccessGrantResponse[] = [fictionalGrant()],
+): Response {
+  const body: TicketAccessGrantListResponse = { data: [...grants] };
+  return jsonResponse(200, body);
+}
+
+// Grant Access's response: the grant, 201 for a new one, or 200 for one that
+// existed already.
+export function grantResponse(
+  grant: TicketAccessGrantResponse,
+  status: 200 | 201 = 201,
+): Response {
+  const body: TicketAccessGrantDataResponse = { data: grant };
+  return jsonResponse(status, body);
+}
+
+// A fictional directory entry of a user, as List Users returns it: Ana
+// Garcia, a vulnerability analyst, with the fields that a test sets.
+export function fictionalDirectoryUser(
+  fields: Partial<UserDirectoryData> = {},
+): UserDirectoryData {
+  return {
+    id: "00000000-0000-0000-0000-000000000005",
+    username: "agarcia",
+    email: "ana.garcia@example.com",
+    full_name: "Ana Garcia",
+    active: true,
+    bot: false,
+    roles: ["vulnerability_analyst"],
+    assignment_eligibility: "all",
+    ...fields,
+  };
+}
+
+// A page of List Users: the users, of a directory of total users.
+export function usersPage(
+  users: UserDirectoryData[],
+  { total = users.length, page = 1, perPage = 20 } = {},
+): Response {
+  const body: UserDirectoryListResponse = {
+    data: users,
+    meta: { total, page, per_page: perPage },
+  };
   return jsonResponse(200, body);
 }
 

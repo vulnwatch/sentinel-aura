@@ -13,9 +13,11 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 The Ticket screen shows one Ticket: its heading row with its main values; in
 the tab Overview its CVE, the CVSS assessments of its CVE, its package tree,
-its details, and the sources of its CVE, which an analyst refetches; and in
-the tab Audit log its history, which an analyst searches and filters to
-reconstruct who changed what and what Sentinel did by itself.
+its details, the sources of its CVE, which an analyst refetches, and who is
+involved in it, with the access grants of a confidential Ticket, which an
+analyst who manages confidentiality grants and revokes; and in the tab Audit
+log its history, which an analyst searches and filters to reconstruct who
+changed what and what Sentinel did by itself.
 Vulnerability and restricted analysts work in it all day; every other user
 reads it, as a package maintainer does a Ticket of one of their packages that
 an analyst shares, and finds in its package tree the tracks that wait for
@@ -30,9 +32,13 @@ package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
 The screen is the same for every user, except that it offers Refetch to a
-user who holds `triage_ticket` (Actions; Sentinel
-`docs/features/identity/rbac.md`, Endpoint Permission Map (CVEs)), and marks
-for a maintainer the tracks that wait for them (Packages).
+user who holds `triage_ticket`, and Grant access and Revoke access to a user
+who holds `manage_confidentiality` (Actions; Sentinel
+`docs/features/identity/rbac.md`, Endpoint Permission Map (CVEs; Tickets)),
+and marks for a maintainer the tracks that wait for them (Packages). Every
+user who sees a confidential Ticket sees its access grants, whatever their
+capabilities (Sentinel `docs/features/tickets/tickets.md`, List Access
+Grants).
 
 ## Navigation
 
@@ -68,11 +74,13 @@ for a maintainer the tracks that wait for them (Packages).
   entry of the browser history (`docs/design-system.md`, Lists). A tab opens
   at its path without parameters.
 - Anchors: `#cve`, the CVE, `#cvss`, the CVSS assessments, `#packages`, the
-  package tree, `#details`, the details, and `#sources`, the sources of the
-  CVE; a Ticket without a CVE lacks the CVSS assessments and the sources. The
-  reads of Overview are the Ticket, its duplicates, the CVSS assessments and
-  the sources of its CVE, and, for a maintainer, their work on the Ticket
-  (`docs/design-system.md`, Main Content).
+  package tree, `#details`, the details, `#sources`, the sources of the CVE,
+  and `#participants`, the participants; a Ticket without a CVE lacks the
+  CVSS assessments and the sources. The reads of Overview are the Ticket, its
+  duplicates, the CVSS assessments and the sources of its CVE, the users who
+  acted on it, the access grants of a confidential Ticket, and, for a
+  maintainer, their work on the Ticket (`docs/design-system.md`, Main
+  Content).
 - The rows of the Ticket list lead to it, and so do the original and the
   duplicates in its details. Its CVE ID is not a link: the address of the CVE
   would lead to this screen (`docs/screen-map.md`, Links Between Areas). Users
@@ -107,10 +115,12 @@ log.
 
 **Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE, the
 CVSS assessments, and the package tree in the main column, in this order, and
-the details and the sources of the CVE in the side column; in one column, the
-details above the CVE, and the sources below the package tree. The
-sources keep their place in the order of the page in both layouts, so they
-stay, with the focus and a refetch in progress, when the layout changes.
+the details, the sources of the CVE, and the participants in the side column;
+in one column, the details above the CVE, and the sources and the
+participants below the package tree. The sources and the participants keep
+their place in the order of the page in both layouts, so they stay, with the
+focus, a refetch in progress, and an open dialog of the access grants, when
+the layout changes.
 
 **CVE**, the first part of the main column, from `cve` of Get Ticket (Sentinel
 `docs/features/tickets/tickets.md`, CVEDetail):
@@ -356,10 +366,10 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 | Created | `created_at`, a date and time |
 | Last modified | `updated_at`, a date and time |
 
-**Sources of the CVE**, the last section of the side column, for a Ticket
-with a CVE, from CVE Source Status, `GET /api/v1/cves/{cve_id}/sources`, in
-the order of the API, by source, as a list (Sentinel
-`docs/features/tickets/cve-service.md`, CVE Source Status):
+**Sources of the CVE**, a section of the side column, before the
+participants, for a Ticket with a CVE, from CVE Source Status,
+`GET /api/v1/cves/{cve_id}/sources`, in the order of the API, by source, as a
+list (Sentinel `docs/features/tickets/cve-service.md`, CVE Source Status):
 
 - Each source on a line of its own: the mark of its status alone, which
   names the status for assistive technologies after the name of the source
@@ -396,7 +406,76 @@ the order of the API, by source, as a list (Sentinel
   still pending (Sentinel `docs/features/tickets/cve-service.md`, CVE Source
   Status, Completed timestamps during pending; Redis graceful degradation);
   it then reads again the Ticket, its duplicates, the work of a maintainer on
-  it, and the CVSS assessments (`docs/behaviors.md`, Outcome of a Change).
+  it, the CVSS assessments, the users who acted on it, and its access grants
+  (`docs/behaviors.md`, Outcome of a Change).
+
+**Participants**, the last section of the side column, who is involved in the
+Ticket, every user once:
+
+- its assignee, from Get Ticket;
+- the users who acted on it, from List Ticket Actors,
+  `GET /api/v1/tickets/{ticket_id}/actors` (Sentinel
+  `docs/features/tickets/ticket-audit-log.md`, List Ticket Actors);
+- the maintainers of its packages that are not excluded, from `maintainers`
+  of Get Ticket, since an excluded package gives its maintainers no
+  visibility of the Ticket (Sentinel
+  `docs/features/packages/package-maintainership.md`, Maintainers in the
+  Package Tree; Sentinel `docs/features/identity/rbac.md`, Scope and
+  Confidential Ticket Visibility); and
+- for a confidential Ticket, the users with an access grant, from List Access
+  Grants, `GET /api/v1/tickets/{ticket_id}/access`, which every user who sees
+  the Ticket reads (Sentinel `docs/features/tickets/tickets.md`, List Access
+  Grants). For a Ticket that is not confidential, the read is not sent.
+
+Bot accounts are not participants, whatever the source; System is not a user
+and is never one; an inactive user is. The participants show as a group of
+users named "Participants" (`docs/design-system.md`, Representation of a
+User): the assignee first, then the others by display name, and by username
+between equal names. Each shows its name in the compact form when it takes
+the focus or the pointer rests on it, such as "Robert Lee (inactive)"
+(`docs/behaviors.md`, Representation of a User). A Ticket without any says
+"No participants.".
+
+On a confidential Ticket, Access grants, a quiet button 32 px high with
+`user-round-key` at the end of the heading (`docs/design-system.md`, Buttons
+and Links), opens the access grants of the Ticket for every user who sees it,
+in a dialog at most 560 px wide named "Access grants" (`docs/design-system.md`,
+Dialogs):
+
+- below the title, in `fg-muted`, what a grant does: "An access grant lets a
+  user see this confidential Ticket. The users who see every Ticket, and the
+  maintainers of its packages that are not excluded, see it without one."
+  (Sentinel `docs/features/identity/rbac.md`, Scope and Confidential Ticket
+  Visibility);
+- below it, for a user who holds `manage_confidentiality`, the form of Grant
+  access (Actions);
+- the grants, as a list named "Access grants", in the order of the API, by
+  the time of the grant, between `border` lines: each its user in the full
+  form at the medium size with the username and the labels, and below it, in
+  `text-13`, `fg-muted`, "Granted by", the user who granted it in the name
+  form, "on", and the date and time of the grant, such
+  as "Granted by Alice Smith on 8 Nov 2026, 13:05"; and, for a user who holds
+  `manage_confidentiality`, Revoke access at its end, or below the user where
+  the line is too narrow for both (Actions). A bot account with a grant shows
+  here with the label Bot, although it is not a participant. Without grants,
+  "No access grants.";
+- Close, a secondary button, which closes the dialog, as Escape does, and
+  returns the focus to Access grants.
+
+For a user who holds `manage_confidentiality`, the user field of the form
+takes the focus as the dialog opens; for every other user, who has no field,
+the dialog takes the focus itself, so that its grants are read first
+(`docs/behaviors.md`, Accessibility, Dialogs). The dialog offers Grant access
+and Revoke access as the user's capabilities were when it opened, until it
+closes (`docs/behaviors.md`, The Signed-in User). When a read shows the
+Ticket no longer confidential while the dialog is open, the dialog stays open
+and says, in `fg-muted`, "This Ticket is no longer confidential, so it has
+no access grants." in place of its explanation, the form, and the grants,
+which its status region announces, and takes the focus; Close then moves the
+focus to the screen's heading, since Access grants is gone
+(`docs/behaviors.md`, Accessibility, Focus after an action). When a read
+removes Access grants while it has the focus, the focus moves to
+the screen's heading too.
 
 **Audit log**, a tab that takes the whole width, without a side column
 (`docs/design-system.md`, Detail Screens): the events of the Ticket as a
@@ -588,6 +667,55 @@ user who holds `triage_ticket` (Sentinel
 - Whatever its outcome, the screen then reads its data again, the sources
   included.
 
+**Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
+and **Revoke access**, Revoke Access,
+`DELETE /api/v1/tickets/{ticket_id}/access/{user}`, in the dialog of the
+access grants of a confidential Ticket, for a user who holds
+`manage_confidentiality` (Sentinel `docs/features/tickets/tickets.md`, Grant
+Access; Revoke Access):
+
+- Grant access is a form below the explanation of the dialog, above the
+  grants (`docs/design-system.md`, Forms): the user field, "User", a combobox
+  of users that List Users fills with the active users that match its term,
+  `GET /api/v1/users` with `search` and `active=true`
+  (`docs/design-system.md`, Forms; Sentinel
+  `docs/features/identity/user-management.md`, List Users), in which a user
+  who holds a grant shows the label "Granted" and is disabled; then Grant
+  access, a primary button, at the end of the form.
+- Grant access sends the `id` of the user chosen; without one, it says "Choose
+  a user." at the field and sends nothing; an error of the field goes as the
+  user types in it or chooses a user. It asks for no confirmation: it
+  ends no one's access (`docs/behaviors.md`, Confirmation). It is busy while
+  its request is in progress, during which the dialog cannot be closed. Once
+  Sentinel confirms it, also for a grant that existed already, the field
+  empties, the focus stays where it was, on Grant access or in the field, and
+  the dialog announces it, such as "Access granted to Carol White."
+  (`docs/behaviors.md`, Outcome of a Change).
+- While the field holds a user chosen and not yet granted, Close and Escape
+  ask "Discard changes?", "The user that you chose isn't granted access.",
+  with Keep editing and Discard (`docs/behaviors.md`, Confirmation); a term
+  typed without a choice is dropped without a question.
+- Revoke access, a secondary button at the end of each grant, named after its
+  user with the username, such as "Revoke access of Carol White @cwhite",
+  asks for confirmation, since it ends another person's access
+  (`docs/behaviors.md`, Confirmation): "Revoke access of Carol White?", "Carol
+  White loses the access grant to this confidential Ticket, and no longer sees
+  it unless their roles or the packages that they maintain let them.", Cancel,
+  and Revoke access, a danger button. It sends the `id` of the user. While it
+  is in progress, the confirmation cannot be closed. Once Sentinel confirms
+  it, the confirmation closes, and once a read of the grants after it
+  arrives, whatever its outcome, the dialog announces it, such as "Access of
+  Carol White revoked.".
+- When the grant whose Revoke access has the focus leaves the list, after its
+  Revoke access or because a read no longer returns it, the focus moves to
+  the Revoke access of the grant that followed it, or to the user field when
+  none follows, in the dialog that holds it (`docs/behaviors.md`,
+  Accessibility, Focus after an action).
+- The outcome of each is announced in a status region of the dialog, which the
+  rest of the page cannot hold while the dialog is open. Whatever the outcome,
+  the screen then reads again the Ticket, its access grants, the users who
+  acted on it, and its audit log.
+
 ## States
 
 - **Loading.** The heading row and the tabs show at once; the panel of
@@ -597,7 +725,11 @@ user who holds `triage_ticket` (Sentinel
   Loading). Until the read of the work of a maintainer arrives, no track is
   marked. The popover of the CNA shows its title at once; its short name and
   its details show once Get CNA arrives, with the loading indicator in place
-  of the details until then.
+  of the details until then. The participants show once List Ticket Actors
+  and, for a confidential Ticket, List Access Grants have arrived, with the
+  loading indicator in their place until then; Access grants shows at once on
+  a confidential Ticket, and its dialog shows the loading indicator in place
+  of the grants until they arrive.
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -623,7 +755,36 @@ user who holds `triage_ticket` (Sentinel
   aren't available." in place of its details, as a user card does
   (`docs/design-system.md`, Menus, Popovers, and Tooltips), and announces it,
   since the popover holds the focus (`docs/behaviors.md`, Accessibility,
-  Announcements).
+  Announcements). The failure of List Ticket Actors or of List Access Grants
+  shows in place of the participants, and that of List Access Grants also in
+  place of the grants in their dialog, each with Try again where the failure
+  offers it. The screen handles one code of List Access Grants specifically:
+  `409 TICKET_NOT_CONFIDENTIAL`, for a Ticket that became non-confidential
+  since the screen read it, which then has no grants (Sentinel
+  `docs/features/tickets/tickets.md`, List Access Grants; Set
+  Confidentiality): the participants show without grants, and the screen
+  reads the Ticket again, which removes Access grants, and turns an open
+  dialog of the access grants to the line that says that the Ticket is no
+  longer confidential (Participants).
+- **Errors of Grant access and Revoke access.** A failure of Grant access
+  shows in its form, which keeps the user chosen (`docs/behaviors.md`, Where
+  Errors Appear): the screen handles two codes specifically, at the user
+  field, `404 USER_NOT_FOUND`, "Sentinel doesn't know this user.", and
+  `409 USER_INACTIVE`, for a user who became inactive, "This user is inactive,
+  so they can't be granted access." (Sentinel
+  `docs/features/tickets/tickets.md`, Grant Access); a field error of a
+  `VALIDATION_ERROR` for `user` also shows at the field; the field then takes
+  the focus. Every other failure shows at the top of the form, which takes
+  the focus, in the presentation of its status, as a warning when Sentinel
+  did not confirm the change (`docs/behaviors.md`, Default Presentation by
+  Status; Retries and Unconfirmed Changes). A failure of Revoke access shows
+  in the same way at the top of its confirmation, which stays open; the
+  screen handles no code of it specifically. After a `403`, the dialog keeps
+  its form, Revoke access, and the error (`docs/behaviors.md`, The
+  Signed-in User). A `409 TICKET_NOT_CONFIDENTIAL` of either is followed by
+  the reads that show the Ticket no longer confidential, so the dialog then
+  says so in place of its explanation, the form, the grants, and their
+  confirmation, and takes the focus (Participants).
 - **Audit log.** The toolbar shows at once with the tabs, and the loading
   indicator in place of the events until they arrive, while the screen
   reads the Ticket too; a failure of the events shows once the Ticket has
@@ -672,9 +833,9 @@ user who holds `triage_ticket` (Sentinel
   User
 - `docs/design-system.md` — Font; Focus and Motion; Main Content; Values;
   Severity; Deadline Badge; Track Milestones; Labels; Other Values; Buttons
-  and Links; Lists; Tables; Timelines; Detail Screens; Forms; Messages;
-  Loading; Empty States; Errors in Place of Content; Menus, Popovers, and
-  Tooltips; Icons by Need; Representation of a User
+  and Links; Lists; Tables; Timelines; Detail Screens; Forms; Dialogs;
+  Messages; Loading; Empty States; Errors in Place of Content; Menus,
+  Popovers, and Tooltips; Icons by Need; Representation of a User
 - Sentinel `docs/features/tickets/ticket-audit-log.md` — Event Type Contract
   (Rules); Canonical Automatic Comment Vocabulary; Cross-Event Ordering,
   Locking, and Rollback; detail JSONB Schema Contract; List Ticket Events;
@@ -684,7 +845,8 @@ user who holds `triage_ticket` (Sentinel
   Transitions; Duplicate Handling; Confidential Tickets (Identifier
   Disclosure Boundary; Coordinated Release Date); Ignore Reason; Response
   Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket; List Tickets
-  (Duplicate filter)
+  (Duplicate filter); Set Confidentiality; Access Grant Management (List
+  Access Grants; Grant Access; Revoke Access)
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Null Due
   Dates); Track Milestones (Observability of Later Phases; Completion
   Evidence); Ticket Current Phase
@@ -712,7 +874,9 @@ user who holds `triage_ticket` (Sentinel
   Score Resolution; API Endpoints (Shared Assessment Item; Get CVSS
   Assessments for a CVE)
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
-  Visibility; Endpoint Permission Map (CVEs)
+  Visibility; Endpoint Permission Map (CVEs; Tickets)
+- Sentinel `docs/features/identity/user-management.md` — Directory API
+  endpoints (List Users)
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Ticket Identifier Resolution; User Identifier
   Resolution; CVE Identifier Resolution; CNA Identifier Resolution; CVE

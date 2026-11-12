@@ -209,6 +209,103 @@ test.describe("for an analyst", () => {
     await expectScreenshot(page, "ticket-confidential.png");
   });
 
+  test("shows the participants of a confidential Ticket, and its access grants with Grant access and Revoke access", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+
+    // SNTL-18, assigned to asmith, who created it, added its package, and
+    // granted access to cwhite, then to the bot account security-scanner,
+    // and revoked it; dbrown maintains fictional-openssh (Tickets; Packages,
+    // Tracks, and Maintainers).
+    await page.goto("/tickets/SNTL-18");
+
+    const participants = part(page, "Participants");
+    const group = participants.getByRole("toolbar", { name: "Participants" });
+    await expect(group.getByRole("img")).toHaveCount(3);
+    expect(
+      await group
+        .getByRole("img")
+        .evaluateAll((images) =>
+          images.map((image) => image.getAttribute("aria-label")),
+        ),
+    ).toEqual(["Alice Smith", "Carol White", "Dave Brown"]);
+    await expectSources(page);
+    await participants.scrollIntoViewIfNeeded();
+    await expectScreenshot(page, "ticket-participants.png");
+
+    await participants.getByRole("button", { name: "Access grants" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Access grants" });
+    const grants = dialog.getByRole("list", { name: "Access grants" });
+    await expect(grants.getByRole("listitem")).toHaveCount(1);
+    await expect(grants.getByRole("listitem")).toHaveText(
+      new RegExp(
+        String.raw`^Carol White @cwhite\s*Granted by Alice Smith on ${DATE_TIME}\s*Revoke access$`,
+      ),
+    );
+    await expect(
+      grants.getByRole("button", {
+        name: "Revoke access of Carol White @cwhite",
+      }),
+    ).toBeVisible();
+    const field = dialog.getByRole("combobox", { name: "User" });
+    await expect(field).toBeFocused();
+    await expectScreenshot(page, "ticket-access-grants.png");
+    await expectAccessible(page);
+
+    // Grant access without a user, which sends nothing.
+    await dialog.getByRole("button", { name: "Grant access" }).click();
+    await expect(dialog.getByText("Choose a user.")).toBeVisible();
+    await expect(field).toBeFocused();
+    await expectScreenshot(page, "ticket-access-grants-no-user.png");
+    await expectAccessible(page);
+
+    // The active users of the directory that match, a grantee as granted.
+    await field.fill("white");
+    const granted = page.getByRole("option", {
+      name: "Carol White @cwhite Granted",
+    });
+    await expect(granted).toHaveAttribute("aria-disabled", "true");
+    await expectScreenshot(page, "ticket-access-grants-users.png");
+    await expectAccessible(page);
+
+    // Close with a user chosen and not granted asks before discarding it,
+    // and Keep editing keeps it. ghill, without a role, has no grant.
+    await field.fill("hill");
+    await page.getByRole("option", { name: "Grace Hill @ghill" }).click();
+    await expect(field).toHaveValue("Grace Hill @ghill");
+    await dialog.getByRole("button", { name: "Close" }).click();
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(
+      discard.getByRole("button", { name: "Keep editing" }),
+    ).toBeFocused();
+    await expectScreenshot(page, "ticket-access-grants-discard.png");
+    await expectAccessible(page);
+    await discard.getByRole("button", { name: "Keep editing" }).click();
+    await expect(discard).toHaveCount(0);
+    await expect(field).toHaveValue("Grace Hill @ghill");
+
+    // The confirmation of Revoke access, which Cancel leaves without a
+    // change. The field closes its menu as the focus leaves it.
+    await field.press("Tab");
+    await expect(granted).toHaveCount(0);
+    await grants
+      .getByRole("button", { name: "Revoke access of Carol White @cwhite" })
+      .click();
+    const confirmation = page.getByRole("dialog", {
+      name: "Revoke access of Carol White?",
+    });
+    await expect(
+      confirmation.getByRole("button", { name: "Cancel" }),
+    ).toBeFocused();
+    await expectScreenshot(page, "ticket-access-grants-revoke.png");
+    await expectAccessible(page);
+    await confirmation.getByRole("button", { name: "Cancel" }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(grants.getByRole("listitem")).toHaveCount(1);
+  });
+
   test("shows a Ticket without a CVE and its duplicate, each linked to the other", async ({
     page,
   }) => {
@@ -1112,6 +1209,29 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
   await expect(cvssTable(page)).toBeVisible();
   await expectSources(page);
   await expectScreenshot(page, "ticket-maintainer.png");
+});
+
+test("shows a maintainer the access grants of a confidential Ticket, without Grant access and Revoke access", async ({
+  page,
+}) => {
+  // dbrown, without a role, sees SNTL-18 as the maintainer of
+  // fictional-openssh (Packages, Tracks, and Maintainers).
+  await signIn(page, "dbrown");
+
+  await page.goto("/tickets/SNTL-18");
+  // Once the sources above it have arrived, so that they do not move it.
+  await expectSources(page);
+  await part(page, "Participants")
+    .getByRole("button", { name: "Access grants" })
+    .click();
+
+  const dialog = page.getByRole("dialog", { name: "Access grants" });
+  await expect(dialog.getByRole("listitem")).toHaveCount(1);
+  await expect(dialog).toBeFocused();
+  await expect(dialog.getByRole("combobox")).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: /^Revoke access/ }),
+  ).toHaveCount(0);
 });
 
 test("shows Not found for a Ticket that the user cannot see", async ({

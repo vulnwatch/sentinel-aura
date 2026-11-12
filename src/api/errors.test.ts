@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  grantAccessFieldError,
+  isNotConfidential,
   isRequestFailure,
   presentChangeFailure,
   presentFailure,
@@ -380,6 +382,55 @@ describe("presentRefetchFailure", () => {
       reference: REQUEST_ID,
       unconfirmed: true,
     });
+  });
+});
+
+describe("grantAccessFieldError", () => {
+  test.each([
+    [404, "USER_NOT_FOUND", "Sentinel doesn't know this user."],
+    [
+      409,
+      "USER_INACTIVE",
+      "This user is inactive, so they can't be granted access.",
+    ],
+  ])("states the error of the user field of %i %s", (status, code, message) => {
+    expect(grantAccessFieldError(errorResponse(status, code))).toBe(message);
+  });
+
+  test.each([
+    ["the codes with another status", errorResponse(409, "USER_NOT_FOUND")],
+    ["another code", errorResponse(409, "TICKET_NOT_CONFIDENTIAL")],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(404, "FICTIONAL_CODE"),
+    ],
+    ["an error without a code", errorResponse(404)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("leaves %s to the form", (_, failure) => {
+    expect(grantAccessFieldError(failure)).toBeUndefined();
+  });
+});
+
+describe("isNotConfidential", () => {
+  test("tells 409 TICKET_NOT_CONFIDENTIAL", () => {
+    expect(
+      isNotConfidential(errorResponse(409, "TICKET_NOT_CONFIDENTIAL")),
+    ).toBe(true);
+  });
+
+  test.each([
+    ["another status", errorResponse(400, "TICKET_NOT_CONFIDENTIAL")],
+    ["another code", errorResponse(409, "FICTIONAL_CODE")],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+    ["any other error", new Error("A fictional error")],
+  ])("tells nothing else: %s", (_, error) => {
+    expect(isNotConfidential(error)).toBe(false);
   });
 });
 

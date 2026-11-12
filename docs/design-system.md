@@ -453,6 +453,7 @@ that the code imports ship.
 | A confidential Ticket | `lock` |
 | A priority override, an eligibility set by hand | `user-pen` |
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
+| The access grants of a confidential Ticket | `user-round-key` |
 | Change a field of a record in place, edit a row of a table | `pencil` |
 | Delete a row of a table | `trash` |
 | The other actions of a record within a part, such as a package | `ellipsis` |
@@ -993,7 +994,7 @@ screen, the heading row follows the lock with the label Confidential
 |---|---|---|
 | Primary | `accent` fill, `on-accent` text, `accent-hover` under the pointer | The main action of a screen, a form, or a dialog; one per screen part |
 | Secondary | `surface` fill, `border-strong` boundary, `fg` text, `surface-hover` under the pointer | Other actions, and Cancel in a dialog |
-| Quiet | No fill or boundary, `fg` text, `surface-hover` under the pointer | Cancel in a form, Clear filters (Lists), and Refetch all of the sources of a CVE |
+| Quiet | No fill or boundary, `fg` text, `surface-hover` under the pointer | Cancel in a form, Clear filters (Lists), and, in the heading of a section of a detail screen, Refetch all of the sources of a CVE and the access grants of a Ticket |
 | Danger | `danger-solid` fill, `on-danger-solid` text, `danger-solid-hover` under the pointer | The button that confirms an action that cannot be undone, that ends another person's access, or that discards input (`docs/behaviors.md`, Confirmation); a confirmed change of a fetcher uses Primary |
 | Icon | A quiet button with an icon alone, named by its accessible name and its tooltip | Compact actions, such as dismiss and the sidebar buttons |
 
@@ -1396,6 +1397,24 @@ states it, such as that of a Ticket; the other audit logs are tables
   field, such as "Calendar From", which its tooltip shows; and a
   search field starts with `search` at 16 px and, with a value, ends with a
   clear button.
+- A combobox of users, such as the user field of a grant, searches the
+  directory, List Users, with the filters that its screen document states,
+  such as active users only (Sentinel
+  `docs/features/identity/user-management.md`, List Users). Once the user has
+  typed at least 2 characters, without their surrounding whitespace, the
+  shortest term that List Users searches, and has paused for 250 ms, it reads
+  the first 20 users that match, by username, and opens them below the field,
+  each in the full form at the small size with the username and the labels
+  (`docs/behaviors.md`, Representation of a User). With fewer characters, the
+  menu says "Enter at least 2 characters.", without users that match "No
+  users match.", and, below the users, when more match, how many, such as
+  "The first 20 of 63 users that match. Type more to narrow them.", which a
+  status region of the menu announces. The field takes at most the 500
+  characters of a query parameter (Sentinel `docs/api-spec.md`, Query
+  Parameter Length Limit). A user that the field does not offer,
+  which its screen document names, shows the label that says why and is
+  disabled. The user chosen shows in the field as the display name, `@`, and
+  the username.
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would
@@ -1588,7 +1607,8 @@ where the labels show, a group of users, and the user card.
   user takes the focus and shows its tooltip, or the user card where it links
   to the user (`docs/behaviors.md`, Representation of a User).
 - **Name form:** the full form without the avatar and the 6 px of space after
-  it; it has no size, since the sizes are those of the avatar.
+  it, and without the username (`docs/behaviors.md`, Representation of a
+  User); it has no size, since the sizes are those of the avatar.
 - **Link:** a user that links to their screen (`docs/behaviors.md`,
   Representation of a User) keeps the colors of the full form, unlike the
   other links (Buttons and Links): its name is in the surrounding text's

@@ -203,6 +203,44 @@ export function presentRefetchFailure(
   return presentChangeFailure(failure);
 }
 
+// The messages of the user field of Grant access, at the field
+// (docs/screens/ticket.md, States): Sentinel knows no such user, or the user
+// is inactive and holds no grant yet (Sentinel
+// docs/features/tickets/tickets.md, Grant Access).
+const MESSAGE_GRANT_USER_NOT_FOUND = "Sentinel doesn't know this user.";
+const MESSAGE_GRANT_USER_INACTIVE =
+  "This user is inactive, so they can't be granted access.";
+
+// The error of the user field of Grant access that a failure states, or
+// undefined for a failure of the form: 404 USER_NOT_FOUND and 409
+// USER_INACTIVE.
+export function grantAccessFieldError(
+  failure: RequestFailure,
+): string | undefined {
+  if (!(failure instanceof ApiError)) {
+    return undefined;
+  }
+  if (failure.status === 404 && failure.code === "USER_NOT_FOUND") {
+    return MESSAGE_GRANT_USER_NOT_FOUND;
+  }
+  if (failure.status === 409 && failure.code === "USER_INACTIVE") {
+    return MESSAGE_GRANT_USER_INACTIVE;
+  }
+  return undefined;
+}
+
+// Whether a read of the access grants of a Ticket failed because the Ticket
+// is no longer confidential, 409 TICKET_NOT_CONFIDENTIAL, after which it has
+// no grants (Sentinel docs/features/tickets/tickets.md, List Access Grants;
+// Set Confidentiality).
+export function isNotConfidential(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 409 &&
+    error.code === "TICKET_NOT_CONFIDENTIAL"
+  );
+}
+
 // The message of a field error of a VALIDATION_ERROR response
 // (docs/behaviors.md, Where Errors Appear).
 export const MESSAGE_INVALID_VALUE = "This value isn't valid.";
