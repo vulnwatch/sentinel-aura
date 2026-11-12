@@ -87,6 +87,8 @@ const LINK = "rgb(9, 105, 218)";
 const BORDER = "rgb(216, 222, 228)";
 const INFO_SOFT = "rgb(221, 244, 255)";
 const INFO_ON_SOFT = "rgb(10, 48, 105)";
+const WARNING_ON_SOFT = "rgb(108, 68, 0)";
+const WARNING_ICON = "#9a6700";
 
 // A maintainer without a role, who maintains fictional-openssl, the package
 // of fictionalPackage.
@@ -297,6 +299,42 @@ function productOf(screen: Screen, name: string): Locator {
     .getByRole("listitem")
     .filter({ has: page.getByRole("button", { name, exact: true }) })
     .last();
+}
+
+// The distance between two colors, #rrggbb, as the largest difference of
+// their channels.
+function distance(one: string, other: string): number {
+  return Math.max(
+    ...[1, 3, 5].map((start) =>
+      Math.abs(
+        Number.parseInt(one.slice(start, start + 2), 16) -
+          Number.parseInt(other.slice(start, start + 2), 16),
+      ),
+    ),
+  );
+}
+
+// The release of a Product as its details show it, or undefined where they
+// show none; the details close again.
+async function releaseInDetails(
+  screen: Screen,
+  name: string,
+): Promise<string | undefined> {
+  await screen.getByRole("button", { name, exact: true }).click();
+  const details = screen.getByRole("dialog", { name });
+  await expect.element(details).toHaveFocus();
+  const terms = details
+    .getByRole("term")
+    .elements()
+    .map((element) => element.textContent);
+  const definitions = details
+    .getByRole("definition")
+    .elements()
+    .map((element) => element.textContent);
+  await userEvent.keyboard("{Escape}");
+  await expect.element(details).not.toBeInTheDocument();
+  const index = terms.indexOf("Release");
+  return index === -1 ? undefined : (definitions[index] ?? undefined);
 }
 
 function showHidden(screen: Screen) {
@@ -679,15 +717,89 @@ describe("a track", () => {
     for (const track of [ibs, git]) {
       expect(track.getByText(/^(?:IBS|Git)$/i).elements()).toHaveLength(0);
     }
-    // The affectedness at the end of the line.
-    expect(boxOf(ibs.getByText("Affected", { exact: true })).right).toBeCloseTo(
-      boxOf(packagesPart(screen)).right,
-      0,
+    // The affectedness on the line of the reference, toward its end.
+    const affected = boxOf(ibs.getByText("Affected", { exact: true }));
+    expect(affected.top).toBeLessThan(
+      boxOf(ibs.getByText("SUSE:FLES-15-SP7:Update")).bottom,
+    );
+    expect(affected.left).toBeGreaterThan(
+      boxOf(packagesPart(screen)).right - 104,
     );
     const reference = getComputedStyle(
       screen.getByText("SUSE:FLES-15-SP7:Update", { exact: true }).element(),
     );
     expect(reference.fontWeight).toBe("500");
+  });
+
+  test("lines up the pipelines and the affectedness of its tracks, 12 px apart", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({ status: "analysis" }),
+          fictionalTrack({
+            id: "00000000-0000-0000-0000-0000000000b2",
+            reference: "SUSE:FLES-15-SP6:Update",
+            status: "fixed",
+            delivery_relevant: false,
+          }),
+          fictionalTrack({
+            id: "00000000-0000-0000-0000-0000000000b3",
+            workflow_type: "git",
+            reference: "fles-16.0",
+            status: "not_affected",
+            delivery_relevant: false,
+            ...NOT_APPLICABLE,
+          }),
+        ],
+      }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(
+        trackOf(screen, "SUSE:FLES-15-SP7:Update").getByRole("button", {
+          name: /^Phases of/,
+        }),
+      )
+      .toBeVisible();
+    const tracks = (
+      [
+        ["SUSE:FLES-15-SP7:Update", "Analysis"],
+        ["SUSE:FLES-15-SP6:Update", "Fixed"],
+        ["fles-16.0", "Not affected"],
+      ] as const
+    ).map(([reference, affectedness]) => {
+      const track = trackOf(screen, reference);
+      return {
+        item: boxOf(track),
+        reference: boxOf(track.getByText(reference, { exact: true })),
+        affectedness: boxOf(track.getByText(affectedness, { exact: true })),
+        pipeline: track.getByRole("button", { name: /^Phases of/ }).query(),
+      };
+    });
+    const pipelines = tracks
+      .slice(0, 2)
+      .map(({ pipeline }) => boxOf(pipeline!));
+    // Each pipeline on the line of its reference, at the same place.
+    for (const [index, pipeline] of pipelines.entries()) {
+      expect(pipeline.top).toBeLessThan(tracks[index]!.reference.bottom);
+    }
+    expect(pipelines[0]!.right).toBeCloseTo(pipelines[1]!.right, 0);
+    // The affectedness on the line of its reference, at the same place on
+    // every track, Not affected, the widest, included; its text follows its
+    // dot of 8 px 6 px later, 12 px after the pipeline.
+    for (const { affectedness, reference } of tracks) {
+      expect(affectedness.top).toBeLessThan(reference.bottom);
+      expect(affectedness.left).toBeCloseTo(tracks[0]!.affectedness.left, 0);
+    }
+    expect(tracks[0]!.affectedness.left - pipelines[0]!.right).toBeCloseTo(
+      12 + 8 + 6,
+      0,
+    );
+    // The tracks 12 px apart.
+    expect(tracks[1]!.item.top - tracks[0]!.item.bottom).toBeCloseTo(12, 0);
+    expect(tracks[2]!.item.top - tracks[1]!.item.bottom).toBeCloseTo(12, 0);
   });
 
   test.each<[TrackDetail["status"], string]>([
@@ -755,7 +867,7 @@ describe("a track", () => {
   });
 
   test.each<[TrackDetail["status"]]>([["analysis"], ["affected"], ["fixed"]])(
-    "shows its delivery and its pipeline on its second line while it has work, in %s",
+    "shows its pipeline on its line, and its delivery in Phases, while it has work, in %s",
     async (status) => {
       showing([
         fictionalPackage({
@@ -771,20 +883,23 @@ describe("a track", () => {
       const { screen } = await renderTree();
 
       const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
-      const delivery = track.getByText("Delivery", { exact: true });
-      await expect.element(delivery).toBeVisible();
-      expect(colorOf(delivery.element())).toBe(FG_MUTED);
-      await expect
-        .element(track.getByText("Pending", { exact: true }))
-        .toBeVisible();
       const pipeline = track.getByRole("button", {
-        name: /^Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: /,
+        name: /^Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: .*; delivery pending$/,
       });
       await expect.element(pipeline).toBeVisible();
-      // On the line below the reference.
-      expect(boxOf(delivery).top).toBeGreaterThan(
+      // On the line of the reference.
+      expect(boxOf(pipeline).top).toBeLessThan(
         boxOf(track.getByText("SUSE:FLES-15-SP7:Update")).bottom,
       );
+      expect(track.getByText("Delivery").elements()).toHaveLength(0);
+
+      await pipeline.click();
+
+      const phases = screen.getByRole("dialog", { name: "Phases" });
+      await expect.element(phases).toHaveFocus();
+      const delivery = phases.getByText("Delivery", { exact: true });
+      expect(colorOf(delivery.element())).toBe(FG_MUTED);
+      expect(phases.element().textContent).toMatch(/DeliveryPending$/);
     },
   );
 
@@ -886,19 +1001,28 @@ describe("a track", () => {
         screen,
         fields.reference ?? "SUSE:FLES-15-SP7:Update",
       );
-      // The track has work and due dates, so its pipeline shows.
-      await expect
-        .element(track.getByRole("button", { name: /^Phases of/ }))
-        .toBeVisible();
+      // The track has work and due dates, so its pipeline shows, and Phases
+      // holds its delivery.
+      const pipeline = track.getByRole("button", { name: /^Phases of/ });
+      await expect.element(pipeline).toBeVisible();
+      expect(track.getByText("Delivery").elements()).toHaveLength(0);
+
+      await pipeline.click();
+
+      const phases = screen.getByRole("dialog", { name: "Phases" });
+      await expect.element(phases).toHaveFocus();
       if (status === undefined) {
-        expect(track.getByText("Delivery").elements()).toHaveLength(0);
+        expect(pipeline.element().getAttribute("aria-label")).not.toMatch(
+          /delivery/i,
+        );
+        expect(phases.getByText("Delivery").elements()).toHaveLength(0);
       } else {
-        await expect
-          .element(track.getByText("Delivery", { exact: true }))
-          .toBeVisible();
-        await expect
-          .element(track.getByText(status, { exact: true }))
-          .toBeVisible();
+        expect(pipeline.element().getAttribute("aria-label")).toMatch(
+          new RegExp(`; delivery ${status.toLowerCase()}$`),
+        );
+        expect(phases.element().textContent).toMatch(
+          new RegExp(`Delivery${status}$`),
+        );
       }
     },
   );
@@ -946,26 +1070,31 @@ describe("a track", () => {
 
     const submitted = trackOf(screen, "SUSE:FLES-15-SP7:Update");
     await expect
-      .element(submitted.getByText("Delivery", { exact: true }))
-      .toBeVisible();
-    await expect
       .element(
-        productOf(screen, "Fictional Linux Enterprise Server 15 SP7").getByText(
-          "Release not observed",
-          { exact: true },
-        ),
+        submitted.getByRole("button", {
+          name: /^Phases of .*; delivery pending$/,
+        }),
       )
       .toBeVisible();
+    expect(
+      await releaseInDetails(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP7",
+      ),
+    ).toBe("Not observed");
     const tested = trackOf(screen, "SUSE:FLES-15-SP6:Update");
-    expect(tested.getByText("Delivery").elements()).toHaveLength(0);
-    await expect
-      .element(
-        productOf(screen, "Fictional Linux Enterprise Server 15 SP6").getByText(
-          "Not released",
-          { exact: true },
-        ),
-      )
-      .toBeVisible();
+    expect(
+      tested
+        .getByRole("button", { name: /^Phases of/ })
+        .element()
+        .getAttribute("aria-label"),
+    ).not.toMatch(/delivery/);
+    expect(
+      await releaseInDetails(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP6",
+      ),
+    ).toBe("Not released");
   });
 
   test.each<[string, TrackDetail["status"]]>([
@@ -1040,12 +1169,24 @@ describe("a track", () => {
     const { screen } = await renderTree();
 
     const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
-    await expect
-      .element(track.getByText("In progress", { exact: true }))
-      .toBeVisible();
+    const status = track.getByText("In progress", { exact: true });
+    await expect.element(status).toBeVisible();
     expect(
       track.getByRole("button", { name: /^Phases of/ }).elements(),
     ).toHaveLength(0);
+    // On the line of the reference, in place of the pipeline, before the
+    // affectedness: "Delivery" in fg-muted, then its status in fg, 6 px later,
+    // without a mark between them.
+    const label = track.getByText("Delivery", { exact: true });
+    expect(colorOf(label.element())).toBe(FG_MUTED);
+    expect(colorOf(status.element())).toBe(FG);
+    expect(boxOf(status).left - boxOf(label).right).toBeCloseTo(6, 0);
+    expect(boxOf(label).top).toBeLessThan(
+      boxOf(track.getByText("SUSE:FLES-15-SP7:Update")).bottom,
+    );
+    expect(boxOf(status).right).toBeLessThan(
+      boxOf(track.getByText("Not affected", { exact: true })).left,
+    );
   });
 
   test("shows no delivery where it is not relevant", async () => {
@@ -1132,13 +1273,18 @@ describe("a track", () => {
     await expect
       .element(delivered.getByText("In progress", { exact: true }))
       .toBeVisible();
-    await expect
-      .element(
-        delivered.getByText(
-          `Released ${formatDateTime("2099-10-20T09:00:00Z")}`,
-        ),
-      )
-      .toBeVisible();
+    expect(
+      await releaseInDetails(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP7",
+      ),
+    ).toBeUndefined();
+    expect(
+      await releaseInDetails(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP6",
+      ),
+    ).toBe(`Released ${formatDateTime("2099-10-20T09:00:00Z")}`);
   });
 
   test.each<[TicketDetail["status"]]>([["ignored"], ["duplicated"]])(
@@ -1185,21 +1331,74 @@ describe("a track", () => {
         .element(track.getByText("Affected", { exact: true }))
         .toBeVisible();
       expect(track.getByText("Delivery").elements()).toHaveLength(0);
-      expect(track.getByText("Not released").elements()).toHaveLength(0);
-      await expect
-        .element(
-          productOf(screen, "Fictional Linux Enterprise Server 16.0").getByText(
-            /^Released /,
-          ),
-        )
-        .toBeVisible();
+      expect(
+        await releaseInDetails(
+          screen,
+          "Fictional Linux Enterprise Server 15 SP7",
+        ),
+      ).toBeUndefined();
+      expect(
+        await releaseInDetails(
+          screen,
+          "Fictional Linux Enterprise Server 16.0",
+        ),
+      ).toBe(`Released ${formatDateTime("2099-10-20T09:00:00Z")}`);
     },
   );
 });
 
 describe("a Product", () => {
-  test("shows its name as a button that opens its details, and its release at the end of its line", async () => {
+  test("shows its name as a button that opens its details, without its release on its line", async () => {
     showing([fictionalPackage()]);
+
+    const { screen } = await renderTree();
+
+    const name = screen.getByRole("button", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+    });
+    await expect.element(name).toBeVisible();
+    expect(colorOf(name.element())).toBe(FG);
+    expect(boxOf(name).height).toBeGreaterThanOrEqual(24);
+    expect(
+      productOf(screen, "Fictional Linux Enterprise Server 15 SP7")
+        .getByText(/release/i)
+        .elements(),
+    ).toHaveLength(0);
+    expect(
+      await releaseInDetails(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP7",
+      ),
+    ).toBe("Not released");
+  });
+
+  test("shows at the end of its line the release that keeps a Ticket with a CVE from Resolved", async () => {
+    showing([
+      fictionalPackage({
+        tracks: [
+          fictionalTrack({
+            status: "fixed",
+            delivery_status: "released",
+            milestones: {
+              triage: "done",
+              submission: "done",
+              um: "done",
+              qa: "pending",
+            },
+            current_phase: "qa",
+            products: [
+              fictionalProduct(),
+              fictionalProduct({
+                id: "00000000-0000-0000-0000-0000000000c9",
+                product_name: "Fictional Linux Enterprise Server LTSS 15 SP7",
+                product_cpe: "cpe:/o:example:fles-ltss:15:sp7",
+                released_at: "2099-10-20T09:00:00Z",
+              }),
+            ],
+          }),
+        ],
+      }),
+    ]);
 
     const { screen } = await renderTree();
 
@@ -1209,82 +1408,163 @@ describe("a Product", () => {
     );
     const release = product.getByText("Not released", { exact: true });
     await expect.element(release).toBeVisible();
-    expect(colorOf(release.element())).toBe(FG_MUTED);
-    expect(getComputedStyle(release.element()).fontSize).toBe("13px");
-    const name = screen.getByRole("button", {
-      name: "Fictional Linux Enterprise Server 15 SP7",
-    });
-    expect(colorOf(name.element())).toBe(FG);
-    expect(boxOf(name).height).toBeGreaterThanOrEqual(24);
+    const style = getComputedStyle(release.element());
+    expect(style.color).toBe(WARNING_ON_SOFT);
+    expect(style.fontSize).toBe("13px");
+    expect(style.fontWeight).toBe("500");
     expect(boxOf(release).right).toBeCloseTo(boxOf(product).right, 0);
+    // triangle-alert at 14 px in warning-icon starts it, 4 px before its
+    // words: the pixel of the first 14 px closest to warning-icon is it,
+    // apart from the smoothing of its edges.
+    const words = release.element().lastChild;
+    const range = document.createRange();
+    range.selectNodeContents(words!);
+    expect(
+      range.getBoundingClientRect().left - boxOf(release).left,
+    ).toBeCloseTo(14 + 4, 0);
+    const picture = await screenshot(release);
+    const pixels = Array.from({ length: 14 * picture.height }, (_, index) =>
+      picture.at(index % 14, Math.floor(index / 14)),
+    );
+    expect(
+      Math.min(...pixels.map((pixel) => distance(pixel, WARNING_ICON))),
+    ).toBeLessThan(24);
+    // The released Product shows nothing on its line.
+    expect(
+      productOf(screen, "Fictional Linux Enterprise Server LTSS 15 SP7")
+        .getByText(/release/i)
+        .elements(),
+    ).toHaveLength(0);
   });
 
   test.each<
-    [string, Partial<TrackDetail>, Partial<TicketDetail>, string, string]
+    [
+      string,
+      Partial<TrackDetail>,
+      Partial<TicketDetail>,
+      string | undefined,
+      string,
+    ]
   >([
     [
-      "a track whose QA Sentinel observes",
-      {},
+      "a Fixed track whose QA Sentinel observes, on its line too",
+      { status: "fixed" },
       {},
       "Not released",
       "Not released",
     ],
     [
-      "a Git track, whose QA Sentinel does not observe",
-      { workflow_type: "git", reference: "fles-16.0", ...UNOBSERVED },
+      "a Fixed Git track, whose QA Sentinel does not observe, on its line too",
+      {
+        status: "fixed",
+        workflow_type: "git",
+        reference: "fles-16.0",
+        ...UNOBSERVED,
+      },
       {},
       "Release not observed",
       "Not observed",
     ],
     [
-      "a track of a Ticket without a CVE, whose QA Sentinel does not observe",
-      UNOBSERVED,
+      "a Fixed track of a Ticket without a CVE, which it does not keep from Resolved",
+      { status: "fixed", ...UNOBSERVED },
       { cve: null },
-      "Release not observed",
+      undefined,
       "Not observed",
     ],
     [
-      "a Git track, once Sentinel observes its QA",
+      "an Affected track whose QA Sentinel observes",
+      {},
+      {},
+      undefined,
+      "Not released",
+    ],
+    [
+      "an Affected Git track, once Sentinel observes its QA",
       { workflow_type: "git", reference: "fles-16.0" },
       {},
+      undefined,
       "Not released",
-      "Not released",
+    ],
+    [
+      "a track in Analysis whose QA Sentinel does not observe",
+      { status: "analysis", ...UNOBSERVED },
+      {},
+      undefined,
+      "Not observed",
     ],
   ])(
     "shows below %s that it is not released",
     async (_, track, ticket, line, details) => {
       showing([fictionalPackage({ tracks: [fictionalTrack(track)] })], ticket);
       const { screen } = await renderTree();
-      await expect
-        .element(
-          productOf(
-            screen,
-            "Fictional Linux Enterprise Server 15 SP7",
-          ).getByText(line, { exact: true }),
-        )
-        .toBeVisible();
+      const product = productOf(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP7",
+      );
+      await expect.element(product).toBeVisible();
+      if (line === undefined) {
+        expect(product.getByText(/release/i).elements()).toHaveLength(0);
+      } else {
+        await expect
+          .element(product.getByText(line, { exact: true }))
+          .toBeVisible();
+        expect(product.getByText(/release/i).elements()).toHaveLength(1);
+      }
 
-      await screen
-        .getByRole("button", {
-          name: "Fictional Linux Enterprise Server 15 SP7",
-        })
-        .click();
-
-      const popover = screen.getByRole("dialog", {
-        name: "Fictional Linux Enterprise Server 15 SP7",
-      });
-      await expect.element(popover).toBeVisible();
       expect(
-        popover
-          .getByRole("definition")
-          .elements()
-          .map((element) => element.textContent)
-          .at(-1),
+        await releaseInDetails(
+          screen,
+          "Fictional Linux Enterprise Server 15 SP7",
+        ),
       ).toBe(details);
     },
   );
 
-  test("shows when it was released, also on a track that expects no fix", async () => {
+  test.each<[string, Partial<TrackDetail>, Partial<ProductDetail>]>([
+    ["that is not eligible", {}, { eligible: false }],
+    ["of a track without due dates, whose Ticket has no SLA", NO_SLA, {}],
+  ])(
+    "shows no release on the line of a Product of a Fixed track %s",
+    async (_, track, product) => {
+      showing([
+        fictionalPackage({
+          tracks: [
+            fictionalTrack({
+              ...track,
+              status: "fixed",
+              products: [
+                fictionalProduct(product),
+                fictionalProduct({
+                  id: "00000000-0000-0000-0000-0000000000c9",
+                  product_name: "Fictional Linux Enterprise Server 15 SP6",
+                  product_cpe: "cpe:/o:example:fles:15:sp6",
+                  released_at: "2099-10-20T09:00:00Z",
+                }),
+              ],
+            }),
+          ],
+        }),
+      ]);
+
+      const { screen } = await renderTree();
+
+      await expect
+        .element(
+          screen.getByRole("button", {
+            name: "Fictional Linux Enterprise Server 15 SP7",
+          }),
+        )
+        .toBeVisible();
+      expect(
+        packagesPart(screen)
+          .getByText(/release/i)
+          .elements(),
+      ).toHaveLength(0);
+    },
+  );
+
+  test("shows when it was released in its details, also on a track that expects no fix", async () => {
     const releasedAt = "2099-10-20T09:00:00Z";
     showing([
       fictionalPackage({
@@ -1299,13 +1579,17 @@ describe("a Product", () => {
 
     const { screen } = await renderTree();
 
-    await expect
-      .element(
-        productOf(screen, "Fictional Linux Enterprise Server 15 SP7").getByText(
-          `Released ${formatDateTime(releasedAt)}`,
-        ),
-      )
-      .toBeVisible();
+    expect(
+      await releaseInDetails(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP7",
+      ),
+    ).toBe(`Released ${formatDateTime(releasedAt)}`);
+    expect(
+      productOf(screen, "Fictional Linux Enterprise Server 15 SP7")
+        .getByText(/released/i)
+        .elements(),
+    ).toHaveLength(0);
   });
 
   test.each<[string, Partial<TrackDetail>, Partial<ProductDetail>]>([

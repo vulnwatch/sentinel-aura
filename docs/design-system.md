@@ -161,7 +161,10 @@ icons on it, and the color of an icon or mark on `surface` or `canvas`:
 | `danger` | Failed, overdue, or an error | `#FFEBE9` / `#4A111A` | `#A40E26` / `#FFA198` | `#CF222E` / `#F85149` |
 
 `danger-on-soft` is also the color of the text of a field error and of an
-attention count above zero, on `surface` or `canvas`.
+attention count above zero, on `surface` or `canvas`. `warning-on-soft` is
+also the color of a short text that asks for attention at the end of the
+line of a record, on `canvas`, such as the missing release of a Product that
+keeps its Ticket from Resolved.
 
 ### Severity Marks
 
@@ -251,6 +254,7 @@ Text, minimum 4.5:1:
 | `on-danger-solid` | `danger-solid-hover` | 7.86 | 6.45 |
 | `danger-on-soft` | `surface` | 7.86 | 8.90 |
 | `danger-on-soft` | `canvas` | 7.38 | 9.73 |
+| `warning-on-soft` | `canvas` | 8.00 | 12.23 |
 | `surface` (tooltip text) | `fg` (tooltip) | 15.79 | 14.65 |
 | `muted-on-fg` (tooltip text) | `fg` (tooltip) | 5.42 | 5.17 |
 | `neutral-on-soft` | `neutral-soft` | 8.94 | 9.09 |
@@ -448,6 +452,7 @@ that the code imports ship.
 | Dismiss or clear | `x` |
 | Success, information, warning, and error messages | `circle-check`, `info`, `triangle-alert`, `circle-alert` |
 | A deadline that has passed, an overdue milestone | `clock-alert` |
+| A record that keeps another from progressing, such as a Product whose missing release keeps its Ticket from Resolved | `triangle-alert` |
 | The other statuses of a milestone: done, pending, not applicable, not observed (Track Milestones); an observation never made (Other Values) | `circle-check`, `circle`, `circle-minus`, `circle-dashed` |
 | The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
 | A confidential Ticket | `lock` |

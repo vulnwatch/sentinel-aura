@@ -513,19 +513,20 @@ test.describe("for an analyst", () => {
       })
       .last();
     await expect(openssl.getByText("Affected", { exact: true })).toBeVisible();
-    await expect(openssl.getByText("Delivery", { exact: true })).toBeVisible();
-    await expect(openssl.getByText("Pending", { exact: true })).toBeVisible();
+    // Its pipeline, whose Phases ends with its delivery, Pending.
     const pipeline = openssl.getByRole("button", {
-      name: /^Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: Triage done; Submission overdue by \d+ days?, current; UM (?:due|overdue) .+; QA due in \d+ days?$/,
+      name: /^Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: Triage done; Submission overdue by \d+ days?, current; UM (?:due|overdue) .+; QA due in \d+ days?; delivery pending$/,
     });
     await expect(pipeline).toBeVisible();
+    await expect(openssl.getByText("Delivery")).toHaveCount(0);
     await expect(
       openssl.getByText("Fictional Linux Enterprise Server 15 SP7"),
     ).toBeVisible();
-    await expect(openssl.getByText("Not released")).toBeVisible();
+    // An Affected track: its Products show their release in their details
+    // only.
+    await expect(openssl.getByText(/release/i)).toHaveCount(0);
     // Its Git track, whose later phases Sentinel does not observe, shows its
-    // pipeline without Delivery Pending, and its Products a release that is
-    // not observed.
+    // pipeline without Delivery Pending.
     const zlib = packages
       .getByRole("listitem")
       .filter({ has: page.getByText("fles-16.0", { exact: true }) })
@@ -536,7 +537,7 @@ test.describe("for an analyst", () => {
       }),
     ).toBeVisible();
     await expect(zlib.getByText("Delivery")).toHaveCount(0);
-    await expect(zlib.getByText("Release not observed")).toHaveCount(2);
+    await expect(zlib.getByText(/release/i)).toHaveCount(0);
     // No track shows a deadline badge, which the pipeline replaces.
     await expect(
       packages.getByText(/^(?:Triage|Submission|UM|QA|Release) -?\d+d$/),
@@ -551,7 +552,9 @@ test.describe("for an analyst", () => {
     const phases = page.getByRole("dialog", { name: "Phases" });
     await expect(phases).toBeFocused();
     await expect(phases).toContainText("Submission · Maintainer");
+    await expect(phases).toContainText(/DeliveryPending$/);
     await expectAccessible(page);
+    await expectScreenshot(page, "ticket-phases.png");
     await page.keyboard.press("Escape");
     await expect(pipeline).toBeFocused();
 
@@ -586,6 +589,53 @@ test.describe("for an analyst", () => {
       "Not available",
       "Not observed",
     ]);
+    await expectAccessible(page);
+  });
+
+  test("shows the Product that keeps a Ticket from Resolved, and a delivery in Phases", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-26#packages");
+
+    // SNTL-26 is Analyzed and not Resolved: the Server 16.0 of its Fixed Git
+    // track fictional-libidn is not released, which Sentinel does not observe
+    // (Tickets). Its IBS track fictional-glibc is Affected, its delivery In
+    // progress (IBS Requests).
+    const packages = part(page, "Packages");
+    const libidn = packages
+      .getByRole("listitem")
+      .filter({ has: page.getByText("fles-16.0", { exact: true }) })
+      .last();
+    await expect(libidn.getByText("Fixed", { exact: true })).toBeVisible();
+    await expect(
+      libidn.getByText("Release not observed", { exact: true }),
+    ).toBeVisible();
+    const glibc = packages
+      .getByRole("listitem")
+      .filter({
+        has: page.getByText("SUSE:FLES-15-SP7:Update", { exact: true }),
+      })
+      .last();
+    await expect(glibc.getByText(/release/i)).toHaveCount(0);
+    const pipeline = glibc.getByRole("button", {
+      name: /^Phases of fictional-glibc, SUSE:FLES-15-SP7:Update: .*; delivery in progress$/,
+    });
+    await expect(pipeline).toBeVisible();
+    await expectSources(page);
+    await expectScreenshot(page, "ticket-unreleased-product.png");
+
+    await packages
+      .getByRole("button", { name: "Fictional Linux Enterprise Server 16.0" })
+      .click();
+
+    const product = page.getByRole("dialog", {
+      name: "Fictional Linux Enterprise Server 16.0",
+    });
+    await expect(product).toBeFocused();
+    await expect(product.getByRole("definition").last()).toHaveText(
+      "Not observed",
+    );
     await expectAccessible(page);
   });
 
