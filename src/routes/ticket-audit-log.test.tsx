@@ -1,3 +1,4 @@
+import { getLocalTimeZone, today } from "@internationalized/date";
 import { focusManager, type QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { CircleQuestionMark } from "lucide-react";
@@ -6,6 +7,7 @@ import { page, userEvent, type Locator } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
+import { formatDate } from "../components/date-time";
 import {
   TicketAuditEventType,
   type CurrentUserResponse,
@@ -141,6 +143,34 @@ function pageOfEvents(count: number, total: number, number = 1): Response {
   });
 }
 
+// The first event of the Ticket, on the first day of the period, which a
+// test of the period ends before today, whatever the day of its run.
+const FIRST_DAY = "2025-01-15";
+const CREATED = at(2025, 1, 15, 9, 30);
+// Today, the last day of the period.
+const TODAY = today(getLocalTimeZone()).toString();
+
+// The query of the read of the first event of the Ticket (docs/screens/
+// ticket.md, Audit log, Period).
+const FIRST_EVENT_READ = "event_type=ticket_created&per_page=1";
+
+function isFirstEventRead(query: URLSearchParams): boolean {
+  return query.toString() === FIRST_EVENT_READ;
+}
+
+// The response to the read of the first event of the Ticket.
+function firstEventResponse(created = CREATED): Response {
+  return eventPage(
+    eventsOf({
+      event_type: "ticket_created",
+      old_value: null,
+      new_value: null,
+      comment: "Ticket created manually",
+      created_at: created,
+    }),
+  );
+}
+
 let client: QueryClient;
 
 beforeEach(async () => {
@@ -173,6 +203,8 @@ interface Stub {
   ticket: (path: string) => Response | Promise<Response>;
   // The response to List Ticket Events, given its query.
   events: Responder;
+  // The response to the read of the first event, its ticket_created.
+  first: () => Response | Promise<Response>;
   // The response to List Ticket Actors.
   actors: () => Response | Promise<Response>;
 }
@@ -189,12 +221,16 @@ function stubLog(fields: Partial<Stub> = {}) {
         fictionalTicketDetail({ ticket_id: path.slice(TICKETS.length + 1) }),
       ),
     events: () => eventPage(eventsOf({})),
+    first: () => firstEventResponse(),
     actors: () => actorsResponse(),
     ...fields,
   };
   const spy = stubApi((request) => {
     if (request.path === ME) {
       return jsonResponse(200, stub.user);
+    }
+    if (request.path === EVENTS && isFirstEventRead(request.query)) {
+      return stub.first();
     }
     if (request.path === EVENTS) {
       return stub.events(request.query);
@@ -245,14 +281,25 @@ function pathsOf(spy: ReturnType<typeof stubApi>): string[] {
 }
 
 // The queries of the reads of the events, in their order, each parameter as
-// its text.
+// its text, without the reads of the first event.
 function eventReads(spy: ReturnType<typeof stubApi>): string[] {
   return spy.mock.calls
     .map(([input]) => urlOf(input))
-    .filter((url) => url.pathname === EVENTS)
+    .filter(
+      (url) => url.pathname === EVENTS && !isFirstEventRead(url.searchParams),
+    )
     .map((url) =>
       [...url.searchParams].map(([key, value]) => `${key}=${value}`).join("&"),
     );
+}
+
+// The number of reads of the first event.
+function firstEventReads(spy: ReturnType<typeof stubApi>): number {
+  return spy.mock.calls
+    .map(([input]) => urlOf(input))
+    .filter(
+      (url) => url.pathname === EVENTS && isFirstEventRead(url.searchParams),
+    ).length;
 }
 
 async function renderApp(path: string) {
@@ -398,15 +445,36 @@ async function toggleKind(dialog: Locator, kind: string) {
     .click();
 }
 
-// Types a date, such as 01112099, into a date field of the period, from its
-// day.
-async function typeDate(dialog: Locator, field: string, digits: string) {
-  await dialog
+// A part of a date field of the period: 0 the day, 1 the month, 2 the year.
+function partOf(dialog: Locator, field: string, index: number): Locator {
+  return dialog
     .getByRole("group", { name: field })
     .getByRole("spinbutton")
-    .first()
-    .click();
+    .nth(index);
+}
+
+// Gives the focus to a part of a date field of the period, as from the
+// keyboard, which opens no calendar.
+function focusPart(dialog: Locator, field: string, index: number) {
+  const part = partOf(dialog, field, index).element();
+  if (part instanceof HTMLElement) {
+    part.focus();
+  }
+}
+
+// Types a date, such as 01112025, into a date field of the period, from its
+// day.
+async function typeDate(dialog: Locator, field: string, digits: string) {
+  focusPart(dialog, field, 0);
   await userEvent.keyboard(digits);
+}
+
+// Empties a date field of the period, from its year.
+async function emptyField(dialog: Locator, field: string) {
+  focusPart(dialog, field, 2);
+  // Backspace removes a digit, and in an empty part moves to the part before
+  // it.
+  await userEvent.keyboard("{Backspace}".repeat(10));
 }
 
 // The number of lines on which an element shows, by the tops of the boxes
@@ -558,7 +626,7 @@ describe("the tab", () => {
     await expect.element(heading(screen, "SNTL-12")).toBeVisible();
   });
 
-  test("reads the Ticket, its events, and its actors as it opens, and none of the reads of Overview", async () => {
+  test("reads the Ticket, its events, its first event, and its actors as it opens, and none of the reads of Overview", async () => {
     const { spy } = stubLog();
 
     await renderEvents();
@@ -566,7 +634,10 @@ describe("the tab", () => {
     await expect
       .poll(() => new Set(pathsOf(spy)))
       .toEqual(new Set([TICKET, EVENTS, ACTORS]));
-    expect(pathsOf(spy)).toHaveLength(3);
+    await expect.poll(() => firstEventReads(spy)).toBe(1);
+    // The events, and the first event, of List Ticket Events.
+    expect(pathsOf(spy)).toHaveLength(4);
+    expect(eventReads(spy)).toEqual([FIRST_PAGE]);
   });
 
   test("opens at its path without parameters from the tab, and Overview without them either", async () => {
@@ -2178,9 +2249,11 @@ describe("the actor", () => {
       const dialog = await openFilters(screen);
       const options = await openActors(dialog);
       await expect.poll(() => optionNames(options)).toHaveLength(6);
-      // Closes the options, then the filters.
+      // Closes the options, which give the focus back to the select, then
+      // the filters.
       await userEvent.keyboard("{Escape}");
       await expect.element(options).not.toBeInTheDocument();
+      await expect.element(actorSelectOf(dialog)).toHaveFocus();
       await userEvent.keyboard("{Escape}");
       await expect.element(dialog).not.toBeInTheDocument();
     }
@@ -2382,18 +2455,18 @@ describe("the period", () => {
     const { router, screen } = await renderEvents(`${PATH}?page=2`);
     const dialog = await openFilters(screen);
 
-    await typeDate(dialog, "From", "01112099");
-    await typeDate(dialog, "To", "08112099");
+    await typeDate(dialog, "From", "01112025");
+    await typeDate(dialog, "To", "08112025");
     await userEvent.keyboard("{Enter}");
 
     await expect
       .poll(() => router.state.location.href)
-      .toBe(`${PATH}?from=2099-11-01&to=2099-11-08`);
+      .toBe(`${PATH}?from=2025-11-01&to=2025-11-08`);
     expect(router.history.length).toBe(2);
     await expect
       .poll(() => eventReads(spy).at(-1))
       .toBe(
-        `from_date=${startOf("2099-11-01")}&to_date=${endOf("2099-11-08")}&${FIRST_PAGE}`,
+        `from_date=${startOf("2025-11-01")}&to_date=${endOf("2025-11-08")}&${FIRST_PAGE}`,
       );
     await expect
       .element(screen.getByRole("button", { name: "Filters 1 applied" }))
@@ -2420,25 +2493,215 @@ describe("the period", () => {
   test("removes a bound with Enter in a field that the user emptied", async () => {
     const { spy } = stubLog();
     const { router, screen } = await renderEvents(
-      `${PATH}?from=2099-11-01&to=2099-11-08`,
+      `${PATH}?from=2025-11-01&to=2025-11-08`,
     );
     const dialog = await openFilters(screen);
-    await dialog
-      .getByRole("group", { name: "From" })
-      .getByRole("spinbutton")
-      .last()
-      .click();
+    await emptyField(dialog, "To");
 
-    // Backspace removes a digit, and in an empty part moves to the part
-    // before it.
-    await userEvent.keyboard(`${"{Backspace}".repeat(10)}{Enter}`);
+    await userEvent.keyboard("{Enter}");
 
     await expect
       .poll(() => router.state.location.href)
-      .toBe(`${PATH}?to=2099-11-08`);
+      .toBe(`${PATH}?from=2025-11-01`);
     await expect
       .poll(() => eventReads(spy).at(-1))
-      .toBe(`to_date=${endOf("2099-11-08")}&${FIRST_PAGE}`);
+      .toBe(`from_date=${startOf("2025-11-01")}&${FIRST_PAGE}`);
+  });
+
+  test("reads the first event of the Ticket once with its events, and shows its local day in From without a bound, which From sends as no bound", async () => {
+    const { spy } = stubLog();
+    const { router, screen } = await renderEvents();
+    expect(firstEventReads(spy)).toBe(1);
+    const dialog = await openFilters(screen);
+    const from = dialog.getByRole("group", { name: "From" });
+    await expect.poll(() => from.element().textContent).toBe("15/01/2025");
+    expect(
+      dialog.getByRole("group", { name: "To" }).element().textContent,
+    ).toBe("dd/mm/yyyy");
+
+    await typeDate(dialog, "To", "08112025");
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(`${PATH}?to=2025-11-08`);
+    await expect
+      .poll(() => eventReads(spy).at(-1))
+      .toBe(`to_date=${endOf("2025-11-08")}&${FIRST_PAGE}`);
+    await expect
+      .element(screen.getByRole("button", { name: "Filters 1 applied" }))
+      .toBeVisible();
+    // Typed, a From on the first day is no bound either.
+    await typeDate(dialog, "From", "15012025");
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(`${PATH}?to=2025-11-08`);
+    expect(firstEventReads(spy)).toBe(1);
+  });
+
+  test("removes a From of the URL on the first day when the fields apply the period", async () => {
+    stubLog();
+    const { router, screen } = await renderEvents(`${PATH}?from=${FIRST_DAY}`);
+    await expect
+      .element(screen.getByRole("button", { name: "Filters 1 applied" }))
+      .toBeVisible();
+    const dialog = await openFilters(screen);
+
+    await typeDate(dialog, "To", "08112025");
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(`${PATH}?to=2025-11-08`);
+  });
+
+  test.each([
+    // The last minute of 14 Jan 2025 of the browser, whatever its offset.
+    ["the last minute of a local day", at(2025, 1, 14, 23, 59)],
+    // An instant of another day in UTC than in the browser's time zone
+    // two hours east of it, which the browser reads in its own.
+    ["an instant with an offset", "2025-01-15T01:30:00+02:00"],
+  ])(
+    "shows the first day in the time zone of the browser, as the timeline groups its event: %s",
+    async (_, created) => {
+      stubLog({ first: () => firstEventResponse(created) });
+      const { screen } = await renderEvents();
+      const dialog = await openFilters(screen);
+      const local = new Date(created);
+      const expected = [
+        String(local.getDate()).padStart(2, "0"),
+        String(local.getMonth() + 1).padStart(2, "0"),
+        String(local.getFullYear()),
+      ].join("/");
+
+      await expect
+        .poll(
+          () =>
+            dialog.getByRole("group", { name: "From" }).element().textContent,
+        )
+        .toBe(expected);
+    },
+  );
+
+  test("takes the days up to the first day when the clock of the browser shows a day before it", async () => {
+    stubLog({ first: () => firstEventResponse(at(2099, 1, 15, 9, 30)) });
+    const { router, screen } = await renderEvents();
+    const dialog = await openFilters(screen);
+    await expect
+      .poll(
+        () => dialog.getByRole("group", { name: "From" }).element().textContent,
+      )
+      .toBe("15/01/2099");
+
+    await typeDate(dialog, "To", "15012099");
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(`${PATH}?to=2099-01-15`);
+  });
+
+  test.each([
+    ["fails", () => errorResponse(503, "SERVICE_UNAVAILABLE"), 3],
+    ["returns no event", () => eventPage([]), 1],
+  ])(
+    "leaves From empty and takes the days from 1 Jan 1970 to today, and shows nothing, when the read of the first event %s",
+    async (_, first, reads) => {
+      const { spy } = stubLog({ first });
+      const { screen } = await renderEvents();
+      // A failed read is sent again twice (docs/behaviors.md, Retries and
+      // Unconfirmed Changes).
+      await expect.poll(() => firstEventReads(spy)).toBe(reads);
+      const dialog = await openFilters(screen);
+
+      expect(
+        dialog.getByRole("group", { name: "From" }).element().textContent,
+      ).toBe("dd/mm/yyyy");
+      await typeDate(dialog, "From", "31121969");
+      await userEvent.keyboard("{Enter}");
+      await expect
+        .element(
+          dialog.getByText(
+            `Enter a date from 1 Jan 1970 to ${formatDate(TODAY)}.`,
+            { exact: true },
+          ),
+        )
+        .toBeVisible();
+      expect(panelOf(screen).getByRole("alert").elements()).toHaveLength(0);
+      expect(panelOf(screen).element().textContent).not.toMatch(
+        /couldn't|isn't available/,
+      );
+    },
+  );
+
+  test("reads the first event again when the tab returns to the foreground after its read failed, and then shows its day in From", async () => {
+    const { stub, spy } = stubLog({
+      first: () => errorResponse(503, "SERVICE_UNAVAILABLE"),
+    });
+    const { screen } = await renderEvents();
+    await expect.poll(() => firstEventReads(spy)).toBe(3);
+    stub.first = () => firstEventResponse();
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await expect.poll(() => firstEventReads(spy)).toBe(4);
+    const dialog = await openFilters(screen);
+    await expect
+      .poll(
+        () => dialog.getByRole("group", { name: "From" }).element().textContent,
+      )
+      .toBe("15/01/2025");
+  });
+
+  test("keeps the first day when a later read of the first event fails", async () => {
+    const { stub, spy } = stubLog();
+    const { screen } = await renderEvents();
+    const reads = firstEventReads(spy);
+    stub.first = () => errorResponse(503, "SERVICE_UNAVAILABLE");
+
+    // The tab returns to the foreground, which reads the data again; the
+    // read fails, also when sent again twice.
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await expect.poll(() => firstEventReads(spy)).toBe(reads + 3);
+    const dialog = await openFilters(screen);
+    expect(
+      dialog.getByRole("group", { name: "From" }).element().textContent,
+    ).toBe("15/01/2025");
+  });
+
+  test("applies the period with a day chosen in a calendar, which Escape closes alone, Filters staying open", async () => {
+    const { spy } = stubLog();
+    const { router, screen } = await renderEvents();
+    const dialog = await openFilters(screen);
+
+    await partOf(dialog, "To", 0).click();
+    const calendar = page.getByRole("dialog", { name: /Calendar To/ });
+    await expect.element(calendar).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await expect.element(calendar).not.toBeInTheDocument();
+    await expect.element(dialog).toBeVisible();
+    await expect.element(partOf(dialog, "To", 0)).toHaveFocus();
+
+    await partOf(dialog, "To", 0).click();
+    await expect.element(calendar).toBeVisible();
+    // The days from the first day to today: today has the focus.
+    await expect
+      .element(calendar.getByRole("button", { name: /^Today, / }))
+      .toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(`${PATH}?to=${TODAY}`);
+    await expect.element(calendar).not.toBeInTheDocument();
+    await expect.element(dialog).toBeVisible();
+    await expect
+      .poll(() => eventReads(spy).at(-1))
+      .toBe(`to_date=${endOf(TODAY)}&${FIRST_PAGE}`);
   });
 
   test.each([
@@ -2452,22 +2715,22 @@ describe("the period", () => {
     [
       "a date before the first",
       "From",
-      "31121969",
+      "14012025",
       "",
-      "Enter a date from 1 Jan 1970 to 30 Dec 9999.",
+      `Enter a date from 15 Jan 2025 to ${formatDate(TODAY)}.`,
     ],
     [
       "a date after the last",
       "To",
       "",
-      "31129999",
-      "Enter a date from 1 Jan 1970 to 30 Dec 9999.",
+      "31122099",
+      `Enter a date from 15 Jan 2025 to ${formatDate(TODAY)}.`,
     ],
     [
       "a start after the end",
       "To",
-      "08112099",
-      "01112099",
+      "08112025",
+      "01112025",
       "This date is before the start.",
     ],
   ])(
@@ -2476,7 +2739,14 @@ describe("the period", () => {
       const { spy } = stubLog();
       const { router, screen } = await renderEvents();
       const dialog = await openFilters(screen);
+      await expect
+        .poll(
+          () =>
+            dialog.getByRole("group", { name: "From" }).element().textContent,
+        )
+        .toBe("15/01/2025");
       if (start !== "") {
+        await emptyField(dialog, "From");
         await typeDate(dialog, "From", start);
       }
       if (end !== "") {
@@ -2493,12 +2763,7 @@ describe("the period", () => {
       expect(announced.element().textContent).toBe(`${field}: ${message}`);
       const other = field === "From" ? "To" : "From";
       const errorOf = (name: string) =>
-        dialog
-          .getByRole("group", { name })
-          .getByRole("spinbutton")
-          .first()
-          .element()
-          .getAttribute("aria-invalid");
+        partOf(dialog, name, 0).element().getAttribute("aria-invalid");
       expect(errorOf(field)).toBe("true");
       expect(errorOf(other)).not.toBe("true");
       expect(router.state.location.href).toBe(PATH);
@@ -2510,11 +2775,12 @@ describe("the period", () => {
 
       await expect.element(error).not.toBeInTheDocument();
       expect(announced.element().textContent).toBe("");
-      for (const name of ["From", "To"]) {
-        expect(dialog.getByRole("group", { name }).element().textContent).toBe(
-          "dd/mm/yyyy",
-        );
-      }
+      expect(
+        dialog.getByRole("group", { name: "From" }).element().textContent,
+      ).toBe("15/01/2025");
+      expect(
+        dialog.getByRole("group", { name: "To" }).element().textContent,
+      ).toBe("dd/mm/yyyy");
     },
   );
 });
@@ -2534,7 +2800,7 @@ describe("the filters", () => {
     router.history.back();
 
     await expect.poll(() => router.state.location.href).toBe(PATH);
-    await expect.poll(() => from.element().textContent).toBe("dd/mm/yyyy");
+    await expect.poll(() => from.element().textContent).toBe("15/01/2025");
   });
 
   test.each([

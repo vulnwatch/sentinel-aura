@@ -63,10 +63,10 @@ for a maintainer the tracks that wait for them (Packages).
   `kind` that the URL gives more than once, and a range whose start follows
   its end, keeps the kinds that it knows once each in the order of the table
   above, writes a UUID in lower case, and removes `page=1`, all in place of
-  the URL in the browser history (`docs/behaviors.md`, Invalid Search Parameters). A
-  search, a change of the filters, and a page are each an entry of the
-  browser history (`docs/design-system.md`, Lists). A tab opens at its path
-  without parameters.
+  the URL in the browser history (`docs/behaviors.md`, Invalid Search
+  Parameters). A search, a change of the filters, and a page are each an
+  entry of the browser history (`docs/design-system.md`, Lists). A tab opens
+  at its path without parameters.
 - Anchors: `#cve`, the CVE, `#cvss`, the CVSS assessments, `#packages`, the
   package tree, `#details`, the details, and `#sources`, the sources of the
   CVE; a Ticket without a CVE lacks the CVSS assessments and the sources. The
@@ -443,14 +443,39 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
     | References | `reference_added`, `reference_deleted`, `reference_url_changed`, `reference_type_changed`, `reference_title_changed`, `reference_description_changed` |
 
   - **Period**, the date fields From and To (`docs/behaviors.md`, Input),
-    from 1 Jan 1970 to 30 Dec 9999, which send `from_date` and `to_date`
-    (Sentinel `docs/api-spec.md`, Date Range Interpretation). Enter in a field
-    that the user emptied removes its bound. A field with only some of its
-    parts says "Enter the day, the month, and the year.", one outside the
-    dates that it takes "Enter a date from 1 Jan 1970 to 30 Dec 9999.", and a
-    start after the end "This date is before the start." at To; none of them
-    applies, and each goes as its field returns to the applied date when the
-    focus leaves it (`docs/design-system.md`, Lists).
+    each with its calendar, which send `from_date` and `to_date` (Sentinel
+    `docs/api-spec.md`, Date Range Interpretation). The fields take the days
+    from that of the first event of the Ticket, in the time zone of the
+    browser as the timeline groups it, to today, or to that day when a
+    clock of the browser behind Sentinel's shows it after today: the first
+    event is its
+    `ticket_created` (Sentinel `docs/features/tickets/ticket-audit-log.md`,
+    Cross-Event Ordering, Locking, and Rollback), which the screen reads as
+    it reads its data, as the one event of
+    `event_type=ticket_created&per_page=1` from List Ticket Events
+    (`docs/behaviors.md`, Loading). Without a bound, From shows the day of
+    the first event, unless the applied To is before it, and To stays
+    empty, up to today: the period that the timeline shows without a
+    filter. Whenever the fields apply the period, a From on the day of the
+    first event, typed, chosen, or unchanged from the URL, is no bound: it
+    sends no `from_date` and leaves the URL without `from`, so it does not
+    count among the filters that apply. Enter in a field that the user
+    emptied removes its bound, and a From so emptied shows the day of the
+    first event again once the focus leaves both fields. Until a read of the
+    first event succeeds, while it loads, when it fails, and when it returns
+    no event, From stays empty and
+    the fields take the days from 1 Jan 1970 to today, and a failure shows
+    nowhere (`docs/behaviors.md`, Where Errors Appear); a day that arrives
+    while the focus is in the period shows in From once the focus leaves
+    both fields. A date of the URL that the fields do not take, such as a
+    day after today, applies and shows in its field as it is, without an
+    error. A field with only some of its parts says "Enter the day, the
+    month, and the year.", a typed date outside the days that the field
+    takes "Enter a date from 8 Nov 2026 to 12 Nov 2026.", with its first and
+    its last day, and a start after the end "This date is before the
+    start." at To; none of them applies, and each goes as its field returns
+    to the applied date when the focus leaves it (`docs/design-system.md`,
+    Lists).
 - **The events**, grouped by day, each day a level-two heading. Each event
   shows its time, the icon of its kind, or `circle-question-mark` for an
   event type that the pinned contract does not list, and its sentence, which
@@ -614,7 +639,8 @@ user who holds `triage_ticket` (Sentinel
   (`docs/behaviors.md`, Empty States). The failure of the read of the events
   shows in place of the events, and that of a new read of the events shown
   above them, each with Try again where the failure offers it, and the
-  failure of List Ticket Actors in the select (Audit log); the screen handles
+  failure of List Ticket Actors in the select, while that of the read of the
+  first event shows nowhere (Audit log); the screen handles
   no error code specifically (Sentinel
   `docs/features/tickets/ticket-audit-log.md`, List Ticket Events; List
   Ticket Actors). When Clear filters, the pagination, or the action of an
@@ -650,8 +676,9 @@ user who holds `triage_ticket` (Sentinel
   Loading; Empty States; Errors in Place of Content; Menus, Popovers, and
   Tooltips; Icons by Need; Representation of a User
 - Sentinel `docs/features/tickets/ticket-audit-log.md` — Event Type Contract
-  (Rules); Canonical Automatic Comment Vocabulary; detail JSONB Schema
-  Contract; List Ticket Events; List Ticket Actors
+  (Rules); Canonical Automatic Comment Vocabulary; Cross-Event Ordering,
+  Locking, and Rollback; detail JSONB Schema Contract; List Ticket Events;
+  List Ticket Actors
 - Sentinel `docs/features/tickets/ticket-references.md` — ReferenceType
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
   Transitions; Duplicate Handling; Confidential Tickets (Identifier

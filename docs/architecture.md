@@ -864,7 +864,7 @@ headers, which Sentinel requires (Same Origin; Security Headers).
 
 | Header | Value |
 |---|---|
-| `Content-Security-Policy` | `default-src 'none'; script-src 'self'; style-src 'self' '<hash>'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'` |
+| `Content-Security-Policy` | `default-src 'none'; script-src 'self'; style-src 'self' '<hash>'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types default` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `no-referrer` |
 | `Cross-Origin-Opener-Policy` | `same-origin` |
@@ -887,6 +887,24 @@ that shows the theme from the first paint (`docs/behaviors.md`, Preferences)
 runs before the page renders, so it is a script file of the UI's origin as
 well; the policy is not relaxed for it.
 
+React Aria empties the region through which it announces changes to
+assistive technologies, such as each part that the user types into a date
+field, by assigning an empty string to `innerHTML`, which Trusted Types
+blocks without a policy. The UI therefore creates the Trusted Types policy
+`default`, the only one that `trusted-types` allows, before it renders
+(`src/trusted-types.ts`, which `src/main.tsx` imports before the modules
+that render). The policy turns the empty string into HTML and refuses every
+other string, and it creates no script and no script URL, so every other
+string that reaches a sink of HTML, script, or script URL stays blocked. No
+code of the UI assigns HTML (`docs/conventions.md`, No Raw HTML Injection):
+the policy exists for the libraries alone.
+
+| Option | Impact |
+|---|---|
+| **A policy `default` that allows only the empty string** (chosen) | A library that empties an element works, an update of it that does so elsewhere too, and every string that holds markup stays blocked |
+| `trusted-types 'none'`, with the assignment rewritten in the library's code at build time | The policy stays as it was, but the build depends on the text of the library's code, which any update can change |
+| A policy `default` that allows any HTML | Removes the protection of Trusted Types against HTML injection |
+
 The image does not set `Strict-Transport-Security`, because the header
 applies to the whole host and only over HTTPS. The component that terminates
 TLS for the Sentinel host sets it on every HTTPS response of the host, the
@@ -903,6 +921,8 @@ image sets (Sentinel `docs/deployment.md`, Sentinel Host).
 **Rationale:** the UI displays text from external sources, such as CVE
 descriptions. React escapes it, and a strict policy with Trusted Types blocks
 the common forms of script injection that an escaping mistake would allow.
+An empty string holds no markup, so the policy `default` keeps that
+protection.
 
 ### Supported Browsers
 
