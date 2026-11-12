@@ -638,6 +638,24 @@ describe("the part", () => {
     await expect
       .element(screen.getByRole("heading", { level: 3, name: long }))
       .toBeVisible();
+    // The line of the track wraps: its pipeline below the reference, and its
+    // affectedness, in its place of 104 px, below the pipeline, each at the
+    // end of its line; the text of the affectedness follows its dot of 8 px
+    // 6 px later.
+    const track = trackOf(
+      screen,
+      "SUSE:FLES-15-SP7:Update:Fictional:Very:Long:Reference",
+    );
+    const end = boxOf(track).right;
+    const pipeline = boxOf(track.getByRole("button", { name: /^Phases of/ }));
+    const reference = boxOf(
+      track.getByText("SUSE:FLES-15-SP7:Update:Fictional:Very:Long:Reference"),
+    );
+    const affectedness = boxOf(track.getByText("Affected", { exact: true }));
+    expect(pipeline.top).toBeGreaterThanOrEqual(reference.bottom);
+    expect(pipeline.right).toBeCloseTo(end, 0);
+    expect(affectedness.top).toBeGreaterThanOrEqual(pipeline.bottom);
+    expect(affectedness.left).toBeCloseTo(end - 104 + 8 + 6, 0);
   });
 });
 
@@ -729,6 +747,24 @@ describe("a track", () => {
       screen.getByText("SUSE:FLES-15-SP7:Update", { exact: true }).element(),
     );
     expect(reference.fontWeight).toBe("500");
+  });
+
+  test("keeps its pipeline and its affectedness at the end of their line where its reference takes a line of its own", async () => {
+    const long = `SUSE:FLES-15-SP7:Update:${"Fictional".repeat(12)}`;
+    showing([
+      fictionalPackage({ tracks: [fictionalTrack({ reference: long })] }),
+    ]);
+
+    const { screen } = await renderTree();
+
+    const track = trackOf(screen, long);
+    const pipeline = boxOf(track.getByRole("button", { name: /^Phases of/ }));
+    expect(pipeline.top).toBeGreaterThanOrEqual(
+      boxOf(track.getByText(long)).bottom,
+    );
+    const affectedness = boxOf(track.getByText("Affected", { exact: true }));
+    expect(affectedness.top).toBeLessThan(pipeline.bottom);
+    expect(affectedness.left).toBeCloseTo(boxOf(track).right - 104 + 8 + 6, 0);
   });
 
   test("lines up the pipelines and the affectedness of its tracks, 12 px apart", async () => {
@@ -1466,35 +1502,35 @@ describe("a Product", () => {
       "Not observed",
     ],
     [
-      "a Fixed track of a Ticket without a CVE, which it does not keep from Resolved",
+      "a Fixed track of a Ticket without a CVE, which it does not keep from Resolved, in its details only",
       { status: "fixed", ...UNOBSERVED },
       { cve: null },
       undefined,
       "Not observed",
     ],
     [
-      "an Affected track whose QA Sentinel observes",
+      "an Affected track whose QA Sentinel observes, in its details only",
       {},
       {},
       undefined,
       "Not released",
     ],
     [
-      "an Affected Git track, once Sentinel observes its QA",
+      "an Affected Git track, once Sentinel observes its QA, in its details only",
       { workflow_type: "git", reference: "fles-16.0" },
       {},
       undefined,
       "Not released",
     ],
     [
-      "a track in Analysis whose QA Sentinel does not observe",
+      "a track in Analysis whose QA Sentinel does not observe, in its details only",
       { status: "analysis", ...UNOBSERVED },
       {},
       undefined,
       "Not observed",
     ],
   ])(
-    "shows below %s that it is not released",
+    "shows that it is not released, below %s",
     async (_, track, ticket, line, details) => {
       showing([fictionalPackage({ tracks: [fictionalTrack(track)] })], ticket);
       const { screen } = await renderTree();
