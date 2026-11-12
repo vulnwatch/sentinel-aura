@@ -488,16 +488,23 @@ that needs it; content of another kind needs a new row first.
   `expectViewCounts` of `fixtures.ts` waits until each view shows its count.
   A test waits for such data through a state that the user sees, such as
   the counts, never for a fixed time.
-- Each browser runs the tests one at a time against its own backend, newly
-  loaded with the dataset (`docs/architecture.md`, Development Environment).
-  A test relies only on the dataset as loaded and on the data that it
-  creates itself, which it finds by what it created, not by a count or a
-  position that another test could change. A test that changes data changes
-  only data that no other test of its Playwright project relies on (the
-  tests that take references run in an earlier project, below); a failed
-  sign-in counts toward the lockout of its user (Sentinel
-  `docs/features/identity/local-authentication.md`, Account lockout), so it
-  uses a user that no other test signs in as.
+- Each browser runs the tests against its own backend, newly loaded with the
+  dataset, at the same time as the other browser, and as many of its tests
+  at once as the cores of the host allow, those of one module too, in any
+  order within their Playwright project (`docs/architecture.md`, Development
+  Environment). So a test is independent of the order of the tests of its
+  project and of the tests that run beside it: it shares no state with
+  another test, such as a page, a session, or a variable of its module, and
+  needs no other test of its project to run first; only an earlier project,
+  which runs before it as a whole, comes first (below). A test relies only
+  on the dataset as loaded and on the data that it creates itself, which it
+  finds by what it created, not by a count or a position that another test
+  could change. A test that
+  changes data changes only data that no other test of its Playwright
+  project relies on (the tests that take references run in an earlier
+  project, below); a failed sign-in counts toward the lockout of its user
+  (Sentinel `docs/features/identity/local-authentication.md`, Account
+  lockout), so it uses a user that no other test signs in as.
 - A test may send requests to the API itself, for example to check the
   environment or to create the data that it uses.
 - A screenshot is a reference in `test/e2e/screenshots/`, taken in Chromium,
@@ -600,6 +607,14 @@ that needs it; content of another kind needs a new row first.
 - Before pushing, run `scripts/ci.sh all`: it runs locally every check of the
   required `Shell Lint`, `UI Checks`, and `End-to-End Tests` jobs, as CI runs
   them (`docs/deployment.md`, Workflow Inventory, Local run).
+- While a change is in progress, each step runs the checks of what it
+  changed rather than all of them, such as the unit and component tests of
+  the changed modules, through the `test` script with their files, and the
+  end-to-end tests of the changed screens or areas, through
+  `scripts/dev-env.sh e2e` with their modules, in Chromium unless the change
+  concerns Firefox. Once the change is complete, `scripts/ci.sh all` runs
+  every check, and again after any later change, before the push that
+  carries it.
 - Code uses no `any`. A lint rule is disabled only inline, for the smallest
   span, with a comment that explains why the finding is a false positive or
   an accepted trade-off. The generated API client is the only exception: it

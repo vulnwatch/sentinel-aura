@@ -3,7 +3,8 @@
 # Inventory, Local run). The UI Checks and End-to-End Tests jobs of
 # .github/workflows/ci.yml run their checks through this script, so that the
 # list of checks exists once. A job stops at its first failed check, which the
-# output names; in CI, each check is a log group.
+# output names, except that e2e reports the test of the development proxy
+# also after the end-to-end tests fail; in CI, each check is a log group.
 #
 # The workflow keeps what needs the run: the dependency audit scope, which
 # reads the event of the run, and the audit; the artifact uploads; and the
@@ -26,8 +27,10 @@
 #                             test-results/sbom/, and no dependency in the
 #                             working tree
 #   scripts/ci.sh e2e         The checks of the End-to-End Tests job: the
-#                             end-to-end tests, then the test of the
-#                             development proxy
+#                             build of the image, then the end-to-end tests
+#                             and, at the same time, the test of the
+#                             development proxy, whose output and outcome
+#                             follow theirs, also when they fail
 #   scripts/ci.sh all         scripts/lint-shell.sh, as the Shell Lint job runs
 #                             it, then ui-checks, then e2e, each even when an
 #                             earlier one failed; fails, with the list of the
@@ -46,40 +49,67 @@ readonly BASE_BRANCH="origin/master"
 readonly SBOM_FILE="test-results/sbom/sentinel-aura.sbom.cdx.json"
 
 # The check that runs, which the exit handler reports when the script ends
-# during it, and the jobs of `all` that failed.
+# during it, the jobs of `all` that failed, and the development proxy test
+# that runs in the background during `e2e`, with the file of its output.
 CURRENT_CHECK=""
 FAILED_JOBS=()
+DEV_PROXY_PID=""
+DEV_PROXY_LOG=""
 
 in_ci() {
     [[ "${GITHUB_ACTIONS:-}" == true ]]
 }
 
-# Runs the check named $1, the command $2...: in CI in a log group, locally
-# after a heading. A failure ends the script, and the exit handler reports it.
-run_check() {
+# Starts the check named $1: in CI a log group, locally a heading.
+start_check() {
     CURRENT_CHECK="$1"
-    shift
     if in_ci; then
         echo "::group::${CURRENT_CHECK}"
     else
         printf '\n--> %s\n' "${CURRENT_CHECK}" >&2
     fi
-    "$@"
+}
+
+# Ends the check that passed.
+end_check() {
     if in_ci; then
         echo "::endgroup::"
     fi
     CURRENT_CHECK=""
 }
 
-# Reports the check during which the script ends.
+# Runs the check named $1, the command $2...: in CI in a log group, locally
+# after a heading. A failure ends the script, and the exit handler reports it.
+run_check() {
+    start_check "$1"
+    shift
+    "$@"
+    end_check
+}
+
+# Reports the failure of the check that ran last.
+report_failed_check() {
+    if in_ci; then
+        echo "::endgroup::"
+        echo "::error::${CURRENT_CHECK} failed"
+    else
+        warn "${CURRENT_CHECK} failed"
+    fi
+    CURRENT_CHECK=""
+}
+
+# Stops the development proxy test when it still runs, whose own exit handler
+# then removes its backend, reports the check during which the script ends,
+# and removes the output of the test.
 on_exit() {
+    if [[ -n "${DEV_PROXY_PID}" ]]; then
+        stop_process_group "${DEV_PROXY_PID}"
+    fi
+    if [[ -n "${DEV_PROXY_LOG}" ]]; then
+        rm -f -- "${DEV_PROXY_LOG}"
+    fi
     if [[ -n "${CURRENT_CHECK}" ]]; then
-        if in_ci; then
-            echo "::endgroup::"
-            echo "::error::${CURRENT_CHECK} failed"
-        else
-            warn "${CURRENT_CHECK} failed"
-        fi
+        report_failed_check
     fi
 }
 
@@ -325,10 +355,43 @@ cmd_ui_checks() {
     run_check "Verify that no dependency reached the working tree" check_no_dependency_files
 }
 
+# Waits for the development proxy test, which runs in the background, then
+# shows its output and returns its status.
+dev_proxy_result() {
+    local status=0
+    wait "${DEV_PROXY_PID}" || status=$?
+    DEV_PROXY_PID=""
+    cat "${DEV_PROXY_LOG}" >&2
+    return "${status}"
+}
+
+# The development proxy test runs beside the end-to-end tests, each against
+# its own backend, in a process group of its own, which the exit handler stops
+# as a whole when the script ends first. Its outcome follows theirs, also when
+# they fail. The build of the image comes first: it installs the dependencies
+# when they changed, which the two would otherwise install at the same time;
+# the end-to-end tests then run the production build again and build the
+# image from cached layers.
 cmd_e2e() {
     [[ $# -eq 0 ]] || die "e2e: takes no arguments"
-    run_check "End-to-end tests" "${SCRIPTS}/dev-env.sh" e2e
-    run_check "Development proxy test" "${SCRIPTS}/dev-env.sh" test
+    local e2e_failed=false
+    run_check "Build the image" "${SCRIPTS}/image.sh" build
+    DEV_PROXY_LOG="$(mktemp)"
+    set -m
+    "${SCRIPTS}/dev-env.sh" test >"${DEV_PROXY_LOG}" 2>&1 </dev/null &
+    DEV_PROXY_PID=$!
+    set +m
+    # Not through run_check, whose failure would end the script before the
+    # development proxy test reports.
+    start_check "End-to-end tests"
+    if "${SCRIPTS}/dev-env.sh" e2e; then
+        end_check
+    else
+        report_failed_check
+        e2e_failed=true
+    fi
+    run_check "Development proxy test" dev_proxy_result
+    [[ "${e2e_failed}" == false ]]
 }
 
 # Runs the job named $1, the command $2..., in its own process, as CI runs
@@ -361,6 +424,7 @@ main() {
     local command="$1"
     shift
     trap on_exit EXIT
+    trap_interruptions
     case "${command}" in
         ui-checks) cmd_ui_checks "$@" ;;
         e2e | all) "cmd_${command}" "$@" ;;

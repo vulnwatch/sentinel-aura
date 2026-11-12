@@ -80,8 +80,9 @@ jobs:
           retention-days: 7
 
   # The end-to-end tests, against the UI's production image and a Sentinel
-  # backend at the pinned version, then the test of the development proxy
-  # (docs/deployment.md, Workflow Inventory, End-to-end tests).
+  # backend at the pinned version, and beside them the test of the
+  # development proxy (docs/deployment.md, Workflow Inventory, End-to-end
+  # tests).
   end-to-end-tests:
     name: End-to-End Tests
     runs-on: ubuntu-latest

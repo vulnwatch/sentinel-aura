@@ -113,7 +113,7 @@ other scripts and CI run for you.
 | Add, update, or remove a dependency | `scripts/tooling.sh npm` |
 | Audit the dependencies, as CI does when they change | `scripts/tooling.sh audit` |
 | Install the dependencies from scratch, or remove them | `scripts/tooling.sh install`, or `scripts/tooling.sh clean` |
-| Run the [end-to-end tests](#end-to-end-tests) | `scripts/dev-env.sh e2e` |
+| Run the [end-to-end tests](#end-to-end-tests), or some of them | `scripts/dev-env.sh e2e` |
 | Update the reference screenshots after a change of what a screen shows | `scripts/dev-env.sh update-screenshots` |
 | Check the development proxy after changing `vite.config.ts`, `compose.yaml`, `test/e2e/same-origin.spec.ts`, `playwright.config.ts`, `scripts/dev-env.sh`, `scripts/tooling.sh`, `scripts/lib/`, the version of `vite`, or the pinned version | `scripts/dev-env.sh test` |
 | Build and test the image that serves the UI in production ([Packaging and Serving](docs/architecture.md#packaging-and-serving)) | `scripts/image.sh build`, then `scripts/image.sh test` |
@@ -166,9 +166,19 @@ The end-to-end tests in `test/e2e/` run with Playwright against the UI's
 production image, behind a reverse proxy that routes `/api` as a Sentinel host
 does, and a backend loaded with the example dataset
 ([Development Environment](docs/architecture.md#development-environment)).
-`scripts/dev-env.sh e2e` runs them in Chromium and Firefox, in about a minute
-per browser; CI runs them on every pull request.
+`scripts/dev-env.sh e2e` runs them in Chromium and Firefox at the same time,
+each line of the output prefixed with its browser, in a few minutes; CI runs
+them on every pull request.
 
+- While you work on a change, the same command runs some tests only, such as
+  the module of the screen that you change, in one browser; its usage, which
+  `scripts/dev-env.sh help` prints, shows how. Run every check with
+  `scripts/ci.sh all` once the change is complete
+  ([Checks](docs/conventions.md#checks)).
+- The tests of a browser can run several at once against its backend, as
+  many as the cores of your host allow, in any order within their Playwright
+  project, so each test must be independent of the others
+  ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).
 - Every test fails on a Content Security Policy violation, an uncaught
   exception, or a WCAG 2.2 A or AA violation that axe-core finds
   ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).

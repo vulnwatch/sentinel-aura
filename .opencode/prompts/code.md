@@ -86,9 +86,10 @@ Use the Sentinel API only as its contract defines it, and honor every client
 obligation it states.
 
 Add or update tests for every code change, cover the scenarios the change
-affects, run the focused checks and then every complete suite and static check
-the repository defines, and fix failures. Use fictional data in tests,
-fixtures, and screenshots.
+affects, run the focused checks while you iterate and every complete suite
+and static check the repository defines once the change is complete, as
+`AGENTS.md` (Quality and findings) requires, and fix failures. Use fictional
+data in tests, fixtures, and screenshots.
 
 ## Delegation to tasks
 
