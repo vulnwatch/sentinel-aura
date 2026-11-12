@@ -176,8 +176,8 @@ them on every pull request.
   `scripts/ci.sh all` once the change is complete
   ([Checks](docs/conventions.md#checks)).
 - The tests of a browser run several at once against its backend, in any
-  order, so each test must be independent of the others
-  ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).
+  order within their Playwright project, so each test must be independent
+  of the others ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).
 - Every test fails on a Content Security Policy violation, an uncaught
   exception, or a WCAG 2.2 A or AA violation that axe-core finds
   ([End-to-End Tests](docs/conventions.md#end-to-end-tests)).

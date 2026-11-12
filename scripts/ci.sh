@@ -59,7 +59,9 @@ in_ci() {
 }
 
 # Runs the check named $1, the command $2...: in CI in a log group, locally
-# after a heading. A failure ends the script, and the exit handler reports it.
+# after a heading. A failure returns its status, which ends the script, whose
+# exit handler reports it, unless the caller tests the status and reports the
+# failure itself with report_failed_check.
 run_check() {
     CURRENT_CHECK="$1"
     shift
@@ -68,9 +70,20 @@ run_check() {
     else
         printf '\n--> %s\n' "${CURRENT_CHECK}" >&2
     fi
-    "$@"
+    "$@" || return $?
     if in_ci; then
         echo "::endgroup::"
+    fi
+    CURRENT_CHECK=""
+}
+
+# Reports the failure of the check that ran last.
+report_failed_check() {
+    if in_ci; then
+        echo "::endgroup::"
+        echo "::error::${CURRENT_CHECK} failed"
+    else
+        warn "${CURRENT_CHECK} failed"
     fi
     CURRENT_CHECK=""
 }
@@ -80,19 +93,13 @@ run_check() {
 # and removes the output of the test.
 on_exit() {
     if [[ -n "${DEV_PROXY_PID}" ]]; then
-        kill -TERM -- "-${DEV_PROXY_PID}" 2>/dev/null || true
-        wait "${DEV_PROXY_PID}" 2>/dev/null || true
+        stop_process_group "${DEV_PROXY_PID}"
     fi
     if [[ -n "${DEV_PROXY_LOG}" ]]; then
         rm -f -- "${DEV_PROXY_LOG}"
     fi
     if [[ -n "${CURRENT_CHECK}" ]]; then
-        if in_ci; then
-            echo "::endgroup::"
-            echo "::error::${CURRENT_CHECK} failed"
-        else
-            warn "${CURRENT_CHECK} failed"
-        fi
+        report_failed_check
     fi
 }
 
@@ -350,20 +357,26 @@ dev_proxy_result() {
 
 # The development proxy test runs beside the end-to-end tests, each against
 # its own backend, in a process group of its own, which the exit handler stops
-# as a whole when the script ends first. The build of the image comes first:
-# it installs the dependencies when they changed, which the two would
-# otherwise install at the same time; the end-to-end tests then rebuild the
-# image from the cache.
+# as a whole when the script ends first. Its outcome follows theirs, also when
+# they fail. The build of the image comes first: it installs the dependencies
+# when they changed, which the two would otherwise install at the same time;
+# the end-to-end tests then build the image again, a new production build in
+# layers that come from the cache.
 cmd_e2e() {
     [[ $# -eq 0 ]] || die "e2e: takes no arguments"
+    local e2e_failed=false
     run_check "Build the image" "${SCRIPTS}/image.sh" build
     DEV_PROXY_LOG="$(mktemp)"
     set -m
     "${SCRIPTS}/dev-env.sh" test >"${DEV_PROXY_LOG}" 2>&1 </dev/null &
     DEV_PROXY_PID=$!
     set +m
-    run_check "End-to-end tests" "${SCRIPTS}/dev-env.sh" e2e
+    if ! run_check "End-to-end tests" "${SCRIPTS}/dev-env.sh" e2e; then
+        report_failed_check
+        e2e_failed=true
+    fi
     run_check "Development proxy test" dev_proxy_result
+    [[ "${e2e_failed}" == false ]]
 }
 
 # Runs the job named $1, the command $2..., in its own process, as CI runs
@@ -396,9 +409,7 @@ main() {
     local command="$1"
     shift
     trap on_exit EXIT
-    # An interruption, such as Ctrl+C, runs the exit handler too.
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
+    trap_interruptions
     case "${command}" in
         ui-checks) cmd_ui_checks "$@" ;;
         e2e | all) "cmd_${command}" "$@" ;;

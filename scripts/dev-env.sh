@@ -44,8 +44,8 @@
 #                                    or in <browser>, chromium or firefox,
 #                                    each against a new backend; the
 #                                    arguments after -- go to Playwright,
-#                                    such as test files, --grep, or
-#                                    --workers, to run some tests only
+#                                    such as test files or --grep, to run
+#                                    some tests only, or --workers
 #   scripts/dev-env.sh update-screenshots
 #                                    Build the UI's image, then run the
 #                                    end-to-end tests in Chromium and write
@@ -309,15 +309,11 @@ cmd_test() {
 }
 
 # Stops the browsers whose tests run in the background, each with its process
-# group: the commands that it runs, and its tests, to whose container docker
-# forwards the signal. Each removes its container when it ends.
+# group.
 stop_browsers() {
     local pid
     for pid in "${BROWSER_PIDS[@]}"; do
-        kill -TERM -- "-${pid}" 2>/dev/null || true
-    done
-    for pid in "${BROWSER_PIDS[@]}"; do
-        wait "${pid}" 2>/dev/null || true
+        stop_process_group "${pid}"
     done
     BROWSER_PIDS=()
 }
@@ -331,15 +327,6 @@ remove_run_state() {
     if [[ -n "${WORK_DIR}" ]]; then
         rm -rf -- "${WORK_DIR}"
     fi
-}
-
-# Ends the script on an interruption, such as Ctrl+C, so that its exit handler
-# removes what the run created. The interruption of the terminal reaches only
-# the processes in the foreground, so the handler also stops those in the
-# background.
-trap_interruptions() {
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
 }
 
 # Prints the project of the end-to-end environment of the browser $1.
@@ -395,7 +382,8 @@ remove_e2e_results() {
 
 # One browser runs in the foreground. Several run at the same time, each in
 # the background, in a process group of its own, which remove_run_state stops
-# as a whole, and without the terminal's input.
+# as a whole, without the terminal's input, and with its output, prefixed, on
+# stderr, where the diagnostics are.
 cmd_e2e() {
     local -a browsers=(chromium firefox) failed=()
     local usage="e2e: takes the browser, chromium or firefox, then the arguments of Playwright after --"
@@ -422,7 +410,7 @@ cmd_e2e() {
     else
         set -m
         for target in "${browsers[@]}"; do
-            (run_e2e "${target}" false "$@" 2>&1 | prefix_lines "${target}") </dev/null &
+            (run_e2e "${target}" false "$@" 2>&1 | prefix_lines "${target}" >&2) </dev/null &
             BROWSER_PIDS+=("$!")
         done
         set +m

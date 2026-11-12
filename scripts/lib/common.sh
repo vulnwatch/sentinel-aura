@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The code that the scripts under scripts/ and the Git hooks share, which they
 # source after setting their strict mode (docs/conventions.md, Shell
-# Scripting): their diagnostics and usage, the identity of the clone, the
+# Scripting): their diagnostics and usage, their interruptions and the
+# processes that they run in the background, the identity of the clone, the
 # repository on GitHub, the development server, the UI's image and the image
 # of a release, the results of the end-to-end tests, the files of the
 # installed dependencies and their changes, the directory of the generated API
@@ -29,6 +30,24 @@ die() {
 # without the comment markers, to stderr.
 usage() {
     awk 'NR == 1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "$0" >&2
+}
+
+# Ends the script on an interruption, such as Ctrl+C, so that its exit handler
+# removes what it created. The interruption of the terminal reaches only the
+# processes in the foreground, so the handler also stops those that the
+# script runs in the background (stop_process_group).
+trap_interruptions() {
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+}
+
+# Stops the process group $1, which a script starts in the background with
+# job control (set -m) so that it can stop it as a whole: a command, what it
+# runs, and the containers of docker run, to which docker forwards the
+# signal. Waits until its leader, a child of the script, has ended.
+stop_process_group() {
+    kill -TERM -- "-$1" 2>/dev/null || true
+    wait "$1" 2>/dev/null || true
 }
 
 # Prints the identifier of this clone, from the path of its root: the

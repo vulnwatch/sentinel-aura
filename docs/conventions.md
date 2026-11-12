@@ -490,11 +490,13 @@ that needs it; content of another kind needs a new row first.
   the counts, never for a fixed time.
 - Each browser runs the tests against its own backend, newly loaded with the
   dataset, at the same time as the other browser, and several of its tests
-  at once, those of one module too, in any order (`docs/architecture.md`,
-  Development Environment). So a test is independent of the order of the
-  tests and of the tests that run beside it: it shares no state with another
-  test, such as a page, a session, or a variable of its module, and needs
-  no other test to run first. A test relies only on the dataset as loaded
+  at once, those of one module too, in any order within their Playwright
+  project (`docs/architecture.md`, Development Environment). So a test is
+  independent of the order of the tests of its project and of the tests that
+  run beside it: it shares no state with another test, such as a page, a
+  session, or a variable of its module, and needs no other test of its
+  project to run first; only an earlier project, which runs before it as a
+  whole, comes first (below). A test relies only on the dataset as loaded
   and on the data that it creates itself, which it finds by what it created,
   not by a count or a position that another test could change. A test that
   changes data changes only data that no other test of its Playwright
@@ -605,8 +607,8 @@ that needs it; content of another kind needs a new row first.
   required `Shell Lint`, `UI Checks`, and `End-to-End Tests` jobs, as CI runs
   them (`docs/deployment.md`, Workflow Inventory, Local run).
 - While a change is in progress, each step runs the checks of what it
-  changed rather than all of them: the unit and component tests of the
-  changed modules, through the `test` script with their files, and the
+  changed rather than all of them, such as the unit and component tests of
+  the changed modules, through the `test` script with their files, and the
   end-to-end tests of the changed screens or areas, through
   `scripts/dev-env.sh e2e` with their modules, in Chromium unless the change
   concerns Firefox. Once the change is complete, `scripts/ci.sh all` runs

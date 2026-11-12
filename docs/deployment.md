@@ -162,10 +162,11 @@ container, where `scripts/tooling.sh e2e` runs it and reaches nginx on the
 loopback interface (`docs/conventions.md`, End-to-End Tests).
 
 **End-to-end tests.** The `End-to-End Tests` job runs beside `UI Checks`,
-through `scripts/ci.sh e2e` (Local run), which builds the image as
-`scripts/image.sh build` does, and installs the dependencies with it when
-they changed, before the two checks that follow run at the same time.
-`scripts/dev-env.sh e2e` builds the image again, from the cache, then, for
+through `scripts/ci.sh e2e` (Local run), which first builds the image with
+`scripts/image.sh build`, and so installs the dependencies when they changed,
+before the two checks that follow run at the same time and would otherwise
+install them at once. `scripts/dev-env.sh e2e` builds the image again, a
+new production build in layers that come from the cache, then, for
 Chromium and Firefox at the same time, creates an end-to-end environment with
 Docker Compose: a new backend from Sentinel's image at the pinned version and
 digest, loaded with the example dataset, the UI's image, and the reverse
@@ -181,7 +182,8 @@ only; then, with the `dev-server` project of the end-to-end tests, in the
 network namespace of the development server, the same-origin checks that the
 browsers run against the reverse proxy (`docs/conventions.md`, End-to-End
 Tests). Each line of the output of the browsers names its browser, and the
-output of the development proxy test follows theirs. The job needs no
+output and the outcome of the development proxy test follow theirs, also
+when they fail. The job needs no
 permission beyond reading the repository, and no secret:
 
 - when a check fails, it retains `test-results/e2e/` — the report of each

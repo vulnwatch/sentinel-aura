@@ -244,10 +244,6 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
 - Does a test rely only on the dataset as loaded and on the data that it
   creates itself, finding its data by what it created rather than by a count
   or a position that another test could change?
-- Is a test independent of the order of the tests and of those that run
-  beside it, which several workers run at once against the backend of their
-  browser: does it share no state with another test, such as a page, a
-  session, or a variable of its module, and need no other test to run first?
 - Does a test that changes data change only data that no other test of its
   Playwright project relies on, and sit in the project that End-to-End Tests
   assigns to its kind of change? Does a failed sign-in use a user that no
@@ -263,7 +259,10 @@ Apply Tests and End-to-End Tests in `docs/conventions.md`:
 - Does a test wait for a fixed time, or read a value once instead of using an
   assertion that retries until the expected state appears?
 - Does a test depend on the order of the tests, on state that another test
-  leaves, or on the current date outside the dataset's time base?
+  leaves, or on the current date outside the dataset's time base? Does an
+  end-to-end test depend on the tests that run beside it, which several
+  workers run at once against the backend of their browser, or on another
+  test of its Playwright project running first?
 - Does each test assert the observable outcome that it claims, so that it
   fails when the behavior breaks? A test that only checks that a replaced
   function was called, asserts internal state, still passes with the
