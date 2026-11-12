@@ -446,7 +446,9 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
     each with its calendar, which send `from_date` and `to_date` (Sentinel
     `docs/api-spec.md`, Date Range Interpretation). The fields take the days
     from that of the first event of the Ticket, in the time zone of the
-    browser as the timeline groups it, to today: the first event is its
+    browser as the timeline groups it, to today, or to that day when a
+    clock of the browser behind Sentinel's shows it after today: the first
+    event is its
     `ticket_created` (Sentinel `docs/features/tickets/ticket-audit-log.md`,
     Cross-Event Ordering, Locking, and Rollback), which the screen reads as
     it reads its data, as the one event of

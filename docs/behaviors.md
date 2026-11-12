@@ -522,12 +522,12 @@ actor of a recorded action (Representation of a User) are exceptions.
   the nearest day that the calendar enables; the button to the previous or
   the next month that becomes disabled while it holds the focus hands the
   focus to the days. Choosing a day sets the date and closes the calendar,
-  and Escape closes it without a change; the focus then returns where it
-  was in the field, such as the part that the user clicked. A click outside the
-  calendar also closes it without a change, and a click on the field that
-  closes it does not open it again: a part that the user clicks then takes
-  the focus. So the user can still type the date, and from the keyboard
-  Tab reaches each part of it without opening the calendar.
+  and Escape, or a click outside the calendar, closes it without a change;
+  a click on the field that closes it does not open it again. Each way the
+  focus returns where it was in the field, such as the part that the user
+  clicked to open the calendar, so that the user can still type the date;
+  from the keyboard, Tab reaches each part of it without opening the
+  calendar.
 - A date that the user enters as a filter covers that whole day in the time
   zone of the browser: the URL keeps the date, and the UI sends the first and
   the last instant of that day converted to UTC (Sentinel `docs/api-spec.md`,

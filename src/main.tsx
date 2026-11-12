@@ -1,5 +1,7 @@
 // Zod's configuration comes first, before any module uses a schema.
 import "./zod";
+// The Trusted Types policy, before any module renders.
+import "./trusted-types";
 import "./styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

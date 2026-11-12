@@ -1,3 +1,4 @@
+import { getLocalTimeZone, today } from "@internationalized/date";
 import { keepPreviousData } from "@tanstack/react-query";
 import {
   createRoute,
@@ -34,7 +35,7 @@ import { CvssVector } from "../components/cvss-vector";
 import { ButtonLink } from "../components/button-link";
 import { EmptyState } from "../components/data-table";
 import { DateRangeFilter } from "../components/date-range-filter";
-import { formatDateTime } from "../components/date-time";
+import { dayOf, formatDateTime } from "../components/date-time";
 import {
   FilterGroup,
   Filters,
@@ -77,7 +78,9 @@ import { isTicketId, ticketRoute } from "./ticket";
 
 // The events of a page.
 const PER_PAGE = 50;
-// The first and the last date of the period.
+// The first and the last date of the period in the URL, and the first date
+// that its fields take until the screen has read the day of the first event
+// (docs/screens/ticket.md, Navigation; Audit log).
 const FIRST_DAY = "1970-01-01";
 const LAST_DAY = "9999-12-30";
 
@@ -1076,6 +1079,21 @@ function TicketAuditLog() {
   // the actor filter, which reads it from the cache (docs/screens/ticket.md,
   // Audit log).
   useListTicketActors(ticketId);
+  // The first event of the Ticket, its ticket_created, gives the period its
+  // first day, in the time zone of the browser (docs/screens/ticket.md, Audit
+  // log; Sentinel docs/features/tickets/ticket-audit-log.md, Cross-Event
+  // Ordering, Locking, and Rollback). Until a read of it succeeds, the period
+  // takes the days from FIRST_DAY, and its failure shows nowhere
+  // (docs/behaviors.md, Where Errors Appear).
+  const created = useListTicketEvents(ticketId, {
+    event_type: ["ticket_created"],
+    per_page: 1,
+  }).data?.data[0]?.created_at;
+  const firstDay = created === undefined ? undefined : dayOf(created).date;
+  const now = today(getLocalTimeZone()).toString();
+  // Today, or a first day after it, which a clock of the browser behind
+  // Sentinel's gives.
+  const lastDay = firstDay !== undefined && firstDay > now ? firstDay : now;
   const shownSearch = useShownSearch(events, search);
   const refined = refinedBy(search);
 
@@ -1155,8 +1173,9 @@ function TicketAuditLog() {
             startLabel="From"
             endLabel="To"
             applied={{ start: search.from, end: search.to }}
-            min={FIRST_DAY}
-            max={LAST_DAY}
+            startDefault={firstDay}
+            min={firstDay ?? FIRST_DAY}
+            max={lastDay}
             onApply={({ start, end }) => {
               refine({ from: start, to: end });
             }}

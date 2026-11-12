@@ -937,13 +937,22 @@ test.describe("the audit log", () => {
     await expect(event(page, "Bob Wilson assigned")).toBeVisible();
     await page.getByRole("button", { name: "Filters" }).click();
     const filters = page.getByRole("dialog", { name: "Filters" });
+    const from = filters.getByRole("group", { name: "From" });
+    // From shows the day of the first event of the Ticket.
+    await expect(from).toHaveText(/^\d{2}\/\d{2}\/\d{4}$/);
 
-    // The day alone.
-    await filters
-      .getByRole("group", { name: "From" })
-      .getByRole("spinbutton")
-      .first()
-      .click();
+    // A click on its year opens its calendar, which Escape closes, with the
+    // focus back on the year; the day alone then.
+    await from.getByRole("spinbutton").last().click();
+    await expect(
+      page.getByRole("dialog", { name: /Calendar From/ }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(from.getByRole("spinbutton").last()).toBeFocused();
+    for (let removed = 0; removed < 10; removed += 1) {
+      await page.keyboard.press("Backspace");
+    }
+    await expect(from).toHaveText("dd/mm/yyyy");
     await page.keyboard.type("01");
     await page.keyboard.press("Enter");
 
@@ -955,6 +964,71 @@ test.describe("the audit log", () => {
     await expect(page).toHaveURL("/tickets/SNTL-12/audit-log");
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-audit-log-period-error.png");
+  });
+
+  test("applies a period typed in full and one chosen in a calendar, under the policy of the image", async ({
+    page,
+  }) => {
+    // The events of the dataset keep the times of its load, so the first day
+    // of SNTL-12 is the day of the load, today (Sentinel
+    // docs/features/platform/example-dataset.md, Aged Tickets).
+    await signIn(page);
+    await page.goto("/tickets/SNTL-12/audit-log");
+    await expect(event(page, "Bob Wilson assigned")).toBeVisible();
+    const today = await page.evaluate(() => {
+      const now = new Date();
+      return [
+        String(now.getDate()).padStart(2, "0"),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getFullYear()),
+      ];
+    });
+    const [day = "", month = "", year = ""] = today;
+    const date = `${year}-${month}-${day}`;
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    const to = filters.getByRole("group", { name: "To" });
+
+    // A click on its day opens the calendar of To on the current month,
+    // with the focus on today.
+    await to.getByRole("spinbutton").first().click();
+    const calendar = page.getByRole("dialog", { name: /Calendar To/ });
+    await expect(calendar).toBeVisible();
+    await expect(
+      calendar.getByRole("button", { name: /^Today, / }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-audit-log-calendar.png");
+    await page.keyboard.press("Escape");
+    await expect(calendar).toBeHidden();
+    await expect(filters).toBeVisible();
+
+    // Each typed part is announced, which empties the region of the
+    // announcements under Trusted Types.
+    await expect(to.getByRole("spinbutton").first()).toBeFocused();
+    await page.keyboard.type(`${day}${month}${year}`);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(`/tickets/SNTL-12/audit-log?to=${date}`);
+
+    for (let removed = 0; removed < 10; removed += 1) {
+      await page.keyboard.press("Backspace");
+    }
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL("/tickets/SNTL-12/audit-log");
+
+    // Chosen in the calendar of To: today.
+    await to.getByRole("button", { name: "Calendar To" }).click();
+    await expect(
+      calendar.getByRole("button", { name: /^Today, / }),
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page).toHaveURL(`/tickets/SNTL-12/audit-log?to=${date}`);
+    await expect(calendar).toBeHidden();
+    await expect(to).toHaveText(`${day}/${month}/${year}`);
+    await expect(
+      page.getByRole("button", { name: "Filters 1 applied" }),
+    ).toBeVisible();
   });
 
   test("says when no event matches the search, and when a page lies beyond the last", async ({

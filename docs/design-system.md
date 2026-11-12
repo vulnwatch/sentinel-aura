@@ -1412,7 +1412,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   The chosen day has an `accent` fill with its number in `on-accent`, today
   its number at weight 600, and a day that the calendar disables
   (`docs/behaviors.md`, Input) shows at 60 % opacity, as a disabled button
-  does (Buttons and Links). The days of the months around it are left out.
+  does (Buttons and Links). The days of the months around it are left out,
+  and the days take the height of six weeks in every month, so that the
+  calendar keeps its size and Previous and Next their place.
 - A switch turns a choice of a screen on or off at once, outside a form, such
   as showing the hidden records of a part: a rail 28 by 16 px, round, with a
   1 px `border-strong` boundary on `neutral-soft` and a knob of 12 px in

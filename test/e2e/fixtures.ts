@@ -152,9 +152,14 @@ function avatars(page: Page): Locator {
 // The dates and times that the page shows, which the reference screenshots
 // mask: the dataset computes them from the instant of its load (same
 // document, Time Base). A date and time shows in a time element
-// (src/components/date-time.tsx).
+// (src/components/date-time.tsx); a date field shows a date in its parts,
+// each a spinbutton of a type, day, month, or year, unless it shows its
+// placeholder; and a calendar shows the current month by default, in its
+// heading and its days.
 function dateTimes(page: Page): Locator {
-  return page.locator("time");
+  return page
+    .locator("time, [role=spinbutton][data-type]:not([data-placeholder])")
+    .or(page.getByRole("application").locator("header h2, table"));
 }
 
 // The style of the dates while a reference is taken: each takes a fixed
