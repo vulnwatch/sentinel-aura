@@ -32,5 +32,7 @@ export interface CurrentUserData {
   capabilities: Capability[];
   active: boolean;
   bot: boolean;
+  /** URL of the user's picture, a URI reference that a client resolves against the URL of the response and may load as an image, or `null` when Sentinel has none, as for every inactive user and bot account. A client treats a picture that fails to load like `null`. */
+  avatar_url: string | null;
   assignment_eligibility: AssignmentEligibility;
 }

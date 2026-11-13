@@ -11,7 +11,9 @@
  * from the *current* `User` row via a JOIN — never a historical
  * snapshot of the user's profile data at the time of the referenced
  * event or action. `bot` is the user's bot marker
- * (`docs/features/identity/user-management.md`, Bot Accounts).
+ * (`docs/features/identity/user-management.md`, Bot Accounts), and
+ * `avatar_url` the URL of the user's picture, returned exactly as stored
+ * (`docs/features/identity/user-avatars.md`, Avatar URL).
  */
 export interface UserReference {
   id: string;
@@ -19,4 +21,6 @@ export interface UserReference {
   full_name: string | null;
   active: boolean;
   bot: boolean;
+  /** URL of the user's picture, a URI reference that a client resolves against the URL of the response and may load as an image, or `null` when Sentinel has none, as for every inactive user and bot account. A client treats a picture that fails to load like `null`. */
+  avatar_url: string | null;
 }
