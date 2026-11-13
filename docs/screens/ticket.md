@@ -527,12 +527,10 @@ by type, then by the time it was added (Sentinel
 that a user added is manual; the others are automatic, owned by the fetcher
 of a source of the CVE that added them (same document, Purpose).
 
-- **The toolbar**, above the table, without a heading, since the selected
-  tab names the panel: at its end, for a user who holds `manage_references`,
-  Add reference, a secondary button 32 px high with `plus` (Actions); then
-  Filters; and, while a filter applies, Clear filters, last, so that it moves
-  no other control to another row as it appears (`docs/design-system.md`,
-  Lists; Buttons and Links). The table follows 16 px below. The screen
+- **The toolbar** of a tab without a heading, since the selected tab names
+  the panel (`docs/design-system.md`, Lists): Add reference with `plus`, for
+  a user who holds `manage_references` (Actions), Filters, and Clear filters.
+  The table follows 16 px below. The screen
   applies the filters itself to the complete list that List References
   returns, whose own `type` and `source` filters take one value each and
   cannot select a reference without a type (Sentinel `docs/api-spec.md`, Enum
@@ -545,7 +543,8 @@ of a source of the CVE that added them (same document, Purpose).
     does not list matches none (`docs/behaviors.md`, Unknown Values).
   - **Source**, a select (`docs/design-system.md`, Forms) that sets `source`:
     Any source; then, after a line, the sources of the references of the
-    Ticket, as the table names them, Manual first, then the others by name.
+    Ticket that the pinned contract lists, as the table names them, Manual
+    first, then the others by name (`docs/behaviors.md`, Unknown Values).
     While List References loads, or when it fails, the select shows Any
     source and, in place of the sources, the loading indicator or the
     message of the failure. A source of the URL that no reference of the
@@ -908,12 +907,12 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   "Reference “Fictional advisory” deleted." (`docs/behaviors.md`, Outcome of
   a Change). When the reference that Sentinel returns after Add reference or
   Edit does not match the filters that apply, the table does not show it, so
-  its outcome shows in the message area instead, such as "Reference
-  “Fictional advisory” added.", without the Ticket in front of it, since the
-  user is on its screen (same section). The outcome of a change that ends
-  after the user left the tab shows in the message area too, starting with
-  the Ticket, as a link to its screen, such as "SNTL-42: Reference
-  “Fictional advisory” added.", and so does its failure. Whatever the
+  its outcome shows in the message area instead, once the same read has
+  arrived, such as "Reference “Fictional advisory” added." (same section).
+  The outcome of a change that ends after the user left the tab shows in the
+  message area too, and so does its failure, starting with the Ticket, as a
+  link to its screen, such as "SNTL-42: Reference “Fictional advisory”
+  added.", when the user is on another screen. Whatever the
   outcome, the screen then reads again the references, the audit log, the
   users who acted on the Ticket, and the Ticket.
 - After Delete, once the read of the references after it no longer returns

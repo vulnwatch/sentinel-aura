@@ -1059,7 +1059,6 @@ describe("the filters", () => {
     expect(optionNames(options)).toEqual([
       "Any source",
       "Manual",
-      "fictional_fetcher",
       "GHSA",
       "NVD",
       "Red Hat",
@@ -1081,6 +1080,41 @@ describe("the filters", () => {
 
     await expect.poll(() => router.state.location.href).toBe(PATH);
     await expect.poll(() => namesOf(screen)).toHaveLength(7);
+  });
+
+  test("offer no source that the pinned contract does not list, whose references still show, and which a URL still applies, shown as received", async () => {
+    const unlisted = fictionalReference({
+      id: "00000000-0000-7000-8000-0000000000f6",
+      url: "https://advisories.example.com/fictional-fetcher",
+      title: "Fictional fetcher",
+      source: "fictional_fetcher",
+    });
+    stubReferences({
+      references: () => referencesResponse([...EVERY_REFERENCE, unlisted]),
+    });
+    const { router, screen } = await renderTab();
+    expect(namesOf(screen)).toContain(unlisted.title);
+    expect(cellsOf(screen).at(-1)?.[2]).toBe("fictional_fetcher");
+    const dialog = await openFilters(screen);
+
+    const options = await openSources(dialog);
+
+    expect(optionNames(options)).toEqual([
+      "Any source",
+      "Manual",
+      "NVD",
+      "Red Hat",
+    ]);
+    await userEvent.keyboard("{Escape}");
+    await expect.element(options).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await expect.element(dialog).not.toBeInTheDocument();
+
+    router.history.push(`${PATH}?source=fictional_fetcher`);
+
+    await expect.poll(() => namesOf(screen)).toEqual([unlisted.title]);
+    const again = await openFilters(screen);
+    expect(readText(sourceSelectOf(again).element())).toBe("fictional_fetcher");
   });
 
   test("apply the type and the source together", async () => {
@@ -1834,31 +1868,43 @@ describe("Add reference", () => {
       .toEqual([`Reference ${ADDED.url} added.`]);
   });
 
-  test("shows the outcome of a reference that the filters hide in the message area, as a success without the Ticket, and announces nothing in the tab", async () => {
-    const { spy } = stubReferences({
-      add: () => referenceResponse(ADDED, 201),
-    });
-    const { screen } = await renderTab(`${PATH}?type=patch`);
-    const reads = referenceReads(spy).length;
-    const dialog = await openAdd(screen);
-    await fieldOf(dialog, "Address").fill(ADDED.url);
+  test.each([
+    ["arrives", () => referencesResponse()],
+    ["fails", () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION")],
+  ])(
+    "shows the outcome of a reference that the filters hide in the message area once the next read of the references %s, as a success without the Ticket, and announces nothing in the tab",
+    async (_, response) => {
+      const reread = later();
+      let added = false;
+      stubReferences({
+        references: () => (added ? reread.promise : referencesResponse()),
+        add: () => {
+          added = true;
+          return referenceResponse(ADDED, 201);
+        },
+      });
+      const { screen } = await renderTab(`${PATH}?type=patch`);
+      const dialog = await openAdd(screen);
+      await fieldOf(dialog, "Address").fill(ADDED.url);
+      const text = "Reference “Fictional packaging issue” added.";
+      const message = screen.getByText(text, { exact: true });
 
-    await submit(dialog, "Add reference");
+      await submit(dialog, "Add reference");
 
-    const message = screen.getByText(
-      "Reference “Fictional packaging issue” added.",
-      { exact: true },
-    );
-    await expect.element(message).toBeVisible();
-    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
-    expect(panelOf(screen).element().contains(message.element())).toBe(false);
-    expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
-    // Nor once the next read of the references has arrived.
-    await expect.poll(() => referenceReads(spy).length).toBe(reads + 1);
-    await frames();
-    expect(announcementsOf(screen)).toEqual([]);
-    expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
-  });
+      await expect.element(dialog).not.toBeInTheDocument();
+      await frames();
+      expect(message.query()).toBeNull();
+      reread.resolve(response());
+
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+      expect(panelOf(screen).element().contains(message.element())).toBe(false);
+      expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
+      await frames();
+      expect(announcementsOf(screen)).not.toContain(text);
+      expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
+    },
+  );
 
   test("announces the outcome of a reference that the filters show in the tab, and shows nothing in the message area", async () => {
     stubReferences({ add: () => referenceResponse(ADDED, 201) });

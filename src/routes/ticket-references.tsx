@@ -955,7 +955,12 @@ const ANY_SOURCE = "";
 function sourceOptions(
   references: readonly TicketReferenceResponse[],
 ): SelectOption<string>[] {
-  const sources = [...new Set(references.map((reference) => reference.source))];
+  // Only the sources that the pinned contract lists (docs/behaviors.md,
+  // Unknown Values); a reference of another source shows in the table, and
+  // a URL can still name its source.
+  const sources = [
+    ...new Set(references.map((reference) => reference.source)),
+  ].filter((source) => source === MANUAL || CVE_FETCHER_NAMES.has(source));
   return sources
     .map((source) => ({
       value: source,
@@ -1038,7 +1043,11 @@ function TicketReferences() {
   const [dialog, setDialog] = useState<DialogMode>();
   const [deleting, setDeleting] = useState<Removed>();
   const [announcement, setAnnouncement] = useState<Announcement>();
-  const announced = useRef<{ text: string; at: number }>(undefined);
+  // The outcome of a change, which waits for the first read of the
+  // references after it, and whether it shows in the message area.
+  const announced = useRef<{ text: string; at: number; message: boolean }>(
+    undefined,
+  );
   const removed = useRef<Removed>(undefined);
   const focused = useRef<string>(undefined);
   const add = useRef<HTMLDivElement>(null);
@@ -1088,16 +1097,20 @@ function TicketReferences() {
     const done = announced.current;
     if (done !== undefined && (readAt >= done.at || failedAt >= done.at)) {
       announced.current = undefined;
-      setAnnouncement((current) => ({
-        key: (current?.key ?? 0) + 1,
-        text: done.text,
-      }));
+      if (done.message) {
+        showMessage({ tone: "success", text: done.text });
+      } else {
+        setAnnouncement((current) => ({
+          key: (current?.key ?? 0) + 1,
+          text: done.text,
+        }));
+      }
     }
     const pending = removed.current?.at;
     if (pending !== undefined && failedAt >= pending && readAt < pending) {
       removed.current = undefined;
     }
-  }, [readAt, failedAt]);
+  }, [readAt, failedAt, showMessage]);
 
   // When the row that holds the focus leaves the table: after Delete, to the
   // Delete of the row that takes its place, or to that row without one, or
@@ -1175,7 +1188,7 @@ function TicketReferences() {
   }, [rows]);
 
   const announceAfterRead = (text: string) => {
-    announced.current = { text, at: Date.now() };
+    announced.current = { text, at: Date.now(), message: false };
   };
   const actions = useMemo<RowActions | undefined>(
     () =>
@@ -1352,12 +1365,14 @@ function TicketReferences() {
             setDialog(undefined);
             // A reference that the filters hide shows nowhere where the user
             // acted, so its outcome shows in the message area
-            // (docs/behaviors.md, Outcome of a Change).
-            if (matches(reference, search)) {
-              announceAfterRead(text);
-            } else {
-              showMessage({ tone: "success", text });
-            }
+            // (docs/behaviors.md, Outcome of a Change), also once the next
+            // read has arrived, after the dialog has given the page back to
+            // assistive technologies.
+            announced.current = {
+              text,
+              at: Date.now(),
+              message: !matches(reference, search),
+            };
           }}
         />
       )}
