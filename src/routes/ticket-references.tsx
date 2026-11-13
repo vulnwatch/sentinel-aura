@@ -1089,6 +1089,30 @@ function TicketReferences() {
     };
   }, []);
 
+  // An outcome for the message area that still waits for its read as the
+  // user leaves the tab shows at once, naming the Ticket, as the outcome of
+  // a change that ends after the user left does (useChangeOutcome).
+  useEffect(
+    () => () => {
+      const done = announced.current;
+      if (done?.message === true) {
+        announced.current = undefined;
+        showMessage({
+          tone: "success",
+          text: done.text,
+          record: {
+            name: ticketId,
+            href: linkOptions({
+              to: "/tickets/$ticketId",
+              params: { ticketId },
+            }),
+          },
+        });
+      }
+    },
+    [showMessage, ticketId],
+  );
+
   const readAt = read.dataUpdatedAt;
   const failedAt = read.errorUpdatedAt;
   // The announcement of a change waits for the first read of the references

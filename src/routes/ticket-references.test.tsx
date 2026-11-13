@@ -3353,11 +3353,10 @@ describe("the focus after a read", () => {
   });
 });
 
+type Router = Awaited<ReturnType<typeof renderTab>>["router"];
+
 // Leaves for Ticket list, while the change is in progress.
-async function leave(
-  router: Awaited<ReturnType<typeof renderTab>>["router"],
-  screen: Screen,
-) {
+async function leave(router: Router, screen: Screen) {
   await router.navigate({ to: "/tickets" });
   await expect
     .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
@@ -3410,6 +3409,63 @@ describe("a change that ends after the user left the tab", () => {
     await frames();
     expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
   });
+
+  test.each([
+    [
+      "another tab of the Ticket, without the Ticket",
+      async (screen: Screen) => {
+        await screen.getByRole("tab", { name: "Audit log" }).click();
+        await expect
+          .element(screen.getByRole("tabpanel", { name: "Audit log" }))
+          .toBeVisible();
+      },
+      "Reference “Fictional packaging issue” added.",
+    ],
+    [
+      "another screen, naming the Ticket",
+      async (screen: Screen, router: Router) => {
+        await leave(router, screen);
+      },
+      "SNTL-12: Reference “Fictional packaging issue” added.",
+    ],
+  ])(
+    "shows the outcome of a reference that the filters hid, which waited for the next read, once as the user leaves the tab for %s",
+    async (_, leaveTab, text) => {
+      const reread = later();
+      let added = false;
+      stubReferences({
+        references: () => (added ? reread.promise : referencesResponse()),
+        add: () => {
+          added = true;
+          return referenceResponse(ADDED, 201);
+        },
+      });
+      const { router, screen } = await renderTab(`${PATH}?type=patch`);
+      const dialog = await openAdd(screen);
+      await fieldOf(dialog, "Address").fill(ADDED.url);
+      await submit(dialog, "Add reference");
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(screen.getByText(/added\.$/).query()).toBeNull();
+
+      await leaveTab(screen, router);
+
+      const message = screen.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+      const record = screen.getByRole("link", { name: "SNTL-12", exact: true });
+      if (text.startsWith("SNTL-12:")) {
+        await expect
+          .element(record)
+          .toHaveAttribute("href", "/tickets/SNTL-12");
+      } else {
+        expect(record.query()).toBeNull();
+      }
+      // The read that it waited for adds nothing.
+      reread.resolve(referencesResponse([...EVERY_REFERENCE, ADDED]));
+      await frames();
+      expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
+    },
+  );
 
   test("shows a change of a reference in the message area", async () => {
     const response = later();
