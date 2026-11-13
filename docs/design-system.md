@@ -426,8 +426,9 @@ that the code imports ship.
   another size only where a pattern states it, such as in the sidebar.
 - An icon beside a text that names the same thing is hidden from assistive
   technologies. An icon alone in a control gives the control no name: the
-  control has its own accessible name, which a tooltip shows (Menus,
-  Popovers, and Tooltips).
+  control has its own accessible name, which a tooltip shows, or the part of
+  it that a pattern states, such as the action of a row of a table (Tables;
+  Menus, Popovers, and Tooltips).
 - The marks of severity, priority, and Ticket status (Values) and the
   Sentinel mark (Sentinel Mark) are drawn by this document, not taken from
   Lucide.
@@ -443,7 +444,7 @@ that the code imports ship.
 | The account button | `chevrons-up-down` |
 | Account, API keys, Sign out | `user`, `key-round`, `log-out` |
 | Theme System, Light, Dark; the selected item of a menu, a selected checkbox | `monitor`, `sun`, `moon`; `check` |
-| Create | `plus` |
+| Create a record, add an item to a record, such as a reference to a Ticket | `plus` |
 | Filters | `list-filter` |
 | The sort of a column, ascending and descending | `arrow-up`, `arrow-down` |
 | Previous and next page, previous and next month of a calendar | `chevron-left`, `chevron-right` |
@@ -643,11 +644,13 @@ Sidebar).
   text is cut to its place, with an ellipsis, only in a table cell, in a
   user's name (Tables; Representation of a User), and, where a screen
   document states it, in the description of a record on its detail screen,
-  such as that of a CVE, and in a long field of the details of a popover,
-  such as the scope of a CNA (Menus, Popovers, and Tooltips): the text shows
-  its first four lines, the last ending with an ellipsis, and below them Show
-  more, a button in `link`, `text-14`, weight 500, which shows the text whole
-  and becomes Show less. Assistive technologies read the text whole, and Show
+  such as that of a CVE, in the description of a record in a table whose
+  records have no screen of their own, such as a reference of a Ticket
+  (Tables), and in a long field of the details of a popover, such as the
+  scope of a CNA (Menus, Popovers, and Tooltips): the text shows its first
+  four lines, the last ending with an ellipsis, and below them Show more, a
+  button in `link`, `text-14`, weight 500, which shows the text whole and
+  becomes Show less. Assistive technologies read the text whole, and Show
   more states whether it is expanded. Such a text keeps its line breaks, and
   a run of spaces shows as one; it shows as written, as plain text, Markdown
   included, since the UI interprets no text of the API (`docs/behaviors.md`,
@@ -1059,10 +1062,14 @@ A list screen, such as the Ticket list, shows from top to bottom:
    start of the row. A tab opens when the user clicks it or presses Enter or
    Space, not when the arrow keys move the focus to it. At the end of the
    toolbar come the search field, Filters, and, while a filter or a search
-   applies, Clear filters. The tabs and the controls are 8 px apart. When the
-   width runs short, the toolbar wraps one control at a time, the last first,
-   and a row of controls keeps them at its end, so that a control that
-   appears, such as Clear filters, moves no other control to another row.
+   applies, Clear filters. On a tab of a detail screen, whose panel has no
+   heading, the action that adds an item to its list, such as Add reference,
+   starts the controls at the end of the toolbar, before Filters, as a
+   secondary button 32 px high, so that Clear filters stays last. The tabs
+   and the controls are 8 px apart. When the width runs short, the toolbar
+   wraps one control at a time, the last first, and a row of controls keeps
+   them at its end, so that a control that appears, such as Clear filters,
+   moves no other control to another row.
    - The search field, 224 px wide and 32 px high (Forms), has the
      placeholder "Search {records}", such as "Search Tickets", which is also
      its accessible name, and takes at most the longest term that the API
@@ -1171,15 +1178,19 @@ keep the search, the filters, and the sorting.
 - A text longer than its column, such as a title, ends with an ellipsis when
   the screen of its record shows it whole, and assistive technologies read it
   whole; in a table whose records have no screen of their own, such as an
-  audit log, it wraps, a user's name included, and its row grows.
+  audit log, it wraps, a user's name included, and its row grows, except a
+  description that its screen document cuts to its first four lines (Main
+  Content).
 - A user shows in the full form at the small size (Representation of a
   User).
 - The actions on one row, such as Edit and Delete, are icon buttons of 24 px
-  at the end of the row, 4 px apart, with their icon at 16 px in `fg-muted`,
-  each named by its action and the record of its row, such as "Edit SUSE
-  assessment v3.1", which its tooltip shows (Buttons and Links). They show
-  only to a user who can take them (`docs/screen-map.md`, Roles), and Delete
-  asks for confirmation (`docs/behaviors.md`, Confirmation).
+  at the end of the row, 4 px apart, in a last column whose name, Actions,
+  only assistive technologies read. Their icon is at 16 px in `fg-muted`, and
+  each is named by its action and the record of its row, such as "Edit SUSE
+  assessment v3.1", while its tooltip shows the action alone, such as "Edit"
+  (Buttons and Links). They show only to a user who can take them
+  (`docs/screen-map.md`, Roles), and Delete asks for confirmation
+  (`docs/behaviors.md`, Confirmation).
 - The loading indicator, an error in place of the data, and an empty state
   show inside the frame, below the header row. A table within a part of a
   detail screen whose rows come with the read of the part, without pages,
@@ -1187,7 +1198,10 @@ keep the search, the filters, and the sorting.
   Screens): the loading indicator and an error show in place of the part,
   below its heading, and a part without items shows its short line without
   the table (Loading; Errors in Place of Content; `docs/behaviors.md`, Empty
-  States).
+  States). So does a table that takes a tab of a detail screen and whose rows
+  come with one read, without pages, such as the references of a Ticket, in
+  place of the table; when none of its rows matches its filters, the empty
+  state shows inside the frame, below the header row.
 - Rows have no colored marks other than those of their values.
 
 ### Timelines
@@ -1286,15 +1300,15 @@ states it, such as that of a Ticket; the other audit logs are tables
   the popover; or a dialog where the change needs more than one choice
   (Dialogs). While the change is in progress, the pencil is busy
   (`docs/behaviors.md`, Loading).
-- Each part of the record, such as the references of a Ticket, is a section
-  on the background of the page, below a `border` line: its level-two heading
-  in `text-16`, weight 600, 24 px below the line, with its actions at the end
-  of the heading's line, and its content 16 px below the heading; the line of
-  the next part is 32 px below the content, and the first part has no line of
-  its own. A box within a part, such as a table or values set side by side,
-  keeps its frame on `surface`, with a `border` line and the radius of its
-  pattern, 6 or 8 px. A part without items shows its short line in `fg-muted`
-  (`docs/behaviors.md`, Empty States).
+- Each part of the record, such as the CVSS assessments of a Ticket, is a
+  section on the background of the page, below a `border` line: its
+  level-two heading in `text-16`, weight 600, 24 px below the line, with its
+  actions at the end of the heading's line, and its content 16 px below the
+  heading; the line of the next part is 32 px below the content, and the
+  first part has no line of its own. A box within a part, such as a table or
+  values set side by side, keeps its frame on `surface`, with a `border` line
+  and the radius of its pattern, 6 or 8 px. A part without items shows its
+  short line in `fg-muted` (`docs/behaviors.md`, Empty States).
 - A group of items within a part, such as a package of a Ticket with its
   tracks, has no frame: its heading row is a band on `neutral-soft`, at least
   32 px high, with a 6 px radius and 12 px of side padding, which holds its
@@ -1456,8 +1470,10 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 - A dialog is centered over `overlay`, on `surface` with a `border` line, an
   8 px radius, `shadow-xl`, and 20 px of padding: at most 400 px wide for a
-  confirmation and 560 px for a dialog with a form. A dialog taller than the
-  window scrolls its content and keeps its buttons in view.
+  confirmation and 560 px for a dialog with a form, or 488 px for a dialog
+  whose content is a form alone, the 448 px of the form with the padding of
+  the dialog, so that its buttons end where its fields do (Forms). A dialog
+  taller than the window scrolls its content and keeps its buttons in view.
 - Its title is in `text-16`, weight 600, its text in `fg-muted`, and its
   buttons, 40 px high, close it aligned to its end: Cancel, or Keep editing,
   as a secondary button, then the action, primary or danger as Buttons and

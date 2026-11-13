@@ -108,6 +108,32 @@ test("shows its name in a tooltip", async () => {
     .toBeVisible();
 });
 
+test("shows its tooltip instead of its name where it has one, and keeps its name", async () => {
+  const screen = await render(
+    <>
+      <Button>Before</Button>
+      <IconButton
+        label="Delete reference “Fictional advisory”"
+        tooltip="Delete"
+        icon={X}
+        size="small"
+        onPress={() => {}}
+      />
+    </>,
+  );
+  await screen.getByRole("button", { name: "Before" }).click();
+
+  await userEvent.keyboard("{Tab}");
+
+  const button = screen.getByRole("button", {
+    name: "Delete reference “Fictional advisory”",
+  });
+  await expect.element(button).toHaveFocus();
+  const tooltip = screen.getByRole("tooltip");
+  await expect.element(tooltip).toBeVisible();
+  expect(tooltip.element().textContent).toBe("Delete");
+});
+
 test("keeps its name and the focus while busy, turns its spinner in place of its icon, and cannot be pressed", async () => {
   const press = vi.fn();
   const screen = await render(

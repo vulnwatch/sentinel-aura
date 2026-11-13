@@ -15,9 +15,12 @@ The Ticket screen shows one Ticket: its heading row with its main values; in
 the tab Overview its CVE, the CVSS assessments of its CVE, its package tree,
 its details, the sources of its CVE, which an analyst refetches, and who is
 involved in it, with the access grants of a confidential Ticket, which an
-analyst who manages confidentiality grants and revokes; and in the tab Audit
-log its history, which an analyst searches and filters to reconstruct who
-changed what and what Sentinel did by itself.
+analyst who manages confidentiality grants and revokes; in the tab References
+its references, the advisories, patches, and other pages of other sites that
+analysts read while they analyze it, which an analyst who manages references
+adds, edits, and deletes; and in the tab Audit log its history, which an
+analyst searches and filters to reconstruct who changed what and what
+Sentinel did by itself.
 Vulnerability and restricted analysts work in it all day; every other user
 reads it, as a package maintainer does a Ticket of one of their packages that
 an analyst shares, and finds in its package tree the tracks that wait for
@@ -32,13 +35,14 @@ package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
 The screen is the same for every user, except that it offers Refetch to a
-user who holds `triage_ticket`, and Grant access and Revoke access to a user
-who holds `manage_confidentiality` (Actions; Sentinel
-`docs/features/identity/rbac.md`, Endpoint Permission Map (CVEs; Tickets)),
-and marks for a maintainer the tracks that wait for them (Packages). Every
-user who sees a confidential Ticket sees its access grants, whatever their
-capabilities (Sentinel `docs/features/tickets/tickets.md`, List Access
-Grants).
+user who holds `triage_ticket`, Grant access and Revoke access to a user who
+holds `manage_confidentiality`, and Add reference, and Edit and Delete on the
+manual references, to a user who holds `manage_references` (Actions; Sentinel
+`docs/features/identity/rbac.md`, Endpoint Permission Map (CVEs; Tickets;
+Ticket References)), and marks for a maintainer the tracks that wait for them
+(Packages). Every user who sees a confidential Ticket sees its access grants,
+whatever their capabilities (Sentinel `docs/features/tickets/tickets.md`,
+List Access Grants).
 
 ## Navigation
 
@@ -53,6 +57,20 @@ Grants).
   the screen removes every other parameter and value from its URL, in place
   of the URL in the browser history, and keeps its anchor
   (`docs/behaviors.md`, Invalid Search Parameters).
+- References is at `/tickets/{ticket_id}/references`, with these search
+  parameters, each value as text, `type` once for each of its values, such
+  as `type=advisory&type=uncategorized`:
+
+  | Parameter | Values | Without it |
+  |---|---|---|
+  | `type` | One or more of `advisory`, `patch`, `issue`, `article`, and `uncategorized`, a reference without a type (References) | Every type |
+  | `source` | One source as Sentinel records it, such as `manual` or `sync_nvd_cves`, at most 100 characters, without U+0000 (Sentinel `docs/features/tickets/ticket-references.md`, TicketReference) | Any source |
+
+  The screen removes every other parameter and value and a `source` that the
+  URL gives more than once, and keeps the types once each in the order of
+  the table above, all in place of the URL in the browser history
+  (`docs/behaviors.md`, Invalid Search Parameters). A change of the filters
+  is an entry of the browser history (`docs/design-system.md`, Lists).
 - Audit log is at `/tickets/{ticket_id}/audit-log`, with these search
   parameters, each value as text and a parameter with several values once for
   each, such as `kind=status&kind=packages`:
@@ -110,8 +128,8 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
   compares the dates with the instant at which the Ticket arrived.
 - The row wraps when the width runs short.
 
-**Tabs**, named "Ticket" for assistive technologies: Overview and Audit
-log.
+**Tabs**, named "Ticket" for assistive technologies: Overview, References,
+and Audit log.
 
 **Layout of Overview** (`docs/design-system.md`, Detail Screens): the CVE, the
 CVSS assessments, and the package tree in the main column, in this order, and
@@ -500,6 +518,74 @@ focus to the screen's heading, since Access grants is gone
 removes Access grants while it has the focus, the focus moves to
 the screen's heading too.
 
+**References**, a tab that takes the whole width, without a side column
+(`docs/design-system.md`, Detail Screens): the references of the Ticket, from
+List References, `GET /api/v1/tickets/{ticket_id}/references`, read when the
+tab opens, every reference at once, without pages, in the order of the API,
+by type, then by the time it was added (Sentinel
+`docs/features/tickets/ticket-references.md`, List References). A reference
+that a user added is manual; the others are automatic, owned by the fetcher
+of a source of the CVE that added them (same document, Purpose).
+
+- **The toolbar**, above the table, without a heading, since the selected
+  tab names the panel: at its end, for a user who holds `manage_references`,
+  Add reference, a secondary button 32 px high with `plus` (Actions); then
+  Filters; and, while a filter applies, Clear filters, last, so that it moves
+  no other control to another row as it appears (`docs/design-system.md`,
+  Lists; Buttons and Links). The table follows 16 px below. The screen
+  applies the filters itself to the complete list that List References
+  returns, whose own `type` and `source` filters take one value each and
+  cannot select a reference without a type (Sentinel `docs/api-spec.md`, Enum
+  Filter Validation; Sentinel `docs/features/tickets/ticket-references.md`,
+  List References). Filters holds, in this order:
+  - **Type**, a group of checkboxes, Advisory, Patch, Issue, Article, and
+    Uncategorized, without icons, that sets `type`: a reference matches when
+    its type is one of those chosen, a reference without a type when
+    Uncategorized is, and a reference of a type that the pinned contract
+    does not list matches none (`docs/behaviors.md`, Unknown Values).
+  - **Source**, a select (`docs/design-system.md`, Forms) that sets `source`:
+    Any source; then, after a line, the sources of the references of the
+    Ticket, as the table names them, Manual first, then the others by name.
+    While List References loads, or when it fails, the select shows Any
+    source and, in place of the sources, the loading indicator or the
+    message of the failure. A source of the URL that no reference of the
+    Ticket has shows in the select by its name, and matches no reference.
+- **The table** "References" (`docs/design-system.md`, Tables), whose column
+  Reference wraps and whose rows grow, since a reference has no screen of its
+  own:
+  - Reference, which names the row and takes the width that the other
+    columns leave: the title, or without a title the address, at weight 500,
+    as a link to the address, or as text where the address is not a web
+    address (`docs/behaviors.md`, Links to Other Sites); below a title, the
+    address in `text-13`, `fg-muted`, as the link leads to it (same section,
+    The address as parsed); and below them the description, cut to its
+    first four lines with Show more (`docs/design-system.md`, Main Content).
+    A title or an address longer than its line wraps at any character.
+  - Type: Advisory, Patch, Issue, or Article; for a reference without a
+    type, "Uncategorized" in `fg-muted`, the name of the absence of a type
+    (Sentinel `docs/features/tickets/ticket-references.md`, ReferenceType;
+    `docs/behaviors.md`, Absent Values); and a type that the pinned contract
+    does not list as received (`docs/behaviors.md`, Unknown Values).
+  - Source: "Manual", or the CVE source whose fetcher owns the reference, as
+    Sentinel names it, such as NVD for `sync_nvd_cves` (Sentinel
+    `docs/features/tickets/cve-tracking.md`, CVE Sources), so that the rows
+    without Edit and Delete are explained; any other source as received.
+  - Added: `created_at`, a date and time.
+  - For a user who holds `manage_references`, the column of the actions
+    (`docs/design-system.md`, Tables): Edit and Delete in the row of a
+    manual reference (Actions), and nothing in the row of an automatic one.
+- Without references, "No references." in `fg-muted`, in place of the table
+  (`docs/behaviors.md`, Empty States). When no reference matches the
+  filters, the table says "No references match the filters." inside its
+  frame, below the header row, with Clear filters (`docs/design-system.md`,
+  Tables; Empty States).
+- After a change of the filters, also one that Clear filters or the browser
+  history makes, the screen announces what the tab shows, "3 references",
+  "1 reference", "No references match the filters.", or "No references."
+  for a Ticket without any, with the focus where it was
+  (`docs/behaviors.md`, Accessibility, Focus after a navigation); the tab
+  announces nothing as it opens.
+
 **Audit log**, a tab that takes the whole width, without a side column
 (`docs/design-system.md`, Detail Screens): the events of the Ticket as a
 timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
@@ -739,6 +825,109 @@ Access; Revoke Access):
   the screen then reads again the Ticket, its access grants, the users who
   acted on it, and its audit log.
 
+**Add reference**, Add Reference,
+`POST /api/v1/tickets/{ticket_id}/references`; **Edit**, Update Reference,
+`PATCH /api/v1/tickets/{ticket_id}/references/{reference_id}`; and
+**Delete**, Delete Reference,
+`DELETE /api/v1/tickets/{ticket_id}/references/{reference_id}`, in the tab
+References, for a user who holds `manage_references` (Sentinel
+`docs/features/tickets/ticket-references.md`, Add Reference; Update
+Reference; Delete Reference). Each is valid in every status of the Ticket,
+Ignored and Duplicated included, so the screen offers it whatever the status
+(same document, Manual-Zone Exception):
+
+- Edit and Delete are offered only on a manual reference, since Sentinel
+  refuses to change an automatic one with `409 RESOURCE_NOT_EDITABLE` (same
+  document, Update Reference; Delete Reference): icon buttons with `pencil`
+  and `trash` at the end of its row (`docs/design-system.md`, Tables), whose
+  tooltips say "Edit" and "Delete", and whose names also name the reference,
+  by its title in quotation marks, or without one by its address, such as
+  "Edit reference “Fictional advisory”" or "Delete reference
+  https://issues.example.test/tickets/12345".
+- Add reference and Edit open a dialog at most 488 px wide, whose content is
+  a form alone (`docs/design-system.md`, Dialogs; Forms), titled "Add
+  reference" or "Edit reference", with these fields, the first of which
+  takes the focus as the dialog opens:
+  - Address, a single-line field for a web address, required; in Edit, the
+    address of the reference as the table shows it;
+  - Title, optional;
+  - Type, a select: in Add reference, "Detect from the address", chosen at
+    first, which sends no `type`, so that Sentinel classifies the address,
+    or leaves it uncategorized (same document, Type Auto-Classification);
+    then Advisory, Patch, Issue, Article, and Uncategorized, which sends
+    `null`. In Edit, the select starts at the type of the reference and
+    offers no Detect from the address, since Sentinel does not classify a
+    reference that it updates (same section); a type that the pinned
+    contract does not list is an option of its own, as received, which keeps
+    the type;
+  - Description, optional, a multi-line field.
+
+  Then Cancel and the action, a primary button: "Add reference", or "Save"
+  in Edit.
+- The form checks before sending what the contract declares of its fields
+  (same document, API Schemas; `docs/behaviors.md`, Where Errors Appear): an
+  Address that is empty or holds only whitespace says "Enter the address.";
+  an address of more than 2,048 characters, a title of more than 500, and a
+  description of more than 2,000 say "Enter at most 2,048 characters." with
+  their limit; and an address that is not a web address
+  (`docs/behaviors.md`, Links to Other Sites) says "Enter a web address that
+  starts with https:// or http://.". Sentinel then checks and normalizes the
+  address itself (same document, URL Normalization).
+- A check shows at its field when the user submits the form, and when the
+  user leaves a field after changing it. The error of a field, that of a
+  check or one that Sentinel returns (States), goes once the user leaves
+  the field after changing it, or, at Type, chooses another type; a check
+  that the new value fails shows in its place.
+- Add reference sends the address without its surrounding whitespace, the
+  title and the description as typed, or `null` when they are empty or hold
+  only whitespace, which Sentinel does not accept (Sentinel
+  `docs/features/tickets/ticket-references.md`, URL Normalization), and the
+  type as chosen. Edit sends only the fields that the user changed, in the
+  same way: the address without its surrounding whitespace, and a title or a
+  description that is empty or holds only whitespace as `null`; it closes
+  without a request when the user changed none (Sentinel `docs/api-spec.md`,
+  Partial Update Semantics).
+- Add reference and Edit ask for no confirmation. With input that the user
+  changed, Cancel and Escape ask "Discard changes?", "The reference that you
+  entered isn't added." in Add reference or "Your changes to this reference
+  aren't saved." in Edit, with Keep editing and Discard (`docs/behaviors.md`,
+  Confirmation). While the request is in progress, the action is busy and
+  the dialog cannot be closed (`docs/behaviors.md`, Loading); once Sentinel
+  confirms it, the dialog closes, and the focus returns to the button that
+  opened it (`docs/behaviors.md`, Accessibility, Dialogs).
+- Delete asks for confirmation, since it cannot be undone in the UI
+  (`docs/behaviors.md`, Confirmation): "Delete reference “Fictional
+  advisory”?", "The reference is removed from this Ticket. This can't be
+  undone.", Cancel, and Delete reference, a danger button. While it is in
+  progress, the confirmation cannot be closed; once Sentinel confirms it, the
+  confirmation closes.
+- The outcome of each is announced once a read of the references after it
+  arrives, whatever the outcome of that read, naming the reference, after
+  Add reference and Edit as Sentinel returns it: "Reference “Fictional
+  advisory” added.", "Reference “Fictional advisory” changed.", or
+  "Reference “Fictional advisory” deleted." (`docs/behaviors.md`, Outcome of
+  a Change). When the reference that Sentinel returns after Add reference or
+  Edit does not match the filters that apply, the table does not show it, so
+  its outcome shows in the message area instead, such as "Reference
+  “Fictional advisory” added.", without the Ticket in front of it, since the
+  user is on its screen (same section). The outcome of a change that ends
+  after the user left the tab shows in the message area too, starting with
+  the Ticket, as a link to its screen, such as "SNTL-42: Reference
+  “Fictional advisory” added.", and so does its failure. Whatever the
+  outcome, the screen then reads again the references, the audit log, the
+  users who acted on the Ticket, and the Ticket.
+- After Delete, once the read of the references after it no longer returns
+  the reference, the focus moves to the Delete of the row that takes its
+  place, or to that row when it has no Delete, or to Add reference when no
+  row follows (`docs/behaviors.md`, Accessibility, Focus after an action);
+  when that read fails, the focus stays where it is. A row that a read
+  moves, such as after an Edit that changes the type, which orders the rows,
+  keeps the focus on its control; when a read removes the row while one of
+  its controls holds the focus, such as a later read after Delete, or after
+  an Edit that the filters no longer match, the focus moves to the screen's
+  heading. Neither move takes place once the user has moved the focus out
+  of the table meanwhile.
+
 ## States
 
 - **Loading.** The heading row and the tabs show at once; the panel of
@@ -808,6 +997,23 @@ Access; Revoke Access):
   the reads that show the Ticket no longer confidential, so the dialog then
   says so in place of its explanation, the form, the grants, and their
   confirmation, and takes the focus (Participants).
+- **References.** The toolbar shows at once with the tabs, and the
+  references as they arrive, without waiting for the Ticket; a failure of
+  the references shows once the Ticket has arrived, so that a Ticket that
+  the user cannot see shows Not found (`docs/behaviors.md`, Loading; Missing
+  and Inaccessible Records). The screen handles no error code of List
+  References specifically (Sentinel
+  `docs/features/tickets/ticket-references.md`, List References).
+- **Errors of Add reference, Edit, and Delete.** The screen handles one code
+  of Add reference and Edit specifically: `409 RESOURCE_CONFLICT`, an
+  address that another reference of the Ticket has once Sentinel normalizes
+  it, says "This Ticket already has a reference with this address." at
+  Address (Sentinel `docs/features/tickets/ticket-references.md`, Add
+  Reference; Update Reference). A field error of a `VALIDATION_ERROR` for
+  `url`, `title`, `type`, or `description` shows at Address, Title, Type, or
+  Description. Every other failure has the default presentation, such as the
+  `404 RESOURCE_NOT_FOUND` of a reference that another user deleted
+  meanwhile; the screen handles no code of Delete specifically.
 - **Audit log.** The toolbar shows at once with the tabs, and the loading
   indicator in place of the events until they arrive, while the screen
   reads the Ticket too; a failure of the events shows once the Ticket has
@@ -844,7 +1050,9 @@ Access; Revoke Access):
   screen.
 - **Reflow.** At 320 CSS px the page does not scroll horizontally, and the
   names of the package tree wrap (`docs/behaviors.md`, Accessibility, Reflow
-  and text size).
+  and text size). The column Reference of the references keeps at least
+  192 px, which its frame holds at 320 CSS px, so that the table scrolls
+  within its frame rather than breaking every word of the column.
 
 ## Cross-references
 
@@ -863,7 +1071,11 @@ Access; Revoke Access):
   (Rules); Canonical Automatic Comment Vocabulary; Cross-Event Ordering,
   Locking, and Rollback; detail JSONB Schema Contract; List Ticket Events;
   List Ticket Actors
-- Sentinel `docs/features/tickets/ticket-references.md` — ReferenceType
+- Sentinel `docs/features/tickets/ticket-references.md` — Purpose; Data Model
+  (ReferenceType; TicketReference); URL Boundary (URL Normalization); Type
+  Auto-Classification; Mutability and Concurrency (Manual-Zone Exception);
+  API Schemas; API Endpoints (List References; Add Reference; Update
+  Reference; Delete Reference)
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
   Transitions; Gate: Analyzed → Resolved; Duplicate Handling; Confidential
   Tickets (Identifier Disclosure Boundary; Coordinated Release Date); Ignore
@@ -898,11 +1110,12 @@ Access; Revoke Access):
   Score Resolution; API Endpoints (Shared Assessment Item; Get CVSS
   Assessments for a CVE)
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
-  Visibility; Endpoint Permission Map (CVEs; Tickets)
+  Visibility; Endpoint Permission Map (CVEs; Tickets; Ticket References)
 - Sentinel `docs/features/identity/user-management.md` — Directory API
   endpoints (List Users)
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Ticket Identifier Resolution; User Identifier
   Resolution; CVE Identifier Resolution; CNA Identifier Resolution; CVE
   Accessibility Check; Pagination; Enum Filter Validation; Date Range
-  Interpretation; Infrastructure Dependency Errors (HTTP 503)
+  Interpretation; Infrastructure Dependency Errors (HTTP 503); Partial Update
+  Semantics

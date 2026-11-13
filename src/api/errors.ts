@@ -229,6 +229,25 @@ export function grantAccessFieldError(
   return undefined;
 }
 
+// The message of the address field of a reference that another reference of
+// the Ticket has, after normalization, 409 RESOURCE_CONFLICT (Sentinel
+// docs/features/tickets/ticket-references.md, Add Reference; Update
+// Reference).
+const MESSAGE_REFERENCE_ADDRESS_TAKEN =
+  "This Ticket already has a reference with this address.";
+
+// The error of the address field of Add reference or Edit reference that a
+// failure states, or undefined for a failure of the form.
+export function referenceAddressError(
+  failure: RequestFailure,
+): string | undefined {
+  return failure instanceof ApiError &&
+    failure.status === 409 &&
+    failure.code === "RESOURCE_CONFLICT"
+    ? MESSAGE_REFERENCE_ADDRESS_TAKEN
+    : undefined;
+}
+
 // Whether a read of the access grants of a Ticket failed because the Ticket
 // is no longer confidential, 409 TICKET_NOT_CONFIDENTIAL, after which it has
 // no grants (Sentinel docs/features/tickets/tickets.md, List Access Grants;

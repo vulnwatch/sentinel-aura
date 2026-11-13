@@ -187,11 +187,11 @@ when they fail. The job needs no permission beyond reading the repository,
 and no secret:
 
 - when a check fails, it retains `test-results/e2e/` — the report of each
-  Playwright project, in `test-results/e2e/<project>/report/`, with the
-  screenshots that differ from their references and the traces of the
-  failed tests — as the seven-day workflow artifact `e2e-results`. The
-  traces hold the session cookies of the run's dataset backends, which no
-  longer exist; and
+  run, in `test-results/e2e/<project>/report/`, named after the Playwright
+  project that the run selects, with the screenshots that differ from their
+  references and the traces of the failed tests — as the seven-day workflow
+  artifact `e2e-results`. The traces hold the session cookies of the run's
+  dataset backends, which no longer exist; and
 - on a pull request whose tests pass, it retains the production build, with
   `contract/sentinel-version` and `contract/sentinel-image-digest`, as the
   seven-day workflow artifact `ui-preview`, which `scripts/dev-env.sh

@@ -19,6 +19,9 @@ const SIZES = {
 interface IconButtonProps {
   // The accessible name of the button, which its tooltip shows.
   label: string;
+  // What the tooltip shows instead, such as the action alone of a button of
+  // a row of a table, whose accessible name also names its record.
+  tooltip?: string | undefined;
   icon: LucideIcon;
   size: keyof typeof SIZES;
   // Where the tooltip shows (Tooltip).
@@ -42,6 +45,7 @@ interface IconButtonProps {
 // reduced motion (docs/design-system.md, Focus and Motion).
 export function IconButton({
   label,
+  tooltip,
   icon: Icon,
   size,
   tooltipPlacement = "top",
@@ -52,7 +56,7 @@ export function IconButton({
 }: IconButtonProps) {
   const icon = SIZES[size].icon;
   return (
-    <Tooltip text={label} placement={tooltipPlacement}>
+    <Tooltip text={tooltip ?? label} placement={tooltipPlacement}>
       <AriaButton
         ref={ref}
         aria-label={label}

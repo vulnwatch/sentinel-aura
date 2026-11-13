@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -113,6 +113,58 @@ test("is at most 400 px wide, centered over the page", async () => {
   expect(box.left + box.width / 2).toBe(640);
 });
 
+test("is at most 488 px wide for a form alone, centered over the page", async () => {
+  const screen = await render(
+    <ModalDialog
+      isOpen
+      onClose={() => undefined}
+      width="form-only"
+      title="Add reference"
+      buttons={<Button>Cancel</Button>}
+    >
+      Fictional content
+    </ModalDialog>,
+  );
+
+  const dialog = screen.getByRole("dialog", { name: "Add reference" });
+  await expect.element(dialog).toBeVisible();
+  const box = dialog.element().getBoundingClientRect();
+  expect(box.width).toBe(488);
+  expect(box.left + box.width / 2).toBe(640);
+});
+
+test("breaks a word of its title longer than its line, such as an address, at 320 CSS pixels", async () => {
+  await page.viewport(320, 640);
+  const address = `https://advisories.example.com/${"fictional-".repeat(12)}advisory`;
+  const screen = await render(
+    <ConfirmationDialog
+      isOpen
+      onCancel={() => undefined}
+      title={`Delete reference ${address}?`}
+      action="Delete reference"
+      onConfirm={() => undefined}
+      isBusy={false}
+      error={undefined}
+    >
+      The reference is removed from this Ticket.
+    </ConfirmationDialog>,
+  );
+
+  const dialog = screen.getByRole("dialog", {
+    name: `Delete reference ${address}?`,
+  });
+  await expect.element(dialog).toBeVisible();
+  const title = dialog.getByRole("heading").element();
+  // The address takes several lines of its own, after Delete reference.
+  expect(title.getBoundingClientRect().height).toBeGreaterThan(
+    3 * Number.parseFloat(getComputedStyle(title).lineHeight),
+  );
+  expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth);
+  expect(dialog.element().getBoundingClientRect().right).toBeLessThanOrEqual(
+    320,
+  );
+});
+
 test.each(["Cancel", "Escape"])(
   "closes on %s, and returns the focus to the button that opened it",
   async (way) => {
@@ -217,6 +269,72 @@ function RemovedDialog() {
     </>
   );
 }
+
+// The event by which React Aria returns the focus to the element that opened
+// a dialog, which a collection of React Aria, such as a table, takes over to
+// return the focus itself once it renders again, which can take longer than
+// a frame.
+const RESTORE_FOCUS = "react-aria-focus-scope-restore";
+
+// A screen with its heading and a confirmation that a button opens, in an
+// element that takes over the return of the focus to the button without
+// returning it, and that Cancel removes from the page.
+function ConfirmationInCollection() {
+  const [open, setOpen] = useState(false);
+  const collection = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = collection.current;
+    const takeOver = (event: Event) => {
+      event.preventDefault();
+    };
+    element?.addEventListener(RESTORE_FOCUS, takeOver);
+    return () => {
+      element?.removeEventListener(RESTORE_FOCUS, takeOver);
+    };
+  }, []);
+  return (
+    <>
+      <h1 tabIndex={-1}>SNTL-12</h1>
+      <div ref={collection}>
+        <Button
+          onPress={() => {
+            setOpen(true);
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+      {open && (
+        <ConfirmationDialog
+          isOpen
+          onCancel={() => {
+            setOpen(false);
+          }}
+          title="Delete reference?"
+          action="Delete reference"
+          onConfirm={() => undefined}
+          isBusy={false}
+          error={undefined}
+        >
+          The reference is removed from this Ticket.
+        </ConfirmationDialog>
+      )}
+    </>
+  );
+}
+
+test("returns the focus to the button that opened it when React Aria has not after two frames, as in a table", async () => {
+  const screen = await render(<ConfirmationInCollection />);
+  await screen.getByRole("button", { name: "Delete" }).click();
+  const dialog = screen.getByRole("dialog", { name: "Delete reference?" });
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+
+  await expect.element(dialog).not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole("button", { name: "Delete" }))
+    .toHaveFocus();
+});
 
 test("moves the focus to the screen's heading when it leaves the page while it is open", async () => {
   const screen = await render(<RemovedDialog />);

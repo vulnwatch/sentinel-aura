@@ -8,6 +8,7 @@ import { signInRoute } from "./routes/sign-in";
 import { ticketRoute } from "./routes/ticket";
 import { ticketAuditLogRoute } from "./routes/ticket-audit-log";
 import { ticketOverviewRoute } from "./routes/ticket-overview";
+import { ticketReferencesRoute } from "./routes/ticket-references";
 import { ticketListRoute } from "./routes/tickets";
 import { unbuiltScreenRoutes } from "./routes/unbuilt";
 import { parseSearch, stringifySearch } from "./search-params";
@@ -17,7 +18,11 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   authCallbackRoute,
   ticketListRoute,
-  ticketRoute.addChildren([ticketOverviewRoute, ticketAuditLogRoute]),
+  ticketRoute.addChildren([
+    ticketOverviewRoute,
+    ticketReferencesRoute,
+    ticketAuditLogRoute,
+  ]),
   ...unbuiltScreenRoutes,
 ]);
 

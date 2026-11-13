@@ -37,7 +37,8 @@ import { rootRoute } from "./root";
 // (Sentinel docs/features/tickets/tickets.md, Get Ticket), with its heading
 // row and its tabs, each at a path under the path of the screen. Overview, at
 // the path of the screen, is its first tab (src/routes/ticket-overview.tsx),
-// and Audit log its second (src/routes/ticket-audit-log.tsx).
+// References its second (src/routes/ticket-references.tsx), and Audit log
+// its third (src/routes/ticket-audit-log.tsx).
 
 // The canonical identity of a Ticket, SNTL-{n} with n at most the largest
 // positive INTEGER of PostgreSQL (Sentinel docs/api-spec.md, Ticket
@@ -92,8 +93,36 @@ export function useShownTicket(): {
   };
 }
 
+// The CVE sources, each with the fetcher that owns its data and its name, as
+// Sentinel names them (Sentinel docs/features/tickets/cve-tracking.md, CVE
+// Sources), which the sources of the CVE and the references of the Ticket
+// show. The registry of the fetchers decides the sources, so the pinned
+// OpenAPI document types them as text (Sentinel docs/api-spec.md, Response
+// Enums), and a source or a fetcher that the pinned contract does not list
+// shows as received (docs/behaviors.md, Unknown Values).
+const CVE_SOURCES = [
+  { source: "nvd", fetcher: "sync_nvd_cves", name: "NVD" },
+  { source: "mitre", fetcher: "sync_mitre_cves", name: "MITRE" },
+  { source: "kernel", fetcher: "sync_kernel_cves", name: "Linux Kernel CNA" },
+  { source: "ghsa", fetcher: "sync_ghsa_advisories", name: "GHSA" },
+  { source: "redhat", fetcher: "sync_redhat_cves", name: "Red Hat" },
+  { source: "osv", fetcher: "sync_osv_advisories", name: "OSV" },
+  { source: "kev", fetcher: "sync_cisa_kev", name: "CISA KEV" },
+  { source: "epss", fetcher: "sync_epss_scores", name: "EPSS" },
+] as const;
+
+// The names of the CVE sources by source, and by the fetcher that owns them.
+// Maps, so that a value that a later Sentinel release returns is looked up
+// only among them (docs/conventions.md, Data Read from the API).
+export const CVE_SOURCE_NAMES: ReadonlyMap<string, string> = new Map(
+  CVE_SOURCES.map(({ source, name }) => [source, name]),
+);
+export const CVE_FETCHER_NAMES: ReadonlyMap<string, string> = new Map(
+  CVE_SOURCES.map(({ fetcher, name }) => [fetcher, name]),
+);
+
 // The tabs of the screen, each at a path under the path of the Ticket.
-type TabId = "overview" | "audit-log";
+type TabId = "overview" | "references" | "audit-log";
 
 function tabsOf(ticketId: string): readonly DetailTab[] {
   return [
@@ -101,6 +130,14 @@ function tabsOf(ticketId: string): readonly DetailTab[] {
       id: "overview",
       label: "Overview",
       href: linkOptions({ to: "/tickets/$ticketId", params: { ticketId } }),
+    },
+    {
+      id: "references",
+      label: "References",
+      href: linkOptions({
+        to: "/tickets/$ticketId/references",
+        params: { ticketId },
+      }),
     },
     {
       id: "audit-log",
@@ -112,6 +149,12 @@ function tabsOf(ticketId: string): readonly DetailTab[] {
     },
   ];
 }
+
+// The tabs at a path below the path of the Ticket, by the route of the path.
+const TAB_ROUTES = new Map<string, TabId>([
+  ["/tickets/$ticketId/references", "references"],
+  ["/tickets/$ticketId/audit-log", "audit-log"],
+]);
 
 interface ValueProps {
   // The name of the value, which assistive technologies read before it.
@@ -269,8 +312,8 @@ interface TicketReadProps {
 // failure replaces the screen, its heading and tabs included, and a Ticket
 // that does not exist or that the user cannot see shows Not found alike
 // (docs/behaviors.md, Where Errors Appear; Missing and Inaccessible Records).
-// Overview waits for the Ticket; Audit log, whose content does not depend on
-// it, shows at once (docs/screens/ticket.md, States).
+// Overview waits for the Ticket; References and Audit log, whose content does
+// not depend on it, show at once (docs/screens/ticket.md, States).
 function TicketRead({ ticketId }: TicketReadProps) {
   const read = useGetTicket(ticketId);
   // The tab of the child that the outlet renders, rather than of the URL
@@ -278,9 +321,9 @@ function TicketRead({ ticketId }: TicketReadProps) {
   // before a navigation from it, such as Audit log of another Ticket.
   const selected = useChildMatches({
     select: (matches): TabId =>
-      matches.some((match) => match.routeId === "/tickets/$ticketId/audit-log")
-        ? "audit-log"
-        : "overview",
+      matches
+        .map((match) => TAB_ROUTES.get(match.routeId))
+        .find((tab) => tab !== undefined) ?? "overview",
   });
   return (
     <ScreenRead
@@ -296,12 +339,12 @@ function TicketRead({ ticketId }: TicketReadProps) {
         </TicketFrame>
       )}
       renderPlace={(ticket) =>
-        selected === "audit-log" ? (
+        selected === "overview" ? (
+          <PartRead read={ticket}>{() => <Outlet />}</PartRead>
+        ) : (
           <TicketUpdates read={ticket}>
             <Outlet />
           </TicketUpdates>
-        ) : (
-          <PartRead read={ticket}>{() => <Outlet />}</PartRead>
         )
       }
     />

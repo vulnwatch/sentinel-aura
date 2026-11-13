@@ -3,6 +3,7 @@ import {
   useId,
   useLayoutEffect,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
@@ -14,10 +15,13 @@ import { focusScreenHeading } from "./screen-heading";
 // A dialog centered over the page (docs/design-system.md, Dialogs).
 
 // Its widths: at most 400 px for a confirmation, and 560 px for a dialog with
-// a form; a window narrower than the dialog with its margin keeps it inside.
+// a form, or 488 px for a dialog whose content is a form alone, which is at
+// most 448 px wide, so that its buttons end where its fields do; a window
+// narrower than the dialog with its margin keeps it inside.
 const WIDTHS = {
   confirmation: "max-w-100",
   form: "max-w-140",
+  "form-only": "max-w-122",
 } as const;
 
 interface ModalDialogProps {
@@ -39,6 +43,7 @@ interface ModalDialogProps {
 
 // A dialog over overlay, centered, on surface with a border line, an 8 px
 // radius, shadow-xl, and 20 px of padding: its title in text-16, weight 600,
+// which breaks a word longer than its line, such as an address,
 // its content 12 px below, and its buttons 20 px below the content, 8 px
 // apart, aligned to its end. A dialog taller than the window scrolls its
 // content and keeps its buttons in view. It has no close icon: its buttons
@@ -60,25 +65,41 @@ export function ModalDialog({
   buttons,
 }: ModalDialogProps) {
   const dialogId = useId();
+  // The element that has the focus as the dialog renders first, before an
+  // element of the dialog takes it: the one that opened it.
+  const [opener] = useState(() => document.activeElement);
   // React Aria returns the focus to the element that opened the dialog, or
-  // to a dialog that holds this one, in the next frame, when it can; the
-  // screen's heading takes the focus only when it could not.
+  // to a dialog that holds this one, in the next frame, when it can; a
+  // collection of React Aria, such as a table, returns it to its element
+  // itself once it renders again, which can take longer. While the focus is
+  // still on the body two frames later, the dialog returns it to that
+  // element itself, or to the screen's heading when the element has left
+  // the page.
   useLayoutEffect(
     () => () => {
       if (document.getElementById(dialogId)?.contains(document.activeElement)) {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             if (
-              document.activeElement === null ||
-              document.activeElement === document.body
+              document.activeElement !== null &&
+              document.activeElement !== document.body
             ) {
+              return;
+            }
+            if (
+              opener instanceof HTMLElement &&
+              opener !== document.body &&
+              opener.isConnected
+            ) {
+              opener.focus();
+            } else {
               focusScreenHeading();
             }
           });
         });
       }
     },
-    [dialogId],
+    [dialogId, opener],
   );
   return (
     <ModalOverlay
@@ -98,7 +119,10 @@ export function ModalDialog({
           id={dialogId}
           className={`flex max-h-full min-h-0 flex-col rounded-lg border border-border bg-surface p-5 text-15 text-fg shadow-xl ${FOCUS_RING}`}
         >
-          <Heading slot="title" className="text-16 font-semibold">
+          <Heading
+            slot="title"
+            className="text-16 font-semibold wrap-break-word"
+          >
             {title}
           </Heading>
           <div className="-mx-1 mt-3 min-h-0 overflow-y-auto px-1">

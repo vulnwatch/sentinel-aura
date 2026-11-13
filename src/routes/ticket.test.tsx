@@ -323,22 +323,31 @@ describe("the read of the Ticket", () => {
       ]);
   });
 
-  test("shows the tabs Overview and Audit log, named Ticket, with Overview selected at the path of the Ticket", async () => {
+  test("shows the tabs Overview, References, and Audit log, named Ticket, with Overview selected at the path of the Ticket", async () => {
     stubTicket();
 
     const { screen } = await renderTicket();
 
     const tabs = screen.getByRole("tablist", { name: "Ticket" });
-    expect(textsOf(tabs.getByRole("tab"))).toEqual(["Overview", "Audit log"]);
+    expect(textsOf(tabs.getByRole("tab"))).toEqual([
+      "Overview",
+      "References",
+      "Audit log",
+    ]);
     await expect
       .element(tabs.getByRole("tab", { name: "Overview" }))
       .toHaveAttribute("aria-selected", "true");
-    await expect
-      .element(tabs.getByRole("tab", { name: "Audit log" }))
-      .toHaveAttribute("aria-selected", "false");
-    await expect
-      .element(tabs.getByRole("tab", { name: "Audit log" }))
-      .toHaveAttribute("href", "/tickets/SNTL-12/audit-log");
+    for (const [name, href] of [
+      ["References", "/tickets/SNTL-12/references"],
+      ["Audit log", "/tickets/SNTL-12/audit-log"],
+    ]) {
+      await expect
+        .element(tabs.getByRole("tab", { name }))
+        .toHaveAttribute("aria-selected", "false");
+      await expect
+        .element(tabs.getByRole("tab", { name }))
+        .toHaveAttribute("href", href);
+    }
   });
 
   test.each([

@@ -535,10 +535,10 @@ that needs it; content of another kind needs a new row first.
   the time of last sign-in of its user, is not such a change. It runs before
   every test of its browser that changes such data: the project named after
   the browser, which `scripts/dev-env.sh e2e` selects, holds the tests that
-  change such data and depends on a project of the other tests. A test that
-  changes such data takes the reference of the state that its own change
-  produces, such as the result of an action, showing only data that no other
-  test of its project changes.
+  change such data, which carry the tag `@changes-data`, and depends on a
+  project of the other tests. A test that changes such data takes the
+  reference of the state that its own change produces, such as the result of
+  an action, showing only data that no other test of its project changes.
 - A change that alters what a screen shows regenerates its references with
   `scripts/dev-env.sh update-screenshots`, which writes those that are new or
   differ, and removes in the same change the references that no test takes

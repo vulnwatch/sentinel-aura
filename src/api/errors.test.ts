@@ -7,6 +7,7 @@ import {
   presentFailure,
   presentRefetchFailure,
   presentSignInFailure,
+  referenceAddressError,
   validationErrorFields,
   type ChangeFailurePresentation,
   type FailurePresentation,
@@ -411,6 +412,30 @@ describe("grantAccessFieldError", () => {
     ],
   ])("leaves %s to the form", (_, failure) => {
     expect(grantAccessFieldError(failure)).toBeUndefined();
+  });
+});
+
+describe("referenceAddressError", () => {
+  test("states the error of the address field of 409 RESOURCE_CONFLICT", () => {
+    expect(referenceAddressError(errorResponse(409, "RESOURCE_CONFLICT"))).toBe(
+      "This Ticket already has a reference with this address.",
+    );
+  });
+
+  test.each([
+    ["the code with another status", errorResponse(400, "RESOURCE_CONFLICT")],
+    ["another code", errorResponse(409, "RESOURCE_NOT_EDITABLE")],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+    ],
+    ["an error without a code", errorResponse(409)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("leaves %s to the form", (_, failure) => {
+    expect(referenceAddressError(failure)).toBeUndefined();
   });
 });
 

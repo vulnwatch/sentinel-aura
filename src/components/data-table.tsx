@@ -19,12 +19,18 @@ export interface TableColumn<TRow> {
   id: string;
   // The name in its header.
   name: string;
+  // Whether its name is for assistive technologies alone, as that of the
+  // actions of the rows, which their own names state.
+  hidesName?: boolean;
   // Whether its cells name their row, such as the identifier of a record.
   isRowHeader?: boolean;
   // Whether the user can sort the rows by it, by pressing its header.
   allowsSorting?: boolean;
-  // Whether it takes the width that the other columns leave, at least
-  // 100 px, its text cut with an ellipsis where it is longer.
+  // Whether it takes the width that the other columns leave: at least
+  // 100 px, its text cut with an ellipsis where it is longer, or, when its
+  // text wraps, at least 192 px, which fits the frame at 320 CSS px, so that
+  // the table scrolls within its frame rather than breaking every word of
+  // the column.
   grows?: boolean;
   // Whether its text wraps where it is longer than its column, and its row
   // grows, as in a table whose records have no screen of their own
@@ -77,8 +83,14 @@ function DataRows<TRow>({
   // A growing column takes the width that the others leave, in its header
   // as in its cells, so that the header row keeps its columns when the rows
   // arrive.
-  const width = (column: TableColumn<TRow>) =>
-    column.grows === true ? "w-full max-w-0 min-w-25" : "";
+  const width = (column: TableColumn<TRow>) => {
+    if (column.grows !== true) {
+      return "";
+    }
+    return column.wraps === true
+      ? "w-full max-w-0 min-w-48"
+      : "w-full max-w-0 min-w-25";
+  };
   return (
     <Table
       aria-label={label}
@@ -94,10 +106,17 @@ function DataRows<TRow>({
             id={column.id}
             isRowHeader={column.isRowHeader === true}
             allowsSorting={column.allowsSorting === true}
-            className={`h-9 cursor-default bg-surface-2 text-start align-middle text-13 font-medium whitespace-nowrap text-fg-muted data-hovered:bg-surface-hover data-hovered:text-fg ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
+            // Positioned, so that a name for assistive technologies alone
+            // stays within the frame, which scrolls, rather than widening the
+            // page.
+            className={`relative h-9 cursor-default bg-surface-2 text-start align-middle text-13 font-medium whitespace-nowrap text-fg-muted data-hovered:bg-surface-hover data-hovered:text-fg ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
           >
             <span className="inline-flex items-center gap-1">
-              {column.name}
+              {column.hidesName === true ? (
+                <span className="sr-only">{column.name}</span>
+              ) : (
+                column.name
+              )}
               {sort?.column === column.id &&
                 (sort.direction === "ascending" ? (
                   <ArrowUp aria-hidden className="size-3.5 shrink-0" />
@@ -121,7 +140,7 @@ function DataRows<TRow>({
               <Cell
                 className={`relative align-middle ${column.wraps === true ? "py-2" : "whitespace-nowrap"} ${padding} ${width(column)} ${INSIDE_FOCUS_RING}`}
               >
-                {column.grows === true ? (
+                {column.grows === true && column.wraps !== true ? (
                   <div className="truncate">{column.render(row)}</div>
                 ) : (
                   column.render(row)
@@ -144,7 +163,14 @@ function DataRows<TRow>({
 // page while it holds the focus, such as when a new read of the place has no
 // rows, the focus moves to the screen's heading (docs/behaviors.md,
 // Accessibility, Focus after an action).
-export function FramedTable<TRow>(props: TableProps<TRow>) {
+// Without rows, it shows what empty gives inside the frame, below the header
+// row, such as an empty state of rows that do not match the filters of the
+// place (docs/design-system.md, Tables; Empty States); when that leaves the
+// page with the focus, the focus moves to the screen's heading too.
+export function FramedTable<TRow>({
+  empty,
+  ...props
+}: TableProps<TRow> & { empty?: ReactNode }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="overflow-x-auto">
@@ -152,6 +178,11 @@ export function FramedTable<TRow>(props: TableProps<TRow>) {
           <DataRows {...props} />
         </FocusHandOff>
       </div>
+      {props.rows.length === 0 && empty !== undefined && (
+        <FocusHandOff>
+          <div className="border-t border-border">{empty}</div>
+        </FocusHandOff>
+      )}
     </div>
   );
 }

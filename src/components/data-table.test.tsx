@@ -164,6 +164,44 @@ function frameOf(screen: Screen): Element {
   return element!;
 }
 
+// The frame of a table, the nearest element around it with a border line.
+function frameOfTable(table: Element): Element {
+  let element = table.parentElement;
+  while (
+    element !== null &&
+    getComputedStyle(element).borderTopWidth !== "1px"
+  ) {
+    element = element.parentElement;
+  }
+  return element!;
+}
+
+interface FramedRecordsProps {
+  records: FictionalRecord[];
+}
+
+// A screen with its heading and records that a place shows in a framed
+// table, with an empty state of records that match no filter.
+function FramedRecords({ records }: FramedRecordsProps) {
+  return (
+    <main>
+      <ScreenHeading>Records</ScreenHeading>
+      <FramedTable
+        label="Records"
+        columns={COLUMNS}
+        rows={records}
+        rowId={(record) => record.id}
+        empty={
+          <EmptyState
+            message="No records match the filters."
+            action={<Button>Clear filters</Button>}
+          />
+        }
+      />
+    </main>
+  );
+}
+
 describe("the table", () => {
   test("shows its header row and its rows, in the sizes and colors of the design system", async () => {
     respond.mockResolvedValue(pageOf("R-1", "R-2"));
@@ -552,6 +590,69 @@ describe("FramedTable", () => {
     expect(getComputedStyle(frame).borderTopLeftRadius).toBe("8px");
   });
 
+  test("shows what it shows without rows inside the frame, below the header row", async () => {
+    const screen = await render(
+      <FramedTable
+        label="Records"
+        columns={WRAPPING}
+        rows={[]}
+        rowId={(record) => record.id}
+        empty={<EmptyState message="No records match the filters." />}
+      />,
+    );
+    const table = screen.getByRole("grid", { name: "Records" });
+    const message = screen.getByText("No records match the filters.");
+
+    await expect.element(message).toBeVisible();
+    await expect
+      .element(table.getByRole("columnheader", { name: "Record" }))
+      .toBeVisible();
+    expect(table.getByRole("rowheader").query()).toBeNull();
+    expect(frameOfTable(table.element()).contains(message.element())).toBe(
+      true,
+    );
+    expect(message.element().getBoundingClientRect().top).toBeGreaterThan(
+      table.element().getBoundingClientRect().bottom,
+    );
+  });
+
+  test("shows its rows alone, without what it shows without rows", async () => {
+    const screen = await render(
+      <FramedTable
+        label="Records"
+        columns={WRAPPING}
+        rows={[{ id: "R-1", title: "Fictional R-1" }]}
+        rowId={(record) => record.id}
+        empty={<EmptyState message="No records match the filters." />}
+      />,
+    );
+
+    await expect
+      .element(screen.getByRole("rowheader", { name: "R-1" }))
+      .toBeVisible();
+    expect(screen.getByText("No records match the filters.").query()).toBe(
+      null,
+    );
+  });
+
+  test("moves the focus to the screen's heading when what it shows without rows leaves the page with the focus", async () => {
+    const screen = await render(<FramedRecords records={[]} />);
+    const action = screen.getByRole("button", { name: "Clear filters" });
+    await action.click();
+    await expect.element(action).toHaveFocus();
+
+    await screen.rerender(
+      <FramedRecords records={[{ id: "R-1", title: "Fictional R-1" }]} />,
+    );
+
+    await expect
+      .element(screen.getByRole("rowheader", { name: "R-1" }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Records" }))
+      .toHaveFocus();
+  });
+
   test("wraps the text of a wrapping column, whose row grows, so that the table keeps to its place", async () => {
     await page.viewport(320, 600);
     const { table, frame } = await renderFramed([
@@ -574,5 +675,148 @@ describe("FramedTable", () => {
     const scroller = frame.firstElementChild!;
     expect(getComputedStyle(scroller).overflowX).toBe("auto");
     expect(scroller.scrollWidth).toBe(scroller.clientWidth);
+  });
+});
+
+// A record with the text of a long title, which wraps.
+const LONG_TITLE = `Fictional ${"long ".repeat(60)}title`;
+
+describe("a growing column whose text wraps", () => {
+  const COLUMNS_THAT_WRAP: readonly TableColumn<FictionalRecord>[] = [
+    {
+      id: "id",
+      name: "Record",
+      isRowHeader: true,
+      render: (record) => record.id,
+    },
+    {
+      id: "title",
+      name: "Title",
+      grows: true,
+      wraps: true,
+      render: (record) => record.title,
+    },
+    {
+      id: "state",
+      name: "State",
+      render: () => "A fictional state of the record",
+    },
+  ];
+
+  async function renderWrapping() {
+    const screen = await render(
+      <FramedTable
+        label="Records"
+        columns={COLUMNS_THAT_WRAP}
+        rows={[{ id: "R-1", title: LONG_TITLE }]}
+        rowId={(record) => record.id}
+      />,
+    );
+    const table = screen.getByRole("grid", { name: "Records" });
+    await expect.element(table).toBeVisible();
+    return { table, cell: table.getByRole("gridcell").first().element() };
+  }
+
+  test("takes the width that the other columns leave, and wraps its text whole, without cutting it", async () => {
+    const { table, cell } = await renderWrapping();
+
+    expect(cell.getBoundingClientRect().width).toBeGreaterThan(
+      table.element().getBoundingClientRect().width / 2,
+    );
+    const line = Number.parseFloat(getComputedStyle(cell).lineHeight);
+    expect(cell.getBoundingClientRect().height).toBeGreaterThanOrEqual(
+      2 * line + 16,
+    );
+    expect(cell.textContent).toBe(LONG_TITLE);
+    expect(cell.scrollWidth).toBeLessThanOrEqual(cell.clientWidth);
+    expect(
+      [cell, ...cell.querySelectorAll("*")].map(
+        (element) => getComputedStyle(element).textOverflow,
+      ),
+    ).not.toContain("ellipsis");
+  });
+
+  test("keeps at least 192 px at 320 CSS pixels, the table scrolling within its frame", async () => {
+    await page.viewport(320, 600);
+    const { table, cell } = await renderWrapping();
+
+    expect(cell.getBoundingClientRect().width).toBe(192);
+    expect(cell.scrollWidth).toBeLessThanOrEqual(cell.clientWidth);
+    const scroller = frameOfTable(table.element()).firstElementChild!;
+    expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
+    expect(document.documentElement.scrollWidth).toBe(320);
+  });
+});
+
+describe("a column whose name is for assistive technologies alone", () => {
+  const COLUMNS_WITH_ACTIONS: readonly TableColumn<FictionalRecord>[] = [
+    {
+      id: "id",
+      name: "Record",
+      isRowHeader: true,
+      render: (record) => record.id,
+    },
+    {
+      id: "title",
+      name: "Title",
+      render: (record) => record.title,
+    },
+    {
+      id: "actions",
+      name: "Actions",
+      hidesName: true,
+      render: (record) => (
+        <button type="button" aria-label={`Edit ${record.id}`}>
+          E
+        </button>
+      ),
+    },
+  ];
+
+  async function renderActions(title: string) {
+    const screen = await render(
+      <FramedTable
+        label="Records"
+        columns={COLUMNS_WITH_ACTIONS}
+        rows={[{ id: "R-1", title }]}
+        rowId={(record) => record.id}
+      />,
+    );
+    const table = screen.getByRole("grid", { name: "Records" });
+    await expect.element(table).toBeVisible();
+    return { screen, table };
+  }
+
+  test("is named in its header, which shows no name", async () => {
+    const { screen, table } = await renderActions("Fictional R-1");
+
+    await expect
+      .element(table.getByRole("columnheader", { name: "Actions" }))
+      .toBeInTheDocument();
+    const name = screen.getByText("Actions", { exact: true }).element();
+    expect(name.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+    expect(
+      screen
+        .getByText("Title", { exact: true })
+        .element()
+        .getBoundingClientRect().width,
+    ).toBeGreaterThan(1);
+  });
+
+  test("keeps the name within the frame, which scrolls, rather than widening the page, at 320 CSS pixels", async () => {
+    await page.viewport(320, 600);
+    const { table } = await renderActions(
+      `Fictional ${"wide ".repeat(30)}title`,
+    );
+
+    const scroller = frameOfTable(table.element()).firstElementChild!;
+    expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
+    expect(
+      table
+        .getByRole("columnheader", { name: "Actions" })
+        .element()
+        .getBoundingClientRect().left,
+    ).toBeGreaterThan(320);
+    expect(document.documentElement.scrollWidth).toBe(320);
   });
 });
