@@ -809,6 +809,7 @@ describe("the details", () => {
           full_name: "Alexandra Konstantina Papadopoulou-Fictional",
           active: false,
           bot: false,
+          avatar_url: null,
         },
       }),
     );
