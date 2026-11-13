@@ -49,6 +49,7 @@ const OVERRIDE_BY: NonNullable<TicketSummary["priority_override_by"]> = {
   full_name: "Alice Smith",
   active: true,
   bot: false,
+  avatar_url: null,
 };
 const OVERRIDE_AT = "2099-10-09T15:05:09Z";
 
@@ -1466,6 +1467,7 @@ describe("the table", () => {
         full_name: "Alice Smith",
         active: true,
         bot: false,
+        avatar_url: null,
       },
       cve: {
         cve_id: "CVE-2099-0018",

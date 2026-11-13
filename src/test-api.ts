@@ -49,6 +49,7 @@ export const FICTIONAL_USER: CurrentUserResponse = {
     capabilities: [],
     active: true,
     bot: false,
+    avatar_url: null,
     assignment_eligibility: "none",
   },
 };
@@ -66,6 +67,7 @@ export const OTHER_USER: CurrentUserResponse = {
     capabilities: ["triage_ticket"],
     active: true,
     bot: false,
+    avatar_url: null,
     assignment_eligibility: "all",
   },
 };
@@ -194,6 +196,7 @@ export function fictionalTicketDetail(
       full_name: "Alice Smith",
       active: true,
       bot: false,
+      avatar_url: null,
     },
     cve: fictionalCve(),
     duplicate_of_ticket_id: null,
@@ -457,6 +460,7 @@ export function fictionalPackage(
         full_name: "Dave Brown",
         active: true,
         bot: false,
+        avatar_url: null,
       },
     ],
     ...fields,
@@ -518,6 +522,7 @@ export function referenceOf({ data }: CurrentUserResponse): UserReference {
     full_name: data.full_name,
     active: data.active,
     bot: data.bot,
+    avatar_url: data.avatar_url,
   };
 }
 
@@ -531,6 +536,7 @@ export const FICTIONAL_ACTORS: readonly UserReference[] = [
     full_name: "Ana Garcia",
     active: true,
     bot: false,
+    avatar_url: null,
   },
   referenceOf(OTHER_USER),
   {
@@ -539,6 +545,7 @@ export const FICTIONAL_ACTORS: readonly UserReference[] = [
     full_name: "Fictional Bot",
     active: true,
     bot: true,
+    avatar_url: null,
   },
   {
     id: "00000000-0000-0000-0000-000000000007",
@@ -546,6 +553,7 @@ export const FICTIONAL_ACTORS: readonly UserReference[] = [
     full_name: "Robert Lee",
     active: false,
     bot: false,
+    avatar_url: null,
   },
 ];
 
@@ -604,6 +612,7 @@ export function fictionalGrant(
       full_name: "Carol White",
       active: true,
       bot: false,
+      avatar_url: null,
     },
     granted_at: "2099-10-10T11:00:00Z",
     granted_by: referenceOf(OTHER_USER),
@@ -641,6 +650,7 @@ export function fictionalDirectoryUser(
     full_name: "Ana Garcia",
     active: true,
     bot: false,
+    avatar_url: null,
     roles: ["vulnerability_analyst"],
     assignment_eligibility: "all",
     ...fields,

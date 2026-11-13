@@ -54,6 +54,7 @@ const SCANNER: CurrentUserResponse = {
     capabilities: ["create_ticket"],
     active: true,
     bot: true,
+    avatar_url: null,
     assignment_eligibility: "none",
   },
 };

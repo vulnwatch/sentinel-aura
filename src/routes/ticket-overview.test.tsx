@@ -102,6 +102,7 @@ const MAINTAINER: CurrentUserResponse = {
     capabilities: [],
     active: true,
     bot: false,
+    avatar_url: null,
     assignment_eligibility: "none",
   },
 };
@@ -425,6 +426,7 @@ const SET_BY_HAND: Partial<ProductDetail> = {
     full_name: "Alice Smith",
     active: true,
     bot: false,
+    avatar_url: null,
   },
   eligibility_override_at: "2099-10-10T11:00:00Z",
 };
@@ -679,6 +681,7 @@ describe("a package", () => {
             full_name: "Dave Brown",
             active: true,
             bot: false,
+            avatar_url: null,
           },
           {
             id: "00000000-0000-0000-0000-000000000005",
@@ -686,6 +689,7 @@ describe("a package", () => {
             full_name: "Grace Hill",
             active: false,
             bot: false,
+            avatar_url: null,
           },
         ],
       }),
@@ -2398,6 +2402,7 @@ describe("the tracks that wait for the signed-in user", () => {
               full_name: "Dave Brown",
               active: true,
               bot: false,
+              avatar_url: null,
             },
           ],
         },
@@ -4547,6 +4552,7 @@ const EMMA = fictionalGrant({
     full_name: "Emma Green",
     active: true,
     bot: false,
+    avatar_url: null,
   },
   granted_at: "2099-10-11T08:00:00Z",
 });
@@ -4704,6 +4710,7 @@ describe("the participants", () => {
                     full_name: "Grace Hill",
                     active: true,
                     bot: false,
+                    avatar_url: null,
                   },
                 ],
               }),

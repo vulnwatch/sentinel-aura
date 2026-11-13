@@ -2274,6 +2274,7 @@ describe("the actor", () => {
             full_name: name,
             active: true,
             bot: false,
+            avatar_url: null,
           },
           ALICE,
         ]),
