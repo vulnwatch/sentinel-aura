@@ -272,28 +272,41 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   "Sentinel knows no maintainer of this package." (Sentinel
   `docs/features/packages/package-maintainership.md`, Maintainers in the
   Package Tree). Users show without a link (Navigation).
-- Its tracks are a list below the band, 16 px apart, each with a border line
-  at its left:
-  - on its first line, its reference at weight 500; "Needs your action"
-    when it waits for the signed-in user (below); and at the end its
-    affectedness, a value with the dot of its tone (`docs/design-system.md`,
-    Other Values): Analysis `info`, Affected `warning`, Not affected and
-    Fixed `success`, Won't fix `neutral`;
-  - on its second line, "Delivery" in `fg-muted` and the delivery status,
-    Pending `neutral`, In progress `info`, Released `success`, where
-    `delivery_relevant` is true (Sentinel
-    `docs/features/packages/package-model.md`, Delivery Relevance Indicator)
-    and either its status is not Pending or the track has work and Sentinel
-    observes its submission (below); and the pipeline of its phases, when
-    it has work and due dates (`docs/design-system.md`, Track Milestones),
-    named such as "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: …",
-    whose Phases holds no more than the design system states. The track has
-    no deadline badge: its pipeline and Phases show its deadlines
+- Its tracks are a list below the band, 12 px apart, each with a border line
+  at its left, on one line that wraps where it is too narrow: its reference
+  at weight 500; "Needs your action" when it waits for the signed-in user
+  (below); and at the end, in `text-14`, its pipeline or its delivery, then,
+  12 px later, its affectedness, at the start of a place at least 104 px
+  wide, wider than Not affected, so that the pipelines and the affectedness
+  of the tracks line up. Where the line wraps, the pipeline or the delivery
+  and the affectedness each stay at the end of their line. IBS and Git tracks
+  show alike.
+  - The affectedness is a value with the dot of its tone
+    (`docs/design-system.md`, Other Values): Analysis `info`, Affected
+    `warning`, Not affected and Fixed `success`, Won't fix `neutral`.
+  - The pipeline of its phases shows when the track has work and due dates
+    (`docs/design-system.md`, Track Milestones), named such as "Phases of
+    fictional-openssl, SUSE:FLES-15-SP7:Update: …". The track has no
+    deadline badge: its pipeline and Phases show its deadlines
     (`docs/behaviors.md`, Deadlines). A track has work when it is actionable
     and in Analysis, or Affected or Fixed with a Product that is actionable
     and eligible; a track without work, Not affected and Won't fix included,
-    shows no pipeline and no Delivery Pending, and a Ticket without due
-    dates shows no pipeline.
+    shows no pipeline, and a Ticket without due dates shows no pipeline.
+  - Its delivery is "Delivery" in `fg-muted`, then, 6 px later, the name of
+    the delivery status, Pending, In progress, or Released, without a mark,
+    so that it does not read as a second affectedness (`docs/design-system.md`,
+    Other Values). It shows where `delivery_relevant` is true (Sentinel
+    `docs/features/packages/package-model.md`, Delivery Relevance Indicator)
+    and either its status is not Pending or the track has work and Sentinel
+    observes its submission (below), so a track without work shows no
+    Delivery Pending. With a pipeline, it shows in Phases, after the phases
+    and a `border` line with 12 px of space above and below it, and the name
+    of the pipeline ends with it, such as "…; QA due in 10 days; delivery
+    pending". Without a pipeline, it shows on the line of the track in place
+    of the pipeline, such as on a Not affected track whose delivery is
+    Released, a combination that Sentinel treats as anomalous (Sentinel
+    `docs/features/packages/package-model.md`, Affectedness-Delivery
+    Independence).
   - Sentinel observes a phase of a track with due dates whose milestone is
     not `null`, and not, for example, the submission, the UM, and the QA of
     a Git track or of a track of a Ticket without a CVE; the delivery of the
@@ -308,21 +321,31 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
 - Its Products are a list below the track, with a border line at their left,
   each on a line that wraps: its name, which wraps, in `fg-muted` when it is
   not eligible; `user-pen` when its eligibility is set by hand, read as ",
-  eligibility set by hand"; the label Not eligible; and at the end its
-  release, in `text-13`, `fg-muted`: "Released" with the date and time of
-  `released_at` on a released Product, and on an actionable, eligible
-  Product of a track in Analysis, Affected, or Fixed, "Not released" where
-  Sentinel observes the QA of the track, or "Release not observed" where it
-  does not. A Product that does not take part or is not eligible, or whose
-  track has no due dates, shows no release unless it is released.
+  eligibility set by hand"; and the label Not eligible. Its details (below)
+  show its release: "Released" with the date and time of `released_at` on a
+  released Product, and on an actionable, eligible Product of a track in
+  Analysis, Affected, or Fixed, "Not released" where Sentinel observes the
+  QA of the track, or "Not observed" where it does not. A Product that does
+  not take part or is not eligible, or whose track has no due dates, has no
+  release unless it is released.
+- A Product that keeps the Ticket from Resolved also shows its release at
+  the end of its line, or of the next line where the line wraps: on a Ticket
+  with a CVE, an actionable, eligible Product of an actionable Fixed track,
+  with a release that is not "Released" (Sentinel
+  `docs/features/tickets/tickets.md`, Gate: Analyzed → Resolved). It shows
+  `triangle-alert` at 14 px in `warning-icon`, then, 4 px later, "Not
+  released", or "Release not observed" where Sentinel does not observe the
+  QA of the track, such as below a Git track, in `text-13`, weight 500,
+  `warning-on-soft`, so that an analyst sees which Product the Ticket waits
+  for. Another Product shows no release on its line; a Product of a track
+  without due dates, which has no release, shows none either.
 - The name of a Product opens its details (`docs/design-system.md`, Menus,
   Popovers, and Tooltips): its CPE in monospace below the name, then
   Eligibility, "Eligible" or "Not eligible", followed by " · automatic", or
   " · set by hand" after `user-pen`; Lifecycle, the phase of `lifecycle_phase`
   (Pre-release, General support, Extended support, Reactive support, EOL),
-  or "Not available" without lifecycle data; Release, where its line shows
-  one, "Released" with its date and time, "Not released", or "Not
-  observed"; and, for a Product that is not actionable, Actionable, "No,"
+  or "Not available" without lifecycle data; Release, where it has one
+  (above); and, for a Product that is not actionable, Actionable, "No,"
   followed by the reason that Sentinel gives, the first that applies in the
   order "its package is excluded", "its track is excluded", "it is excluded
   from this track", and "it has reached its end of life" (Sentinel
@@ -831,27 +854,28 @@ Access; Revoke Access):
   Links to Other Sites; Loading and Empty States; Dates and Times;
   Confirmations and Outcomes; Accessibility; Wording; Representation of a
   User
-- `docs/design-system.md` — Font; Focus and Motion; Main Content; Values;
-  Severity; Deadline Badge; Track Milestones; Labels; Other Values; Buttons
-  and Links; Lists; Tables; Timelines; Detail Screens; Forms; Dialogs;
-  Messages; Loading; Empty States; Errors in Place of Content; Menus,
-  Popovers, and Tooltips; Icons by Need; Representation of a User
+- `docs/design-system.md` — Tones; Font; Focus and Motion; Main Content;
+  Values; Severity; Deadline Badge; Track Milestones; Labels; Other Values;
+  Buttons and Links; Lists; Tables; Timelines; Detail Screens; Forms;
+  Dialogs; Messages; Loading; Empty States; Errors in Place of Content;
+  Menus, Popovers, and Tooltips; Icons by Need; Representation of a User
 - Sentinel `docs/features/tickets/ticket-audit-log.md` — Event Type Contract
   (Rules); Canonical Automatic Comment Vocabulary; Cross-Event Ordering,
   Locking, and Rollback; detail JSONB Schema Contract; List Ticket Events;
   List Ticket Actors
 - Sentinel `docs/features/tickets/ticket-references.md` — ReferenceType
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
-  Transitions; Duplicate Handling; Confidential Tickets (Identifier
-  Disclosure Boundary; Coordinated Release Date); Ignore Reason; Response
-  Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket; List Tickets
-  (Duplicate filter); Set Confidentiality; Access Grant Management (List
-  Access Grants; Grant Access; Revoke Access)
+  Transitions; Gate: Analyzed → Resolved; Duplicate Handling; Confidential
+  Tickets (Identifier Disclosure Boundary; Coordinated Release Date); Ignore
+  Reason; Response Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket;
+  List Tickets (Duplicate filter); Set Confidentiality; Access Grant
+  Management (List Access Grants; Grant Access; Revoke Access)
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Null Due
   Dates); Track Milestones (Observability of Later Phases; Completion
   Evidence); Ticket Current Phase
 - Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
-  Dimensions; Exclusion and Actionability; List Ticket Packages
+  Dimensions; Affectedness-Delivery Independence; Exclusion and
+  Actionability; List Ticket Packages
 - Sentinel `docs/features/packages/package-maintainership.md` — Maintainers
   in the Package Tree; Workbench Dependency
 - Sentinel `docs/features/packages/maintainer.md` — Classification; Package

@@ -6,7 +6,13 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { ClockAlert, RefreshCw, UserPen, UserRoundKey } from "lucide-react";
+import {
+  ClockAlert,
+  RefreshCw,
+  TriangleAlert,
+  UserPen,
+  UserRoundKey,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -67,7 +73,6 @@ import type {
   CVESSVCResponse,
   CVSSAssessmentItem,
   CurrentPhaseValue,
-  DeliveryStatusValue,
   LifecyclePhaseValue,
   PackageDetail,
   PackageStatusValue,
@@ -150,7 +155,7 @@ import {
 } from "../components/screen-heading";
 import { Severity } from "../components/severity";
 import { Switch } from "../components/switch";
-import { TrackMilestones } from "../components/track-milestones";
+import { TrackDelivery, TrackMilestones } from "../components/track-milestones";
 import { displayName, User, type UserFields } from "../components/user";
 import { UserComboBox } from "../components/user-combobox";
 import { UserGroup } from "../components/user-group";
@@ -856,16 +861,6 @@ const AFFECTEDNESS = new Map<string, MarkedName>(
   } satisfies Record<PackageStatusValue, MarkedName>),
 );
 
-// The delivery status of a track: Pending neutral, In progress blue,
-// Released green (same document, Axis 3: Delivery and Release Observation).
-const DELIVERY = new Map<string, MarkedName>(
-  Object.entries({
-    pending: { name: "Pending", tone: "neutral" },
-    in_progress: { name: "In progress", tone: "info" },
-    released: { name: "Released", tone: "success" },
-  } satisfies Record<DeliveryStatusValue, MarkedName>),
-);
-
 // The lifecycle phase of a Product (Sentinel
 // docs/features/packages/product-catalog.md, Product Lifecycle Phases).
 const LIFECYCLE_PHASES = new Map<string, string>(
@@ -904,7 +899,8 @@ function receivesFix(product: ProductDetail): boolean {
   return product.actionable && product.eligible;
 }
 
-// The release of a Product that its line and its details show: when it was
+// The release of a Product that its details show, and its line where the
+// Product keeps the Ticket from Resolved (ProductItem): when it was
 // released, on every released Product; and, on a Product that receives the
 // fix under a track that expects one (expectsFix), that it is not released
 // where Sentinel observes the QA of the track, which the release of its
@@ -1052,9 +1048,9 @@ interface ProductDetailsProps {
 
 // The details of a Product, as its popover shows them: its eligibility,
 // automatic or set by hand; its lifecycle phase, or "Not available" without
-// lifecycle data; its release, where its line shows one; and, for a Product
-// that takes no part, why. Values that the pinned contract does not list
-// show as received.
+// lifecycle data; its release, where it has one (releaseOf); and, for a
+// Product that takes no part, why. Values that the pinned contract does not
+// list show as received.
 function ProductDetails({ product, release }: ProductDetailsProps) {
   return (
     <DescriptionList>
@@ -1104,24 +1100,36 @@ interface ProductItemProps {
   // Whether Sentinel observes the QA of the track, the release of its
   // Products (observes).
   releaseObserved: boolean | undefined;
+  // Whether the track that holds the Product is Fixed on a Ticket with a
+  // CVE, where a Product that receives the fix, actionable and eligible, and
+  // is not released keeps the Ticket from Resolved (Sentinel
+  // docs/features/tickets/tickets.md, Gate: Analyzed → Resolved). A Product
+  // of a track that is not actionable is not actionable either.
+  releaseGates: boolean;
 }
 
 // A Product of a track: its name, which opens its details, in fg-muted when
 // it is hidden or not eligible, and wraps; user-pen at 14 px in fg-muted when
 // its eligibility is set by hand, read as ", eligibility set by hand"; the
-// label Not eligible, and the labels of its own hidden state; and at the end
-// its release (releaseOf), in text-13, fg-muted: "Released" with the date and
-// time, "Not released", or "Release not observed".
+// label Not eligible, and the labels of its own hidden state. Its release
+// (releaseOf) shows in its details; at the end of its line only when the
+// Product keeps the Ticket from Resolved: triangle-alert at 14 px in
+// warning-icon, then "Not released", or "Release not observed", in text-13,
+// weight 500, warning-on-soft, at the end of the next line where the line
+// wraps.
 function ProductItem({
   product,
   trackHidden,
   fixExpected,
   releaseObserved: observed,
+  releaseGates,
 }: ProductItemProps) {
   const ref = useRef<HTMLLIElement>(null);
   useFocusHeadingOnRemoval(ref);
   const hidden = trackHidden || !product.actionable;
   const release = releaseOf(product, fixExpected, observed);
+  const blocks =
+    releaseGates && release !== undefined && release.kind !== "released";
   return (
     <li
       ref={ref}
@@ -1148,8 +1156,12 @@ function ProductItem({
           eol={product.lifecycle_phase === "eol"}
         />
       </span>
-      {release !== undefined && (
-        <span className="text-13 text-fg-muted">
+      {blocks && (
+        <span className="ms-auto inline-flex items-center gap-1 text-13 font-medium text-warning-on-soft">
+          <TriangleAlert
+            aria-hidden
+            className="size-3.5 shrink-0 text-warning-icon"
+          />
           <ReleaseText release={release} notObserved="Release not observed" />
         </span>
       )}
@@ -1164,30 +1176,33 @@ interface TrackItemProps {
   packageHidden: boolean;
   // Whether the track waits for the signed-in user.
   waitsForYou: boolean;
+  // Whether the Ticket has a CVE.
+  hasCve: boolean;
   showHidden: boolean;
   now: number;
 }
 
-// A track of a package, on two lines, with a border line at its left, or,
-// when it waits for the signed-in user, a bar of 3 px in link:
-// - its reference at weight 500, "Needs your action" when it waits for the
-//   user, the label of its own hidden state, and at the end its
-//   affectedness;
-// - "Delivery" and its status, where it is relevant (Sentinel
-//   docs/features/packages/package-model.md, Delivery Relevance Indicator)
-//   and either its status is not Pending or the track has work and Sentinel
-//   observes its submission, which its delivery completes (observes;
-//   Sentinel docs/features/tickets/ticket-deadlines.md, Completion
-//   Evidence); and the pipeline of its phases, when it has work and due
-//   dates, which shows the deadlines of the track in place of a badge;
-// then its Products, as a list with a border line at its left. A hidden
-// track shows its hidden Products; another track only while "Show hidden" is
-// on.
+// A track of a package, on one line that wraps, with a border line at its
+// left, or, when it waits for the signed-in user, a bar of 3 px in link: its
+// reference at weight 500, "Needs your action" when it waits for the user,
+// and the label of its own hidden state; then, at the end, the pipeline of its
+// phases, when it has work and due dates, which shows the deadlines of the
+// track in place of a badge, or else its delivery, and its affectedness, in a
+// place at least as wide as Not affected, so that the pipelines and the
+// affectedness of the tracks line up. The delivery shows where it is relevant
+// (Sentinel docs/features/packages/package-model.md, Delivery Relevance
+// Indicator) and either its status is not Pending or the track has work and
+// Sentinel observes its submission, which its delivery completes (observes;
+// Sentinel docs/features/tickets/ticket-deadlines.md, Completion Evidence);
+// with a pipeline, in Phases. Then its Products, as a list with a border line
+// at its left. A hidden track shows its hidden Products; another track only
+// while "Show hidden" is on.
 function TrackItem({
   packageName,
   track,
   packageHidden,
   waitsForYou,
+  hasCve,
   showHidden,
   now,
 }: TrackItemProps) {
@@ -1214,27 +1229,22 @@ function TrackItem({
           {waitsForYou && <NeedsYourAction />}
           <HiddenLabels excluded={track.deleted_at !== null} />
         </span>
-        <span className="text-14">
-          <MarkedValue value={track.status} known={AFFECTEDNESS} />
-        </span>
-      </div>
-      {(delivery || pipeline) && (
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-14">
-          {delivery && (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="text-fg-muted">Delivery</span>
-              <MarkedValue value={track.delivery_status} known={DELIVERY} />
-            </span>
-          )}
-          {pipeline && (
+        <span className="ms-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-14">
+          {pipeline ? (
             <TrackMilestones
               track={track}
               subject={`${packageName}, ${track.reference}`}
               now={now}
+              delivery={delivery ? track.delivery_status : undefined}
             />
+          ) : (
+            delivery && <TrackDelivery status={track.delivery_status} />
           )}
-        </div>
-      )}
+          <span className="min-w-26">
+            <MarkedValue value={track.status} known={AFFECTEDNESS} />
+          </span>
+        </span>
+      </div>
       {products.length > 0 && (
         <ul className="mt-2 flex flex-col gap-0.5 border-s border-border ps-3 text-14">
           {products.map((product) => (
@@ -1243,6 +1253,7 @@ function TrackItem({
               product={product}
               trackHidden={hidden}
               fixExpected={expectsFix(track)}
+              releaseGates={hasCve && track.status === "fixed"}
               releaseObserved={observes(track, "qa")}
             />
           ))}
@@ -1269,6 +1280,8 @@ interface PackageGroupProps {
   ticketPackage: PackageDetail;
   // The keys of the tracks that wait for the signed-in user (trackKey).
   waiting: ReadonlySet<string>;
+  // Whether the Ticket has a CVE.
+  hasCve: boolean;
   showHidden: boolean;
   now: number;
 }
@@ -1277,12 +1290,13 @@ interface PackageGroupProps {
 // the band, on neutral-soft, at least 32 px high, with a 6 px radius and
 // 12 px of side padding, holds its name as a level-three heading in text-15,
 // weight 600, which wraps, its maintainers, and the label of its own hidden
-// state; its tracks follow 12 px below the band, indented by 12 px, 16 px
+// state; its tracks follow 12 px below the band, indented by 12 px, 12 px
 // apart. A hidden package shows its hidden tracks; another package only
 // while "Show hidden" is on.
 function PackageGroup({
   ticketPackage,
   waiting,
+  hasCve,
   showHidden,
   now,
 }: PackageGroupProps) {
@@ -1307,7 +1321,7 @@ function PackageGroup({
         <HiddenLabels excluded={ticketPackage.deleted_at !== null} />
       </div>
       {tracks.length > 0 && (
-        <ul className="ms-3 mt-3 flex flex-col gap-4 text-15">
+        <ul className="ms-3 mt-3 flex flex-col gap-3 text-15">
           {tracks.map((track) => (
             <TrackItem
               key={track.id}
@@ -1317,6 +1331,7 @@ function PackageGroup({
               waitsForYou={waiting.has(
                 trackKey(ticketPackage.package_name, track.reference),
               )}
+              hasCve={hasCve}
               showHidden={showHidden}
               now={now}
             />
@@ -1447,6 +1462,7 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
                 key={ticketPackage.id}
                 ticketPackage={ticketPackage}
                 waiting={waiting}
+                hasCve={ticket.cve !== null}
                 showHidden={showHidden}
                 now={now}
               />

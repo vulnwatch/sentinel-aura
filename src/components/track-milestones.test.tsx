@@ -63,11 +63,20 @@ function track(fields: Partial<MilestoneTrack> = {}): MilestoneTrack {
 
 const SUBJECT = "fictional-openssl, SUSE:FLES-15-SP7:Update";
 
-async function renderMilestones(milestones: MilestoneTrack, scale = 1) {
+async function renderMilestones(
+  milestones: MilestoneTrack,
+  scale = 1,
+  delivery?: string,
+) {
   document.documentElement.style.fontSize = `${16 * scale}px`;
   const screen = await render(
     <div className="p-4">
-      <TrackMilestones track={milestones} subject={SUBJECT} now={NOW} />
+      <TrackMilestones
+        track={milestones}
+        subject={SUBJECT}
+        now={NOW}
+        delivery={delivery}
+      />
     </div>,
   );
   return {
@@ -266,4 +275,63 @@ test("shows in Phases a phase without a due date with its state alone, and a sta
     "UM · Maintenance update teamWaived",
     "QA · QANot observed",
   ]);
+});
+
+test.each([
+  ["pending", "Pending", "delivery pending"],
+  ["in_progress", "In progress", "delivery in progress"],
+  ["released", "Released", "delivery released"],
+  ["on_hold", "on_hold", "delivery on_hold"],
+])(
+  "ends its name and Phases with the delivery %s, after a border line",
+  async (status, name, words) => {
+    const { screen, pipeline } = await renderMilestones(track(), 1, status);
+
+    await expect
+      .element(pipeline)
+      .toHaveAccessibleName(
+        `Phases of ${SUBJECT}: Triage done; Submission overdue by 2 days, current; UM due in 3 days; QA due in 10 days; ${words}`,
+      );
+
+    await pipeline.click();
+
+    const phases = screen.getByRole("dialog", { name: "Phases" });
+    await expect.element(phases).toHaveFocus();
+    // The delivery is the last line of Phases, below its phases.
+    expect(phases.element().textContent).toMatch(
+      new RegExp(`QA · QA.*Delivery${name}$`),
+    );
+    const label = phases.getByText("Delivery", { exact: true });
+    const value = phases.getByText(name, { exact: true });
+    expect(getComputedStyle(label.element()).color).toBe(FG_MUTED);
+    // Its status 6 px after its label, without a mark between them.
+    expect(
+      value.element().getBoundingClientRect().left -
+        label.element().getBoundingClientRect().right,
+    ).toBeCloseTo(6, 0);
+    // A border line 12 px below the last phase and 12 px above the delivery.
+    const lines = phases.getByRole("separator").elements();
+    expect(lines).toHaveLength(2);
+    const line = lines[1]!.getBoundingClientRect();
+    const last = phases.getByRole("listitem").elements().at(-1)!;
+    expect(line.top - last.getBoundingClientRect().bottom).toBeCloseTo(12, 0);
+    expect(
+      label.element().getBoundingClientRect().top - line.bottom,
+    ).toBeGreaterThanOrEqual(12);
+  },
+);
+
+test("shows no delivery without one", async () => {
+  const { screen, pipeline } = await renderMilestones(track());
+
+  expect(pipeline.element().getAttribute("aria-label")).not.toContain(
+    "delivery",
+  );
+
+  await pipeline.click();
+
+  const phases = screen.getByRole("dialog", { name: "Phases" });
+  await expect.element(phases).toHaveFocus();
+  expect(phases.getByText("Delivery").elements()).toHaveLength(0);
+  expect(phases.getByRole("separator").elements()).toHaveLength(1);
 });

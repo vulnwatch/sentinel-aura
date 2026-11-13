@@ -9,7 +9,11 @@ import {
 } from "lucide-react";
 import { Fragment } from "react";
 import { Button as AriaButton, DialogTrigger } from "react-aria-components";
-import type { MilestoneStatusValue, TrackDetail } from "../api/generated/model";
+import type {
+  DeliveryStatusValue,
+  MilestoneStatusValue,
+  TrackDetail,
+} from "../api/generated/model";
 import { DateTime } from "./date-time";
 import { dueState } from "./deadline-badge";
 import { FOCUS_RING } from "./focus-ring";
@@ -17,7 +21,9 @@ import { InfoPopover, PopoverLine, PopoverTitle } from "./info-popover";
 
 // The milestones of a track (docs/design-system.md, Track Milestones;
 // Sentinel docs/features/tickets/ticket-deadlines.md, Actors and Phases;
-// Track Milestones).
+// Track Milestones), and its delivery (Sentinel
+// docs/features/packages/package-model.md, Axis 3: Delivery and Release
+// Observation).
 
 type Phase = "triage" | "submission" | "um" | "qa";
 
@@ -141,8 +147,39 @@ function capitalized(text: string): string {
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
 
+// The names of the delivery statuses of a track. A Map, so that a value that
+// a later Sentinel release returns is looked up only among them
+// (docs/conventions.md, Data Read from the API).
+const DELIVERY = new Map<string, string>(
+  Object.entries({
+    pending: "Pending",
+    in_progress: "In progress",
+    released: "Released",
+  } satisfies Record<DeliveryStatusValue, string>),
+);
+
+interface TrackDeliveryProps {
+  // The delivery status of the track, one that the pinned contract lists or
+  // another that a later Sentinel release returns.
+  status: string;
+}
+
+// The delivery of a track: "Delivery" in fg-muted, then, 6 px later, the
+// name of its status in the color of the text around it, without a mark, so
+// that it does not read as a second affectedness, or the status as received.
+export function TrackDelivery({ status }: TrackDeliveryProps) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="text-fg-muted">Delivery</span>
+      <span>{DELIVERY.get(status) ?? status}</span>
+    </span>
+  );
+}
+
 interface PhasesProps {
   phases: readonly PhaseView[];
+  // The delivery status of the track, where the screen shows it.
+  delivery: string | undefined;
 }
 
 // Phases: its title, a border line, and a line for each phase, 10 px apart:
@@ -152,7 +189,9 @@ interface PhasesProps {
 // overdue and in fg-muted otherwise, followed, for a phase with a due date, by
 // " · due " and its date and time (docs/behaviors.md, Dates and Times,
 // Display). The icon starts the line, so the state takes no icon of its own.
-function Phases({ phases }: PhasesProps) {
+// The delivery of the track, where it shows, follows the phases after a
+// border line.
+function Phases({ phases, delivery }: PhasesProps) {
   return (
     <>
       <PopoverTitle>Phases</PopoverTitle>
@@ -195,6 +234,14 @@ function Phases({ phases }: PhasesProps) {
           );
         })}
       </ul>
+      {delivery !== undefined && (
+        <>
+          <PopoverLine />
+          <p>
+            <TrackDelivery status={delivery} />
+          </p>
+        </>
+      )}
     </>
   );
 }
@@ -207,6 +254,9 @@ interface TrackMilestonesProps {
   // The instant with which the states compare the due dates, in milliseconds
   // since the epoch, the same as that of the badges of the screen.
   now: number;
+  // The delivery status of the track, where the screen shows it, which
+  // Phases shows after the phases.
+  delivery?: string;
 }
 
 // The milestones of a track as a pipeline, its four phases in their order:
@@ -218,22 +268,31 @@ interface TrackMilestonesProps {
 // side padding and a 4 px radius, on neutral-soft under the pointer and while
 // its popover is open, with the focus ring around it. Its icons and lines are
 // hidden from assistive technologies, and its accessible name states the
-// subject and the state of each phase, such as "Phases of fictional-openssl,
-// SUSE:FLES-15-SP7:Update: Triage done; Submission overdue by 2 days,
-// current; UM due in 3 days; QA due in 10 days". A click, a tap, Enter, or
-// Space opens Phases, 320 px wide (InfoPopover).
-export function TrackMilestones({ track, subject, now }: TrackMilestonesProps) {
+// subject and the state of each phase, then the delivery, where it shows,
+// such as "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: Triage done;
+// Submission overdue by 2 days, current; UM due in 3 days; QA due in 10 days;
+// delivery pending". A click, a tap, Enter, or Space opens Phases, 320 px
+// wide (InfoPopover).
+export function TrackMilestones({
+  track,
+  subject,
+  now,
+  delivery,
+}: TrackMilestonesProps) {
   const phases = phasesOf(track, now);
-  const states = phases
-    .map(
-      (phase) =>
-        `${phase.name} ${phase.words}${phase.current ? ", current" : ""}`,
-    )
-    .join("; ");
+  const states = phases.map(
+    (phase) =>
+      `${phase.name} ${phase.words}${phase.current ? ", current" : ""}`,
+  );
+  if (delivery !== undefined) {
+    states.push(
+      `delivery ${DELIVERY.get(delivery)?.toLowerCase() ?? delivery}`,
+    );
+  }
   return (
     <DialogTrigger>
       <AriaButton
-        aria-label={`Phases of ${subject}: ${states}`}
+        aria-label={`Phases of ${subject}: ${states.join("; ")}`}
         className={`inline-flex h-6 shrink-0 cursor-default items-center rounded px-1 data-hovered:bg-neutral-soft aria-expanded:bg-neutral-soft ${FOCUS_RING}`}
       >
         <span aria-hidden className="flex items-center">
@@ -263,7 +322,7 @@ export function TrackMilestones({ track, subject, now }: TrackMilestonesProps) {
         </span>
       </AriaButton>
       <InfoPopover width="wide">
-        <Phases phases={phases} />
+        <Phases phases={phases} delivery={delivery} />
       </InfoPopover>
     </DialogTrigger>
   );
