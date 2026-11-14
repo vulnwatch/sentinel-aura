@@ -939,17 +939,17 @@ of a picture that the person uploaded to Slack, and every such URL is on that
 host (Sentinel `docs/features/identity/user-avatars.md`, Accepted Picture
 URL). Sentinel never requests a picture: the browser of each user loads it
 from Slack (Sentinel `docs/features/identity/user-avatars.md`, Security and
-Privacy), so the host is an asset that the UI loads from a third party, which
-the repository owner admitted (`docs/conventions.md`, Dependency Admission;
-Approved Dependencies). With each picture, the host receives the address of
-the user's browser, the browser's ordinary request headers and any cookie
-that it keeps for that host, and the URL of the picture, and so learns whose
-pictures the user's screens show, but not the URL of the screen:
-`Referrer-Policy` withholds it, and the UI also sets that policy on each
-picture that it loads.
-A picture on any other host, such as one of a later source of the pictures
-(Sentinel `docs/features/identity/user-avatars.md`, Design Notes), is blocked
-and shows as a picture that failed to load, the generated avatar
+Privacy), so the pictures are an asset that the UI loads from a third party,
+and the repository owner admitted the host (Approved Dependencies;
+`docs/conventions.md`, Dependency Admission). With each picture, the host
+receives the address of the user's browser, the browser's ordinary request
+headers and any cookie that it keeps for that host, and the URL of the
+picture, and so learns whose pictures the user's screens show, but not the URL
+of the screen: `Referrer-Policy` withholds it, and the UI also sets that
+policy on each picture that it loads. A picture on any other host, such as one
+of a later source of the pictures (Sentinel
+`docs/features/identity/user-avatars.md`, Design Notes), is blocked and shows
+as a picture that failed to load, the generated avatar
 (`docs/design-system.md`, Profile Picture), until a change of this policy
 admits its host. A relative URL, which Sentinel can introduce for a picture
 that it serves itself, resolves to the UI's origin and loads.

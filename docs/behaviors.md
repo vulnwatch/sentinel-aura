@@ -878,18 +878,17 @@ complete profile and its manager, and the signed-in user alike: `id`,
 - **Avatar.** A person's profile picture, the picture whose URL Sentinel
   returns as `avatar_url`, such as the one that the person uploaded to Slack,
   so that people recognize one another at a glance; or else the generated
-  avatar, a picture that the UI generates from the user's `id`, which never
+  avatar, an image that the UI generates from the user's `id`, which never
   changes. A person's avatar is round (`docs/design-system.md`, Avatar).
   `avatar_url` is a URI reference, which the UI resolves against the URL of
   the response that carries it; the UI neither parses it nor derives another
   URL from it (Sentinel `docs/features/identity/user-avatars.md`, Avatar URL).
   The generated avatar shows when `avatar_url` is `null` or does not resolve,
-  and when the profile picture fails to load, which Sentinel's contract
-  treats like `null`. While the picture loads, the avatar keeps its place and
-  size, and a picture that fails to load gives way to the generated avatar
-  there, without a mark of a broken image, so that nothing around it moves
+  and in place of a profile picture that fails to load, which Sentinel's
+  contract treats like `null`. While the picture loads and when it fails, the
+  avatar keeps its place and size, so that nothing around it moves
   (`docs/design-system.md`, Profile Picture). The browser loads the picture
-  from the host that serves it, which receives no address of the UI's screens
+  from the host that serves it, which receives no URL of the UI's screens
   (`docs/architecture.md`, Security Headers).
 - **Full form.** The avatar followed by the display name. The avatar is
   hidden from assistive technologies, because the name identifies the user.

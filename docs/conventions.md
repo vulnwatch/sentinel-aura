@@ -280,7 +280,7 @@ that needs it; content of another kind needs a new row first.
   an absolute URL; a value that does not resolve becomes `null`
   (`docs/behaviors.md`, Representation of a User; Sentinel
   `docs/features/identity/user-avatars.md`, Avatar URL). No other code
-  resolves or parses it, or derives another URL from it.
+  resolves it, and no code reads its parts or derives another URL from it.
 - A request sends only the query parameters and request body members that
   the contract of the pinned version declares for the operation: a later
   Sentinel release within the supported Sentinel versions can declare
@@ -528,11 +528,11 @@ that needs it; content of another kind needs a new row first.
   run to the next, such as a date that the dataset computes from the instant
   of its load (Sentinel `docs/features/platform/example-dataset.md`, Time
   Base) or the generated avatar of a user, whose `id` the dataset does not
-  fix (same document, Users), is masked. Such a region also keeps the same size in
-  every run, so that neither its mask nor what follows it moves: the text of
-  a date changes in width with the day and the month of the run, so each
-  date takes, for the screenshot alone, a fixed width of at least its widest
-  text. `expectScreenshot` of `fixtures.ts` takes every reference, with
+  fix (same document, Users), is masked. Such a region also keeps the same
+  size in every run, so that neither its mask nor what follows it moves: the
+  text of a date changes in width with the day and the month of the run, so
+  each date takes, for the screenshot alone, a fixed width of at least its
+  widest text. `expectScreenshot` of `fixtures.ts` takes every reference, with
   these masks and widths. The widths come from a stylesheet of the CSS
   object model, which the policy allows (`docs/architecture.md`, Security
   Headers), and the page returns to its own style once the screenshot is
