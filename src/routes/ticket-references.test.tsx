@@ -522,7 +522,7 @@ function optionNames(listbox: Locator): string[] {
 }
 
 describe("the tab", () => {
-  test("opens at its path, selected, between Overview and Audit log", async () => {
+  test("opens at its path, selected, between Overview and Affected versions", async () => {
     stubReferences();
 
     const { screen } = await renderTab();
@@ -533,7 +533,7 @@ describe("the tab", () => {
         .getByRole("tab")
         .elements()
         .map((tab) => tab.textContent),
-    ).toEqual(["Overview", "References", "Audit log"]);
+    ).toEqual(["Overview", "References", "Affected versions", "Audit log"]);
     await expect
       .element(tabs.getByRole("tab", { name: "References" }))
       .toHaveAttribute("aria-selected", "true");

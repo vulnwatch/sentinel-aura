@@ -37,8 +37,9 @@ import { rootRoute } from "./root";
 // (Sentinel docs/features/tickets/tickets.md, Get Ticket), with its heading
 // row and its tabs, each at a path under the path of the screen. Overview, at
 // the path of the screen, is its first tab (src/routes/ticket-overview.tsx),
-// References its second (src/routes/ticket-references.tsx), and Audit log
-// its third (src/routes/ticket-audit-log.tsx).
+// References its second (src/routes/ticket-references.tsx), Affected
+// versions its third (src/routes/ticket-affected-versions.tsx), and Audit
+// log its fourth (src/routes/ticket-audit-log.tsx).
 
 // The canonical identity of a Ticket, SNTL-{n} with n at most the largest
 // positive INTEGER of PostgreSQL (Sentinel docs/api-spec.md, Ticket
@@ -122,7 +123,7 @@ export const CVE_FETCHER_NAMES: ReadonlyMap<string, string> = new Map(
 );
 
 // The tabs of the screen, each at a path under the path of the Ticket.
-type TabId = "overview" | "references" | "audit-log";
+type TabId = "overview" | "references" | "affected-versions" | "audit-log";
 
 function tabsOf(ticketId: string): readonly DetailTab[] {
   return [
@@ -140,6 +141,14 @@ function tabsOf(ticketId: string): readonly DetailTab[] {
       }),
     },
     {
+      id: "affected-versions",
+      label: "Affected versions",
+      href: linkOptions({
+        to: "/tickets/$ticketId/affected-versions",
+        params: { ticketId },
+      }),
+    },
+    {
       id: "audit-log",
       label: "Audit log",
       href: linkOptions({
@@ -153,6 +162,7 @@ function tabsOf(ticketId: string): readonly DetailTab[] {
 // The tabs at a path below the path of the Ticket, by the route of the path.
 const TAB_ROUTES = new Map<string, TabId>([
   ["/tickets/$ticketId/references", "references"],
+  ["/tickets/$ticketId/affected-versions", "affected-versions"],
   ["/tickets/$ticketId/audit-log", "audit-log"],
 ]);
 
@@ -313,7 +323,9 @@ interface TicketReadProps {
 // that does not exist or that the user cannot see shows Not found alike
 // (docs/behaviors.md, Where Errors Appear; Missing and Inaccessible Records).
 // Overview waits for the Ticket; References and Audit log, whose content does
-// not depend on it, show at once (docs/screens/ticket.md, States).
+// not depend on it, show at once, and so does the toolbar of Affected
+// versions, whose entries wait for the CVE of the Ticket themselves
+// (docs/screens/ticket.md, States).
 function TicketRead({ ticketId }: TicketReadProps) {
   const read = useGetTicket(ticketId);
   // The tab of the child that the outlet renders, rather than of the URL

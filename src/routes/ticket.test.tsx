@@ -323,7 +323,7 @@ describe("the read of the Ticket", () => {
       ]);
   });
 
-  test("shows the tabs Overview, References, and Audit log, named Ticket, with Overview selected at the path of the Ticket", async () => {
+  test("shows the tabs Overview, References, Affected versions, and Audit log, named Ticket, with Overview selected at the path of the Ticket", async () => {
     stubTicket();
 
     const { screen } = await renderTicket();
@@ -332,6 +332,7 @@ describe("the read of the Ticket", () => {
     expect(textsOf(tabs.getByRole("tab"))).toEqual([
       "Overview",
       "References",
+      "Affected versions",
       "Audit log",
     ]);
     await expect
@@ -339,6 +340,7 @@ describe("the read of the Ticket", () => {
       .toHaveAttribute("aria-selected", "true");
     for (const [name, href] of [
       ["References", "/tickets/SNTL-12/references"],
+      ["Affected versions", "/tickets/SNTL-12/affected-versions"],
       ["Audit log", "/tickets/SNTL-12/audit-log"],
     ]) {
       await expect

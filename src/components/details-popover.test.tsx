@@ -141,6 +141,27 @@ test("opens its popover, 320 px wide, which takes the focus, with its title, wha
   await expect.element(name).toHaveFocus();
 });
 
+test("takes an accessible name that tells it from the other names of its kind, while its popover keeps the name as its title", async () => {
+  const screen = await render(
+    <DetailsName name="CNA" label="CNA for fictional-tar">
+      <DescriptionList>
+        <DescriptionItem term="Vendor">Example</DescriptionItem>
+      </DescriptionList>
+    </DetailsName>,
+  );
+  const name = screen.getByRole("button", {
+    name: "CNA for fictional-tar",
+    exact: true,
+  });
+  await expect.element(name).toHaveTextContent("CNA");
+
+  await name.click();
+
+  await expect
+    .element(screen.getByRole("dialog", { name: "CNA", exact: true }))
+    .toHaveFocus();
+});
+
 test("moves the focus to the screen's heading when the name leaves the page while its popover holds the focus", async () => {
   const screen = await render(<Record />);
   await screen.getByRole("button", { name: NAME }).click();

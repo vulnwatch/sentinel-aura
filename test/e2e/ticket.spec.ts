@@ -116,7 +116,7 @@ test.describe("for an analyst", () => {
     );
     await expect(
       page.getByRole("tablist", { name: "Ticket" }).getByRole("tab"),
-    ).toHaveText(["Overview", "References", "Audit log"]);
+    ).toHaveText(["Overview", "References", "Affected versions", "Audit log"]);
     await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -1849,6 +1849,245 @@ test.describe("the references", () => {
       await expect(add).toBeFocused();
     },
   );
+});
+
+// The panel of the tab Affected versions.
+function affectedPanel(page: Page) {
+  return page.getByRole("tabpanel", { name: "Affected versions" });
+}
+
+// The names of the packages of the tab Affected versions, its level-two
+// headings.
+function affectedPackages(page: Page) {
+  return affectedPanel(page).getByRole("heading", { level: 2 });
+}
+
+// The lines of the versions of the block of a source, by the rank of its
+// term in the tab.
+function sourceLines(page: Page, rank: number) {
+  return affectedPanel(page)
+    .getByRole("definition")
+    .nth(rank)
+    .getByRole("listitem");
+}
+
+// Opens the tab Affected versions of a Ticket at its path, and waits until
+// the Ticket and what the tab shows in place of its entries have arrived.
+async function openAffectedVersions(
+  page: Page,
+  ticketId: string,
+  text: string,
+) {
+  await page.goto(`/tickets/${ticketId}/affected-versions`);
+  await expect(heading(page, ticketId)).toBeVisible();
+  await expect(affectedPanel(page).getByText(text).first()).toBeVisible();
+}
+
+test.describe("the affected versions", () => {
+  test("shows the affected versions of the CVE of a Ticket by package, each source with its versions and their status, in the tab Affected versions", async ({
+    page,
+  }) => {
+    // The four scopes of CVE-2099-0009, the CVE of SNTL-9, which together
+    // give every field of an entry a value (CVEs, Affected Versions).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-9");
+    await expect(heading(page, "SNTL-9")).toBeVisible();
+
+    await page.getByRole("tab", { name: "Affected versions" }).click();
+
+    await expect(page).toHaveURL("/tickets/SNTL-9/affected-versions");
+    await expect(
+      page.getByRole("tab", { name: "Affected versions", selected: true }),
+    ).toBeVisible();
+    await expect(affectedPackages(page)).toHaveText([
+      "fictional_tar",
+      "fictional-tar",
+      /^https:\/\/git\.example\.com\/fictional-tar/,
+    ]);
+    await expect(
+      affectedPanel(page).getByRole("link", {
+        name: "https://git.example.com/fictional-tar (another site)",
+      }),
+    ).toHaveAttribute("href", "https://git.example.com/fictional-tar");
+    // Within fictional-tar, the CNA first, then GHSA and OSV.
+    await expect(affectedPanel(page).getByRole("term")).toHaveText([
+      "CISA-ADP",
+      "CNA",
+      "GHSA",
+      "OSV",
+      "OSV",
+    ]);
+    await expect(sourceLines(page, 0)).toHaveText([
+      /^From 1\.0 through 1\.4\.2\s*Affected$/,
+      /^2\.0\.0-rc1\s*Unknown$/,
+      /^Other versions\s*Unknown$/,
+    ]);
+    await expect(sourceLines(page, 1)).toHaveText([
+      /^From 1\.0 before 1\.5\s*Affected$/,
+      /^1\.5\s*Unaffected$/,
+      /^Other versions\s*Unaffected$/,
+    ]);
+    await expect(sourceLines(page, 2)).toHaveText(["From 1.0.0 before 1.5.0"]);
+    await expect(sourceLines(page, 3)).toHaveText(["From 1.0.0 before 1.5.0"]);
+    await expect(sourceLines(page, 4)).toHaveText([
+      "From 1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d before 9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c",
+    ]);
+    // Away from the tab, which the pointer would mark.
+    await page.mouse.move(100, 500);
+    await expectScreenshot(page, "ticket-affected-versions.png");
+  });
+
+  test("opens the details of a source, which the entries of a package share", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await openAffectedVersions(page, "SNTL-9", "From 1.0 before 1.5");
+    const name = affectedPanel(page).getByRole("button", {
+      name: "CNA for fictional-tar",
+      exact: true,
+    });
+
+    await name.click();
+
+    const dialog = page.getByRole("dialog", { name: "CNA", exact: true });
+    await expect(dialog).toBeFocused();
+    await expect(dialog.getByRole("term")).toHaveText([
+      "Vendor",
+      "Repository",
+      "Collection URL",
+      "CPE",
+      "Version type",
+      "Program files",
+    ]);
+    await expect(dialog.getByRole("definition")).toHaveText([
+      "Example",
+      /^https:\/\/git\.example\.com\/fictional-tar/,
+      /^https:\/\/packages\.example\.com\//,
+      "cpe:2.3:a:example:fictional-tar:*:*:*:*:*:*:*:*",
+      "semver",
+      "src/extract.c, src/names.c",
+    ]);
+    await expect(
+      dialog.getByRole("link", {
+        name: "https://packages.example.com/ (another site)",
+      }),
+    ).toHaveAttribute("href", "https://packages.example.com/");
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-affected-versions-details.png");
+
+    await page.keyboard.press("Escape");
+
+    await expect(dialog).toHaveCount(0);
+    await expect(name).toBeFocused();
+  });
+
+  test("searches the entries, also in the details of their sources, and says when none matches", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await openAffectedVersions(page, "SNTL-9", "From 1.0 before 1.5");
+    const search = affectedPanel(page).getByRole("searchbox", {
+      name: "Search entries",
+    });
+
+    await search.fill("npm");
+    await search.press("Enter");
+
+    await expect(page).toHaveURL(
+      "/tickets/SNTL-9/affected-versions?search=npm",
+    );
+    await expect(affectedPackages(page)).toHaveText(["fictional-tar"]);
+    await expect(affectedPanel(page).getByRole("term")).toHaveText([
+      "GHSA",
+      "OSV",
+    ]);
+
+    await search.fill("fictional-zlib");
+    await search.press("Enter");
+
+    await expect(
+      affectedPanel(page).getByText("No entries match the search.", {
+        exact: true,
+      }),
+    ).toHaveCount(2);
+    await expect(affectedPackages(page)).toHaveCount(0);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-affected-versions-no-match.png");
+
+    await affectedPanel(page)
+      .getByRole("button", { name: "Clear filters" })
+      .last()
+      .click();
+
+    await expect(page).toHaveURL("/tickets/SNTL-9/affected-versions");
+    await expect(affectedPackages(page)).toHaveCount(3);
+  });
+
+  test("stays usable with the keyboard and at 320 CSS pixels with the largest CVE", async ({
+    page,
+  }) => {
+    // The generated cna scope of 500 entries of CVE-2099-0013, the CVE of
+    // SNTL-13 (CVEs, Affected Versions).
+    await page.setViewportSize({ width: 320, height: 640 });
+    await signIn(page, "asmith");
+    await openAffectedVersions(page, "SNTL-13", "2.0.0");
+
+    await expect(sourceLines(page, 0)).toHaveCount(500);
+    expect(await scrollsHorizontally(page)).toBe(false);
+    await page.getByRole("tab", { name: "Affected versions" }).focus();
+
+    await page.keyboard.press("Tab");
+    await expect(
+      affectedPanel(page).getByRole("searchbox", { name: "Search entries" }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    const name = affectedPanel(page).getByRole("button", {
+      name: "CNA for fictional-httpd",
+      exact: true,
+    });
+    await expect(name).toBeFocused();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "CNA", exact: true });
+    await expect(dialog).toBeFocused();
+    await expect(dialog.getByRole("definition")).toHaveText([
+      "Example",
+      "semver",
+    ]);
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(name).toBeFocused();
+    await page.keyboard.press("End");
+
+    await expect(
+      affectedPanel(page).getByText("2.4.99", { exact: true }),
+    ).toBeInViewport();
+    expect(await scrollsHorizontally(page)).toBe(false);
+  });
+
+  test("says when a Ticket has no CVE, and when Sentinel has no version data for its CVE", async ({
+    page,
+  }) => {
+    // SNTL-21 has no CVE, and CVE-2099-0012 of SNTL-12 has no affected
+    // versions (Tickets; CVEs).
+    await signIn(page, "asmith");
+
+    await openAffectedVersions(page, "SNTL-21", "This Ticket has no CVE.");
+
+    await expect(
+      affectedPanel(page).getByRole("searchbox", { name: "Search entries" }),
+    ).toHaveCount(0);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-affected-versions-without-cve.png");
+
+    await openAffectedVersions(
+      page,
+      "SNTL-12",
+      "Sentinel has no version data for this CVE.",
+    );
+
+    await expect(affectedPackages(page)).toHaveCount(0);
+    await expectScreenshot(page, "ticket-affected-versions-empty.png");
+  });
 });
 
 test("shows a maintainer the tracks of a Ticket that wait for them", async ({

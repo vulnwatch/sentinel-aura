@@ -42,8 +42,9 @@ export function DescriptionList({
 
 // The grid of a term and its value: one column, or, where the list is at
 // least 280 px wide, the column of the term, 104 px, and 12 px later that of
-// the value.
-const FIELD =
+// the value. A list whose terms or values a screen builds itself, such as the
+// sources of an affected product with their versions, takes it from here.
+export const FIELD =
   "grid grid-cols-[minmax(0,1fr)] @min-[17.5rem]:grid-cols-[6.5rem_minmax(0,1fr)] @min-[17.5rem]:gap-x-3";
 
 // The columns of a list whose terms take the width of the longest one: one
