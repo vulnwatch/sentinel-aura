@@ -1,7 +1,7 @@
 <p align="center">
 <picture>
-<source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-b-dark.svg">
-<img src=".github/assets/banner-b.svg" alt="Sentinel Aura — Web interface for Linux vulnerability management" width="520">
+<source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+<img src=".github/assets/banner.svg" alt="Sentinel Aura — Web interface for Linux vulnerability management" width="520">
 </picture>
 </p>
 
@@ -22,12 +22,9 @@ follow their queues all day, the package maintainers who look for the fixes
 that wait for them, and every colleague who needs SUSE's status for a CVE.
 
 <p align="center">
-<picture>
-<source media="(prefers-color-scheme: dark)" srcset=".github/assets/screenshot-ticket-list-dark.png">
-<img src=".github/assets/screenshot-ticket-list.png" alt="The Ticket list of Sentinel Aura: the Tickets that need attention, the views of the list, and a page of Tickets with their CVE, packages, status, severity, priority, deadline, and assignee">
-</picture>
+<img src=".github/assets/screenshot-ticket-list.png" alt="The Ticket list of Sentinel Aura, in the light theme on the left and the dark theme on the right, split along a diagonal: the Tickets that need attention, the views of the list, and a page of Tickets with their CVE, packages, status, severity, priority, deadline, and assignee">
 <br>
-<sub>Fictional data from Sentinel's example dataset.</sub>
+<sub>The Ticket list in the light and the dark theme, with fictional data from Sentinel's example dataset.</sub>
 </p>
 
 ## Highlights
@@ -106,12 +103,6 @@ the options considered, and the rationale.
 | [Conventions](docs/conventions.md) | Code, shell, Git, and specification-writing conventions |
 | [Deployment](docs/deployment.md) | CI pipeline, dependency updates, release process, supported Sentinel versions, and release verification |
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, the checks,
-and the pull request process. Bugs and features of the backend and of its API
-belong to [Sentinel](https://github.com/vulnwatch/sentinel/issues).
-
 ## Specification Boundary
 
 [Sentinel](https://github.com/vulnwatch/sentinel) owns the domain and API
@@ -132,70 +123,3 @@ justification is rationale of the contract and prescribes no presentation.
 
 See the System Boundary section of Sentinel's
 [architecture document](https://github.com/vulnwatch/sentinel/blob/master/docs/architecture.md#system-boundary).
-
-## Security
-
-Do not report vulnerabilities in public issues. See [SECURITY.md](SECURITY.md).
-
-## Code of Conduct
-
-This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
-
-## License
-
-Licensed under the [Apache License 2.0](LICENSE).
-
----
-
-## Candidates (temporary, removed before the pull request)
-
-Switch the GitHub theme (Settings → Appearance) to see the light and the dark
-version of each adaptive image.
-
-### Banner A — Sentinel's shield and typography
-
-<p align="center">
-<picture>
-<source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-a-dark.svg">
-<img src=".github/assets/banner-a.svg" alt="Banner candidate A" width="520">
-</picture>
-</p>
-
-### Banner B — the Sentinel mark of the UI, in an aura (shown at the top)
-
-<p align="center">
-<picture>
-<source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-b-dark.svg">
-<img src=".github/assets/banner-b.svg" alt="Banner candidate B" width="520">
-</picture>
-</p>
-
-### Banner C — Sentinel's shield, in an aura
-
-<p align="center">
-<picture>
-<source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-c-dark.svg">
-<img src=".github/assets/banner-c.svg" alt="Banner candidate C" width="520">
-</picture>
-</p>
-
-### Main screenshot — Ticket list, diagonal
-
-<p align="center">
-<img src=".github/assets/screenshot-ticket-list-diagonal.png" alt="Screenshot candidate: the Ticket list, light and dark, split along a diagonal">
-</p>
-
-### Main screenshot — Ticket, adaptive
-
-<p align="center">
-<picture>
-<source media="(prefers-color-scheme: dark)" srcset=".github/assets/screenshot-ticket-dark.png">
-<img src=".github/assets/screenshot-ticket.png" alt="Screenshot candidate: the Ticket screen">
-</picture>
-</p>
-
-### Main screenshot — Ticket, diagonal
-
-<p align="center">
-<img src=".github/assets/screenshot-ticket-diagonal.png" alt="Screenshot candidate: the Ticket screen, light and dark, split along a diagonal">
-</p>
