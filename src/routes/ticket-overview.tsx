@@ -1046,24 +1046,57 @@ interface ProductDetailsProps {
   release: Release | undefined;
 }
 
-// The details of a Product, as its popover shows them: its eligibility,
-// automatic or set by hand; its lifecycle phase, or "Not available" without
-// lifecycle data; its release, where it has one (releaseOf); and, for a
-// Product that takes no part, why. Values that the pinned contract does not
-// list show as received.
+interface OverrideProvenanceProps {
+  product: ProductDetail;
+}
+
+// Who set the eligibility of a Product by hand and when, below its value, in
+// text-13, fg-muted: "Set by", the user in the name form, which wraps, since
+// nothing else in the details shows it whole, "on", and the date and time on
+// one line. The user is the setter's current profile, so a user deactivated
+// since shows as inactive. Sentinel returns both with every override
+// (Sentinel docs/features/packages/package-model.md, Override Model); a value
+// that is absent shows as an absent value, never as System, since no system
+// task sets an override.
+function OverrideProvenance({ product }: OverrideProvenanceProps) {
+  const setter = product.eligibility_override_by;
+  return (
+    <p className="mt-0.5 text-13 text-fg-muted">
+      Set by{" "}
+      {setter === null ? (
+        <AbsentValue />
+      ) : (
+        <User user={setter} withAvatar={false} wrap />
+      )}{" "}
+      on{" "}
+      <span className="whitespace-nowrap">
+        <MaybeDateTime value={product.eligibility_override_at} />
+      </span>
+    </p>
+  );
+}
+
+// The details of a Product, as its popover shows them: its eligibility, and,
+// when it is set by hand, user-pen at 14 px in fg-muted 4 px after it, read
+// as ", set by hand", and who set it and when below it (OverrideProvenance);
+// its lifecycle phase, or "Not available" without lifecycle data; its
+// release, where it has one (releaseOf); and, for a Product that takes no
+// part, why. Values that the pinned contract does not list show as received.
 function ProductDetails({ product, release }: ProductDetailsProps) {
   return (
     <DescriptionList>
       <DescriptionItem term="Eligibility">
-        {product.eligible ? "Eligible" : "Not eligible"}
-        {" · "}
-        {product.is_eligible_override ? (
-          <span className="inline-flex items-center gap-1 align-bottom">
-            <UserPen aria-hidden className="size-3.5 text-fg-muted" />
-            set by hand
-          </span>
-        ) : (
-          "automatic"
+        <span className="inline-flex items-center gap-1">
+          {product.eligible ? "Eligible" : "Not eligible"}
+          {product.is_eligible_override && (
+            <>
+              <UserPen aria-hidden className="size-3.5 text-fg-muted" />
+              <span className="sr-only">, set by hand</span>
+            </>
+          )}
+        </span>
+        {product.is_eligible_override && (
+          <OverrideProvenance product={product} />
         )}
       </DescriptionItem>
       <DescriptionItem term="Lifecycle">

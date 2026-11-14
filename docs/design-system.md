@@ -1570,11 +1570,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   many lines, such as the scope of a CNA, comes last, its term above its
   value, as in a list narrower than 280 px, across the width of the list,
   and, where its screen document states it, cut to its first four lines with
-  Show more (Main Content). Details that the popover reads as it first
-  opens, such as those of a CNA, load and fail as those of the user card do
-  (`docs/behaviors.md`, Representation of a User, User card), with the
-  loading indicator (Loading) or the line of the failure in `fg-muted` in
-  their place. The popover takes the focus itself as it opens
+  Show more (Main Content). The name of a user in the details wraps instead
+  of ending with an ellipsis, since nothing else in the popover shows it
+  whole (Representation of a User). Details that the popover reads as it
+  first opens, such as those of a CNA, load and fail as those of the user
+  card do (`docs/behaviors.md`, Representation of a User, User card), with
+  the loading indicator (Loading) or the line of the failure in `fg-muted`
+  in their place. The popover takes the focus itself as it opens
   (`docs/behaviors.md`, Accessibility, Dialogs); Tab reaches its actions,
   and the rest of the page is out of reach while it is open. Escape or a
   click outside closes it and returns the focus to the name, except while
@@ -1617,8 +1619,9 @@ where the labels show, a group of users, and the user card.
   where it follows the name. An inactive user's name is in `fg-muted`, and
   its avatar is gray (Avatar). Where the place is too narrow, only the name,
   with the username that follows it, ends with an ellipsis, unless a table,
-  the account menu, the user card, or the explanation of a priority wraps it
-  (Tables; Account Menu; User card; Priority, Explanation); the labels always
+  the account menu, the user card, the explanation of a priority, or the
+  description list of a popover wraps it (Tables; Account Menu; User card;
+  Priority, Explanation; Menus, Popovers, and Tooltips); the labels always
   show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.

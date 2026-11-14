@@ -359,10 +359,17 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   without due dates, which has no release, shows none either.
 - The name of a Product opens its details (`docs/design-system.md`, Menus,
   Popovers, and Tooltips): its CPE in monospace below the name, then
-  Eligibility, "Eligible" or "Not eligible", followed by " · automatic", or
-  " · set by hand" after `user-pen`; Lifecycle, the phase of `lifecycle_phase`
-  (Pre-release, General support, Extended support, Reactive support, EOL),
-  or "Not available" without lifecycle data; Release, where it has one
+  Eligibility, "Eligible" or "Not eligible", and, when it is set by hand,
+  `user-pen` at 14 px in `fg-muted`, 4 px after it, read as ", set by hand",
+  and below it, in `text-13`, `fg-muted`, who set it and when: "Set by", the
+  user in the name form, which wraps, "on", and the date and time, which
+  keep to one line, such as "Set by Alice Smith on 9 Oct 2026, 14:05". The
+  user is the setter's current profile, so a user deactivated since shows as
+  inactive (Sentinel `docs/features/packages/package-model.md`, Package
+  Eligibility (Override Model); Sentinel `docs/api-spec.md`, User References
+  in Responses). Then Lifecycle, the phase of `lifecycle_phase` (Pre-release,
+  General support, Extended support, Reactive support, EOL), or "Not
+  available" without lifecycle data; Release, where it has one
   (above); and, for a Product that is not actionable, Actionable, "No,"
   followed by the reason that Sentinel gives, the first that applies in the
   order "its package is excluded", "its track is excluded", "it is excluded
@@ -1086,7 +1093,7 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Evidence); Ticket Current Phase
 - Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
   Dimensions; Affectedness-Delivery Independence; Exclusion and
-  Actionability; List Ticket Packages
+  Actionability; Package Eligibility (Override Model); List Ticket Packages
 - Sentinel `docs/features/packages/package-maintainership.md` — Maintainers
   in the Package Tree; Workbench Dependency
 - Sentinel `docs/features/packages/maintainer.md` — Classification; Package
@@ -1117,4 +1124,4 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Resolution; CVE Identifier Resolution; CNA Identifier Resolution; CVE
   Accessibility Check; Pagination; Enum Filter Validation; Date Range
   Interpretation; Infrastructure Dependency Errors (HTTP 503); Partial Update
-  Semantics
+  Semantics; User References in Responses

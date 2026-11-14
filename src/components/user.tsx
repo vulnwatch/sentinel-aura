@@ -70,7 +70,9 @@ interface UserProps {
 // inactive user's name is in fg-muted, and the @ sets its username apart from
 // it. Where the place is too narrow, only the name, with its username, ends
 // with an ellipsis, and assistive technologies read it whole, or wraps when
-// asked.
+// asked. In running text, the full form centers the avatar on the line, and
+// the name form, without an avatar, stands on the baseline of the text
+// around it.
 export function User({
   user,
   size = "small",
@@ -80,7 +82,9 @@ export function User({
 }: UserProps) {
   const name = displayName(user);
   return (
-    <span className="inline-flex max-w-full items-center gap-1.5 align-middle">
+    <span
+      className={`inline-flex max-w-full items-center gap-1.5 ${withAvatar ? "align-middle" : "align-baseline"}`}
+    >
       {withAvatar && <Avatar user={user} size={size} />}
       <span
         className={`min-w-0 ${wrap ? "wrap-anywhere" : "truncate"} ${user.active ? "" : "text-fg-muted"}`}

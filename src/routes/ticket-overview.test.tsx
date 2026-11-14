@@ -338,6 +338,32 @@ async function releaseInDetails(
   return index === -1 ? undefined : (definitions[index] ?? undefined);
 }
 
+// Shows a package tree with one Product with the fields, opens its details,
+// and returns them.
+async function openProductDetails(
+  product: Partial<ProductDetail>,
+): Promise<Locator> {
+  showing([
+    fictionalPackage({
+      tracks: [fictionalTrack({ products: [fictionalProduct(product)] })],
+    }),
+  ]);
+  const { screen } = await renderTree();
+  await screen
+    .getByRole("button", { name: "Fictional Linux Enterprise Server 15 SP7" })
+    .click();
+  const details = screen.getByRole("dialog", {
+    name: "Fictional Linux Enterprise Server 15 SP7",
+  });
+  await expect.element(details).toHaveFocus();
+  return details;
+}
+
+// The value of Eligibility in the details of a Product, their first field.
+function eligibilityIn(details: Locator): Element {
+  return details.getByRole("definition").first().element();
+}
+
 function showHidden(screen: Screen) {
   return screen.getByRole("switch", { name: /^Show hidden/ });
 }
@@ -414,21 +440,26 @@ const UNOBSERVED: Pick<TrackDetail, "milestones" | "current_phase"> = {
   current_phase: null,
 };
 
+// The user who set the eligibility of a Product by hand, and when, its
+// provenance (Sentinel docs/features/packages/package-model.md, Override
+// Model).
+const SETTER: NonNullable<ProductDetail["eligibility_override_by"]> = {
+  id: "00000000-0000-0000-0000-000000000003",
+  username: "asmith",
+  full_name: "Alice Smith",
+  active: true,
+  bot: false,
+  avatar_url: null,
+};
+const SET_AT = "2099-10-10T11:00:00Z";
+
 // The eligibility of a Product that a user set by hand to not eligible, with
-// its provenance, which Sentinel returns with every override (Sentinel
-// docs/features/packages/package-model.md, Override Model).
+// its provenance, which Sentinel returns with every override.
 const SET_BY_HAND: Partial<ProductDetail> = {
   eligible: false,
   is_eligible_override: true,
-  eligibility_override_by: {
-    id: "00000000-0000-0000-0000-000000000003",
-    username: "asmith",
-    full_name: "Alice Smith",
-    active: true,
-    bot: false,
-    avatar_url: null,
-  },
-  eligibility_override_at: "2099-10-10T11:00:00Z",
+  eligibility_override_by: SETTER,
+  eligibility_override_at: SET_AT,
 };
 
 // A Product that is excluded from its track.
@@ -1758,23 +1789,173 @@ describe("a Product", () => {
         .getByRole("definition")
         .elements()
         .map((element) => element.textContent),
-    ).toEqual(["Not eligible · set by hand", "General support"]);
+    ).toEqual([
+      `Not eligible, set by handSet by Alice Smith on ${formatDateTime(SET_AT)}`,
+      "General support",
+    ]);
     expect(details.getByRole("button").elements()).toHaveLength(0);
   });
+
+  test('ends an eligibility set by hand with user-pen at 14 px in fg-muted, 4 px after it, read as ", set by hand"', async () => {
+    const details = await openProductDetails(SET_BY_HAND);
+
+    const eligibility = eligibilityIn(details);
+    // The icon, hidden from assistive technologies, follows the words of the
+    // eligibility.
+    const icons = eligibility.querySelectorAll("svg");
+    expect(icons).toHaveLength(1);
+    const icon = icons[0]!;
+    const words = document.createRange();
+    words.selectNodeContents(icon.previousSibling!);
+    const box = icon.getBoundingClientRect();
+    expect([box.width, box.height]).toEqual([14, 14]);
+    expect(box.left - words.getBoundingClientRect().right).toBeCloseTo(4, 0);
+    expect(colorOf(icon)).toBe(FG_MUTED);
+    expect(details.getByRole("img").query()).toBeNull();
+    expect(eligibility.textContent).toMatch(/^Not eligible, set by handSet by/);
+  });
+
+  test("shows below an eligibility set by hand who set it, in the name form, and when, as a date and time on one line, in text-13, fg-muted", async () => {
+    const details = await openProductDetails(SET_BY_HAND);
+
+    const eligibility = eligibilityIn(details);
+    const line = details.getByText(/^Set by /);
+    const time = line.getByText(formatDateTime(SET_AT), { exact: true });
+    await expect.element(time).toHaveAttribute("datetime", SET_AT);
+    expect(line.element().textContent).toBe(
+      `Set by Alice Smith on ${formatDateTime(SET_AT)}`,
+    );
+    const style = getComputedStyle(line.element());
+    expect([style.fontSize, style.color]).toEqual(["13px", FG_MUTED]);
+    // The name form, without the avatar, in the color of the line, on its
+    // baseline.
+    const name = line.getByText("Alice Smith", { exact: true }).element();
+    expect(line.element().querySelectorAll("svg")).toHaveLength(0);
+    expect(colorOf(name)).toBe(FG_MUTED);
+    const setBy = document.createRange();
+    setBy.selectNodeContents(line.element().firstChild!);
+    const nameText = document.createRange();
+    nameText.selectNodeContents(name);
+    expect(nameText.getBoundingClientRect().bottom).toBeCloseTo(
+      setBy.getBoundingClientRect().bottom,
+      0,
+    );
+    // Below the words of the eligibility, 2 px after their line, at the
+    // start of the value.
+    const value = eligibility.firstElementChild!.getBoundingClientRect();
+    expect(boxOf(line).top - value.bottom).toBeCloseTo(2, 0);
+    expect(boxOf(line).left).toBe(eligibility.getBoundingClientRect().left);
+    // The line wraps, but never within the date and time.
+    expect(boxOf(line).height).toBeGreaterThan(20);
+    expect(time.element().getClientRects()).toHaveLength(1);
+  });
+
+  test.each([
+    [
+      "an inactive user with the label Inactive",
+      { ...SETTER, active: false },
+      "Alice SmithInactive",
+    ],
+    [
+      "a bot account with the label Bot",
+      { ...SETTER, bot: true },
+      "Alice SmithBot",
+    ],
+    [
+      "a user without a full name by the username",
+      { ...SETTER, full_name: null },
+      "asmith",
+    ],
+  ])(
+    "shows who set an eligibility by hand when it is %s",
+    async (_, user, text) => {
+      const details = await openProductDetails({
+        ...SET_BY_HAND,
+        eligibility_override_by: user,
+      });
+
+      expect(details.getByText(/^Set by /).element().textContent).toBe(
+        `Set by ${text} on ${formatDateTime(SET_AT)}`,
+      );
+    },
+  );
+
+  // Each value apart, so that each shows in its own place.
+  test.each<[string, Partial<ProductDetail>, string]>([
+    [
+      "a setter",
+      { eligibility_override_by: null },
+      `Set by –Not set on ${formatDateTime(SET_AT)}`,
+    ],
+    [
+      "a time",
+      { eligibility_override_at: null },
+      "Set by Alice Smith on –Not set",
+    ],
+  ])(
+    "shows %s that is absent under an eligibility set by hand as an absent value, not as System",
+    async (_, changes, text) => {
+      const details = await openProductDetails({ ...SET_BY_HAND, ...changes });
+
+      expect(eligibilityIn(details).textContent).toBe(
+        `Not eligible, set by hand${text}`,
+      );
+    },
+  );
+
+  test("wraps a long name of who set an eligibility by hand within the details, which show it whole", async () => {
+    const details = await openProductDetails({
+      ...SET_BY_HAND,
+      eligibility_override_by: {
+        ...SETTER,
+        full_name: "Alexandra Fictional Konstantinopoulou-Example",
+        active: false,
+      },
+    });
+
+    const name = details
+      .getByText("Alexandra Fictional Konstantinopoulou-Example", {
+        exact: true,
+      })
+      .element();
+    expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+    expect(name.getBoundingClientRect().height).toBeGreaterThan(20);
+    // Within the details, apart from a fraction of a pixel of rounding.
+    const bounds = details.element().getBoundingClientRect();
+    const label = details.getByText("Inactive", { exact: true }).element();
+    expect(name.getBoundingClientRect().right - bounds.right).toBeLessThan(0.5);
+    expect(label.getBoundingClientRect().right - bounds.right).toBeLessThan(
+      0.5,
+    );
+  });
+
+  test.each<[string, boolean]>([
+    ["Eligible", true],
+    ["Not eligible", false],
+  ])(
+    "shows an automatic eligibility, %s, without user-pen and without who set it",
+    async (words, eligible) => {
+      const details = await openProductDetails({ eligible });
+
+      const eligibility = eligibilityIn(details);
+      expect(eligibility.textContent).toBe(words);
+      expect(eligibility.querySelectorAll("svg")).toHaveLength(0);
+    },
+  );
 
   test.each<[string, Partial<TrackDetail>, Partial<ProductDetail>, string[]]>([
     [
       "an automatic eligibility, no lifecycle data, and a Git release that Sentinel does not observe",
       { workflow_type: "git", reference: "fles-16.0", ...UNOBSERVED },
       { lifecycle_phase: null },
-      ["Eligible · automatic", "Not available", "Not observed"],
+      ["Eligible", "Not available", "Not observed"],
     ],
     [
       "a release",
       {},
       { released_at: "2099-10-20T09:00:00Z", lifecycle_phase: "pre_release" },
       [
-        "Eligible · automatic",
+        "Eligible",
         "Pre-release",
         `Released ${formatDateTime("2099-10-20T09:00:00Z")}`,
       ],
@@ -1852,7 +2033,7 @@ describe("a Product", () => {
         .getByRole("definition")
         .elements()
         .map((element) => element.textContent),
-    ).toEqual(["Eligible · automatic", "sunset", words]);
+    ).toEqual(["Eligible", "sunset", words]);
   });
 });
 
