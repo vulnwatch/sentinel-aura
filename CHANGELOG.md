@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.8.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.7.0...v0.8.0) (2026-11-14)
+
+
+### Features
+
+* **deps:** pin Sentinel 0.22.0 and follow its example dataset ([#224](https://github.com/vulnwatch/sentinel-aura/issues/224)) ([3b4c1bf](https://github.com/vulnwatch/sentinel-aura/commit/3b4c1bf35d219fde842032c8f1256d8afd2588f2))
+* **deps:** pin Sentinel 0.23.0 ([#244](https://github.com/vulnwatch/sentinel-aura/issues/244)) ([a829f2b](https://github.com/vulnwatch/sentinel-aura/commit/a829f2b54be93379d0e59622464823276f885208))
+* pick the dates of the audit log period from a calendar ([#235](https://github.com/vulnwatch/sentinel-aura/issues/235)) ([83627e5](https://github.com/vulnwatch/sentinel-aura/commit/83627e52855a3dd94e961588d799c6d00954921c))
+* refine the CVSS assessments of a Ticket ([#231](https://github.com/vulnwatch/sentinel-aura/issues/231)) ([b6c62f4](https://github.com/vulnwatch/sentinel-aura/commit/b6c62f4c6c0f9ae5101550eb7809160f771b154c))
+* show and edit the references of a Ticket ([#245](https://github.com/vulnwatch/sentinel-aura/issues/245)) ([7a59e29](https://github.com/vulnwatch/sentinel-aura/commit/7a59e290825f97951ae0df5f42344ef7f36c41dc))
+* show each track of the package tree on one line ([#242](https://github.com/vulnwatch/sentinel-aura/issues/242)) ([c5c5db2](https://github.com/vulnwatch/sentinel-aura/commit/c5c5db2efeb113c606927ab1e984c6c71b682250))
+* show the affected versions of a Ticket's CVE ([#249](https://github.com/vulnwatch/sentinel-aura/issues/249)) ([78832c3](https://github.com/vulnwatch/sentinel-aura/commit/78832c35f881eb8427882b3c3370e835c08a8f39))
+* show the audit log of a Ticket ([#233](https://github.com/vulnwatch/sentinel-aura/issues/233)) ([1aa65ec](https://github.com/vulnwatch/sentinel-aura/commit/1aa65ec5db0daa9967c6385dadee997446d434e9))
+* show the CNA of a Ticket's CVE ([#232](https://github.com/vulnwatch/sentinel-aura/issues/232)) ([ae3688e](https://github.com/vulnwatch/sentinel-aura/commit/ae3688e35e064ee243cca2fbe978a84a399394cd))
+* show the CVSS assessments of a Ticket's CVE ([#226](https://github.com/vulnwatch/sentinel-aura/issues/226)) ([cb494e5](https://github.com/vulnwatch/sentinel-aura/commit/cb494e5726615e5ec5374022901e8333aa031885))
+* show the override provenance after the evidence of a priority ([#191](https://github.com/vulnwatch/sentinel-aura/issues/191)) ([dccb677](https://github.com/vulnwatch/sentinel-aura/commit/dccb677d95e92e5df2889e719e0109c39fe6ee92)), closes [#190](https://github.com/vulnwatch/sentinel-aura/issues/190)
+* show the package tree of a Ticket ([#222](https://github.com/vulnwatch/sentinel-aura/issues/222)) ([679b805](https://github.com/vulnwatch/sentinel-aura/commit/679b8054836659f364cf9abb0921633ad09cf212))
+* show the participants and the access grants of a Ticket ([#237](https://github.com/vulnwatch/sentinel-aura/issues/237)) ([342b6d6](https://github.com/vulnwatch/sentinel-aura/commit/342b6d681833390cf59d1c614d57e41f6e436e04))
+* show the read-only detail of a Ticket ([#221](https://github.com/vulnwatch/sentinel-aura/issues/221)) ([7c3bec3](https://github.com/vulnwatch/sentinel-aura/commit/7c3bec31655b1a683c4c1f41a1183e2870b94098))
+* show the Slack profile picture as the avatar of a user ([#250](https://github.com/vulnwatch/sentinel-aura/issues/250)) ([91a600f](https://github.com/vulnwatch/sentinel-aura/commit/91a600f9409c47d0d75e2ea28ed676b2943ff0dd))
+* show the sources of a Ticket's CVE with Refetch ([#227](https://github.com/vulnwatch/sentinel-aura/issues/227)) ([671b807](https://github.com/vulnwatch/sentinel-aura/commit/671b8073478f14c1ec2c61e6a9bcc64a924b4abe))
+* show who set the eligibility of a Product by hand ([#247](https://github.com/vulnwatch/sentinel-aura/issues/247)) ([a78c245](https://github.com/vulnwatch/sentinel-aura/commit/a78c2456bb4a1c85e2a041c6b9fdeeeec9cd6aaf))
+
+
+### Dependencies
+
+* **deps:** Update dependency orval to v8.46.0 ([#177](https://github.com/vulnwatch/sentinel-aura/issues/177)) ([6e1b06d](https://github.com/vulnwatch/sentinel-aura/commit/6e1b06d7f51bae1b9e0a679db5c1a5853815c8c9))
+* **deps:** Update nginx ([#196](https://github.com/vulnwatch/sentinel-aura/issues/196)) ([8d43894](https://github.com/vulnwatch/sentinel-aura/commit/8d438949a0de161864ba02174e5cad433ff220f4))
+* **deps:** Update npm minor and patch dependencies ([#157](https://github.com/vulnwatch/sentinel-aura/issues/157)) ([63a19e1](https://github.com/vulnwatch/sentinel-aura/commit/63a19e19d8ad22d082ce45c0b19eea61f909bab1))
+* **deps:** Update postgres Docker digest to e3d24f6 ([#175](https://github.com/vulnwatch/sentinel-aura/issues/175)) ([9ca348c](https://github.com/vulnwatch/sentinel-aura/commit/9ca348c2ab3b4a34fe81e5f08e202b490222faac))
+
 ## [0.7.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.6.0...v0.7.0) (2026-11-08)
 
 
