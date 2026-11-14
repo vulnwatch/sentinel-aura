@@ -1281,12 +1281,13 @@ function requestState(request: IbsRequest): string {
 
 // The requests of one track, of the package and the codestream that its
 // reference names (Sentinel docs/features/packages/ibs-submission-tracking.md,
-// Package and Codestream Identity), the most recently created first, and
-// their number: the latest request and the ten others that "+N" names, as
-// many as a cell of a table names (docs/design-system.md, Tables); read each
-// time the popover that shows them opens, as the details of a CNA are: the
-// query goes when the popover closes, and is not read again while it is open
-// (same document, Common Query Rules).
+// Package and Codestream Identity), the most recently created first (same
+// document, Common Query Rules), and their number: the latest request and the
+// ten others that "+N" names, as many as a cell of a table names
+// (docs/design-system.md, Tables). They are read each time the popover that
+// shows them opens, as the details of a CNA are: the query goes when the
+// popover closes, and is not read again while it is open, even when the tab
+// returns to the foreground (docs/behaviors.md, Loading).
 function requestsQuery(packageName: string, reference: string) {
   return {
     params: {

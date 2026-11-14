@@ -90,9 +90,8 @@ sidebar is the one exception (Spacing and Sizes).
   explanation of a priority (Priority), a deadline that has passed, an error,
   a failure, such as that of a source of a CVE or of the latest request of a
   track (Other Values), and the button that confirms a destructive action
-  (Buttons and Links).
-  Severity shows as a small mark beside its name, not as a red fill, so that
-  red keeps that meaning.
+  (Buttons and Links). Severity shows as a small mark beside its name, not as
+  a red fill, so that red keeps that meaning.
 - **Never color alone.** A text, an icon, or a shape always carries the same
   information as a color (`docs/behaviors.md`, Accessibility).
 - **Quiet surfaces.** Lines separate the content, and only what floats above
@@ -1619,10 +1618,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   Show more (Main Content). The name of a user in the details wraps instead
   of ending with an ellipsis, since nothing else in the popover shows it
   whole (Representation of a User). Details that the popover reads as it
-  first opens, such as those of a CNA, load and fail as those of the user
-  card do (`docs/behaviors.md`, Representation of a User, User card), with
-  the loading indicator (Loading) or the line of the failure in `fg-muted`
-  in their place. The popover takes the focus itself as it opens
+  opens, such as those of a CNA, load and fail as those of the user card do
+  (`docs/behaviors.md`, Representation of a User, User card), with the
+  loading indicator (Loading) or the line of the failure in `fg-muted` in
+  their place. The popover takes the focus itself as it opens
   (`docs/behaviors.md`, Accessibility, Dialogs); Tab reaches its actions,
   and the rest of the page is out of reach while it is open. Escape or a
   click outside closes it and returns the focus to the name, except while
@@ -1648,7 +1647,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   its popover is that of such a name, without actions: its title names the
   value without stating it, such as "Delivery", since the line of the button
   shows it; then the `border` line and the records as a description list
-  whose terms take the width of the longest one.
+  whose terms take the width of the longest one. Tab reaches the links and
+  buttons of the records, and Escape first hides a tooltip that shows in the
+  popover, then closes it, as in Phases (Track Milestones).
 
 ## Representation of a User
 

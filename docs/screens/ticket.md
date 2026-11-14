@@ -360,7 +360,7 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     the one that IBS created last, since Sentinel designates none of them as
     the one in effect (same document, Public API). The reads are sent each
     time the popover that shows them opens, and not again while it is open,
-    also when the tab returns to the foreground meanwhile
+    even when the tab returns to the foreground meanwhile
     (`docs/behaviors.md`, Loading); for any other track they are not sent,
     so a Git track shows none.
   - A request shows the mark of its state (`docs/design-system.md`, Other

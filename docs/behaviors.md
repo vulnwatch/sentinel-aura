@@ -444,10 +444,9 @@ returns, whatever Sentinel guarantees for its field:
   shows in place of content, because it failed before it showed any data, is
   not read again when the tab returns: its error stays until Try again, where
   the error offers it, or until the screen opens again (Where Errors Appear).
-  What a popover reads as it opens, such as the details of a CNA, is read
-  again when the popover opens again, not while it stays open, also when the
-  tab returns to the foreground meanwhile (`docs/design-system.md`, Menus,
-  Popovers, and Tooltips).
+  What a popover reads as it opens, such as the details of a CNA, is not read
+  again while it stays open, even when the tab returns to the foreground
+  meanwhile (`docs/design-system.md`, Menus, Popovers, and Tooltips).
 - A read at intervals is not sent while the tab is hidden, since the screen
   reads its data again when the tab returns. Once a read at intervals has
   failed, its error shows as Where Errors Appear states, and no further read

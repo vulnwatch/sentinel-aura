@@ -949,6 +949,20 @@ test.describe("for an analyst", () => {
       await expectAccessible(page);
       await expectScreenshot(page, "ticket-delivery.png");
 
+      // Tab reaches the request, whose tooltip states its state; Escape
+      // first hides the tooltip, then closes the popover
+      // (docs/design-system.md, Menus, Popovers, and Tooltips).
+      await page.keyboard.press("Tab");
+
+      await expect(request).toBeFocused();
+      await expect(page.getByRole("tooltip")).toHaveText("Review");
+
+      await page.keyboard.press("Escape");
+
+      await expect(page.getByRole("tooltip")).toHaveCount(0);
+      await expect(popover).toBeVisible();
+      await expect(request).toBeFocused();
+
       await page.keyboard.press("Escape");
 
       await expect(popover).toHaveCount(0);
