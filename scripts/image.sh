@@ -72,7 +72,7 @@ readonly WEB_ROOT="/usr/share/nginx/html"
 # Trivy's official image, which inventories and scans the image, pinned by
 # version and digest and updated by Renovate (docs/deployment.md, Dependency
 # Updates).
-readonly TRIVY_IMAGE="docker.io/aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c"
+readonly TRIVY_IMAGE="docker.io/aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb"
 
 # The label of the version of the image, the version of a development build,
 # and the label of the pinned Sentinel version, the minimum of the Sentinel
