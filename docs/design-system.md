@@ -126,7 +126,7 @@ sidebar is the one exception (Spacing and Sizes).
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `canvas` | `#F6F8FA` | `#0D1117` | The page behind the content; the search field of the sidebar |
-| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table and of a box within a part of a detail screen, menus, popovers, dialogs, and fields |
+| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table and of a box within a part of a detail screen, menus, popovers, dialogs, and fields; a line of a group of a detail screen under the pointer (Detail Screens) |
 | `surface-2` | `#F6F8FA` | `#1A212A` | The header row of a table |
 | `surface-hover` | `#F3F5F8` | `#1E2630` | A row, a menu item, or a quiet control under the pointer |
 | `sidebar` | `#FFFFFF` | `#010409` | The sidebar |
@@ -1065,15 +1065,21 @@ A list screen, such as the Ticket list, shows from top to bottom:
    applies, Clear filters. On a tab of a detail screen, whose panel has no
    heading, the action that adds an item to its list, such as Add reference,
    starts the controls at the end of the toolbar, before Filters, as a
-   secondary button 32 px high, so that Clear filters stays last. The tabs
-   and the controls are 8 px apart. When the width runs short, the toolbar
+   secondary button 32 px high, so that Clear filters stays last. Such a
+   toolbar can start with a line in `text-14`, `fg-muted`, at most 720 px
+   wide, that says what the tab shows, such as where its data comes from: it
+   takes the room that the controls leave, at least 240 px, and wraps rather
+   than moving a control to another row. The tabs and the controls are 8 px
+   apart. When the width runs short, the toolbar
    wraps one control at a time, the last first, and a row of controls keeps
    them at its end, so that a control that appears, such as Clear filters,
    moves no other control to another row.
    - The search field, 224 px wide and 32 px high (Forms), has the
      placeholder "Search {records}", such as "Search Tickets", which is also
      its accessible name, and takes at most the longest term that the API
-     accepts. Enter applies the term that the user typed, without its
+     accepts, also where the screen searches itself a list that it reads
+     whole, such as the affected versions of a CVE. Enter applies the term
+     that the user typed, without its
      surrounding whitespace, or removes the search when the field is empty.
      Its clear button, an icon button with `x` named "Clear search", and
      Escape empty the field and remove the search that applies. A typed term
@@ -1312,10 +1318,17 @@ states it, such as that of a Ticket; the other audit logs are tables
 - A group of items within a part, such as a package of a Ticket with its
   tracks, has no frame: its heading row is a band on `neutral-soft`, at least
   32 px high, with a 6 px radius and 12 px of side padding, which holds its
-  level-three heading in `text-15`, weight 600, followed by its values and
-  labels, and ends with its actions. Its items follow 12 px below the band,
-  indented by the 12 px of its padding, and the band of the next group is
-  32 px below them.
+  heading, one level below the heading of its place, such as level three in
+  a part or level two in a tab without parts, in `text-15`, weight 600,
+  followed by its values and labels, and ends with its actions. Its items
+  follow 12 px below the band, indented by the 12 px of its padding, and the
+  band of the next group is 32 px below them. Its items can be a description
+  list, 12 px apart, whose values are lists of lines, such as the sources of
+  an affected package with their versions. A line whose end holds a value of
+  the line, such as the status of a version, is on `surface` under the
+  pointer, with a 4 px radius and 8 px of space on each side of its text,
+  so that the eye follows the line to that value; the value stays beside the
+  first line of a line that wraps.
 - A part that hides records, such as the excluded and EOL records of a
   package tree, shows them on request with a switch (Forms). A hidden record
   that shows, and every record within it, is in `fg-muted`, in its texts, its

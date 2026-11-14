@@ -122,6 +122,7 @@ import {
   SideSection,
 } from "../components/detail-screen";
 import { DetailsName, DetailsValue } from "../components/details-popover";
+import { GroupBand } from "../components/group-band";
 import { IconButton } from "../components/icon-button";
 import { Label, LabelList } from "../components/label";
 import { Link } from "../components/link";
@@ -1319,13 +1320,11 @@ interface PackageGroupProps {
   now: number;
 }
 
-// A package as a group under a band (docs/design-system.md, Detail Screens):
-// the band, on neutral-soft, at least 32 px high, with a 6 px radius and
-// 12 px of side padding, holds its name as a level-three heading in text-15,
-// weight 600, which wraps, its maintainers, and the label of its own hidden
-// state; its tracks follow 12 px below the band, indented by 12 px, 12 px
-// apart. A hidden package shows its hidden tracks; another package only
-// while "Show hidden" is on.
+// A package as a group under a band (GroupBand): its name as a level-three
+// heading, its maintainers, and the label of its own hidden state; its
+// tracks follow 12 px below the band, indented by 12 px, 12 px apart. A
+// hidden package shows its hidden tracks; another package only while "Show
+// hidden" is on.
 function PackageGroup({
   ticketPackage,
   waiting,
@@ -1341,18 +1340,13 @@ function PackageGroup({
   );
   return (
     <li ref={ref}>
-      <div
-        className={`flex min-h-8 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md bg-neutral-soft px-3 py-1 ${mutedIf(hidden)}`}
-      >
-        <h3 className="min-w-0 text-15 font-semibold wrap-anywhere">
-          {ticketPackage.package_name}
-        </h3>
+      <GroupBand heading={ticketPackage.package_name} level={3} muted={hidden}>
         <Maintainers
           users={ticketPackage.maintainers}
           packageName={ticketPackage.package_name}
         />
         <HiddenLabels excluded={ticketPackage.deleted_at !== null} />
-      </div>
+      </GroupBand>
       {tracks.length > 0 && (
         <ul className="ms-3 mt-3 flex flex-col gap-3 text-15">
           {tracks.map((track) => (

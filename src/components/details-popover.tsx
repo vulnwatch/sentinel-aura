@@ -13,6 +13,10 @@ interface DetailsNameProps {
   // The name of the record, which the button and the title of its popover
   // show.
   name: string;
+  // The accessible name of the button, which starts with the name, when the
+  // name alone does not tell it from the other buttons of its kind, such as
+  // "CNA for fictional-tar".
+  label?: string;
   // What identifies the record further, such as a CPE, below the title.
   identifier?: ReactNode;
   // The details of the record, as a description list
@@ -26,10 +30,17 @@ interface DetailsNameProps {
 // title, the name, in text-16, weight 600, wrapping; below it, in text-13,
 // fg-muted, what identifies the record further; a border line with 12 px of
 // space above and below it; and the details.
-export function DetailsName({ name, identifier, children }: DetailsNameProps) {
+export function DetailsName({
+  name,
+  label,
+  identifier,
+  children,
+}: DetailsNameProps) {
   return (
     <DialogTrigger>
-      <AriaButton className={`${OPENER} wrap-break-word`}>{name}</AriaButton>
+      <AriaButton aria-label={label} className={`${OPENER} wrap-break-word`}>
+        {name}
+      </AriaButton>
       <InfoPopover width="wide">
         <PopoverTitle>{name}</PopoverTitle>
         {identifier !== undefined && (
