@@ -1,13 +1,19 @@
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { page, userEvent, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
 import { formatDateTime } from "./date-time";
-import { TrackMilestones, type MilestoneTrack } from "./track-milestones";
+import { DescriptionItem, DescriptionList } from "./description-list";
+import {
+  TrackDelivery,
+  TrackMilestones,
+  type MilestoneTrack,
+  type PhaseExtras,
+} from "./track-milestones";
 
-// The milestones of a track (docs/design-system.md, Track Milestones), at a
-// wide window, in the light theme.
+// The milestones of a track (docs/design-system.md, Track Milestones), and
+// its delivery, at a wide window, in the light theme.
 
 beforeEach(async () => {
   await page.viewport(1280, 800);
@@ -26,6 +32,7 @@ const NOW = Date.parse("2099-10-20T12:00:00Z");
 // The colors of docs/design-system.md (Color Tokens; Tones) in the light
 // theme.
 const FG_MUTED = "rgb(89, 99, 110)";
+const BORDER_STRONG = "rgb(129, 139, 152)";
 const DANGER_ON_SOFT = "rgb(164, 14, 38)";
 const NEUTRAL_SOFT = "rgb(239, 242, 245)";
 const CANVAS = "#f6f8fa";
@@ -67,6 +74,7 @@ async function renderMilestones(
   milestones: MilestoneTrack,
   scale = 1,
   delivery?: string,
+  extras?: PhaseExtras,
 ) {
   document.documentElement.style.fontSize = `${16 * scale}px`;
   const screen = await render(
@@ -76,6 +84,7 @@ async function renderMilestones(
         subject={SUBJECT}
         now={NOW}
         delivery={delivery}
+        extras={extras}
       />
     </div>,
   );
@@ -206,7 +215,7 @@ test("is on neutral-soft under the pointer and while Phases is open", async () =
   );
 });
 
-test("opens Phases, which takes the focus, with each phase, its actor, its state, and its due date, and returns the focus on Escape", async () => {
+test("opens Phases, 400 px wide, which takes the focus, with each phase, its actor, its state, and its due date, and returns the focus on Escape", async () => {
   const milestones = track();
   const { screen, pipeline } = await renderMilestones(milestones);
 
@@ -215,7 +224,7 @@ test("opens Phases, which takes the focus, with each phase, its actor, its state
   const phases = screen.getByRole("dialog", { name: "Phases" });
   await expect.element(phases).toHaveFocus();
   expect(phases.element().parentElement!.getBoundingClientRect().width).toBe(
-    320,
+    400,
   );
   const lines = phases
     .getByRole("listitem")
@@ -334,4 +343,228 @@ test("shows no delivery without one", async () => {
   await expect.element(phases).toHaveFocus();
   expect(phases.getByText("Delivery").elements()).toHaveLength(0);
   expect(phases.getByRole("separator").elements()).toHaveLength(1);
+});
+
+// The rectangle of an element on the screen.
+function boxOf(element: Locator): DOMRect {
+  return element.element().getBoundingClientRect();
+}
+
+// What a screen adds to the phases of the tests: two values of different
+// widths, both narrower than their column, at Submission and at QA.
+const EXTRAS: PhaseExtras = {
+  submission: "SR 900001",
+  qa: "RR 900003 +12",
+};
+
+// Opens Phases of the track with the extras, and returns it.
+async function openPhases(extras: PhaseExtras | undefined) {
+  const { screen, pipeline } = await renderMilestones(
+    track(),
+    1,
+    undefined,
+    extras,
+  );
+  await pipeline.click();
+  const phases = screen.getByRole("dialog", { name: "Phases" });
+  await expect.element(phases).toHaveFocus();
+  return phases;
+}
+
+test("shows what the screen adds to a phase at the end of the line of its name, 12 px or more after it, in text-13, in a column at least 144 px wide whose values line up", async () => {
+  const phases = await openPhases(EXTRAS);
+
+  const submission = phases.getByText("SR 900001", { exact: true });
+  const qa = phases.getByText("RR 900003 +12", { exact: true });
+  await expect.element(submission).toBeVisible();
+  for (const [value, name, actor] of [
+    [submission, "Submission", "· Maintainer"],
+    [qa, "QA", "· QA"],
+  ] as const) {
+    const box = boxOf(value);
+    const nameBox = boxOf(phases.getByText(name, { exact: true }));
+    const line = boxOf(
+      phases
+        .getByRole("listitem")
+        .filter({ has: page.getByText(name, { exact: true }) }),
+    );
+    // On the line of the name, centered on it, at its end.
+    expect(
+      Math.abs((box.top + box.bottom) / 2 - (nameBox.top + nameBox.bottom) / 2),
+    ).toBeLessThan(1);
+    expect(box.right).toBeCloseTo(line.right, 0);
+    expect(box.width).toBeGreaterThanOrEqual(144);
+    expect(
+      box.left - boxOf(phases.getByText(actor, { exact: true })).right,
+    ).toBeGreaterThanOrEqual(12);
+    expect(getComputedStyle(value.element()).fontSize).toBe("13px");
+  }
+  expect(boxOf(submission).left).toBeCloseTo(boxOf(qa).left, 0);
+  // The state of the phase stays on the line below the name.
+  expect(
+    boxOf(phases.getByText("Overdue by 2 days", { exact: true })).top,
+  ).toBeGreaterThanOrEqual(boxOf(submission).bottom);
+
+  // In a window where the line of Submission leaves only 6 px between the
+  // name and the column, the value goes below the name: Phases, narrower
+  // than its 400 px, then takes the width of the window less 16 px.
+  const name = phases.getByText("Submission", { exact: true });
+  const line = phases
+    .getByRole("listitem")
+    .filter({ has: page.getByText("Submission", { exact: true }) });
+  const start = boxOf(name).left;
+  const used =
+    boxOf(phases.getByText("· Maintainer", { exact: true })).right - start;
+  const room = boxOf(line).right - start;
+  await page.viewport(Math.round(used + 144 + 6 + 416 - room), 800);
+  await expect
+    .poll(() => phases.element().parentElement!.getBoundingClientRect().width)
+    .toBeLessThan(400);
+  const left = boxOf(line).right - boxOf(name).left - used - 144;
+  expect(left).toBeGreaterThan(0);
+  expect(left).toBeLessThan(12);
+  expect(boxOf(submission).top).toBeGreaterThanOrEqual(boxOf(name).bottom);
+});
+
+test("shows nothing more at a phase to which the screen adds nothing", async () => {
+  const milestones = track();
+  const phases = await openPhases(EXTRAS);
+
+  const lines = phases
+    .getByRole("listitem")
+    .elements()
+    .map((element) => element.textContent);
+  expect([lines[0], lines[2]]).toEqual([
+    `Triage · Vulnerability analystDone · due ${formatDateTime(milestones.triage_due_at!)}`,
+    `UM · Maintenance update teamDue in 3 days · due ${formatDateTime(milestones.um_due_at!)}`,
+  ]);
+  expect(lines[1]).toBe(
+    `Submission · MaintainerSR 900001Overdue by 2 days · due ${formatDateTime(milestones.submission_due_at!)}`,
+  );
+});
+
+test.each([
+  ["without", undefined],
+  ["with", EXTRAS],
+])(
+  "gives the line of the name of each phase at least 24 px, %s what the screen adds",
+  async (_, extras) => {
+    const phases = await openPhases(extras);
+
+    // The state below the name starts at least 24 px below the top of the
+    // line of the phase; the text of its own line is 20 px high.
+    for (const [name, state] of [
+      ["Triage", "Done"],
+      ["Submission", "Overdue by 2 days"],
+      ["UM", "Due in 3 days"],
+      ["QA", "Due in 10 days"],
+    ] as const) {
+      const line = boxOf(
+        phases
+          .getByRole("listitem")
+          .filter({ has: page.getByText(name, { exact: true }) }),
+      );
+      expect(
+        boxOf(phases.getByText(state, { exact: true })).top - line.top,
+      ).toBeGreaterThanOrEqual(24);
+    }
+  },
+);
+
+test("puts what the screen adds to a phase below its name and above its state where Phases is too narrow for both, at 320 CSS px", async () => {
+  await page.viewport(320, 640);
+
+  const phases = await openPhases(EXTRAS);
+
+  const frame = phases.element().parentElement!.getBoundingClientRect();
+  expect(frame.left).toBeGreaterThanOrEqual(0);
+  expect(frame.right).toBeLessThanOrEqual(320);
+  const value = boxOf(phases.getByText("SR 900001", { exact: true }));
+  expect(value.top).toBeGreaterThanOrEqual(
+    boxOf(phases.getByText("Submission", { exact: true })).bottom,
+  );
+  expect(value.bottom).toBeLessThanOrEqual(
+    boxOf(phases.getByText("Overdue by 2 days", { exact: true })).top,
+  );
+  expect(value.right).toBeLessThanOrEqual(frame.right);
+});
+
+// The delivery of a track on its line, with its records where the test gives
+// them: the submission request of the track.
+async function renderDelivery(status: string, records: boolean) {
+  return render(
+    <p className="p-4 text-14 text-fg">
+      <TrackDelivery
+        status={status}
+        records={
+          records
+            ? {
+                subject: SUBJECT,
+                content: (
+                  <DescriptionList fittedTerms>
+                    <DescriptionItem term="Submission">
+                      SR 900001
+                    </DescriptionItem>
+                  </DescriptionList>
+                ),
+              }
+            : undefined
+        }
+      />
+    </p>,
+  );
+}
+
+test.each([
+  ["in_progress", "In progress"],
+  ["released", "Released"],
+  ["on_hold", "on_hold"],
+])(
+  "opens the records of the delivery %s from its status, a button named after what the delivery belongs to and the status, in a popover titled Delivery that does not repeat the status",
+  async (status, name) => {
+    const screen = await renderDelivery(status, true);
+    const button = screen.getByRole("button", {
+      name: `Delivery of ${SUBJECT}: ${name}`,
+      exact: true,
+    });
+    await expect.element(button).toHaveTextContent(name);
+    const label = screen.getByText("Delivery", { exact: true });
+    // The pointer away from the button, where an earlier test may have left
+    // it.
+    await label.hover();
+    // In the style of a name that opens a popover, 6 px after "Delivery" in
+    // fg-muted.
+    await expect
+      .poll(() => getComputedStyle(button.element()).textDecorationColor)
+      .toBe(BORDER_STRONG);
+    expect(getComputedStyle(button.element()).textDecorationStyle).toBe(
+      "dotted",
+    );
+    expect(getComputedStyle(label.element()).color).toBe(FG_MUTED);
+    expect(boxOf(button).left - boxOf(label).right).toBeCloseTo(6, 0);
+
+    await button.click();
+
+    const popover = screen.getByRole("dialog", { name: "Delivery" });
+    await expect.element(popover).toHaveFocus();
+    await expect
+      .element(popover.getByRole("definition"))
+      .toHaveTextContent("SR 900001");
+    expect(popover.getByText(name, { exact: true }).elements()).toHaveLength(0);
+    expect(popover.getByRole("separator").elements()).toHaveLength(1);
+
+    await userEvent.keyboard("{Escape}");
+
+    await expect.element(button).toHaveFocus();
+    expect(screen.getByRole("dialog").query()).toBeNull();
+  },
+);
+
+test("shows the status of a delivery without records as text", async () => {
+  const screen = await renderDelivery("in_progress", false);
+
+  await expect
+    .element(screen.getByText("In progress", { exact: true }))
+    .toBeVisible();
+  expect(screen.getByRole("button").query()).toBeNull();
 });

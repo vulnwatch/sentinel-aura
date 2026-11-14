@@ -7,11 +7,16 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import {
+  CircleQuestionMark,
   ClockAlert,
+  GitMerge,
+  GitPullRequest,
+  GitPullRequestClosed,
   RefreshCw,
   TriangleAlert,
   UserPen,
   UserRoundKey,
+  type LucideIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -43,6 +48,10 @@ import {
   useRefetchCve,
 } from "../api/generated/cves";
 import {
+  useListReleaseRequests,
+  useListSubmissionRequests,
+} from "../api/generated/ibs-submission-tracking";
+import {
   getGetTicketPackageWorkQueryKey,
   useGetTicketPackageWork,
 } from "../api/generated/maintainer-operations";
@@ -61,6 +70,8 @@ import {
   CVSSPrivilegesRequired,
   CVSSVersionValue,
   EligibilitySource,
+  type IBSRequestStateValue,
+  type SubmissionRequestItem,
 } from "../api/generated/model";
 import type {
   CNASummary,
@@ -154,9 +165,15 @@ import {
   focusScreenHeading,
   useFocusHeadingOnRemoval,
 } from "../components/screen-heading";
+import { MoreValues } from "../components/several-values";
 import { Severity } from "../components/severity";
 import { Switch } from "../components/switch";
-import { TrackDelivery, TrackMilestones } from "../components/track-milestones";
+import { Tooltip } from "../components/tooltip";
+import {
+  TrackDelivery,
+  TrackMilestones,
+  type PhaseExtras,
+} from "../components/track-milestones";
 import { displayName, User, type UserFields } from "../components/user";
 import { UserComboBox } from "../components/user-combobox";
 import { UserGroup } from "../components/user-group";
@@ -1203,7 +1220,255 @@ function ProductItem({
   );
 }
 
+// The most requests that the tooltip of "+N" and its accessible name list,
+// as those of a cell of a table do (docs/design-system.md, Tables): the
+// tooltip lists the latest request and nine others, and the accessible name
+// the ten others that follow the latest one.
+const LISTED_REQUESTS = 10;
+
+// How the state of a request shows: its name, and a mark whose shape and
+// color tell the open requests from the accepted and the closed ones
+// (docs/design-system.md, Other Values).
+interface RequestState {
+  name: string;
+  icon: LucideIcon;
+  color: string;
+}
+
+// New and Review: a request in progress.
+const OPEN_REQUEST = { icon: GitPullRequest, color: "text-info-icon" };
+// Declined, Revoked, Superseded, and Deleted: a request that failed, which
+// no longer establishes progress by itself (Sentinel
+// docs/features/packages/ibs-submission-tracking.md, Effective SR), in red,
+// so that an analyst sees at once that the latest request was stopped.
+const CLOSED_REQUEST = {
+  icon: GitPullRequestClosed,
+  color: "text-danger-icon",
+};
+
+// The states of an IBS request, as Sentinel names them (Sentinel
+// docs/features/packages/ibs-submission-tracking.md, Request States). A Map,
+// so that a value that a later Sentinel release returns is looked up only
+// among them (docs/conventions.md, Data Read from the API).
+const REQUEST_STATES = new Map<string, RequestState>(
+  Object.entries({
+    new: { name: "New", ...OPEN_REQUEST },
+    review: { name: "Review", ...OPEN_REQUEST },
+    accepted: { name: "Accepted", icon: GitMerge, color: "text-success-icon" },
+    declined: { name: "Declined", ...CLOSED_REQUEST },
+    revoked: { name: "Revoked", ...CLOSED_REQUEST },
+    superseded: { name: "Superseded", ...CLOSED_REQUEST },
+    deleted: { name: "Deleted", ...CLOSED_REQUEST },
+  } satisfies Record<IBSRequestStateValue, RequestState>),
+);
+
+// The fields of an IBS request that a line shows, which a submission request
+// and a release request share.
+type IbsRequest = Pick<
+  SubmissionRequestItem,
+  "id" | "request_number" | "state" | "superseded_by_request_number" | "ibs_url"
+>;
+
+// The state of a request: its name, followed for a superseded request by the
+// number of the request that replaced it, or the state as received.
+function requestState(request: IbsRequest): string {
+  const name = REQUEST_STATES.get(request.state)?.name ?? request.state;
+  return request.state === "superseded" &&
+    request.superseded_by_request_number !== null
+    ? `${name} by ${request.superseded_by_request_number}`
+    : name;
+}
+
+// The requests of one track, of the package and the codestream that its
+// reference names (Sentinel docs/features/packages/ibs-submission-tracking.md,
+// Package and Codestream Identity), the most recently created first, as many
+// as "+N" names, and their number; read each time the popover that shows
+// them opens, as the details of a CNA are: the query goes when the popover
+// closes, and is not read again while it is open (same document, Common
+// Query Rules).
+function requestsQuery(packageName: string, reference: string) {
+  return {
+    params: {
+      package_name: packageName,
+      codestream_name: reference,
+      sort_by: "upstream_created_at",
+      sort_order: "desc",
+      per_page: LISTED_REQUESTS + 1,
+    },
+    options: { query: { gcTime: 0, refetchOnWindowFocus: false } },
+  } as const;
+}
+
+// A number of requests, such as "2 submission requests" or "1 more release
+// request".
+function counted(count: number, noun: Noun): string {
+  return `${COUNT.format(count)} ${count === 1 ? noun.one : noun.other}`;
+}
+
+// What a request is, in the singular and the plural.
+interface Noun {
+  one: string;
+  other: string;
+}
+
+// The mark of the state of a request, at 14 px, hidden from assistive
+// technologies, which read the state with the request: git-pull-request in
+// info-icon for New and Review, git-merge in success-icon for Accepted,
+// git-pull-request-closed in danger-icon for Declined, Revoked, Superseded,
+// and Deleted, and circle-question-mark in neutral-icon for a state that the
+// pinned contract does not list (docs/design-system.md, Other Values).
+function RequestMark({ state }: { state: string }) {
+  const known = REQUEST_STATES.get(state);
+  const Icon = known?.icon ?? CircleQuestionMark;
+  return (
+    <Icon
+      aria-hidden
+      className={`size-3.5 shrink-0 ${known?.color ?? "text-neutral-icon"}`}
+    />
+  );
+}
+
+// The kind of a request: its abbreviation, as IBS and Sentinel name it, the
+// kind in words, and what assistive technologies read when the requests of
+// the kind are not available.
+interface RequestKind {
+  abbreviation: string;
+  noun: Noun;
+  failure: string;
+}
+
+const SUBMISSION_REQUEST: RequestKind = {
+  abbreviation: "SR",
+  noun: { one: "submission request", other: "submission requests" },
+  failure: "The submission requests aren't available.",
+};
+
+const RELEASE_REQUEST: RequestKind = {
+  abbreviation: "RR",
+  noun: { one: "release request", other: "release requests" },
+  failure: "The release requests aren't available.",
+};
+
+interface RequestCellProps {
+  read: Read<{ data: IbsRequest[]; meta: { total: number } }>;
+  kind: RequestKind;
+  // What the place says without requests, or nothing.
+  empty?: string;
+}
+
+// The most recently created request of a track in a phase: the mark of its
+// state, then its kind and number, such as "SR 900001", as a link to it in
+// IBS, 24 px high, whose tooltip states its state and whose accessible name
+// states it after the number, such as "SR 900001, Review"; then, 6 px later,
+// "+N", the number of the others, whose tooltip lists the requests with their
+// state (docs/design-system.md, Tables). While they load, the loading
+// indicator takes their place, and when their read fails, "Not available" in
+// fg-muted, which a status region announces, since the popover holds the
+// focus, as what is not available; opening the popover again reads them
+// again. Without requests, the place says what empty says, or nothing.
+function RequestCell({ read, kind, empty }: RequestCellProps) {
+  const list = read.data;
+  const [latest] = list?.data ?? [];
+  const total = list?.meta.total ?? 0;
+  const line = (request: IbsRequest, separator: string) =>
+    `${kind.abbreviation} ${request.request_number}${separator}${requestState(request)}`;
+  const others = (list?.data ?? [])
+    .slice(1, LISTED_REQUESTS + 1)
+    .map((request) => line(request, ", "));
+  const unnamed = total - 1 - LISTED_REQUESTS;
+  if (unnamed > 0) {
+    others.push(`and ${COUNT.format(unnamed)} more`);
+  }
+  return (
+    <>
+      <output className="block">
+        {list === undefined && read.status === "error" && (
+          <span className="flex min-h-6 items-center text-fg-muted">
+            <span aria-hidden>Not available</span>
+            <span className="sr-only">{kind.failure}</span>
+          </span>
+        )}
+      </output>
+      {list === undefined && read.status === "pending" && <Loading inValue />}
+      {list !== undefined && latest === undefined && empty !== undefined && (
+        <span className="text-fg-muted">{empty}</span>
+      )}
+      {list !== undefined && latest !== undefined && (
+        <span className="inline-flex items-center gap-1">
+          <RequestMark state={latest.state} />
+          <Tooltip placement="top" text={requestState(latest)}>
+            <WebLink
+              address={latest.ibs_url}
+              tall
+              detail={requestState(latest)}
+            >
+              {`${kind.abbreviation} ${latest.request_number}`}
+            </WebLink>
+          </Tooltip>
+          {total > 1 && (
+            <span className="ms-0.5">
+              <MoreValues
+                count={total - 1}
+                label={`${counted(total - 1, {
+                  one: `more ${kind.noun.one}`,
+                  other: `more ${kind.noun.other}`,
+                })}: ${others.join("; ")}`}
+                heading={counted(total, kind.noun)}
+                values={list.data
+                  .slice(0, LISTED_REQUESTS)
+                  .map((request) => line(request, " · "))}
+                more={
+                  total > LISTED_REQUESTS
+                    ? `and ${COUNT.format(total - LISTED_REQUESTS)} more`
+                    : undefined
+                }
+              />
+            </span>
+          )}
+        </span>
+      )}
+    </>
+  );
+}
+
+interface TrackRequestsProps {
+  ticketId: string;
+  packageName: string;
+  reference: string;
+  empty?: string;
+}
+
+// The submission requests of a track, from List Submission Requests,
+// `GET /api/v1/tickets/{ticket_id}/submission-requests` (Sentinel
+// docs/features/packages/ibs-submission-tracking.md, List Submission
+// Requests).
+function SubmissionRequests({
+  ticketId,
+  packageName,
+  reference,
+  empty,
+}: TrackRequestsProps) {
+  const { params, options } = requestsQuery(packageName, reference);
+  const read = useListSubmissionRequests(ticketId, params, options);
+  return <RequestCell read={read} kind={SUBMISSION_REQUEST} empty={empty} />;
+}
+
+// The release requests of a track, from List Release Requests,
+// `GET /api/v1/tickets/{ticket_id}/release-requests` (same document, List
+// Release Requests).
+function ReleaseRequests({
+  ticketId,
+  packageName,
+  reference,
+  empty,
+}: TrackRequestsProps) {
+  const { params, options } = requestsQuery(packageName, reference);
+  const read = useListReleaseRequests(ticketId, params, options);
+  return <RequestCell read={read} kind={RELEASE_REQUEST} empty={empty} />;
+}
+
 interface TrackItemProps {
+  ticketId: string;
   packageName: string;
   track: TrackDetail;
   // Whether the package that holds the track is hidden.
@@ -1228,10 +1493,14 @@ interface TrackItemProps {
 // Indicator) and either its status is not Pending or the track has work and
 // Sentinel observes its submission, which its delivery completes (observes;
 // Sentinel docs/features/tickets/ticket-deadlines.md, Completion Evidence);
-// with a pipeline, in Phases. Then its Products, as a list with a border line
-// at its left. A hidden track shows its hidden Products; another track only
-// while "Show hidden" is on.
+// with a pipeline, in Phases. On an IBS track of a Ticket with a CVE, Phases
+// shows the latest submission request at the end of the line of Submission
+// and the latest release request at the end of the line of QA, and the
+// delivery on the line of a track without a pipeline opens the same requests.
+// Then its Products, as a list with a border line at its left. A hidden track
+// shows its hidden Products; another track only while "Show hidden" is on.
 function TrackItem({
+  ticketId,
   packageName,
   track,
   packageHidden,
@@ -1249,6 +1518,24 @@ function TrackItem({
     (track.delivery_status !== "pending" ||
       (work && observes(track, "submission") === true));
   const pipeline = work && hasDueDates(track);
+  const subject = `${packageName}, ${track.reference}`;
+  // Sentinel correlates IBS requests only to the IBS tracks of a Ticket with
+  // a CVE, through the CVE that their diff names (Sentinel
+  // docs/features/packages/ibs-submission-tracking.md, Scope; Action-Scoped
+  // CVE Evidence), so the requests of any other track are not read.
+  const requests = hasCve && track.workflow_type === "ibs";
+  const target = { ticketId, packageName, reference: track.reference };
+  // The submission requests show under Submission, and the release requests
+  // under QA: UM creates a release request to end its phase, and the request
+  // then waits for the tests of QA (Sentinel
+  // docs/features/tickets/ticket-deadlines.md, Actors and Phases; Completion
+  // Evidence).
+  const extras: PhaseExtras | undefined = requests
+    ? {
+        submission: <SubmissionRequests {...target} />,
+        qa: <ReleaseRequests {...target} />,
+      }
+    : undefined;
   const products = track.products.filter(
     (product) => showHidden || product.actionable,
   );
@@ -1267,12 +1554,34 @@ function TrackItem({
           {pipeline ? (
             <TrackMilestones
               track={track}
-              subject={`${packageName}, ${track.reference}`}
+              subject={subject}
               now={now}
               delivery={delivery ? track.delivery_status : undefined}
+              extras={extras}
             />
           ) : (
-            delivery && <TrackDelivery status={track.delivery_status} />
+            delivery && (
+              <TrackDelivery
+                status={track.delivery_status}
+                records={
+                  requests
+                    ? {
+                        subject,
+                        content: (
+                          <DescriptionList fittedTerms>
+                            <DescriptionItem term="Submission">
+                              <SubmissionRequests {...target} empty="None" />
+                            </DescriptionItem>
+                            <DescriptionItem term="QA">
+                              <ReleaseRequests {...target} empty="None" />
+                            </DescriptionItem>
+                          </DescriptionList>
+                        ),
+                      }
+                    : undefined
+                }
+              />
+            )
           )}
           <span className="min-w-26">
             <MarkedValue value={track.status} known={AFFECTEDNESS} />
@@ -1311,6 +1620,7 @@ function NeedsYourAction() {
 }
 
 interface PackageGroupProps {
+  ticketId: string;
   ticketPackage: PackageDetail;
   // The keys of the tracks that wait for the signed-in user (trackKey).
   waiting: ReadonlySet<string>;
@@ -1326,6 +1636,7 @@ interface PackageGroupProps {
 // hidden package shows its hidden tracks; another package only while "Show
 // hidden" is on.
 function PackageGroup({
+  ticketId,
   ticketPackage,
   waiting,
   hasCve,
@@ -1352,6 +1663,7 @@ function PackageGroup({
           {tracks.map((track) => (
             <TrackItem
               key={track.id}
+              ticketId={ticketId}
               packageName={ticketPackage.package_name}
               track={track}
               packageHidden={hidden}
@@ -1487,6 +1799,7 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
             {packages.map((ticketPackage) => (
               <PackageGroup
                 key={ticketPackage.id}
+                ticketId={ticket.ticket_id}
                 ticketPackage={ticketPackage}
                 waiting={waiting}
                 hasCve={ticket.cve !== null}

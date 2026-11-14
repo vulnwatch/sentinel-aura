@@ -183,6 +183,74 @@ describe("a link to another site", () => {
   });
 });
 
+describe("a link on a line of its own", () => {
+  test("has a target at least 24 px high, which a link in text does not need", async () => {
+    const { screen } = await renderLink(
+      <span className="text-13">
+        <WebLink address="https://build.suse.de/request/show/900001" tall>
+          SR 900001
+        </WebLink>{" "}
+        <WebLink address="https://build.suse.de/request/show/900000">
+          SR 900000
+        </WebLink>
+      </span>,
+    );
+
+    const tall = screen.getByRole("link", { name: "SR 900001 (another site)" });
+    await expect.element(tall).toBeVisible();
+    expect(
+      tall.element().getBoundingClientRect().height,
+    ).toBeGreaterThanOrEqual(24);
+    expect(
+      screen
+        .getByRole("link", { name: "SR 900000 (another site)" })
+        .element()
+        .getBoundingClientRect().height,
+    ).toBeLessThan(24);
+  });
+});
+
+describe("the detail of a link", () => {
+  test("follows its text for assistive technologies, before the mark of another site, without showing", async () => {
+    const { screen } = await renderLink(
+      <WebLink
+        address="https://build.suse.de/request/show/900001"
+        detail="Review"
+      >
+        SR 900001
+      </WebLink>,
+    );
+
+    const link = screen.getByRole("link", {
+      name: "SR 900001, Review (another site)",
+      exact: true,
+    });
+    await expect.element(link).toBeVisible();
+    // The link shows its text alone.
+    expect(link.element().textContent).not.toContain("Review");
+  });
+
+  test("follows the text that shows without a link when the address is not a web address", async () => {
+    const { screen } = await renderLink(
+      <WebLink address="/request/show/900001" detail="Review">
+        SR 900001
+      </WebLink>,
+    );
+
+    // The text and its detail, in one element.
+    await expect
+      .element(screen.getByText("SR 900001, Review", { exact: true }))
+      .toBeVisible();
+    expect(screen.getByRole("link").elements()).toHaveLength(0);
+    expect(
+      screen
+        .getByText(", Review", { exact: true })
+        .element()
+        .getBoundingClientRect().width,
+    ).toBeLessThanOrEqual(1);
+  });
+});
+
 describe("the underline of a link", () => {
   test("shows under the pointer and on keyboard focus in a table or a list, and always in running text", async () => {
     const { screen } = await renderLink(

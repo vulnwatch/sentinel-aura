@@ -560,6 +560,16 @@ test.describe("for an analyst", () => {
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThan(0);
+    // Phases reads the requests of the track as it opens.
+    const requests = Promise.all(
+      ["submission-requests", "release-requests"].map((list) =>
+        page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname ===
+            `/api/v1/tickets/SNTL-12/${list}`,
+        ),
+      ),
+    );
 
     await pipeline.click();
 
@@ -567,9 +577,12 @@ test.describe("for an analyst", () => {
     await expect(phases).toBeFocused();
     await expect(phases).toContainText("Submission · Maintainer");
     await expect(phases).toContainText(/DeliveryPending$/);
+    // The track has no IBS request (IBS Requests), so no phase shows one.
+    for (const response of await requests) {
+      expect(response.ok()).toBe(true);
+    }
+    await expect(phases.getByRole("link")).toHaveCount(0);
     await expectAccessible(page);
-    await expectSources(page);
-    await expectScreenshot(page, "ticket-phases.png");
     await page.keyboard.press("Escape");
     await expect(pipeline).toBeFocused();
 
@@ -641,6 +654,46 @@ test.describe("for an analyst", () => {
     await expectSources(page);
     await expectScreenshot(page, "ticket-unreleased-product.png");
     await expectAccessible(page);
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the pipeline: the click waits for it.
+    await expect(
+      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
+    ).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+
+    await pipeline.click();
+
+    // Its accepted submission request 900006 and the release request 900007
+    // in review (IBS Requests), at the ends of the lines of Submission and
+    // QA.
+    const phases = page.getByRole("dialog", { name: "Phases" });
+    await expect(phases).toBeFocused();
+    const submission = phases
+      .getByRole("listitem")
+      .filter({ hasText: "Submission · Maintainer" })
+      .getByRole("link");
+    const qa = phases
+      .getByRole("listitem")
+      .filter({ hasText: "QA · QA" })
+      .getByRole("link");
+    await expect(submission).toHaveAttribute(
+      "href",
+      "https://build.suse.de/request/show/900006",
+    );
+    await expect(qa).toHaveAttribute(
+      "href",
+      "https://build.suse.de/request/show/900007",
+    );
+    await expect(phases.getByRole("button", { name: /more/ })).toHaveCount(0);
+    await expect(submission).toHaveAccessibleName(
+      "SR 900006, Accepted (another site)",
+    );
+    await expect(qa).toHaveAccessibleName("RR 900007, Review (another site)");
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(pipeline).toBeFocused();
 
     await packages
       .getByRole("button", { name: "Fictional Linux Enterprise Server 16.0" })
@@ -652,6 +705,91 @@ test.describe("for an analyst", () => {
     await expect(product).toBeFocused();
     await expect(product.getByRole("definition").last()).toHaveText(
       "Not observed",
+    );
+  });
+
+  test("shows the IBS requests of a track in Phases, the state of each in the tooltip of its link", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-13#packages");
+
+    // The IBS track of fictional-httpd of SNTL-13 is Affected, its delivery
+    // In progress, with the submission request 900001 in review, created
+    // after 900000, which IBS declined, and no release request (Aged
+    // Tickets; IBS Requests).
+    const packages = part(page, "Packages");
+    const httpd = packages
+      .getByRole("listitem")
+      .filter({
+        has: page.getByText("SUSE:FLES-15-SP7:Update", { exact: true }),
+      })
+      .last();
+    const pipeline = httpd.getByRole("button", {
+      name: /^Phases of fictional-httpd, SUSE:FLES-15-SP7:Update: .*; delivery in progress$/,
+    });
+    await expect(pipeline).toBeVisible();
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the pipeline: the click waits for it.
+    await expectSources(page);
+    await expect(
+      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
+    ).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+    // Phases reads the requests of the track as it opens.
+    const requests = Promise.all(
+      ["submission-requests", "release-requests"].map((list) =>
+        page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname ===
+            `/api/v1/tickets/SNTL-13/${list}`,
+        ),
+      ),
+    );
+
+    await pipeline.click();
+
+    const phases = page.getByRole("dialog", { name: "Phases" });
+    await expect(phases).toBeFocused();
+    const submission = phases
+      .getByRole("listitem")
+      .filter({ hasText: "Submission · Maintainer" });
+    const request = submission.getByRole("link", { name: /^SR 900001\b/ });
+    await expect(request).toHaveAttribute(
+      "href",
+      "https://build.suse.de/request/show/900001",
+    );
+    await expect(
+      submission.getByRole("button", {
+        name: "1 more submission request: SR 900000, Declined",
+        exact: true,
+      }),
+    ).toHaveText("+1");
+    // Neither a release request at QA nor another request, once both reads
+    // have answered.
+    for (const response of await requests) {
+      expect(response.ok()).toBe(true);
+    }
+    await expect(
+      phases
+        .getByRole("listitem")
+        .filter({ hasText: "QA · QA" })
+        .getByRole("link"),
+    ).toHaveCount(0);
+    await expect(phases.getByRole("link")).toHaveCount(1);
+    await expectAccessible(page);
+    await expectSources(page);
+    await expectScreenshot(page, "ticket-phases.png");
+
+    await page.keyboard.press("Tab");
+
+    await expect(request).toBeFocused();
+    await expect(page.getByRole("tooltip")).toHaveText("Review");
+    await expectAccessible(page);
+    await expect(request).toHaveAccessibleName(
+      "SR 900001, Review (another site)",
     );
   });
 

@@ -13,8 +13,9 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 The Ticket screen shows one Ticket: its heading row with its main values; in
 the tab Overview its CVE, the CVSS assessments of its CVE, its package tree,
-its details, the sources of its CVE, which an analyst refetches, and who is
-involved in it, with the access grants of a confidential Ticket, which an
+with the IBS requests of its tracks, its details, the sources of its CVE,
+which an analyst refetches, and who is involved in it, with the access
+grants of a confidential Ticket, which an
 analyst who manages confidentiality grants and revokes; in the tab References
 its references, the advisories, patches, and other pages of other sites that
 analysts read while they analyze it, which an analyst who manages references
@@ -319,7 +320,9 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     (`docs/behaviors.md`, Deadlines). A track has work when it is actionable
     and in Analysis, or Affected or Fixed with a Product that is actionable
     and eligible; a track without work, Not affected and Won't fix included,
-    shows no pipeline, and a Ticket without due dates shows no pipeline.
+    shows no pipeline, and a Ticket without due dates shows no pipeline. The
+    name of the pipeline does not state the IBS requests of the track
+    (below), which Phases reads only as it opens.
   - Its delivery is "Delivery" in `fg-muted`, then, 6 px later, the name of
     the delivery status, Pending, In progress, or Released, without a mark,
     so that it does not read as a second affectedness (`docs/design-system.md`,
@@ -334,7 +337,58 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     of the pipeline, such as on a Not affected track whose delivery is
     Released, a combination that Sentinel treats as anomalous (Sentinel
     `docs/features/packages/package-model.md`, Affectedness-Delivery
-    Independence).
+    Independence); there its status opens the IBS requests of the track
+    (below).
+  - Its IBS requests, on an IBS track of a Ticket with a CVE, the only
+    tracks to which Sentinel correlates requests, through the CVE that their
+    diff names (Sentinel `docs/features/packages/ibs-submission-tracking.md`,
+    Scope; Action-Scoped CVE Evidence). Phases shows, at the end of the line
+    of Submission, the latest submission request of the track, from List
+    Submission Requests, `GET /api/v1/tickets/{ticket_id}/submission-requests`,
+    and at the end of the line of QA its latest release request, from List
+    Release Requests, `GET /api/v1/tickets/{ticket_id}/release-requests`, in
+    the column of Phases (`docs/design-system.md`, Track Milestones): UM
+    creates a release request to end its phase, and the request then waits
+    for the tests of QA (Sentinel
+    `docs/features/tickets/ticket-deadlines.md`, Actors and Phases;
+    Completion Evidence). Triage and UM show none, and neither does a phase
+    without requests. Each read sends the package name as `package_name` and
+    the reference of the track as `codestream_name`, which Sentinel matches
+    exactly (Sentinel `docs/features/packages/ibs-submission-tracking.md`,
+    Package and Codestream Identity; Common Query Rules), with
+    `sort_by=upstream_created_at`, `sort_order=desc`, and `per_page=11`, the
+    latest request and the ten others that "+N" names: the latest request is
+    the one that IBS created last, since Sentinel designates none of them as
+    the one in effect (same document, Public API). The reads are sent each
+    time the popover that shows them opens, and not again while it is open;
+    for any other track they are not sent, so a Git track shows none.
+  - A request shows the mark of its state (`docs/design-system.md`, Other
+    Values): in progress for New and Review, accepted for Accepted, and
+    failed for Declined, Revoked, Superseded, and Deleted (Sentinel
+    `docs/features/packages/ibs-submission-tracking.md`, Request States);
+    then "SR" for a submission request or "RR" for a release request and its
+    request number, such as "SR 900001", as a link to its `ibs_url`
+    (`docs/behaviors.md`, Links to Other Sites), 24 px high, whose tooltip
+    states its state by its name, such as "Review", followed for a superseded
+    request by the number of the request that replaced it, such as
+    "Superseded by 900014", and whose accessible name states the same after
+    the number, such as "SR 900001, Review (another site)". A state that the
+    pinned contract does not list shows the mark of an unknown value, and as
+    received in the tooltip and the accessible name (`docs/behaviors.md`,
+    Unknown Values). When the phase has other requests, "+N" follows, named
+    such as "1 more submission request: SR 900000, Declined", whose tooltip
+    lists, below their number, such as "2 submission requests", the requests
+    from the latest, each such as "SR 900000 · Declined", at most ten, and
+    then how many more, such as "…and 3 more" (`docs/design-system.md`,
+    Tables).
+  - On a track without a pipeline whose delivery shows on its line, an IBS
+    track of a Ticket with a CVE, its status is a value that opens the same
+    requests (`docs/design-system.md`, Menus, Popovers, and Tooltips), named
+    such as "Delivery of fictional-sudo, SUSE:FLES-15-SP4:Update: In
+    progress", in a popover titled "Delivery" whose description list holds
+    Submission and QA, each with its latest request in the same form, or
+    "None" in `fg-muted` without one. On any other track, the status is
+    text.
   - Sentinel observes a phase of a track with due dates whose milestone is
     not `null`, and not, for example, the submission, the UM, and the QA of
     a Git track or of a track of a Ticket without a CVE; the delivery of the
@@ -1083,7 +1137,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Loading). Until the read of the work of a maintainer arrives, no track is
   marked. The popover of the CNA shows its title at once; its short name and
   its details show once Get CNA arrives, with the loading indicator in place
-  of the details until then. The participants show once List Ticket Actors
+  of the details until then. Phases and the popover of a delivery show their
+  phases at once, and the loading indicator in place of each request until
+  its read arrives. The participants show once List Ticket Actors
   and, for a confidential Ticket, List Access Grants have arrived, with the
   loading indicator in their place until then; Access grants shows at once on
   a confidential Ticket, and its dialog shows the loading indicator in place
@@ -1113,7 +1169,15 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   aren't available." in place of its details, as a user card does
   (`docs/design-system.md`, Menus, Popovers, and Tooltips), and announces it,
   since the popover holds the focus (`docs/behaviors.md`, Accessibility,
-  Announcements). The failure of List Ticket Actors or of List Access Grants
+  Announcements). When List Submission Requests or List Release Requests
+  fails, whatever its status, the place of its request in Phases or in the
+  popover of a delivery says "Not available" in `fg-muted`, and the popover
+  announces "The submission requests aren't available." or "The release
+  requests aren't available."; the phases and the other requests stay shown,
+  and the next opening of the popover reads them again. The screen handles
+  no error code of either specifically (Sentinel
+  `docs/features/packages/ibs-submission-tracking.md`, Public API). The
+  failure of List Ticket Actors or of List Access Grants
   shows in place of the participants, and that of List Access Grants also in
   place of the grants in their dialog, each with Try again where the failure
   offers it. The screen handles one code of List Access Grants specifically:
@@ -1241,12 +1305,16 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Reason; Response Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket;
   List Tickets (Duplicate filter); Set Confidentiality; Access Grant
   Management (List Access Grants; Grant Access; Revoke Access)
-- Sentinel `docs/features/tickets/ticket-deadlines.md` — Due Dates (Null Due
-  Dates); Track Milestones (Observability of Later Phases; Completion
-  Evidence); Ticket Current Phase
+- Sentinel `docs/features/tickets/ticket-deadlines.md` — Actors and Phases;
+  Due Dates (Null Due Dates); Track Milestones (Observability of Later
+  Phases; Completion Evidence); Ticket Current Phase
 - Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
   Dimensions; Affectedness-Delivery Independence; Exclusion and
   Actionability; Package Eligibility (Override Model); List Ticket Packages
+- Sentinel `docs/features/packages/ibs-submission-tracking.md` — Scope;
+  Request States; Upstream Evidence (Package and Codestream Identity;
+  Action-Scoped CVE Evidence); Public API (Common Query Rules; List
+  Submission Requests; List Release Requests)
 - Sentinel `docs/features/packages/package-maintainership.md` — Maintainers
   in the Package Tree; Workbench Dependency
 - Sentinel `docs/features/packages/maintainer.md` — Classification; Package

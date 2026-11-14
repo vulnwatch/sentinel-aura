@@ -460,6 +460,7 @@ that the code imports ship.
 | The missing release of a Product that keeps its Ticket from Resolved | `triangle-alert` |
 | The other statuses of a milestone: done, pending, not applicable, not observed (Track Milestones); an observation never made (Other Values) | `circle-check`, `circle`, `circle-minus`, `circle-dashed` |
 | The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
+| The state of a request: in progress, accepted, failed (Other Values) | `git-pull-request`, `git-merge`, `git-pull-request-closed` |
 | A confidential Ticket | `lock` |
 | A priority override, an eligibility set by hand | `user-pen` |
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
@@ -471,7 +472,7 @@ that the code imports ship.
 | Refetch | `refresh-cw` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy, an operation in progress (Other Values) | `loader-circle` |
-| A Ticket status, a milestone status, a status of a source of a CVE, or an event type that the pinned contract does not list | `circle-question-mark` |
+| A Ticket status, a milestone status, a status of a source of a CVE, a state of a request, or an event type that the pinned contract does not list | `circle-question-mark` |
 | Copy | `copy` |
 | A link to another site | `external-link` |
 | The kinds of event of the timeline of a Ticket: Status, Assignment, Packages, CVE and CVSS, Priority, Confidentiality, References | `circle-dot`, `user-check`, `package`, `gauge`, `flag`, `eye-off`, `link` |
@@ -897,7 +898,7 @@ Milestones), show as a pipeline: the icon of the status of each phase at
   as "Phases of fictional-openssl, SUSE:FLES-15-SP7:Update: Triage done;
   Submission overdue by 2 days, current; UM due in 3 days; QA due in 10
   days".
-- A click, a tap, Enter, or Space opens Phases, a popover 320 px wide, with
+- A click, a tap, Enter, or Space opens Phases, a popover 400 px wide, with
   16 px of padding, in `text-14`, that opens and closes as the explanation of
   a priority does (Priority, Explanation): it takes the focus itself, Escape
   or a click outside closes it, and the focus returns to the pipeline. Its
@@ -906,14 +907,20 @@ Milestones), show as a pipeline: the icon of the status of each phase at
   apart: the icon of its status, as in the pipeline, then, 8 px later, the
   name of the phase, at weight 600 for the current one, followed by " · " and
   its actor in `fg-muted`: Vulnerability analyst, Maintainer, Maintenance
-  update team, or QA (same document, Actors and Phases); below the name, in
-  `text-13`, the state of the phase in the words of `docs/behaviors.md`
-  (Deadlines), in `danger-on-soft` at weight 500 when it is overdue and in
-  `fg-muted` otherwise, followed, for a phase with a due date, by " · due "
-  and its date and time (`docs/behaviors.md`, Dates and Times, Display). The
-  icon of the status starts the line, so the state takes no icon of its own
-  (Deadline Badge). A status that the pinned contract does not list shows as
-  received (`docs/behaviors.md`, Unknown Values).
+  update team, or QA (same document, Actors and Phases), on a line at least
+  24 px high; below the name, in `text-13`, the state of the phase in the
+  words of `docs/behaviors.md` (Deadlines), in `danger-on-soft` at weight 500
+  when it is overdue and in `fg-muted` otherwise, followed, for a phase with a
+  due date, by " · due " and its date and time (`docs/behaviors.md`, Dates and
+  Times, Display). The icon of the status starts the line, so the state takes
+  no icon of its own (Deadline Badge). A status that the pinned contract does
+  not list shows as received (`docs/behaviors.md`, Unknown Values).
+- What a screen document adds to a phase, such as the latest request that a
+  track has in it, stands at the end of the line of the name of the phase, in
+  `text-13`, in a column at least 144 px wide, 12 px or more after the name,
+  so that the values of the phases line up and each phase keeps its two
+  lines; where Phases is too narrow for both, as at 320 CSS px, the value
+  goes below the name, above the state.
 - A screen document states where the pipeline shows, what more Phases holds,
   such as the requests that a track has in a phase, and what of it the
   accessible name of the pipeline states after the state of each phase.
@@ -989,6 +996,21 @@ screen, the heading row follows the lock with the label Confidential
   order of the focus and for assistive technologies. Where the primary
   pointer does not hover, such as on a touch screen, a tap neither shows the
   button nor reaches it.
+- The state of a request that a link leads to on another site, such as a
+  submission request of a track in IBS, shows as a mark alone, at 14 px,
+  4 px before the link, in the place of its name, so that the requests of a
+  column stay short (Track Milestones): `git-pull-request` in `info-icon`
+  for a request in progress, `git-merge` in `success-icon` for an accepted
+  one, and `git-pull-request-closed` in `danger-icon` for one that failed,
+  such as a declined or a superseded request, so that an analyst sees at once
+  that the latest request was stopped; its screen document gives each state
+  its mark. A state that the pinned contract does not list shows
+  `circle-question-mark` in `neutral-icon`. The tooltip of the link states
+  the state, by its name or as received, and assistive technologies read it
+  after the text of the link, such as "SR 900001, Review"
+  (`docs/behaviors.md`, Unknown Values). The other requests follow as "+N",
+  6 px after the link, whose tooltip lists each request with its state, as
+  the "+N" of a cell lists its values (Tables).
 - An absent value shows as an en dash, "–", in `fg-muted`, read as "Not
   set", or as the word that names the absence precisely, also in `fg-muted`
   (`docs/behaviors.md`, Absent Values).
@@ -1568,8 +1590,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   stays while the pointer is over it, and Escape hides it (WCAG 2.2, 1.4.13
   Content on Hover or Focus). It names an icon alone or a compact avatar that
   does not link to the user (one that does shows the user card instead;
-  Representation of a User), or lists the values of a "+N" (Tables); it never
-  holds the only means to act.
+  Representation of a User), states what the mark before a link shows, such
+  as the state of a request (Other Values), or lists the values of a "+N"
+  (Tables); it never holds the only means to act.
 - A name that opens a popover with the details of its record, and with the
   record's actions for a user who can take them, such as a Product of a
   package tree or the CNA of a CVE, is a button in the style of the text
@@ -1612,6 +1635,14 @@ states it, such as that of a Ticket; the other audit logs are tables
   and the details as a description list whose terms take the width of the
   longest one, so that none wraps (Detail Screens). A link to another site
   that explains the value follows the details, below another `border` line.
+- A value that opens the records that establish it, such as the delivery of
+  a track with its requests, is a button in the style of a name that opens a
+  popover, named after the record of the value and the value, such as
+  "Delivery of fictional-openssl, SUSE:FLES-15-SP7:Update: In progress", and
+  its popover is that of such a name, without actions: its title names the
+  value without stating it, such as "Delivery", since the line of the button
+  shows it; then the `border` line and the records as a description list
+  whose terms take the width of the longest one.
 
 ## Representation of a User
 

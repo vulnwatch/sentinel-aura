@@ -94,7 +94,19 @@ interface WebLinkProps {
   placement?: keyof typeof PLACEMENTS;
   // The size of the text around the link.
   size?: keyof typeof ICON_SIZES;
+  // Whether the link stands on a line of its own, where its target is at
+  // least 24 px high (docs/design-system.md, Spacing and Sizes, Targets).
+  tall?: boolean;
+  // What assistive technologies read after the text, such as the state of
+  // the record that the link leads to, which a mark beside it shows. A link
+  // then takes its accessible name from its text, the detail, and the mark
+  // of another site, since a hidden text, which the browser reads as a block,
+  // would put a space before the comma that precedes the detail.
+  detail?: string;
 }
+
+// What assistive technologies read after the text of a link to another site.
+const OTHER_SITE = " (another site)";
 
 // A link to an address of the API (docs/behaviors.md, Links to Other Sites):
 // only a web address becomes a link, which leads to the address as the
@@ -109,15 +121,27 @@ export function WebLink({
   children,
   placement = "list",
   size = "small",
+  tall = false,
+  detail,
 }: WebLinkProps) {
   const web = WebAddress.of(address);
   if (web === undefined) {
-    return <span>{children}</span>;
+    return (
+      <span>
+        {children}
+        {detail !== undefined && <span className="sr-only">, {detail}</span>}
+      </span>
+    );
   }
   return (
     <AriaLink
       href={web}
-      className={`text-link ${PLACEMENTS[placement]} ${FOCUS_RING}`}
+      aria-label={
+        detail === undefined
+          ? undefined
+          : `${children}, ${detail}${web.isOtherSite ? OTHER_SITE : ""}`
+      }
+      className={`text-link ${PLACEMENTS[placement]} ${tall ? "inline-block py-0.5" : ""} ${FOCUS_RING}`}
     >
       {children}
       {web.isOtherSite && (
@@ -130,7 +154,7 @@ export function WebLink({
               className={`ms-1 inline-block shrink-0 align-[-0.125em] ${ICON_SIZES[size]}`}
             />
           </span>
-          <span className="sr-only"> (another site)</span>
+          <span className="sr-only">{OTHER_SITE}</span>
         </>
       )}
     </AriaLink>

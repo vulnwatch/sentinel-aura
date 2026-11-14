@@ -3,7 +3,7 @@ import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { DescriptionItem, DescriptionList } from "./description-list";
-import { DetailsName, DetailsValue } from "./details-popover";
+import { DetailsName, DetailsValue, ValueRecords } from "./details-popover";
 import { ScreenHeading } from "./screen-heading";
 
 // A name that opens a popover with the details of its record
@@ -277,6 +277,79 @@ test("opens the popover of a value, which takes the focus, with its title, the v
   await userEvent.keyboard("{Escape}");
 
   await expect.element(value).toHaveFocus();
+});
+
+const DELIVERY =
+  "Delivery of fictional-openssl, SUSE:FLES-15-SP7:Update: In progress";
+
+// The delivery of a fictional track, which opens the requests that
+// establish it.
+function Records() {
+  return (
+    <main className="p-4">
+      <p className="w-96 text-14 text-fg-muted">
+        <ValueRecords value="In progress" label={DELIVERY} title="Delivery">
+          <DescriptionList fittedTerms>
+            <DescriptionItem term="Submission">SR 900001</DescriptionItem>
+            <DescriptionItem term="QA">None</DescriptionItem>
+          </DescriptionList>
+        </ValueRecords>
+      </p>
+    </main>
+  );
+}
+
+test("shows a value that opens its records as a button with the value, named after the record of the value and the value, in the style of a name, at least 24 px high", async () => {
+  const screen = await render(<Records />);
+  const value = screen.getByRole("button", { name: DELIVERY, exact: true });
+  // The pointer away from the value, where an earlier test may have left it.
+  await page.elementLocator(document.body).hover({ position: { x: 1, y: 1 } });
+
+  await expect.element(value).toHaveTextContent("In progress");
+  await expect
+    .poll(() => getComputedStyle(value.element()).textDecorationColor)
+    .toBe(BORDER_STRONG);
+  const style = getComputedStyle(value.element());
+  expect(style.color).toBe(FG_MUTED);
+  expect(style.textDecorationStyle).toBe("dotted");
+  expect(value.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(
+    24,
+  );
+});
+
+test("opens the records of a value in a popover of a name, 320 px wide, which takes the focus, with its title, a line, and the records, without the value, and returns the focus on Escape", async () => {
+  const screen = await render(<Records />);
+  const value = screen.getByRole("button", { name: DELIVERY, exact: true });
+
+  await value.click();
+
+  const popover = screen.getByRole("dialog", { name: "Delivery", exact: true });
+  await expect.element(popover).toHaveFocus();
+  expect(popover.element().parentElement!.getBoundingClientRect().width).toBe(
+    320,
+  );
+  const title = popover.getByRole("heading", { name: "Delivery" }).element();
+  expect(getComputedStyle(title).fontSize).toBe("16px");
+  expect(getComputedStyle(title).fontWeight).toBe("600");
+  // The line 12 px below the title, with nothing between them.
+  const lines = popover.getByRole("separator").elements();
+  expect(lines).toHaveLength(1);
+  expect(
+    lines[0]!.getBoundingClientRect().top -
+      title.getBoundingClientRect().bottom,
+  ).toBeCloseTo(12, 0);
+  expect(popover.getByText("In progress").elements()).toHaveLength(0);
+  expect(
+    popover
+      .getByRole("definition")
+      .elements()
+      .map((element) => element.textContent),
+  ).toEqual(["SR 900001", "None"]);
+
+  await userEvent.keyboard("{Escape}");
+
+  await expect.element(value).toHaveFocus();
+  expect(screen.getByRole("dialog").query()).toBeNull();
 });
 
 test("ends the popover of a value with its link, below another line", async () => {
