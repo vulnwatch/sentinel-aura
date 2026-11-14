@@ -742,6 +742,18 @@ test.describe("for an analyst", () => {
     const ltss = part(page, "Packages").getByRole("button", {
       name: "Fictional Linux Enterprise Server LTSS 15 SP5",
     });
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the Product: the click waits for it, so that
+    // its details do not open where the Product was (docs/conventions.md,
+    // End-to-End Tests).
+    await expectSources(page);
+    await expect(
+      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
+    ).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+
     await ltss.click();
 
     const product = page.getByRole("dialog", {
@@ -755,7 +767,6 @@ test.describe("for an analyst", () => {
       "Extended support",
     ]);
     await expectAccessible(page);
-    await expectSources(page);
     await expectScreenshot(page, "ticket-product-set-by-hand.png");
     await page.keyboard.press("Escape");
     await expect(ltss).toBeFocused();

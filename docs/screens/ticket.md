@@ -362,15 +362,14 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   Eligibility, "Eligible" or "Not eligible", and, when it is set by hand,
   `user-pen` at 14 px in `fg-muted`, 4 px after it, read as ", set by hand",
   and below it, in `text-13`, `fg-muted`, who set it and when: "Set by", the
-  user in the name form, which wraps, since the details show it nowhere
-  else, "on", and the date and time, on one line, such as "Set by Alice
-  Smith on 9 Oct 2026, 14:05". The user is the setter's current profile, so
-  a user deactivated since shows as inactive (Sentinel
-  `docs/features/packages/package-model.md`, Package Eligibility (Override
-  Model); Sentinel `docs/api-spec.md`, User References in Responses). Then
-  Lifecycle, the phase of `lifecycle_phase`
-  (Pre-release, General support, Extended support, Reactive support, EOL),
-  or "Not available" without lifecycle data; Release, where it has one
+  user in the name form, which wraps, "on", and the date and time, which
+  keep to one line, such as "Set by Alice Smith on 9 Oct 2026, 14:05". The
+  user is the setter's current profile, so a user deactivated since shows as
+  inactive (Sentinel `docs/features/packages/package-model.md`, Package
+  Eligibility (Override Model); Sentinel `docs/api-spec.md`, User References
+  in Responses). Then Lifecycle, the phase of `lifecycle_phase` (Pre-release,
+  General support, Extended support, Reactive support, EOL), or "Not
+  available" without lifecycle data; Release, where it has one
   (above); and, for a Product that is not actionable, Actionable, "No,"
   followed by the reason that Sentinel gives, the first that applies in the
   order "its package is excluded", "its track is excluded", "it is excluded
