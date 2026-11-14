@@ -619,8 +619,7 @@ CVEAffectedVersion).
 - **The toolbar** of a tab without a heading (`docs/design-system.md`,
   Lists): at its start, "The versions of the affected software as the
   sources of the CVE report them."; then the search field, "Search entries",
-  and Clear filters while a search applies. It shows at once with the tabs,
-  and goes once the Ticket shows without a CVE. The tab applies the search
+  and Clear filters while a search applies. The tab applies the search
   itself to the entries that it read, since the operation takes no parameter
   (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE Affected
   Versions, Filtering and sorting): an entry matches when one of its values,
@@ -638,8 +637,8 @@ CVEAffectedVersion).
   source; names that differ in their writing, such as `fictional-tar` and
   `fictional_tar`, are two, since Sentinel does not tell whether they name
   the same software. The products are in alphabetical order of their name.
-- **The sources** of a product, below its band, as a description list (same
-  section): each source a term, a CNA as "CNA", an ADP by its short name,
+- **The sources** of a product, below its band, as a description list
+  (`docs/design-system.md`, Detail Screens): each source a term, a CNA as "CNA", an ADP by its short name,
   such as "CISA-ADP", GHSA and OSV as Sentinel names them (Sentinel
   `docs/features/tickets/cve-tracking.md`, CVE Sources), and a scope that the
   pinned contract does not list as received (`docs/behaviors.md`, Unknown
@@ -697,10 +696,11 @@ CVEAffectedVersion).
   field of the table below is a name that opens its details
   (`docs/design-system.md`, Menus, Popovers, and Tooltips), named after the
   source and the product, such as "CNA for fictional-tar", or "CNA for the
-  unnamed product", followed, for a source that shows twice in its product,
-  by its rank, such as "CNA for Linux, 2 of 2". The title of the popover is
-  the source, with the product below it, and its details, a description
-  list:
+  unnamed product", followed, for a source that shows more than once in its
+  product, by its rank among all its blocks there, also those that the
+  search hides, such as "CNA for Linux, 2 of 2". The title of the popover is
+  the source, with the name of the product below it, and nothing there for
+  the unnamed product, and its details, a description list:
 
   | Term | Value |
   |---|---|

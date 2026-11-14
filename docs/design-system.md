@@ -126,7 +126,7 @@ sidebar is the one exception (Spacing and Sizes).
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `canvas` | `#F6F8FA` | `#0D1117` | The page behind the content; the search field of the sidebar |
-| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table and of a box within a part of a detail screen, menus, popovers, dialogs, and fields; a line of a list of lines in a group of a detail screen under the pointer (Detail Screens) |
+| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table and of a box within a part of a detail screen, menus, popovers, dialogs, and fields; a line of a value of a description list in a group of a detail screen under the pointer (Detail Screens) |
 | `surface-2` | `#F6F8FA` | `#1A212A` | The header row of a table |
 | `surface-hover` | `#F3F5F8` | `#1E2630` | A row, a menu item, or a quiet control under the pointer |
 | `sidebar` | `#FFFFFF` | `#010409` | The sidebar |
@@ -1081,11 +1081,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
      accepts, also where the screen searches itself a list that it reads
      whole, such as the affected versions of a CVE. Enter applies the term
      that the user typed, without its surrounding whitespace, or removes the
-     search when the field is empty.
-     Its clear button, an icon button with `x` named "Clear search", and
-     Escape empty the field and remove the search that applies. A typed term
-     that is not applied returns to the applied one when the focus leaves the
-     field.
+     search when the field is empty. Its clear button, an icon button with
+     `x` named "Clear search", and Escape empty the field and remove the
+     search that applies. A typed term that is not applied returns to the
+     applied one when the focus leaves the field.
    - Filters is a secondary button 32 px high with `list-filter`. While
      filters apply, their number follows its label in `fg-muted`, which
      assistive technologies read as "2 applied". It opens below it, aligned

@@ -465,15 +465,14 @@ describe("the tab", () => {
 
     const { screen } = await renderTab();
 
-    const toolbar = searchOf(screen).element().closest("div.flex-wrap");
+    // The search field, 32 px high, is the tallest item of the toolbar on
+    // its one row, so its bottom is the bottom of the toolbar.
+    const search = searchOf(screen).element().getBoundingClientRect();
     const band = panelOf(screen)
       .getByRole("heading", { level: 2 })
       .first()
       .element().parentElement;
-    expect(
-      (band?.getBoundingClientRect().top ?? 0) -
-        (toolbar?.getBoundingClientRect().bottom ?? 0),
-    ).toBe(16);
+    expect((band?.getBoundingClientRect().top ?? 0) - search.bottom).toBe(16);
   });
 
   test("keeps the explanation and the search on their row when Clear filters appears, which wraps alone to the end of the next row", async () => {
