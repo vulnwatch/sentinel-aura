@@ -10,17 +10,6 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 By participating, you are expected to uphold this code.
 Please report unacceptable behavior to security@suse.com.
 
-## Project Status
-
-The repository contains the application skeleton, its build and test
-tooling, and the UI foundations, but no screens yet; see
-[README.md](README.md#project-status). The foundation documents define the
-architecture, the users, screen map, and roles, the cross-cutting behaviors,
-and the design system (see
-[Foundation Documents](docs/conventions.md#foundation-documents)). Screens are
-built feature by feature, each from an issue whose acceptance criteria are
-agreed with the maintainers (see [Specification Workflow](#specification-workflow)).
-
 ## How to Contribute
 
 ### Reporting Bugs
