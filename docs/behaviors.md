@@ -885,8 +885,11 @@ complete profile and its manager, and the signed-in user alike: `id`,
   URL from it (Sentinel `docs/features/identity/user-avatars.md`, Avatar URL).
   The generated avatar shows when `avatar_url` is `null` or does not resolve,
   and in place of a profile picture that fails to load, which Sentinel's
-  contract treats like `null`. While the picture loads and when it fails, the
-  avatar keeps its place and size, so that nothing around it moves
+  contract treats like `null`. Each place that shows the avatar loads the
+  picture as it shows it, and one whose picture failed keeps the generated
+  avatar until that place shows the avatar anew, such as when its screen opens
+  again, or until `avatar_url` changes. While the picture loads and when it
+  fails, the avatar keeps its place and size, so that nothing around it moves
   (`docs/design-system.md`, Profile Picture). The browser loads the picture
   from the host that serves it, which receives no URL of the UI's screens
   (`docs/architecture.md`, Security Headers).

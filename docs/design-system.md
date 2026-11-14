@@ -1721,9 +1721,7 @@ the avatar, not to the definition of the generated avatar.
   whose host the Content Security Policy does not allow
   (`docs/architecture.md`, Security Headers), gives way to the generated
   avatar, at the same size and in the same place, without the browser's mark
-  of a broken image. Each place that shows the avatar loads the picture when
-  it shows it, and one whose picture failed keeps the generated avatar until
-  it shows the avatar again or `avatar_url` changes.
+  of a broken image.
 - Like the generated avatar, the profile picture has no border and is the
   same in both themes: the UI does not change its colors.
 
