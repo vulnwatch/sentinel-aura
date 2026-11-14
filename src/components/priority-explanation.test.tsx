@@ -36,6 +36,7 @@ const SETTER: NonNullable<PriorityFields["priority_override_by"]> = {
   full_name: "Jane Doe",
   active: true,
   bot: false,
+  avatar_url: null,
 };
 const SET_AT = "2099-10-09T15:05:09Z";
 

@@ -2,8 +2,19 @@ import { afterEach, expect, test } from "vitest";
 import { page, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { avatarGrid, avatarPicture } from "../avatar";
-import { Avatar, NoActorPicture, type AvatarSize } from "./avatar";
+import { avatarGrid, avatarPattern } from "../avatar";
+import {
+  FICTIONAL_PICTURE,
+  FICTIONAL_PICTURE_COLOR,
+  fictionalPicture,
+} from "../test-api";
+import { picturesLoaded } from "../test-screenshot";
+import {
+  Avatar,
+  NoActorPicture,
+  type AvatarSize,
+  type AvatarUser,
+} from "./avatar";
 
 // The avatar (docs/design-system.md, Avatar; Representation of a User), at
 // the browser's default text size. The avatar is hidden from assistive
@@ -24,15 +35,24 @@ const GRAY = "#6e6e6e";
 const CANVAS_LIGHT = "#f6f8fa";
 const CANVAS_DARK = "#0d1117";
 
-const PERSON = { id: ID, active: true, bot: false };
-const BOT = { id: ID, active: true, bot: true };
+const PERSON: AvatarUser = {
+  id: ID,
+  active: true,
+  bot: false,
+  avatar_url: null,
+};
+const BOT: AvatarUser = { id: ID, active: true, bot: true, avatar_url: null };
 
-function renderAvatar(user: typeof PERSON, size: AvatarSize = "large") {
-  return render(
+function avatarOf(user: AvatarUser, size: AvatarSize = "large") {
+  return (
     <figure aria-label="Fictional avatar" className="inline-flex">
       <Avatar user={user} size={size} />
-    </figure>,
+    </figure>
   );
+}
+
+function renderAvatar(user: AvatarUser, size: AvatarSize = "large") {
+  return render(avatarOf(user, size));
 }
 
 interface Picture {
@@ -43,8 +63,10 @@ interface Picture {
   at: (x: number, y: number) => string;
 }
 
-// A screenshot of an element, whose pixels the test reads.
+// A screenshot of an element, whose pixels the test reads, once its pictures
+// have loaded.
 async function screenshot(element: Locator): Promise<Picture> {
+  await picturesLoaded(element);
   const base64 = await page.screenshot({ element, save: false });
   const png = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
   const bitmap = await createImageBitmap(
@@ -138,7 +160,7 @@ test.each([
   ["019a2b3c-4d5e-7f00-8000-000000000002", "#4338ca"],
   ["019a2b3c-4d5e-7f00-8000-000000000001", "#a21caf"],
 ])("draws the cells of %s in the color of its index, %s", async (id, color) => {
-  const grid = avatarGrid(avatarPicture(id).cells);
+  const grid = avatarGrid(avatarPattern(id).cells);
   const row = grid.findIndex((cells) => cells.includes(true));
   const column = grid[row]?.indexOf(true) ?? -1;
   const screen = await renderAvatar({ ...PERSON, id });
@@ -186,6 +208,122 @@ test.each([
 
 test("is hidden from assistive technologies", async () => {
   const screen = await render(<Avatar user={PERSON} size="large" />);
+
+  expect(screen.getByRole("img").query()).toBeNull();
+});
+
+// The profile picture (docs/design-system.md, Avatar, Profile Picture), with
+// fictional pictures that load without a network request: one in a single
+// color, one that is transparent, one wider than high in three stripes, and
+// one whose data no browser can decode.
+
+const PICTURE = FICTIONAL_PICTURE;
+const PICTURE_COLOR = FICTIONAL_PICTURE_COLOR;
+const STRIPE_COLOR = "#d4a72c";
+const TRANSPARENT_PICTURE = fictionalPicture(192, "");
+// 288 by 192: a stripe of 96 in STRIPE_COLOR, one in PICTURE_COLOR, and
+// another in STRIPE_COLOR.
+const WIDE_PICTURE = fictionalPicture(
+  288,
+  `<rect width="288" height="192" fill="${STRIPE_COLOR}"/><rect x="96" width="96" height="192" fill="${PICTURE_COLOR}"/>`,
+);
+const BROKEN_PICTURE = "data:image/png;base64,AAAA";
+
+const PERSON_WITH_PICTURE: AvatarUser = { ...PERSON, avatar_url: PICTURE };
+
+// How long a picture that fails to load may take to give way to the
+// generated avatar, which shows once React renders again after the failure:
+// longer than the default of a poll, since each attempt takes a screenshot,
+// which a busy browser takes slowly.
+const FALLBACK = { timeout: 10_000 };
+
+test("shows a person's profile picture through the circle", async () => {
+  const screen = await renderAvatar(PERSON_WITH_PICTURE);
+  const picture = await screenshot(screen.getByRole("figure"));
+
+  expect(picture.at(3, 3)).toBe(PICTURE_COLOR);
+  expect(picture.at(...SIDE)).toBe(PICTURE_COLOR);
+  expect(picture.at(...CORNER)).toBe(CANVAS_LIGHT);
+});
+
+test("shows avatar-bg through the transparent parts of a profile picture, as while it loads", async () => {
+  const screen = await renderAvatar({
+    ...PERSON,
+    avatar_url: TRANSPARENT_PICTURE,
+  });
+  const picture = await screenshot(screen.getByRole("figure"));
+
+  expect(picture.at(3, 3)).toBe(BACKGROUND);
+  expect(picture.at(...SIDE)).toBe(BACKGROUND);
+  expect(picture.at(...CORNER)).toBe(CANVAS_LIGHT);
+});
+
+test("scales a profile picture that is not square to cover the avatar, cut at its edges rather than distorted", async () => {
+  const screen = await renderAvatar({ ...PERSON, avatar_url: WIDE_PICTURE });
+  const picture = await screenshot(screen.getByRole("figure"));
+
+  // Covered, the middle stripe takes the middle two thirds of the 192 that
+  // show, from 1.5 to 4.5 units; stretched, it would take 2 to 4.
+  expect(picture.at(1.75, 3)).toBe(PICTURE_COLOR);
+  expect(picture.at(4.25, 3)).toBe(PICTURE_COLOR);
+  expect(picture.at(1.25, 3)).toBe(STRIPE_COLOR);
+});
+
+test("shows the generated avatar, at the same size, in place of a profile picture that fails to load", async () => {
+  const screen = await renderAvatar({ ...PERSON, avatar_url: BROKEN_PICTURE });
+  const figure = screen.getByRole("figure");
+
+  await expect
+    .poll(async () => cellColors(await screenshot(figure)), FALLBACK)
+    .toEqual(expectedCells(COLOR, BACKGROUND));
+  const box = figure.element().getBoundingClientRect();
+  expect([box.width, box.height]).toEqual([64, 64]);
+});
+
+test("loads a new profile picture after an earlier one failed", async () => {
+  const screen = await renderAvatar({ ...PERSON, avatar_url: BROKEN_PICTURE });
+  const figure = screen.getByRole("figure");
+  await expect
+    .poll(async () => cellColors(await screenshot(figure)), FALLBACK)
+    .toEqual(expectedCells(COLOR, BACKGROUND));
+
+  await screen.rerender(avatarOf(PERSON_WITH_PICTURE));
+
+  expect((await screenshot(figure)).at(3, 3)).toBe(PICTURE_COLOR);
+});
+
+test.each([
+  ["an inactive person", { ...PERSON, active: false }, GRAY, BACKGROUND],
+  ["a bot account", BOT, BACKGROUND, COLOR],
+  ["an inactive bot account", { ...BOT, active: false }, BACKGROUND, GRAY],
+])(
+  "shows the generated avatar of %s whatever avatar_url holds",
+  async (_, user, filled, empty) => {
+    const screen = await renderAvatar({ ...user, avatar_url: PICTURE });
+    const picture = await screenshot(screen.getByRole("figure"));
+
+    expect(cellColors(picture)).toEqual(expectedCells(filled, empty));
+  },
+);
+
+test.each([
+  ["small", 24],
+  ["medium", 32],
+  ["large", 64],
+] as const)(
+  "shows a profile picture at the %s size, %i px",
+  async (size, pixels) => {
+    const screen = await renderAvatar(PERSON_WITH_PICTURE, size);
+    const box = screen.getByRole("figure").element().getBoundingClientRect();
+
+    expect([box.width, box.height]).toEqual([pixels, pixels]);
+  },
+);
+
+test("hides a profile picture from assistive technologies", async () => {
+  const screen = await render(
+    <Avatar user={PERSON_WITH_PICTURE} size="large" />,
+  );
 
   expect(screen.getByRole("img").query()).toBeNull();
 });

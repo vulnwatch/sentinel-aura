@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
-import { avatarGrid, avatarPicture, sha256 } from "./avatar";
+import { avatarGrid, avatarPattern, sha256 } from "./avatar";
 
-// The picture of the avatar (docs/design-system.md, Avatar, Definition,
-// Version 1; Test Vectors).
+// The pattern of the generated avatar (docs/design-system.md, Avatar,
+// Definition, Version 1; Test Vectors).
 
 function hex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
@@ -66,9 +66,9 @@ const VECTORS = [
 ] as const;
 
 test.each(VECTORS)(
-  "the picture of %s",
+  "the pattern of %s",
   (id, digest, expectedCells, expectedColor) => {
-    const { cells, color } = avatarPicture(id);
+    const { cells, color } = avatarPattern(id);
 
     expect(hex(sha256(utf8(id.toLowerCase()))).slice(0, 6)).toBe(digest);
     expect(cells.map((filled) => (filled ? "1" : "0")).join("")).toBe(
@@ -105,7 +105,7 @@ test.each([
     ["..#..", "..#..", "..#..", "..#..", "..#.."],
   ],
 ])("the grid of %s mirrors around its center column", (id, expected) => {
-  const grid = avatarGrid(avatarPicture(id).cells);
+  const grid = avatarGrid(avatarPattern(id).cells);
 
   expect(
     grid.map((row) => row.map((filled) => (filled ? "#" : ".")).join("")),

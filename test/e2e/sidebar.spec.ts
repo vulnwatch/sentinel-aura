@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page, Request } from "@playwright/test";
 import {
   expect,
   expectAccessible,
@@ -24,6 +24,41 @@ const ENTRIES = [
 
 function sidebar(page: Page) {
   return page.getByRole("navigation", { name: "Main" });
+}
+
+// A fictional profile picture on Slack's image host, the one host besides the
+// UI's origin that the Content Security Policy allows (docs/architecture.md,
+// Security Headers), which the test serves itself: no user of the dataset
+// has a picture (Sentinel docs/features/platform/example-dataset.md, Users),
+// and no test reaches Slack. An SVG document in one color.
+const PICTURE_URL = "https://avatars.slack-edge.com/fictional/jdoe_192.jpg";
+const PICTURE_COLOR = "#2f81f7";
+const PICTURE = `<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" fill="${PICTURE_COLOR}"/></svg>`;
+
+// The color of the pixel at the center of an element, as #rrggbb, from a
+// screenshot of the element, which the page decodes.
+async function centerColor(page: Page, element: Locator): Promise<string> {
+  const png = (await element.screenshot()).toString("base64");
+  return page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+    const bitmap = await createImageBitmap(
+      new Blob([bytes], { type: "image/png" }),
+    );
+    // A new canvas has no other context, so the browser gives it a 2D one.
+    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext(
+      "2d",
+    )!;
+    context.drawImage(bitmap, 0, 0);
+    const { data } = context.getImageData(
+      Math.floor(bitmap.width / 2),
+      Math.floor(bitmap.height / 2),
+      1,
+      1,
+    );
+    return `#${Array.from(data.slice(0, 3), (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join("")}`;
+  }, png);
 }
 
 // Waits until the Ticket list, the landing of jdoe, shows its rows and the
@@ -188,6 +223,53 @@ test.describe("the account menu", () => {
     ).toHaveAttribute("href", "/account/api-keys");
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-list-account-menu.png");
+  });
+
+  test("shows the profile picture of the signed-in user, which the browser loads from Slack's image host without the address of the screen", async ({
+    page,
+  }) => {
+    const pictures: Request[] = [];
+    await page.route(PICTURE_URL, async (route) => {
+      pictures.push(route.request());
+      await route.fulfill({ contentType: "image/svg+xml", body: PICTURE });
+    });
+    // Get Current User gives jdoe the picture.
+    await page.route(
+      (url) => url.pathname === "/api/v1/users/me",
+      async (route) => {
+        const response = await route.fetch();
+        if (!response.ok()) {
+          await route.fulfill({ response });
+          return;
+        }
+        const body: unknown = await response.json();
+        if (
+          typeof body !== "object" ||
+          body === null ||
+          !("data" in body) ||
+          typeof body.data !== "object" ||
+          body.data === null
+        ) {
+          throw new Error("Get Current User returned no user");
+        }
+        await route.fulfill({
+          response,
+          json: { ...body, data: { ...body.data, avatar_url: PICTURE_URL } },
+        });
+      },
+    );
+    await signIn(page);
+    await sidebar(page)
+      .getByRole("button", { name: "Collapse navigation" })
+      .click();
+
+    // In the collapsed sidebar, the account button is the avatar alone.
+    const account = sidebar(page).getByRole("button", { name: "John Doe" });
+    await expect.poll(() => centerColor(page, account)).toBe(PICTURE_COLOR);
+    expect(pictures).not.toHaveLength(0);
+    for (const request of pictures) {
+      expect(await request.allHeaders()).not.toHaveProperty("referer");
+    }
   });
 
   test("applies the theme that the user selects, which lasts across a reload", async ({

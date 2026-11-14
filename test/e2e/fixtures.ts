@@ -139,12 +139,13 @@ export async function expectViewCounts(page: Page) {
   await expect(views.filter({ hasNotText: COUNTED_VIEW })).toHaveCount(0);
 }
 
-// The avatars that the page shows, which the reference screenshots mask: the
-// dataset does not fix the users' ids, from which the avatars are generated
-// (docs/conventions.md, End-to-End Tests). An avatar is hidden from assistive
-// technologies, so it has no role or name to find it by; it is the only
-// picture of the page with the view box of 6 by 6 units that
-// src/components/avatar.tsx draws it in.
+// The generated avatars that the page shows, which the reference screenshots
+// mask: the dataset does not fix the users' ids, from which they are
+// generated (docs/conventions.md, End-to-End Tests). No dataset user has a
+// profile picture, which would need no mask. An avatar is hidden from
+// assistive technologies, so it has no role or name to find it by; a
+// generated avatar is the only picture of the page with the view box of 6 by
+// 6 units that src/components/avatar.tsx draws it in.
 function avatars(page: Page): Locator {
   return page.locator('svg[viewBox="0 0 6 6"]');
 }

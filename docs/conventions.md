@@ -176,7 +176,7 @@ rules; review enforces the rest.
 | `src/query-client.ts` | The query client, with the defaults of every read and change (`docs/behaviors.md`, Retries and Unconfirmed Changes; Loading) |
 | `src/session.ts` | What the UI keeps of the session in the origin's browser storage: the session record, and the saved URL with its check, both forgotten after a sign-out (`docs/behaviors.md`, Return After Sign-in; Session Expiration Message; Sign-out) |
 | `src/session-gate.tsx` | What the root route shows before and around every screen as the session requires: the read of the signed-in user, Sign in after a `401`, the read after a `403`, another user, the return from Sign in, and Sign out (`docs/behaviors.md`, Session); and the signed-in user for the screens that depend on it, with the capability that decides the landing (`docs/screen-map.md`, Landing; Roles) |
-| `src/avatar.ts` | The pattern and the color of the avatar (`docs/design-system.md`, Avatar, Definition, Version 1): the SHA-256 digest of a user's `id`, and the cells and the index of the color in the Palette that it selects |
+| `src/avatar.ts` | The pattern and the color of the generated avatar (`docs/design-system.md`, Avatar, Definition, Version 1): the SHA-256 digest of a user's `id`, and the cells and the index of the color in the Palette that it selects |
 | `src/router.ts` | The route tree and the router, with what every route shows when its screen does not apply: Not found and the page of a failure of the UI itself |
 | `src/search-params.ts` | How the router reads and writes the search parameters of a URL, as text (Routes), and the schemas of the parameters whose value is a whole number or a list |
 | `src/routes/` | One module per route: its definition and its page component |
@@ -185,7 +185,7 @@ rules; review enforces the rest.
 | `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
 | `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` beneath the shared request function (Tests) |
-| `src/test-screenshot.ts` | What several component tests share: the colors of the pixels of a screenshot of an element, such as a mark that is hidden from assistive technologies (Tests) |
+| `src/test-screenshot.ts` | What several component tests share: the colors of the pixels of a screenshot of an element, such as a mark that is hidden from assistive technologies, taken once the pictures of the element have loaded (Tests) |
 | `src/test-setup.ts` | The setup that Vitest runs in the document of every unit and component test file before its tests: it gives that document the focus, which Playwright's Firefox does not reliably move into it |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
@@ -274,6 +274,13 @@ that needs it; content of another kind needs a new row first.
   the HTTP status and, when the response provides one, Sentinel's `code`
   (`docs/architecture.md`, API Client Generation; Sentinel
   `docs/api-spec.md`, Response Format).
+- The shared request function also resolves every `avatar_url` of a
+  successful response, the URL of a user's profile picture, against the URL
+  of that response, as Sentinel's contract requires, so that the cache holds
+  an absolute URL; a value that does not resolve becomes `null`
+  (`docs/behaviors.md`, Representation of a User; Sentinel
+  `docs/features/identity/user-avatars.md`, Avatar URL). No other code
+  resolves or parses it, or derives another URL from it.
 - A request sends only the query parameters and request body members that
   the contract of the pinned version declares for the operation: a later
   Sentinel release within the supported Sentinel versions can declare
@@ -520,8 +527,8 @@ that needs it; content of another kind needs a new row first.
   have none, and neither has the dark theme. A region that changes from one
   run to the next, such as a date that the dataset computes from the instant
   of its load (Sentinel `docs/features/platform/example-dataset.md`, Time
-  Base) or the avatar of a user, whose `id` the dataset does not fix (same
-  document, Users), is masked. Such a region also keeps the same size in
+  Base) or the generated avatar of a user, whose `id` the dataset does not
+  fix (same document, Users), is masked. Such a region also keeps the same size in
   every run, so that neither its mask nor what follows it moves: the text of
   a date changes in width with the day and the month of the run, so each
   date takes, for the screenshot alone, a fixed width of at least its widest

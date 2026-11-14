@@ -72,6 +72,22 @@ export const OTHER_USER: CurrentUserResponse = {
   },
 };
 
+// A fictional profile picture, as the avatar_url of a user
+// (docs/design-system.md, Profile Picture): an SVG document of the width, 192
+// high, with the content, in a data URL, which the browser loads without a
+// network request and which resolves to itself.
+export function fictionalPicture(width: number, content: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="192">${content}</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+// A fictional profile picture in one color, FICTIONAL_PICTURE_COLOR.
+export const FICTIONAL_PICTURE_COLOR = "#2f81f7";
+export const FICTIONAL_PICTURE = fictionalPicture(
+  192,
+  `<rect width="192" height="192" fill="${FICTIONAL_PICTURE_COLOR}"/>`,
+);
+
 // A JSON response with the request identifier that Sentinel sets.
 export function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

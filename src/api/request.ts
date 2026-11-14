@@ -10,6 +10,37 @@ const API_PREFIX = "/api/v1/";
 // an error names (Sentinel docs/api-spec.md, Request Tracing).
 const REQUEST_ID_HEADER = "X-Request-ID";
 
+// The field of every user representation that holds the URL of the user's
+// profile picture: a URI reference, which a client resolves against the URL
+// of the response that carries it (Sentinel
+// docs/features/identity/user-avatars.md, Avatar URL).
+const AVATAR_URL = "avatar_url";
+
+// The URL against which the references of a response resolve: its own URL,
+// after any redirect, or, for a response that states none, the URL of the
+// request as the browser resolves it.
+function baseOf(response: Response, url: string): string {
+  return response.url === ""
+    ? new URL(url, document.baseURI).href
+    : response.url;
+}
+
+// A reviver of JSON.parse that resolves every avatar_url that is a string
+// against the base, and gives null for one that does not resolve, as for a
+// picture that fails to load (docs/conventions.md, API Access).
+function resolvingAvatarUrls(base: string) {
+  return (key: string, value: unknown): unknown => {
+    if (key !== AVATAR_URL || typeof value !== "string") {
+      return value;
+    }
+    try {
+      return new URL(value, base).href;
+    } catch {
+      return null;
+    }
+  };
+}
+
 // An error response of the API, or any other error response that a request
 // receives, such as one produced before the request reaches Sentinel.
 export class ApiError extends Error {
@@ -83,10 +114,11 @@ export type ErrorType<_DeclaredBody> =
   ApiError | NetworkError | UnreadableResponseError | Error;
 
 // Sends a request of the generated client and returns its parsed JSON body,
-// or undefined for 204 No Content. Throws an ApiError for every response
-// whose status is not successful, a NetworkError when no response or no
-// body arrives, and an UnreadableResponseError when the body of a successful
-// response is not JSON; a cancelled request keeps the browser's error.
+// with every avatar_url resolved, or undefined for 204 No Content. Throws an
+// ApiError for every response whose status is not successful, a NetworkError
+// when no response or no body arrives, and an UnreadableResponseError when
+// the body of a successful response is not JSON; a cancelled request keeps
+// the browser's error.
 export async function apiRequest<T>(
   url: string,
   init: RequestInit,
@@ -109,8 +141,10 @@ export async function apiRequest<T>(
   // The generated type of a 204 response is void.
   let body: unknown;
   if (response.status !== 204) {
+    const reviver = resolvingAvatarUrls(baseOf(response, url));
     try {
-      body = await response.json();
+      // As text, then parsed, since response.json() takes no reviver.
+      body = JSON.parse(await response.text(), reviver);
     } catch (error) {
       if (init.signal?.aborted) {
         throw error;

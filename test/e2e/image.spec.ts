@@ -21,7 +21,7 @@ const ASSET_DIR = "/assets";
 // one of nginx/default.conf, which explains it.
 const SECURITY_HEADERS = {
   "content-security-policy":
-    "default-src 'none'; script-src 'self'; style-src 'self' 'sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o='; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types default",
+    "default-src 'none'; script-src 'self'; style-src 'self' 'sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o='; img-src 'self' https://avatars.slack-edge.com; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types default",
   "x-content-type-options": "nosniff",
   "referrer-policy": "no-referrer",
   "cross-origin-opener-policy": "same-origin",

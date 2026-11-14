@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { FICTIONAL_PICTURE, FICTIONAL_PICTURE_COLOR } from "../test-api";
+import { screenshot } from "../test-screenshot";
 import {
   Actor,
   compactName,
@@ -20,6 +22,7 @@ const ALICE: UserFields = {
   full_name: "Alice Smith",
   active: true,
   bot: false,
+  avatar_url: null,
 };
 const SCANNER: UserFields = {
   id: "019a2b3c-4d5e-7f00-8000-00000000000d",
@@ -27,6 +30,7 @@ const SCANNER: UserFields = {
   full_name: "Security Scanner",
   active: true,
   bot: true,
+  avatar_url: null,
 };
 
 // fg and fg-muted of the light theme.
@@ -310,6 +314,23 @@ describe("with the username on a line of its own", () => {
     expect(getComputedStyle(name.element()).color).toBe(FG_MUTED);
   });
 
+  test("shows a person's profile picture as the avatar", async () => {
+    const screen = await render(
+      <section aria-label="Signed-in user" className="w-64">
+        <StackedUser
+          user={{ ...ALICE, avatar_url: FICTIONAL_PICTURE }}
+          size="medium"
+        />
+      </section>,
+    );
+    const place = screen.getByRole("region");
+
+    // The avatar, 32 px, is centered on the two lines beside it.
+    const picture = await screenshot(place);
+    expect(picture.at(16, picture.height / 2)).toBe(FICTIONAL_PICTURE_COLOR);
+    expect(screen.getByRole("img").query()).toBeNull();
+  });
+
   test("wraps the name and the username where the place is too narrow, instead of cutting them", async () => {
     const longName = "Alice Fictional Smith-Wilson-Brown";
     const screen = await render(
@@ -381,6 +402,20 @@ test.each([
     ).toBe(pixels);
   },
 );
+
+test("shows a person's profile picture as the avatar, while the name stays the text of the user", async () => {
+  const screen = await render(
+    <section aria-label="Row" className="flex">
+      <User user={{ ...ALICE, avatar_url: FICTIONAL_PICTURE }} />
+    </section>,
+  );
+  const row = screen.getByRole("region");
+
+  expect((await screenshot(row)).at(12, 12)).toBe(FICTIONAL_PICTURE_COLOR);
+  expect(row.element().textContent).toBe("Alice Smith");
+  expect(screen.getByRole("img").query()).toBeNull();
+  expect(row.element().getBoundingClientRect().height).toBe(24);
+});
 
 describe("actor of a recorded action", () => {
   test("is the user in the full form", async () => {
