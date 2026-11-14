@@ -211,6 +211,38 @@ test("shows the name form without the avatar: the name at the start of its place
   expect(getComputedStyle(name).color).toBe(FG_MUTED);
 });
 
+test.each([
+  ["cut", false],
+  ["wrapped", true],
+])(
+  "stands the name form, %s, on the baseline of the text around it",
+  async (_, wrap) => {
+    const screen = await render(
+      <p className="text-13">
+        Granted by{" "}
+        <User
+          user={{ ...ALICE, active: false }}
+          withAvatar={false}
+          wrap={wrap}
+        />{" "}
+        on
+      </p>,
+    );
+    const line = screen.getByText(/^Granted by/).element();
+    const name = screen.getByText("Alice Smith", { exact: true }).element();
+
+    await expect.element(screen.getByText("Inactive")).toBeVisible();
+    const around = document.createRange();
+    around.selectNodeContents(line.firstChild!);
+    const words = document.createRange();
+    words.selectNodeContents(name);
+    expect(words.getBoundingClientRect().bottom).toBeCloseTo(
+      around.getBoundingClientRect().bottom,
+      0,
+    );
+  },
+);
+
 describe("with the username on a line of its own", () => {
   test.each([
     ["a user with a full name", ALICE, "Alice Smith", "@asmith"],

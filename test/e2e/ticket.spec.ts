@@ -599,8 +599,9 @@ test.describe("for an analyst", () => {
       product.getByText("cpe:/o:example:fles-micro:6.2"),
     ).toBeVisible();
     // Micro 6.2 has no lifecycle data (Product Catalog).
+    // Its eligibility is automatic: neither user-pen nor who set it.
     await expect(product.getByRole("definition")).toHaveText([
-      "Eligible · automatic",
+      "Eligible",
       "Not available",
       "Not observed",
     ]);
@@ -681,22 +682,6 @@ test.describe("for an analyst", () => {
       packages.getByRole("button", { name: /^Phases of/ }),
     ).toHaveCount(0);
 
-    // asmith set the eligibility of Server LTSS 15 SP5 by hand.
-    const ltss = packages.getByRole("button", {
-      name: "Fictional Linux Enterprise Server LTSS 15 SP5",
-    });
-    await ltss.click();
-    await expect(
-      page
-        .getByRole("dialog", {
-          name: "Fictional Linux Enterprise Server LTSS 15 SP5",
-        })
-        .getByRole("definition"),
-    ).toHaveText(["Not eligible · set by hand", "Extended support"]);
-    await expectAccessible(page);
-    await page.keyboard.press("Escape");
-    await expect(ltss).toBeFocused();
-
     // Five hidden records whose parent shows: Server 15 SP7, the SP3 and the
     // excluded SP4 tracks of fictional-kernel, the excluded
     // fictional-kernel-firmware, and fictional-kernel-compat, whose only
@@ -744,6 +729,36 @@ test.describe("for an analyst", () => {
     ).toBeChecked();
     await expect(packages.getByText("SUSE:FLES-15-SP3:Update")).toHaveCount(2);
     await expect(packages.getByText("SUSE:FLES-15-SP4:Update")).toBeVisible();
+  });
+
+  test("shows who set the eligibility of a Product by hand, and when", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-16#packages");
+
+    // asmith set the eligibility of Server LTSS 15 SP5 of SNTL-16 by hand,
+    // to not eligible (Packages, Tracks, and Maintainers).
+    const ltss = part(page, "Packages").getByRole("button", {
+      name: "Fictional Linux Enterprise Server LTSS 15 SP5",
+    });
+    await ltss.click();
+
+    const product = page.getByRole("dialog", {
+      name: "Fictional Linux Enterprise Server LTSS 15 SP5",
+    });
+    await expect(product).toBeFocused();
+    await expect(product.getByRole("definition")).toHaveText([
+      new RegExp(
+        String.raw`^Not eligible, set by handSet by Alice Smith on ${DATE_TIME}$`,
+      ),
+      "Extended support",
+    ]);
+    await expectAccessible(page);
+    await expectSources(page);
+    await expectScreenshot(page, "ticket-product-set-by-hand.png");
+    await page.keyboard.press("Escape");
+    await expect(ltss).toBeFocused();
   });
 
   test("shows the CVSS assessments of a CVE, whose SUSE assessment sets its severity and the eligibility score", async ({

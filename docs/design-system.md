@@ -1617,8 +1617,9 @@ where the labels show, a group of users, and the user card.
   where it follows the name. An inactive user's name is in `fg-muted`, and
   its avatar is gray (Avatar). Where the place is too narrow, only the name,
   with the username that follows it, ends with an ellipsis, unless a table,
-  the account menu, the user card, or the explanation of a priority wraps it
-  (Tables; Account Menu; User card; Priority, Explanation); the labels always
+  the account menu, the user card, the explanation of a priority, or the
+  description list of a popover wraps it (Tables; Account Menu; User card;
+  Priority, Explanation; Menus, Popovers, and Tooltips); the labels always
   show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
