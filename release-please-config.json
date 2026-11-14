@@ -13,6 +13,7 @@
         { "type": "feat", "section": "Features" },
         { "type": "fix", "section": "Bug Fixes" },
         { "type": "docs", "section": "Documentation", "hidden": true },
+        { "type": "chore", "scope": "deps", "section": "Dependencies" },
         { "type": "chore", "section": "Miscellaneous", "hidden": true },
         { "type": "ci", "section": "Continuous Integration", "hidden": true },
         { "type": "test", "section": "Tests", "hidden": true },

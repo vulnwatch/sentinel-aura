@@ -45,7 +45,7 @@ issue_body() {
     cat <<EOF
 The image scan found ${count} fixable HIGH or CRITICAL vulnerabilities in $(scanned_image "${version}" "${image}"). The [workflow run](${RUN_URL}) keeps the complete report.
 
-A fix usually arrives as a Renovate pull request that updates the base image of the \`Containerfile\`. Merge it with a \`fix(deps):\` subject, set when squash-merging rather than by renaming the pull request, whose title Renovate restores: for example \`gh pr merge <number> --squash --subject "fix(deps): <description> (#<number>)"\`. The fix reaches the scanned image with the next release, once the release pull request is merged, and the scan that runs after that release closes this issue if no fixable vulnerability remains. See \`docs/deployment.md\` (Workflow Inventory, Image vulnerability scan; Release Process, Release Chain) and \`docs/conventions.md\` (Workflow, Squash merge).
+A fix usually arrives as the \`nginx\` pull request of Renovate, which updates the base image of the \`Containerfile\` and whose \`chore(deps):\` title proposes a patch release once it is merged. The fix reaches the scanned image with the next release, once the release pull request is merged, and the scan that runs after that release closes this issue if no fixable vulnerability remains. See \`docs/deployment.md\` (Workflow Inventory, Image vulnerability scan; Dependency Updates, Release signal of dependency updates; Release Process, Release Chain).
 
 | Vulnerability | Severity | Package | Installed | Fixed in |
 |---|---|---|---|---|

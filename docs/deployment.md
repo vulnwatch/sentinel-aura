@@ -234,15 +234,14 @@ a release ships it, and skips the `Scan Tracking Issue` job. Every run retains
 the complete report, with every severity and the vulnerabilities without a
 fix, as a 90-day workflow artifact.
 
-A fix usually arrives as a Renovate pull request that updates the base image
-of the `Containerfile` (Dependency Updates), which a maintainer merges with a
-`fix(deps):` subject, so that it is a patch release signal
-(`docs/conventions.md`, Workflow, Squash merge). The fix reaches the scanned
-image with the release that ships it (Release Process, Release Chain); until
-then, the issue stays open. nginx itself comes from nginx.org's package
-repository, not from Alpine's, so the scan does not match nginx's own
-advisories: a security release of nginx arrives as a Renovate update of the
-base image, which a maintainer merges with a `fix(deps):` subject as well.
+A fix usually arrives as the `nginx` pull request of Renovate, which updates
+the base image of the `Containerfile` and whose `chore(deps):` title is a
+patch release signal (Dependency Updates, Release signal of dependency
+updates). The fix reaches the scanned image with the release that ships it
+(Release Process, Release Chain); until then, the issue stays open. nginx
+itself comes from nginx.org's package repository, not from Alpine's, so the
+scan does not match nginx's own advisories: a security release of nginx
+arrives as an `nginx` pull request as well.
 
 **Static Application Security Testing (SAST).** CodeQL runs through GitHub's
 repository-level default setup, not through a workflow of this repository. It
@@ -507,10 +506,10 @@ Its title uses the `feat(deps):` prefix, a minor release signal, when the new
 version is outside the supported Sentinel versions of the current pin: for a
 major update, and for a minor update while the pin is below 1.0.0
 (`docs/architecture.md`, Backend Contract). Every other update uses the
-`chore(deps):` prefix, which carries no release signal, because the supported
-Sentinel versions of the current pin include the new version. Renovate sets
-the prefix from the type of the update and the current version
-(`renovate.jsonc`), so no maintainer sets the subject at squash merge.
+`ci(deps):` prefix, which carries no release signal, because the supported
+Sentinel versions of the current pin include the new version; the next
+release states the new pin. Renovate sets the prefix from the type of the
+update and the current version (`renovate.jsonc`).
 
 Routine updates follow a nightly schedule: Renovate opens them before 06:00
 UTC every day (`schedule` in `renovate.jsonc`), so that their pull requests
@@ -523,11 +522,8 @@ requests that it opens in an hour nor those that it keeps open
 other updates to the next night. Lock file maintenance runs in the same
 window, on Monday only (npm dependencies).
 
-Routine updates use the `ci(deps):` title prefix, or `chore(deps):` for the
-tooling image, the images of the shell lint tools and Trivy, the npm
-dependencies, the base image of the `Containerfile`, and the images of
-`compose.yaml`, which are not used only by CI; neither carries a release
-signal (`docs/conventions.md`, Versioning). So that the titles stay within
+Routine updates use the title prefix that states their release signal
+(Release signal of dependency updates, below). So that the titles stay within
 the length that the `PR Metadata` check allows (`docs/conventions.md`, Pull
 Request Requirements), the `nginx` and `Playwright` pull requests are titled
 with the name of their group, also when they hold a single update, and any
@@ -535,6 +531,63 @@ other digest update of an image names the image without its tag. Renovate
 never merges its own pull requests: `automerge` is disabled, and each one is
 merged like any other pull request, after the repository owner authorizes the
 merge.
+
+**Release signal of dependency updates.** The title prefix that
+`renovate.jsonc` gives an update states whether the update changes what the
+UI's image contains, or, for the pinned Sentinel version, whether it leaves
+the supported Sentinel versions of the current pin (Sentinel version), and
+therefore whether release-please proposes a release for it (Release Process,
+Versions):
+
+| Prefix | Updates | Release signal |
+|---|---|---|
+| `chore(deps):` | What the image contains: the base image of the `Containerfile`, with the nginx image of `compose.yaml` in the `nginx` pull request; the npm `dependencies`, which the build bundles, and the versions that the overrides of `package.json` force; the group of the npm minor and patch updates; the major updates of React's types, which join those of React; and lock file maintenance | Patch, listed under Dependencies |
+| `ci(deps):` | What builds, checks, tests, or runs the UI outside its image: the actions and the tools that the workflows pin; the images of the shell lint tools and Trivy; the PostgreSQL and Redis images of `compose.yaml`; the tooling image and `@playwright/test`, in the `Playwright` pull request; the updates of the other npm `devDependencies` that the group of the npm minor and patch updates does not hold: their major updates, other than those of React's types, and those of Orval; and the pinned Sentinel version within the supported Sentinel versions of the current pin (Sentinel version) | None |
+| `feat(deps):` | The pinned Sentinel version outside the supported Sentinel versions of the current pin (Sentinel version) | Minor, listed under Features |
+| `fix(deps):` | Vulnerability-fix pull requests (below), whatever the dependency | Patch, listed under Bug Fixes |
+
+What the image contains is the inventory of its SBOM (Release Process,
+Supply-Chain Artifacts): the operating system packages that the base image
+brings, nginx included, and the production dependencies that the build
+bundles into the scripts of the UI. The development dependencies and the
+tooling image, which runs the build, also shape what the build produces, such
+as the CSS that Tailwind CSS generates, and so does the API client that an
+Orval update or a change of the pinned Sentinel version within the supported
+Sentinel versions regenerates. A change that such an update makes to the
+build ships with the next release, which the update does not create on its
+own.
+
+Every Renovate pull request keeps the title that Renovate generates, so a
+merged update that changes what the image contains reaches the release pull
+request without a maintainer's action (Release Process, Release Chain).
+Renovate titles a pull request that groups several updates with the prefix of
+one of them, so a group whose updates would take different prefixes sets one
+for all of them:
+
+- the `nginx` group, `chore(deps):`, the prefix of the base image of the
+  `Containerfile`;
+- the group of the npm minor and patch updates, which holds runtime and
+  development dependencies, `chore(deps):`, because it almost always updates
+  a dependency that ships;
+- the `Playwright` group and Orval, whose npm updates leave the group of the
+  npm minor and patch updates, `ci(deps):`; and
+- the major updates of React's types, which `config:recommended` groups with
+  those of React, `chore(deps):`, the prefix of React.
+
+A group of the npm minor and patch updates that holds only development
+dependencies, a lock file maintenance pull request that moves only
+development dependencies, a major update of React's types that arrives
+without one of React, and a vulnerability fix of a development dependency
+still propose a release; that noise is accepted. Conversely, an update of a
+development dependency can raise a locked package that the runtime
+dependencies share; that change ships with the next release. An update that
+no rule classifies keeps the prefix of the `config:recommended` preset,
+`chore(deps):` or, for the runtime dependencies of some managers,
+`fix(deps):`; both are release signals, so an unclassified update is proposed
+for a release rather than silently left out of one. A dependency that the
+image does not contain gets a `ci(deps):` rule when Renovate starts tracking
+it. A maintainer's own dependency pull request follows the same
+classification in its title, with `fix(deps):` for a security fix (below).
 
 Known vulnerabilities are handled by these complementary mechanisms:
 
@@ -554,8 +607,8 @@ Known vulnerabilities are handled by these complementary mechanisms:
   the minimum release age, or earlier by hand (below); a fix outside those
   ranges needs an update of the dependency that requires it, or an override
   (below). A lock file maintenance pull request that delivers a security fix
-  is merged with a `fix(deps):` subject, so that it is a patch release signal
-  too (`docs/conventions.md`, Workflow, Squash merge).
+  keeps its `chore(deps):` title, which proposes a patch release already
+  (Release signal of dependency updates).
 - **An npm fix younger than the minimum release age** cannot be resolved by
   npm, which applies the age when Renovate updates the lockfile: Renovate
   then reports an artifact update problem on the pull request, or opens none
@@ -695,16 +748,17 @@ version from the tag. Until the first release, `package.json` declares
 | Commit subject on `master` | Current version | Release |
 |---|---|---|
 | `fix:` | Any | Patch |
+| `chore(deps):` | Any | Patch |
 | `feat:` | Any | Minor |
 | `fix!:` or `feat!:` | `0.x.y` | Next minor |
 | `fix!:` or `feat!:` | `1.0.0` or later | Next major |
-| `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | Any | None on their own |
+| `docs:`, `chore:` with another scope or none, `ci:`, `test:`, `refactor:` | Any | None on their own |
 
 | Release | Meaning |
 |---|---|
 | Major | A change that users or a deployment must act on, such as the removal of a screen or a change of how the Sentinel host serves the image (`docs/architecture.md`, Packaging and Serving) |
 | Minor | A new screen or capability, or the support of a Sentinel version outside the supported Sentinel versions of the previous release: a later minor version before Sentinel 1.0.0, a later major version from 1.0.0 on (Supported Sentinel Versions) |
-| Patch | A fix, including a security fix and a dependency update that fixes a vulnerability (Dependency Updates) |
+| Patch | A fix, including a security fix and a dependency update that fixes a vulnerability, or an update of a dependency that the image contains (Dependency Updates, Release signal of dependency updates) |
 
 **Before 1.0.0.** The first release is `0.1.0` (`initial-version`). While the
 version is `0.x.y`, a breaking change advances the minor version
@@ -716,9 +770,20 @@ the merge, because a footer only in the pull request description has no
 effect.
 
 **Changelog.** release-please writes `CHANGELOG.md` and the notes of each
-GitHub Release. They list the `feat` and `fix` commits, under Features and
-Bug Fixes, and hide the other types, so commits of only those types open no
-release pull request. Nobody edits `CHANGELOG.md` by hand.
+GitHub Release. They list the `feat`, `fix`, and `chore(deps)` commits, under
+Features, Bug Fixes, and Dependencies, and hide the other types and `chore`
+with another scope or none, so commits of only those open no release pull
+request. Nobody edits `CHANGELOG.md` by hand.
+
+The Dependencies section matches the `deps` scope of a `chore` commit through
+the `scope` key of its entry in the `changelog-sections` of
+`release-please-config.json`, which release-please's configuration schema
+does not document. The changelog writer that release-please bundles applies
+the first entry whose type and scope match, so the Dependencies entry
+precedes the hidden `chore` entry. Should an update of release-please stop
+applying the key, every `chore` commit would appear under Dependencies: a
+release pull request that lists another `chore` commit there shows the
+regression, and no dependency update is left out of a release.
 
 **Configuration.** `release-please-config.json` holds the release policy and
 changes only through a reviewed pull request. `.release-please-manifest.json`
@@ -754,7 +819,7 @@ obligations that the contracts of that version place on clients
 Consumer Compatibility). A change of the pinned version to a version outside
 the range of the current pin, a later minor version before Sentinel 1.0.0 or a
 later major version, is therefore a `feat(deps):` commit, a minor release
-signal, and any other change of the pinned version a `chore(deps):` commit,
+signal, and any other change of the pinned version a `ci(deps):` commit,
 which carries none (Dependency Updates, Sentinel version). A maintainer merges
 the release pull request once a `feat(deps):` change is on `master`, so that a
 host can deploy the new Sentinel version.
