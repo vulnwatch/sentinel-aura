@@ -507,10 +507,9 @@ version is outside the supported Sentinel versions of the current pin: for a
 major update, and for a minor update while the pin is below 1.0.0
 (`docs/architecture.md`, Backend Contract). Every other update uses the
 `ci(deps):` prefix, which carries no release signal, because the supported
-Sentinel versions of the current pin include the new version, so the current
-release supports it; the next release states the new pin. Renovate sets the
-prefix from the type of the update and the current version
-(`renovate.jsonc`), so no maintainer sets the subject at squash merge.
+Sentinel versions of the current pin include the new version; the next
+release states the new pin. Renovate sets the prefix from the type of the
+update and the current version (`renovate.jsonc`).
 
 Routine updates follow a nightly schedule: Renovate opens them before 06:00
 UTC every day (`schedule` in `renovate.jsonc`), so that their pull requests
@@ -535,13 +534,15 @@ merge.
 
 **Release signal of dependency updates.** The title prefix that
 `renovate.jsonc` gives an update states whether the update changes what the
-UI's image contains, and therefore whether release-please proposes a release
-for it (Release Process, Versions):
+UI's image contains, or, for the pinned Sentinel version, whether it leaves
+the supported Sentinel versions of the current pin (Sentinel version), and
+therefore whether release-please proposes a release for it (Release Process,
+Versions):
 
 | Prefix | Updates | Release signal |
 |---|---|---|
-| `chore(deps):` | What the image contains: the base image of the `Containerfile`, with the nginx image of `compose.yaml` in the `nginx` pull request; the npm `dependencies`, which the build bundles, and the versions that the overrides of `package.json` force; the group of the npm minor and patch updates; and lock file maintenance | Patch, listed under Dependencies |
-| `ci(deps):` | What builds, checks, tests, or runs the UI outside its image: the actions and the tools that the workflows pin; the images of the shell lint tools and Trivy; the PostgreSQL and Redis images of `compose.yaml`; the tooling image and `@playwright/test`, in the `Playwright` pull request; the updates of the other npm `devDependencies` that the group of the npm minor and patch updates does not hold: their major updates and those of Orval; and the pinned Sentinel version within the supported Sentinel versions of the current pin (Sentinel version) | None |
+| `chore(deps):` | What the image contains: the base image of the `Containerfile`, with the nginx image of `compose.yaml` in the `nginx` pull request; the npm `dependencies`, which the build bundles, and the versions that the overrides of `package.json` force; the group of the npm minor and patch updates; the major updates of React's types, which join those of React; and lock file maintenance | Patch, listed under Dependencies |
+| `ci(deps):` | What builds, checks, tests, or runs the UI outside its image: the actions and the tools that the workflows pin; the images of the shell lint tools and Trivy; the PostgreSQL and Redis images of `compose.yaml`; the tooling image and `@playwright/test`, in the `Playwright` pull request; the updates of the other npm `devDependencies` that the group of the npm minor and patch updates does not hold: their major updates, other than those of React's types, and those of Orval; and the pinned Sentinel version within the supported Sentinel versions of the current pin (Sentinel version) | None |
 | `feat(deps):` | The pinned Sentinel version outside the supported Sentinel versions of the current pin (Sentinel version) | Minor, listed under Features |
 | `fix(deps):` | Vulnerability-fix pull requests (below), whatever the dependency | Patch, listed under Bug Fixes |
 
@@ -551,9 +552,10 @@ brings, nginx included, and the production dependencies that the build
 bundles into the scripts of the UI. The development dependencies and the
 tooling image, which runs the build, also shape what the build produces, such
 as the CSS that Tailwind CSS generates, and so does the API client that an
-Orval update or a change of the pinned Sentinel version regenerates. A change
-that such an update makes to the build ships with the next release, which the
-update does not create on its own.
+Orval update or a change of the pinned Sentinel version within the supported
+Sentinel versions regenerates. A change that such an update makes to the
+build ships with the next release, which the update does not create on its
+own.
 
 Every Renovate pull request keeps the title that Renovate generates, so a
 merged update that changes what the image contains reaches the release pull
@@ -562,19 +564,21 @@ Renovate titles a pull request that groups several updates with the prefix of
 one of them, so a group whose updates would take different prefixes sets one
 for all of them:
 
-- the `nginx` group, the prefix of the base image of the `Containerfile`;
+- the `nginx` group, `chore(deps):`, the prefix of the base image of the
+  `Containerfile`;
 - the group of the npm minor and patch updates, which holds runtime and
   development dependencies, `chore(deps):`, because it almost always updates
   a dependency that ships;
 - the `Playwright` group and Orval, whose npm updates leave the group of the
   npm minor and patch updates, `ci(deps):`; and
 - the major updates of React's types, which `config:recommended` groups with
-  those of React, the prefix of React.
+  those of React, `chore(deps):`, the prefix of React.
 
 A group of the npm minor and patch updates that holds only development
-dependencies, a lock file maintenance that moves only development
-dependencies, and a vulnerability fix of a development dependency still
-propose a release; that noise is accepted. Conversely, an update of a
+dependencies, a lock file maintenance pull request that moves only
+development dependencies, a major update of React's types that arrives
+without one of React, and a vulnerability fix of a development dependency
+still propose a release; that noise is accepted. Conversely, an update of a
 development dependency can raise a locked package that the runtime
 dependencies share; that change ships with the next release. An update that
 no rule classifies keeps the prefix of the `config:recommended` preset,

@@ -226,7 +226,8 @@
     },
     {
       // config:recommended groups the major updates of React with those of
-      // its types (react monorepo), so the types take the prefix of React.
+      // its types (react monorepo), so the types take the prefix of React,
+      // also when one arrives without React: an accepted noise.
       "description": "React's types, major update: the prefix of React, whose group they join",
       "matchManagers": ["npm"],
       "matchPackageNames": ["@types/react", "@types/react-dom"],
@@ -252,9 +253,8 @@
       // can deploy it, and one within them keeps the pin and the end-to-end
       // tests on Sentinel's latest release — see docs/architecture.md
       // (Backend Contract) and docs/deployment.md (Dependency Updates). A
-      // change within those versions carries no release signal, because the
-      // current release supports the new version; the two rules below give
-      // the others one.
+      // change within those versions carries no release signal; the two
+      // rules below give the others one.
       "description": "Pinned Sentinel version: ci(deps):, outside the schedule and the minimum release age, first",
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["contract/sentinel-version"],
