@@ -6,30 +6,41 @@ import { Tooltip } from "./tooltip";
 
 const COUNT = new Intl.NumberFormat("en-US");
 
+// What a value is, in the singular and the plural, such as "package" and
+// "packages".
+export interface Noun {
+  one: string;
+  other: string;
+}
+
 interface SeveralValuesProps {
   // The values, distinct, in the order in which they show.
   values: readonly string[];
-  // What a value is, in the singular and the plural, such as "package" and
-  // "packages".
-  noun: { one: string; other: string };
+  noun: Noun;
 }
 
 // The most values that the tooltip and the accessible name of "+N" list, so
-// that the tooltip of a record with many values fits in the window.
-const LISTED = 10;
+// that the tooltip of a record with many values fits in the window
+// (docs/design-system.md, Tables).
+export const LISTED = 10;
 
 // A number of values, such as "3 packages" or "1 package".
-function counted(count: number, { one, other }: SeveralValuesProps["noun"]) {
+export function counted(count: number, { one, other }: Noun): string {
   return `${COUNT.format(count)} ${count === 1 ? one : other}`;
+}
+
+// How many values a list of LISTED values does not name, such as "and 42
+// more", or undefined when it names them all.
+export function andMore(rest: number): string | undefined {
+  return rest > 0 ? `and ${COUNT.format(rest)} more` : undefined;
 }
 
 // The values that a list names, at most LISTED, and "and N more" for the
 // others, or undefined without others.
 function listed(values: readonly string[]) {
-  const rest = values.length - LISTED;
   return {
     named: values.slice(0, LISTED),
-    more: rest > 0 ? `and ${COUNT.format(rest)} more` : undefined,
+    more: andMore(values.length - LISTED),
   };
 }
 

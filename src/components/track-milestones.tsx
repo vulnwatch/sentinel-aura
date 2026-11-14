@@ -169,8 +169,8 @@ interface TrackDeliveryProps {
   // The delivery status of the track, one that the pinned contract lists or
   // another that a later Sentinel release returns.
   status: string;
-  // The records that establish the delivery, which its status opens where
-  // the screen shows them, such as the requests of the track, with what the
+  // The records related to the delivery, which its status opens where the
+  // screen shows them, such as the requests of the track, with what the
   // delivery belongs to, which names the status for assistive technologies,
   // such as "fictional-openssl, SUSE:FLES-15-SP7:Update".
   records?: { subject: string; content: ReactNode };

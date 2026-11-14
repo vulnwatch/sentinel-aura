@@ -13,20 +13,19 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 The Ticket screen shows one Ticket: its heading row with its main values; in
 the tab Overview its CVE, the CVSS assessments of its CVE, its package tree,
-with the IBS requests of its tracks, its details, the sources of its CVE,
-which an analyst refetches, and who is involved in it, with the access
-grants of a confidential Ticket, which an
-analyst who manages confidentiality grants and revokes; in the tab References
-its references, the advisories, patches, and other pages of other sites that
-analysts read while they analyze it, which an analyst who manages references
-adds, edits, and deletes; in the tab Affected versions the versions of the
-software that its CVE affects, as the CVE record, its ADPs, GHSA, and OSV
-report them, which an analyst compares with the tracks of its packages; and
-in the tab Audit log its history, which an analyst searches and filters to
-reconstruct who changed what and what Sentinel did by itself.
-Vulnerability and restricted analysts work in it all day; every other user
-reads it, as a package maintainer does a Ticket of one of their packages that
-an analyst shares, and finds in its package tree the tracks that wait for
+with the IBS requests of its tracks, its details, the sources of its CVE, which
+an analyst refetches, and who is involved in it, with the access grants of a
+confidential Ticket, which an analyst who manages confidentiality grants and
+revokes; in the tab References its references, the advisories, patches, and
+other pages of other sites that analysts read while they analyze it, which an
+analyst who manages references adds, edits, and deletes; in the tab Affected
+versions the versions of the software that its CVE affects, as the CVE record,
+its ADPs, GHSA, and OSV report them, which an analyst compares with the tracks
+of its packages; and in the tab Audit log its history, which an analyst
+searches and filters to reconstruct who changed what and what Sentinel did by
+itself. Vulnerability and restricted analysts work in it all day; every other
+user reads it, as a package maintainer does a Ticket of one of their packages
+that an analyst shares, and finds in its package tree the tracks that wait for
 them (`docs/screen-map.md`, Users and Frequent Tasks; Areas and Screens). It
 shows the same Ticket to every user who can see it.
 
@@ -339,7 +338,7 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     `docs/features/packages/package-model.md`, Affectedness-Delivery
     Independence); there its status opens the IBS requests of the track
     (below).
-  - Its IBS requests, on an IBS track of a Ticket with a CVE, the only
+  - Its IBS requests show on an IBS track of a Ticket with a CVE, the only
     tracks to which Sentinel correlates requests, through the CVE that their
     diff names (Sentinel `docs/features/packages/ibs-submission-tracking.md`,
     Scope; Action-Scoped CVE Evidence). Phases shows, at the end of the line
@@ -360,8 +359,10 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     latest request and the ten others that "+N" names: the latest request is
     the one that IBS created last, since Sentinel designates none of them as
     the one in effect (same document, Public API). The reads are sent each
-    time the popover that shows them opens, and not again while it is open;
-    for any other track they are not sent, so a Git track shows none.
+    time the popover that shows them opens, and not again while it is open,
+    also when the tab returns to the foreground meanwhile
+    (`docs/behaviors.md`, Loading); for any other track they are not sent,
+    so a Git track shows none.
   - A request shows the mark of its state (`docs/design-system.md`, Other
     Values): in progress for New and Review, accepted for Accepted, and
     failed for Declined, Revoked, Superseded, and Deleted (Sentinel
@@ -376,11 +377,13 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
     pinned contract does not list shows the mark of an unknown value, and as
     received in the tooltip and the accessible name (`docs/behaviors.md`,
     Unknown Values). When the phase has other requests, "+N" follows, named
-    such as "1 more submission request: SR 900000, Declined", whose tooltip
-    lists, below their number, such as "2 submission requests", the requests
-    from the latest, each such as "SR 900000 · Declined", at most ten, and
-    then how many more, such as "…and 3 more" (`docs/design-system.md`,
-    Tables).
+    after them, separated by semicolons, since each states its state after a
+    comma, such as "2 more submission requests: SR 900000, Declined; SR
+    899990, Superseded by 900000", whose tooltip lists, below their number,
+    such as "3 submission requests", the requests from the latest, each with
+    its state as the tooltip of its link states it, such as "SR 900000 ·
+    Declined", at most ten, and then how many more, such as "…and 3 more"
+    (`docs/design-system.md`, Tables).
   - On a track without a pipeline whose delivery shows on its line, an IBS
     track of a Ticket with a CVE, its status is a value that opens the same
     requests (`docs/design-system.md`, Menus, Popovers, and Tooltips), named
@@ -1130,20 +1133,19 @@ Ignored and Duplicated included, so the screen offers it whatever the status
 
 ## States
 
-- **Loading.** The heading row and the tabs show at once; the panel of
-  Overview shows the loading indicator until the Ticket arrives, the value of
-  Duplicates until its read arrives, and the part CVSS assessments and the
-  section Sources of the CVE until theirs arrives (`docs/behaviors.md`,
-  Loading). Until the read of the work of a maintainer arrives, no track is
-  marked. The popover of the CNA shows its title at once; its short name and
-  its details show once Get CNA arrives, with the loading indicator in place
-  of the details until then. Phases and the popover of a delivery show their
-  phases at once, and the loading indicator in place of each request until
-  its read arrives. The participants show once List Ticket Actors
-  and, for a confidential Ticket, List Access Grants have arrived, with the
-  loading indicator in their place until then; Access grants shows at once on
-  a confidential Ticket, and its dialog shows the loading indicator in place
-  of the grants until they arrive.
+- **Loading.** The heading row and the tabs show at once; the panel of Overview
+  shows the loading indicator until the Ticket arrives, the value of Duplicates
+  until its read arrives, and the part CVSS assessments and the section Sources
+  of the CVE until theirs arrives (`docs/behaviors.md`, Loading). Until the
+  read of the work of a maintainer arrives, no track is marked. The popover of
+  the CNA shows its title at once; its short name and its details show once Get
+  CNA arrives, with the loading indicator in place of the details until then.
+  Phases and the popover of a delivery show their phases at once, and the
+  loading indicator in place of each request until its read arrives. The
+  participants show once List Ticket Actors and, for a confidential Ticket,
+  List Access Grants have arrived, with the loading indicator in their place
+  until then; Access grants shows at once on a confidential Ticket, and its
+  dialog shows the loading indicator in place of the grants until they arrive.
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -1153,41 +1155,43 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   its warning at the top of the panel of the tab, unless it is a `403` or a
   `404`, which replaces the screen. The failure of the read of the duplicates
   shows in place of their value, that of the read of the CVSS assessments in
-  place of the part (`docs/design-system.md`, Tables), and that of the read
-  of the sources in place of the section, without Refetch all, each with Try
-  again where the failure offers it, and leaves the rest of the screen
-  usable. When the read of the work of a maintainer fails, a `warning`
-  message above the package tree says "The tracks that wait for you couldn't
-  be shown.", followed by the message of its status, with Try again where
-  the failure offers it, and the package tree stays usable; once
-  a read of it has succeeded, a later read that fails keeps its marks and
-  says "The tracks that wait for you couldn't be updated.", followed by the
-  message of its status, unless it is a `403` or a `404`, which removes them;
-  while it is sent again, the marks that stay shown are marked as being
-  updated (`docs/behaviors.md`, Where Errors Appear; Loading). When Get CNA
-  fails, whatever its status, the popover of the CNA says "Other details
-  aren't available." in place of its details, as a user card does
-  (`docs/design-system.md`, Menus, Popovers, and Tooltips), and announces it,
-  since the popover holds the focus (`docs/behaviors.md`, Accessibility,
-  Announcements). When List Submission Requests or List Release Requests
-  fails, whatever its status, the place of its request in Phases or in the
-  popover of a delivery says "Not available" in `fg-muted`, and the popover
-  announces "The submission requests aren't available." or "The release
-  requests aren't available."; the phases and the other requests stay shown,
-  and the next opening of the popover reads them again. The screen handles
-  no error code of either specifically (Sentinel
-  `docs/features/packages/ibs-submission-tracking.md`, Public API). The
-  failure of List Ticket Actors or of List Access Grants
-  shows in place of the participants, and that of List Access Grants also in
-  place of the grants in their dialog, each with Try again where the failure
-  offers it. The screen handles one code of List Access Grants specifically:
-  `409 TICKET_NOT_CONFIDENTIAL`, for a Ticket that became non-confidential
-  since the screen read it, which then has no grants (Sentinel
-  `docs/features/tickets/tickets.md`, List Access Grants; Set
-  Confidentiality): the participants show without grants, and the screen
-  reads the Ticket again, which removes Access grants, and turns an open
-  dialog of the access grants to the line that says that the Ticket is no
-  longer confidential (Participants).
+  place of the part (`docs/design-system.md`, Tables), and that of the read of
+  the sources in place of the section, without Refetch all, each with Try again
+  where the failure offers it, and leaves the rest of the screen usable. When
+  the read of the work of a maintainer fails, a `warning` message above the
+  package tree says "The tracks that wait for you couldn't be shown.", followed
+  by the message of its status, with Try again where the failure offers it, and
+  the package tree stays usable; once a read of it has succeeded, a later read
+  that fails keeps its marks and says "The tracks that wait for you couldn't be
+  updated.", followed by the message of its status, unless it is a `403` or a
+  `404`, which removes them; while it is sent again, the marks that stay shown
+  are marked as being updated (`docs/behaviors.md`, Where Errors Appear;
+  Loading). When Get CNA fails, whatever its status, the popover of the CNA
+  says "Other details aren't available." in place of its details, as a user
+  card does (`docs/design-system.md`, Menus, Popovers, and Tooltips), and
+  announces it, since the popover holds the focus (`docs/behaviors.md`,
+  Accessibility, Announcements). When List Submission Requests or List Release
+  Requests fails, whatever its status, the place of its request in Phases or in
+  the popover of a delivery says, in `fg-muted`, "The submission requests
+  aren't available." or "The release requests aren't available.", which the
+  popover announces, for each read that fails, as for the details of a CNA
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips; Track Milestones;
+  `docs/behaviors.md`, Accessibility, Announcements); in Phases, the line goes
+  below the name of its phase where it does not fit beside it, as beside that
+  of Submission. The phases and the other requests stay shown, and the next
+  opening of the popover reads them again. The screen handles no error code of
+  either specifically (Sentinel
+  `docs/features/packages/ibs-submission-tracking.md`, Public API). The failure
+  of List Ticket Actors or of List Access Grants shows in place of the
+  participants, and that of List Access Grants also in place of the grants in
+  their dialog, each with Try again where the failure offers it. The screen
+  handles one code of List Access Grants specifically: `409
+  TICKET_NOT_CONFIDENTIAL`, for a Ticket that became non-confidential since the
+  screen read it, which then has no grants (Sentinel
+  `docs/features/tickets/tickets.md`, List Access Grants; Set Confidentiality):
+  the participants show without grants, and the screen reads the Ticket again,
+  which removes Access grants, and turns an open dialog of the access grants to
+  the line that says that the Ticket is no longer confidential (Participants).
 - **Errors of Grant access and Revoke access.** A failure of Grant access
   shows in its form, which keeps the user chosen (`docs/behaviors.md`, Where
   Errors Appear): the screen handles two codes specifically, at the user

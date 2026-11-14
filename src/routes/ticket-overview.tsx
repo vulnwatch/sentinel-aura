@@ -165,7 +165,13 @@ import {
   focusScreenHeading,
   useFocusHeadingOnRemoval,
 } from "../components/screen-heading";
-import { MoreValues } from "../components/several-values";
+import {
+  andMore,
+  counted,
+  LISTED,
+  MoreValues,
+  type Noun,
+} from "../components/several-values";
 import { Severity } from "../components/severity";
 import { Switch } from "../components/switch";
 import { Tooltip } from "../components/tooltip";
@@ -1220,12 +1226,6 @@ function ProductItem({
   );
 }
 
-// The most requests that the tooltip of "+N" and its accessible name list,
-// as those of a cell of a table do (docs/design-system.md, Tables): the
-// tooltip lists the latest request and nine others, and the accessible name
-// the ten others that follow the latest one.
-const LISTED_REQUESTS = 10;
-
 // How the state of a request shows: its name, and a mark whose shape and
 // color tell the open requests from the accepted and the closed ones
 // (docs/design-system.md, Other Values).
@@ -1281,11 +1281,12 @@ function requestState(request: IbsRequest): string {
 
 // The requests of one track, of the package and the codestream that its
 // reference names (Sentinel docs/features/packages/ibs-submission-tracking.md,
-// Package and Codestream Identity), the most recently created first, as many
-// as "+N" names, and their number; read each time the popover that shows
-// them opens, as the details of a CNA are: the query goes when the popover
-// closes, and is not read again while it is open (same document, Common
-// Query Rules).
+// Package and Codestream Identity), the most recently created first, and
+// their number: the latest request and the ten others that "+N" names, as
+// many as a cell of a table names (docs/design-system.md, Tables); read each
+// time the popover that shows them opens, as the details of a CNA are: the
+// query goes when the popover closes, and is not read again while it is open
+// (same document, Common Query Rules).
 function requestsQuery(packageName: string, reference: string) {
   return {
     params: {
@@ -1293,22 +1294,10 @@ function requestsQuery(packageName: string, reference: string) {
       codestream_name: reference,
       sort_by: "upstream_created_at",
       sort_order: "desc",
-      per_page: LISTED_REQUESTS + 1,
+      per_page: LISTED + 1,
     },
     options: { query: { gcTime: 0, refetchOnWindowFocus: false } },
   } as const;
-}
-
-// A number of requests, such as "2 submission requests" or "1 more release
-// request".
-function counted(count: number, noun: Noun): string {
-  return `${COUNT.format(count)} ${count === 1 ? noun.one : noun.other}`;
-}
-
-// What a request is, in the singular and the plural.
-interface Noun {
-  one: string;
-  other: string;
 }
 
 // The mark of the state of a request, at 14 px, hidden from assistive
@@ -1329,8 +1318,8 @@ function RequestMark({ state }: { state: string }) {
 }
 
 // The kind of a request: its abbreviation, as IBS and Sentinel name it, the
-// kind in words, and what assistive technologies read when the requests of
-// the kind are not available.
+// kind in words, and what its place says when the requests of the kind are
+// not available.
 interface RequestKind {
   abbreviation: string;
   noun: Noun;
@@ -1362,10 +1351,12 @@ interface RequestCellProps {
 // states it after the number, such as "SR 900001, Review"; then, 6 px later,
 // "+N", the number of the others, whose tooltip lists the requests with their
 // state (docs/design-system.md, Tables). While they load, the loading
-// indicator takes their place, and when their read fails, "Not available" in
-// fg-muted, which a status region announces, since the popover holds the
-// focus, as what is not available; opening the popover again reads them
-// again. Without requests, the place says what empty says, or nothing.
+// indicator takes their place, and when their read fails, the line of the
+// failure in fg-muted, such as "The submission requests aren't available.",
+// which a status region announces, since the popover holds the focus, as the
+// details of a popover of a name do (docs/design-system.md, Menus, Popovers,
+// and Tooltips); opening the popover again reads them again. Without
+// requests, the place says what empty says, or nothing.
 function RequestCell({ read, kind, empty }: RequestCellProps) {
   const list = read.data;
   const [latest] = list?.data ?? [];
@@ -1373,19 +1364,18 @@ function RequestCell({ read, kind, empty }: RequestCellProps) {
   const line = (request: IbsRequest, separator: string) =>
     `${kind.abbreviation} ${request.request_number}${separator}${requestState(request)}`;
   const others = (list?.data ?? [])
-    .slice(1, LISTED_REQUESTS + 1)
+    .slice(1, LISTED + 1)
     .map((request) => line(request, ", "));
-  const unnamed = total - 1 - LISTED_REQUESTS;
-  if (unnamed > 0) {
-    others.push(`and ${COUNT.format(unnamed)} more`);
+  const unnamed = andMore(total - 1 - LISTED);
+  if (unnamed !== undefined) {
+    others.push(unnamed);
   }
   return (
     <>
       <output className="block">
         {list === undefined && read.status === "error" && (
           <span className="flex min-h-6 items-center text-fg-muted">
-            <span aria-hidden>Not available</span>
-            <span className="sr-only">{kind.failure}</span>
+            {kind.failure}
           </span>
         )}
       </output>
@@ -1415,13 +1405,9 @@ function RequestCell({ read, kind, empty }: RequestCellProps) {
                 })}: ${others.join("; ")}`}
                 heading={counted(total, kind.noun)}
                 values={list.data
-                  .slice(0, LISTED_REQUESTS)
+                  .slice(0, LISTED)
                   .map((request) => line(request, " · "))}
-                more={
-                  total > LISTED_REQUESTS
-                    ? `and ${COUNT.format(total - LISTED_REQUESTS)} more`
-                    : undefined
-                }
+                more={andMore(total - LISTED)}
               />
             </span>
           )}

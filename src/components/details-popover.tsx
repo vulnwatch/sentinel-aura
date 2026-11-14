@@ -100,8 +100,8 @@ export function DetailsValue({
 interface ValueRecordsProps {
   // The value, which the button shows.
   value: string;
-  // The accessible name of the button, which names the record of the value
-  // and then the value, such as "Delivery of fictional-openssl,
+  // The accessible name of the button, which names what the value is, its
+  // record, and then the value, such as "Delivery of fictional-openssl,
   // SUSE:FLES-15-SP7:Update: In progress".
   label: string;
   // The title of the popover, which names the value without stating it, such
@@ -112,7 +112,7 @@ interface ValueRecordsProps {
   children: ReactNode;
 }
 
-// A value that opens the records that establish it (docs/design-system.md,
+// A value that opens the records related to it (docs/design-system.md,
 // Menus, Popovers, and Tooltips), such as the delivery of a track with its
 // requests: the button of a name, and the popover of a name without actions,
 // which holds its title, a border line, and the records. The popover does not

@@ -19,6 +19,7 @@ import type {
   CVSS30Assessment,
   CVSS40Assessment,
   CurrentUserResponse,
+  IBSRequestStateValue,
   PackageDetail,
   ProductDetail,
   SubmissionRequestItem,
@@ -1564,6 +1565,27 @@ const REQUEST_POPOVERS: [
   ["the popover of a delivery", DELIVERED, inDelivery],
 ];
 
+// What the place of the latest submission request and that of the latest
+// release request say when the read of their requests fails.
+const UNAVAILABLE = {
+  submission: "The submission requests aren't available.",
+  qa: "The release requests aren't available.",
+};
+
+// Fails unless an element shows its text whole within its box, unlike a text
+// for assistive technologies alone, whose box of 1 px clips it.
+function expectShownWhole(element: Element) {
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  const text = range.getBoundingClientRect();
+  const box = boxOf(element);
+  expect(text.width).toBeGreaterThan(0);
+  expect(text.left).toBeGreaterThanOrEqual(box.left - 0.5);
+  expect(text.right).toBeLessThanOrEqual(box.right + 0.5);
+  expect(text.top).toBeGreaterThanOrEqual(box.top - 0.5);
+  expect(text.bottom).toBeLessThanOrEqual(box.bottom + 0.5);
+}
+
 // The distance to the color of the pixel closest to it in the mark of the
 // state of a request, which is hidden from assistive technologies: the 14 px
 // that end 4 px before the link of the request, across the middle of its
@@ -1602,16 +1624,26 @@ function markDrawing(link: Locator): string | undefined {
     ?.closest("svg")?.innerHTML;
 }
 
-// List Submission Requests's response with the request SR 900001, whose
-// state the pinned contract may not list, with the fields that a test sets.
+// A state of a request that the pinned contract does not list, which a later
+// Sentinel release could return.
+const UNLISTED_STATE = "fictional_state";
+
+// List Submission Requests's response with the request SR 900001 in a state,
+// with the fields that a test sets: as the pinned contract types it for a
+// state that the contract lists, and untyped for UNLISTED_STATE.
 function submissionRequestIn(
-  state: string,
+  state: IBSRequestStateValue | typeof UNLISTED_STATE,
   fields: Partial<SubmissionRequestItem> = {},
 ): Response {
-  return jsonResponse(200, {
-    data: [{ ...fictionalSubmissionRequest(fields), state }],
-    meta: { total: 1, page: 1, per_page: 11 },
-  });
+  if (state === UNLISTED_STATE) {
+    return jsonResponse(200, {
+      data: [{ ...fictionalSubmissionRequest(fields), state }],
+      meta: { total: 1, page: 1, per_page: 11 },
+    });
+  }
+  return submissionRequestsResponse([
+    fictionalSubmissionRequest({ state, ...fields }),
+  ]);
 }
 
 // The submission requests SR 900020 to SR 900010 of a track, the latest
@@ -1743,11 +1775,18 @@ describe("the IBS requests of a track", () => {
     expect(qa.getByRole("link").elements()).toHaveLength(0);
     expect(qa.getByRole("button").elements()).toHaveLength(0);
     expect(qa.element().textContent).toMatch(/^QA · QA(?:Due|Overdue) /);
-    expect(qa.element().textContent).not.toMatch(/RR|None|Not available/);
+    expect(qa.element().textContent).not.toMatch(/RR|None|available/);
   });
 
   test.each<
-    [string, string, string, string, LucideIcon, Partial<SubmissionRequestItem>]
+    [
+      IBSRequestStateValue | typeof UNLISTED_STATE,
+      string,
+      string,
+      string,
+      LucideIcon,
+      Partial<SubmissionRequestItem>,
+    ]
   >([
     ["new", "New", "in progress", INFO_ICON, GitPullRequest, {}],
     ["review", "Review", "in progress", INFO_ICON, GitPullRequest, {}],
@@ -1764,8 +1803,8 @@ describe("the IBS requests of a track", () => {
     ],
     ["deleted", "Deleted", "failed", DANGER_ICON, GitPullRequestClosed, {}],
     [
-      "fictional_state",
-      "fictional_state",
+      UNLISTED_STATE,
+      UNLISTED_STATE,
       "unknown",
       NEUTRAL_ICON,
       CircleQuestionMark,
@@ -2012,7 +2051,7 @@ describe("the IBS requests of a track", () => {
       "FICTIONAL_CODE",
     ],
   ])(
-    "say Not available in place of a request in %s whose read fails, announce what is not available, and keep the other request and the phases shown",
+    "say in place of a request in %s whose read fails, in fg-muted, that the requests of its kind aren't available, which a status region announces, and keep the other request and the phases shown",
     async (_, [, fields, open], kind, status, code) => {
       const failure = later();
       const fails = () =>
@@ -2043,21 +2082,26 @@ describe("the IBS requests of a track", () => {
 
       failure.resolve(new Response());
 
-      await expect
-        .element(
-          announced.getByText(
-            kind === "submission"
-              ? "The submission requests aren't available."
-              : "The release requests aren't available.",
-            { exact: true },
-          ),
-        )
-        .toBeInTheDocument();
-      // What shows, which assistive technologies do not read.
-      const shown = announced.getByText("Not available", { exact: true });
+      // The line that shows is the one that the region announces, and
+      // nothing else says it.
+      const shown = announced.getByText(UNAVAILABLE[kind], { exact: true });
       await expect.element(shown).toBeVisible();
+      expectShownWhole(shown.element());
+      expect(shown.element().closest("[aria-hidden]")).toBeNull();
+      expect(announced.element().textContent).toBe(UNAVAILABLE[kind]);
       expect(colorOf(shown.element())).toBe(FG_MUTED);
-      expect(shown.element().closest("[aria-hidden]")).not.toBeNull();
+      expect(failed.element().textContent).not.toMatch(/Not available/);
+      if (open === inPhases && kind === "submission") {
+        // Too wide for the line of "Submission · Maintainer", it stands
+        // below the name of the phase, above its state.
+        const box = boxOf(shown);
+        expect(box.top).toBeGreaterThanOrEqual(
+          boxOf(failed.getByText("Submission", { exact: true })).bottom,
+        );
+        expect(box.bottom).toBeLessThanOrEqual(
+          boxOf(failed.getByText(/^(?:Due|Overdue) /)).top,
+        );
+      }
       expect(failed.getByRole("link").elements()).toHaveLength(0);
       await expect
         .element(other.getByRole("link", { name: /^(?:SR|RR) 9000/ }))
@@ -2069,49 +2113,50 @@ describe("the IBS requests of a track", () => {
     },
   );
 
-  test("are read again when Phases opens again, after a failure too", async () => {
-    let fail = true;
-    const spy = showing(
-      [fictionalPackage()],
-      {},
-      {
-        submissionRequests: () =>
-          fail
-            ? errorResponse(404, "TICKET_NOT_FOUND")
-            : submissionRequestsResponse([fictionalSubmissionRequest()]),
-      },
-    );
-    const { screen } = await renderTree();
-    let phases = await openPhases(screen);
-    await expect
-      .element(
-        phaseIn(phases, "Submission")
-          .getByRole("status")
-          .getByText("The submission requests aren't available.", {
-            exact: true,
-          }),
-      )
-      .toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-    await expect.element(phases).not.toBeInTheDocument();
+  test.each(REQUEST_POPOVERS)(
+    "are read again when %s opens again, after a failure too",
+    async (_, fields, open) => {
+      let fail = true;
+      const spy = showing(
+        [fictionalPackage({ tracks: [fictionalTrack(fields)] })],
+        {},
+        {
+          submissionRequests: () =>
+            fail
+              ? errorResponse(404, "TICKET_NOT_FOUND")
+              : submissionRequestsResponse([fictionalSubmissionRequest()]),
+        },
+      );
+      const { screen } = await renderTree();
+      let places = await open(screen);
+      const shown = places.submission
+        .getByRole("status")
+        .getByText(UNAVAILABLE.submission, { exact: true });
+      await expect.element(shown).toBeVisible();
+      expectShownWhole(shown.element());
+      expect(colorOf(shown.element())).toBe(FG_MUTED);
+      await userEvent.keyboard("{Escape}");
+      await expect.element(places.popover).not.toBeInTheDocument();
 
-    fail = false;
-    phases = await openPhases(screen);
+      fail = false;
+      places = await open(screen);
 
-    const submission = phaseIn(phases, "Submission");
-    await expect
-      .element(submission.getByRole("link", { name: /^SR 900001\b/ }))
-      .toBeVisible();
-    expect(submission.getByRole("status").element().textContent).toBe("");
-    expect(queriesTo(spy, SUBMISSION_REQUESTS)).toEqual([
-      TRACK_QUERY,
-      TRACK_QUERY,
-    ]);
-    expect(queriesTo(spy, RELEASE_REQUESTS)).toEqual([
-      TRACK_QUERY,
-      TRACK_QUERY,
-    ]);
-  });
+      await expect
+        .element(places.submission.getByRole("link", { name: /^SR 900001\b/ }))
+        .toBeVisible();
+      expect(places.submission.getByRole("status").element().textContent).toBe(
+        "",
+      );
+      expect(queriesTo(spy, SUBMISSION_REQUESTS)).toEqual([
+        TRACK_QUERY,
+        TRACK_QUERY,
+      ]);
+      expect(queriesTo(spy, RELEASE_REQUESTS)).toEqual([
+        TRACK_QUERY,
+        TRACK_QUERY,
+      ]);
+    },
+  );
 
   test("are read again each time Phases opens, without showing those of the earlier opening meanwhile", async () => {
     const second = later();

@@ -88,7 +88,9 @@ sidebar is the one exception (Spacing and Sizes).
 - **Red means now.** Red is reserved for what needs attention at once: an
   effective priority of P1, the automatic P1 that an override hides in the
   explanation of a priority (Priority), a deadline that has passed, an error,
-  and the button that confirms a destructive action (Buttons and Links).
+  a failure, such as that of a source of a CVE or of the latest request of a
+  track (Other Values), and the button that confirms a destructive action
+  (Buttons and Links).
   Severity shows as a small mark beside its name, not as a red fill, so that
   red keeps that meaning.
 - **Never color alone.** A text, an icon, or a shape always carries the same
@@ -919,8 +921,12 @@ Milestones), show as a pipeline: the icon of the status of each phase at
   track has in it, stands at the end of the line of the name of the phase, in
   `text-13`, in a column at least 144 px wide, 12 px or more after the name,
   so that the values of the phases line up and each phase keeps its two
-  lines; where Phases is too narrow for both, as at 320 CSS px, the value
-  goes below the name, above the state.
+  lines; where the line of a phase is too narrow for both, such as that of
+  Submission at 320 CSS px, the value goes below the name, above the state.
+  What Phases reads as it opens, such as those requests, loads and fails as
+  the details of a popover of a name do (Menus, Popovers, and Tooltips). Tab
+  reaches the links and buttons of these values in the order of the phases,
+  and Escape first hides a tooltip that shows in Phases, then closes it.
 - A screen document states where the pipeline shows, what more Phases holds,
   such as the requests that a track has in a phase, and what of it the
   accessible name of the pipeline states after the state of each phase.
@@ -1635,9 +1641,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   and the details as a description list whose terms take the width of the
   longest one, so that none wraps (Detail Screens). A link to another site
   that explains the value follows the details, below another `border` line.
-- A value that opens the records that establish it, such as the delivery of
-  a track with its requests, is a button in the style of a name that opens a
-  popover, named after the record of the value and the value, such as
+- A value that opens the records related to it, such as the delivery of a
+  track with its requests, is a button in the style of a name that opens a
+  popover, named after what the value is, its record, and the value, such as
   "Delivery of fictional-openssl, SUSE:FLES-15-SP7:Update: In progress", and
   its popover is that of such a name, without actions: its title names the
   value without stating it, such as "Delivery", since the line of the button

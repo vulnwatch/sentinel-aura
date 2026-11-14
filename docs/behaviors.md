@@ -351,8 +351,9 @@ from the API):
   known value; it is also its accessible name. The status of a source of a
   CVE and the state of a request, which show their mark alone, are the
   exception: an unknown status or state shows the mark of an unknown value,
-  and only assistive technologies read the value as received, and, for a
-  request, the tooltip of its link (`docs/design-system.md`, Other Values);
+  and assistive technologies read the value as received, which, for a
+  request, the tooltip of its link also shows (`docs/design-system.md`, Other
+  Values);
 - a record whose kind is an unknown value, such as an audit event of an
   unknown type or a CVSS assessment of an unknown version, shows its kind as
   received and the fields whose meaning does not depend on the kind, such as
@@ -414,7 +415,8 @@ returns, whatever Sentinel guarantees for its field:
 - **Marked.** A link whose address lies on an origin other than the UI's, a
   link to another site, ends with an icon that shows that it leaves Sentinel
   (`docs/design-system.md`, Buttons and Links), and its accessible name is
-  its text followed by "(another site)".
+  its text, followed by what its pattern adds, such as the state of a request
+  (`docs/design-system.md`, Other Values), and then by "(another site)".
 - **The UI's own origin.** The UI does not interpret an address that the API
   returns: the browser loads it as a new page, also when it lies on the UI's
   own origin, such as a reference to a Ticket of this UI. Such a link leads to
@@ -442,6 +444,10 @@ returns, whatever Sentinel guarantees for its field:
   shows in place of content, because it failed before it showed any data, is
   not read again when the tab returns: its error stays until Try again, where
   the error offers it, or until the screen opens again (Where Errors Appear).
+  What a popover reads as it opens, such as the details of a CNA, is read
+  again when the popover opens again, not while it stays open, also when the
+  tab returns to the foreground meanwhile (`docs/design-system.md`, Menus,
+  Popovers, and Tooltips).
 - A read at intervals is not sent while the tab is hidden, since the screen
   reads its data again when the tab returns. Once a read at intervals has
   failed, its error shows as Where Errors Appear states, and no further read
