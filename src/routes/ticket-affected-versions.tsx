@@ -796,8 +796,8 @@ function TicketAffectedVersions() {
         <FocusHandOff>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <p className="me-auto max-w-180 min-w-0 grow basis-60 pe-2 text-14 text-fg-muted">
-              The versions of the affected software as the sources of the CVE
-              report them.
+              The versions of the affected software as the CVE record and other
+              databases report them.
             </p>
             <SearchField
               placeholder="Search entries"

@@ -44,7 +44,7 @@ const MESSAGE_GONE =
 const NO_MATCH = "No entries match the search.";
 const NO_ENTRIES = "Sentinel has no version data for this CVE.";
 const EXPLANATION =
-  "The versions of the affected software as the sources of the CVE report them.";
+  "The versions of the affected software as the CVE record and other databases report them.";
 
 // The colors of docs/design-system.md (Color Tokens) in the light theme.
 const SURFACE = "rgb(255, 255, 255)";

@@ -617,15 +617,15 @@ one of the CVE sources that Overview shows (Sentinel `docs/data-model.md`,
 CVEAffectedVersion).
 
 - **The toolbar** of a tab without a heading (`docs/design-system.md`,
-  Lists): at its start, "The versions of the affected software as the
-  sources of the CVE report them."; then the search field, "Search entries",
-  and Clear filters while a search applies. The tab applies the search
-  itself to the entries that it read, since the operation takes no parameter
-  (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE Affected
-  Versions, Filtering and sorting): an entry matches when one of its values,
-  as Sentinel returns it, holds the term without regard to case, also a value
-  that only the details of its source show, such as a CPE or a program file,
-  but not the name of its source or the words of its line.
+  Lists): at its start, "The versions of the affected software as the CVE
+  record and other databases report them."; then the search field, "Search
+  entries", and Clear filters while a search applies. The tab applies the
+  search itself to the entries that it read, since the operation takes no
+  parameter (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE
+  Affected Versions, Filtering and sorting): an entry matches when one of its
+  values, as Sentinel returns it, holds the term without regard to case, also
+  a value that only the details of its source show, such as a CPE or a
+  program file, but not the name of its source or the words of its line.
 - **The affected products**, each a group under a band
   (`docs/design-system.md`, Detail Screens) whose level-two heading is its
   name: the product of its entries, or without one their package name, or
