@@ -638,11 +638,11 @@ CVEAffectedVersion).
   `fictional_tar`, are two, since Sentinel does not tell whether they name
   the same software. The products are in alphabetical order of their name.
 - **The sources** of a product, below its band, as a description list
-  (`docs/design-system.md`, Detail Screens): each source a term, a CNA as "CNA", an ADP by its short name,
-  such as "CISA-ADP", GHSA and OSV as Sentinel names them (Sentinel
-  `docs/features/tickets/cve-tracking.md`, CVE Sources), and a scope that the
-  pinned contract does not list as received (`docs/behaviors.md`, Unknown
-  Values); its versions the value. The CNA comes first, as the authority of
+  (`docs/design-system.md`, Detail Screens): each source a term, a CNA as
+  "CNA", an ADP by its short name, such as "CISA-ADP", GHSA and OSV as
+  Sentinel names them (Sentinel `docs/features/tickets/cve-tracking.md`, CVE
+  Sources), and a scope that the pinned contract does not list as received
+  (`docs/behaviors.md`, Unknown Values); its versions the value. The CNA comes first, as the authority of
   the record of the CVE, then the other sources in the order of the API, by
   scope. A source shows once for each set of the fields that its entries
   share, such as each `affected` element of a CVE record, in the order in
