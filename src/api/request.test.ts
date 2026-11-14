@@ -269,7 +269,7 @@ describe("apiRequest", () => {
   test("turns a successful response whose body breaks off into a NetworkError", async () => {
     const failure = new TypeError("network error");
     const response = jsonResponse(200, { data: [] });
-    vi.spyOn(response, "json").mockRejectedValue(failure);
+    vi.spyOn(response, "text").mockRejectedValue(failure);
     stubFetch(response);
 
     const error = await rejection(
@@ -287,7 +287,10 @@ describe("apiRequest", () => {
       controller.abort();
       const reason: unknown = controller.signal.reason;
       const response = jsonResponse(status, { data: [] });
-      vi.spyOn(response, "json").mockRejectedValue(reason);
+      // A successful response is read as text, an error response as JSON.
+      vi.spyOn(response, status === 200 ? "text" : "json").mockRejectedValue(
+        reason,
+      );
       stubFetch(response);
 
       await expect(
@@ -298,6 +301,157 @@ describe("apiRequest", () => {
       ).rejects.toBe(reason);
     },
   );
+});
+
+// A user reference, as a response of the API carries it, with the avatar_url
+// that a test gives it.
+function userWith(avatarUrl: string | null) {
+  return {
+    id: "00000000-0000-0000-0000-000000000001",
+    username: "jdoe",
+    full_name: "John Doe",
+    active: true,
+    bot: false,
+    avatar_url: avatarUrl,
+  };
+}
+
+// A response with its own URL, as the browser gives it after any redirect,
+// which a response that a test creates lacks.
+function responseAt(url: string, body: unknown): Response {
+  const response = jsonResponse(200, body);
+  Object.defineProperty(response, "url", { value: url });
+  return response;
+}
+
+// The avatar_url of every user representation is a URI reference, which the
+// shared request function resolves against the URL of the response that
+// carries it (Sentinel docs/features/identity/user-avatars.md, Avatar URL;
+// docs/conventions.md, API Access).
+describe("the URL of a user's profile picture", () => {
+  const RESPONSE_URL = "https://sentinel.example.com/api/v1/tickets/SNTL-1";
+
+  test.each([
+    [
+      "an absolute URL, which stays unchanged,",
+      "https://avatars.slack-edge.com/fictional/jdoe_192.jpg",
+      "https://avatars.slack-edge.com/fictional/jdoe_192.jpg",
+    ],
+    [
+      "a path",
+      "/pictures/jdoe.jpg",
+      "https://sentinel.example.com/pictures/jdoe.jpg",
+    ],
+    [
+      "a relative path",
+      "pictures/jdoe.jpg",
+      "https://sentinel.example.com/api/v1/tickets/pictures/jdoe.jpg",
+    ],
+    [
+      "a relative path with dot segments",
+      "../../pictures/jdoe.jpg",
+      "https://sentinel.example.com/api/pictures/jdoe.jpg",
+    ],
+    [
+      "a reference without a scheme",
+      "//pictures.example.com/jdoe.jpg",
+      "https://pictures.example.com/jdoe.jpg",
+    ],
+  ])(
+    "resolves %s against the URL of the response",
+    async (_, avatarUrl, resolved) => {
+      stubFetch(responseAt(RESPONSE_URL, { data: userWith(avatarUrl) }));
+
+      const body = await apiRequest("/api/v1/tickets/SNTL-1", {
+        method: "GET",
+      });
+
+      expect(body).toEqual({ data: userWith(resolved) });
+    },
+  );
+
+  test("resolves against the URL of the response after a redirect, not of the request", async () => {
+    stubFetch(
+      responseAt("https://sentinel.example.com/api/v1/users/jdoe", {
+        data: userWith("pictures/jdoe.jpg"),
+      }),
+    );
+
+    const body = await apiRequest("/api/v1/users/me", { method: "GET" });
+
+    expect(body).toEqual({
+      data: userWith(
+        "https://sentinel.example.com/api/v1/users/pictures/jdoe.jpg",
+      ),
+    });
+  });
+
+  test("resolves against the URL of the request when the response states none", async () => {
+    stubFetch(jsonResponse(200, { data: userWith("pictures/jdoe.jpg") }));
+
+    const body = await apiRequest("/api/v1/users/me", { method: "GET" });
+
+    expect(body).toEqual({
+      data: userWith(
+        `${window.location.origin}/api/v1/users/pictures/jdoe.jpg`,
+      ),
+    });
+  });
+
+  test("resolves every user of the response, at any depth, and keeps null", async () => {
+    stubFetch(
+      responseAt(RESPONSE_URL, {
+        data: {
+          assignee: userWith("/pictures/a.jpg"),
+          priority_override_by: userWith(null),
+          packages: [{ maintainers: [userWith("/pictures/b.jpg")] }],
+        },
+      }),
+    );
+
+    const body = await apiRequest("/api/v1/tickets/SNTL-1", {
+      method: "GET",
+    });
+
+    expect(body).toEqual({
+      data: {
+        assignee: userWith("https://sentinel.example.com/pictures/a.jpg"),
+        priority_override_by: userWith(null),
+        packages: [
+          {
+            maintainers: [
+              userWith("https://sentinel.example.com/pictures/b.jpg"),
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  test("gives null for a value that does not resolve, as for a picture that fails to load", async () => {
+    stubFetch(responseAt(RESPONSE_URL, { data: userWith("https://[") }));
+
+    const body = await apiRequest("/api/v1/tickets/SNTL-1", {
+      method: "GET",
+    });
+
+    expect(body).toEqual({ data: userWith(null) });
+  });
+
+  test("resolves no other field", async () => {
+    const references = {
+      url: "pictures/jdoe.jpg",
+      reference_url: "/pictures/jdoe.jpg",
+      title: "avatar_url",
+    };
+    stubFetch(responseAt(RESPONSE_URL, { data: references }));
+
+    const body = await apiRequest("/api/v1/tickets/SNTL-1", {
+      method: "GET",
+    });
+
+    expect(body).toEqual({ data: references });
+  });
 });
 
 describe("the generated client", () => {

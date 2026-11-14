@@ -41,7 +41,21 @@ async function pointerAwayFrom(element: Locator) {
   });
 }
 
+// Waits until every picture that the element loads, such as a profile
+// picture, has loaded and can be drawn, or has failed to load. A picture is
+// hidden from assistive technologies, so the wait finds the pictures as the
+// browser does, as the images of the element.
+export async function picturesLoaded(element: Locator): Promise<void> {
+  await Promise.allSettled(
+    Array.from(element.element().querySelectorAll("img"), (image) =>
+      image.decode(),
+    ),
+  );
+}
+
+// A screenshot of the element as it shows once its pictures have loaded.
 export async function screenshot(element: Locator): Promise<Screenshot> {
+  await picturesLoaded(element);
   await pointerAwayFrom(element);
   const base64 = await page.screenshot({ element, save: false });
   // Measured after the screenshot, which can follow the load of a font that

@@ -2,6 +2,8 @@ import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { FICTIONAL_PICTURE, FICTIONAL_PICTURE_COLOR } from "../test-api";
+import { screenshot } from "../test-screenshot";
 import type { UserFields } from "./user";
 import { UserGroup } from "./user-group";
 
@@ -14,6 +16,7 @@ const PERSON: UserFields = {
   full_name: "Dave Brown",
   active: true,
   bot: false,
+  avatar_url: null,
 };
 const INACTIVE: UserFields = {
   id: "00000000-0000-0000-0000-000000000005",
@@ -21,6 +24,7 @@ const INACTIVE: UserFields = {
   full_name: null,
   active: false,
   bot: false,
+  avatar_url: null,
 };
 const BOT: UserFields = {
   id: "00000000-0000-0000-0000-000000000006",
@@ -28,6 +32,7 @@ const BOT: UserFields = {
   full_name: "Fictional Bot",
   active: false,
   bot: true,
+  avatar_url: null,
 };
 
 async function renderGroup(users: UserFields[]) {
@@ -69,6 +74,15 @@ test("shows every user at the medium size, 6 px apart, a person round and a bot 
   expect(getComputedStyle(person!).borderRadius).not.toBe(
     getComputedStyle(bot!).borderRadius,
   );
+});
+
+test("shows a person's profile picture as the avatar of the user, named in the compact form", async () => {
+  const screen = await renderGroup([
+    { ...PERSON, avatar_url: FICTIONAL_PICTURE },
+  ]);
+  const avatar = screen.getByRole("img", { name: "Dave Brown" });
+
+  expect((await screenshot(avatar)).at(16, 16)).toBe(FICTIONAL_PICTURE_COLOR);
 });
 
 test("is one stop of the Tab key, the arrow keys moving from user to user, and shows the name of the user with the focus", async () => {

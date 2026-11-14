@@ -32,6 +32,7 @@ const ALICE: UserFields = {
   full_name: "Alice Smith",
   active: true,
   bot: false,
+  avatar_url: null,
 };
 
 // A date and time of the API of a local time of the browser.

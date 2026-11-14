@@ -74,6 +74,7 @@ sidebar is the one exception (Spacing and Sizes).
   - [Menus, Popovers, and Tooltips](#menus-popovers-and-tooltips)
 - [Representation of a User](#representation-of-a-user)
 - [Avatar](#avatar)
+  - [Profile Picture](#profile-picture)
   - [Definition, Version 1](#definition-version-1)
   - [Palette](#palette)
   - [Versions](#versions)
@@ -103,7 +104,8 @@ sidebar is the one exception (Spacing and Sizes).
   class, such as `bg-surface`, `text-fg-muted`, or `text-14`, and code uses
   no other color or type size (`docs/conventions.md`, Components and
   Styling): a value that this document lacks is added to it first. The
-  avatar's colors are tokens too (Palette). The favicon, which the browser
+  colors of the generated avatar are tokens too (Palette), while a profile
+  picture shows its own (Profile Picture). The favicon, which the browser
   shows outside the page, has two colors of its own, outside the tokens
   (Sentinel Mark).
 
@@ -119,7 +121,8 @@ sidebar is the one exception (Spacing and Sizes).
 - The theme also sets the page's CSS `color-scheme`, so that the parts that
   the browser draws itself, such as scrollbars and the pickers of fields,
   follow it.
-- The avatar has its own colors, the same in both themes (Avatar).
+- The avatar has its own colors, those of the generated avatar or of a
+  profile picture, the same in both themes (Avatar).
 
 ### Color Tokens
 
@@ -220,8 +223,9 @@ WCAG sets them no minimum:
   the tones, whose text carries their meaning;
 - the background of the selected view, whose `border-strong` boundary and
   weight carry the selection;
-- the background of the avatar against the page, because the avatar
-  accompanies the user's name or is named by it (Representation of a User);
+- the background of the generated avatar, and a profile picture, against the
+  page, because the avatar accompanies the user's name or is named by it
+  (Representation of a User);
 - disabled controls (1.4.3 and 1.4.11 exempt inactive components); and
 - `overlay`.
 
@@ -328,7 +332,7 @@ pair. The icon of a link to another site (Buttons and Links), an icon that
 carries a meaning without a text, has the contrast of the text of its link,
 and the icon of a priority override (Priority) has that of `fg-muted` text on
 its background.
-The avatar colors are in Palette.
+The colors of the generated avatar are in Palette.
 
 ## Type
 
@@ -1630,12 +1634,12 @@ where the labels show, a group of users, and the user card.
   whose name is in `fg-muted` too.
 - **Inactive and Bot:** the label (Labels) follows the name, or the username
   where it follows the name. An inactive user's name is in `fg-muted`, and
-  its avatar is gray (Avatar). Where the place is too narrow, only the name,
-  with the username that follows it, ends with an ellipsis, unless a table,
-  the account menu, the user card, the explanation of a priority, or the
-  description list of a popover wraps it (Tables; Account Menu; User card;
-  Priority, Explanation; Menus, Popovers, and Tooltips); the labels always
-  show.
+  its avatar is the generated one, in gray (Avatar). Where the place is too
+  narrow, only the name, with the username that follows it, ends with an
+  ellipsis, unless a table, the account menu, the user card, the explanation
+  of a priority, or the description list of a popover wraps it (Tables;
+  Account Menu; User card; Priority, Explanation; Menus, Popovers, and
+  Tooltips); the labels always show.
 - **Compact form:** the avatar alone in its control, with the tooltip of its
   name, or the user card where it links to the user.
 - **Group of users:** the users of a group, such as the participants of a
@@ -1687,17 +1691,39 @@ where the labels show, a group of users, and the user card.
 
 ## Avatar
 
-The avatar is a square picture that the UI generates from the user's `id`,
-which is stable and never changes (Sentinel `docs/api-spec.md`, User
-References in Responses), in the colors that the user's `bot` and `active`
-select. The definition is exact, so that any implementation, in any
-language, draws the same picture.
+The avatar of a person is the person's profile picture, the picture whose URL
+Sentinel returns as `avatar_url` (Profile Picture), and otherwise, as for
+every inactive user and bot account, the generated avatar: a square image
+that the UI generates from the user's `id`, which is stable and never changes
+(Sentinel `docs/api-spec.md`, User References in Responses), in the colors
+that the user's `bot` and `active` select. The definition of the generated
+avatar is exact, so that any implementation, in any language, draws the same
+image.
 
-The UI shows the picture through a shape, as a mask that hides what lies
+The UI shows the avatar through a shape, as a mask that hides what lies
 outside it: for a person, a circle that touches the sides of the square,
-which hides part of the cells in the corners; for a bot account, the square
-with its corners rounded at 20 % of its size. The shape belongs to how the UI
-shows the picture, not to its definition.
+which hides the corners of a profile picture and part of the cells of the
+generated avatar in the corners; for a bot account, the square with its
+corners rounded at 20 % of its size. The shape belongs to how the UI shows
+the avatar, not to the definition of the generated avatar.
+
+### Profile Picture
+
+- The profile picture fills the square of the avatar's size, scaled to
+  cover it and cut at its edges rather than distorted where it is not square,
+  and shows through the circle of a person, which tells it from the square
+  avatar of a bot account, since a picture has a lightness of its own.
+- While the picture loads, the square shows `avatar-bg`, the background of
+  the generated avatar, through the circle, and the picture appears over it
+  at once (Focus and Motion); `avatar-bg` also shows through the transparent
+  parts of a picture.
+- A picture that fails to load, such as one whose URL no longer works or
+  whose host the Content Security Policy does not allow
+  (`docs/architecture.md`, Security Headers), gives way to the generated
+  avatar, at the same size and in the same place, without the browser's mark
+  of a broken image.
+- Like the generated avatar, the profile picture has no border and is the
+  same in both themes: the UI does not change its colors.
 
 ### Definition, Version 1
 
@@ -1735,13 +1761,14 @@ do, still look different. SHA-256 is available in the browser's Web Crypto
 API in the secure contexts in which the UI runs and in the standard library
 of most languages.
 
-A bot account differs from a person by two cues that do not depend on hue,
-its shape and its lightness, in both themes and at every size. The shape
-alone would not suffice: `#F0F0F0` differs little from the page and the
-surfaces of the light theme, where the outline of a person's avatar shows
-only through its cells. The gray of an inactive user shows the state on the
-avatar itself, also where no label follows it (`docs/behaviors.md`,
-Representation of a User), and a bot account keeps its shape.
+The generated avatar of a bot account differs from that of a person by two
+cues that do not depend on hue, its shape and its lightness, in both themes
+and at every size. The shape alone would not suffice: `#F0F0F0` differs
+little from the page and the surfaces of the light theme, where the outline
+of a person's generated avatar shows only through its cells. The gray of an
+inactive user shows the state on the avatar itself, also where no label
+follows it (`docs/behaviors.md`, Representation of a User), and a bot account
+keeps its shape.
 
 ### Palette
 
@@ -1758,17 +1785,17 @@ Representation of a User), and a bot account keeps its shape.
 | Gray, for an inactive user | `#6E6E6E` | 4.47 |
 
 Every color has a contrast of at least 3:1 with `#F0F0F0` (WCAG 2.2, 1.4.11
-Non-text Contrast), also in the picture of a bot account, which swaps the
-two. The Palette has no red, which is kept for what needs attention at once
-(Principles): the square of a bot account in red would look like the P1
-mark. The colors and `#F0F0F0` are tokens, `avatar-0` to `avatar-7`,
+Non-text Contrast), also in the generated avatar of a bot account, which
+swaps the two. The Palette has no red, which is kept for what needs attention
+at once (Principles): the square of a bot account in red would look like the
+P1 mark. The colors and `#F0F0F0` are tokens, `avatar-0` to `avatar-7`,
 `avatar-inactive`, and `avatar-bg`, with one value for both themes.
 
 ### Versions
 
 This is version 1. A change of any step of the definition or of the Palette
-changes the avatar of every user, so it is made only as a new version, which
-this document numbers and gives new test vectors.
+changes the generated avatar of every user, so it is made only as a new
+version, which this document numbers and gives new test vectors.
 
 ### Test Vectors
 

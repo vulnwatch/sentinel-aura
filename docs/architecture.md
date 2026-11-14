@@ -71,7 +71,8 @@ UI needs is added to the API for every consumer.
   own. A browser navigation that Sentinel's contract prescribes, such as
   the redirect to the identity provider in the SSO login flow (Sentinel
   `docs/features/identity/sso-authentication.md`, Frontend flow), is not a
-  backend call
+  backend call, and neither is the load of a user's profile picture from the
+  host that the URL in Sentinel's response names (Security Headers)
 - Define backend behavior. A capability that the UI needs and the API lacks is
   specified and implemented in Sentinel first (`AGENTS.md`, Sentinel as an
   External Authority)
@@ -828,6 +829,7 @@ dependencies that reach the browser bring about 30 packages in total.
 | `@internationalized/date` | The dates of React Aria's date fields, which `react-aria-components` brings without exporting them | Yes |
 | `@fontsource-variable/inter` | The font of the design system, Inter (`docs/design-system.md`, Font) | Yes |
 | `lucide-react` | The icon set of the design system, Lucide (`docs/design-system.md`, Icon Set) | Yes |
+| Host `https://avatars.slack-edge.com` | The profile pictures of the users, which the browser loads from Slack (Security Headers) | Yes |
 | `typescript`, `@types/react`, `@types/react-dom` | Language and type check | No |
 | `@types/node` | Type check of the code that runs in Node.js, the end-to-end tests and the configuration of the tools, at the major version of the Node.js line | No |
 | `vite`, `@vitejs/plugin-react` | Build and development server | No |
@@ -889,7 +891,7 @@ headers, which Sentinel requires (Same Origin; Security Headers).
 
 | Header | Value |
 |---|---|
-| `Content-Security-Policy` | `default-src 'none'; script-src 'self'; style-src 'self' '<hash>'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types default` |
+| `Content-Security-Policy` | `default-src 'none'; script-src 'self'; style-src 'self' '<hash>'; img-src 'self' https://avatars.slack-edge.com; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types default` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `no-referrer` |
 | `Cross-Origin-Opener-Policy` | `same-origin` |
@@ -929,6 +931,41 @@ the policy exists for the libraries alone.
 | **A policy `default` that allows only the empty string** (chosen) | A library that empties an element works, an update of it that does so elsewhere too, and every string that holds markup stays blocked |
 | `trusted-types 'none'`, with the assignment rewritten in the library's code at build time | The policy stays as it was, but the build depends on the text of the library's code, which any update can change |
 | A policy `default` that allows any HTML | Removes the protection of Trusted Types against HTML injection |
+
+`img-src` allows, besides the UI's origin, exactly
+`https://avatars.slack-edge.com`, the host of the users' profile pictures
+(`docs/behaviors.md`, Representation of a User). Sentinel stores only the URL
+of a picture that the person uploaded to Slack, and every such URL is on that
+host (Sentinel `docs/features/identity/user-avatars.md`, Accepted Picture
+URL). Sentinel never requests a picture: the browser of each user loads it
+from Slack (Sentinel `docs/features/identity/user-avatars.md`, Security and
+Privacy), so the pictures are an asset that the UI loads from a third party,
+and the repository owner admitted the host (Approved Dependencies;
+`docs/conventions.md`, Dependency Admission). With each picture, the host
+receives the address of the user's browser, the browser's ordinary request
+headers and any cookie that it keeps for that host, and the URL of the
+picture, and so learns whose pictures the user's screens show, but not the URL
+of the screen: `Referrer-Policy` withholds it, and the UI also sets that
+policy on each picture that it loads. A picture on any other host, such as one
+of a later source of the pictures (Sentinel
+`docs/features/identity/user-avatars.md`, Design Notes), is blocked and shows
+as a picture that failed to load, the generated avatar
+(`docs/design-system.md`, Profile Picture), until a change of this policy
+admits its host. A relative URL, which Sentinel can introduce for a picture
+that it serves itself, resolves to the UI's origin and loads.
+
+| Option | Impact |
+|---|---|
+| **The UI's origin and exactly `https://avatars.slack-edge.com`** (chosen) | The pictures that Sentinel stores load, and no other host receives a request for an image of the page. A new source of the pictures needs a change of the policy, and until then its pictures show as the generated avatar |
+| The UI's origin and every `https:` host | A new source works without a change, but an image that a value of the API names could send a request, with what its URL carries, to any host |
+| Also `*.slack-edge.com` and `secure.gravatar.com`, the other hosts of Slack's pictures | Hosts whose pictures Sentinel never stores (Sentinel `docs/features/identity/user-avatars.md`, Accepted Picture URL) |
+| Pictures served from the Sentinel host | No third party learns the users' addresses, but Sentinel serves no image data (Sentinel `docs/features/identity/user-avatars.md`, Scope), so it needs a capability that Sentinel's contract does not have |
+| No profile pictures | The page loads nothing from a third party, and users tell one another apart only by their names and the generated avatars |
+
+**Rationale:** a picture lets people recognize at a glance who acted on a
+Ticket or has access to it, and Sentinel's contract offers it only as a URL
+on Slack's image host; admitting exactly that host keeps every other origin
+out of the page's images.
 
 The image does not set `Strict-Transport-Security`, because the header
 applies to the whole host and only over HTTPS. The component that terminates

@@ -10,7 +10,7 @@ import { Label } from "./label";
 // the complete profile and its manager, and the signed-in user.
 export type UserFields = Pick<
   UserReference,
-  "id" | "username" | "full_name" | "active" | "bot"
+  "id" | "username" | "full_name" | "active" | "bot" | "avatar_url"
 >;
 
 // The display name: full_name, or the username when full_name is null or

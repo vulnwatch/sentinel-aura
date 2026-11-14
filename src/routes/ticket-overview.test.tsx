@@ -4929,6 +4929,7 @@ describe("the participants", () => {
       full_name: "Ana Garcia",
       active: true,
       bot: false,
+      avatar_url: null,
     };
 
     const participants = participantsOf(

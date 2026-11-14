@@ -867,7 +867,7 @@ also meets these requirements, which they cannot check:
 Every screen shows a user in the same way, from the fields that every user
 representation of the API carries, a user reference, a directory entry, the
 complete profile and its manager, and the signed-in user alike: `id`,
-`username`, `full_name`, `active`, and `bot` (Sentinel
+`username`, `full_name`, `active`, `bot`, and `avatar_url` (Sentinel
 `docs/features/identity/user-management.md`, Bot Accounts; Sentinel
 `docs/api-spec.md`, User References in Responses).
 
@@ -875,9 +875,24 @@ complete profile and its manager, and the signed-in user alike: `id`,
   blank: Sentinel returns `full_name` as stored and leaves the fallback to the
   presentation (Sentinel `docs/features/identity/user-management.md`, Get
   User).
-- **Avatar.** A picture that the UI generates from the user's `id`, which
-  never changes; a person's avatar is round (`docs/design-system.md`,
-  Avatar).
+- **Avatar.** A person's profile picture, the picture whose URL Sentinel
+  returns as `avatar_url`, such as the one that the person uploaded to Slack,
+  so that people recognize one another at a glance; or else the generated
+  avatar, an image that the UI generates from the user's `id`, which never
+  changes. A person's avatar is round (`docs/design-system.md`, Avatar).
+  `avatar_url` is a URI reference, which the UI resolves against the URL of
+  the response that carries it; the UI neither parses it nor derives another
+  URL from it (Sentinel `docs/features/identity/user-avatars.md`, Avatar URL).
+  The generated avatar shows when `avatar_url` is `null` or does not resolve,
+  and in place of a profile picture that fails to load, which Sentinel's
+  contract treats like `null`. Each place that shows the avatar loads the
+  picture as it shows it, and one whose picture failed keeps the generated
+  avatar until that place shows the avatar anew, such as when its screen opens
+  again, or until `avatar_url` changes. While the picture loads and when it
+  fails, the avatar keeps its place and size, so that nothing around it moves
+  (`docs/design-system.md`, Profile Picture). The browser loads the picture
+  from the host that serves it, which receives no URL of the UI's screens
+  (`docs/architecture.md`, Security Headers).
 - **Full form.** The avatar followed by the display name. The avatar is
   hidden from assistive technologies, because the name identifies the user.
   Where users must be told apart exactly, such as in a user picker, the
@@ -933,14 +948,18 @@ complete profile and its manager, and the signed-in user alike: `id`,
   `docs/design-system.md` (Representation of a User) defines how the card
   looks, when it shows, and when it hides.
 - **Inactive user** (`active` is `false`). The label "Inactive" follows the
-  name, and the avatar is gray, so that the compact form shows the state at a
-  glance too; in the compact form, the accessible name and the tooltip end
-  with "(inactive)".
+  name, and the avatar is the generated one, in gray, never a profile
+  picture, which Sentinel does not keep for an inactive user (Sentinel
+  `docs/features/identity/user-avatars.md`, Invariants and Writers), so that
+  the compact form shows the state at a glance too; in the compact form, the
+  accessible name and the tooltip end with "(inactive)".
 - **Bot account** (`bot` is `true`), an account that an automation operates
   instead of a person. The label "Bot" follows the name; in the compact form,
   the accessible name and the tooltip end with "(bot)". A bot account is
-  still a user, with its own avatar, which is square and in inverted colors,
-  so that a list of avatars shows at a glance which actions are automated.
+  still a user, with its own avatar, the generated one, which is square and
+  in inverted colors, never a profile picture, which shows a person (Sentinel
+  `docs/features/identity/user-management.md`, Bot Accounts), so that a list
+  of avatars shows at a glance which actions are automated.
   An inactive bot account shows "Bot", then "Inactive", and in the compact
   form ends with "(bot) (inactive)".
 - **No recorded actor.** A recorded action whose actor is `null`, such as one

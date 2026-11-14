@@ -1,6 +1,6 @@
-// The pattern and the color of the avatar (docs/design-system.md, Avatar,
-// Definition, Version 1): the SHA-256 digest of a user's id, and the cells
-// and the index of the color in the Palette that it selects.
+// The pattern and the color of the generated avatar (docs/design-system.md,
+// Avatar, Definition, Version 1): the SHA-256 digest of a user's id, and the
+// cells and the index of the color in the Palette that it selects.
 // src/components/avatar.tsx draws the picture.
 
 // The constants of SHA-256: the first 32 bits of the fractional parts of the
@@ -29,8 +29,8 @@ function rotateRight(word: number, bits: number): number {
 }
 
 // The SHA-256 digest of a message (FIPS 180-4, 6.2). It is computed
-// synchronously, so that an avatar shows in the same render as the name that
-// it accompanies: the digest of Web Crypto is asynchronous only.
+// synchronously, so that a generated avatar shows in the same render as the
+// name that it accompanies: the digest of Web Crypto is asynchronous only.
 export function sha256(message: Uint8Array): Uint8Array {
   // The message, a 1 bit, zeros, and the length of the message in bits as a
   // 64-bit big-endian number, in blocks of 64 bytes (5.1.1).
@@ -97,7 +97,7 @@ export function sha256(message: Uint8Array): Uint8Array {
 // The pattern and the color that a user's id selects (Definition, Version 1,
 // steps 1 to 4). src/components/avatar.tsx gives an inactive user the gray
 // in place of the color, and draws the picture.
-export interface AvatarPicture {
+export interface AvatarPattern {
   // The cells of step 3: cell 5c + r is the cell of column c, from 0 to 2,
   // and row r, from 0 to 4, and is true when it is filled.
   cells: readonly boolean[];
@@ -105,7 +105,7 @@ export interface AvatarPicture {
   color: number;
 }
 
-export function avatarPicture(id: string): AvatarPicture {
+export function avatarPattern(id: string): AvatarPattern {
   const digest = new DataView(
     sha256(new TextEncoder().encode(id.toLowerCase())).buffer,
   );

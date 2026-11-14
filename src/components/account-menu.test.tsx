@@ -18,6 +18,8 @@ import {
 } from "../session";
 import {
   errorResponse,
+  FICTIONAL_PICTURE,
+  FICTIONAL_PICTURE_COLOR,
   FICTIONAL_USER,
   jsonResponse,
   requestsTo,
@@ -25,6 +27,7 @@ import {
   unauthorized,
   type ApiResponder,
 } from "../test-api";
+import { screenshot } from "../test-screenshot";
 import {
   applyThemePreference,
   followThemePreference,
@@ -210,6 +213,20 @@ describe("the account button", () => {
     await expect
       .element(screen.getByRole("tooltip", { name: "Security Scanner (bot)" }))
       .toBeVisible();
+  });
+
+  test("shows the profile picture of the signed-in user as the avatar", async () => {
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, "collapsed");
+    stubSession({
+      data: { ...FICTIONAL_USER.data, avatar_url: FICTIONAL_PICTURE },
+    });
+    const { screen } = await renderApp();
+    const button = accountButton(screen);
+
+    await expect.element(button).toBeVisible();
+    // The avatar, 32 px, 4 px from the start of the button, 40 by 44 px.
+    expect((await screenshot(button)).at(20, 22)).toBe(FICTIONAL_PICTURE_COLOR);
+    expect(button.getByRole("img").query()).toBeNull();
   });
 });
 

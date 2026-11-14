@@ -31,6 +31,7 @@ const DBROWN: UserFields = {
   full_name: "Dave Brown",
   active: true,
   bot: false,
+  avatar_url: null,
 };
 const GHILL: UserFields = {
   id: "00000000-0000-0000-0000-000000000005",
@@ -38,6 +39,7 @@ const GHILL: UserFields = {
   full_name: "Grace Hill",
   active: false,
   bot: false,
+  avatar_url: null,
 };
 
 async function renderMaintainers(users: UserFields[], scale = 1) {
