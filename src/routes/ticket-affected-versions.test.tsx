@@ -322,17 +322,30 @@ interface ShownSource {
 function blocksOf(screen: Screen): Record<string, ShownSource[]> {
   return Object.fromEntries(
     panelOf(screen)
-      .getByRole("heading", { level: 2 })
+      .getByRole("listitem")
+      .filter({ has: page.getByRole("heading", { level: 2 }) })
       .elements()
-      .map((name) => [
-        readText(name),
-        [...(name.closest("li")?.querySelectorAll("dt") ?? [])].map((term) => ({
-          source: readText(term),
-          lines: [
-            ...(term.nextElementSibling?.querySelectorAll("li") ?? []),
-          ].map(readText),
-        })),
-      ]),
+      .map((item) => {
+        const product = page.elementLocator(item);
+        const definitions = product.getByRole("definition").elements();
+        return [
+          readText(product.getByRole("heading", { level: 2 }).element()),
+          product
+            .getByRole("term")
+            .elements()
+            .map((term, index) => ({
+              source: readText(term),
+              lines:
+                definitions[index] === undefined
+                  ? []
+                  : page
+                      .elementLocator(definitions[index])
+                      .getByRole("listitem")
+                      .elements()
+                      .map(readText),
+            })),
+        ];
+      }),
   );
 }
 
@@ -429,19 +442,66 @@ describe("the tab", () => {
 
     await expect.element(heading(screen, "Ticket")).toBeVisible();
     await expect.element(searchOf(screen)).toBeVisible();
+    const explanation = panelOf(screen).getByText(EXPLANATION, {
+      exact: true,
+    });
+    await expect.element(explanation).toBeVisible();
     await expect
       .element(panelOf(screen).getByRole("progressbar", { name: "Loading" }))
       .toBeVisible();
     expect(requestsTo(spy, VERSIONS)).toBe(0);
+    const top = explanation.element().getBoundingClientRect().top;
 
     ticket.resolve(ticketResponse(fictionalTicketDetail()));
 
     await expect
       .poll(() => packageNames(screen))
       .toEqual(["fictional_tar", "fictional-tar", `${REPO} (another site)`]);
-    await expect
-      .element(panelOf(screen).getByText(EXPLANATION, { exact: true }))
-      .toBeVisible();
+    expect(explanation.element().getBoundingClientRect().top).toBe(top);
+  });
+
+  test("starts the products 16 px below the toolbar", async () => {
+    stubVersions();
+
+    const { screen } = await renderTab();
+
+    const toolbar = searchOf(screen).element().closest("div.flex-wrap");
+    const band = panelOf(screen)
+      .getByRole("heading", { level: 2 })
+      .first()
+      .element().parentElement;
+    expect(
+      (band?.getBoundingClientRect().top ?? 0) -
+        (toolbar?.getBoundingClientRect().bottom ?? 0),
+    ).toBe(16);
+  });
+
+  test("keeps the explanation and the search on their row when Clear filters appears, which wraps alone to the end of the next row", async () => {
+    stubVersions();
+    // A main content of 496 px beside the collapsed sidebar: room for the
+    // explanation, at least 240 px, and the search field, but not for Clear
+    // filters too.
+    await page.viewport(600, 800);
+    const { router, screen } = await renderTab();
+    const explanation = panelOf(screen)
+      .getByText(EXPLANATION, { exact: true })
+      .element();
+    const search = searchOf(screen).element();
+    const row = search.getBoundingClientRect().top;
+    expect(
+      Math.abs(explanation.getBoundingClientRect().top - row),
+    ).toBeLessThan(20);
+
+    router.history.push(`${PATH}?search=npm`);
+
+    const clear = panelOf(screen).getByRole("button", {
+      name: "Clear filters",
+    });
+    await expect.element(clear.first()).toBeVisible();
+    expect(search.getBoundingClientRect().top).toBe(row);
+    const clearBox = clear.first().element().getBoundingClientRect();
+    expect(clearBox.top).toBeGreaterThan(search.getBoundingClientRect().bottom);
+    expect(clearBox.right).toBeCloseTo(search.getBoundingClientRect().right, 1);
   });
 
   test("reads the Ticket and the affected versions of its CVE, without parameters, as it opens, and none of the reads of the other tabs", async () => {
@@ -476,8 +536,8 @@ describe("the tab", () => {
   });
 });
 
-describe("the packages", () => {
-  test("show the entries by package, in alphabetical order, each a level-two heading in a band, the name of a repository as a link to it", async () => {
+describe("the products", () => {
+  test("show the entries by affected product, in alphabetical order, each a level-two heading in a band, the name of a repository as a link to it", async () => {
     stubVersions();
 
     const { screen } = await renderTab();
@@ -494,7 +554,7 @@ describe("the packages", () => {
       .toHaveAttribute("href", REPO);
   });
 
-  test("show within a package the block of each source, the CNA first, then the others in the order of the API, with the entries of each in that order", async () => {
+  test("show the blocks of the sources of each product with their lines, in the shape that the example dataset gives CVE-2099-0009", async () => {
     stubVersions();
 
     const { screen } = await renderTab();
@@ -531,7 +591,7 @@ describe("the packages", () => {
     });
   });
 
-  test("put the CNA first within a package, before an ADP that the API orders before it", async () => {
+  test("put the CNA first within a product, before an ADP that the API orders before it, and the entries of each block in the order of the API", async () => {
     showing(
       group(
         "adp:CISA-ADP",
@@ -554,24 +614,76 @@ describe("the packages", () => {
     ]);
   });
 
-  test("name a package by its package name without a product, and show a package without any name last, as Unnamed product", async () => {
+  test("name a product by its package name without a product, and show a product without any name last, as Unnamed product, whose details name it so", async () => {
     showing(
       group(
         "ghsa",
         entry({ version: "1.0" }),
         entry({ package_name: "fictional-zlib", version: "2.0" }),
+        entry({ product: "zstd-fictional", version: "3.0" }),
       ),
-      group("cna", entry({ product: "fictional-zlib", version: "1.2" })),
+      group(
+        "cna",
+        entry({ product: "fictional-zlib", version: "1.2" }),
+        entry({ vendor: "Example", version: "4.0" }),
+      ),
     );
 
     const { screen } = await renderTab();
 
-    expect(packageNames(screen)).toEqual(["fictional-zlib", "Unnamed product"]);
+    expect(packageNames(screen)).toEqual([
+      "fictional-zlib",
+      "zstd-fictional",
+      "Unnamed product",
+    ]);
     expect(blocksOf(screen)["fictional-zlib"]).toEqual([
       { source: "CNA", lines: ["1.2"] },
       { source: "GHSA", lines: ["From 2.0"] },
     ]);
+    const dialog = await openDetails(screen, "CNA for the unnamed product");
+    expect(fieldsOf(dialog)).toEqual([["Vendor", "Example"]]);
   });
+
+  test.each([
+    [
+      "its collection URL, as a link",
+      { collection_url: "https://packages.example.com/fictional-zlib" },
+      "https://packages.example.com/fictional-zlib (another site)",
+    ],
+    [
+      "its Package URL, as text",
+      { package_url: "pkg:npm/fictional-zlib" },
+      "pkg:npm/fictional-zlib",
+    ],
+    [
+      "its CPE, as text",
+      { cpe: "cpe:2.3:a:example:fictional-zlib:*:*:*:*:*:*:*:*" },
+      "cpe:2.3:a:example:fictional-zlib:*:*:*:*:*:*:*:*",
+    ],
+  ])(
+    "name a product without a product, a package name, or a repository by %s",
+    async (_, fields, name) => {
+      showing(
+        group(
+          "cna",
+          entry({
+            ...fields,
+            cpe: "cpe:2.3:a:example:fictional-zlib:*:*:*:*:*:*:*:*",
+            version: "1.0",
+          }),
+        ),
+      );
+
+      const { screen } = await renderTab();
+
+      expect(packageNames(screen)).toEqual([name]);
+      const links = panelOf(screen)
+        .getByRole("heading", { level: 2 })
+        .getByRole("link")
+        .elements();
+      expect(links).toHaveLength(name.endsWith("(another site)") ? 1 : 0);
+    },
+  );
 
   test("show a block for each set of the fields that the entries of a source share", async () => {
     const kernel = {
@@ -627,6 +739,16 @@ describe("the packages", () => {
           "Other versions Affected",
         ],
       },
+    ]);
+    // The details of each block tell it from the other.
+    expect(
+      panelOf(screen)
+        .getByRole("button", { name: /^CNA for/ })
+        .elements()
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual([
+      "CNA for fictional-kernel, 1 of 2",
+      "CNA for fictional-kernel, 2 of 2",
     ]);
   });
 
@@ -715,10 +837,16 @@ describe("the versions", () => {
     ["an entry of OSV without versions", "osv", {}, "Every version"],
     ["an entry of GHSA without versions", "ghsa", {}, "No version details"],
     [
-      "a single version of a scope that the pinned contract does not list",
+      "a single version of a scope that the pinned contract does not list, as received",
       "fictional_scope",
       { version: "1.5" },
       "1.5",
+    ],
+    [
+      "an entry without versions of a scope that the pinned contract does not list",
+      "fictional_scope",
+      { default_status: "affected" },
+      "No version details",
     ],
     [
       "a value that the source writes as a pattern, as received",
@@ -745,7 +873,7 @@ describe("the versions", () => {
     expect(getComputedStyle(version.element()).fontFamily).not.toMatch(/mono/i);
   });
 
-  test("show the status of each line at its end, the entry-level status of a line without its own, and a status that the pinned contract does not list as received", async () => {
+  test("show the status of each line at its end, the entry-level status of a line of a CVE record without its own, and a status that the pinned contract does not list as received; and neither the entry-level status nor its line for a scope that the pinned contract does not list", async () => {
     showing(
       group(
         "cna",
@@ -761,6 +889,11 @@ describe("the versions", () => {
         }),
         entry({ product: "fictional-zlib", version: "1.2", status: "unknown" }),
         entry({ product: "fictional-zlib", version: "1.3", status: "fixed" }),
+        entry({
+          product: "fictional-zlib",
+          version: "1.4",
+          default_status: "affected",
+        }),
       ),
       group(
         "fictional_scope",
@@ -779,10 +912,8 @@ describe("the versions", () => {
         source: "CNA",
         lines: ["1.0 Affected", "1.1 Unaffected", "1.2 Unknown", "1.3 fixed"],
       },
-      {
-        source: "fictional_scope",
-        lines: ["2.0 Affected", "Other versions Affected"],
-      },
+      { source: "CNA", lines: ["1.4 Affected", "Other versions Affected"] },
+      { source: "fictional_scope", lines: ["2.0"] },
     ]);
     // The status ends the line, in a column of 104 px after its padding of
     // 8 px, far from the versions at the start of the line.
@@ -865,7 +996,7 @@ describe("the versions", () => {
 });
 
 describe("the details of a source", () => {
-  test("open from the name of the source, named after its package, with the fields that its entries share", async () => {
+  test("open from the name of the source, named after its product, with the fields that its entries share", async () => {
     stubVersions();
     const { screen } = await renderTab();
 
@@ -874,7 +1005,9 @@ describe("the details of a source", () => {
     await expect
       .element(dialog.getByRole("heading", { name: "CNA" }))
       .toBeVisible();
-    await expect.element(dialog.getByText("fictional-tar")).toBeVisible();
+    await expect
+      .element(dialog.getByText("fictional-tar", { exact: true }))
+      .toBeVisible();
     expect(fieldsOf(dialog)).toEqual([
       ["Vendor", "Example"],
       ["Repository", `${REPO} (another site)`],
@@ -982,9 +1115,10 @@ describe("the details of a source", () => {
 });
 
 describe("the search", () => {
-  test("shows the entries that hold the term, without regard to case, in a value of the entry or of its details, as a new entry of the browser history", async () => {
+  test("shows the entries that hold the term, without regard to case, in a value of the entry or of its details, as a new entry of the browser history, with the focus in the field", async () => {
     stubVersions();
     const { router, screen } = await renderTab();
+    await expect.element(searchOf(screen)).toHaveAttribute("maxlength", "500");
 
     await searchFor(screen, "NPM");
 
@@ -992,6 +1126,7 @@ describe("the search", () => {
       .poll(() => router.state.location.href)
       .toBe(`${PATH}?search=NPM`);
     expect(router.history.length).toBe(2);
+    await expect.element(searchOf(screen)).toHaveFocus();
     await expect
       .poll(() => blocksOf(screen))
       .toEqual({
@@ -1019,9 +1154,19 @@ describe("the search", () => {
       });
   });
 
-  test("keeps the line of the versions that a block does not list while it shows some of its entries", async () => {
+  test("hides the line of the versions that a block does not list while the search hides some of its lines, and keeps it while it hides none", async () => {
     stubVersions();
-    const { screen } = await renderTab(`${PATH}?search=1.4.2`);
+    const { router, screen } = await renderTab(`${PATH}?search=1.4.2`);
+
+    await expect
+      .poll(() => blocksOf(screen))
+      .toEqual({
+        fictional_tar: [
+          { source: "CISA-ADP", lines: ["From 1.0 through 1.4.2 Affected"] },
+        ],
+      });
+
+    router.history.push(`${PATH}?search=custom`);
 
     await expect
       .poll(() => blocksOf(screen))
@@ -1031,12 +1176,34 @@ describe("the search", () => {
             source: "CISA-ADP",
             lines: [
               "From 1.0 through 1.4.2 Affected",
+              "2.0.0-rc1 Unknown",
               "Other versions Unknown",
             ],
           },
         ],
       });
   });
+
+  test.each([
+    [
+      "a product, by the link of its name",
+      "link" as const,
+      `${REPO} (another site)`,
+    ],
+    ["a block of a product", "button" as const, "CNA for fictional-tar"],
+  ])(
+    "moves the focus to the heading when a search takes away %s that holds it",
+    async (_, role, name) => {
+      stubVersions();
+      const { router, screen } = await renderTab();
+      panelOf(screen).getByRole(role, { name, exact: true }).element().focus();
+
+      router.history.push(`${PATH}?search=npm`);
+
+      await expect.element(heading(screen, "SNTL-12")).toHaveFocus();
+      expect(packageNames(screen).length).toBeGreaterThan(0);
+    },
+  );
 
   test("says that no entry matches inside the tab, with Clear filters, which shows every entry and moves the focus to the heading", async () => {
     stubVersions();
@@ -1172,6 +1339,23 @@ describe("the states", () => {
     ).toEqual([]);
   });
 
+  test("move the focus from the search to the heading when the Ticket shows without a CVE, which takes the toolbar away", async () => {
+    const ticket = later();
+    stubVersions({ ticket: () => ticket.promise });
+    const { screen } = await renderApp(PATH);
+    await expect.element(searchOf(screen)).toBeVisible();
+    searchOf(screen).element().focus();
+
+    ticket.resolve(ticketResponse(fictionalTicketDetail({ cve: null })));
+
+    await expect
+      .element(
+        panelOf(screen).getByText("This Ticket has no CVE.", { exact: true }),
+      )
+      .toBeVisible();
+    await expect.element(heading(screen, "SNTL-12")).toHaveFocus();
+  });
+
   test("show the loading indicator in place of the entries until they arrive", async () => {
     const versions = later();
     stubVersions({ versions: () => versions.promise });
@@ -1236,5 +1420,12 @@ describe("the states", () => {
     );
     await expect.element(warning).toBeVisible();
     expect(packageNames(screen)).toHaveLength(3);
+    expect(warning.element().getBoundingClientRect().bottom).toBeLessThan(
+      panelOf(screen)
+        .getByRole("heading", { level: 2 })
+        .first()
+        .element()
+        .getBoundingClientRect().top,
+    );
   });
 });

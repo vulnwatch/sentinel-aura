@@ -1,6 +1,6 @@
 import { createRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { X } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import { useGetCveAffectedVersions } from "../api/generated/cves";
 import type {
@@ -15,13 +15,17 @@ import { EmptyState } from "../components/data-table";
 import {
   DescriptionItem,
   DescriptionList,
+  FIELD,
 } from "../components/description-list";
 import { DetailsName } from "../components/details-popover";
 import { GroupBand } from "../components/group-band";
 import { Loading, UpdatingBar } from "../components/loading";
 import { MarkedValue, type MarkedName } from "../components/marked-value";
 import { dataPlace } from "../components/read-view";
-import { FocusHandOff } from "../components/screen-heading";
+import {
+  FocusHandOff,
+  useFocusHeadingOnRemoval,
+} from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { addressText, WebLink } from "../components/web-link";
 import {
@@ -36,8 +40,9 @@ import { CVE_SOURCE_NAMES, ticketRoute } from "./ticket";
 // Affected versions): the affected products and versions of the CVE of the
 // Ticket, as its sources report them, from Get CVE Affected Versions
 // (Sentinel docs/features/tickets/cve-tracking.md, Get CVE Affected
-// Versions), by package, and within a package by the source that reports
-// them.
+// Versions), by affected product, and within a product by the source that
+// reports them: the provenance scope of the entries, which is not one of the
+// CVE sources that Overview shows.
 
 // A count, its thousands grouped (docs/behaviors.md, Style).
 const COUNT = new Intl.NumberFormat("en-US");
@@ -50,11 +55,12 @@ function entriesText(count: number): string {
 // Sources
 
 // How the entries of a scope read, which depends on the writer of the scope
-// (same section, Interpreting entries): the CVE JSON 5.x containers, cna and
-// adp:*; ghsa; and osv. A scope that the pinned contract does not list reads
-// as a CVE JSON 5.x container, the general shape of the entries (Sentinel
-// docs/data-model.md, CVEAffectedVersion).
-type ScopeKind = "record" | "ghsa" | "osv";
+// (Sentinel docs/features/tickets/cve-tracking.md, Get CVE Affected
+// Versions, Interpreting entries): the CVE JSON 5.x containers, cna and
+// adp:*; ghsa; osv; and other, a scope that the pinned contract does not
+// list, whose entries show only what their fields state, without a meaning
+// that depends on the writer (docs/behaviors.md, Unknown Values).
+type ScopeKind = "record" | "ghsa" | "osv" | "other";
 
 interface Scope {
   // The name of the source, the heading of its block.
@@ -85,7 +91,7 @@ function scopeOf(container: string): Scope {
       kind: container,
     };
   }
-  return { name: container, kind: "record" };
+  return { name: container, kind: "other" };
 }
 
 // ----------------------------------------------------------------------------
@@ -160,7 +166,8 @@ function compareNames(first: PackageView, second: PackageView): number {
 // is the same, as Sentinel returns it: within a package, each block of a
 // source, the CNA first, the authority of the record of the CVE, then the
 // other sources in the order of the API, and the entries of each block in
-// that order (same section, Filtering and sorting).
+// that order (Sentinel docs/features/tickets/cve-tracking.md, Get CVE
+// Affected Versions, Filtering and sorting).
 function packagesOf(groups: readonly CVEAffectedVersionGroup[]): PackageView[] {
   const ordered = [
     ...groups.filter((group) => group.source_container === CNA),
@@ -199,7 +206,8 @@ function packagesOf(groups: readonly CVEAffectedVersionGroup[]): PackageView[] {
 // ----------------------------------------------------------------------------
 // Versions
 
-// The statuses of an entry (same section, CVEAffectedVersionEntry), with the
+// The statuses of an entry (Sentinel docs/features/tickets/cve-tracking.md,
+// Get CVE Affected Versions, CVEAffectedVersionEntry), with the
 // tone of their meaning: Affected orange, as the affectedness of a track,
 // Unaffected green, Unknown gray (docs/design-system.md, Other Values).
 const STATUSES = new Map<string, MarkedName>(
@@ -210,9 +218,10 @@ const STATUSES = new Map<string, MarkedName>(
   }),
 );
 
-// Whether an entry names versions: a CVE JSON 5.x entry without version
-// fields carries no version detail, and its block says what applies to its
-// versions (OtherVersions).
+// Whether an entry makes a line of its own: an entry of a CVE JSON 5.x
+// container without a version, an end, or a status of its own carries no
+// version detail, and the last line of its block says what applies to its
+// versions (SourceItem).
 function namesVersions(entry: CVEAffectedVersionEntry, kind: ScopeKind) {
   return (
     kind !== "record" ||
@@ -240,11 +249,13 @@ function capitalized(word: string): string {
   return `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 }
 
-// The versions of an entry in words, as its scope means them (same section,
+// The versions of an entry in words, as its scope means them (Sentinel
+// docs/features/tickets/cve-tracking.md, Get CVE Affected Versions,
 // Interpreting entries): a range, "From 1.0 before 1.5", "From 1.0 through
 // 1.4.2", or, without a start, "Before 1.5"; a single version, "1.5"; an
 // open range of GHSA or OSV, "From 1.0.0"; an entry of OSV without versions,
-// "Every version"; and an entry without version details.
+// "Every version"; and an entry without version details. A version alone of
+// a scope that the pinned contract does not list shows as received.
 function versionsOf(
   entry: CVEAffectedVersionEntry,
   kind: ScopeKind,
@@ -269,7 +280,11 @@ function versionsOf(
     );
   }
   if (version !== null) {
-    if (kind === "record" || entry.version_type === "exact") {
+    if (
+      kind === "record" ||
+      kind === "other" ||
+      entry.version_type === "exact"
+    ) {
       return <VersionValue value={version} commit={commit} />;
     }
     return (
@@ -437,23 +452,34 @@ interface SourceItemProps {
   // The entries of the block that the search shows, in its order.
   shown: readonly CVEAffectedVersionEntry[];
   name: string | null;
+  // What tells the block from the other blocks of its source in its product,
+  // such as ", 2 of 2", or "" for the one block of its source.
+  ordinal: string;
 }
 
-// The block of a source within its package, a field of the description list
-// of the package (docs/design-system.md, Detail Screens): the name of the
-// source as its term, in text-13, fg-muted, in the column of 104 px, which
-// opens the fields that its entries share, as the name of a record opens its
-// details (docs/design-system.md, Menus, Popovers, and Tooltips), or is text
-// without any; and its versions as its value, a list, each line with its
-// status, and, for a CVE JSON 5.x container with a default status, a last
-// line with what applies to the versions that it does not list: "Other
-// versions", or "All versions" when it lists none.
-function SourceItem({ block, shown, name }: SourceItemProps) {
+// The block of a source within its affected product, a field of the
+// description list of the product (docs/design-system.md, Detail Screens):
+// the name of the source as its term, in text-13, fg-muted, in the column of
+// 104 px, which opens the fields that its entries share, as the name of a
+// record opens its details (docs/design-system.md, Menus, Popovers, and
+// Tooltips), or is text without any; and its versions as its value, a list,
+// each line with its status. For a CVE JSON 5.x container, an entry without
+// a status of its own takes the status of its affected[] element, and a last
+// line with that status says what applies to the versions that the source
+// does not list, "Other versions", or "All versions" when it lists none,
+// while the search hides none of its lines, so that it never seems to cover
+// a version that the search hides. When the block leaves the page with the
+// focus, as after a search, the focus moves to the screen's heading
+// (docs/behaviors.md, Accessibility, Focus after an action).
+function SourceItem({ block, shown, name, ordinal }: SourceItemProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusHeadingOnRemoval(ref);
   const [first] = block.entries;
   if (first === undefined) {
     return null;
   }
   const { kind } = block.scope;
+  const record = kind === "record";
   const listed = block.entries.filter((entry) => namesVersions(entry, kind));
   const lines = shown.filter((entry) => namesVersions(entry, kind));
   const fields = blockFields({
@@ -462,14 +488,14 @@ function SourceItem({ block, shown, name }: SourceItemProps) {
     types: versionTypes(block.entries),
   });
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] items-baseline gap-y-1 @min-[17.5rem]:grid-cols-[6.5rem_minmax(0,1fr)] @min-[17.5rem]:gap-x-3">
+    <div ref={ref} className={`${FIELD} items-baseline gap-y-1`}>
       <dt className="text-13 text-fg-muted">
         {fields.length === 0 ? (
           block.scope.name
         ) : (
           <DetailsName
             name={block.scope.name}
-            label={`${block.scope.name} for ${name ?? "the unnamed product"}`}
+            label={`${block.scope.name} for ${name ?? "the unnamed product"}${ordinal}`}
             identifier={name ?? undefined}
           >
             <DescriptionList>{fields}</DescriptionList>
@@ -482,28 +508,50 @@ function SourceItem({ block, shown, name }: SourceItemProps) {
             <VersionLine
               // oxlint-disable-next-line react/no-array-index-key -- the entries have no identifier, and their order is fixed
               key={index}
-              status={entry.status ?? entry.default_status}
+              status={entry.status ?? (record ? entry.default_status : null)}
             >
               {versionsOf(entry, kind)}
             </VersionLine>
           ))}
-          {kind === "record" && first.default_status !== null && (
-            <VersionLine status={first.default_status}>
-              <span className="text-fg-muted">
-                {listed.length === 0 ? "All versions" : "Other versions"}
-              </span>
-            </VersionLine>
-          )}
-          {kind === "record" &&
-            first.default_status === null &&
-            listed.length === 0 && (
-              <VersionLine status={null}>
-                <AbsentValue name="No version details" />
+          {record &&
+            first.default_status !== null &&
+            lines.length === listed.length && (
+              <VersionLine status={first.default_status}>
+                <span className="text-fg-muted">
+                  {listed.length === 0 ? "All versions" : "Other versions"}
+                </span>
               </VersionLine>
             )}
+          {record && first.default_status === null && listed.length === 0 && (
+            <VersionLine status={null}>
+              <AbsentValue name="No version details" />
+            </VersionLine>
+          )}
         </ul>
       </dd>
     </div>
+  );
+}
+
+// What tells each block of a product from the other blocks of its source in
+// the product, by the key of the block: ", 1 of 2" and ", 2 of 2" for a
+// source with two blocks, such as the Git ranges and the stable versions of
+// a kernel CVE, which the accessible name of its details adds, so that each
+// name tells its control from the others (WCAG 2.2, 2.4.6), and "" for a
+// source with one. A search keeps the ordinal of each block.
+function ordinalsOf(blocks: readonly SourceBlock[]): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const block of blocks) {
+    counts.set(block.scope.name, (counts.get(block.scope.name) ?? 0) + 1);
+  }
+  const seen = new Map<string, number>();
+  return new Map(
+    blocks.map((block) => {
+      const count = counts.get(block.scope.name) ?? 1;
+      const rank = (seen.get(block.scope.name) ?? 0) + 1;
+      seen.set(block.scope.name, rank);
+      return [block.key, count === 1 ? "" : `, ${rank} of ${count}`];
+    }),
   );
 }
 
@@ -513,17 +561,22 @@ interface PackageGroupProps {
   shown: ReadonlyMap<string, readonly CVEAffectedVersionEntry[]>;
 }
 
-// A package as a group under a band (GroupBand): its name as a level-two
-// heading, a link where it is an address, or "Unnamed product" in fg-muted
-// for entries without any field that names one; below it, indented by
-// 12 px, the blocks of its sources as a description list, 12 px apart, each
-// term above its value where the list is narrower than 280 px.
+// An affected product as a group under a band (GroupBand): its name as a
+// level-two heading, a link where it is a web address, or "Unnamed product"
+// in fg-muted for entries without any field that names one; below it,
+// indented by 12 px, the blocks of its sources as a description list, 12 px
+// apart, each term above its value where the list is narrower than 280 px.
+// When the product leaves the page with the focus, as after a search, the
+// focus moves to the screen's heading.
 function PackageGroup({ view, shown }: PackageGroupProps) {
+  const ref = useRef<HTMLLIElement>(null);
+  useFocusHeadingOnRemoval(ref);
+  const ordinals = ordinalsOf(view.blocks);
   const blocks = view.blocks.filter(
     (block) => (shown.get(block.key)?.length ?? 0) > 0,
   );
   return (
-    <li>
+    <li ref={ref}>
       <GroupBand
         level={2}
         heading={
@@ -544,6 +597,7 @@ function PackageGroup({ view, shown }: PackageGroupProps) {
               block={block}
               shown={shown.get(block.key) ?? []}
               name={view.name}
+              ordinal={ordinals.get(block.key) ?? ""}
             />
           ))}
         </dl>
@@ -624,11 +678,13 @@ interface VersionsProps {
 
 // The entries of the CVE, from Get CVE Affected Versions,
 // GET /api/v1/cves/{cve_id}/affected-versions, read when the tab opens:
-// every entry at once, without pages (same section, Pagination), by package,
-// 32 px apart. "Sentinel has no version data for this CVE." without entries,
-// since Sentinel does not tell a scope that its source emptied from one that
-// it never observed (same section, Empty and absent scopes); "No entries
-// match the search." with Clear filters when none holds the term.
+// every entry at once, without pages (Sentinel
+// docs/features/tickets/cve-tracking.md, Get CVE Affected Versions,
+// Pagination), by affected product, 32 px apart. "Sentinel has no version
+// data for this CVE." without entries, since Sentinel does not tell a scope
+// that its source emptied from one that it never observed (same section,
+// Empty and absent scopes); "No entries match the search." with Clear
+// filters when none holds the term.
 function Versions({ cveId, search, searched, onClear }: VersionsProps) {
   const read = useGetCveAffectedVersions(cveId);
   const place = dataPlace(read);
@@ -698,15 +754,18 @@ function Versions({ cveId, search, searched, onClear }: VersionsProps) {
 
 // The tab, which takes the whole width (docs/design-system.md, Detail
 // Screens): at the start of its toolbar, in fg-muted, what the entries are,
-// and at its end the search field and, while a search applies, Clear
-// filters (docs/design-system.md, Lists); the packages 24 px below. The
-// toolbar shows at once with the tabs, and without the search once the
-// Ticket shows without a CVE; the entries wait for the Ticket, which names
-// the CVE, and a Ticket without a CVE says so. The tab filters the entries
-// itself, since Get CVE Affected Versions takes no parameter (same section,
-// Filtering and sorting). A search announces what the tab shows; the tab as
-// it opens does not (docs/behaviors.md, Accessibility, Focus after a
-// navigation).
+// which takes the room that the controls leave, at least 240 px or the
+// whole row; then the search field and, while a search applies, Clear
+// filters, each an item of the row, so that the row wraps one control at a
+// time (docs/design-system.md, Lists); the products 16 px below. The toolbar
+// shows at once with the tabs, and goes once the Ticket shows without a CVE,
+// handing the focus to the screen's heading; the entries wait for the
+// Ticket, which names the CVE, and a Ticket without a CVE says so. The tab
+// filters the entries itself, since Get CVE Affected Versions takes no
+// parameter (Sentinel docs/features/tickets/cve-tracking.md, Get CVE
+// Affected Versions, Filtering and sorting). A search announces what the tab
+// shows; the tab as it opens does not (docs/behaviors.md, Accessibility,
+// Focus after a navigation).
 function TicketAffectedVersions() {
   const { ticketId } = ticketAffectedVersionsRoute.useParams();
   const search = ticketAffectedVersionsRoute.useSearch();
@@ -729,18 +788,17 @@ function TicketAffectedVersions() {
   const clear = () => {
     refine("");
   };
-  const hasCve = ticket?.cve !== null && ticket?.cve !== undefined;
+  // Until the Ticket shows without a CVE.
+  const toolbar = ticket?.cve !== null;
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {hasCve && (
-          <p className="max-w-180 min-w-60 flex-1 text-14 text-fg-muted">
-            The versions of the affected software as the sources of the CVE
-            report them.
-          </p>
-        )}
-        {ticket?.cve !== null && (
-          <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+      {toolbar && (
+        <FocusHandOff>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <p className="me-auto max-w-180 min-w-0 grow basis-60 pe-2 text-14 text-fg-muted">
+              The versions of the affected software as the sources of the CVE
+              report them.
+            </p>
             <SearchField
               placeholder="Search entries"
               applied={search.search ?? ""}
@@ -756,9 +814,9 @@ function TicketAffectedVersions() {
               </FocusHandOff>
             )}
           </div>
-        )}
-      </div>
-      <div className={ticket?.cve === null ? "" : "mt-6"}>
+        </FocusHandOff>
+      )}
+      <div className={toolbar ? "mt-4" : ""}>
         {ticket === undefined ? (
           <Loading />
         ) : ticket.cve === null ? (

@@ -2011,6 +2011,7 @@ test.describe("the affected versions", () => {
       }),
     ).toHaveCount(2);
     await expect(affectedPackages(page)).toHaveCount(0);
+    await expectAccessible(page);
     await expectScreenshot(page, "ticket-affected-versions-no-match.png");
 
     await affectedPanel(page)
@@ -2052,6 +2053,7 @@ test.describe("the affected versions", () => {
       "Example",
       "semver",
     ]);
+    await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(name).toBeFocused();
     await page.keyboard.press("End");
@@ -2074,6 +2076,7 @@ test.describe("the affected versions", () => {
     await expect(
       affectedPanel(page).getByRole("searchbox", { name: "Search entries" }),
     ).toHaveCount(0);
+    await expectAccessible(page);
     await expectScreenshot(page, "ticket-affected-versions-without-cve.png");
 
     await openAffectedVersions(

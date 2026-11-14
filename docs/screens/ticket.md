@@ -19,10 +19,10 @@ analyst who manages confidentiality grants and revokes; in the tab References
 its references, the advisories, patches, and other pages of other sites that
 analysts read while they analyze it, which an analyst who manages references
 adds, edits, and deletes; in the tab Affected versions the versions of the
-software that its CVE affects, as the sources of the CVE report them, which
-an analyst compares with the tracks of its packages; and in the tab Audit
-log its history, which an analyst searches and filters to reconstruct who
-changed what and what Sentinel did by itself.
+software that its CVE affects, as the CVE record, its ADPs, GHSA, and OSV
+report them, which an analyst compares with the tracks of its packages; and
+in the tab Audit log its history, which an analyst searches and filters to
+reconstruct who changed what and what Sentinel did by itself.
 Vulnerability and restricted analysts work in it all day; every other user
 reads it, as a package maintainer does a Ticket of one of their packages that
 an analyst shares, and finds in its package tree the tracks that wait for
@@ -604,60 +604,71 @@ of a source of the CVE that added them (same document, Purpose).
 
 **Affected versions**, a tab that takes the whole width, without a side
 column (`docs/design-system.md`, Detail Screens): the products and versions
-that the CVE of the Ticket affects, as its sources report them, from Get CVE
-Affected Versions, `GET /api/v1/cves/{cve_id}/affected-versions`, read when
-the tab opens, every entry at once, without pages (Sentinel
-`docs/features/tickets/cve-tracking.md`, Get CVE Affected Versions). Sentinel
-uses them neither to resolve packages nor to decide affectedness, which
-analysts decide on the tracks (same section).
+that the CVE of the Ticket affects, as the scopes of their provenance report
+them, from Get CVE Affected Versions,
+`GET /api/v1/cves/{cve_id}/affected-versions`, read when the tab opens,
+every entry at once, without pages (Sentinel
+`docs/features/tickets/cve-tracking.md`, Get CVE Affected Versions).
+Sentinel uses them neither to resolve packages nor to decide affectedness,
+which analysts decide on the tracks (same section). A source of this tab is
+the scope of the provenance of its entries, `source_container`, such as the
+CNA container of the CVE record, which several CVE sources can write, not
+one of the CVE sources that Overview shows (Sentinel `docs/data-model.md`,
+CVEAffectedVersion).
 
 - **The toolbar** of a tab without a heading (`docs/design-system.md`,
   Lists): at its start, "The versions of the affected software as the
-  sources of the CVE report them."; at its end the search field, "Search
-  entries", and Clear filters while a search applies. The tab applies the
-  search itself to the entries that it read, since the operation takes no
-  parameter (same section, Filtering and sorting): an entry matches when one
-  of its values, as Sentinel returns it, holds the term without regard to
-  case, also a value that only the details of its source show, such as a CPE
-  or a program file.
-- **The packages**, 32 px apart, each a group under a band
+  sources of the CVE report them."; then the search field, "Search entries",
+  and Clear filters while a search applies. It shows at once with the tabs,
+  and goes once the Ticket shows without a CVE. The tab applies the search
+  itself to the entries that it read, since the operation takes no parameter
+  (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE Affected
+  Versions, Filtering and sorting): an entry matches when one of its values,
+  as Sentinel returns it, holds the term without regard to case, also a value
+  that only the details of its source show, such as a CPE or a program file,
+  but not the name of its source or the words of its line.
+- **The affected products**, each a group under a band
   (`docs/design-system.md`, Detail Screens) whose level-two heading is its
   name: the product of its entries, or without one their package name, or
   without either the first that they have of their repository, collection
-  URL, Package URL, and CPE, a repository or a collection URL as a link
-  (`docs/behaviors.md`, Links to Other Sites). Entries without any of these
-  show last, under "Unnamed product" in `fg-muted`. The entries of one name,
-  as Sentinel returns it, are one package whatever their source; names that
-  differ in their writing, such as `fictional-tar` and `fictional_tar`, are
-  two, since Sentinel does not tell whether they name the same software. The
-  packages are in alphabetical order of their name.
-- **The sources** of a package, 12 px below its band, as a description list,
-  12 px apart: each source a term, a CNA as "CNA", an ADP by its short name,
+  URL, Package URL, and CPE, a repository or a collection URL as a link where
+  it is a web address (`docs/behaviors.md`, Links to Other Sites). Entries
+  without any of these show last, under "Unnamed product" in `fg-muted`. The
+  entries of one name, as Sentinel returns it, are one product whatever their
+  source; names that differ in their writing, such as `fictional-tar` and
+  `fictional_tar`, are two, since Sentinel does not tell whether they name
+  the same software. The products are in alphabetical order of their name.
+- **The sources** of a product, below its band, as a description list (same
+  section): each source a term, a CNA as "CNA", an ADP by its short name,
   such as "CISA-ADP", GHSA and OSV as Sentinel names them (Sentinel
   `docs/features/tickets/cve-tracking.md`, CVE Sources), and a scope that the
   pinned contract does not list as received (`docs/behaviors.md`, Unknown
   Values); its versions the value. The CNA comes first, as the authority of
   the record of the CVE, then the other sources in the order of the API, by
   scope. A source shows once for each set of the fields that its entries
-  share, such as each `affected` element of a CVE record, so a source can
-  show twice in a package, such as the Git ranges and the stable versions of
-  a kernel CVE.
+  share, such as each `affected` element of a CVE record, in the order in
+  which the API first returns one of its entries, so a source can show twice
+  in a product, such as the Git ranges and the stable versions of a kernel
+  CVE.
 - **The versions** of a source, a line each, in the order of the API, by
-  package coordinates, then by version as text, which is not the order of the
-  versions (same section, Filtering and sorting). Each says the versions of
-  its entry in words, as the scope of the entry means them (same section,
-  Interpreting entries; Sentinel `docs/features/platform/cve-record-parser.md`,
-  `parse_affected_versions`; Sentinel
-  `docs/features/tickets/cve-sync-ghsa.md`, Field Mapping, Affected
-  versions; Sentinel `docs/features/tickets/cve-sync-osv.md`, Field
-  Mapping — CVE Record (Phase 1); Field Mapping — Alias Records (Phase 2)):
+  package coordinates, then by version type, version, and end as text, which
+  is not the order of the versions (Sentinel
+  `docs/features/tickets/cve-tracking.md`, Get CVE Affected Versions,
+  Filtering and sorting). Each says the versions of its entry in words, as
+  the scope of the entry means them (same document, Get CVE Affected
+  Versions, Interpreting entries; Sentinel
+  `docs/features/platform/cve-record-parser.md`, `parse_affected_versions`;
+  Sentinel `docs/features/tickets/cve-sync-ghsa.md`, Field Mapping, Affected
+  versions (from `.vulnerabilities[]`); Sentinel
+  `docs/features/tickets/cve-sync-osv.md`, Field Mapping — CVE Record
+  (Phase 1); Field Mapping — Alias Records (Phase 2)):
 
   | Entry | Words |
   |---|---|
   | A start and an end | "From 1.0 before 1.5", without the end; "From 1.0 through 1.4.2", with the end; "From 1.0 up to 2.0" when Sentinel does not say which |
   | An end alone | "Before 1.5", "Through 1.5", or "Up to 1.5" |
   | A start and an end of one version, with the end | The version, such as "1.5.0" |
-  | A version alone | The version, such as "1.5", from a CNA or an ADP, and an enumerated version of OSV, of type `exact`; an open range from GHSA and OSV, such as "From 1.0.0" |
+  | A version alone | The version, such as "1.5", from a CNA, an ADP, or a scope that the pinned contract does not list, and an enumerated version of OSV, of type `exact`; an open range from GHSA and OSV, such as "From 1.0.0" |
   | No version | "Every version" from OSV; "No version details" in `fg-muted` otherwise |
 
   A Git commit shows in monospace, and every value as received, such as
@@ -666,25 +677,35 @@ analysts decide on the tracks (same section).
   Values): Affected `warning`, as the affectedness of a track, Unaffected
   `success`, Unknown `neutral`, and a status that the pinned contract does
   not list as received; or nothing for an entry without a status, as those
-  of GHSA and OSV. In a CNA or an ADP, an entry without a status of its own
-  takes the status of its `affected` element, `default_status`, and a last
-  line, "Other versions" in `fg-muted`, shows that status, which applies to
-  the versions that the source does not list, or "All versions" when it lists
-  none; without such a status and without versions, the line says "No
-  version details". Under the pointer, a line is on `surface`
-  (`docs/design-system.md`, Detail Screens). Where the versions wrap, the
-  status stays beside their first line.
+  of GHSA and OSV. A line is on `surface` under the pointer
+  (`docs/design-system.md`, Detail Screens).
+- **A CNA or an ADP**, whose entries come from the `affected` elements of the
+  CVE record: an entry without a version, an end, or a status of its own
+  makes no line of its own, and an entry without a status of its own takes
+  the status of its element, `default_status` (Sentinel
+  `docs/features/tickets/cve-tracking.md`, Get CVE Affected Versions,
+  Interpreting entries; Sentinel `docs/data-model.md`, CVEAffectedVersion). A
+  last line, "Other versions" in `fg-muted`, shows that status, which applies
+  to the versions that the element does not list, or "All versions" when it
+  lists none; it shows only while the search hides none of the lines of its
+  source, so that it never seems to cover a version that the search hides.
+  Without such a status and without versions, the line says "No version
+  details". A scope that the pinned contract does not list shows only what
+  the fields of its entries state: no status that an entry does not carry,
+  and no last line (`docs/behaviors.md`, Unknown Values).
 - **The details of a source**: the name of a source whose entries share a
   field of the table below is a name that opens its details
   (`docs/design-system.md`, Menus, Popovers, and Tooltips), named after the
-  source and the package, such as "CNA for fictional-tar". The title of the
-  popover is the source, with the package below it, and its details, a
-  description list:
+  source and the product, such as "CNA for fictional-tar", or "CNA for the
+  unnamed product", followed, for a source that shows twice in its product,
+  by its rank, such as "CNA for Linux, 2 of 2". The title of the popover is
+  the source, with the product below it, and its details, a description
+  list:
 
   | Term | Value |
   |---|---|
   | Vendor | `vendor` |
-  | Package name | `package_name`, where it is neither the name of the package nor the product |
+  | Package name | `package_name`, where it is neither the name of the affected product nor its `product` |
   | Ecosystem | `ecosystem`, such as npm or Debian:12, of which the versions are |
   | Repository, Collection URL | `repo`, `collection_url`, each a link where it is a web address, and text otherwise (`docs/behaviors.md`, Links to Other Sites) |
   | Package URL, CPE | `package_url`, `cpe`, as text in monospace |
@@ -692,21 +713,24 @@ analysts decide on the tracks (same section).
   | Program files | `program_files`, below its term, cut to their first four lines with Show more (`docs/design-system.md`, Main Content) |
 
   A field without a value does not show, and neither does the field that
-  names the package. A source without any of these fields shows its name as
+  names the product. A source without any of these fields shows its name as
   text.
 - A CVE without entries says "Sentinel has no version data for this CVE." in
   `fg-muted`, since Sentinel does not tell a scope that its source emptied
-  from one that it never observed (same section, Empty and absent scopes).
-  When no entry matches the search, the tab says "No entries match the
-  search." with Clear filters (`docs/behaviors.md`, Empty States). A Ticket
-  without a CVE says "This Ticket has no CVE.", without the explanation and
-  the search of the toolbar, and the read is not sent.
+  from one that it never observed (Sentinel
+  `docs/features/tickets/cve-tracking.md`, Get CVE Affected Versions, Empty
+  and absent scopes). When no entry matches the search, the tab says "No
+  entries match the search." with Clear filters (`docs/behaviors.md`, Empty
+  States). A Ticket without a CVE says "This Ticket has no CVE.", without the
+  toolbar, and the read is not sent.
 - After a change of the search, also one that Clear filters or the browser
   history makes, the screen announces what the tab shows, "7 entries", "1
   entry", "No entries match the search.", or "Sentinel has no version data
   for this CVE.", with the focus where it was (`docs/behaviors.md`,
   Accessibility, Focus after a navigation); the tab announces nothing as it
-  opens.
+  opens. When a product or a source that holds the focus leaves the page, as
+  after a search, the focus moves to the screen's heading
+  (`docs/behaviors.md`, Accessibility, Focus after an action).
 
 **Audit log**, a tab that takes the whole width, without a side column
 (`docs/design-system.md`, Detail Screens): the events of the Ticket as a
@@ -1140,13 +1164,13 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   loading indicator in place of the entries until the Ticket, which names
   the CVE, and then the entries have arrived (`docs/behaviors.md`, Loading).
   The failure of their read shows in place of the entries, below the
-  toolbar, with Try again where the failure offers it, such as "This no
-  longer exists, or you no longer have access to it." for a `404
-  CVE_NOT_FOUND` (`docs/behaviors.md`, Missing and Inaccessible Records); a
-  later read that fails keeps the entries, with its warning above them
-  (`docs/behaviors.md`, Where Errors Appear). The screen handles no error
-  code of Get CVE Affected Versions specifically (Sentinel
-  `docs/features/tickets/cve-tracking.md`, Get CVE Affected Versions).
+  toolbar, and that of a later read as `docs/behaviors.md` (Where Errors
+  Appear) states, each with Try again where the failure offers it; a `404
+  CVE_NOT_FOUND` shows as a record that no longer exists or that the user no
+  longer sees (`docs/behaviors.md`, Missing and Inaccessible Records). The
+  screen handles no error code of Get CVE Affected Versions specifically
+  (Sentinel `docs/features/tickets/cve-tracking.md`, Get CVE Affected
+  Versions).
 - **Audit log.** The toolbar shows at once with the tabs, and the loading
   indicator in place of the events until they arrive, while the screen
   reads the Ticket too; a failure of the events shows once the Ticket has
@@ -1187,7 +1211,7 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   192 px, which its frame holds at 320 CSS px, so that the table scrolls
   within its frame rather than breaking every word of the column. In
   Affected versions, the name of each source stands above its versions,
-  which wrap, a commit at any character.
+  and a value longer than its line wraps at any character.
 
 ## Cross-references
 
@@ -1237,7 +1261,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
 - Sentinel `docs/features/platform/cve-record-parser.md` —
   `parse_affected_versions`
 - Sentinel `docs/features/tickets/cve-sync-ghsa.md` — Field Mapping
-  (Affected versions; Version range parsing rules)
+  (Affected versions (from `.vulnerabilities[]`); Version range parsing
+  rules)
+- Sentinel `docs/data-model.md` — CVEAffectedVersion
 - Sentinel `docs/features/tickets/cve-sync-osv.md` — Field Mapping — CVE
   Record (Phase 1) (GIT Range Event Parsing); Field Mapping — Alias Records
   (Phase 2)
