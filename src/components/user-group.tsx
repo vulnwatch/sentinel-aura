@@ -35,9 +35,10 @@ export function UserGroup({ users, labelledBy }: UserGroupProps) {
               <Tooltip text={name} placement="top">
                 <Focusable>
                   <span
-                    // The avatar is an SVG drawn by React (Avatar), which an
-                    // img element cannot hold, so the element that holds it
-                    // is its picture for assistive technologies.
+                    // The avatar is hidden from assistive technologies, the
+                    // generated one an SVG drawn by React, which an img
+                    // element cannot hold (Avatar), so the element that
+                    // holds it is its picture for assistive technologies.
                     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an img element cannot hold the SVG of the avatar
                     role="img"
                     aria-label={name}

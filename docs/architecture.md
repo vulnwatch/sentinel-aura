@@ -942,9 +942,11 @@ from Slack (Sentinel `docs/features/identity/user-avatars.md`, Security and
 Privacy), so the host is an asset that the UI loads from a third party, which
 the repository owner admitted (`docs/conventions.md`, Dependency Admission;
 Approved Dependencies). With each picture, the host receives the address of
-the user's browser and the URL of the picture, and so learns whose pictures
-the user's screens show, but not the URL of the screen: `Referrer-Policy`
-withholds it, and the UI also sets that policy on each picture that it loads.
+the user's browser, the browser's ordinary request headers and any cookie
+that it keeps for that host, and the URL of the picture, and so learns whose
+pictures the user's screens show, but not the URL of the screen:
+`Referrer-Policy` withholds it, and the UI also sets that policy on each
+picture that it loads.
 A picture on any other host, such as one of a later source of the pictures
 (Sentinel `docs/features/identity/user-avatars.md`, Design Notes), is blocked
 and shows as a picture that failed to load, the generated avatar

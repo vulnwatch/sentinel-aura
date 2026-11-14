@@ -1765,11 +1765,13 @@ do, still look different. SHA-256 is available in the browser's Web Crypto
 API in the secure contexts in which the UI runs and in the standard library
 of most languages.
 
-A bot account differs from a person by two cues that do not depend on hue,
-its shape and its lightness, in both themes and at every size. The shape
-alone would not suffice: `#F0F0F0` differs little from the page and the
-surfaces of the light theme, where the outline of a person's avatar shows
-only through its cells. The gray of an inactive user shows the state on the
+The generated avatar of a bot account differs from that of a person by two
+cues that do not depend on hue, its shape and its lightness, in both themes
+and at every size. The shape alone would not suffice: `#F0F0F0` differs
+little from the page and the surfaces of the light theme, where the outline
+of a person's generated avatar shows only through its cells. A person's
+profile picture has a lightness of its own, and its circle and its content
+tell it from the square of a bot account (Profile Picture). The gray of an inactive user shows the state on the
 avatar itself, also where no label follows it (`docs/behaviors.md`,
 Representation of a User), and a bot account keeps its shape.
 

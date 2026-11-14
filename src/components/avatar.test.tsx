@@ -253,7 +253,8 @@ test("shows avatar-bg through the transparent parts of a profile picture, as whi
   });
   const picture = await screenshot(screen.getByRole("figure"));
 
-  expect(picture.at(3, 3)).toBe(BACKGROUND);
+  // No cell of the generated avatar shows.
+  expect(cellColors(picture)).toEqual(expectedCells(BACKGROUND, BACKGROUND));
   expect(picture.at(...SIDE)).toBe(BACKGROUND);
   expect(picture.at(...CORNER)).toBe(CANVAS_LIGHT);
 });
