@@ -12,7 +12,7 @@ import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { RouterLinks } from "./router-links";
-import { WebAddress, WebLink } from "./web-link";
+import { addressText, WebAddress, WebLink } from "./web-link";
 
 // The links to addresses of the API and to addresses that the UI composes
 // from its values (docs/behaviors.md, Links to Other Sites;
@@ -54,6 +54,22 @@ describe("a web address", () => {
     expect(WebAddress.of("https://süse.example.com/a b")?.url.href).toBe(
       "https://xn--sse-hoa.example.com/a%20b",
     );
+  });
+});
+
+describe("the text of an address", () => {
+  test("is a web address as the browser parses it, which a link to it leads to", () => {
+    expect(addressText("HTTPS://Advisories.Example.com/a b")).toBe(
+      "https://advisories.example.com/a%20b",
+    );
+  });
+
+  test.each([
+    ["a Package URL", "pkg:rpm/suse/fictional-openssl@3.0.8"],
+    ["with a user name", "https://jdoe@example.com/"],
+    ["relative", "/tickets/SNTL-42"],
+  ])("is any other value as received: %s", (_, value) => {
+    expect(addressText(value)).toBe(value);
   });
 });
 

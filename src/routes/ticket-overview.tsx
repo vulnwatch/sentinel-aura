@@ -162,7 +162,7 @@ import { UserGroup } from "../components/user-group";
 import { WebLink } from "../components/web-link";
 import { sameSearch } from "../search-params";
 import { useSignedInUser } from "../session-gate";
-import { ticketRoute, useShownTicket } from "./ticket";
+import { CVE_SOURCE_NAMES, ticketRoute, useShownTicket } from "./ticket";
 
 // Overview, the first tab of the Ticket screen (docs/screens/ticket.md): the
 // CVE, the CVSS assessments, and the package tree of the Ticket in the main
@@ -1972,28 +1972,10 @@ function CvssPart({ read }: CvssPartProps) {
 // pending (docs/behaviors.md, Loading).
 const PENDING_READ_INTERVAL_MS = 5_000;
 
-// The names of the CVE sources, as Sentinel names them (Sentinel
-// docs/features/tickets/cve-tracking.md, CVE Sources). The registry of the
-// fetchers decides the sources, so the pinned OpenAPI document types them as
-// text (Sentinel docs/api-spec.md, Response Enums), and a source that the
-// pinned contract does not list shows as received (docs/behaviors.md,
-// Unknown Values). A Map, so that such a source is looked up only among
-// them (docs/conventions.md, Data Read from the API).
-const SOURCE_NAMES = new Map<string, string>(
-  Object.entries({
-    epss: "EPSS",
-    ghsa: "GHSA",
-    kernel: "Linux Kernel CNA",
-    kev: "CISA KEV",
-    mitre: "MITRE",
-    nvd: "NVD",
-    osv: "OSV",
-    redhat: "Red Hat",
-  }),
-);
-
+// The name of a CVE source, as Sentinel names it, or as received
+// (CVE_SOURCE_NAMES).
 function sourceName(source: string): string {
-  return SOURCE_NAMES.get(source) ?? source;
+  return CVE_SOURCE_NAMES.get(source) ?? source;
 }
 
 // The status of a source, with the tone of its meaning: Success green,

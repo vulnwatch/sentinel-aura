@@ -244,7 +244,8 @@ message follows Wording.
   read.
 - A form checks before sending the constraints that the pinned contract
   declares for its fields, such as a required value or a maximum length, and
-  states the constraint at the field. A field error of a `VALIDATION_ERROR`
+  states the constraint at the field; a length counts the characters as
+  Sentinel counts them, by code point. A field error of a `VALIDATION_ERROR`
   response is matched to its field by its `loc` (`docs/conventions.md`, Error
   Codes and Messages) and says "This value isn't valid."; one that matches no
   field is an error of the form.

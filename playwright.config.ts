@@ -1,5 +1,5 @@
 import { availableParallelism } from "node:os";
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices, type Project } from "@playwright/test";
 
 // The end-to-end tests (docs/architecture.md, Static Checks and Tests). Each
 // project runs in the network namespace of a container, which serves the UI
@@ -28,6 +28,40 @@ const WORKERS = Math.min(
 // origin of the UI and the API, and the UI's image.
 const SAME_ORIGIN = "**/same-origin.spec.ts";
 const IMAGE = "**/image.spec.ts";
+// The tag of the tests that change data that a screen shows
+// (docs/conventions.md, End-to-End Tests).
+const CHANGES_DATA = /@changes-data/;
+
+// The two projects of a browser, which run every module but image.spec.ts
+// against the end-to-end environment (docs/conventions.md, End-to-End
+// Tests). The one named after the browser, which scripts/dev-env.sh e2e
+// selects, holds the tests tagged CHANGES_DATA, and depends on
+// <browser>-read-only, which holds the others, so Playwright runs that
+// project first. Playwright never narrows a project that another depends on:
+// a run that selects some tests, such as the tests of a module, runs it as a
+// whole when the selection holds a tagged test, and otherwise runs the
+// selected tests in it alone. Both keep their results in the output
+// directory of the browser, which Playwright clears as the run starts.
+function browserProjects(
+  browser: "chromium" | "firefox",
+  project: Pick<Project, "use" | "ignoreSnapshots">,
+): Project[] {
+  const shared = {
+    ...project,
+    testIgnore: IMAGE,
+    outputDir: `test-results/e2e/${browser}/output`,
+  };
+  const readOnly = `${browser}-read-only`;
+  return [
+    { ...shared, name: readOnly, grepInvert: CHANGES_DATA },
+    {
+      ...shared,
+      name: browser,
+      grep: CHANGES_DATA,
+      dependencies: [readOnly],
+    },
+  ];
+}
 
 export default defineConfig({
   testDir: "test/e2e",
@@ -37,9 +71,9 @@ export default defineConfig({
   // A missing or different reference fails the test; scripts/dev-env.sh
   // update-screenshots writes them.
   updateSnapshots: "none",
-  // Each project runs separately and keeps its own results: Playwright clears
-  // the output directory of a project when it runs it, and
-  // scripts/tooling.sh e2e names the report directory of each project.
+  // Each run keeps its own results: Playwright clears the output directory
+  // of the project that the run selects as the run starts, and
+  // scripts/tooling.sh e2e names the report directory after that project.
   reporter: [
     ["list"],
     ["html", { outputFolder: "test-results/e2e/report", open: "never" }],
@@ -55,25 +89,17 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  // scripts/dev-env.sh e2e selects the project named after each browser.
-  // Tests that change data that a screen shows belong to it, and it then
-  // depends on a project of the browser's other tests, with the same output
-  // directory (docs/conventions.md, End-to-End Tests).
+  // scripts/dev-env.sh e2e selects the project named after each browser
+  // (browserProjects).
   projects: [
-    {
-      name: "chromium",
-      testIgnore: IMAGE,
-      outputDir: "test-results/e2e/chromium/output",
+    ...browserProjects("chromium", {
       use: { ...devices["Desktop Chrome"], viewport: VIEWPORT },
-    },
-    {
-      // The references are Chromium's: Firefox renders text differently.
-      name: "firefox",
-      testIgnore: IMAGE,
-      outputDir: "test-results/e2e/firefox/output",
+    }),
+    // The references are Chromium's: Firefox renders text differently.
+    ...browserProjects("firefox", {
       use: { ...devices["Desktop Firefox"], viewport: VIEWPORT },
       ignoreSnapshots: true,
-    },
+    }),
     {
       // The port of the development server: keep in sync with
       // vite.config.ts.

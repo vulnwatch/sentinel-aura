@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import {
   expect,
   expectAccessible,
@@ -9,9 +9,12 @@ import {
 } from "./fixtures";
 
 // The Ticket screen (docs/screens/ticket.md), against a backend loaded with
-// Sentinel's example dataset, whose Tickets, CVEs, users, and roles the tests
-// rely on as loaded (Sentinel docs/features/platform/example-dataset.md,
-// Users; CVEs; Tickets; Aged Tickets; Embargoes; Priorities).
+// Sentinel's example dataset, whose Tickets, CVEs, references, users, and
+// roles the tests rely on as loaded (Sentinel
+// docs/features/platform/example-dataset.md, Users; CVEs; Tickets; Aged
+// Tickets; Embargoes; Priorities; References), except a test tagged
+// @changes-data, which changes data of its own (docs/conventions.md,
+// End-to-End Tests).
 
 // The level-one heading of the screen.
 function heading(page: Page, name: string) {
@@ -113,7 +116,7 @@ test.describe("for an analyst", () => {
     );
     await expect(
       page.getByRole("tablist", { name: "Ticket" }).getByRole("tab"),
-    ).toHaveText(["Overview", "Audit log"]);
+    ).toHaveText(["Overview", "References", "Audit log"]);
     await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -546,6 +549,17 @@ test.describe("for an analyst", () => {
     await expect(
       page.getByRole("switch", { name: "Show hidden 0" }),
     ).toBeDisabled();
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the pipeline: the click waits for it, so that
+    // Phases does not open where the pipeline was (docs/conventions.md,
+    // End-to-End Tests).
+    await expectSources(page);
+    await expect(
+      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
+    ).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
 
     await pipeline.click();
 
@@ -1232,6 +1246,583 @@ test.describe("the audit log", () => {
     ).toHaveCount(0);
     await expectScreenshot(page, "ticket-audit-log-beyond-last-page.png");
   });
+});
+
+// The panel of the tab References.
+function referencesPanel(page: Page) {
+  return page.getByRole("tabpanel", { name: "References" });
+}
+
+// The table of the references.
+function referencesTable(page: Page) {
+  return referencesPanel(page).getByRole("grid", { name: "References" });
+}
+
+// The links of the references, which name their rows, in their order.
+function referenceLinks(page: Page) {
+  return referencesTable(page).getByRole("rowheader").getByRole("link");
+}
+
+// The row of a reference, by the name of its link: its title, or its address
+// without one, followed by the mark of another site.
+function referenceRow(page: Page, name: string) {
+  return referencesTable(page)
+    .getByRole("row")
+    .filter({
+      has: page.getByRole("link", {
+        name: `${name} (another site)`,
+        exact: true,
+      }),
+    });
+}
+
+// A button of the tab References, by its whole name.
+function referencesButton(page: Page, name: string) {
+  return referencesPanel(page).getByRole("button", { name, exact: true });
+}
+
+// The status regions of the tab References that hold a text, such as the
+// announcement of the outcome of a change.
+function referencesStatus(page: Page, text: string) {
+  return referencesPanel(page).getByRole("status").filter({ hasText: text });
+}
+
+// The line of a Ticket without references, not its announcement after a
+// change of the filters.
+function noReferences(page: Page) {
+  return referencesPanel(page)
+    .getByRole("paragraph")
+    .filter({ hasText: /^No references\.$/ });
+}
+
+// The date and time of a cell, such as when a reference was added.
+const DATE_TIME_CELL = new RegExp(`^${DATE_TIME}$`);
+
+// Opens the tab References of a Ticket at its path, and waits until the
+// Ticket and its references have arrived, which can move the controls of the
+// tab (docs/conventions.md, End-to-End Tests).
+async function openReferences(page: Page, ticketId: string, search = "") {
+  await page.goto(`/tickets/${ticketId}/references${search}`);
+  await expect(heading(page, ticketId)).toBeVisible();
+  await expect(referencesTable(page).or(noReferences(page))).toBeVisible();
+}
+
+// The select of the type in a dialog of a reference, named by the option
+// that it shows and its label.
+function typeSelect(dialog: Locator) {
+  return dialog.getByRole("button", { name: /Type$/ });
+}
+
+// Opens the options of the type in a dialog of a reference, and returns
+// them.
+async function openTypes(page: Page, dialog: Locator) {
+  await typeSelect(dialog).click();
+  const options = page.getByRole("listbox", { name: "Type" });
+  await expect(options).toBeVisible();
+  return options;
+}
+
+// Chooses the type of a reference in its dialog, once its open options are
+// checked (docs/conventions.md, End-to-End Tests).
+async function chooseType(page: Page, dialog: Locator, type: string) {
+  const options = await openTypes(page, dialog);
+  await expectAccessible(page);
+  await options.getByRole("option", { name: type, exact: true }).click();
+  await expect(typeSelect(dialog)).toHaveText(type);
+}
+
+test.describe("the references", () => {
+  test("shows the references of a Ticket in the tab References, with Edit and Delete on each manual reference", async ({
+    page,
+  }) => {
+    // SNTL-12 has two manual references by asmith, who holds
+    // manage_references through the vulnerability_analyst role (Users;
+    // References).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12");
+    await expect(heading(page, "SNTL-12")).toBeVisible();
+
+    await page.getByRole("tab", { name: "References" }).click();
+
+    await expect(page).toHaveURL("/tickets/SNTL-12/references");
+    await expect(
+      page.getByRole("tab", { name: "References", selected: true }),
+    ).toBeVisible();
+    // In the order of the API, by type: the advisory, then the issue.
+    const links = referenceLinks(page);
+    await expect(links).toHaveCount(2);
+    await expect(links.nth(0)).toHaveAccessibleName(
+      "Fictional advisory (another site)",
+    );
+    await expect(links.nth(0)).toHaveAttribute(
+      "href",
+      "https://advisories.example.com/fictional-openssl/2099-0012",
+    );
+    await expect(links.nth(1)).toHaveAccessibleName(
+      "Fictional bug report (another site)",
+    );
+    await expect(links.nth(1)).toHaveAttribute(
+      "href",
+      "https://bugzilla.example.com/show_bug.cgi?id=1000012",
+    );
+    const advisory = referenceRow(page, "Fictional advisory");
+    await expect(
+      advisory.getByText(
+        "https://advisories.example.com/fictional-openssl/2099-0012",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      advisory.getByText("Fixed in fictional-openssl 3.0.99.", { exact: true }),
+    ).toBeVisible();
+    await expect(referencesTable(page).getByRole("columnheader")).toHaveText([
+      "Reference",
+      "Type",
+      "Source",
+      "Added",
+      "Actions",
+    ]);
+    await expect(referencesTable(page).getByRole("gridcell")).toHaveText([
+      "Advisory",
+      "Manual",
+      DATE_TIME_CELL,
+      "",
+      "Issue",
+      "Manual",
+      DATE_TIME_CELL,
+      "",
+    ]);
+    for (const name of ["“Fictional advisory”", "“Fictional bug report”"]) {
+      await expect(
+        referencesButton(page, `Edit reference ${name}`),
+      ).toBeVisible();
+      await expect(
+        referencesButton(page, `Delete reference ${name}`),
+      ).toBeVisible();
+    }
+    await expect(referencesButton(page, "Add reference")).toBeVisible();
+    // Away from the tab, which the pointer would mark.
+    await page.mouse.move(100, 500);
+    await expectScreenshot(page, "ticket-references.png");
+
+    // The tooltip of Edit names the action alone. React Aria shows it on
+    // hover after the click on the tab.
+    await referencesButton(page, "Edit reference “Fictional advisory”").hover();
+
+    await expect(page.getByRole("tooltip")).toHaveText("Edit");
+    await expectAccessible(page);
+  });
+
+  test("shows the automatic references of a CVE without Edit and Delete", async ({
+    page,
+  }) => {
+    // The two references of CVE-2099-0001 from its ingestion from NVD,
+    // without titles (References).
+    await signIn(page, "asmith");
+
+    await openReferences(page, "SNTL-1");
+
+    const links = referenceLinks(page);
+    await expect(links).toHaveCount(2);
+    await expect(links.nth(0)).toHaveAccessibleName(
+      "https://www.example.com/advisories/CVE-2099-0001 (another site)",
+    );
+    await expect(links.nth(1)).toHaveAccessibleName(
+      "https://git.example.com/fictional-lib/commit/0123abc (another site)",
+    );
+    await expect(referencesTable(page).getByRole("gridcell")).toHaveText([
+      "Advisory",
+      "NVD",
+      DATE_TIME_CELL,
+      "",
+      "Patch",
+      "NVD",
+      DATE_TIME_CELL,
+      "",
+    ]);
+    await expect(
+      referencesPanel(page).getByRole("button", {
+        name: /^(?:Edit|Delete) reference/,
+      }),
+    ).toHaveCount(0);
+    await expect(referencesButton(page, "Add reference")).toBeVisible();
+  });
+
+  test("shows a user who does not manage references neither Add reference nor the actions", async ({
+    page,
+  }) => {
+    // dbrown holds no role (Users).
+    await signIn(page, "dbrown");
+
+    await openReferences(page, "SNTL-12");
+
+    await expect(referenceLinks(page)).toHaveCount(2);
+    await expect(referencesTable(page).getByRole("columnheader")).toHaveText([
+      "Reference",
+      "Type",
+      "Source",
+      "Added",
+    ]);
+    await expect(referencesPanel(page).getByRole("button")).toHaveText([
+      "Filters",
+    ]);
+  });
+
+  test("says when a Ticket has no references", async ({ page }) => {
+    // Only CVE-2099-0001, SNTL-10, and SNTL-12 have references (References).
+    await signIn(page, "asmith");
+
+    await openReferences(page, "SNTL-2");
+
+    await expect(noReferences(page)).toBeVisible();
+    await expect(referencesTable(page)).toHaveCount(0);
+    await expectScreenshot(page, "ticket-references-empty.png");
+  });
+
+  test("filters the references by type and by source, from Filters and from the URL", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await openReferences(page, "SNTL-12");
+
+    await referencesButton(page, "Filters").click();
+
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    const types = filters.getByRole("group", { name: "Type" });
+    const checkboxes = types.getByRole("checkbox");
+    await expect(checkboxes).toHaveCount(5);
+    for (const [index, type] of [
+      "Advisory",
+      "Patch",
+      "Issue",
+      "Article",
+      "Uncategorized",
+    ].entries()) {
+      await expect(checkboxes.nth(index)).toHaveAccessibleName(type);
+    }
+    await expect(filters.getByRole("button", { name: /Source$/ })).toHaveText(
+      "Any source",
+    );
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-filters.png");
+
+    await types.getByText("Issue", { exact: true }).click();
+
+    await expect(page).toHaveURL("/tickets/SNTL-12/references?type=issue");
+    await expect(filters.getByRole("status").last()).toHaveText("1 reference");
+    // The sources of the references of SNTL-12, all manual.
+    await filters.getByRole("button", { name: /Source$/ }).click();
+    const sourceOptions = page.getByRole("listbox", { name: "Source" });
+    await expect(sourceOptions.getByRole("option")).toHaveText([
+      "Any source",
+      "Manual",
+    ]);
+    await expectAccessible(page);
+    await sourceOptions.getByRole("option", { name: "Manual" }).click();
+    await expect(page).toHaveURL(
+      "/tickets/SNTL-12/references?type=issue&source=manual",
+    );
+    await page.keyboard.press("Escape");
+    await expect(filters).toHaveCount(0);
+    await expect(referencesButton(page, "Filters 2 applied")).toBeVisible();
+    await expect(referenceLinks(page)).toHaveCount(1);
+    await expect(referenceLinks(page)).toHaveAccessibleName(
+      "Fictional bug report (another site)",
+    );
+
+    // From the URL, a type that no reference of SNTL-12 has.
+    await openReferences(page, "SNTL-12", "?type=patch&source=manual");
+
+    await expect(
+      referencesPanel(page).getByText("No references match the filters.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(referenceLinks(page)).toHaveCount(0);
+    // The one of the line above the table, and the one of the empty state.
+    const clear = referencesButton(page, "Clear filters");
+    await expect(clear).toHaveCount(2);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-no-match.png");
+
+    await clear.last().click();
+
+    await expect(page).toHaveURL("/tickets/SNTL-12/references");
+    await expect(referenceLinks(page)).toHaveCount(2);
+    await expect(heading(page, "SNTL-12")).toBeFocused();
+  });
+
+  test("checks the address of Add reference, says that the Ticket already has it, and asks before discarding it", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await openReferences(page, "SNTL-12");
+    const add = referencesButton(page, "Add reference");
+
+    await add.click();
+
+    const dialog = page.getByRole("dialog", { name: "Add reference" });
+    const address = dialog.getByRole("textbox", {
+      name: "Address",
+      exact: true,
+    });
+    await expect(address).toBeFocused();
+    await expect(
+      dialog.getByRole("textbox", { name: "Title (optional)" }),
+    ).toHaveValue("");
+    await expect(typeSelect(dialog)).toHaveText("Detect from the address");
+    await expect(
+      dialog.getByRole("textbox", { name: "Description (optional)" }),
+    ).toHaveValue("");
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-add.png");
+
+    // The types, after Detect from the address, chosen at first; Escape
+    // closes them alone.
+    const types = await openTypes(page, dialog);
+    await expect(types.getByRole("option")).toHaveText([
+      "Detect from the address",
+      "Advisory",
+      "Patch",
+      "Issue",
+      "Article",
+      "Uncategorized",
+    ]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-add-types.png");
+    await page.keyboard.press("Escape");
+    await expect(types).toHaveCount(0);
+    await expect(typeSelect(dialog)).toBeFocused();
+
+    // Without an address, from the keyboard, which sends nothing.
+    await address.press("Enter");
+
+    await expect(
+      dialog.getByText("Enter the address.", { exact: true }),
+    ).toBeVisible();
+    await expect(address).toBeFocused();
+    await expectAccessible(page);
+
+    // The address of “Fictional advisory” of SNTL-12 with http, which
+    // Sentinel normalizes to https, and refuses with 409 RESOURCE_CONFLICT,
+    // so that nothing changes (Sentinel
+    // docs/features/tickets/ticket-references.md, URL Normalization; Add
+    // Reference).
+    await address.fill(
+      "http://advisories.example.com/fictional-openssl/2099-0012",
+    );
+    await address.press("Enter");
+
+    await expect(
+      dialog.getByText(
+        "This Ticket already has a reference with this address.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(address).toBeFocused();
+    await expect(address).toHaveValue(
+      "http://advisories.example.com/fictional-openssl/2099-0012",
+    );
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-add-conflict.png");
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText(
+      "The reference that you entered isn't added.",
+    );
+    await expect(
+      discard.getByRole("button", { name: "Keep editing" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-discard.png");
+    await discard.getByRole("button", { name: "Discard" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(add).toBeFocused();
+    await expect(referenceLinks(page)).toHaveCount(2);
+  });
+
+  test("opens Edit reference with the values of a reference, and the confirmation of Delete, each closed without a change", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await openReferences(page, "SNTL-12");
+    const edit = referencesButton(page, "Edit reference “Fictional advisory”");
+
+    await edit.click();
+
+    const dialog = page.getByRole("dialog", { name: "Edit reference" });
+    const address = dialog.getByRole("textbox", {
+      name: "Address",
+      exact: true,
+    });
+    await expect(address).toBeFocused();
+    await expect(address).toHaveValue(
+      "https://advisories.example.com/fictional-openssl/2099-0012",
+    );
+    await expect(
+      dialog.getByRole("textbox", { name: "Title (optional)" }),
+    ).toHaveValue("Fictional advisory");
+    await expect(typeSelect(dialog)).toHaveText("Advisory");
+    await expect(
+      dialog.getByRole("textbox", { name: "Description (optional)" }),
+    ).toHaveValue("Fixed in fictional-openssl 3.0.99.");
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-edit.png");
+
+    // Without a change, Cancel closes it without asking.
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(edit).toBeFocused();
+
+    const remove = referencesButton(
+      page,
+      "Delete reference “Fictional bug report”",
+    );
+    await remove.click();
+
+    const confirmation = page.getByRole("dialog", {
+      name: "Delete reference “Fictional bug report”?",
+    });
+    await expect(confirmation).toContainText(
+      "The reference is removed from this Ticket. This can't be undone.",
+    );
+    await expect(
+      confirmation.getByRole("button", { name: "Delete reference" }),
+    ).toBeVisible();
+    await expect(
+      confirmation.getByRole("button", { name: "Cancel" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-references-delete.png");
+
+    await confirmation.getByRole("button", { name: "Cancel" }).click();
+
+    await expect(confirmation).toHaveCount(0);
+    await expect(remove).toBeFocused();
+    await expect(referenceLinks(page)).toHaveCount(2);
+  });
+
+  test(
+    "adds a reference that the filters hide, with its outcome in the message area, then edits it and deletes it, after which the focus moves to Add reference",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-17, Ignored, has no reference, and no other test opens it, so
+      // its references, its audit log, and its participants are this test's
+      // own (Tickets; References). A change of a reference is valid in every
+      // status (Sentinel docs/features/tickets/ticket-references.md,
+      // Manual-Zone Exception). The tab opens with the filter of the
+      // advisories.
+      await signIn(page, "asmith");
+      await openReferences(page, "SNTL-17", "?type=advisory");
+      await expect(noReferences(page)).toBeVisible();
+      const add = referencesButton(page, "Add reference");
+
+      // With the type detected from the address, which only Sentinel
+      // decides.
+      await add.click();
+      const dialog = page.getByRole("dialog", { name: "Add reference" });
+      await dialog
+        .getByRole("textbox", { name: "Address", exact: true })
+        .fill("http://advisories.example.com/CVE-2099-0017");
+      await dialog
+        .getByRole("textbox", { name: "Title (optional)" })
+        .fill("Fictional advisory draft");
+      await expect(typeSelect(dialog)).toHaveText("Detect from the address");
+      await dialog.getByRole("button", { name: "Add reference" }).click();
+
+      // Sentinel detects no type from an address of example.com, so the
+      // reference is uncategorized, the filter hides it, and its outcome
+      // shows in the message area instead of the tab (Sentinel
+      // docs/features/tickets/ticket-references.md, URL Pattern Mapping;
+      // docs/screens/ticket.md, Actions).
+      await expect(dialog).toHaveCount(0);
+      const added = "Reference “Fictional advisory draft” added.";
+      await expect(page.getByText(added, { exact: true })).toHaveCount(1);
+      await expect(page.getByText(added, { exact: true })).toBeVisible();
+      await expect(referencesPanel(page).getByText(added)).toHaveCount(0);
+      await expect(
+        referencesPanel(page).getByText("No references match the filters.", {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(add).toBeFocused();
+
+      await referencesButton(page, "Clear filters").first().click();
+
+      await expect(page).toHaveURL("/tickets/SNTL-17/references");
+      // Sentinel normalizes the address, http to https (Sentinel
+      // docs/features/tickets/ticket-references.md, URL Normalization).
+      const draft = referenceRow(page, "Fictional advisory draft");
+      await expect(draft.getByRole("link")).toHaveAttribute(
+        "href",
+        "https://advisories.example.com/CVE-2099-0017",
+      );
+      await expect(
+        draft.getByText("https://advisories.example.com/CVE-2099-0017", {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(draft.getByRole("gridcell")).toHaveText([
+        "Uncategorized",
+        "Manual",
+        DATE_TIME_CELL,
+        "",
+      ]);
+
+      await referencesButton(
+        page,
+        "Edit reference “Fictional advisory draft”",
+      ).click();
+      const edit = page.getByRole("dialog", { name: "Edit reference" });
+      const title = edit.getByRole("textbox", { name: "Title (optional)" });
+      await expect(title).toHaveValue("Fictional advisory draft");
+      await title.fill("Fictional advisory");
+      await chooseType(page, edit, "Advisory");
+      await edit.getByRole("button", { name: "Save" }).click();
+
+      await expect(edit).toHaveCount(0);
+      const advisory = referenceRow(page, "Fictional advisory");
+      await expect(advisory.getByRole("gridcell")).toHaveText([
+        "Advisory",
+        "Manual",
+        DATE_TIME_CELL,
+        "",
+      ]);
+      await expect(draft).toHaveCount(0);
+      await expect(
+        referencesStatus(page, "Reference “Fictional advisory” changed."),
+      ).toHaveCount(1);
+      // Back on Edit, which names the reference by its new title.
+      const editAdvisory = referencesButton(
+        page,
+        "Edit reference “Fictional advisory”",
+      );
+      await expect(editAdvisory).toBeFocused();
+
+      await referencesButton(
+        page,
+        "Delete reference “Fictional advisory”",
+      ).click();
+      const confirmation = page.getByRole("dialog", {
+        name: "Delete reference “Fictional advisory”?",
+      });
+      await confirmation
+        .getByRole("button", { name: "Delete reference" })
+        .click();
+
+      await expect(confirmation).toHaveCount(0);
+      await expect(advisory).toHaveCount(0);
+      await expect(noReferences(page)).toBeVisible();
+      await expect(
+        referencesStatus(page, "Reference “Fictional advisory” deleted."),
+      ).toHaveCount(1);
+      // No row follows the deleted one (docs/screens/ticket.md, Actions).
+      await expect(add).toBeFocused();
+    },
+  );
 });
 
 test("shows a maintainer the tracks of a Ticket that wait for them", async ({

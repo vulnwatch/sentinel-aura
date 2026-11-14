@@ -60,6 +60,13 @@ export class WebAddress {
   }
 }
 
+// An address of the API as text: the address as the browser parses it when
+// it is a web address, which a link to it leads to, or the value as received
+// otherwise (docs/behaviors.md, Links to Other Sites, The address as parsed).
+export function addressText(value: string): string {
+  return WebAddress.of(value)?.url.href ?? value;
+}
+
 // The size of the icon of a link to another site: that of an icon beside the
 // text of the link (docs/design-system.md, Icon Set).
 const ICON_SIZES = {
