@@ -131,10 +131,7 @@ backend's API
   (`restricted_analyst`), or `dbrown` (no role), with the dataset's published
   password `example-dataset-password` (Sentinel
   `docs/features/platform/example-dataset.md`, Credentials; Users, which lists
-  every user). Until the UI has a sign-in screen, use Sentinel's API
-  documentation on the same origin, <http://localhost:5173/api/docs>:
-  `POST /api/v1/auth/login` sets the session cookie, and
-  `GET /api/v1/users/me` then returns your user.
+  every user).
 - Use Chrome or Firefox: Safari does not accept the session cookie from
   `http://localhost`
   ([Supported Browsers](docs/architecture.md#supported-browsers)).

@@ -34,9 +34,9 @@ that wait for them, and every colleague who needs SUSE's status for a CVE.
   ([Accessibility](#accessibility)).
 - **Light and dark.** Follows the color scheme of the desktop, or the theme
   that each user chooses.
-- **API only.** A static single-page application that reads and changes data
-  only through Sentinel's REST API, on the same origin, with no server or data
-  store of its own.
+- **API only.** A static single-page application that reads and changes
+  Sentinel's data only through its REST API, on the same origin, with no
+  backend or server-side data store of its own.
 - **Pinned to the contract.** Every release is built and tested against one
   exact Sentinel version, with an API client generated from that version's
   OpenAPI document.
@@ -52,10 +52,11 @@ Sentinel Aura is designed to meet
 [WCAG 2.2](https://www.w3.org/TR/WCAG22/) at levels A and AA, in the light and
 the dark theme alike:
 
-- **Checked on every change.** Every end-to-end test runs axe-core's WCAG 2.2
-  A and AA rules on the screen it ends on, under the light and the dark color
-  scheme, and fails on any violation; lint applies the accessibility rules of
-  jsx-a11y to the code.
+- **Checked on every change.** Every end-to-end test checks the states it
+  shows against axe-core's WCAG 2.2 A and AA rules, under the light and the
+  dark color scheme, and fails on any violation
+  ([End-to-End Tests](docs/conventions.md#end-to-end-tests)); lint applies the
+  accessibility rules of jsx-a11y to the code.
 - **Contrast in both themes.** Every text has a contrast of at least 4.5:1,
   and every graphic needed to understand a screen at least 3:1, in each theme
   ([Contrast](docs/design-system.md#contrast)).
@@ -69,7 +70,7 @@ the dark theme alike:
 <p align="center">
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset=".github/assets/color-vision-dark.png">
-<img src=".github/assets/color-vision.png" alt="Three rows of the Ticket list with typical color vision and with protanopia, deuteranopia, tritanopia, and achromatopsia: in each, every status, severity, priority, and deadline stays readable through its text and icon" width="600">
+<img src=".github/assets/color-vision.png" alt="Three rows of the Ticket list with typical color vision and with protanopia, deuteranopia, tritanopia, and achromatopsia: in each, every status, severity, priority, and deadline stays readable through its text" width="600">
 </picture>
 <br>
 <sub>Rows of the Ticket list with typical color vision and with four color vision deficiencies, simulated by Chromium.</sub>
