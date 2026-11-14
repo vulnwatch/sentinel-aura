@@ -895,17 +895,12 @@ administrators as well.
 pre-push hook blocks tag pushes locally.
 
 **Squash merge**: the only allowed merge method. The PR title becomes
-the commit message on `master`, except where `docs/deployment.md` requires
-a Renovate pull request to land with a `fix(deps):` subject. Renovate
-restores the title that it generates whenever it updates its pull request,
-so a renamed title may not last until the merge: the maintainer sets the
-subject when squash-merging instead, in GitHub's merge dialog or with
-`gh pr merge <number> --squash --subject "fix(deps): <description> (#<number>)"`.
-The subject is a valid PR title (Pull Request Requirements) followed by the
-`(#<number>)` suffix that GitHub adds to the default subject. The
-`PR Metadata` check validates the title, not the subject, so the maintainer
-checks the subject before confirming the merge. A maintainer's own pull
-request carries `fix(deps):` in its title instead.
+the commit message on `master`, with the `(#<number>)` suffix that GitHub
+adds, so the title carries the release signal of the change (Versioning). A
+Renovate pull request keeps the title that Renovate generates, whose prefix
+states its release signal (`docs/deployment.md`, Dependency Updates, Release
+signal of dependency updates); Renovate restores that title whenever it
+updates its pull request.
 
 **Branch deletion**: branches are deleted automatically after merge.
 
@@ -1007,15 +1002,20 @@ The 72-character hard-wrapping convention remains scoped to:
 
 The commit subjects on `master` carry the release signal used by
 release-please, which owns versions and tags. Through squash merge they are
-the PR titles, unless the maintainer sets the subject at merge (Workflow,
-Squash merge):
+the PR titles (Workflow, Squash merge):
 
 | Commit type | Release signal |
 |-------------|----------------|
 | `fix` | Patch |
+| `chore(deps)`, an update of a dependency that the UI's image contains | Patch |
 | `feat` | Minor |
 | `fix!`, `feat!` | Breaking release; the resulting version depends on whether the project is pre-1.0 or stable |
-| `docs`, `chore`, `ci`, `test`, `refactor` | No release on their own; `!` is not permitted |
+| `docs`, `chore` with another scope or none, `ci`, `test`, `refactor` | No release on their own; `!` is not permitted |
+
+`docs/deployment.md` (Dependency Updates, Release signal of dependency
+updates) classifies the dependency updates: `chore(deps)` for what the image
+contains, `ci(deps)` for what builds, checks, tests, or runs the UI outside
+it.
 
 The complete Semantic Versioning interpretation, changelog policy, and version
 source of truth belong to the release process, `docs/deployment.md` (Release

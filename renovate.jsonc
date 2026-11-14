@@ -23,10 +23,11 @@
   // Fix PRs raised from GitHub vulnerability (Dependabot) alerts. They bypass
   // the schedule and the minimum release age of Renovate by design.
   // Requires Dependabot alerts and read access to them for the Mend Renovate
-  // App. fix(deps): makes a merged security fix a release signal (patch) for
-  // release-please, whereas routine ci(deps): and chore(deps): updates never
-  // cut a release on their own. Renovate appends alert rules after
-  // packageRules, so this prefix overrides the prefixes below. The topic
+  // App. The title prefix of an update is its release signal for
+  // release-please — see docs/deployment.md (Dependency Updates, Release
+  // signal of dependency updates): fix(deps): makes a merged security fix a
+  // patch release, whatever the dependency. Renovate appends alert rules
+  // after packageRules, so this prefix overrides the prefixes below. The topic
   // drops the word "dependency", so that the title with its [SECURITY] suffix
   // stays within the length that the PR Metadata check allows.
   "vulnerabilityAlerts": {
@@ -37,7 +38,9 @@
   // Weekly regeneration of package-lock.json, which keeps the transitive npm
   // dependencies current: in the window of the schedule above, on Monday
   // only, because a nightly regeneration would open a pull request almost
-  // every night that conflicts with the npm group on the same file.
+  // every night that conflicts with the npm group on the same file. It moves
+  // the transitive dependencies that the build bundles, so chore(deps):, a
+  // release signal.
   "lockFileMaintenance": {
     "enabled": true,
     "commitMessagePrefix": "chore(deps):",
@@ -138,16 +141,15 @@
       "commitMessagePrefix": "ci(deps):"
     },
     {
-      "description": "Tooling image and images of the tools that the scripts run, used locally and in CI",
+      // The tooling image runs the production build, so a change that its
+      // update makes to the build ships with the next release, which the
+      // update does not create on its own.
+      "description": "Tooling image and images of the tools that the scripts run, used locally and in CI, outside the UI's image",
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["scripts/tooling.sh", "scripts/lint-shell.sh", "scripts/image.sh"],
-      "commitMessagePrefix": "chore(deps):"
+      "commitMessagePrefix": "ci(deps):"
     },
     {
-      // A base image update that fixes a vulnerability that the image scan
-      // reports is merged with a fix(deps): subject instead, set when
-      // squash-merging — see docs/deployment.md (Workflow Inventory, Image
-      // vulnerability scan) and docs/conventions.md (Workflow, Squash merge).
       "description": "Base image of the Containerfile, which ships in the UI's image",
       "matchManagers": ["dockerfile"],
       "commitMessagePrefix": "chore(deps):"
@@ -157,10 +159,11 @@
       // the UI's image is built locally, so the manager skips both: the
       // pinned version changes in contract/sentinel-version (below), and
       // scripts/sentinel-contract.sh pins its digest — see docs/deployment.md
-      // (Dependency Updates).
+      // (Dependency Updates). The nginx group below gives the nginx image the
+      // prefix of the base image of the Containerfile.
       "description": "PostgreSQL, Redis, and nginx images of compose.yaml, which runs the backend of local development, the end-to-end tests, and the local preview",
       "matchManagers": ["docker-compose"],
-      "commitMessagePrefix": "chore(deps):"
+      "commitMessagePrefix": "ci(deps):"
     },
     {
       // Renovate's default topic of a digest update also names the tag
@@ -181,34 +184,66 @@
       // (Dependency Updates, Minimum release age). groupSingleUpdates titles
       // its pull request "Update nginx" also when it holds a single update,
       // because the title that names the image would exceed the length that
-      // the PR Metadata check allows.
+      // the PR Metadata check allows. Renovate titles a group with the prefix
+      // of one of its updates, so the group sets the prefix of the base image
+      // for both.
       "description": "nginx: the base image of the Containerfile and the proxy image of compose.yaml in one pull request, titled by the group, without the minimum release age",
       "matchManagers": ["dockerfile", "docker-compose"],
       "matchPackageNames": ["/(^|/)nginx/nginx-unprivileged$/"],
       "groupName": "nginx",
       "groupSingleUpdates": true,
-      "minimumReleaseAge": null
+      "minimumReleaseAge": null,
+      "commitMessagePrefix": "chore(deps):"
     },
     {
-      "description": "npm dependencies, which reach the browser or run in the tooling",
+      // The dependencies that the build bundles into the UI, the versions
+      // that the overrides force, which can be bundled too, and any other
+      // dependency type of package.json, which proposes a release rather than
+      // being left out of one.
+      "description": "npm dependencies, which ship in the UI's image",
       "matchManagers": ["npm"],
       "commitMessagePrefix": "chore(deps):"
     },
     {
-      "description": "npm minor and patch updates in one pull request; each major update gets its own",
+      // The build tools among them shape the bundle: a change that their
+      // update makes to it ships with the next release, which the update
+      // does not create on its own.
+      "description": "npm development dependencies, which build, check, and test the UI and do not ship",
       "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "npm minor and patch dependencies"
+      "matchDepTypes": ["devDependencies"],
+      "commitMessagePrefix": "ci(deps):"
     },
     {
-      // After the group above, which it overrides. Its pull request needs the
-      // API client regenerated on its branch, which the Mend Renovate App
-      // cannot do, so it holds back no other update — see
-      // docs/deployment.md (Dependency Updates).
-      "description": "Orval in its own pull request",
+      // The group holds runtime and development dependencies, and Renovate
+      // titles a group with the prefix of one of its updates, so the group
+      // sets one prefix for all: a release signal, because the group almost
+      // always updates a dependency that ships.
+      "description": "npm minor and patch updates in one pull request, a release signal; each major update gets its own",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm minor and patch dependencies",
+      "commitMessagePrefix": "chore(deps):"
+    },
+    {
+      // config:recommended groups the major updates of React with those of
+      // its types (react monorepo), so the types take the prefix of React.
+      "description": "React's types, major update: the prefix of React, whose group they join",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["@types/react", "@types/react-dom"],
+      "matchUpdateTypes": ["major"],
+      "commitMessagePrefix": "chore(deps):"
+    },
+    {
+      // After the group of the npm minor and patch updates, which it
+      // overrides. Its pull request needs the API client regenerated on its
+      // branch, which the Mend Renovate App cannot do, so it holds back no
+      // other update — see docs/deployment.md (Dependency Updates). The
+      // regenerated client ships with the next release.
+      "description": "Orval in its own pull request, a development dependency",
       "matchManagers": ["npm"],
       "matchPackageNames": ["orval"],
-      "groupName": "Orval"
+      "groupName": "Orval",
+      "commitMessagePrefix": "ci(deps):"
     },
     {
       // Every Sentinel release is raised at once, without the minimum release
@@ -217,12 +252,13 @@
       // can deploy it, and one within them keeps the pin and the end-to-end
       // tests on Sentinel's latest release — see docs/architecture.md
       // (Backend Contract) and docs/deployment.md (Dependency Updates). A
-      // change within those versions carries no release signal; the two
-      // rules below give the others one.
-      "description": "Pinned Sentinel version: chore(deps):, outside the schedule and the minimum release age, first",
+      // change within those versions carries no release signal, because the
+      // current release supports the new version; the two rules below give
+      // the others one.
+      "description": "Pinned Sentinel version: ci(deps):, outside the schedule and the minimum release age, first",
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["contract/sentinel-version"],
-      "commitMessagePrefix": "chore(deps):",
+      "commitMessagePrefix": "ci(deps):",
       "commitMessageTopic": "Sentinel",
       "schedule": ["at any time"],
       "minimumReleaseAge": null,
@@ -289,11 +325,13 @@
       // that version reaches the minimum release age. groupSingleUpdates
       // titles the pull request "Update Playwright" also when it holds the
       // image alone, whose own title would exceed the length that the PR
-      // Metadata check allows.
-      "description": "Playwright: the tooling image and @playwright/test in one pull request, so that the browsers of the image are the ones that Playwright expects; titled by the group",
+      // Metadata check allows. The prefix overrides the one of the npm group
+      // above.
+      "description": "Playwright: the tooling image and @playwright/test in one pull request, so that the browsers of the image are the ones that Playwright expects; titled by the group, and used outside the UI's image",
       "matchPackageNames": ["mcr.microsoft.com/playwright", "@playwright/test"],
       "groupName": "Playwright",
-      "groupSingleUpdates": true
+      "groupSingleUpdates": true,
+      "commitMessagePrefix": "ci(deps):"
     },
     {
       // mcr.microsoft.com publishes no release timestamps, so the minimum
