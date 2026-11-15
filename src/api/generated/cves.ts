@@ -138,6 +138,7 @@ export type ListCvesQueryError = ErrorType<
 /**
  * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, repeatable CNA, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary List CVEs
+ * @route GET /api/v1/cves
  */
 export function useListCves<
   TData = Awaited<ReturnType<typeof listCves>>,
@@ -165,6 +166,7 @@ export function useListCves<
 /**
  * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, repeatable CNA, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary List CVEs
+ * @route GET /api/v1/cves
  */
 export function useListCves<
   TData = Awaited<ReturnType<typeof listCves>>,
@@ -192,6 +194,7 @@ export function useListCves<
 /**
  * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, repeatable CNA, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary List CVEs
+ * @route GET /api/v1/cves
  */
 export function useListCves<
   TData = Awaited<ReturnType<typeof listCves>>,
@@ -211,6 +214,7 @@ export function useListCves<
 /**
  * Returns a paginated list of the CVEs accessible to the caller, with free-text search, state, repeatable severity, Ticket-presence, repeatable CNA, and publication-date filters, and sorting. A CVE without a Ticket is always listed; a CVE with a Ticket is listed only when that Ticket is visible to the caller. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary List CVEs
+ * @route GET /api/v1/cves
  */
 export function useListCves<
   TData = Awaited<ReturnType<typeof listCves>>,
@@ -297,6 +301,7 @@ export type GetCveQueryError = ErrorType<
 /**
  * Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE
+ * @route GET /api/v1/cves/{cve_id}
  */
 export function useGetCve<
   TData = Awaited<ReturnType<typeof getCve>>,
@@ -324,6 +329,7 @@ export function useGetCve<
 /**
  * Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE
+ * @route GET /api/v1/cves/{cve_id}
  */
 export function useGetCve<
   TData = Awaited<ReturnType<typeof getCve>>,
@@ -351,6 +357,7 @@ export function useGetCve<
 /**
  * Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE
+ * @route GET /api/v1/cves/{cve_id}
  */
 export function useGetCve<
   TData = Awaited<ReturnType<typeof getCve>>,
@@ -370,6 +377,7 @@ export function useGetCve<
 /**
  * Returns one CVE, identified by its CVE-ID, with its persisted exploitation (KEV, EPSS, SSVC) and weakness (CWE) evidence, its external identifiers, and the associated Ticket identity. Evidence only: no priority, no CVSS assessments (see `/cvss`), and no affected versions (see `/affected-versions`). Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE
+ * @route GET /api/v1/cves/{cve_id}
  */
 export function useGetCve<
   TData = Awaited<ReturnType<typeof getCve>>,
@@ -469,6 +477,7 @@ export type GetCveAffectedVersionsQueryError = ErrorType<
 /**
  * Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE affected versions
+ * @route GET /api/v1/cves/{cve_id}/affected-versions
  */
 export function useGetCveAffectedVersions<
   TData = Awaited<ReturnType<typeof getCveAffectedVersions>>,
@@ -500,6 +509,7 @@ export function useGetCveAffectedVersions<
 /**
  * Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE affected versions
+ * @route GET /api/v1/cves/{cve_id}/affected-versions
  */
 export function useGetCveAffectedVersions<
   TData = Awaited<ReturnType<typeof getCveAffectedVersions>>,
@@ -531,6 +541,7 @@ export function useGetCveAffectedVersions<
 /**
  * Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE affected versions
+ * @route GET /api/v1/cves/{cve_id}/affected-versions
  */
 export function useGetCveAffectedVersions<
   TData = Awaited<ReturnType<typeof getCveAffectedVersions>>,
@@ -554,6 +565,7 @@ export function useGetCveAffectedVersions<
 /**
  * Returns the persisted affected-product and affected-version entries of one CVE, identified by its CVE-ID, grouped by provenance scope (`source_container`). Informational evidence only: not used for package resolution or affectedness. Not paginated, filtered, or sortable: each scope is a complete snapshot in one fixed order (groups by `source_container`, entries by package coordinates then version fields, Unicode code-point order with absent values last). A CVE without entries returns an empty list. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE affected versions
+ * @route GET /api/v1/cves/{cve_id}/affected-versions
  */
 export function useGetCveAffectedVersions<
   TData = Awaited<ReturnType<typeof getCveAffectedVersions>>,
@@ -655,6 +667,7 @@ export type ListCveSourcesQueryError = ErrorType<
 /**
  * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. For `kev` it lists only `success` records written by the KEV fetcher: it can disagree with the KEV status of `GET /api/v1/cves/{cve_id}/sources`, which derives it from the CVE's KEV entry, and the KEV fetcher writes no `failure` records. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.
  * @summary List persisted CVE source records
+ * @route GET /api/v1/cve-sources
  */
 export function useListCveSources<
   TData = Awaited<ReturnType<typeof listCveSources>>,
@@ -682,6 +695,7 @@ export function useListCveSources<
 /**
  * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. For `kev` it lists only `success` records written by the KEV fetcher: it can disagree with the KEV status of `GET /api/v1/cves/{cve_id}/sources`, which derives it from the CVE's KEV entry, and the KEV fetcher writes no `failure` records. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.
  * @summary List persisted CVE source records
+ * @route GET /api/v1/cve-sources
  */
 export function useListCveSources<
   TData = Awaited<ReturnType<typeof listCveSources>>,
@@ -709,6 +723,7 @@ export function useListCveSources<
 /**
  * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. For `kev` it lists only `success` records written by the KEV fetcher: it can disagree with the KEV status of `GET /api/v1/cves/{cve_id}/sources`, which derives it from the CVE's KEV entry, and the KEV fetcher writes no `failure` records. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.
  * @summary List persisted CVE source records
+ * @route GET /api/v1/cve-sources
  */
 export function useListCveSources<
   TData = Awaited<ReturnType<typeof listCveSources>>,
@@ -728,6 +743,7 @@ export function useListCveSources<
 /**
  * Returns a paginated global listing of the persisted latest-state CVE source records (CVE-ID, source, persisted status, timestamps) of the CVEs accessible to the caller, filterable by source, status, stalled state, and fetch time. A record of a CVE without a Ticket is always listed; a record of a CVE with a Ticket is listed only when that Ticket is visible to the caller. Enables drill-down from fetcher runs; the result is a latest-state approximation and can differ from a run's failure count. For `kev` it lists only `success` records written by the KEV fetcher: it can disagree with the KEV status of `GET /api/v1/cves/{cve_id}/sources`, which derives it from the CVE's KEV entry, and the KEV fetcher writes no `failure` records. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to the records of CVEs associated with confidential Tickets.
  * @summary List persisted CVE source records
+ * @route GET /api/v1/cve-sources
  */
 export function useListCveSources<
   TData = Awaited<ReturnType<typeof listCveSources>>,
@@ -823,6 +839,7 @@ export type GetCveSourceStatusQueryError = ErrorType<
 /**
  * Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE source status
+ * @route GET /api/v1/cves/{cve_id}/sources
  */
 export function useGetCveSourceStatus<
   TData = Awaited<ReturnType<typeof getCveSourceStatus>>,
@@ -854,6 +871,7 @@ export function useGetCveSourceStatus<
 /**
  * Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE source status
+ * @route GET /api/v1/cves/{cve_id}/sources
  */
 export function useGetCveSourceStatus<
   TData = Awaited<ReturnType<typeof getCveSourceStatus>>,
@@ -885,6 +903,7 @@ export function useGetCveSourceStatus<
 /**
  * Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE source status
+ * @route GET /api/v1/cves/{cve_id}/sources
  */
 export function useGetCveSourceStatus<
   TData = Awaited<ReturnType<typeof getCveSourceStatus>>,
@@ -908,6 +927,7 @@ export function useGetCveSourceStatus<
 /**
  * Returns the fetch status of one CVE, identified by its CVE-ID, for every currently registered CVE source plus every persisted historical source no longer registered. Not paginated and not sortable: one entry per source in fixed ascending `source` code-point order. `pending` is a best-effort transient overlay; when it cannot be read, the persisted status is returned. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVE source status
+ * @route GET /api/v1/cves/{cve_id}/sources
  */
 export function useGetCveSourceStatus<
   TData = Awaited<ReturnType<typeof getCveSourceStatus>>,
@@ -1011,6 +1031,7 @@ export type GetCveCvssAssessmentsQueryError = ErrorType<
 /**
  * Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVSS assessments for a CVE
+ * @route GET /api/v1/cves/{cve_id}/cvss
  */
 export function useGetCveCvssAssessments<
   TData = Awaited<ReturnType<typeof getCveCvssAssessments>>,
@@ -1042,6 +1063,7 @@ export function useGetCveCvssAssessments<
 /**
  * Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVSS assessments for a CVE
+ * @route GET /api/v1/cves/{cve_id}/cvss
  */
 export function useGetCveCvssAssessments<
   TData = Awaited<ReturnType<typeof getCveCvssAssessments>>,
@@ -1073,6 +1095,7 @@ export function useGetCveCvssAssessments<
 /**
  * Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVSS assessments for a CVE
+ * @route GET /api/v1/cves/{cve_id}/cvss
  */
 export function useGetCveCvssAssessments<
   TData = Awaited<ReturnType<typeof getCveCvssAssessments>>,
@@ -1096,6 +1119,7 @@ export function useGetCveCvssAssessments<
 /**
  * Returns the complete CVSS assessment set of one CVE, identified by its CVE-ID, in canonical order (version 4.0, 3.1, 3.0, 2.0, then provider name), together with the configured default CVSS version, the resolved severity (null without assessments), and the eligibility score. Not paginated and not sortable: the set is bounded and has one canonical order. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to CVEs associated with confidential Tickets.
  * @summary Get CVSS assessments for a CVE
+ * @route GET /api/v1/cves/{cve_id}/cvss
  */
 export function useGetCveCvssAssessments<
   TData = Awaited<ReturnType<typeof getCveCvssAssessments>>,
@@ -1230,6 +1254,7 @@ export type UpsertSuseCvssAssessmentMutationVariables = {
 /**
  * Creates or updates the internal SUSE assessment of one CVE for the version derived from the submitted CVSS Base vector. Returns 201 only when this request created the assessment, and 200 for an update or an equivalent (unchanged) vector. An effective change re-resolves the CVE severity; for a CVE with a Ticket, it auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, refreshes automatic Product eligibility and priority, and re-evaluates the Ticket status. Requires `manage_cvss`.
  * @summary Set or update the SUSE CVSS assessment
+ * @route POST /api/v1/cves/{cve_id}/cvss/suse
  */
 export const useUpsertSuseCvssAssessment = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1334,6 +1359,7 @@ export type DeleteSuseCvssAssessmentMutationVariables = {
 /**
  * Deletes the internal SUSE assessment of one CVE for one CVSS version (`2.0`, `3.0`, `3.1`, or `4.0`). The CVE severity is re-resolved; for a CVE with a Ticket, an unassigned Ticket is auto-assigned to the caller when the caller is eligible to be its assignee, automatic Product eligibility and priority are refreshed, and the Ticket status is re-evaluated (deleting the last SUSE assessment reopens the analysis). Requires `manage_cvss`.
  * @summary Delete the SUSE CVSS assessment
+ * @route DELETE /api/v1/cves/{cve_id}/cvss/suse/{cvss_version}
  */
 export const useDeleteSuseCvssAssessment = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1446,6 +1472,7 @@ export type RefetchCveMutationVariables = {
 /**
  * Enqueues an on-demand re-fetch of one CVE, identified by its CVE-ID, from one source (`source`) or from every enabled source that supports single-CVE fetch, and returns immediately. No request body. The result lists the sources newly enqueued, already pending, skipped as disabled, and whose publication is unconfirmed. Progress is visible through `GET /api/v1/cves/{cve_id}/sources`. Dispatch only: accepted for a CVE whose Ticket is Ignored or Duplicated. Requires `triage_ticket`.
  * @summary Re-fetch CVE data
+ * @route POST /api/v1/cves/{cve_id}/refetch
  */
 export const useRefetchCve = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

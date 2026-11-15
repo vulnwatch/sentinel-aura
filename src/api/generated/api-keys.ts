@@ -125,6 +125,7 @@ export type ListMyApiKeysQueryError = ErrorType<
 /**
  * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
  * @summary List my API keys
+ * @route GET /api/v1/api-keys
  */
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
@@ -152,6 +153,7 @@ export function useListMyApiKeys<
 /**
  * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
  * @summary List my API keys
+ * @route GET /api/v1/api-keys
  */
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
@@ -179,6 +181,7 @@ export function useListMyApiKeys<
 /**
  * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
  * @summary List my API keys
+ * @route GET /api/v1/api-keys
  */
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
@@ -198,6 +201,7 @@ export function useListMyApiKeys<
 /**
  * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
  * @summary List my API keys
+ * @route GET /api/v1/api-keys
  */
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
@@ -320,6 +324,7 @@ export type CreateApiKeyMutationVariables = { data: ApiKeyCreateRequest };
 /**
  * Creates a new API key owned by the authenticated user. Requires JWT session authentication — a request authenticated by an API key is rejected. Returns the plaintext key exactly once, in this response only.
  * @summary Create an API key
+ * @route POST /api/v1/api-keys
  */
 export const useCreateApiKey = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -413,6 +418,7 @@ export type RevokeMyApiKeyMutationVariables = { keyId: string };
 /**
  * Revokes one of the authenticated user's own API keys. Idempotent — an already-revoked key returns its unchanged representation. A key that does not exist or belongs to another user returns an identical 404, without revealing which case applies.
  * @summary Revoke my API key
+ * @route POST /api/v1/api-keys/{key_id}/revoke
  */
 export const useRevokeMyApiKey = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -507,6 +513,7 @@ export type ListAllApiKeysQueryError = ErrorType<
 /**
  * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
  * @summary List all API keys
+ * @route GET /api/v1/admin/api-keys
  */
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
@@ -534,6 +541,7 @@ export function useListAllApiKeys<
 /**
  * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
  * @summary List all API keys
+ * @route GET /api/v1/admin/api-keys
  */
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
@@ -561,6 +569,7 @@ export function useListAllApiKeys<
 /**
  * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
  * @summary List all API keys
+ * @route GET /api/v1/admin/api-keys
  */
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
@@ -580,6 +589,7 @@ export function useListAllApiKeys<
 /**
  * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
  * @summary List all API keys
+ * @route GET /api/v1/admin/api-keys
  */
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
@@ -676,6 +686,7 @@ export type RevokeApiKeyMutationVariables = { keyId: string };
 /**
  * Revokes any user's API key, requiring the 'manage_users' capability. An administrator may revoke the API key used to authenticate the current request. Idempotent.
  * @summary Revoke an API key
+ * @route POST /api/v1/admin/api-keys/{key_id}/revoke
  */
 export const useRevokeApiKey = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

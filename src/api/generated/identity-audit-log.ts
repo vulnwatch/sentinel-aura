@@ -140,6 +140,7 @@ export type ListMyIdentityAuditEventsQueryError = ErrorType<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
  * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
  */
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
@@ -171,6 +172,7 @@ export function useListMyIdentityAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
  * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
  */
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
@@ -202,6 +204,7 @@ export function useListMyIdentityAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
  * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
  */
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
@@ -225,6 +228,7 @@ export function useListMyIdentityAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
  * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
  */
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
@@ -354,6 +358,7 @@ export type ListIdentityAuditEventsQueryError = ErrorType<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
  * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
  */
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,
@@ -385,6 +390,7 @@ export function useListIdentityAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
  * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
  */
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,
@@ -416,6 +422,7 @@ export function useListIdentityAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
  * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
  */
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,
@@ -439,6 +446,7 @@ export function useListIdentityAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
  * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
  */
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,

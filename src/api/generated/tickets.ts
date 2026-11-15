@@ -151,6 +151,7 @@ export type ListTicketsQueryError = ErrorType<
 /**
  * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, ignore reason, CNA, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
+ * @route GET /api/v1/tickets
  */
 export function useListTickets<
   TData = Awaited<ReturnType<typeof listTickets>>,
@@ -178,6 +179,7 @@ export function useListTickets<
 /**
  * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, ignore reason, CNA, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
+ * @route GET /api/v1/tickets
  */
 export function useListTickets<
   TData = Awaited<ReturnType<typeof listTickets>>,
@@ -205,6 +207,7 @@ export function useListTickets<
 /**
  * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, ignore reason, CNA, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
+ * @route GET /api/v1/tickets
  */
 export function useListTickets<
   TData = Awaited<ReturnType<typeof listTickets>>,
@@ -224,6 +227,7 @@ export function useListTickets<
 /**
  * Returns a paginated list of the Tickets visible to the caller, with multi-field search, repeatable status, ignore reason, CNA, severity, priority, overdue, and current phase filters, assignee, maintainer, Product, track, duplicate-original, confidentiality, and passed Coordinated Release Date filters, and sorting. Visibility is applied before every filter, sort, count, and page. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Tickets
+ * @route GET /api/v1/tickets
  */
 export function useListTickets<
   TData = Awaited<ReturnType<typeof listTickets>>,
@@ -348,6 +352,7 @@ export type CreateTicketMutationVariables = { data: TicketCreateRequest };
 /**
  * Creates a Ticket manually, optionally associated with a CVE (an unknown CVE is created as a placeholder record), with an initial manual severity (only without a CVE), as confidential, and with an initial Coordinated Release Date (only when confidential, and not before the creation instant of the Ticket). A creator eligible to be the assignee of the new Ticket (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential) is assigned and the Ticket starts in `analysis`; otherwise it starts `new` and unassigned. Returns the created Ticket detail. Requires `create_ticket`; supplying `is_confidential` (`true` or `false`) additionally requires `manage_confidentiality`.
  * @summary Create Ticket
+ * @route POST /api/v1/tickets
  */
 export const useCreateTicket = <
   TError = ErrorType<
@@ -435,6 +440,7 @@ export type GetTicketQueryError = ErrorType<
 /**
  * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree, which names the maintainers of each package. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Get Ticket
+ * @route GET /api/v1/tickets/{ticket_id}
  */
 export function useGetTicket<
   TData = Awaited<ReturnType<typeof getTicket>>,
@@ -462,6 +468,7 @@ export function useGetTicket<
 /**
  * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree, which names the maintainers of each package. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Get Ticket
+ * @route GET /api/v1/tickets/{ticket_id}
  */
 export function useGetTicket<
   TData = Awaited<ReturnType<typeof getTicket>>,
@@ -489,6 +496,7 @@ export function useGetTicket<
 /**
  * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree, which names the maintainers of each package. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Get Ticket
+ * @route GET /api/v1/tickets/{ticket_id}
  */
 export function useGetTicket<
   TData = Awaited<ReturnType<typeof getTicket>>,
@@ -508,6 +516,7 @@ export function useGetTicket<
 /**
  * Returns one Ticket by its canonical SNTL-{n} identity: root fields, resolved severity, effective, automatic, and override priority, Ticket-level due dates, the current assignee, expanded CVE evidence (KEV, EPSS, SSVC, CWE, external identifiers; CVSS assessments are available from their own sub-resource), the duplicate target's identifier only, and the complete package tree, which names the maintainers of each package. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Get Ticket
+ * @route GET /api/v1/tickets/{ticket_id}
  */
 export function useGetTicket<
   TData = Awaited<ReturnType<typeof getTicket>>,
@@ -635,6 +644,7 @@ export type SetTicketSeverityMutationVariables = {
 /**
  * Sets or clears the manual severity of a Ticket without a CVE. A lowercase label (`critical`, `high`, `medium`, `low`, `none`) sets it; JSON `null` clears it (unresolved). An effective change auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, refreshes the automatic priority, and re-evaluates the Ticket status; an unchanged severity returns the current Ticket with no side effect. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Set Severity Manual
+ * @route PATCH /api/v1/tickets/{ticket_id}/severity
  */
 export const useSetTicketSeverity = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -761,6 +771,7 @@ export type AssociateTicketCveMutationVariables = {
 /**
  * Associates a CVE with a Ticket that has none (an unknown CVE is created as a placeholder record). Clears the manual severity, which the CVE's CVSS-derived severity replaces; recalculates the automatic Product eligibility and the automatic priority from the CVE's current assessments and evidence; and re-evaluates the Ticket status, which may regress. An unassigned Ticket is auto-assigned to the caller when the caller is eligible to be its assignee. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Associate CVE
+ * @route POST /api/v1/tickets/{ticket_id}/associate-cve
  */
 export const useAssociateTicketCve = <
   TError = ErrorType<
@@ -890,6 +901,7 @@ export type SetTicketPriorityMutationVariables = {
 /**
  * Sets, changes, or clears the manual priority override. A lowercase level (`p1`-`p4`) sets it; JSON `null` clears it, returning the Ticket to its automatic priority (`priority_automatic`). The override is sticky: automatic refresh never changes it. An unchanged request is an idempotent success. An effective change auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Set Priority Override
+ * @route PATCH /api/v1/tickets/{ticket_id}/priority
  */
 export const useSetTicketPriority = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1013,6 +1025,7 @@ export type AssignTicketMutationVariables = {
 /**
  * Assigns or reassigns a Ticket to a user eligible to be its assignee (active, not a bot account, holding `triage_ticket`, and with scope `all` when the Ticket is confidential), identified by UUID or exact username. Reassigning to the current assignee is an idempotent success. A `new` Ticket moves to `analysis`, and the Ticket status is re-evaluated. JSON `null` instead unassigns the caller, who must be the current assignee: the Ticket keeps its status, and a Ticket without an assignee is an idempotent success. Another user's assignment cannot be cleared, only reassigned. The optional `expected_assignee_id` states the assignee that the client expects to replace: when the current assignee differs and the request is not an idempotent success, it fails with `TICKET_ASSIGNEE_CHANGED` and changes nothing. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Assign Ticket
+ * @route PATCH /api/v1/tickets/{ticket_id}/assignee
  */
 export const useAssignTicket = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1136,6 +1149,7 @@ export type IgnoreTicketMutationVariables = {
 /**
  * Moves a `new` or `analysis` Ticket to `ignored` (manual zone) with the `reason` why it is ignored, which the Ticket carries as `ignore_reason` until it is reopened. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee, which records `new` -> `analysis` before the transition. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Ignore Ticket
+ * @route POST /api/v1/tickets/{ticket_id}/ignore
  */
 export const useIgnoreTicket = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1263,6 +1277,7 @@ export type MarkTicketAsDuplicateMutationVariables = {
 /**
  * Marks a Ticket as a duplicate of another Ticket, identified by `duplicate_of_ticket_id` (`SNTL-{n}`), which must not itself be Duplicated. Tickets currently marked as duplicates of this Ticket are atomically repointed to the new target. An unassigned Ticket is first auto-assigned to the caller when the caller is eligible to be its assignee. Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Mark Ticket as Duplicate
+ * @route POST /api/v1/tickets/{ticket_id}/duplicate
  */
 export const useMarkTicketAsDuplicate = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1359,6 +1374,7 @@ export type ReopenTicketMutationVariables = { ticketId: string };
 /**
  * Reopens an `ignored` Ticket. No request body. A caller eligible to be its assignee becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Reopen Ticket
+ * @route POST /api/v1/tickets/{ticket_id}/reopen
  */
 export const useReopenTicket = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1456,6 +1472,7 @@ export type RevertTicketDuplicateMutationVariables = { ticketId: string };
 /**
  * Reverts a `duplicated` Ticket into the gate zone and clears its duplicate link. No request body. Tickets previously repointed away from this Ticket keep their current target. A caller eligible to be its assignee becomes the assignee, replacing any current assignee; otherwise the current assignee is kept. Automatic Product eligibility is re-evaluated from current data, and the Ticket status is evaluated from its gates (`analysis`, `analyzed`, or `resolved`). Returns the post-mutation Ticket detail. Requires `triage_ticket`.
  * @summary Revert Duplicate Status
+ * @route POST /api/v1/tickets/{ticket_id}/revert-duplicate
  */
 export const useRevertTicketDuplicate = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1556,6 +1573,7 @@ export type RerunTicketConvergenceMutationVariables = { ticketId: string };
 /**
  * Publishes the complete asynchronous Ticket convergence workflow again: re-resolution of every persisted package marker (including excluded ones, without restoring them), then the per-Ticket catch-up of every participating fetcher. A recovery action for a failed or lost convergence; it does not change Ticket status directly. No request body. The Ticket must be `analysis`, `analyzed`, or `resolved`. Returns the transient root task ID, which is correlation data only (no status or progress endpoint). Repeated requests are accepted and each publishes a complete workflow. Requires `triage_ticket` or `manage_fetchers`.
  * @summary Rerun Ticket Convergence
+ * @route POST /api/v1/tickets/{ticket_id}/rerun-reactivation
  */
 export const useRerunTicketConvergence = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1687,6 +1705,7 @@ export type SetTicketConfidentialityMutationVariables = {
 /**
  * Sets whether a Ticket is confidential. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. Making a `new`, `analysis`, or `analyzed` Ticket confidential unassigns an assignee who is not eligible to be the assignee of a confidential Ticket, such as a restricted analyst, even one with an access grant or package maintainership; the Ticket then appears unassigned. Making a confidential Ticket non-confidential deletes every explicit access grant; making it confidential again does not recreate them. Package-maintainer visibility and the Coordinated Release Date are unchanged. An unchanged request is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.
  * @summary Set Confidentiality
+ * @route PATCH /api/v1/tickets/{ticket_id}/confidentiality
  */
 export const useSetTicketConfidentiality = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1818,6 +1837,7 @@ export type SetTicketCoordinatedReleaseDateMutationVariables = {
 /**
  * Sets the Coordinated Release Date (embargo publication instant) of a confidential Ticket, or changes or clears the date of a Ticket that has one, including a Ticket made non-confidential that retains it. While set, the date is the final release deadline: the due dates divide the window from the Ticket's creation to it; clearing it returns them to the SLA. An ISO 8601 date-time sets or replaces it (a value without a UTC offset is interpreted as UTC; a past instant is accepted when it is not before the creation of the Ticket); JSON `null` clears it. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. An unchanged request (the same instant, or `null` when none is set) is an idempotent success. Returns the post-mutation Ticket detail. Requires `manage_confidentiality`.
  * @summary Set Coordinated Release Date
+ * @route PATCH /api/v1/tickets/{ticket_id}/coordinated-release-date
  */
 export const useSetTicketCoordinatedReleaseDate = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1917,6 +1937,7 @@ export type ListTicketAccessGrantsQueryError = ErrorType<
 /**
  * Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Every caller who can see the Ticket lists its grants, whatever the caller's capabilities; granting and revoking require `manage_confidentiality`.
  * @summary List Access Grants
+ * @route GET /api/v1/tickets/{ticket_id}/access
  */
 export function useListTicketAccessGrants<
   TData = Awaited<ReturnType<typeof listTicketAccessGrants>>,
@@ -1948,6 +1969,7 @@ export function useListTicketAccessGrants<
 /**
  * Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Every caller who can see the Ticket lists its grants, whatever the caller's capabilities; granting and revoking require `manage_confidentiality`.
  * @summary List Access Grants
+ * @route GET /api/v1/tickets/{ticket_id}/access
  */
 export function useListTicketAccessGrants<
   TData = Awaited<ReturnType<typeof listTicketAccessGrants>>,
@@ -1979,6 +2001,7 @@ export function useListTicketAccessGrants<
 /**
  * Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Every caller who can see the Ticket lists its grants, whatever the caller's capabilities; granting and revoking require `manage_confidentiality`.
  * @summary List Access Grants
+ * @route GET /api/v1/tickets/{ticket_id}/access
  */
 export function useListTicketAccessGrants<
   TData = Awaited<ReturnType<typeof listTicketAccessGrants>>,
@@ -2002,6 +2025,7 @@ export function useListTicketAccessGrants<
 /**
  * Lists every user holding an explicit access grant on a confidential Ticket, with the current profiles of the user and of the grantor (deactivated users are included with `active = false`). Unpaginated: grants per Ticket are a bounded dataset, so the response has no `meta` object. The order is fixed, `granted_at` ascending then user UUID ascending, and not client-configurable: supplied `sort_by` or `sort_order` values are ignored. Every caller who can see the Ticket lists its grants, whatever the caller's capabilities; granting and revoking require `manage_confidentiality`.
  * @summary List Access Grants
+ * @route GET /api/v1/tickets/{ticket_id}/access
  */
 export function useListTicketAccessGrants<
   TData = Awaited<ReturnType<typeof listTicketAccessGrants>>,
@@ -2136,6 +2160,7 @@ export type GrantTicketAccessMutationVariables = {
 /**
  * Grants a user, identified by UUID or exact username, explicit access to a confidential Ticket. Returns 201 with the new grant; when the grant already exists, returns 200 with the existing grant (original `granted_by` and `granted_at`), even when its user is now inactive. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. Requires `manage_confidentiality`.
  * @summary Grant Access
+ * @route POST /api/v1/tickets/{ticket_id}/access
  */
 export const useGrantTicketAccess = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -2234,6 +2259,7 @@ export type RevokeTicketAccessMutationVariables = {
 /**
  * Revokes the explicit access grant of a user, identified by UUID or exact username, on a confidential Ticket. Revoking from an inactive user is valid. When no grant exists, the request is an idempotent success. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket or changes its status. Requires `manage_confidentiality`.
  * @summary Revoke Access
+ * @route DELETE /api/v1/tickets/{ticket_id}/access/{user}
  */
 export const useRevokeTicketAccess = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

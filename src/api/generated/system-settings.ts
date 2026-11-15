@@ -112,6 +112,7 @@ export type GetSystemSettingsQueryError = ErrorType<
 /**
  * Returns the current value of platform-wide settings. Requires the manage_settings capability.
  * @summary Get system settings
+ * @route GET /api/v1/admin/settings
  */
 export function useGetSystemSettings<
   TData = Awaited<ReturnType<typeof getSystemSettings>>,
@@ -142,6 +143,7 @@ export function useGetSystemSettings<
 /**
  * Returns the current value of platform-wide settings. Requires the manage_settings capability.
  * @summary Get system settings
+ * @route GET /api/v1/admin/settings
  */
 export function useGetSystemSettings<
   TData = Awaited<ReturnType<typeof getSystemSettings>>,
@@ -172,6 +174,7 @@ export function useGetSystemSettings<
 /**
  * Returns the current value of platform-wide settings. Requires the manage_settings capability.
  * @summary Get system settings
+ * @route GET /api/v1/admin/settings
  */
 export function useGetSystemSettings<
   TData = Awaited<ReturnType<typeof getSystemSettings>>,
@@ -194,6 +197,7 @@ export function useGetSystemSettings<
 /**
  * Returns the current value of platform-wide settings. Requires the manage_settings capability.
  * @summary Get system settings
+ * @route GET /api/v1/admin/settings
  */
 export function useGetSystemSettings<
   TData = Awaited<ReturnType<typeof getSystemSettings>>,
@@ -322,6 +326,7 @@ export type UpdateSystemSettingsMutationVariables = {
 /**
  * Changes the default CVSS version and records one setting audit event, or returns the persisted value unchanged when it already equals the request. Does not recalculate derived state, schedule, or publish anything: the separate manual recalculation endpoint converges existing state. Requires the manage_settings capability.
  * @summary Update system settings
+ * @route PATCH /api/v1/admin/settings
  */
 export const useUpdateSystemSettings = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -435,6 +440,7 @@ export type GetDefaultCvssVersionImpactQueryError = ErrorType<
 /**
  * Returns a read-only, fixed-size aggregate of the severity, Product eligibility, override-skip, and Resolved-regression effects that applying the proposed default CVSS version would have on the persisted CVE population. Advisory and non-binding; it is not a prerequisite for changing the setting. Requires the manage_settings capability.
  * @summary Preview the impact of a default CVSS version change
+ * @route GET /api/v1/admin/settings/default-cvss-version/impact
  */
 export function useGetDefaultCvssVersionImpact<
   TData = Awaited<ReturnType<typeof getDefaultCvssVersionImpact>>,
@@ -466,6 +472,7 @@ export function useGetDefaultCvssVersionImpact<
 /**
  * Returns a read-only, fixed-size aggregate of the severity, Product eligibility, override-skip, and Resolved-regression effects that applying the proposed default CVSS version would have on the persisted CVE population. Advisory and non-binding; it is not a prerequisite for changing the setting. Requires the manage_settings capability.
  * @summary Preview the impact of a default CVSS version change
+ * @route GET /api/v1/admin/settings/default-cvss-version/impact
  */
 export function useGetDefaultCvssVersionImpact<
   TData = Awaited<ReturnType<typeof getDefaultCvssVersionImpact>>,
@@ -497,6 +504,7 @@ export function useGetDefaultCvssVersionImpact<
 /**
  * Returns a read-only, fixed-size aggregate of the severity, Product eligibility, override-skip, and Resolved-regression effects that applying the proposed default CVSS version would have on the persisted CVE population. Advisory and non-binding; it is not a prerequisite for changing the setting. Requires the manage_settings capability.
  * @summary Preview the impact of a default CVSS version change
+ * @route GET /api/v1/admin/settings/default-cvss-version/impact
  */
 export function useGetDefaultCvssVersionImpact<
   TData = Awaited<ReturnType<typeof getDefaultCvssVersionImpact>>,
@@ -520,6 +528,7 @@ export function useGetDefaultCvssVersionImpact<
 /**
  * Returns a read-only, fixed-size aggregate of the severity, Product eligibility, override-skip, and Resolved-regression effects that applying the proposed default CVSS version would have on the persisted CVE population. Advisory and non-binding; it is not a prerequisite for changing the setting. Requires the manage_settings capability.
  * @summary Preview the impact of a default CVSS version change
+ * @route GET /api/v1/admin/settings/default-cvss-version/impact
  */
 export function useGetDefaultCvssVersionImpact<
   TData = Awaited<ReturnType<typeof getDefaultCvssVersionImpact>>,
@@ -623,6 +632,7 @@ export type TriggerCvssRecalculationMutationError = ErrorType<
 /**
  * Admits and enqueues one complete recalculation of every persisted CVE for the currently persisted default CVSS version. Takes no request body and accepts no version. Changes no setting and creates no audit event. Repeatable: it is the explicit refresh and recovery surface after a setting change or an interrupted run. Requires the manage_settings capability.
  * @summary Trigger the all-CVE CVSS recalculation
+ * @route POST /api/v1/admin/settings/default-cvss-version/recalculate
  */
 export const useTriggerCvssRecalculation = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -745,6 +755,7 @@ export type ListSettingAuditEventsQueryError = ErrorType<
 /**
  * Returns a paginated, fixed reverse-chronological list of system setting modifications. Supports filtering by event type, setting key, actor, and date range. Requires the manage_settings capability.
  * @summary List settings audit events
+ * @route GET /api/v1/admin/settings/audit-log
  */
 export function useListSettingAuditEvents<
   TData = Awaited<ReturnType<typeof listSettingAuditEvents>>,
@@ -776,6 +787,7 @@ export function useListSettingAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of system setting modifications. Supports filtering by event type, setting key, actor, and date range. Requires the manage_settings capability.
  * @summary List settings audit events
+ * @route GET /api/v1/admin/settings/audit-log
  */
 export function useListSettingAuditEvents<
   TData = Awaited<ReturnType<typeof listSettingAuditEvents>>,
@@ -807,6 +819,7 @@ export function useListSettingAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of system setting modifications. Supports filtering by event type, setting key, actor, and date range. Requires the manage_settings capability.
  * @summary List settings audit events
+ * @route GET /api/v1/admin/settings/audit-log
  */
 export function useListSettingAuditEvents<
   TData = Awaited<ReturnType<typeof listSettingAuditEvents>>,
@@ -830,6 +843,7 @@ export function useListSettingAuditEvents<
 /**
  * Returns a paginated, fixed reverse-chronological list of system setting modifications. Supports filtering by event type, setting key, actor, and date range. Requires the manage_settings capability.
  * @summary List settings audit events
+ * @route GET /api/v1/admin/settings/audit-log
  */
 export function useListSettingAuditEvents<
   TData = Awaited<ReturnType<typeof listSettingAuditEvents>>,

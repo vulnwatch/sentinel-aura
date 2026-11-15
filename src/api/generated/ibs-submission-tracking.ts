@@ -144,6 +144,7 @@ export type ListSubmissionRequestsQueryError = ErrorType<
 /**
  * Returns the paginated IBS submission request (`maintenance_incident`) actions correlated to the Ticket's package tracks. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List submission requests
+ * @route GET /api/v1/tickets/{ticket_id}/submission-requests
  */
 export function useListSubmissionRequests<
   TData = Awaited<ReturnType<typeof listSubmissionRequests>>,
@@ -176,6 +177,7 @@ export function useListSubmissionRequests<
 /**
  * Returns the paginated IBS submission request (`maintenance_incident`) actions correlated to the Ticket's package tracks. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List submission requests
+ * @route GET /api/v1/tickets/{ticket_id}/submission-requests
  */
 export function useListSubmissionRequests<
   TData = Awaited<ReturnType<typeof listSubmissionRequests>>,
@@ -208,6 +210,7 @@ export function useListSubmissionRequests<
 /**
  * Returns the paginated IBS submission request (`maintenance_incident`) actions correlated to the Ticket's package tracks. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List submission requests
+ * @route GET /api/v1/tickets/{ticket_id}/submission-requests
  */
 export function useListSubmissionRequests<
   TData = Awaited<ReturnType<typeof listSubmissionRequests>>,
@@ -232,6 +235,7 @@ export function useListSubmissionRequests<
 /**
  * Returns the paginated IBS submission request (`maintenance_incident`) actions correlated to the Ticket's package tracks. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List submission requests
+ * @route GET /api/v1/tickets/{ticket_id}/submission-requests
  */
 export function useListSubmissionRequests<
   TData = Awaited<ReturnType<typeof listSubmissionRequests>>,
@@ -363,6 +367,7 @@ export type ListReleaseRequestsQueryError = ErrorType<
 /**
  * Returns the paginated IBS release request (`maintenance_release`) actions directly correlated to the Ticket's package tracks; they are never inferred from request-level incident equality. Also filterable by exact `incident_number`. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List release requests
+ * @route GET /api/v1/tickets/{ticket_id}/release-requests
  */
 export function useListReleaseRequests<
   TData = Awaited<ReturnType<typeof listReleaseRequests>>,
@@ -395,6 +400,7 @@ export function useListReleaseRequests<
 /**
  * Returns the paginated IBS release request (`maintenance_release`) actions directly correlated to the Ticket's package tracks; they are never inferred from request-level incident equality. Also filterable by exact `incident_number`. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List release requests
+ * @route GET /api/v1/tickets/{ticket_id}/release-requests
  */
 export function useListReleaseRequests<
   TData = Awaited<ReturnType<typeof listReleaseRequests>>,
@@ -427,6 +433,7 @@ export function useListReleaseRequests<
 /**
  * Returns the paginated IBS release request (`maintenance_release`) actions directly correlated to the Ticket's package tracks; they are never inferred from request-level incident equality. Also filterable by exact `incident_number`. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List release requests
+ * @route GET /api/v1/tickets/{ticket_id}/release-requests
  */
 export function useListReleaseRequests<
   TData = Awaited<ReturnType<typeof listReleaseRequests>>,
@@ -451,6 +458,7 @@ export function useListReleaseRequests<
 /**
  * Returns the paginated IBS release request (`maintenance_release`) actions directly correlated to the Ticket's package tracks; they are never inferred from request-level incident equality. Also filterable by exact `incident_number`. Each item is one distinct action, however many tracks of the Ticket it is correlated to. Persisted history is returned regardless of the Ticket status and of package or track exclusion, affectedness, or actionability. Filters combine with AND; an invalid `state` returns an empty page. Sorted by the selected upstream timestamp of the request (default `upstream_updated_at`, `desc`). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List release requests
+ * @route GET /api/v1/tickets/{ticket_id}/release-requests
  */
 export function useListReleaseRequests<
   TData = Awaited<ReturnType<typeof listReleaseRequests>>,

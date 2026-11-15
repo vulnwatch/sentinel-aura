@@ -132,6 +132,7 @@ export type ListPendingPackagesQueryError = ErrorType<
 /**
  * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my pending packages
+ * @route GET /api/v1/my/packages/pending
  */
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
@@ -163,6 +164,7 @@ export function useListPendingPackages<
 /**
  * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my pending packages
+ * @route GET /api/v1/my/packages/pending
  */
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
@@ -194,6 +196,7 @@ export function useListPendingPackages<
 /**
  * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my pending packages
+ * @route GET /api/v1/my/packages/pending
  */
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
@@ -217,6 +220,7 @@ export function useListPendingPackages<
 /**
  * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my pending packages
+ * @route GET /api/v1/my/packages/pending
  */
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
@@ -334,6 +338,7 @@ export type ListInProgressPackagesQueryError = ErrorType<
 /**
  * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my in-progress packages
+ * @route GET /api/v1/my/packages/in-progress
  */
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
@@ -365,6 +370,7 @@ export function useListInProgressPackages<
 /**
  * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my in-progress packages
+ * @route GET /api/v1/my/packages/in-progress
  */
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
@@ -396,6 +402,7 @@ export function useListInProgressPackages<
 /**
  * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my in-progress packages
+ * @route GET /api/v1/my/packages/in-progress
  */
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
@@ -419,6 +426,7 @@ export function useListInProgressPackages<
 /**
  * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my in-progress packages
+ * @route GET /api/v1/my/packages/in-progress
  */
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
@@ -536,6 +544,7 @@ export type ListCompletedPackagesQueryError = ErrorType<
 /**
  * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my completed packages
+ * @route GET /api/v1/my/packages/completed
  */
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
@@ -567,6 +576,7 @@ export function useListCompletedPackages<
 /**
  * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my completed packages
+ * @route GET /api/v1/my/packages/completed
  */
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
@@ -598,6 +608,7 @@ export function useListCompletedPackages<
 /**
  * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my completed packages
+ * @route GET /api/v1/my/packages/completed
  */
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
@@ -621,6 +632,7 @@ export function useListCompletedPackages<
 /**
  * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my completed packages
+ * @route GET /api/v1/my/packages/completed
  */
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
@@ -724,6 +736,7 @@ export type GetTicketPackageWorkQueryError = ErrorType<
 /**
  * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
  * @summary Get my package work for a Ticket
+ * @route GET /api/v1/my/packages/tickets/{ticket_id}
  */
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,
@@ -755,6 +768,7 @@ export function useGetTicketPackageWork<
 /**
  * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
  * @summary Get my package work for a Ticket
+ * @route GET /api/v1/my/packages/tickets/{ticket_id}
  */
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,
@@ -786,6 +800,7 @@ export function useGetTicketPackageWork<
 /**
  * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
  * @summary Get my package work for a Ticket
+ * @route GET /api/v1/my/packages/tickets/{ticket_id}
  */
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,
@@ -809,6 +824,7 @@ export function useGetTicketPackageWork<
 /**
  * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
  * @summary Get my package work for a Ticket
+ * @route GET /api/v1/my/packages/tickets/{ticket_id}
  */
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,

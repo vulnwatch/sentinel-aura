@@ -131,6 +131,7 @@ export type ListTicketPackagesQueryError = ErrorType<
 /**
  * Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase, and the maintainers of each package. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Ticket packages
+ * @route GET /api/v1/tickets/{ticket_id}/packages
  */
 export function useListTicketPackages<
   TData = Awaited<ReturnType<typeof listTicketPackages>>,
@@ -162,6 +163,7 @@ export function useListTicketPackages<
 /**
  * Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase, and the maintainers of each package. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Ticket packages
+ * @route GET /api/v1/tickets/{ticket_id}/packages
  */
 export function useListTicketPackages<
   TData = Awaited<ReturnType<typeof listTicketPackages>>,
@@ -193,6 +195,7 @@ export function useListTicketPackages<
 /**
  * Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase, and the maintainers of each package. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Ticket packages
+ * @route GET /api/v1/tickets/{ticket_id}/packages
  */
 export function useListTicketPackages<
   TData = Awaited<ReturnType<typeof listTicketPackages>>,
@@ -216,6 +219,7 @@ export function useListTicketPackages<
 /**
  * Returns the complete package tree of one Ticket: every package, track, and Product occurrence, including manually excluded and lifecycle-non-actionable records, with direct exclusion timestamps, derived actionability, per-track due dates, milestones, and current phase, and the maintainers of each package. Fixed order: packages by name, tracks by reference, and Products by CPE, each in ascending Unicode code-point order. Unpaginated (the package count per Ticket is bounded). The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary List Ticket packages
+ * @route GET /api/v1/tickets/{ticket_id}/packages
  */
 export function useListTicketPackages<
   TData = Awaited<ReturnType<typeof listTicketPackages>>,
@@ -347,6 +351,7 @@ export type AddTicketPackageMutationVariables = {
 /**
  * Adds a source package to a Ticket. Sentinel resolves every currently maintained track and Product of the package through SMELT, matches the Products against the current Product catalog snapshot, acquires package-wide maintainership, and creates the missing package, track, and Product records. Existing records, included or excluded, are skipped, so a repeated request is safe and reports zero created records. An effective addition records a `package_added` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. Requires `manage_packages`. Error rows are not ordered by status: the endpoint applies, in order, Ticket accessibility, SMELT availability, catalog readiness, package-not-found, target resolution, then the locked Ticket checks (accessibility, `TICKET_NOT_MUTABLE`, `PACKAGE_ALREADY_EXCLUDED`).
  * @summary Add Package to Ticket
+ * @route POST /api/v1/tickets/{ticket_id}/packages
  */
 export const useAddTicketPackage = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -450,6 +455,7 @@ export type SearchPackagesQueryError = ErrorType<
 /**
  * Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Search packages across Tickets
+ * @route GET /api/v1/packages
  */
 export function useSearchPackages<
   TData = Awaited<ReturnType<typeof searchPackages>>,
@@ -477,6 +483,7 @@ export function useSearchPackages<
 /**
  * Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Search packages across Tickets
+ * @route GET /api/v1/packages
  */
 export function useSearchPackages<
   TData = Awaited<ReturnType<typeof searchPackages>>,
@@ -504,6 +511,7 @@ export function useSearchPackages<
 /**
  * Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Search packages across Tickets
+ * @route GET /api/v1/packages
  */
 export function useSearchPackages<
   TData = Awaited<ReturnType<typeof searchPackages>>,
@@ -523,6 +531,7 @@ export function useSearchPackages<
 /**
  * Returns a paginated list of actionable package occurrences across the Tickets visible to the caller; each item is one (package name, Ticket) pair. Non-actionable packages (directly excluded, or without an actionable track) are always omitted. Supports a literal substring `search` or an exact `name`, a repeatable `ticket_status` filter, and sorting. Visibility is applied before every filter, sort, count, page, and track aggregate. Requires authentication (JWT session or API key); the caller's scope, grants, and package maintainership determine access to confidential Tickets.
  * @summary Search packages across Tickets
+ * @route GET /api/v1/packages
  */
 export function useSearchPackages<
   TData = Awaited<ReturnType<typeof searchPackages>>,
@@ -667,6 +676,7 @@ export type ChangeTrackStatusMutationVariables = {
 /**
  * Changes the affectedness status of one track. An effective change records a `track_status_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status; an unchanged status returns the current track with no side effect. `fixed` requires `admin_ticket_ops` (any Ticket) or `manage_packages` (only a Ticket without a CVE); every other status requires `manage_packages`. Returns the track and all its Products with their current eligibility and actionability.
  * @summary Change Track Status
+ * @route PATCH /api/v1/tickets/{ticket_id}/packages/{package_id}/tracks/{track_id}
  */
 export const useChangeTrackStatus = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -819,6 +829,7 @@ export type OverrideProductEligibilityMutationVariables = {
 /**
  * Sets, changes, or clears the eligibility override of one Product occurrence. `eligible: true` or `false` sets or changes the manual override; `eligible: null` removes it and immediately recalculates eligibility from the current CVSS threshold and lifecycle rules (the SUSE assessment of the default CVSS version, otherwise the 10.0 fallback, including for a Ticket without a CVE). An effective change records a `product_eligibility_changed` event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status; an unchanged request returns the current Product with no side effect. Excluded and end-of-life Products remain editable. Requires `manage_packages`. Returns the Product with its current eligibility and actionability.
  * @summary Override Product Eligibility
+ * @route PATCH /api/v1/tickets/{ticket_id}/packages/{package_id}/tracks/{track_id}/products/{ticket_package_product_id}
  */
 export const useOverrideProductEligibility = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -922,6 +933,7 @@ export type ExcludePackageMutationVariables = {
 /**
  * Directly excludes one package. Its tracks and Products become effectively excluded without being modified. Excluding the caller's last included maintained package may remove the caller's access to a confidential Ticket after this request. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Soft-Delete Package from Ticket
+ * @route POST /api/v1/tickets/{ticket_id}/packages/{package_id}/exclude
  */
 export const useExcludePackage = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1022,6 +1034,7 @@ export type RestorePackageMutationVariables = {
 /**
  * Restores one directly excluded package. Child markers are not modified, so the package may remain non-actionable (`no_actionable_tracks`). Restoring a maintained package reactivates maintainer visibility. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Restore Package
+ * @route POST /api/v1/tickets/{ticket_id}/packages/{package_id}/restore
  */
 export const useRestorePackage = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1128,6 +1141,7 @@ export type ExcludeTrackMutationVariables = {
 /**
  * Directly excludes one track, also beneath an excluded package (the response reason is then `package_excluded`). Its Products become effectively excluded without being modified. Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Soft-Delete Track
+ * @route POST /api/v1/tickets/{ticket_id}/packages/{package_id}/tracks/{track_id}/exclude
  */
 export const useExcludeTrack = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1234,6 +1248,7 @@ export type RestoreTrackMutationVariables = {
 /**
  * Restores one directly excluded track. Product markers are not modified, so the track may remain non-actionable (`no_actionable_products`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Restore Track
+ * @route POST /api/v1/tickets/{ticket_id}/packages/{package_id}/tracks/{track_id}/restore
  */
 export const useRestoreTrack = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1350,6 +1365,7 @@ export type ExcludeProductMutationVariables = {
 /**
  * Directly excludes one Product occurrence, also beneath an excluded package or track and while the Product is end-of-life (ancestor reasons take precedence over `product_excluded`, which takes precedence over `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Soft-Delete Product
+ * @route POST /api/v1/tickets/{ticket_id}/packages/{package_id}/tracks/{track_id}/products/{ticket_package_product_id}/exclude
  */
 export const useExcludeProduct = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1466,6 +1482,7 @@ export type RestoreProductMutationVariables = {
 /**
  * Restores one directly excluded Product occurrence. No ancestor or lifecycle pre-check applies, so the Product may remain non-actionable (for example `eol`). Requires `manage_packages`. Changes only this record's direct marker: ancestors and descendants are never modified. Records one audit event, auto-assigns an unassigned Ticket to the caller when the caller is eligible to be its assignee, and re-evaluates the Ticket status. The response reports current actionability, which may remain `false` because of an ancestor exclusion, end-of-life, or the descendant set.
  * @summary Restore Product
+ * @route POST /api/v1/tickets/{ticket_id}/packages/{package_id}/tracks/{track_id}/products/{ticket_package_product_id}/restore
  */
 export const useRestoreProduct = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

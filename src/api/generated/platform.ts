@@ -103,6 +103,7 @@ export type GetPlatformVersionQueryError = ErrorType<
 /**
  * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
  * @summary Get platform version
+ * @route GET /api/v1/version
  */
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,
@@ -133,6 +134,7 @@ export function useGetPlatformVersion<
 /**
  * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
  * @summary Get platform version
+ * @route GET /api/v1/version
  */
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,
@@ -163,6 +165,7 @@ export function useGetPlatformVersion<
 /**
  * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
  * @summary Get platform version
+ * @route GET /api/v1/version
  */
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,
@@ -185,6 +188,7 @@ export function useGetPlatformVersion<
 /**
  * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
  * @summary Get platform version
+ * @route GET /api/v1/version
  */
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,

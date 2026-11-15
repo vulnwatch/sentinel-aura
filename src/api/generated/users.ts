@@ -139,6 +139,7 @@ export type ListUsersQueryError = ErrorType<
 /**
  * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
  * @summary List users
+ * @route GET /api/v1/users
  */
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
@@ -166,6 +167,7 @@ export function useListUsers<
 /**
  * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
  * @summary List users
+ * @route GET /api/v1/users
  */
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
@@ -193,6 +195,7 @@ export function useListUsers<
 /**
  * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
  * @summary List users
+ * @route GET /api/v1/users
  */
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
@@ -212,6 +215,7 @@ export function useListUsers<
 /**
  * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
  * @summary List users
+ * @route GET /api/v1/users
  */
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
@@ -297,6 +301,7 @@ export type GetCurrentUserProfileQueryError = ErrorType<
 /**
  * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
  * @summary Get my profile
+ * @route GET /api/v1/users/me
  */
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
@@ -327,6 +332,7 @@ export function useGetCurrentUserProfile<
 /**
  * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
  * @summary Get my profile
+ * @route GET /api/v1/users/me
  */
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
@@ -357,6 +363,7 @@ export function useGetCurrentUserProfile<
 /**
  * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
  * @summary Get my profile
+ * @route GET /api/v1/users/me
  */
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
@@ -379,6 +386,7 @@ export function useGetCurrentUserProfile<
 /**
  * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
  * @summary Get my profile
+ * @route GET /api/v1/users/me
  */
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
@@ -470,6 +478,7 @@ export type GetUserQueryError = ErrorType<
 /**
  * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
  * @summary Get user
+ * @route GET /api/v1/users/{user}
  */
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
@@ -497,6 +506,7 @@ export function useGetUser<
 /**
  * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
  * @summary Get user
+ * @route GET /api/v1/users/{user}
  */
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
@@ -524,6 +534,7 @@ export function useGetUser<
 /**
  * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
  * @summary Get user
+ * @route GET /api/v1/users/{user}
  */
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
@@ -543,6 +554,7 @@ export function useGetUser<
 /**
  * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
  * @summary Get user
+ * @route GET /api/v1/users/{user}
  */
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
@@ -649,6 +661,7 @@ export type ListUsersAdminQueryError = ErrorType<
 /**
  * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
  * @summary List users (admin)
+ * @route GET /api/v1/admin/users
  */
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
@@ -676,6 +689,7 @@ export function useListUsersAdmin<
 /**
  * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
  * @summary List users (admin)
+ * @route GET /api/v1/admin/users
  */
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
@@ -703,6 +717,7 @@ export function useListUsersAdmin<
 /**
  * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
  * @summary List users (admin)
+ * @route GET /api/v1/admin/users
  */
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
@@ -722,6 +737,7 @@ export function useListUsersAdmin<
 /**
  * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
  * @summary List users (admin)
+ * @route GET /api/v1/admin/users
  */
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
@@ -844,6 +860,7 @@ export type CreateUserAdminMutationVariables = { data: AdminUserCreateRequest };
 /**
  * Creates a new local user with a password and optional initial manual roles. Requires the 'manage_users' capability and JWT session authentication — not reachable with an API key.
  * @summary Create user (admin)
+ * @route POST /api/v1/admin/users
  */
 export const useCreateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -931,6 +948,7 @@ export type GetUserAdminQueryError = ErrorType<
 /**
  * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
  * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
  */
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
@@ -958,6 +976,7 @@ export function useGetUserAdmin<
 /**
  * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
  * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
  */
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
@@ -985,6 +1004,7 @@ export function useGetUserAdmin<
 /**
  * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
  * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
  */
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
@@ -1004,6 +1024,7 @@ export function useGetUserAdmin<
 /**
  * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
  * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
  */
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
@@ -1130,6 +1151,7 @@ export type UpdateUserAdminMutationVariables = {
 /**
  * Updates a local user's email, full name, and bot marker. At least one field must be provided. Marking a user as a bot account also unassigns the user from every `new`, `analysis`, and `analyzed` Ticket, because a bot account is never a Ticket assignee. Requires the 'manage_users' capability.
  * @summary Update user (admin)
+ * @route PATCH /api/v1/admin/users/{user}
  */
 export const useUpdateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1224,6 +1246,7 @@ export type ReactivateUserAdminMutationVariables = { user: string };
 /**
  * Reactivates a previously deactivated local user. Idempotent for an already-active local user. Requires the 'manage_users' capability.
  * @summary Reactivate user (admin)
+ * @route POST /api/v1/admin/users/{user}/reactivate
  */
 export const useReactivateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1352,6 +1375,7 @@ export type SetUserRolesAdminMutationVariables = {
 /**
  * Adds and removes manual ('_manual') roles of a user. Roles granted through external origins are never changed. Already-present additions and missing removals are no-ops. Returns the complete profile with every role origin. Requires the 'manage_users' capability.
  * @summary Set user roles (admin)
+ * @route POST /api/v1/admin/users/{user}/roles
  */
 export const useSetUserRolesAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1479,6 +1503,7 @@ export type ResetUserPasswordAdminMutationVariables = {
 /**
  * Resets the password of a local user (active or inactive), invalidating all active sessions. Requires the 'manage_users' capability and JWT session authentication — not reachable with an API key.
  * @summary Reset user password (admin)
+ * @route POST /api/v1/admin/users/{user}/password
  */
 export const useResetUserPasswordAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1576,6 +1601,7 @@ export type DeactivateUserAdminMutationVariables = { user: string };
 /**
  * Deactivates a user: revokes every non-revoked API key, invalidates every active session, and unassigns active-status tickets. Explicit ticket grants and package-maintainer associations are retained. Idempotent for an already-inactive user. Requires the 'manage_users' capability.
  * @summary Deactivate user (admin)
+ * @route POST /api/v1/admin/users/{user}/deactivate
  */
 export const useDeactivateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1675,6 +1701,7 @@ export type GetDeactivationImpactAdminQueryError = ErrorType<
 /**
  * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
  * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
  */
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
@@ -1706,6 +1733,7 @@ export function useGetDeactivationImpactAdmin<
 /**
  * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
  * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
  */
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
@@ -1737,6 +1765,7 @@ export function useGetDeactivationImpactAdmin<
 /**
  * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
  * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
  */
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
@@ -1760,6 +1789,7 @@ export function useGetDeactivationImpactAdmin<
 /**
  * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
  * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
  */
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
@@ -1860,6 +1890,7 @@ export type UnlockUserAdminMutationVariables = { user: string };
 /**
  * Clears the login lockout counter for a user. Idempotent — a user who is not locked out returns the same success response. Requires the 'manage_users' capability.
  * @summary Unlock user (admin)
+ * @route POST /api/v1/admin/users/{user}/unlock
  */
 export const useUnlockUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
