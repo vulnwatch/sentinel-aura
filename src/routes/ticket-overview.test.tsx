@@ -6214,11 +6214,7 @@ describe("the access grants", () => {
     await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
     await expect.element(accessGrantsButton(screen)).toHaveFocus();
     // Not for a moment the heading, as the dialog left.
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
-      });
-    });
+    await nextFrames();
     await expect.element(accessGrantsButton(screen)).toHaveFocus();
   });
 
@@ -6808,11 +6804,7 @@ describe("the access grants", () => {
       .not.toBeInTheDocument();
     await expect.element(dialog).toHaveFocus();
     // Not for a moment the heading, behind the dialog.
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
-      });
-    });
+    await nextFrames();
     await expect.element(dialog).toHaveFocus();
   });
 

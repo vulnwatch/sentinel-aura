@@ -261,8 +261,9 @@ function later() {
 }
 
 // The parts of Overview that the target of an anchor waits for besides the
-// duplicates, by the name of their region, each with what it shows once its
-// read has ended.
+// duplicates and the work of the signed-in user, which these tests do not
+// read, by the name of their region, each with what it shows once its read
+// has ended.
 const READ_PARTS = {
   "CVSS assessments": (part: Locator) => part.getByText("SUSE").first(),
   "Sources of the CVE": (part: Locator) =>
