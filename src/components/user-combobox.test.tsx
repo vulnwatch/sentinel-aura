@@ -2,7 +2,7 @@ import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Form } from "react-aria-components";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import type { UserDirectoryData } from "../api/generated/model";
@@ -108,14 +108,20 @@ test("asks for at least 2 characters without reading the directory", async () =>
 test("reads the active users of the term once the user stops typing, and lists each with the username", async () => {
   const spy = stubApi(() => usersPage([fictionalDirectoryUser(), CAROL]));
   const { screen, field } = await renderField();
+  field.element().focus();
   // The clock of the pause, which the test moves itself, so that the time
-  // between two inputs does not depend on the speed of the browser.
+  // between two inputs does not depend on the speed of the browser. The
+  // keyboard types without moving it, while an action on an element, such as
+  // fill, moves a fake clock for as long as it runs.
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
-  await field.fill("an");
+  await userEvent.keyboard("an");
   vi.advanceTimersByTime(SEARCH_DELAY_MS - 1);
-  await field.fill("ana ");
+  await userEvent.keyboard("a ");
   vi.advanceTimersByTime(SEARCH_DELAY_MS - 1);
+  // A key that types nothing, which gives the page the time to search for a
+  // term that has settled.
+  await userEvent.keyboard("{Shift}");
   expect(requestsTo(spy, USERS)).toBe(0);
   vi.advanceTimersByTime(1);
   vi.useRealTimers();

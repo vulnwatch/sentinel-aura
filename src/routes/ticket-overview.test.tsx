@@ -4440,9 +4440,14 @@ const FETCHER_ADMIN: CurrentUserResponse = {
 };
 
 // Waits until no read of the sources is in progress, so that a read at
-// intervals is not merged into it.
+// intervals is not merged into it. expect.poll moves a fake clock by its
+// interval after each failed attempt; an interval of 0 leaves the clock where
+// the test set it, so that the next read at intervals comes when the test
+// counts it.
 async function sourcesSettled() {
-  await expect.poll(() => client.isFetching({ queryKey: [SOURCES] })).toBe(0);
+  await expect
+    .poll(() => client.isFetching({ queryKey: [SOURCES] }), { interval: 0 })
+    .toBe(0);
 }
 
 function sourcesPart(screen: Screen) {
@@ -5436,19 +5441,25 @@ describe("the sources of the CVE", () => {
     await renderSources();
     expect(requestsTo(spy, SOURCES)).toBe(1);
 
-    vi.advanceTimersByTime(4_999);
-    expect(requestsTo(spy, SOURCES)).toBe(1);
-    vi.advanceTimersByTime(1);
-    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(2);
+    // The wait for the screen moves the clock by as long as it takes, so the
+    // test moves it on to the first read at intervals, and counts from there.
+    vi.advanceTimersToNextTimer();
     await sourcesSettled();
+    expect(requestsTo(spy, SOURCES)).toBe(2);
+
+    vi.advanceTimersByTime(4_999);
+    expect(requestsTo(spy, SOURCES)).toBe(2);
+    vi.advanceTimersByTime(1);
+    await sourcesSettled();
+    expect(requestsTo(spy, SOURCES)).toBe(3);
 
     // While the tab is hidden, no read at intervals is sent.
     focusManager.setFocused(false);
     vi.advanceTimersByTime(15_000);
-    expect(requestsTo(spy, SOURCES)).toBe(2);
+    expect(requestsTo(spy, SOURCES)).toBe(3);
     // The tab returns to the foreground, where the sources are read again.
     focusManager.setFocused(true);
-    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(3);
+    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(4);
     await sourcesSettled();
 
     sources = pendingSources().map((source) =>
@@ -5457,10 +5468,11 @@ describe("the sources of the CVE", () => {
         : source,
     );
     vi.advanceTimersByTime(5_000);
-    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(4);
+    await expect.poll(() => requestsTo(spy, SOURCES)).toBe(5);
+    await sourcesSettled();
 
     vi.advanceTimersByTime(30_000);
-    expect(requestsTo(spy, SOURCES)).toBe(4);
+    expect(requestsTo(spy, SOURCES)).toBe(5);
   });
 
   test("stop the reads at intervals after one fails, keeping the sources shown with a warning, until a read of them succeeds", async () => {
