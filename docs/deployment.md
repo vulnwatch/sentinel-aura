@@ -387,8 +387,8 @@ These updates are not held:
   one, and a security release of nginx would wait until a later release
   replaced it;
 - the tooling image: `mcr.microsoft.com` publishes no release timestamps, so
-  the image would be held indefinitely, while `@playwright/test`, which joins
-  its pull request (npm dependencies), still waits for the age;
+  the image would be held indefinitely, while the npm packages of Playwright,
+  which join its pull request (npm dependencies), still wait for the age;
 - digest updates: Docker Hub dates a digest by the last push of its tag, and
   the digest refresh of the base image is how a fix of its packages arrives
   (Workflow Inventory, Image vulnerability scan);
@@ -418,12 +418,22 @@ npm group on the same file. Renovate does not update the Node.js line of
 Tool, Package Manager, and Node.js), nor the major version of `@types/node`,
 the types of the Node.js of that line: both change by hand, together.
 
-The tooling image and `@playwright/test` are updated in one `Playwright` pull
-request, because the browsers of the image must be the ones that the package
-expects. The image is exempt from the minimum release age (above), so
-Renovate raises its update at once and adds the package to the same pull
-request when the package reaches the age; until then `UI Checks` fails, and
-the pull request is not merged.
+The tooling image and the npm packages of Playwright are updated in one
+`Playwright` pull request, because the browsers of the image must be the ones
+that the packages expect: `@playwright/test`, which runs the end-to-end tests,
+and `playwright` and `playwright-core`, which it requires at its own version.
+`@vitest/browser-playwright` launches the browsers of the unit and component
+tests through `playwright`, and `@axe-core/playwright` takes the type of the
+page that it checks from `playwright-core`. Each accepts any version of the
+package that it uses, so `package.json` declares the two packages at the
+exact version of `@playwright/test`. Without that declaration, npm would resolve them for those
+ranges to the newest version old enough, and lock file maintenance would
+install a second version beside the one that `@playwright/test` requires: one
+whose browsers the tooling image lacks, and whose page type the end-to-end
+tests cannot pass to `@axe-core/playwright`. The image is exempt from the
+minimum release age (above), so Renovate raises its update at once and adds
+the packages to the same pull request when they reach the age; until then
+`UI Checks` fails, and the pull request is not merged.
 
 Renovate updates the lockfile with the npm line of the tooling image
 (`constraints.npm` in `renovate.jsonc`, which Renovate does not update either:
@@ -542,7 +552,7 @@ Versions):
 | Prefix | Updates | Release signal |
 |---|---|---|
 | `chore(deps):` | What the image contains: the base image of the `Containerfile`, with the nginx image of `compose.yaml` in the `nginx` pull request; the npm `dependencies`, which the build bundles, and the versions that the overrides of `package.json` force; the group of the npm minor and patch updates; the major updates of React's types, which join those of React; and lock file maintenance | Patch, listed under Dependencies |
-| `ci(deps):` | What builds, checks, tests, or runs the UI outside its image: the actions and the tools that the workflows pin; the images of the shell lint tools and Trivy; the PostgreSQL and Redis images of `compose.yaml`; the tooling image and `@playwright/test`, in the `Playwright` pull request; the updates of the other npm `devDependencies` that the group of the npm minor and patch updates does not hold: their major updates, other than those of React's types, and those of Orval; and the pinned Sentinel version within the supported Sentinel versions of the current pin (Sentinel version) | None |
+| `ci(deps):` | What builds, checks, tests, or runs the UI outside its image: the actions and the tools that the workflows pin; the images of the shell lint tools and Trivy; the PostgreSQL and Redis images of `compose.yaml`; the tooling image, `@playwright/test`, `playwright`, and `playwright-core`, in the `Playwright` pull request; the updates of the other npm `devDependencies` that the group of the npm minor and patch updates does not hold: their major updates, other than those of React's types, and those of Orval; and the pinned Sentinel version within the supported Sentinel versions of the current pin (Sentinel version) | None |
 | `feat(deps):` | The pinned Sentinel version outside the supported Sentinel versions of the current pin (Sentinel version) | Minor, listed under Features |
 | `fix(deps):` | Vulnerability-fix pull requests (below), whatever the dependency | Patch, listed under Bug Fixes |
 
