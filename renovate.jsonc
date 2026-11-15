@@ -321,14 +321,17 @@
     {
       // Last but one, so that it overrides the groups above and the
       // playwright monorepo group of config:recommended. Renovate raises the
-      // update of the image at once (below) and adds @playwright/test when
-      // that version reaches the minimum release age. groupSingleUpdates
-      // titles the pull request "Update Playwright" also when it holds the
-      // image alone, whose own title would exceed the length that the PR
-      // Metadata check allows. The prefix overrides the one of the npm group
-      // above.
-      "description": "Playwright: the tooling image and @playwright/test in one pull request, so that the browsers of the image are the ones that Playwright expects; titled by the group, and used outside the UI's image",
-      "matchPackageNames": ["mcr.microsoft.com/playwright", "@playwright/test"],
+      // update of the image at once (below) and adds the npm packages when
+      // that version reaches the minimum release age. package.json declares
+      // playwright and playwright-core at the version of @playwright/test, so
+      // that lock file maintenance cannot move them alone within the open
+      // ranges of @vitest/browser-playwright and @axe-core/playwright — see
+      // docs/deployment.md (Dependency Updates). groupSingleUpdates titles
+      // the pull request "Update Playwright" also when it holds the image
+      // alone, whose own title would exceed the length that the PR Metadata
+      // check allows. The prefix overrides the one of the npm group above.
+      "description": "Playwright: the tooling image, @playwright/test, playwright, and playwright-core in one pull request, so that the browsers of the image are the ones that Playwright expects; titled by the group, and used outside the UI's image",
+      "matchPackageNames": ["mcr.microsoft.com/playwright", "@playwright/test", "playwright", "playwright-core"],
       "groupName": "Playwright",
       "groupSingleUpdates": true,
       "commitMessagePrefix": "ci(deps):"
