@@ -84,6 +84,43 @@ function scrollsHorizontally(page: Page): Promise<boolean> {
   );
 }
 
+// Whether a value of a response body is a JSON object, whose members a test
+// reads.
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// The identifiers of a package of a Ticket and of a track of the package, by
+// the package name and the reference of the track, from the package tree of
+// Get Ticket, as the signed-in user of the page.
+async function trackIdsOf(
+  page: Page,
+  ticketId: string,
+  packageName: string,
+  reference: string,
+): Promise<{ packageId: string; trackId: string }> {
+  const response = await page.request.get(`/api/v1/tickets/${ticketId}`);
+  expect(response.ok()).toBe(true);
+  const body: unknown = await response.json();
+  const packages =
+    isObject(body) && isObject(body.data) && Array.isArray(body.data.packages)
+      ? body.data.packages.filter(isObject)
+      : [];
+  const found = packages.find((item) => item.package_name === packageName);
+  const tracks = Array.isArray(found?.tracks)
+    ? found.tracks.filter(isObject)
+    : [];
+  const track = tracks.find((item) => item.reference === reference);
+  const packageId = found?.id;
+  const trackId = track?.id;
+  if (typeof packageId !== "string" || typeof trackId !== "string") {
+    throw new Error(
+      `Get Ticket returned no track ${reference} of ${packageName} on ${ticketId}`,
+    );
+  }
+  return { packageId, trackId };
+}
+
 test.describe("for an analyst", () => {
   test("shows a Ticket with its heading row, its CVE, and its details", async ({
     page,
@@ -560,6 +597,16 @@ test.describe("for an analyst", () => {
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThan(0);
+    // Phases reads the requests of the track as it opens.
+    const requests = Promise.all(
+      ["submission-requests", "release-requests"].map((list) =>
+        page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname ===
+            `/api/v1/tickets/SNTL-12/${list}`,
+        ),
+      ),
+    );
 
     await pipeline.click();
 
@@ -567,9 +614,12 @@ test.describe("for an analyst", () => {
     await expect(phases).toBeFocused();
     await expect(phases).toContainText("Submission · Maintainer");
     await expect(phases).toContainText(/DeliveryPending$/);
+    // The track has no IBS request (IBS Requests), so no phase shows one.
+    for (const response of await requests) {
+      expect(response.ok()).toBe(true);
+    }
+    await expect(phases.getByRole("link")).toHaveCount(0);
     await expectAccessible(page);
-    await expectSources(page);
-    await expectScreenshot(page, "ticket-phases.png");
     await page.keyboard.press("Escape");
     await expect(pipeline).toBeFocused();
 
@@ -641,6 +691,46 @@ test.describe("for an analyst", () => {
     await expectSources(page);
     await expectScreenshot(page, "ticket-unreleased-product.png");
     await expectAccessible(page);
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the pipeline: the click waits for it.
+    await expect(
+      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
+    ).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+
+    await pipeline.click();
+
+    // Its accepted submission request 900006 and the release request 900007
+    // in review (IBS Requests), at the ends of the lines of Submission and
+    // QA.
+    const phases = page.getByRole("dialog", { name: "Phases" });
+    await expect(phases).toBeFocused();
+    const submission = phases
+      .getByRole("listitem")
+      .filter({ hasText: "Submission · Maintainer" })
+      .getByRole("link");
+    const qa = phases
+      .getByRole("listitem")
+      .filter({ hasText: "QA · QA" })
+      .getByRole("link");
+    await expect(submission).toHaveAttribute(
+      "href",
+      "https://build.suse.de/request/show/900006",
+    );
+    await expect(qa).toHaveAttribute(
+      "href",
+      "https://build.suse.de/request/show/900007",
+    );
+    await expect(phases.getByRole("button", { name: /more/ })).toHaveCount(0);
+    await expect(submission).toHaveAccessibleName(
+      "SR 900006, Accepted (another site)",
+    );
+    await expect(qa).toHaveAccessibleName("RR 900007, Review (another site)");
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(pipeline).toBeFocused();
 
     await packages
       .getByRole("button", { name: "Fictional Linux Enterprise Server 16.0" })
@@ -654,6 +744,231 @@ test.describe("for an analyst", () => {
       "Not observed",
     );
   });
+
+  test("shows the IBS requests of a track in Phases, the state of each in the tooltip of its link", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-13#packages");
+
+    // The IBS track of fictional-httpd of SNTL-13 is Affected, its delivery
+    // In progress, with the submission request 900001 in review, created
+    // after 900000, which IBS declined, and no release request (Aged
+    // Tickets; IBS Requests).
+    const packages = part(page, "Packages");
+    const httpd = packages
+      .getByRole("listitem")
+      .filter({
+        has: page.getByText("SUSE:FLES-15-SP7:Update", { exact: true }),
+      })
+      .last();
+    const pipeline = httpd.getByRole("button", {
+      name: /^Phases of fictional-httpd, SUSE:FLES-15-SP7:Update: .*; delivery in progress$/,
+    });
+    await expect(pipeline).toBeVisible();
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the pipeline: the click waits for it.
+    await expectSources(page);
+    await expect(
+      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
+    ).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+    // Phases reads the requests of the track as it opens.
+    const requests = Promise.all(
+      ["submission-requests", "release-requests"].map((list) =>
+        page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname ===
+            `/api/v1/tickets/SNTL-13/${list}`,
+        ),
+      ),
+    );
+
+    await pipeline.click();
+
+    const phases = page.getByRole("dialog", { name: "Phases" });
+    await expect(phases).toBeFocused();
+    const submission = phases
+      .getByRole("listitem")
+      .filter({ hasText: "Submission · Maintainer" });
+    const request = submission.getByRole("link", { name: /^SR 900001\b/ });
+    await expect(request).toHaveAttribute(
+      "href",
+      "https://build.suse.de/request/show/900001",
+    );
+    await expect(
+      submission.getByRole("button", {
+        name: "1 more submission request: SR 900000, Declined",
+        exact: true,
+      }),
+    ).toHaveText("+1");
+    // Neither a release request at QA nor another request, once both reads
+    // have answered.
+    for (const response of await requests) {
+      expect(response.ok()).toBe(true);
+    }
+    await expect(
+      phases
+        .getByRole("listitem")
+        .filter({ hasText: "QA · QA" })
+        .getByRole("link"),
+    ).toHaveCount(0);
+    await expect(phases.getByRole("link")).toHaveCount(1);
+    await expectAccessible(page);
+    await expectSources(page);
+    await expectScreenshot(page, "ticket-phases.png");
+
+    await page.keyboard.press("Tab");
+
+    await expect(request).toBeFocused();
+    await expect(page.getByRole("tooltip")).toHaveText("Review");
+    await expectAccessible(page);
+    await expect(request).toHaveAccessibleName(
+      "SR 900001, Review (another site)",
+    );
+
+    // Escape first hides the tooltip, then closes Phases
+    // (docs/design-system.md, Track Milestones).
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await expect(phases).toBeVisible();
+    await expect(request).toBeFocused();
+
+    await page.keyboard.press("Escape");
+
+    await expect(phases).toHaveCount(0);
+    await expect(pipeline).toBeFocused();
+  });
+
+  test(
+    "opens the IBS requests of a track without a pipeline from the delivery on its line",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // The IBS track of fictional-httpd of SNTL-13, Affected, its delivery
+      // In progress (Packages, Tracks, and Maintainers; IBS Requests),
+      // becomes Not affected: without work, it shows no pipeline, while its
+      // delivery, which the affectedness does not reset, stays relevant and
+      // shows on its line (Sentinel docs/features/packages/package-model.md,
+      // Affectedness-Delivery Independence; Delivery Relevance Indicator).
+      // No other test of this project relies on SNTL-13: every other test
+      // that does, in this module or in ticket-list.spec.ts, is read-only, in
+      // the project that runs first.
+      await signIn(page, "asmith");
+      const { packageId, trackId } = await trackIdsOf(
+        page,
+        "SNTL-13",
+        "fictional-httpd",
+        "SUSE:FLES-15-SP7:Update",
+      );
+      // Change Track Status, sent as the UI sends a change: by the page, from
+      // the UI's origin, with the session cookie, which the cross-origin
+      // request protection accepts (Sentinel
+      // docs/features/identity/authentication.md, Cross-Origin Request
+      // Protection).
+      const status = await page.evaluate(async (path) => {
+        const response = await fetch(path, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "not_affected" }),
+        });
+        return response.status;
+      }, `/api/v1/tickets/SNTL-13/packages/${packageId}/tracks/${trackId}`);
+      expect(status).toBe(200);
+
+      await page.goto("/tickets/SNTL-13#packages");
+
+      const httpd = part(page, "Packages")
+        .getByRole("listitem")
+        .filter({
+          has: page.getByText("SUSE:FLES-15-SP7:Update", { exact: true }),
+        })
+        .last();
+      const delivery = httpd.getByRole("button", {
+        name: "Delivery of fictional-httpd, SUSE:FLES-15-SP7:Update: In progress",
+        exact: true,
+      });
+      await expect(delivery).toHaveText("In progress");
+      await expect(httpd.getByText("Delivery", { exact: true })).toBeVisible();
+      await expect(
+        httpd.getByText("Not affected", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        httpd.getByRole("button", { name: /^Phases of/ }),
+      ).toHaveCount(0);
+      // Once every read of the tab has arrived, the page shows the target of
+      // its anchor, which moves the delivery: the click waits for it.
+      await expectSources(page);
+      await expect(
+        part(page, "Participants").getByRole("toolbar", {
+          name: "Participants",
+        }),
+      ).toBeVisible();
+      await expect
+        .poll(() => page.evaluate(() => window.scrollY))
+        .toBeGreaterThan(0);
+      // The popover reads the requests of the track as it opens.
+      const requests = Promise.all(
+        ["submission-requests", "release-requests"].map((list) =>
+          page.waitForResponse(
+            (response) =>
+              new URL(response.url()).pathname ===
+              `/api/v1/tickets/SNTL-13/${list}`,
+          ),
+        ),
+      );
+
+      await delivery.click();
+
+      // The submission request 900001 in review, created after 900000, which
+      // IBS declined, and no release request (IBS Requests).
+      const popover = page.getByRole("dialog", { name: "Delivery" });
+      await expect(popover).toBeFocused();
+      await expect(popover.getByRole("term")).toHaveText(["Submission", "QA"]);
+      const submission = popover.getByRole("definition").first();
+      const request = submission.getByRole("link");
+      await expect(request).toHaveAccessibleName(
+        "SR 900001, Review (another site)",
+      );
+      await expect(request).toHaveAttribute(
+        "href",
+        "https://build.suse.de/request/show/900001",
+      );
+      await expect(
+        submission.getByRole("button", {
+          name: "1 more submission request: SR 900000, Declined",
+          exact: true,
+        }),
+      ).toHaveText("+1");
+      for (const response of await requests) {
+        expect(response.ok()).toBe(true);
+      }
+      await expect(popover.getByRole("definition").last()).toHaveText("None");
+      await expectAccessible(page);
+      await expectScreenshot(page, "ticket-delivery.png");
+
+      // Tab reaches the request, whose tooltip states its state; Escape
+      // first hides the tooltip, then closes the popover
+      // (docs/design-system.md, Menus, Popovers, and Tooltips).
+      await page.keyboard.press("Tab");
+
+      await expect(request).toBeFocused();
+      await expect(page.getByRole("tooltip")).toHaveText("Review");
+
+      await page.keyboard.press("Escape");
+
+      await expect(page.getByRole("tooltip")).toHaveCount(0);
+      await expect(popover).toBeVisible();
+      await expect(request).toBeFocused();
+
+      await page.keyboard.press("Escape");
+
+      await expect(popover).toHaveCount(0);
+      await expect(delivery).toBeFocused();
+    },
+  );
 
   test("shows the hidden records of a Ticket in gray, with their label", async ({
     page,

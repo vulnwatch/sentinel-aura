@@ -14,6 +14,10 @@ import type {
   MaintainerTicketWorkResponse,
   PackageDetail,
   ProductDetail,
+  ReleaseRequestItem,
+  ReleaseRequestListResponse,
+  SubmissionRequestItem,
+  SubmissionRequestListResponse,
   TicketAccessGrantDataResponse,
   TicketAccessGrantListResponse,
   TicketAccessGrantResponse,
@@ -507,6 +511,90 @@ export function ticketWorkResponse(
       in_progress: [],
       completed: [],
     },
+  };
+  return jsonResponse(200, body);
+}
+
+// The action identifier and the IBS link of a fictional request, which
+// Sentinel computes from its number with the fixed IBS web origin (Sentinel
+// docs/features/packages/ibs-submission-tracking.md, Public API).
+function requestIdentity(requestNumber: number) {
+  return {
+    id: `00000000-0000-7000-8000-${String(requestNumber).padStart(12, "0")}`,
+    ibs_url: `https://build.suse.de/request/show/${requestNumber}`,
+  };
+}
+
+// A fictional submission request of the track of fictionalTrack, as List
+// Submission Requests returns it: SR 900001 of fictional-openssl to
+// SUSE:FLES-15-SP7:Update, in review, without an incident, with the fields
+// that a test sets; its identifier and link follow its number.
+export function fictionalSubmissionRequest(
+  fields: Partial<SubmissionRequestItem> = {},
+): SubmissionRequestItem {
+  const requestNumber = fields.request_number ?? 900001;
+  return {
+    ...requestIdentity(requestNumber),
+    action_type: "maintenance_incident",
+    request_number: requestNumber,
+    state: "review",
+    superseded_by_request_number: null,
+    package_name: "fictional-openssl",
+    codestream_name: "SUSE:FLES-15-SP7:Update",
+    incident_number: null,
+    incident_url: null,
+    upstream_created_at: "2099-10-14T09:00:00Z",
+    upstream_updated_at: "2099-10-14T10:00:00Z",
+    ...fields,
+  };
+}
+
+// A fictional release request of the track of fictionalTrack, as List
+// Release Requests returns it: RR 900003 of fictional-openssl to
+// SUSE:FLES-15-SP7:Update, new, which releases the incident 90001, with the
+// fields that a test sets; its identifier and link follow its number.
+export function fictionalReleaseRequest(
+  fields: Partial<ReleaseRequestItem> = {},
+): ReleaseRequestItem {
+  const requestNumber = fields.request_number ?? 900003;
+  return {
+    ...requestIdentity(requestNumber),
+    action_type: "maintenance_release",
+    request_number: requestNumber,
+    state: "new",
+    superseded_by_request_number: null,
+    package_name: "fictional-openssl",
+    codestream_name: "SUSE:FLES-15-SP7:Update",
+    incident_number: 90001,
+    incident_url: "https://build.suse.de/project/show/SUSE:Maintenance:90001",
+    upstream_created_at: "2099-10-18T09:00:00Z",
+    upstream_updated_at: "2099-10-18T10:00:00Z",
+    ...fields,
+  };
+}
+
+// A page of List Submission Requests, of 11 requests: the requests, of a
+// list of total requests.
+export function submissionRequestsResponse(
+  requests: SubmissionRequestItem[],
+  { total = requests.length } = {},
+): Response {
+  const body: SubmissionRequestListResponse = {
+    data: requests,
+    meta: { total, page: 1, per_page: 11 },
+  };
+  return jsonResponse(200, body);
+}
+
+// A page of List Release Requests, of 11 requests: the requests, of a list
+// of total requests.
+export function releaseRequestsResponse(
+  requests: ReleaseRequestItem[],
+  { total = requests.length } = {},
+): Response {
+  const body: ReleaseRequestListResponse = {
+    data: requests,
+    meta: { total, page: 1, per_page: 11 },
   };
   return jsonResponse(200, body);
 }

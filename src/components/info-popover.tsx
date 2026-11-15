@@ -8,13 +8,14 @@ import { focusScreenHeading } from "./screen-heading";
 // Tooltips), as the content of a dialog of React Aria inside a
 // DialogTrigger, after its trigger.
 
-// Its widths: 288 px, as the explanation of a priority, or 320 px, as Phases
-// and the popover of a name (docs/design-system.md, Track Milestones; Menus,
-// Popovers, and Tooltips). A window narrower than the popover with its
-// margin keeps it inside.
+// Its widths: 288 px, as the explanation of a priority, 320 px, as the
+// popover of a name, or 400 px, as Phases, whose phases hold a column
+// (docs/design-system.md, Track Milestones; Menus, Popovers, and Tooltips).
+// A window narrower than the popover with its margin keeps it inside.
 const WIDTHS = {
   narrow: "w-72",
   wide: "w-80",
+  wider: "w-100",
 } as const;
 
 interface InfoPopoverProps {

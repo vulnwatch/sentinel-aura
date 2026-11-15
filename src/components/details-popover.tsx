@@ -96,3 +96,43 @@ export function DetailsValue({
     </DialogTrigger>
   );
 }
+
+interface ValueRecordsProps {
+  // The value, which the button shows.
+  value: string;
+  // The accessible name of the button, which names what the value is, its
+  // record, and then the value, such as "Delivery of fictional-openssl,
+  // SUSE:FLES-15-SP7:Update: In progress".
+  label: string;
+  // The title of the popover, which names the value without stating it, such
+  // as "Delivery".
+  title: string;
+  // The records, as a description list whose terms take the width of the
+  // longest one (src/components/description-list.tsx).
+  children: ReactNode;
+}
+
+// A value that opens the records related to it (docs/design-system.md,
+// Menus, Popovers, and Tooltips), such as the delivery of a track with its
+// requests: the button of a name, and the popover of a name without actions,
+// which holds its title, a border line, and the records. The popover does not
+// repeat the value, which its line shows beside the button.
+export function ValueRecords({
+  value,
+  label,
+  title,
+  children,
+}: ValueRecordsProps) {
+  return (
+    <DialogTrigger>
+      <AriaButton aria-label={label} className={`${OPENER} wrap-break-word`}>
+        {value}
+      </AriaButton>
+      <InfoPopover width="wide">
+        <PopoverTitle>{title}</PopoverTitle>
+        <PopoverLine />
+        {children}
+      </InfoPopover>
+    </DialogTrigger>
+  );
+}
