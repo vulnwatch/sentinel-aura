@@ -2,6 +2,7 @@ import type { Locator, Page, Request } from "@playwright/test";
 import {
   expect,
   expectAccessible,
+  expectAttentionCounts,
   expectScreenshot,
   expectViewCounts,
   signIn,
@@ -61,14 +62,15 @@ async function centerColor(page: Page, element: Locator): Promise<string> {
   }, png);
 }
 
-// Waits until the Ticket list, the landing of jdoe, shows its rows and the
-// counts of its views, which move what follows them, before a reference
-// screenshot of it.
+// Waits until the Ticket list, the landing of jdoe, shows its rows, the
+// counts of its views, and those of its attention summary, which move what
+// follows them, before a reference screenshot of it.
 async function expectTicketListShown(page: Page) {
   await expect(
     page.getByRole("grid", { name: "Tickets" }).getByRole("rowheader"),
   ).toHaveCount(20);
   await expectViewCounts(page);
+  await expectAttentionCounts(page);
 }
 
 test.describe("the sidebar", () => {

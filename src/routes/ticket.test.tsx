@@ -1618,6 +1618,9 @@ describe("the CNA of the CVE", () => {
       .element(popover.getByText("fictional-plugins", { exact: true }))
       .toBeVisible();
 
+    // Once no read is in progress, which the return would join rather than
+    // read again.
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
     focusManager.setFocused(false);
     focusManager.setFocused(true);
 

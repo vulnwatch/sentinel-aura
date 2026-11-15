@@ -429,10 +429,24 @@ function later() {
   return { promise, resolve };
 }
 
-// The tab returns to the foreground after being hidden.
-function returnToForeground() {
+// The tab returns to the foreground after being hidden, once no read is in
+// progress: a return during a read joins it rather than reading again
+// (TanStack Query's Query.onFocus), so the reads that a test expects after
+// the return do not depend on when the reads before it end.
+async function returnToForeground() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
   focusManager.setFocused(false);
   focusManager.setFocused(true);
+}
+
+// Waits until the error at the top of a dialog holds the focus, which it
+// takes once it has shown, in a render after the response.
+async function expectFocusOnError(error: Locator) {
+  await expect
+    .poll(() =>
+      error.element().closest("[tabindex]")?.contains(document.activeElement),
+    )
+    .toBe(true);
 }
 
 // Presses a button from the keyboard, which keeps the focus on it.
@@ -1591,7 +1605,7 @@ describe("the read", () => {
     const { screen } = await renderTab();
 
     stub.references = () => errorResponse(503, "DATABASE_UNAVAILABLE");
-    returnToForeground();
+    await returnToForeground();
 
     const warning = panelOf(screen).getByText(
       `This couldn't be updated. ${MESSAGE_UNAVAILABLE}`,
@@ -1617,7 +1631,7 @@ describe("the read", () => {
     const { stub } = stubReferences();
     const { screen } = await renderTab();
     stub.references = () => errorResponse(503, "DATABASE_UNAVAILABLE");
-    returnToForeground();
+    await returnToForeground();
     await expect
       .element(panelOf(screen).getByText(/couldn't be updated/))
       .toBeVisible();
@@ -2201,9 +2215,7 @@ describe("Add reference", () => {
       const error = dialog.getByText(message);
       await expect.element(error).toBeVisible();
       expect(backgroundBehind(error.element())).toBe(tone);
-      expect(
-        error.element().closest("[tabindex]")?.contains(document.activeElement),
-      ).toBe(true);
+      await expectFocusOnError(error);
       expect(error.element().getBoundingClientRect().bottom).toBeLessThan(
         fieldOf(dialog, "Address").element().getBoundingClientRect().top,
       );
@@ -2232,9 +2244,7 @@ describe("Add reference", () => {
     await expect
       .element(fieldOf(dialog, "Address"))
       .toHaveAccessibleDescription(MESSAGE_INVALID);
-    expect(
-      error.element().closest("[tabindex]")?.contains(document.activeElement),
-    ).toBe(true);
+    await expectFocusOnError(error);
   });
 
   test("shows the error of another failure again, which takes the focus again", async () => {
@@ -2248,15 +2258,7 @@ describe("Add reference", () => {
 
     await submit(dialog, "Add reference");
 
-    await expect
-      .poll(() =>
-        dialog
-          .getByText(MESSAGE_UNCONFIRMED)
-          .element()
-          .closest("[tabindex]")
-          ?.contains(document.activeElement),
-      )
-      .toBe(true);
+    await expectFocusOnError(dialog.getByText(MESSAGE_UNCONFIRMED));
   });
 
   test("leaves an answer that the UI cannot show to the page of a failure of the UI", async () => {
@@ -2729,9 +2731,7 @@ describe("Edit reference", () => {
         .toHaveAccessibleDescription(message);
       await expect.element(fieldOf(dialog, "Address")).toHaveFocus();
     } else {
-      expect(
-        error.element().closest("[tabindex]")?.contains(document.activeElement),
-      ).toBe(true);
+      await expectFocusOnError(error);
     }
     await expect.element(dialog).toBeVisible();
   });
@@ -2874,6 +2874,40 @@ async function frames() {
       requestAnimationFrame(resolve);
     });
   }
+}
+
+// Holds the animation frames that the page asks for, as a browser that
+// renders no frame meanwhile, until the function that it returns renders
+// the next one: it runs the callbacks held, in their order, after which the
+// page has its frames again.
+function holdFrames(): () => void {
+  const requestFrame = window.requestAnimationFrame.bind(window);
+  const cancelFrame = window.cancelAnimationFrame.bind(window);
+  const held = new Map<number, FrameRequestCallback>();
+  let holding = true;
+  // Below the handles of the browser, which are positive.
+  let handle = 0;
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+    if (!holding) {
+      return requestFrame(callback);
+    }
+    handle -= 1;
+    held.set(handle, callback);
+    return handle;
+  });
+  vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+    if (!held.delete(id)) {
+      cancelFrame(id);
+    }
+  });
+  return () => {
+    holding = false;
+    const time = performance.now();
+    for (const [id, callback] of held) {
+      held.delete(id);
+      callback(time);
+    }
+  };
 }
 
 // Deletes a reference among others, and waits until the read after it has
@@ -3092,7 +3126,7 @@ describe("Delete", () => {
       // Meanwhile another analyst deleted it, or Sentinel had.
       phase = "gone";
 
-      returnToForeground();
+      await returnToForeground();
 
       await expect.poll(() => rowOf(screen, ADVISORY).query()).toBeNull();
       await expectFocusSettledOn(heading(screen, "SNTL-12"));
@@ -3180,9 +3214,7 @@ describe("Delete", () => {
       const error = confirmation.getByText(message);
       await expect.element(error).toBeVisible();
       expect(backgroundBehind(error.element())).toBe(tone);
-      expect(error.element().closest("[tabindex]")?.contains(focused())).toBe(
-        true,
-      );
+      await expectFocusOnError(error);
       await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
       await expect.element(confirmation).toBeVisible();
     },
@@ -3243,7 +3275,7 @@ describe("the focus after a read", () => {
           EVERY_REFERENCE.filter((item) => item.id !== reference.id),
         );
 
-      returnToForeground();
+      await returnToForeground();
 
       await expect.poll(() => namesOf(screen)).toHaveLength(4);
       await expectFocusSettledOn(heading(screen, "SNTL-12"));
@@ -3305,13 +3337,44 @@ describe("the focus after a read", () => {
     }
   });
 
+  test("moves to the screen's heading after an Edit that the filters no longer match, also when the read after it takes the row away before the focus returns from the dialog", async () => {
+    const changed = { ...ADVISORY, type: "issue" as const };
+    const response = later();
+    let references: TicketReferenceResponse[] = [...EVERY_REFERENCE];
+    stubReferences({
+      references: () => referencesResponse(references),
+      update: () => {
+        references = [NVD, PATCH, ISSUE, changed, POST];
+        return response.promise;
+      },
+    });
+    const { screen } = await renderTab(`${PATH}?type=advisory`);
+    const dialog = await openEdit(screen, ADVISORY);
+    await chooseType(dialog, "Issue");
+    await submit(dialog, "Save");
+    // The read after the change arrives before the browser renders a frame
+    // after the dialog closes, in which React Aria returns the focus.
+    const release = holdFrames();
+
+    try {
+      response.resolve(referenceResponse(changed));
+      await expect.element(dialog).not.toBeInTheDocument();
+      await expect.poll(() => namesOf(screen)).toEqual([NVD.title]);
+      expect(focused()).toBe(document.body);
+    } finally {
+      release();
+    }
+
+    await expectFocusSettledOn(heading(screen, "SNTL-12"));
+  });
+
   test("moves to the screen's heading when a read leaves no reference where a row held it", async () => {
     const { stub } = stubReferences();
     const { screen } = await renderTab();
     await focusInRow(screen, editOf(screen, ADVISORY));
     stub.references = () => referencesResponse([]);
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(panelOf(screen).getByText("No references.", { exact: true }))
@@ -3327,7 +3390,7 @@ describe("the focus after a read", () => {
     addButton(screen).element().blur();
     stub.references = () => referencesResponse([NVD, PATCH, ISSUE, POST]);
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect.poll(() => namesOf(screen)).toHaveLength(4);
     await frames();
@@ -3345,7 +3408,7 @@ describe("the focus after a read", () => {
       .click({ position: { x: 100, y: 400 } });
     expect(focused()).toBe(document.body);
     stub.references = () => referencesResponse([NVD, PATCH, ISSUE, POST]);
-    returnToForeground();
+    await returnToForeground();
 
     await expect.poll(() => namesOf(screen)).toHaveLength(4);
     await frames();

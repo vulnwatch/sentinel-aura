@@ -1055,7 +1055,9 @@ function TicketReferences() {
 
   // The reference of the row that has the focus, which the focus leaves for
   // good when it moves elsewhere, or when the pointer presses elsewhere; a
-  // row that leaves the page takes the focus without either.
+  // row that leaves the page takes the focus without either. A dialog that
+  // a row opened takes it, and gives it back to the row after an Edit that
+  // Sentinel confirmed, as the dialog closes.
   useEffect(() => {
     const element = references.current;
     if (element === null) {
@@ -1387,6 +1389,14 @@ function TicketReferences() {
               return;
             }
             setDialog(undefined);
+            // The dialog returns the focus to the Edit that opened it as it
+            // closes (docs/behaviors.md, Accessibility, Dialogs), so its row
+            // holds the focus from now on, also before React Aria has
+            // returned it: a read that takes the row away meanwhile moves the
+            // focus to the screen's heading.
+            if (dialog.kind === "edit") {
+              focused.current = dialog.reference.id;
+            }
             // A reference that the filters hide shows nowhere where the user
             // acted, so its outcome shows in the message area
             // (docs/behaviors.md, Outcome of a Change), also once the next

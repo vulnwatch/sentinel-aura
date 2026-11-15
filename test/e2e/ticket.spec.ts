@@ -64,6 +64,50 @@ async function expectSources(page: Page) {
   await expect(sources(page).getByRole("listitem").first()).toBeVisible();
 }
 
+// Waits until every read of Overview has arrived and shows in its part: the
+// duplicates of a Ticket that is not a duplicate, the CVSS assessments and
+// the sources of a Ticket with a CVE, and the participants. Each moves what
+// follows it as it arrives, and only then, at a URL with an anchor, does the
+// page show the target of the anchor, once (docs/design-system.md, Main
+// Content), which moves the parts again: so a test waits for it before it
+// points at an element of the tab or takes a reference screenshot of it
+// (docs/conventions.md, End-to-End Tests). The work of a maintainer, which
+// marks tracks, is waited for by the test that relies on it.
+async function expectOverviewShown(page: Page) {
+  await expect(part(page, "Details")).toBeVisible();
+  if ((await detailTerms(page).allTextContents()).includes("Duplicates")) {
+    await expect(await detail(page, "Duplicates")).toHaveText(
+      /^(?:None|SNTL-\d+)/,
+    );
+  }
+  const cvss = part(page, "CVSS assessments");
+  if ((await cvss.count()) > 0) {
+    await expect(
+      cvssTable(page).or(
+        cvss.getByText("No CVSS assessments.", { exact: true }),
+      ),
+    ).toBeVisible();
+    await expect(
+      sources(page)
+        .getByRole("listitem")
+        .first()
+        .or(sources(page).getByText("No sources.", { exact: true })),
+    ).toBeVisible();
+  }
+  const participants = part(page, "Participants");
+  await expect(
+    participants
+      .getByRole("toolbar", { name: "Participants" })
+      .or(participants.getByText("No participants.", { exact: true })),
+  ).toBeVisible();
+  // The anchors of these tests lead below the top of the page.
+  if (new URL(page.url()).hash !== "") {
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+  }
+}
+
 // A date and time as the screen shows it, such as 9 Oct 2026, 14:05.
 const DATE_TIME = String.raw`\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}`;
 
@@ -244,8 +288,7 @@ test.describe("for an analyst", () => {
     await expect(await valueOf(page, "CVE-2099-0018", "Score")).toHaveText(
       "0.31",
     );
-    await expect(cvssTable(page)).toBeVisible();
-    await expectSources(page);
+    await expectOverviewShown(page);
     await expectScreenshot(page, "ticket-confidential.png");
   });
 
@@ -270,7 +313,7 @@ test.describe("for an analyst", () => {
           images.map((image) => image.getAttribute("aria-label")),
         ),
     ).toEqual(["Alice Smith", "Carol White", "Dave Brown"]);
-    await expectSources(page);
+    await expectOverviewShown(page);
     await participants.scrollIntoViewIfNeeded();
     await expectScreenshot(page, "ticket-participants.png");
 
@@ -362,6 +405,7 @@ test.describe("for an analyst", () => {
     const duplicates = (await detail(page, "Duplicates")).getByRole("link");
     await expect(duplicates).toHaveText(["SNTL-22", "SNTL-32"]);
     const duplicate = duplicates.filter({ hasText: "SNTL-22" });
+    await expectOverviewShown(page);
     await expectScreenshot(page, "ticket-without-cve.png");
 
     await duplicate.click();
@@ -590,13 +634,7 @@ test.describe("for an analyst", () => {
     // its anchor, which moves the pipeline: the click waits for it, so that
     // Phases does not open where the pipeline was (docs/conventions.md,
     // End-to-End Tests).
-    await expectSources(page);
-    await expect(
-      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
-    ).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => window.scrollY))
-      .toBeGreaterThan(0);
+    await expectOverviewShown(page);
     // Phases reads the requests of the track as it opens.
     const requests = Promise.all(
       ["submission-requests", "release-requests"].map((list) =>
@@ -688,17 +726,12 @@ test.describe("for an analyst", () => {
       name: /^Phases of fictional-glibc, SUSE:FLES-15-SP7:Update: .*; delivery in progress$/,
     });
     await expect(pipeline).toBeVisible();
-    await expectSources(page);
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the pipeline: the screenshot and the click
+    // wait for it.
+    await expectOverviewShown(page);
     await expectScreenshot(page, "ticket-unreleased-product.png");
     await expectAccessible(page);
-    // Once every read of the tab has arrived, the page shows the target of
-    // its anchor, which moves the pipeline: the click waits for it.
-    await expect(
-      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
-    ).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => window.scrollY))
-      .toBeGreaterThan(0);
 
     await pipeline.click();
 
@@ -768,13 +801,7 @@ test.describe("for an analyst", () => {
     await expect(pipeline).toBeVisible();
     // Once every read of the tab has arrived, the page shows the target of
     // its anchor, which moves the pipeline: the click waits for it.
-    await expectSources(page);
-    await expect(
-      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
-    ).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => window.scrollY))
-      .toBeGreaterThan(0);
+    await expectOverviewShown(page);
     // Phases reads the requests of the track as it opens.
     const requests = Promise.all(
       ["submission-requests", "release-requests"].map((list) =>
@@ -817,7 +844,6 @@ test.describe("for an analyst", () => {
     ).toHaveCount(0);
     await expect(phases.getByRole("link")).toHaveCount(1);
     await expectAccessible(page);
-    await expectSources(page);
     await expectScreenshot(page, "ticket-phases.png");
 
     await page.keyboard.press("Tab");
@@ -900,15 +926,7 @@ test.describe("for an analyst", () => {
       ).toHaveCount(0);
       // Once every read of the tab has arrived, the page shows the target of
       // its anchor, which moves the delivery: the click waits for it.
-      await expectSources(page);
-      await expect(
-        part(page, "Participants").getByRole("toolbar", {
-          name: "Participants",
-        }),
-      ).toBeVisible();
-      await expect
-        .poll(() => page.evaluate(() => window.scrollY))
-        .toBeGreaterThan(0);
+      await expectOverviewShown(page);
       // The popover reads the requests of the track as it opens.
       const requests = Promise.all(
         ["submission-requests", "release-requests"].map((list) =>
@@ -997,6 +1015,11 @@ test.describe("for an analyst", () => {
       packages.getByRole("button", { name: /^Phases of/ }),
     ).toHaveCount(0);
 
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves Show hidden: the click waits for it, and Show
+    // hidden keeps the scroll position for the screenshot.
+    await expectOverviewShown(page);
+
     // Five hidden records whose parent shows: Server 15 SP7, the SP3 and the
     // excluded SP4 tracks of fictional-kernel, the excluded
     // fictional-kernel-firmware, and fictional-kernel-compat, whose only
@@ -1034,7 +1057,6 @@ test.describe("for an analyst", () => {
         })
         .getByText("Excluded", { exact: true }),
     ).toBeVisible();
-    await expectSources(page);
     await expectScreenshot(page, "ticket-hidden-records.png");
 
     await page.reload();
@@ -1061,13 +1083,7 @@ test.describe("for an analyst", () => {
     // its anchor, which moves the Product: the click waits for it, so that
     // its details do not open where the Product was (docs/conventions.md,
     // End-to-End Tests).
-    await expectSources(page);
-    await expect(
-      part(page, "Participants").getByRole("toolbar", { name: "Participants" }),
-    ).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => window.scrollY))
-      .toBeGreaterThan(0);
+    await expectOverviewShown(page);
 
     await ltss.click();
 
@@ -1123,10 +1139,10 @@ test.describe("for an analyst", () => {
       "5.5 Medium",
       "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
     ]);
+    await expectOverviewShown(page);
     await expect(
       part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
     ).toBeInViewport();
-    await expectSources(page);
     await expectScreenshot(page, "ticket-cvss.png");
   });
 
@@ -1139,11 +1155,9 @@ test.describe("for an analyst", () => {
     // the popover opens below the vector, and the dates of the CVE, whose
     // masks would show over the compact heading, above the window.
     await page.goto("/tickets/SNTL-16?hidden=shown#cvss");
-    await expect(cvssTable(page)).toBeVisible();
-    await expectSources(page);
-    // The duplicates, the other read for which the anchor waits, so that
-    // the page no longer scrolls by itself.
-    await expect(await detail(page, "Duplicates")).toHaveText("None");
+    // Every read for which the anchor waits, so that the page no longer
+    // scrolls by itself.
+    await expectOverviewShown(page);
     const anchored = await page.evaluate(() => window.scrollY);
     await page.evaluate(() => window.scrollBy(0, 100));
     await expect
@@ -1182,7 +1196,6 @@ test.describe("for an analyst", () => {
       "href",
       `https://www.first.org/cvss/calculator/3.1#${vector}`,
     );
-    await expectSources(page);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-cvss-vector.png");
 
@@ -1213,10 +1226,10 @@ test.describe("for an analyst", () => {
       "NVD",
       "v4.0",
     ]);
+    await expectOverviewShown(page);
     await expect(
       part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
     ).toBeInViewport();
-    await expectSources(page);
     await expectScreenshot(page, "ticket-cvss-without-suse.png");
     await expectAccessible(page);
 
@@ -1229,7 +1242,7 @@ test.describe("for an analyst", () => {
     await expect(part(page, "CVSS assessments").getByRole("grid")).toHaveCount(
       0,
     );
-    await expectSources(page);
+    await expectOverviewShown(page);
     await expectScreenshot(page, "ticket-cvss-empty.png");
   });
 
@@ -1356,6 +1369,10 @@ test.describe("the audit log", () => {
 
     await page.getByRole("button", { name: "Filters" }).click();
     const filters = page.getByRole("dialog", { name: "Filters" });
+    // From shows the day of the first event once its read has arrived.
+    await expect(filters.getByRole("group", { name: "From" })).toHaveText(
+      /^\d{2}\/\d{2}\/\d{4}$/,
+    );
     await filters.getByRole("button", { name: /Actor/ }).click();
     const options = page.getByRole("listbox").getByRole("option");
     await expect(options).toHaveText([
@@ -2428,8 +2445,7 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
       .last()
       .getByText("Needs your action"),
   ).toBeVisible();
-  await expect(cvssTable(page)).toBeVisible();
-  await expectSources(page);
+  await expectOverviewShown(page);
   await expectScreenshot(page, "ticket-maintainer.png");
 });
 
@@ -2441,8 +2457,8 @@ test("shows a maintainer the access grants of a confidential Ticket, without Gra
   await signIn(page, "dbrown");
 
   await page.goto("/tickets/SNTL-18");
-  // Once the sources above it have arrived, so that they do not move it.
-  await expectSources(page);
+  // Once the parts above it have arrived, so that they do not move it.
+  await expectOverviewShown(page);
   await part(page, "Participants")
     .getByRole("button", { name: "Access grants" })
     .click();

@@ -159,7 +159,8 @@ run_container() {
     # dependency directory needs a mount point inside the read-only
     # repository.
     mkdir -p "${DEPS_DIR}" "${REPO_ROOT}/node_modules"
-    docker run --rm "${tty[@]}" \
+    pull_images "${TOOLING_IMAGE}" || die "cannot download ${TOOLING_IMAGE}"
+    docker run --rm --pull=never "${tty[@]}" \
         --user="$(id -u):$(id -g)" \
         --cap-drop=ALL \
         --security-opt=no-new-privileges \

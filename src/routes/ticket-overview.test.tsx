@@ -426,10 +426,28 @@ function fromNow(duration: number): string {
   return new Date(Date.now() + duration).toISOString();
 }
 
-// The tab returns to the foreground after being hidden.
-function returnToForeground() {
+// The tab returns to the foreground after being hidden, once no read is in
+// progress: a return during a read joins it rather than reading again
+// (TanStack Query's Query.onFocus), so the reads that a test expects after
+// the return do not depend on when the reads before it end. The poll moves
+// no fake clock (sourcesSettled).
+async function returnToForeground() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
   focusManager.setFocused(false);
   focusManager.setFocused(true);
+}
+
+// Waits until no read of the path is in progress and the screen shows its
+// outcome, for a read whose outcome shows nothing of its own, such as the
+// requests of a phase without any: TanStack Query tells the screen of the
+// end of a read in a later task, which runs before this one ends.
+async function readEnded(path: string) {
+  await expect
+    .poll(() => client.isFetching({ queryKey: [path] }), { interval: 0 })
+    .toBe(0);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }
 
 // A response that the test gives when it chooses.
@@ -1771,6 +1789,9 @@ describe("the IBS requests of a track", () => {
     await expect
       .element(phases.getByRole("link", { name: /^SR 900001\b/ }))
       .toBeVisible();
+    // The release requests, of which none shows, arrive by a read of their
+    // own.
+    await readEnded(RELEASE_REQUESTS);
     const qa = phaseIn(phases, "QA");
     expect(qa.getByRole("link").elements()).toHaveLength(0);
     expect(qa.getByRole("button").elements()).toHaveLength(0);
@@ -2215,7 +2236,7 @@ describe("the IBS requests of a track", () => {
       .element(phases.getByRole("link", { name: /^SR 900001\b/ }))
       .toBeVisible();
 
-    returnToForeground();
+    await returnToForeground();
 
     // The Ticket is read again, which shows that the return took effect.
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(2);
@@ -2288,6 +2309,9 @@ describe("the IBS requests of a track", () => {
     await expect
       .element(phases.getByRole("link", { name: /^RR 900003\b/ }))
       .toBeVisible();
+    await expect
+      .element(phases.getByRole("link", { name: /^SR 900001\b/ }))
+      .toBeVisible();
     await userEvent.keyboard("{Escape}");
 
     await expect.element(pipeline).toHaveFocus();
@@ -2338,7 +2362,8 @@ describe("the IBS requests of a track", () => {
           .elements()
           .map((element) => element.textContent),
       ).toEqual(["Submission", "QA"]);
-      expect(qa.element().textContent).toBe("None");
+      // The release requests arrive by a read of their own.
+      await expect.poll(() => qa.element().textContent).toBe("None");
       expect(colorOf(qa.getByText("None", { exact: true }).element())).toBe(
         FG_MUTED,
       );
@@ -2368,7 +2393,8 @@ describe("the IBS requests of a track", () => {
     await expect
       .element(qa.getByRole("link", { name: /^RR 900003\b/ }))
       .toBeVisible();
-    expect(submission.element().textContent).toBe("None");
+    // The submission requests arrive by a read of their own.
+    await expect.poll(() => submission.element().textContent).toBe("None");
   });
 
   test.each<[string, Partial<TrackDetail>, Partial<TicketDetail>]>([
@@ -3404,7 +3430,7 @@ describe("the tracks that wait for the signed-in user", () => {
     await expect.element(screen.getByText(/couldn't be shown/)).toBeVisible();
     fails = false;
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect.element(screen.getByText("Needs your action")).toBeVisible();
     expect(screen.getByText(/couldn't be shown/).elements()).toHaveLength(0);
@@ -3438,7 +3464,7 @@ describe("the tracks that wait for the signed-in user", () => {
     await expect.element(screen.getByText("Needs your action")).toBeVisible();
     fails = true;
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(
@@ -3505,7 +3531,7 @@ describe("the tracks that wait for the signed-in user", () => {
     excluded = true;
     const before = requestsTo(spy, `${TICKETS}/SNTL-12`);
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .poll(() => requestsTo(spy, `${TICKETS}/SNTL-12`))
@@ -3518,7 +3544,7 @@ describe("the tracks that wait for the signed-in user", () => {
     const work = requestsTo(spy, YOUR_WORK);
     const tickets = requestsTo(spy, `${TICKETS}/SNTL-12`);
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .poll(() => requestsTo(spy, `${TICKETS}/SNTL-12`))
@@ -4285,7 +4311,7 @@ describe("the CVSS assessments", () => {
       eligibility: { score: 10, source: "fallback" },
     });
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(cvssPart(screen).getByText("No CVSS assessments."))
@@ -4398,7 +4424,7 @@ describe("the CVSS assessments", () => {
     const { screen } = await renderCvss("SUSE");
     fails = true;
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(
@@ -4907,7 +4933,7 @@ describe("the sources of the CVE", () => {
     await expect.element(refetchAll(screen)).toHaveFocus();
     refused = true;
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(
@@ -5052,6 +5078,8 @@ describe("the sources of the CVE", () => {
     stubTicket();
     const { screen } = await renderSources();
     const refetch = refetchOf(screen, "NVD");
+    // Away from the line, where the pointer of an earlier test can stay.
+    await screen.getByRole("heading", { level: 2, name: "Details" }).hover();
     expect((await screenshot(sourceOf(screen, "NVD"))).at(12, 12)).toBe(
       "#1a7f37",
     );
@@ -5596,7 +5624,7 @@ describe("the sources of the CVE", () => {
 
     // Another fetch, which ends in the same way.
     sources = pending;
-    returnToForeground();
+    await returnToForeground();
     await expect
       .element(sourceOf(screen, "NVD").getByText("Pending"))
       .toBeVisible();
@@ -5679,7 +5707,7 @@ describe("the sources of the CVE", () => {
     // Meanwhile NVD was disabled.
     sources = [fictionalSource({ enabled: false })];
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(sourceOf(screen, "NVD").getByText("Disabled"))
@@ -6091,7 +6119,7 @@ describe("the participants", () => {
     accessGrantsButton(screen).element().focus();
     confidential = false;
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect.element(accessGrantsButton(screen)).not.toBeInTheDocument();
     await expect
@@ -6396,9 +6424,15 @@ describe("the access grants", () => {
       const error = accessGrantsDialog(screen).getByText(message);
       await expect.element(error).toBeVisible();
       expect(backgroundBehind(error.element())).toBe(tone);
-      expect(
-        error.element().closest("[tabindex]")?.contains(document.activeElement),
-      ).toBe(true);
+      // The error takes the focus once it has shown, after the response.
+      await expect
+        .poll(() =>
+          error
+            .element()
+            .closest("[tabindex]")
+            ?.contains(document.activeElement),
+        )
+        .toBe(true);
       await expect
         .element(userField(screen))
         .toHaveValue("Ana Garcia @agarcia");
@@ -6624,7 +6658,7 @@ describe("the access grants", () => {
     // Meanwhile another analyst revoked it.
     grants = [EMMA];
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(revokeOf(screen, "Carol White @cwhite"))

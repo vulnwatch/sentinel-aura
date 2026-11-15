@@ -377,6 +377,8 @@ test("shows what the screen adds to a phase at the end of the line of its name, 
   const submission = phases.getByText("SR 900001", { exact: true });
   const qa = phases.getByText("RR 900003 +12", { exact: true });
   await expect.element(submission).toBeVisible();
+  // Measured once the font has loaded, which changes the width of the text.
+  await document.fonts.ready;
   for (const [value, name, actor] of [
     [submission, "Submission", "· Maintainer"],
     [qa, "QA", "· QA"],

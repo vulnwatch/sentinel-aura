@@ -244,6 +244,9 @@ function widthOf(element: Element): number {
 async function widthsOf(screen: Awaited<ReturnType<typeof render>>) {
   const clear = screen.getByRole("button", { name: "Clear filters" });
   await expect.element(clear).toBeVisible();
+  // Measured once the font has loaded, which changes the width of the
+  // labels.
+  await document.fonts.ready;
   const tabs = screen.getByRole("tablist", { name: "Views" }).element();
   return {
     left: tabs.getBoundingClientRect().left,

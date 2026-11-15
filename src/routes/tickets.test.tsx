@@ -315,8 +315,12 @@ function announcementsOf(screen: Screen): string[] {
     .filter((text) => text !== "");
 }
 
-// The tab returns to the foreground after being hidden.
-function returnToForeground() {
+// The tab returns to the foreground after being hidden, once no read is in
+// progress: a return during a read joins it rather than reading again
+// (TanStack Query's Query.onFocus), so the reads that a test expects after
+// the return do not depend on when the reads before it end.
+async function returnToForeground() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
   focusManager.setFocused(false);
   focusManager.setFocused(true);
 }
@@ -807,6 +811,11 @@ describe("while the list changes", () => {
     await expect
       .element(screen.getByRole("tab", { name: "New 12" }))
       .toBeVisible();
+    // The count is read again when a read of the list starts, once the
+    // first has ended.
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
+      .toBeVisible();
     // Another Ticket arrives in the meantime.
     totals.set(FILTERS.New, 13);
     const countsOf = (filters: string) =>
@@ -1192,7 +1201,7 @@ describe("the URL", () => {
     tab.element().focus();
 
     stub.user = ANALYST;
-    returnToForeground();
+    await returnToForeground();
 
     await expect.poll(() => router.state.location.href).toBe("/tickets");
     await expect
@@ -1214,7 +1223,7 @@ describe("the URL", () => {
     tab.element().focus();
 
     stub.user = withEligibility(ANALYST, "none");
-    returnToForeground();
+    await returnToForeground();
 
     await expect.poll(() => router.state.location.href).toBe("/tickets");
     await expect
@@ -1240,7 +1249,7 @@ describe("a change of the assignment eligibility", () => {
     // The same user, who can now be the assignee of the non-confidential
     // Tickets.
     stub.user = withEligibility(READER, "non_confidential");
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(screen.getByRole("tab", { name: /^Assigned to me/ }))
@@ -1257,7 +1266,7 @@ describe("a change of the assignment eligibility", () => {
     link.element().focus();
 
     stub.user = withEligibility(ANALYST, "none");
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(screen.getByRole("tab", { name: /^Assigned to me/ }))
@@ -1275,7 +1284,7 @@ describe("a change of manage_confidentiality", () => {
     fresh.element().focus();
 
     stub.user = EMBARGO_ANALYST;
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(screen.getByRole("tab", { name: "Embargo 3" }))
@@ -1624,7 +1633,7 @@ describe("the table", () => {
     await expect.element(dialog).toHaveFocus();
     stub.list = () => ticketPage([]);
 
-    returnToForeground();
+    await returnToForeground();
 
     await expect.element(dialog).not.toBeInTheDocument();
     await expect
@@ -2565,7 +2574,7 @@ describe("a list that the user refined", () => {
     await expect.element(status).toHaveTextContent("");
 
     stub.list = () => errorResponse(503, "DATABASE_UNAVAILABLE");
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(status)
@@ -2971,7 +2980,7 @@ describe("the attention summary", () => {
     count.element().focus();
 
     stub.user = ANALYST;
-    returnToForeground();
+    await returnToForeground();
 
     await expect.element(count).not.toBeInTheDocument();
     await expectSummary(screen);
@@ -3007,7 +3016,7 @@ describe("the attention summary", () => {
       { data: { ...ANALYST.data, roles: [], capabilities: [] } },
       "none",
     );
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(screen.getByRole("tab", { name: /^Assigned to me/ }))
