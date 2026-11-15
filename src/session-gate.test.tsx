@@ -119,8 +119,12 @@ function readTickets() {
     .catch(() => undefined);
 }
 
-// The tab returns to the foreground after being hidden.
-function returnToForeground() {
+// The tab returns to the foreground after being hidden, once no read is in
+// progress: a return during a read joins it rather than reading again
+// (TanStack Query's Query.onFocus), so the reads that a test expects after
+// the return do not depend on when the reads before it end.
+async function returnToForeground() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
   focusManager.setFocused(false);
   focusManager.setFocused(true);
 }
@@ -151,7 +155,9 @@ describe("as the UI loads", () => {
 
     await expect.element(indicator).toBeVisible();
     await expect.element(screen.getByRole("heading")).not.toBeInTheDocument();
-    // Centered in the window.
+    // Centered in the window, measured once the font has loaded, which
+    // changes the width of the label.
+    await document.fonts.ready;
     const box = indicator.element().getBoundingClientRect();
     expect(Math.abs(box.left + box.width / 2 - window.innerWidth / 2)).toBe(0);
     expect(
@@ -389,7 +395,7 @@ describe("as the UI loads", () => {
       .element(screen.getByRole("button", { name: "Try again" }))
       .toBeVisible();
 
-    returnToForeground();
+    await returnToForeground();
     await settle();
 
     expect(requestsTo(fetch, ME)).toBe(1);
@@ -570,7 +576,7 @@ describe("the signed-in user", () => {
     fetch.mockImplementation(() =>
       Promise.resolve(errorResponse(500, "INTERNAL_ERROR")),
     );
-    returnToForeground();
+    await returnToForeground();
 
     await expect.poll(() => requestsTo(fetch, ME)).toBe(4);
     await expect.poll(() => client.isFetching()).toBe(0);
@@ -590,7 +596,7 @@ describe("the signed-in user", () => {
       .toBeVisible();
 
     session.user = undefined;
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
@@ -626,7 +632,7 @@ describe("the signed-in user", () => {
       client.setQueryData(["records"], { data: ["fictional"] });
 
       session.user = other;
-      returnToForeground();
+      await returnToForeground();
 
       await expect
         .element(screen.getByRole("heading", { level: 1, name: heading }))
@@ -682,7 +688,7 @@ test("starts the screen again for another user, so that it keeps nothing of the 
     .toBeVisible();
 
   session.user = OTHER_USER;
-  returnToForeground();
+  await returnToForeground();
 
   await expect
     .element(screen.getByRole("button", { name: "Pressed 0 times" }))
@@ -698,7 +704,7 @@ describe("Sign in, once a session exists", () => {
       .toBeVisible();
 
     session.user = FICTIONAL_USER;
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))

@@ -264,8 +264,7 @@ prepare_trivy() {
     trap remove_state EXIT
     mkdir "${WORK_DIR}/cache"
     docker save --output "${WORK_DIR}/image.tar" "${UI_IMAGE}"
-    docker image inspect "${TRIVY_IMAGE}" >/dev/null 2>&1 ||
-        docker pull --quiet "${TRIVY_IMAGE}" >/dev/null
+    pull_images "${TRIVY_IMAGE}" || die "cannot download ${TRIVY_IMAGE}"
 }
 
 # Runs Trivy with the arguments $2..., offline when $1 is "offline", in a

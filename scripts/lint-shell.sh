@@ -52,14 +52,7 @@ selected_files() {
 # image is present or is downloaded.
 prepare_images() {
     check_docker_engine
-    local image
-    for image in "$@"; do
-        if ! docker image inspect "${image}" >/dev/null 2>&1; then
-            echo "lint-shell.sh: downloading ${image}" >&2
-            docker pull --quiet "${image}" >/dev/null ||
-                die "cannot download ${image}"
-        fi
-    done
+    pull_images "$@" || die "cannot download the images of the linters"
 }
 
 # Runs the tool of the image $1 with the arguments $2... in a disposable

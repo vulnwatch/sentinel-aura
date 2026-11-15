@@ -12,7 +12,7 @@ import { useState } from "react";
 import { Link } from "react-aria-components";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { cleanup, render } from "vitest-browser-react";
 import { z } from "zod";
 import { App } from "./app";
 import { Button } from "./components/button";
@@ -25,7 +25,10 @@ beforeEach(() => {
   stubApi(() => jsonResponse(200, FICTIONAL_USER));
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // Before the responses go, so that the screen of the test reads nothing
+  // more.
+  await cleanup();
   vi.restoreAllMocks();
 });
 

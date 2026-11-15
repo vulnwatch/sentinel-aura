@@ -394,8 +394,19 @@ function later() {
   return { promise, resolve };
 }
 
-// The tab returns to the foreground after being hidden.
-function returnToForeground() {
+// Waits until no read is in progress, for a read whose end the tab shows
+// nowhere, such as that of the first event, which From shows only once
+// Filters opens, and keeps when a later read of it fails.
+async function readsEnded() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+}
+
+// The tab returns to the foreground after being hidden, once no read is in
+// progress: a return during a read joins it rather than reading again
+// (TanStack Query's Query.onFocus), so the reads that a test expects after
+// the return do not depend on when the reads before it end.
+async function returnToForeground() {
+  await readsEnded();
   focusManager.setFocused(false);
   focusManager.setFocused(true);
 }
@@ -755,7 +766,7 @@ describe("the tab", () => {
     const panel = panelOf(screen);
 
     stub.ticket = () => errorResponse(503, "DATABASE_UNAVAILABLE");
-    returnToForeground();
+    await returnToForeground();
 
     const warning = panel.getByText(
       `This couldn't be updated. ${MESSAGE_UNAVAILABLE}`,
@@ -797,7 +808,7 @@ describe("the tab", () => {
     const { screen } = await renderEvents();
 
     stub.ticket = () => errorResponse(404, "TICKET_NOT_FOUND");
-    returnToForeground();
+    await returnToForeground();
 
     await expect.element(heading(screen, "Not found")).toBeVisible();
     await expect
@@ -2547,6 +2558,9 @@ describe("the period", () => {
     await expect
       .element(screen.getByRole("button", { name: "Filters 1 applied" }))
       .toBeVisible();
+    // The first day comes from the read of the first event, which shows
+    // nothing of its own.
+    await readsEnded();
     const dialog = await openFilters(screen);
 
     await typeDate(dialog, "To", "08112025");
@@ -2614,6 +2628,7 @@ describe("the period", () => {
       // A failed read is sent again twice (docs/behaviors.md, Retries and
       // Unconfirmed Changes).
       await expect.poll(() => firstEventReads(spy)).toBe(reads);
+      await readsEnded();
       const dialog = await openFilters(screen);
 
       expect(
@@ -2644,8 +2659,7 @@ describe("the period", () => {
     await expect.poll(() => firstEventReads(spy)).toBe(3);
     stub.first = () => firstEventResponse();
 
-    focusManager.setFocused(false);
-    focusManager.setFocused(true);
+    await returnToForeground();
 
     await expect.poll(() => firstEventReads(spy)).toBe(4);
     const dialog = await openFilters(screen);
@@ -2664,10 +2678,10 @@ describe("the period", () => {
 
     // The tab returns to the foreground, which reads the data again; the
     // read fails, also when sent again twice.
-    focusManager.setFocused(false);
-    focusManager.setFocused(true);
+    await returnToForeground();
 
     await expect.poll(() => firstEventReads(spy)).toBe(reads + 3);
+    await readsEnded();
     const dialog = await openFilters(screen);
     expect(
       dialog.getByRole("group", { name: "From" }).element().textContent,
@@ -3372,7 +3386,7 @@ describe("the errors", () => {
     const { screen } = await renderEvents();
 
     stub.events = () => errorResponse(503, "DATABASE_UNAVAILABLE");
-    returnToForeground();
+    await returnToForeground();
 
     await expect
       .element(

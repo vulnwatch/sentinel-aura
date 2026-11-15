@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import {
   expect,
   expectAccessible,
+  expectAttentionCounts,
   expectScreenshot,
   expectViewCounts,
   signIn,
@@ -211,6 +212,7 @@ test.describe("for an analyst", () => {
     await expect(
       table(page).getByRole("row", { name: /SNTL-7/ }),
     ).toContainText("Triage -3d");
+    await expectAttentionCounts(page);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list.png");
@@ -238,6 +240,7 @@ test.describe("for an analyst", () => {
       table(page).getByRole("row", { name: /SNTL-9/ }),
     ).toContainText("Unassigned");
     await expectAccessible(page);
+    await expectAttentionCounts(page);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-analysis.png");
@@ -320,6 +323,7 @@ test.describe("for an analyst", () => {
     }
     await expect(releaseOf("SNTL-19")).toHaveText("–Not set");
     await expectAccessible(page);
+    await expectAttentionCounts(page);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-embargo.png");
@@ -439,6 +443,7 @@ test.describe("for an analyst", () => {
       setAt,
     );
     await expectAccessible(page);
+    await expectAttentionCounts(page);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-priority.png");
@@ -576,6 +581,7 @@ test.describe("for an analyst", () => {
     const pagination = page.getByRole("navigation", { name: "Pagination" });
     await expect(pagination).toContainText("1–20 of 32");
     await expectAccessible(page);
+    await expectAttentionCounts(page);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-all.png");
@@ -606,6 +612,8 @@ test.describe("for an analyst", () => {
       page.getByRole("navigation", { name: "Pagination" }),
     ).toHaveCount(0);
     await expectAccessible(page);
+    await expectViewCounts(page);
+    await expectAttentionCounts(page);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-beyond-last-page.png");
@@ -696,6 +704,8 @@ test.describe("refined by an analyst", () => {
         .getByText("No Tickets in this view match the search."),
     ).toBeVisible();
     await expectAccessible(page);
+    await expectViewCounts(page);
+    await expectAttentionCounts(page);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-no-match.png");
@@ -721,7 +731,7 @@ test.describe("refined by an analyst", () => {
     // Once the counts have arrived, which widen the tabs and the summary, so
     // that the popover opens below Filters where it stays.
     await expectViewCounts(page);
-    await expect(attention(page).last()).toHaveText("2 QA overdue");
+    await expectAttentionCounts(page);
 
     // In the New view, whose columns hold no avatar and no date, so that no
     // mask of the reference lies over the popover.

@@ -139,6 +139,25 @@ export async function expectViewCounts(page: Page) {
   await expect(views.filter({ hasNotText: COUNTED_VIEW })).toHaveCount(0);
 }
 
+// The text of a count of the attention summary once its number shows: the
+// number, its thousands grouped, then its label (src/components/count-link.tsx).
+const COUNTED_ATTENTION = /^\d[\d,]*\s/;
+
+// Waits until each count of the attention summary of the Ticket list
+// (docs/screens/ticket-list.md, Content) shows its number. Each count is read
+// on its own and widens its link as its number arrives, which moves the
+// counts after it and, when the heading row wraps, what follows it, as the
+// counts of the views do: a test calls this before a reference screenshot of
+// the list, which shows the numbers, or before it points at what they can
+// move (docs/conventions.md, End-to-End Tests).
+export async function expectAttentionCounts(page: Page) {
+  const counts = page
+    .getByRole("list", { name: "Tickets that need attention" })
+    .getByRole("link");
+  await expect(counts.first()).toBeVisible();
+  await expect(counts.filter({ hasNotText: COUNTED_ATTENTION })).toHaveCount(0);
+}
+
 // The generated avatars that the page shows, which the reference screenshots
 // mask: the dataset does not fix the users' ids, from which they are
 // generated (docs/conventions.md, End-to-End Tests). No dataset user has a

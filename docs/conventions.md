@@ -436,6 +436,18 @@ that needs it; content of another kind needs a new row first.
   caller observes it, so that it fails when the behavior breaks. A test that
   runs code without checking its outcome proves nothing, and the minimum
   coverage (Checks) never justifies one.
+- A test checks a state only once the read or the effect that produces it
+  has ended, and waits for it through that state, with an assertion that
+  retries, such as `expect.element` or `expect.poll`, never for a fixed
+  time. A request that the replaced `fetch` has received is not a read that
+  has ended, and the data of one read says nothing of another read of the
+  same screen, which arrives on its own: a check that does not retry fails
+  while the other read loads, or, when it checks an absence, passes without
+  checking anything. Where nothing on the screen marks the end of a read,
+  such as a read whose outcome shows nothing, the test waits until the query
+  client has no read in progress. A test returns the tab to the foreground
+  only when no read is in progress, since TanStack Query joins a read in
+  progress rather than reading again.
 - Each unit or component test that a change adds, or whose assertions it
   changes, is seen to fail when the behavior that it checks breaks: the
   author breaks that behavior in the code, or for a fix restores the defect,
@@ -492,9 +504,19 @@ that needs it; content of another kind needs a new row first.
   arrive after the tabs, and each widens its tab, which moves the tabs and
   the controls after it and, when the toolbar wraps, what follows the
   toolbar (`docs/behaviors.md`, Loading; `docs/design-system.md`, Lists).
-  `expectViewCounts` of `fixtures.ts` waits until each view shows its count.
-  A test waits for such data through a state that the user sees, such as
-  the counts, never for a fixed time.
+  `expectViewCounts` of `fixtures.ts` waits until each view shows its count,
+  and `expectAttentionCounts` until each count of the attention summary
+  shows its number. A test waits for such data through a state that the user
+  sees, such as the counts, never for a fixed time. At a URL with an anchor,
+  that data includes every read of the screen, after which the page shows the
+  target of the anchor (`docs/design-system.md`, Main Content), which moves
+  the page in turn.
+- A test takes a reference screenshot only once every read whose data the
+  screenshot shows, or that moves what it shows, has arrived, and, at a URL
+  with an anchor, once the page has shown its target: a part whose read is
+  in progress shows nothing in its place during the delay of the loading
+  indicator, then the indicator, frozen, which the comparison takes for a
+  page that has settled.
 - Each browser runs the tests against its own backend, newly loaded with the
   dataset, at the same time as the other browser, and as many of its tests
   at once as the cores of the host allow, those of one module too, in any

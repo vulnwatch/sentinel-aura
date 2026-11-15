@@ -190,11 +190,26 @@ remove_backend() {
     COMPOSE_PROFILES="${ALL_PROFILES}" compose "$1" down --volumes --remove-orphans --timeout 5
 }
 
+# Downloads the images of the services of the project $1, with those of the
+# profile $2 when it names one, other than the UI's, which scripts/image.sh
+# builds, trying a download again as pull_images does, so that Compose
+# downloads none itself.
+pull_backend_images() {
+    local -a images
+    mapfile -t images < <(
+        COMPOSE_PROFILES="${2:-}" compose "$1" config --images |
+            grep --line-regexp --fixed-strings --invert-match "${SENTINEL_AURA_UI_IMAGE}" |
+            sort --unique
+    )
+    pull_images "${images[@]}"
+}
+
 # Creates the backend of the project $1, with the services of the profile $2
 # when it names one, and waits until every service is healthy: the migration
 # and the dataset load complete first, into a new database.
 create_backend() {
     echo "dev-env.sh: creating the backend ${1}: Sentinel ${SENTINEL_VERSION}, loaded with the example dataset" >&2
+    pull_backend_images "$1" "${2:-}" || return 1
     COMPOSE_PROFILES="${2:-}" compose "$1" up --detach --wait --wait-timeout "${WAIT_TIMEOUT}"
 }
 

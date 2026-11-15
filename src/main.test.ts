@@ -60,11 +60,20 @@ test("mounts the application in the #root element", async () => {
 
 test("shows the stored theme", async () => {
   window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
-  addRootElement();
+  const container = addRootElement();
 
   await runEntryPoint();
 
   expect(root.dataset.theme).toBe("dark");
+  // Its read of the signed-in user ends under the responses of this test,
+  // not of the next.
+  await expect
+    .element(
+      page
+        .elementLocator(container)
+        .getByRole("heading", { level: 1, name: "Not found" }),
+    )
+    .toBeVisible();
 });
 
 test("fails with an error that names the missing #root element", async () => {

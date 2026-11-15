@@ -7,8 +7,9 @@
 # of a release, the results of the end-to-end tests, the files of the
 # installed dependencies and their changes, the directory of the generated API
 # client, the pinned Sentinel version and image digest of contract/, the
-# checks of the container engine, the digest that an image tag names in its
-# registry, and the head branch of a release-please pull request.
+# checks of the container engine, the downloads of images, the digest that an
+# image tag names in its registry, and the head branch of a release-please
+# pull request.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly REPO_ROOT
@@ -210,6 +211,47 @@ check_docker_engine() {
         die "Docker's rootless mode is not supported; ${SETUP}"
     [[ $'\n'"${options}" != *$'\n'name=userns* ]] ||
         die "Docker's user namespace remapping is not supported; ${SETUP}"
+}
+
+# How many times a download from a registry is tried, and how long the first
+# wait before another attempt lasts, in seconds, which doubles with each
+# attempt.
+readonly DOWNLOAD_ATTEMPTS=3
+readonly DOWNLOAD_DELAY=5
+
+# Runs the command $@ until it succeeds, at most DOWNLOAD_ATTEMPTS times, for a
+# download that a registry can fail for a moment, such as with a 502 Bad
+# Gateway; waits DOWNLOAD_DELAY seconds before the second attempt, and twice
+# as long before each later one. Fails with the status of the last attempt.
+retry_download() {
+    local attempt=1 delay="${DOWNLOAD_DELAY}" status
+    while true; do
+        status=0
+        "$@" || status=$?
+        if ((status == 0)); then
+            return 0
+        fi
+        if ((attempt >= DOWNLOAD_ATTEMPTS)); then
+            return "${status}"
+        fi
+        warn "the download failed (attempt ${attempt} of ${DOWNLOAD_ATTEMPTS}); trying again in ${delay} s"
+        sleep "${delay}"
+        attempt=$((attempt + 1))
+        delay=$((delay * 2))
+    done
+}
+
+# Downloads each image $@ that Docker Engine does not hold yet, trying a
+# download again as retry_download does, so that the command that runs the
+# image never downloads it itself, without another attempt.
+pull_images() {
+    local image
+    for image in "$@"; do
+        if ! docker image inspect "${image}" >/dev/null 2>&1; then
+            echo "${0##*/}: downloading ${image}" >&2
+            retry_download docker pull --quiet "${image}" >/dev/null || return 1
+        fi
+    done
 }
 
 # Fails unless Docker's Buildx plugin is installed.
