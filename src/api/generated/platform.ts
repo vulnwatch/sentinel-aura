@@ -100,6 +100,11 @@ export type GetPlatformVersionQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
+ * @summary Get platform version
+ * @route GET /api/v1/version
+ */
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -126,6 +131,11 @@ export function useGetPlatformVersion<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
+ * @summary Get platform version
+ * @route GET /api/v1/version
+ */
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -152,6 +162,11 @@ export function useGetPlatformVersion<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
+ * @summary Get platform version
+ * @route GET /api/v1/version
+ */
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -171,9 +186,10 @@ export function useGetPlatformVersion<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the platform version of the Sentinel process that serves the request: the same value as `info.version` of the OpenAPI document that it serves, identical for every caller and constant for the life of the process. Requires authentication (JWT session or API key).
  * @summary Get platform version
+ * @route GET /api/v1/version
  */
-
 export function useGetPlatformVersion<
   TData = Awaited<ReturnType<typeof getPlatformVersion>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

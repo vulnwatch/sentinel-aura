@@ -79,6 +79,10 @@ export default defineConfig({
         mutator: { path: "./src/api/request.ts", name: "apiRequest" },
         // The request functions return the body; apiRequest throws on errors.
         fetch: { includeHttpResponseReturnType: false },
+        // The documentation of each hook also names the method and path of
+        // its operation, by which the documents name it, such as
+        // "@route GET /api/v1/tickets" on useListTickets.
+        query: { docs: { route: true } },
       },
     },
   },

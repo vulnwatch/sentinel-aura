@@ -722,7 +722,9 @@ request function for each operation, and the TanStack Query hooks.
 committed in `src/api/generated/`; CI compares it, without writing, with the
 client that the document generates and fails when a file differs, is missing,
 or is no longer generated, so a change of the contract appears in the pull
-request diff (Backend Contract). The client covers only the operations under
+request diff (Backend Contract). CI also fails when the directory holds what
+Orval never generates and its own comparison skips: a declaration file, or a
+hidden file or directory. The client covers only the operations under
 `/api/v1/`: the document also describes the probes `/health` and `/ready`,
 which the Sentinel host does not route to the API (Same Origin). The requests
 use origin-relative URLs under `/api/v1/` (Same Origin) and the browser's

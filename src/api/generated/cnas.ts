@@ -120,6 +120,11 @@ export type ListCnasQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated list of the CVE Numbering Authorities (CNAs) that own, or have owned, the record of an ingested CVE, with their display name, short name, the organization name, types, and plain-text scope of the CVE Program CNA list, and whether their new Tickets are ignored automatically. Supports search, an auto-ignore filter, and sorting. Requires authentication (JWT session or API key).
+ * @summary List CNAs
+ * @route GET /api/v1/cnas
+ */
 export function useListCnas<
   TData = Awaited<ReturnType<typeof listCnas>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -143,6 +148,11 @@ export function useListCnas<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of the CVE Numbering Authorities (CNAs) that own, or have owned, the record of an ingested CVE, with their display name, short name, the organization name, types, and plain-text scope of the CVE Program CNA list, and whether their new Tickets are ignored automatically. Supports search, an auto-ignore filter, and sorting. Requires authentication (JWT session or API key).
+ * @summary List CNAs
+ * @route GET /api/v1/cnas
+ */
 export function useListCnas<
   TData = Awaited<ReturnType<typeof listCnas>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -166,6 +176,11 @@ export function useListCnas<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of the CVE Numbering Authorities (CNAs) that own, or have owned, the record of an ingested CVE, with their display name, short name, the organization name, types, and plain-text scope of the CVE Program CNA list, and whether their new Tickets are ignored automatically. Supports search, an auto-ignore filter, and sorting. Requires authentication (JWT session or API key).
+ * @summary List CNAs
+ * @route GET /api/v1/cnas
+ */
 export function useListCnas<
   TData = Awaited<ReturnType<typeof listCnas>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -182,9 +197,10 @@ export function useListCnas<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated list of the CVE Numbering Authorities (CNAs) that own, or have owned, the record of an ingested CVE, with their display name, short name, the organization name, types, and plain-text scope of the CVE Program CNA list, and whether their new Tickets are ignored automatically. Supports search, an auto-ignore filter, and sorting. Requires authentication (JWT session or API key).
  * @summary List CNAs
+ * @route GET /api/v1/cnas
  */
-
 export function useListCnas<
   TData = Awaited<ReturnType<typeof listCnas>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -267,6 +283,11 @@ export type GetCnaQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns one CNA, identified by its CVE Services UUID (`org_id`). Requires authentication (JWT session or API key).
+ * @summary Get CNA
+ * @route GET /api/v1/cnas/{org_id}
+ */
 export function useGetCna<
   TData = Awaited<ReturnType<typeof getCna>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -290,6 +311,11 @@ export function useGetCna<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns one CNA, identified by its CVE Services UUID (`org_id`). Requires authentication (JWT session or API key).
+ * @summary Get CNA
+ * @route GET /api/v1/cnas/{org_id}
+ */
 export function useGetCna<
   TData = Awaited<ReturnType<typeof getCna>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -313,6 +339,11 @@ export function useGetCna<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns one CNA, identified by its CVE Services UUID (`org_id`). Requires authentication (JWT session or API key).
+ * @summary Get CNA
+ * @route GET /api/v1/cnas/{org_id}
+ */
 export function useGetCna<
   TData = Awaited<ReturnType<typeof getCna>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -329,9 +360,10 @@ export function useGetCna<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns one CNA, identified by its CVE Services UUID (`org_id`). Requires authentication (JWT session or API key).
  * @summary Get CNA
+ * @route GET /api/v1/cnas/{org_id}
  */
-
 export function useGetCna<
   TData = Awaited<ReturnType<typeof getCna>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -456,7 +488,9 @@ export type SetCnaAutoIgnoreMutationVariables = {
 };
 
 /**
+ * Places a CNA under the auto-ignore policy or removes it, and records one CNA audit event for an effective change. The change applies to the Tickets that ingestion creates, or whose CNA it records, after the change; no existing Ticket changes. An unchanged request is an idempotent success with no audit event. Requires the manage_settings capability.
  * @summary Set CNA auto-ignore
+ * @route PATCH /api/v1/admin/cnas/{org_id}
  */
 export const useSetCnaAutoIgnore = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -564,6 +598,11 @@ export type ListCnaAuditEventsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated, fixed reverse-chronological list of the auto-ignore policy changes of CNAs. Supports filtering by event type, CNA, actor, and date range. Requires the manage_settings capability.
+ * @summary List CNA audit events
+ * @route GET /api/v1/admin/cnas/audit-log
+ */
 export function useListCnaAuditEvents<
   TData = Awaited<ReturnType<typeof listCnaAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -591,6 +630,11 @@ export function useListCnaAuditEvents<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of the auto-ignore policy changes of CNAs. Supports filtering by event type, CNA, actor, and date range. Requires the manage_settings capability.
+ * @summary List CNA audit events
+ * @route GET /api/v1/admin/cnas/audit-log
+ */
 export function useListCnaAuditEvents<
   TData = Awaited<ReturnType<typeof listCnaAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -618,6 +662,11 @@ export function useListCnaAuditEvents<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of the auto-ignore policy changes of CNAs. Supports filtering by event type, CNA, actor, and date range. Requires the manage_settings capability.
+ * @summary List CNA audit events
+ * @route GET /api/v1/admin/cnas/audit-log
+ */
 export function useListCnaAuditEvents<
   TData = Awaited<ReturnType<typeof listCnaAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -638,9 +687,10 @@ export function useListCnaAuditEvents<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated, fixed reverse-chronological list of the auto-ignore policy changes of CNAs. Supports filtering by event type, CNA, actor, and date range. Requires the manage_settings capability.
  * @summary List CNA audit events
+ * @route GET /api/v1/admin/cnas/audit-log
  */
-
 export function useListCnaAuditEvents<
   TData = Awaited<ReturnType<typeof listCnaAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

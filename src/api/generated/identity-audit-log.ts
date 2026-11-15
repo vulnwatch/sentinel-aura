@@ -137,6 +137,11 @@ export type ListMyIdentityAuditEventsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
+ * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
+ */
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -164,6 +169,11 @@ export function useListMyIdentityAuditEvents<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
+ * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
+ */
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -191,6 +201,11 @@ export function useListMyIdentityAuditEvents<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
+ * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
+ */
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -211,9 +226,10 @@ export function useListMyIdentityAuditEvents<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events where the authenticated user is the target. The actor is the user reference of the user who performed the action, or null when no user is recorded. Requires authentication (JWT session or API key).
  * @summary List my identity audit events
+ * @route GET /api/v1/users/me/audit-log
  */
-
 export function useListMyIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listMyIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -339,6 +355,11 @@ export type ListIdentityAuditEventsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
+ * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
+ */
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -366,6 +387,11 @@ export function useListIdentityAuditEvents<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
+ * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
+ */
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -393,6 +419,11 @@ export function useListIdentityAuditEvents<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
+ * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
+ */
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -413,9 +444,10 @@ export function useListIdentityAuditEvents<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated, fixed reverse-chronological list of identity audit events across all users. Supports filtering by event type, actor, target user, and date range. Requires the manage_users capability.
  * @summary List identity audit events
+ * @route GET /api/v1/admin/identity/audit-log
  */
-
 export function useListIdentityAuditEvents<
   TData = Awaited<ReturnType<typeof listIdentityAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

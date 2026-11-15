@@ -136,6 +136,11 @@ export type ListUsersQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
+ * @summary List users
+ * @route GET /api/v1/users
+ */
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -159,6 +164,11 @@ export function useListUsers<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
+ * @summary List users
+ * @route GET /api/v1/users
+ */
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -182,6 +192,11 @@ export function useListUsers<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
+ * @summary List users
+ * @route GET /api/v1/users
+ */
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -198,9 +213,10 @@ export function useListUsers<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated user directory: each entry carries the user's id, username, email, full name, active status, bot marker, role values, and assignment eligibility (for which Tickets the user can be the assignee). Supports search across username, email, and full name; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. The complete user profile is served by GET /api/v1/admin/users. Requires authentication (JWT session or API key).
  * @summary List users
+ * @route GET /api/v1/users
  */
-
 export function useListUsers<
   TData = Awaited<ReturnType<typeof listUsers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -282,6 +298,11 @@ export type GetCurrentUserProfileQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
+ * @summary Get my profile
+ * @route GET /api/v1/users/me
+ */
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -308,6 +329,11 @@ export function useGetCurrentUserProfile<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
+ * @summary Get my profile
+ * @route GET /api/v1/users/me
+ */
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -334,6 +360,11 @@ export function useGetCurrentUserProfile<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
+ * @summary Get my profile
+ * @route GET /api/v1/users/me
+ */
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -353,9 +384,10 @@ export function useGetCurrentUserProfile<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the concise profile of the currently authenticated user, including current role values, the capabilities that those roles grant, and the user's assignment eligibility (for which Tickets the user can be the assignee). The capabilities and the assignment eligibility are informational: every operation still checks its own authorization and eligibility. Requires authentication (JWT session or API key).
  * @summary Get my profile
+ * @route GET /api/v1/users/me
  */
-
 export function useGetCurrentUserProfile<
   TData = Awaited<ReturnType<typeof getCurrentUserProfile>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -443,6 +475,11 @@ export type GetUserQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
+ * @summary Get user
+ * @route GET /api/v1/users/{user}
+ */
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -466,6 +503,11 @@ export function useGetUser<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
+ * @summary Get user
+ * @route GET /api/v1/users/{user}
+ */
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -489,6 +531,11 @@ export function useGetUser<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
+ * @summary Get user
+ * @route GET /api/v1/users/{user}
+ */
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -505,9 +552,10 @@ export function useGetUser<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the directory entry of one user, resolved by UUID or exact, case-sensitive username. The complete user profile is served by GET /api/v1/admin/users/{user}. Requires authentication (JWT session or API key).
  * @summary Get user
+ * @route GET /api/v1/users/{user}
  */
-
 export function useGetUser<
   TData = Awaited<ReturnType<typeof getUser>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -610,6 +658,11 @@ export type ListUsersAdminQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
+ * @summary List users (admin)
+ * @route GET /api/v1/admin/users
+ */
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -633,6 +686,11 @@ export function useListUsersAdmin<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
+ * @summary List users (admin)
+ * @route GET /api/v1/admin/users
+ */
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -656,6 +714,11 @@ export function useListUsersAdmin<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
+ * @summary List users (admin)
+ * @route GET /api/v1/admin/users
+ */
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -672,9 +735,10 @@ export function useListUsersAdmin<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated list of complete user profiles. Supports search across username, email, and full name; local/external type; active status; repeatable role and assignment_eligibility (OR semantics); and has_role filters, plus standard pagination and sorting. Requires the 'manage_users' capability.
  * @summary List users (admin)
+ * @route GET /api/v1/admin/users
  */
-
 export function useListUsersAdmin<
   TData = Awaited<ReturnType<typeof listUsersAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -794,7 +858,9 @@ export type CreateUserAdminMutationError = ErrorType<
 export type CreateUserAdminMutationVariables = { data: AdminUserCreateRequest };
 
 /**
+ * Creates a new local user with a password and optional initial manual roles. Requires the 'manage_users' capability and JWT session authentication — not reachable with an API key.
  * @summary Create user (admin)
+ * @route POST /api/v1/admin/users
  */
 export const useCreateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -879,6 +945,11 @@ export type GetUserAdminQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
+ * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
+ */
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -902,6 +973,11 @@ export function useGetUserAdmin<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
+ * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
+ */
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -925,6 +1001,11 @@ export function useGetUserAdmin<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
+ * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
+ */
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -941,9 +1022,10 @@ export function useGetUserAdmin<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the complete profile of one user, resolved by UUID or exact, case-sensitive username. Requires the 'manage_users' capability.
  * @summary Get user (admin)
+ * @route GET /api/v1/admin/users/{user}
  */
-
 export function useGetUserAdmin<
   TData = Awaited<ReturnType<typeof getUserAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1067,7 +1149,9 @@ export type UpdateUserAdminMutationVariables = {
 };
 
 /**
+ * Updates a local user's email, full name, and bot marker. At least one field must be provided. Marking a user as a bot account also unassigns the user from every `new`, `analysis`, and `analyzed` Ticket, because a bot account is never a Ticket assignee. Requires the 'manage_users' capability.
  * @summary Update user (admin)
+ * @route PATCH /api/v1/admin/users/{user}
  */
 export const useUpdateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1160,7 +1244,9 @@ export type ReactivateUserAdminMutationError = ErrorType<
 export type ReactivateUserAdminMutationVariables = { user: string };
 
 /**
+ * Reactivates a previously deactivated local user. Idempotent for an already-active local user. Requires the 'manage_users' capability.
  * @summary Reactivate user (admin)
+ * @route POST /api/v1/admin/users/{user}/reactivate
  */
 export const useReactivateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1287,7 +1373,9 @@ export type SetUserRolesAdminMutationVariables = {
 };
 
 /**
+ * Adds and removes manual ('_manual') roles of a user. Roles granted through external origins are never changed. Already-present additions and missing removals are no-ops. Returns the complete profile with every role origin. Requires the 'manage_users' capability.
  * @summary Set user roles (admin)
+ * @route POST /api/v1/admin/users/{user}/roles
  */
 export const useSetUserRolesAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1413,7 +1501,9 @@ export type ResetUserPasswordAdminMutationVariables = {
 };
 
 /**
+ * Resets the password of a local user (active or inactive), invalidating all active sessions. Requires the 'manage_users' capability and JWT session authentication — not reachable with an API key.
  * @summary Reset user password (admin)
+ * @route POST /api/v1/admin/users/{user}/password
  */
 export const useResetUserPasswordAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1509,7 +1599,9 @@ export type DeactivateUserAdminMutationError = ErrorType<
 export type DeactivateUserAdminMutationVariables = { user: string };
 
 /**
+ * Deactivates a user: revokes every non-revoked API key, invalidates every active session, and unassigns active-status tickets. Explicit ticket grants and package-maintainer associations are retained. Idempotent for an already-inactive user. Requires the 'manage_users' capability.
  * @summary Deactivate user (admin)
+ * @route POST /api/v1/admin/users/{user}/deactivate
  */
 export const useDeactivateUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1606,6 +1698,11 @@ export type GetDeactivationImpactAdminQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
+ * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
+ */
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1633,6 +1730,11 @@ export function useGetDeactivationImpactAdmin<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
+ * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
+ */
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1660,6 +1762,11 @@ export function useGetDeactivationImpactAdmin<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
+ * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
+ */
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1680,9 +1787,10 @@ export function useGetDeactivationImpactAdmin<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Previews what deactivating a user would affect: non-revoked API keys (including expired keys), active sessions, and active-status assigned tickets, plus whether the user is the last active admin. The values are advisory point-in-time observations. An already-inactive user returns zeroed values. Requires the 'manage_users' capability.
  * @summary Get deactivation impact (admin)
+ * @route GET /api/v1/admin/users/{user}/deactivation-impact
  */
-
 export function useGetDeactivationImpactAdmin<
   TData = Awaited<ReturnType<typeof getDeactivationImpactAdmin>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1780,7 +1888,9 @@ export type UnlockUserAdminMutationError = ErrorType<
 export type UnlockUserAdminMutationVariables = { user: string };
 
 /**
+ * Clears the login lockout counter for a user. Idempotent — a user who is not locked out returns the same success response. Requires the 'manage_users' capability.
  * @summary Unlock user (admin)
+ * @route POST /api/v1/admin/users/{user}/unlock
  */
 export const useUnlockUserAdmin = <
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

@@ -148,6 +148,11 @@ export type ListTicketEventsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated list of audit events for one Ticket, in fixed reverse-chronological order (created_at DESC, id DESC). Supports filtering by event type (repeatable), actor, text search, and inclusive date range. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
+ * @summary List Ticket audit events
+ * @route GET /api/v1/tickets/{ticket_id}/audit-log
+ */
 export function useListTicketEvents<
   TData = Awaited<ReturnType<typeof listTicketEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -176,6 +181,11 @@ export function useListTicketEvents<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of audit events for one Ticket, in fixed reverse-chronological order (created_at DESC, id DESC). Supports filtering by event type (repeatable), actor, text search, and inclusive date range. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
+ * @summary List Ticket audit events
+ * @route GET /api/v1/tickets/{ticket_id}/audit-log
+ */
 export function useListTicketEvents<
   TData = Awaited<ReturnType<typeof listTicketEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -204,6 +214,11 @@ export function useListTicketEvents<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of audit events for one Ticket, in fixed reverse-chronological order (created_at DESC, id DESC). Supports filtering by event type (repeatable), actor, text search, and inclusive date range. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
+ * @summary List Ticket audit events
+ * @route GET /api/v1/tickets/{ticket_id}/audit-log
+ */
 export function useListTicketEvents<
   TData = Awaited<ReturnType<typeof listTicketEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -225,9 +240,10 @@ export function useListTicketEvents<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated list of audit events for one Ticket, in fixed reverse-chronological order (created_at DESC, id DESC). Supports filtering by event type (repeatable), actor, text search, and inclusive date range. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
  * @summary List Ticket audit events
+ * @route GET /api/v1/tickets/{ticket_id}/audit-log
  */
-
 export function useListTicketEvents<
   TData = Awaited<ReturnType<typeof listTicketEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -328,6 +344,11 @@ export type ListTicketActorsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns, unpaginated, each user who is the actor of at least one audit event of the Ticket, once, as the current User reference, ordered by username in Unicode code-point order. Events without an actor (system events) add no entry. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
+ * @summary List the users who acted on a Ticket
+ * @route GET /api/v1/tickets/{ticket_id}/actors
+ */
 export function useListTicketActors<
   TData = Awaited<ReturnType<typeof listTicketActors>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -355,6 +376,11 @@ export function useListTicketActors<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns, unpaginated, each user who is the actor of at least one audit event of the Ticket, once, as the current User reference, ordered by username in Unicode code-point order. Events without an actor (system events) add no entry. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
+ * @summary List the users who acted on a Ticket
+ * @route GET /api/v1/tickets/{ticket_id}/actors
+ */
 export function useListTicketActors<
   TData = Awaited<ReturnType<typeof listTicketActors>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -382,6 +408,11 @@ export function useListTicketActors<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns, unpaginated, each user who is the actor of at least one audit event of the Ticket, once, as the current User reference, ordered by username in Unicode code-point order. Events without an actor (system events) add no entry. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
+ * @summary List the users who acted on a Ticket
+ * @route GET /api/v1/tickets/{ticket_id}/actors
+ */
 export function useListTicketActors<
   TData = Awaited<ReturnType<typeof listTicketActors>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -402,9 +433,10 @@ export function useListTicketActors<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns, unpaginated, each user who is the actor of at least one audit event of the Ticket, once, as the current User reference, ordered by username in Unicode code-point order. Events without an actor (system events) add no entry. The Ticket is identified by its canonical SNTL-{n} identity. Requires authentication (JWT session or API key).
  * @summary List the users who acted on a Ticket
+ * @route GET /api/v1/tickets/{ticket_id}/actors
  */
-
 export function useListTicketActors<
   TData = Awaited<ReturnType<typeof listTicketActors>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
