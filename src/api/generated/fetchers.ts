@@ -109,6 +109,10 @@ export type ListFetchersQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns every fetcher — registered and deregistered — merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Requires authentication (JWT session or API key); every caller sees the same fields, including the user who triggered a manual run.
+ * @summary List all fetchers
+ */
 export function useListFetchers<
   TData = Awaited<ReturnType<typeof listFetchers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -131,6 +135,10 @@ export function useListFetchers<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns every fetcher — registered and deregistered — merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Requires authentication (JWT session or API key); every caller sees the same fields, including the user who triggered a manual run.
+ * @summary List all fetchers
+ */
 export function useListFetchers<
   TData = Awaited<ReturnType<typeof listFetchers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -153,6 +161,10 @@ export function useListFetchers<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns every fetcher — registered and deregistered — merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Requires authentication (JWT session or API key); every caller sees the same fields, including the user who triggered a manual run.
+ * @summary List all fetchers
+ */
 export function useListFetchers<
   TData = Awaited<ReturnType<typeof listFetchers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -168,9 +180,9 @@ export function useListFetchers<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns every fetcher — registered and deregistered — merged with its latest run and, for enabled registered fetchers, its next scheduled run time. Requires authentication (JWT session or API key); every caller sees the same fields, including the user who triggered a manual run.
  * @summary List all fetchers
  */
-
 export function useListFetchers<
   TData = Awaited<ReturnType<typeof listFetchers>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -287,6 +299,10 @@ export type ListFetcherRunsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range. Requires authentication (JWT session or API key).
+ * @summary List fetcher run history
+ */
 export function useListFetcherRuns<
   TData = Awaited<ReturnType<typeof listFetcherRuns>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -315,6 +331,10 @@ export function useListFetcherRuns<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range. Requires authentication (JWT session or API key).
+ * @summary List fetcher run history
+ */
 export function useListFetcherRuns<
   TData = Awaited<ReturnType<typeof listFetcherRuns>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -343,6 +363,10 @@ export function useListFetcherRuns<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range. Requires authentication (JWT session or API key).
+ * @summary List fetcher run history
+ */
 export function useListFetcherRuns<
   TData = Awaited<ReturnType<typeof listFetcherRuns>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -364,9 +388,9 @@ export function useListFetcherRuns<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated, fixed reverse-chronological list of runs for the named fetcher. Supports filtering by status and date range. Requires authentication (JWT session or API key).
  * @summary List fetcher run history
  */
-
 export function useListFetcherRuns<
   TData = Awaited<ReturnType<typeof listFetcherRuns>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -475,6 +499,10 @@ export type GetFetcherRunQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers. Requires authentication (JWT session or API key).
+ * @summary Get fetcher run detail
+ */
 export function useGetFetcherRun<
   TData = Awaited<ReturnType<typeof getFetcherRun>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -499,6 +527,10 @@ export function useGetFetcherRun<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers. Requires authentication (JWT session or API key).
+ * @summary Get fetcher run detail
+ */
 export function useGetFetcherRun<
   TData = Awaited<ReturnType<typeof getFetcherRun>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -523,6 +555,10 @@ export function useGetFetcherRun<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers. Requires authentication (JWT session or API key).
+ * @summary Get fetcher run detail
+ */
 export function useGetFetcherRun<
   TData = Awaited<ReturnType<typeof getFetcherRun>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -540,9 +576,9 @@ export function useGetFetcherRun<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns full detail for a single run. Raw error detail and traceback are present only for callers with manage_fetchers. Requires authentication (JWT session or API key).
  * @summary Get fetcher run detail
  */
-
 export function useGetFetcherRun<
   TData = Awaited<ReturnType<typeof getFetcherRun>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -667,6 +703,10 @@ export type GetFetcherTimelineQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days). Requires authentication (JWT session or API key).
+ * @summary Get fetcher run timeline data
+ */
 export function useGetFetcherTimeline<
   TData = Awaited<ReturnType<typeof getFetcherTimeline>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -695,6 +735,10 @@ export function useGetFetcherTimeline<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days). Requires authentication (JWT session or API key).
+ * @summary Get fetcher run timeline data
+ */
 export function useGetFetcherTimeline<
   TData = Awaited<ReturnType<typeof getFetcherTimeline>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -723,6 +767,10 @@ export function useGetFetcherTimeline<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days). Requires authentication (JWT session or API key).
+ * @summary Get fetcher run timeline data
+ */
 export function useGetFetcherTimeline<
   TData = Awaited<ReturnType<typeof getFetcherTimeline>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -744,9 +792,9 @@ export function useGetFetcherTimeline<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns time-series run data and disabled periods for chart rendering, bounded by an optional date range (maximum 1825 days). Requires authentication (JWT session or API key).
  * @summary Get fetcher run timeline data
  */
-
 export function useGetFetcherTimeline<
   TData = Awaited<ReturnType<typeof getFetcherTimeline>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -849,6 +897,7 @@ export type TriggerFetcherMutationError = ErrorType<
 export type TriggerFetcherMutationVariables = { fetcherName: string };
 
 /**
+ * Enqueues a manual run of the specified fetcher. Returns the identifier of a FetcherRun already committed with status 'queued'; poll GET .../runs/{run_id} for progress. Requires the manage_fetchers capability.
  * @summary Trigger fetcher
  */
 export const useTriggerFetcher = <
@@ -943,6 +992,10 @@ export type GetFetcherConfigQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the current configuration for a fetcher, including any fetcher-specific custom settings and the generated settings schema. Requires the manage_fetchers capability.
+ * @summary Get fetcher config
+ */
 export function useGetFetcherConfig<
   TData = Awaited<ReturnType<typeof getFetcherConfig>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -970,6 +1023,10 @@ export function useGetFetcherConfig<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the current configuration for a fetcher, including any fetcher-specific custom settings and the generated settings schema. Requires the manage_fetchers capability.
+ * @summary Get fetcher config
+ */
 export function useGetFetcherConfig<
   TData = Awaited<ReturnType<typeof getFetcherConfig>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -997,6 +1054,10 @@ export function useGetFetcherConfig<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the current configuration for a fetcher, including any fetcher-specific custom settings and the generated settings schema. Requires the manage_fetchers capability.
+ * @summary Get fetcher config
+ */
 export function useGetFetcherConfig<
   TData = Awaited<ReturnType<typeof getFetcherConfig>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1017,9 +1078,9 @@ export function useGetFetcherConfig<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the current configuration for a fetcher, including any fetcher-specific custom settings and the generated settings schema. Requires the manage_fetchers capability.
  * @summary Get fetcher config
  */
-
 export function useGetFetcherConfig<
   TData = Awaited<ReturnType<typeof getFetcherConfig>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1151,6 +1212,7 @@ export type UpdateFetcherConfigMutationVariables = {
 };
 
 /**
+ * Partially updates a fetcher's configuration — generic fields (enabled, schedule_override, run_timeout, request_delay) and/or fetcher-specific custom settings. Only the submitted fields are changed; only actually-changed fields produce an audit event. Schedule-affecting changes are propagated to redbeat after commit on a best-effort basis. Requires the manage_fetchers capability.
  * @summary Update fetcher config
  */
 export const useUpdateFetcherConfig = <
@@ -1281,6 +1343,10 @@ export type ListFetcherAuditEventsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated, fixed reverse-chronological list of administrative actions on a fetcher. Supports filtering by event type, actor, and date range. Requires the manage_fetchers capability.
+ * @summary Get fetcher audit log
+ */
 export function useListFetcherAuditEvents<
   TData = Awaited<ReturnType<typeof listFetcherAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1309,6 +1375,10 @@ export function useListFetcherAuditEvents<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of administrative actions on a fetcher. Supports filtering by event type, actor, and date range. Requires the manage_fetchers capability.
+ * @summary Get fetcher audit log
+ */
 export function useListFetcherAuditEvents<
   TData = Awaited<ReturnType<typeof listFetcherAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1337,6 +1407,10 @@ export function useListFetcherAuditEvents<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated, fixed reverse-chronological list of administrative actions on a fetcher. Supports filtering by event type, actor, and date range. Requires the manage_fetchers capability.
+ * @summary Get fetcher audit log
+ */
 export function useListFetcherAuditEvents<
   TData = Awaited<ReturnType<typeof listFetcherAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -1358,9 +1432,9 @@ export function useListFetcherAuditEvents<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated, fixed reverse-chronological list of administrative actions on a fetcher. Supports filtering by event type, actor, and date range. Requires the manage_fetchers capability.
  * @summary Get fetcher audit log
  */
-
 export function useListFetcherAuditEvents<
   TData = Awaited<ReturnType<typeof listFetcherAuditEvents>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

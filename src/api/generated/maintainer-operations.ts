@@ -129,6 +129,10 @@ export type ListPendingPackagesQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my pending packages
+ */
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -156,6 +160,10 @@ export function useListPendingPackages<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my pending packages
+ */
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -183,6 +191,10 @@ export function useListPendingPackages<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my pending packages
+ */
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -203,9 +215,9 @@ export function useListPendingPackages<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the caller's pending tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` with delivery `pending`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my pending packages
  */
-
 export function useListPendingPackages<
   TData = Awaited<ReturnType<typeof listPendingPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -319,6 +331,10 @@ export type ListInProgressPackagesQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my in-progress packages
+ */
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -346,6 +362,10 @@ export function useListInProgressPackages<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my in-progress packages
+ */
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -373,6 +393,10 @@ export function useListInProgressPackages<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my in-progress packages
+ */
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -393,9 +417,9 @@ export function useListInProgressPackages<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the caller's in-progress tracks: Ticket in `analysis` or `analyzed`, track actionable and `affected` or `fixed` with delivery `in_progress`, and at least one actionable eligible Product. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my in-progress packages
  */
-
 export function useListInProgressPackages<
   TData = Awaited<ReturnType<typeof listInProgressPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -509,6 +533,10 @@ export type ListCompletedPackagesQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my completed packages
+ */
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -536,6 +564,10 @@ export function useListCompletedPackages<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my completed packages
+ */
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -563,6 +595,10 @@ export function useListCompletedPackages<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
+ * @summary List my completed packages
+ */
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -583,9 +619,9 @@ export function useListCompletedPackages<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns the caller's completed tracks: Ticket in `analysis`, `analyzed`, or `resolved`, track actionable with delivery `released`. Each item is one exact package track whose Ticket is visible to the caller and whose included package the caller maintains. Supports an exact `package` filter, sorting, and pagination. Authenticated; no capability is required.
  * @summary List my completed packages
  */
-
 export function useListCompletedPackages<
   TData = Awaited<ReturnType<typeof listCompletedPackages>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -685,6 +721,10 @@ export type GetTicketPackageWorkQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
+ * @summary Get my package work for a Ticket
+ */
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -712,6 +752,10 @@ export function useGetTicketPackageWork<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
+ * @summary Get my package work for a Ticket
+ */
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -739,6 +783,10 @@ export function useGetTicketPackageWork<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
+ * @summary Get my package work for a Ticket
+ */
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -759,9 +807,9 @@ export function useGetTicketPackageWork<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns every track of one Ticket that the caller maintains and that satisfies a workbench classification, partitioned into `pending`, `in_progress`, and `completed`. Fixed order: `package_name`, then `reference`, in ascending Unicode code-point order. Unpaginated (the track set of one Ticket is bounded). All three arrays are empty when the caller has no qualifying work on an accessible Ticket. The Ticket is identified by its canonical SNTL-{n} identity. Authenticated; no capability is required.
  * @summary Get my package work for a Ticket
  */
-
 export function useGetTicketPackageWork<
   TData = Awaited<ReturnType<typeof getTicketPackageWork>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

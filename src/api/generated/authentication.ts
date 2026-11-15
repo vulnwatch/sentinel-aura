@@ -116,6 +116,7 @@ export type LoginMutationError = ErrorType<
 export type LoginMutationVariables = { data: LoginRequest };
 
 /**
+ * Authenticates a local user, creates a session, and returns a JWT. Public endpoint. Returns a generic 401 for every credential failure (unknown username, wrong password, inactive user, external user, no password set, or a superseded password) to prevent username enumeration.
  * @summary Log in with a local username and password
  */
 export const useLogin = <
@@ -204,6 +205,7 @@ export type LogoutMutationError = ErrorType<
 >;
 
 /**
+ * Invalidates the current session and clears the session cookie. Idempotent — safe to call multiple times, including with an already-invalidated or missing session, or a temporally expired (but validly signed) token.
  * @summary Log out
  */
 export const useLogout = <

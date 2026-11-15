@@ -139,6 +139,10 @@ export type ListReferencesQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Requires authentication (JWT session or API key).
+ * @summary List References
+ */
 export function useListReferences<
   TData = Awaited<ReturnType<typeof listReferences>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -163,6 +167,10 @@ export function useListReferences<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Requires authentication (JWT session or API key).
+ * @summary List References
+ */
 export function useListReferences<
   TData = Awaited<ReturnType<typeof listReferences>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -187,6 +195,10 @@ export function useListReferences<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Requires authentication (JWT session or API key).
+ * @summary List References
+ */
 export function useListReferences<
   TData = Awaited<ReturnType<typeof listReferences>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -204,9 +216,9 @@ export function useListReferences<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns every automatic and manual reference of a Ticket visible to the caller, unpaginated, ordered by type (`advisory`, `patch`, `issue`, `article`, uncategorized), then creation time, then identifier. `source` and `type` filters combine with AND; an invalid `type` value returns an empty list for an accessible Ticket. Requires authentication (JWT session or API key).
  * @summary List References
  */
-
 export function useListReferences<
   TData = Awaited<ReturnType<typeof listReferences>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -331,6 +343,7 @@ export type AddReferenceMutationVariables = {
 };
 
 /**
+ * Creates one manual reference. The URL is validated and normalized without being dereferenced; an omitted `type` is classified from the normalized URL. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket, changes its status, or re-evaluates its workflow. Requires `manage_references`.
  * @summary Add Reference
  */
 export const useAddReference = <
@@ -461,6 +474,7 @@ export type UpdateReferenceMutationVariables = {
 };
 
 /**
+ * Partially updates one manual reference: omitted fields are preserved and `null` clears `title`, `description`, or `type`. Changing `url` without `type` keeps the current type. A request equivalent to the current state returns it unchanged without recording an event. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket, changes its status, or re-evaluates its workflow. Requires `manage_references`.
  * @summary Update Reference
  */
 export const useUpdateReference = <
@@ -560,6 +574,7 @@ export type DeleteReferenceMutationVariables = {
 };
 
 /**
+ * Deletes one manual reference. Valid in every Ticket status, including `ignored` and `duplicated`; it never assigns the Ticket, changes its status, or re-evaluates its workflow. Requires `manage_references`.
  * @summary Delete Reference
  */
 export const useDeleteReference = <

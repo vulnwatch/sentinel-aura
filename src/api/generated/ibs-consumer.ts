@@ -100,6 +100,10 @@ export type GetIbsConsumerStatusQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Reports the liveness and activity of the standalone IBS RabbitMQ consumer from its ephemeral Redis heartbeat: `connected`, `disconnected`, or `reconnecting` with the process timestamps, aggregate counters, and the latest bounded error category; `disabled` when the consumer is configured off; `unreachable` when the heartbeat is absent, invalid, stale, or unreadable. Always HTTP 200 for an operational status; `disabled` and `unreachable` return every other field as `null`. Requires authentication (JWT session or API key).
+ * @summary Get IBS consumer status
+ */
 export function useGetIbsConsumerStatus<
   TData = Awaited<ReturnType<typeof getIbsConsumerStatus>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -126,6 +130,10 @@ export function useGetIbsConsumerStatus<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Reports the liveness and activity of the standalone IBS RabbitMQ consumer from its ephemeral Redis heartbeat: `connected`, `disconnected`, or `reconnecting` with the process timestamps, aggregate counters, and the latest bounded error category; `disabled` when the consumer is configured off; `unreachable` when the heartbeat is absent, invalid, stale, or unreadable. Always HTTP 200 for an operational status; `disabled` and `unreachable` return every other field as `null`. Requires authentication (JWT session or API key).
+ * @summary Get IBS consumer status
+ */
 export function useGetIbsConsumerStatus<
   TData = Awaited<ReturnType<typeof getIbsConsumerStatus>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -152,6 +160,10 @@ export function useGetIbsConsumerStatus<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Reports the liveness and activity of the standalone IBS RabbitMQ consumer from its ephemeral Redis heartbeat: `connected`, `disconnected`, or `reconnecting` with the process timestamps, aggregate counters, and the latest bounded error category; `disabled` when the consumer is configured off; `unreachable` when the heartbeat is absent, invalid, stale, or unreadable. Always HTTP 200 for an operational status; `disabled` and `unreachable` return every other field as `null`. Requires authentication (JWT session or API key).
+ * @summary Get IBS consumer status
+ */
 export function useGetIbsConsumerStatus<
   TData = Awaited<ReturnType<typeof getIbsConsumerStatus>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -171,9 +183,9 @@ export function useGetIbsConsumerStatus<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Reports the liveness and activity of the standalone IBS RabbitMQ consumer from its ephemeral Redis heartbeat: `connected`, `disconnected`, or `reconnecting` with the process timestamps, aggregate counters, and the latest bounded error category; `disabled` when the consumer is configured off; `unreachable` when the heartbeat is absent, invalid, stale, or unreadable. Always HTTP 200 for an operational status; `disabled` and `unreachable` return every other field as `null`. Requires authentication (JWT session or API key).
  * @summary Get IBS consumer status
  */
-
 export function useGetIbsConsumerStatus<
   TData = Awaited<ReturnType<typeof getIbsConsumerStatus>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

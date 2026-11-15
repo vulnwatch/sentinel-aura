@@ -122,6 +122,10 @@ export type ListProductsQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated list of the Products synchronized from SMELT, identified by their canonical CPE, with AIMAAS lifecycle dates, the derived lifecycle phase, and the CVSS threshold. By default only Products of the latest complete catalog snapshot are listed; retained historical Products are selected through `catalog_presence`. Supports search, exact CPE, repeatable catalog presence and lifecycle filters, and sorting. Before the first complete snapshot, the list is empty. Requires authentication (JWT session or API key).
+ * @summary List Products
+ */
 export function useListProducts<
   TData = Awaited<ReturnType<typeof listProducts>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -145,6 +149,10 @@ export function useListProducts<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of the Products synchronized from SMELT, identified by their canonical CPE, with AIMAAS lifecycle dates, the derived lifecycle phase, and the CVSS threshold. By default only Products of the latest complete catalog snapshot are listed; retained historical Products are selected through `catalog_presence`. Supports search, exact CPE, repeatable catalog presence and lifecycle filters, and sorting. Before the first complete snapshot, the list is empty. Requires authentication (JWT session or API key).
+ * @summary List Products
+ */
 export function useListProducts<
   TData = Awaited<ReturnType<typeof listProducts>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -168,6 +176,10 @@ export function useListProducts<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of the Products synchronized from SMELT, identified by their canonical CPE, with AIMAAS lifecycle dates, the derived lifecycle phase, and the CVSS threshold. By default only Products of the latest complete catalog snapshot are listed; retained historical Products are selected through `catalog_presence`. Supports search, exact CPE, repeatable catalog presence and lifecycle filters, and sorting. Before the first complete snapshot, the list is empty. Requires authentication (JWT session or API key).
+ * @summary List Products
+ */
 export function useListProducts<
   TData = Awaited<ReturnType<typeof listProducts>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -184,9 +196,9 @@ export function useListProducts<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated list of the Products synchronized from SMELT, identified by their canonical CPE, with AIMAAS lifecycle dates, the derived lifecycle phase, and the CVSS threshold. By default only Products of the latest complete catalog snapshot are listed; retained historical Products are selected through `catalog_presence`. Supports search, exact CPE, repeatable catalog presence and lifecycle filters, and sorting. Before the first complete snapshot, the list is empty. Requires authentication (JWT session or API key).
  * @summary List Products
  */
-
 export function useListProducts<
   TData = Awaited<ReturnType<typeof listProducts>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,

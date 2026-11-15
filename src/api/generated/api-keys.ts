@@ -122,6 +122,10 @@ export type ListMyApiKeysQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
+ * @summary List my API keys
+ */
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -145,6 +149,10 @@ export function useListMyApiKeys<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
+ * @summary List my API keys
+ */
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -168,6 +176,10 @@ export function useListMyApiKeys<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
+ * @summary List my API keys
+ */
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -184,9 +196,9 @@ export function useListMyApiKeys<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated list of the authenticated user's own API keys, newest first by default. Never exposes the plaintext key or its hash.
  * @summary List my API keys
  */
-
 export function useListMyApiKeys<
   TData = Awaited<ReturnType<typeof listMyApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -306,6 +318,7 @@ export type CreateApiKeyMutationError = ErrorType<
 export type CreateApiKeyMutationVariables = { data: ApiKeyCreateRequest };
 
 /**
+ * Creates a new API key owned by the authenticated user. Requires JWT session authentication — a request authenticated by an API key is rejected. Returns the plaintext key exactly once, in this response only.
  * @summary Create an API key
  */
 export const useCreateApiKey = <
@@ -398,6 +411,7 @@ export type RevokeMyApiKeyMutationError = ErrorType<
 export type RevokeMyApiKeyMutationVariables = { keyId: string };
 
 /**
+ * Revokes one of the authenticated user's own API keys. Idempotent — an already-revoked key returns its unchanged representation. A key that does not exist or belongs to another user returns an identical 404, without revealing which case applies.
  * @summary Revoke my API key
  */
 export const useRevokeMyApiKey = <
@@ -490,6 +504,10 @@ export type ListAllApiKeysQueryError = ErrorType<
   ErrorResponse | ValidationErrorResponse
 >;
 
+/**
+ * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
+ * @summary List all API keys
+ */
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -513,6 +531,10 @@ export function useListAllApiKeys<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
+ * @summary List all API keys
+ */
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -536,6 +558,10 @@ export function useListAllApiKeys<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
+/**
+ * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
+ * @summary List all API keys
+ */
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -552,9 +578,9 @@ export function useListAllApiKeys<
   queryKey: DataTag<QueryKey, TData, TError>;
 };
 /**
+ * Returns a paginated list of API keys across all owners, requiring the 'manage_users' capability.
  * @summary List all API keys
  */
-
 export function useListAllApiKeys<
   TData = Awaited<ReturnType<typeof listAllApiKeys>>,
   TError = ErrorType<ErrorResponse | ValidationErrorResponse>,
@@ -648,6 +674,7 @@ export type RevokeApiKeyMutationError = ErrorType<
 export type RevokeApiKeyMutationVariables = { keyId: string };
 
 /**
+ * Revokes any user's API key, requiring the 'manage_users' capability. An administrator may revoke the API key used to authenticate the current request. Idempotent.
  * @summary Revoke an API key
  */
 export const useRevokeApiKey = <
