@@ -439,6 +439,19 @@ async function returnToForeground() {
   focusManager.setFocused(true);
 }
 
+// Waits until no read of the path is in progress and the tab has its
+// outcome, for a read whose outcome the tab does not show yet, such as a
+// failure that waits for the Ticket: TanStack Query tells the tab of the end
+// of a read in a later task, which runs before this one ends.
+async function readEnded(path: string) {
+  await expect
+    .poll(() => client.isFetching({ queryKey: [path] }), { interval: 0 })
+    .toBe(0);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 // Waits until the error at the top of a dialog holds the focus, which it
 // takes once it has shown, in a render after the response.
 async function expectFocusOnError(error: Locator) {
@@ -1583,6 +1596,7 @@ describe("the read", () => {
     // Sent again twice after a 5xx, as every read (docs/behaviors.md,
     // Retries and Unconfirmed Changes).
     await expect.poll(() => referenceReads(spy)).toHaveLength(3);
+    await readEnded(REFERENCES);
     await expect
       .element(panelOf(screen).getByRole("progressbar", { name: "Loading" }))
       .toBeVisible();

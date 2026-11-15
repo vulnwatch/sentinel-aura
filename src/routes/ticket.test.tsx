@@ -260,6 +260,36 @@ function later() {
   return { promise, resolve };
 }
 
+// The parts of Overview that the target of an anchor waits for besides the
+// duplicates, by the name of their region, each with what it shows once its
+// read has ended.
+const READ_PARTS = {
+  "CVSS assessments": (part: Locator) => part.getByText("SUSE").first(),
+  "Sources of the CVE": (part: Locator) =>
+    part.getByText("NVD", { exact: true }).first(),
+  Participants: (part: Locator) =>
+    part.getByRole("toolbar", { name: "Participants" }),
+};
+
+// Waits until each part of Overview whose read the test does not hold back
+// shows what its read gave, and then for two more frames of the page, after
+// which the effect of the commit that showed them has run, such as the one
+// that shows the target of the anchor.
+async function partsShown(screen: Screen, held?: keyof typeof READ_PARTS) {
+  for (const [name, shown] of Object.entries(READ_PARTS)) {
+    if (name !== held) {
+      await expect.element(shown(region(screen, name))).toBeVisible();
+    }
+  }
+  await nextFrames();
+}
+
+// Waits until the browser has rendered two more frames.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 // A date and time of the API that lies the duration from now.
 function fromNow(duration: number): string {
   return new Date(Date.now() + duration).toISOString();
@@ -731,8 +761,7 @@ describe("the layout", () => {
 
     refetch.element().focus();
     const scrolled = window.scrollY;
-    await new Promise((done) => requestAnimationFrame(done));
-    await new Promise((done) => requestAnimationFrame(done));
+    await nextFrames();
 
     await expect.element(refetch).toHaveFocus();
     expect(refetch.element().matches(":focus-visible")).toBe(false);
@@ -1691,6 +1720,7 @@ describe("the anchor of the URL", () => {
     const duplicates = later();
     stubTicket({ duplicates: () => duplicates.promise });
     const { screen } = await renderTicket("/tickets/SNTL-12#cve");
+    await partsShown(screen);
     expect(window.scrollY).toBe(0);
 
     duplicates.resolve(ticketPage([]));
@@ -1760,6 +1790,7 @@ describe("the anchor of the URL", () => {
     await expect
       .poll(() => valueOf(screen, "Duplicates").textContent)
       .toBe("None");
+    await partsShown(screen, "CVSS assessments");
     expect(window.scrollY).toBe(0);
 
     cvss.resolve(cvssResponse());
@@ -1791,6 +1822,7 @@ describe("the anchor of the URL", () => {
       await expect
         .poll(() => valueOf(screen, "Duplicates").textContent)
         .toBe("None");
+      await partsShown(screen, "Sources of the CVE");
       expect(window.scrollY).toBe(0);
 
       // Every source, so that the window shows the start of the sources
@@ -1825,6 +1857,7 @@ describe("the anchor of the URL", () => {
       await expect
         .poll(() => valueOf(screen, "Duplicates").textContent)
         .toBe("None");
+      await partsShown(screen, "Participants");
       expect(window.scrollY).toBe(0);
 
       actors.resolve(actorsResponse([]));
@@ -1877,6 +1910,7 @@ describe("the anchor of the URL", () => {
     await expect
       .poll(() => valueOf(screen, "Duplicates").textContent)
       .toBe("None");
+    await partsShown(screen);
     expect(window.scrollY).toBe(10);
   });
 
@@ -1906,6 +1940,7 @@ describe("the anchor of the URL", () => {
     await expect
       .poll(() => valueOf(screen, "Duplicates").textContent)
       .toBe("None");
+    await partsShown(screen);
     expect(window.scrollY).toBe(10);
   });
 });
