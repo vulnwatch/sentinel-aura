@@ -31,7 +31,7 @@
     "@vitejs/plugin-react": "6.2.1",
     "@vitest/browser-playwright": "5.1.0",
     "@vitest/coverage-istanbul": "5.1.0",
-    "orval": "8.46.0",
+    "orval": "8.47.0",
     "oxlint": "1.92.0",
     "oxlint-tsgolint": "7.0.2006",
     "prettier": "3.9.10",
