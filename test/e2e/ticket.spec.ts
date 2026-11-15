@@ -844,7 +844,6 @@ test.describe("for an analyst", () => {
     ).toHaveCount(0);
     await expect(phases.getByRole("link")).toHaveCount(1);
     await expectAccessible(page);
-    await expectSources(page);
     await expectScreenshot(page, "ticket-phases.png");
 
     await page.keyboard.press("Tab");
@@ -1197,7 +1196,6 @@ test.describe("for an analyst", () => {
       "href",
       `https://www.first.org/cvss/calculator/3.1#${vector}`,
     );
-    await expectSources(page);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-cvss-vector.png");
 

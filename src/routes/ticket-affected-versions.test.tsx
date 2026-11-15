@@ -1411,6 +1411,9 @@ describe("the states", () => {
     const { screen } = await renderTab();
 
     stub.versions = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+    // Once no read is in progress, which the return would join rather than
+    // read again.
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
     focusManager.setFocused(false);
     focusManager.setFocused(true);
 

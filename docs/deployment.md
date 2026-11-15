@@ -269,12 +269,12 @@ Docker Hub does with a `502 Bad Gateway`, which would fail a check that has
 nothing to do with it. So the scripts download each container image that
 they run, when Docker Engine does not hold it yet, before they run it, and
 try a failed download again, twice at most, after a wait that doubles with
-each attempt: `scripts/tooling.sh` its tooling image, `scripts/dev-env.sh`
-the images of the services of a backend and of its profile, other than the
-UI's image, which `scripts/image.sh build` builds, `scripts/lint-shell.sh`
-the images of its linters, and `scripts/image.sh scan` Trivy's image. A
-build, whose base image Buildx resolves in its registry itself, is not tried
-again.
+each attempt: `scripts/tooling.sh` its tooling image; `scripts/dev-env.sh`,
+before it starts each backend, the images of the services of the backend
+and of its profile, other than the UI's image, which `scripts/image.sh`
+builds; `scripts/lint-shell.sh` the images of its linters; and
+`scripts/image.sh sbom` and `scan` Trivy's image. A build, whose base image
+Buildx resolves in its registry itself, is not tried again.
 
 **Checkout credentials.** Every `actions/checkout` step sets
 `persist-credentials: false`: no workflow pushes to the repository through

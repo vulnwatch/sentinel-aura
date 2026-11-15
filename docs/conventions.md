@@ -445,7 +445,8 @@ that needs it; content of another kind needs a new row first.
   while the other read loads, or, when it checks an absence, passes without
   checking anything. Where nothing on the screen marks the end of a read,
   such as a read whose outcome shows nothing, the test waits until the query
-  client has no read in progress. A test returns the tab to the foreground
+  client has no read in progress, then for the later task in which TanStack
+  Query gives the screen the outcome. A test returns the tab to the foreground
   only when no read is in progress, since TanStack Query joins a read in
   progress rather than reading again.
 - Each unit or component test that a change adds, or whose assertions it
