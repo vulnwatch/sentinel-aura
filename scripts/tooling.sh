@@ -30,7 +30,8 @@
 #                                            pinned OpenAPI document, offline;
 #                                            --check writes nothing and fails
 #                                            unless the client of the working
-#                                            tree is the one that it generates
+#                                            tree is the one that it
+#                                            generates, with no other file
 #   scripts/tooling.sh npm <args>            Run npm, with write access to
 #                                            package.json and package-lock.json
 #   scripts/tooling.sh audit                 Audit the installed dependencies:
@@ -218,6 +219,20 @@ cmd_format() {
     run_container --network=none "${mounts[@]}" -- npm run format
 }
 
+# Fails when the generated client holds what `orval --outdated` does not
+# compare, and lists it: the declaration files and the hidden files and
+# directories, which Orval never generates and its `clean` keeps. A
+# declaration file would otherwise change the types of the UI unseen.
+check_generated_files() {
+    local list
+    list="$(cd "${REPO_ROOT}" && find "${GENERATED_DIR}" -mindepth 1 \
+        \( -name '.*' -prune -o -name '*.d.ts' \) -print | sort)"
+    if [[ -n "${list}" ]]; then
+        echo "${list}" >&2
+        die "${GENERATED_DIR}/ holds these files, which Orval never generates and 'scripts/tooling.sh generate' keeps; remove them"
+    fi
+}
+
 cmd_generate() {
     if [[ "${1:-}" == --check ]]; then
         [[ $# -eq 1 ]] || die "generate: takes no arguments besides --check"
@@ -226,6 +241,7 @@ cmd_generate() {
         # lists each file that differs, is missing, or is no longer generated.
         run_container --network=none -- npm run generate -- --outdated ||
             die "${GENERATED_DIR}/ is not the client that the pinned OpenAPI document generates; run 'scripts/tooling.sh generate' and commit the result"
+        check_generated_files
         return
     fi
     [[ $# -eq 0 ]] || die "generate: takes no arguments besides --check"

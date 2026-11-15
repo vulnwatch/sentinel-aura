@@ -134,8 +134,8 @@ audit_if_required() {
 
 # Fails unless the client of the working tree is the one that the pinned
 # OpenAPI document generates (docs/architecture.md, API Client Generation).
-# The generator compares them without writing, and lists each file that
-# differs.
+# The generator compares them without writing, and the check lists each file
+# that differs or that the generator never writes.
 check_client() {
     [[ -d "${REPO_ROOT}/${GENERATED_DIR}" ]] ||
         die "missing ${GENERATED_DIR}/; run 'scripts/tooling.sh generate' and commit the result"
