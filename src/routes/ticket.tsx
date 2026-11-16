@@ -110,6 +110,7 @@ const CVE_SOURCES = [
   { source: "osv", fetcher: "sync_osv_advisories", name: "OSV" },
   { source: "kev", fetcher: "sync_cisa_kev", name: "CISA KEV" },
   { source: "epss", fetcher: "sync_epss_scores", name: "EPSS" },
+  { source: "bugzilla", fetcher: "sync_bugzilla_bugs", name: "SUSE Bugzilla" },
 ] as const;
 
 // The names of the CVE sources by source, and by the fetcher that owns them.

@@ -4690,6 +4690,7 @@ describe("the sources of the CVE", () => {
     stubTicket({
       sources: () =>
         sourcesResponse([
+          fictionalSource({ source: "bugzilla" }),
           fictionalSource({
             source: "epss",
             status: "not_attempted",
@@ -4740,6 +4741,7 @@ describe("the sources of the CVE", () => {
     // technologies; an absent date reads "Not set" (docs/behaviors.md,
     // Absent Values).
     expect(sourceLines(screen)).toEqual([
+      `SUSE Bugzilla Success Last attempt ${attempted}`,
       "EPSS Not attempted Disabled Last attempt – Not set",
       "GHSA Pending Last attempt – Not set",
       `Linux Kernel CNA Missing Last attempt ${attempted}`,

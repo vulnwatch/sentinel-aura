@@ -1260,6 +1260,7 @@ test.describe("for an analyst", () => {
     // Operating a Dataset Backend). The name of each status follows the name
     // of its source for assistive technologies.
     await expect(sources(page).getByRole("listitem")).toHaveText([
+      notAttempted("SUSE Bugzilla"),
       notAttempted("EPSS"),
       notAttempted("GHSA"),
       notAttempted("Linux Kernel CNA"),

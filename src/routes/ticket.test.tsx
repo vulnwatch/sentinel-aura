@@ -202,6 +202,7 @@ function longCve(): CVEDetail {
 // Every source of a CVE, each that can be refetched but CISA KEV, so that
 // the side column is taller than a short window.
 const EVERY_SOURCE = [
+  "bugzilla",
   "epss",
   "ghsa",
   "kernel",

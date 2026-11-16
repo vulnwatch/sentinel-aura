@@ -790,6 +790,7 @@ describe("the table", () => {
       ["sync_osv_advisories", "OSV"],
       ["sync_cisa_kev", "CISA KEV"],
       ["sync_epss_scores", "EPSS"],
+      ["sync_bugzilla_bugs", "SUSE Bugzilla"],
       ["sync_fictional_cves", "sync_fictional_cves"],
     ] as const;
     showing(
