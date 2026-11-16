@@ -494,7 +494,7 @@ list (Sentinel `docs/features/tickets/cve-service.md`, CVE Source Status):
   that the pinned contract does not list shows a circle with a question mark
   (`docs/behaviors.md`, Unknown Values). Then the name of the source, at
   weight 500, as Sentinel names it, NVD, MITRE, Linux Kernel CNA, GHSA, Red
-  Hat, OSV, CISA KEV, or EPSS (Sentinel
+  Hat, OSV, CISA KEV, EPSS, or SUSE Bugzilla (Sentinel
   `docs/features/tickets/cve-tracking.md`, CVE Sources), or as received for a
   source that the pinned contract does not list; and, at the end of the line,
   the label Disabled for a registered source that is not enabled, or Retired
