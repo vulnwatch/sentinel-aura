@@ -1,7 +1,10 @@
 import {
+  createContext,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -23,6 +26,10 @@ const WIDTHS = {
   form: "max-w-140",
   "form-only": "max-w-122",
 } as const;
+
+// The sets of the ids of the dialogs that each dialog around a dialog holds,
+// from the outermost one (ModalDialog).
+const NestedDialogsContext = createContext<readonly Set<string>[]>([]);
 
 interface ModalDialogProps {
   isOpen: boolean;
@@ -53,8 +60,10 @@ interface ModalDialogProps {
 // (docs/behaviors.md, Accessibility, Dialogs). The dialog takes the focus
 // itself as it opens, unless an element of its content takes it. When it
 // leaves the page while it is open, as when a read removes what opened it,
-// the focus moves to the screen's heading (docs/behaviors.md, Accessibility,
-// Focus after an action).
+// the focus moves to the screen's heading; and when it closes after a read
+// removed the element that opened it, the focus moves to the dialog that
+// held that element, or otherwise to the screen's heading
+// (docs/behaviors.md, Accessibility, Focus after an action).
 export function ModalDialog({
   isOpen,
   onClose,
@@ -68,6 +77,64 @@ export function ModalDialog({
   // The element that has the focus as the dialog renders first, before an
   // element of the dialog takes it: the one that opened it.
   const [opener] = useState(() => document.activeElement);
+  // The dialog that holds that element, if any.
+  const [openerHolder] = useState(
+    () => opener?.closest<HTMLElement>('[role="dialog"]') ?? null,
+  );
+  // Whether the dialog opened as it rendered first, so that the element of
+  // opener opened it, rather than being the one that had the focus when a
+  // dialog that opens later rendered first.
+  const [openedFirst] = useState(isOpen);
+  // The ids of the dialogs that this one holds, such as the question before
+  // its input is discarded, which show outside it; each registers itself in
+  // the sets of the dialogs that hold it.
+  const [nested] = useState(() => new Set<string>());
+  const holders = useContext(NestedDialogsContext);
+  const within = useMemo(() => [...holders, nested], [holders, nested]);
+  useLayoutEffect(() => {
+    for (const holder of holders) {
+      holder.add(dialogId);
+    }
+    return () => {
+      for (const holder of holders) {
+        holder.delete(dialogId);
+      }
+    };
+  }, [holders, dialogId]);
+  // A dialog that closes after a read removed the element that opened it
+  // moves the focus itself, once it has left the page and before React Aria
+  // would move it in the next frame: React Aria moves it to the first element
+  // of what held that element, such as a cell of another row of a table.
+  // Its own dialog and those that it holds leave together, so it moves the
+  // focus also when one of those holds it.
+  useLayoutEffect(
+    () => () => {
+      if (
+        !openedFirst ||
+        !(opener instanceof HTMLElement) ||
+        opener.isConnected ||
+        ![dialogId, ...nested].some((id) =>
+          document.getElementById(id)?.contains(document.activeElement),
+        )
+      ) {
+        return;
+      }
+      queueMicrotask(() => {
+        if (
+          document.activeElement !== null &&
+          document.activeElement !== document.body
+        ) {
+          return;
+        }
+        if (openerHolder?.isConnected === true) {
+          openerHolder.focus({ preventScroll: true });
+        } else {
+          focusScreenHeading();
+        }
+      });
+    },
+    [openedFirst, opener, openerHolder, dialogId, nested],
+  );
   // React Aria returns the focus to the element that opened the dialog, or
   // to a dialog that holds this one, in the next frame, when it can; a
   // collection of React Aria, such as a table, returns it to its element
@@ -102,36 +169,40 @@ export function ModalDialog({
     [dialogId, opener],
   );
   return (
-    <ModalOverlay
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-        }
-      }}
-      isKeyboardDismissDisabled={!closable}
-      className="fixed inset-0 z-30 flex items-center justify-center bg-overlay p-4"
-    >
-      <Modal
-        className={`flex max-h-full w-full flex-col outline-none ${WIDTHS[width]}`}
+    <NestedDialogsContext value={within}>
+      <ModalOverlay
+        isOpen={isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            onClose();
+          }
+        }}
+        isKeyboardDismissDisabled={!closable}
+        className="fixed inset-0 z-30 flex items-center justify-center bg-overlay p-4"
       >
-        <Dialog
-          id={dialogId}
-          className={`flex max-h-full min-h-0 flex-col rounded-lg border border-border bg-surface p-5 text-15 text-fg shadow-xl ${FOCUS_RING}`}
+        <Modal
+          className={`flex max-h-full w-full flex-col outline-none ${WIDTHS[width]}`}
         >
-          <Heading
-            slot="title"
-            className="text-16 font-semibold wrap-break-word"
+          <Dialog
+            id={dialogId}
+            className={`flex max-h-full min-h-0 flex-col rounded-lg border border-border bg-surface p-5 text-15 text-fg shadow-xl ${FOCUS_RING}`}
           >
-            {title}
-          </Heading>
-          <div className="-mx-1 mt-3 min-h-0 overflow-y-auto px-1">
-            {children}
-          </div>
-          <div className="mt-5 flex flex-wrap justify-end gap-2">{buttons}</div>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+            <Heading
+              slot="title"
+              className="text-16 font-semibold wrap-break-word"
+            >
+              {title}
+            </Heading>
+            <div className="-mx-1 mt-3 min-h-0 overflow-y-auto px-1">
+              {children}
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              {buttons}
+            </div>
+          </Dialog>
+        </Modal>
+      </ModalOverlay>
+    </NestedDialogsContext>
   );
 }
 
