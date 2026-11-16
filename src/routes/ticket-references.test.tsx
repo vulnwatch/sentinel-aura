@@ -3382,6 +3382,59 @@ describe("the focus after a read", () => {
     await expectFocusSettledOn(heading(screen, "SNTL-12"));
   });
 
+  test.each([
+    ["Edit reference", "Cancel"],
+    ["Edit reference", "Escape"],
+    ["Edit reference", "Discard"],
+    ["the confirmation of Delete", "Cancel"],
+    ["the confirmation of Delete", "Escape"],
+  ] as const)(
+    "moves to the screen's heading when a read removes the row of %s while it is open, once %s closes it",
+    async (opened, way) => {
+      const { stub } = stubReferences();
+      const { screen } = await renderTab();
+      const edits = opened === "Edit reference";
+      const opener = (edits ? editOf : deleteOf)(screen, ADVISORY).element();
+      let dialog: Locator;
+      if (edits) {
+        dialog = await openEdit(screen, ADVISORY);
+        if (way === "Discard") {
+          await fieldOf(dialog, "Title (optional)").fill("Fictional title");
+        }
+      } else {
+        await deleteOf(screen, ADVISORY).click();
+        dialog = confirmationOf(screen, ADVISORY);
+        await expect
+          .element(dialog.getByRole("button", { name: "Cancel" }))
+          .toHaveFocus();
+      }
+      // Meanwhile another analyst deleted it.
+      stub.references = () =>
+        referencesResponse(
+          EVERY_REFERENCE.filter((item) => item.id !== ADVISORY.id),
+        );
+
+      await returnToForeground();
+      // The dialog keeps the rest of the page out of reach of assistive
+      // technologies, so the test follows the element that opened it.
+      await expect.poll(() => opener.isConnected).toBe(false);
+      if (way === "Escape") {
+        await userEvent.keyboard("{Escape}");
+      } else {
+        await dialog.getByRole("button", { name: "Cancel" }).click();
+      }
+      if (way === "Discard") {
+        await screen
+          .getByRole("dialog", { name: "Discard changes?" })
+          .getByRole("button", { name: "Discard", exact: true })
+          .click();
+      }
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      await expectFocusSettledOn(heading(screen, "SNTL-12"));
+    },
+  );
+
   test("moves to the screen's heading when a read leaves no reference where a row held it", async () => {
     const { stub } = stubReferences();
     const { screen } = await renderTab();
