@@ -453,7 +453,7 @@ that needs it; content of another kind needs a new row first.
   request, a navigation, a message, or a tooltip, first waits until its
   cause has been handled, through a state that the same cause produces, such
   as the end of the change or the read that the check is about; another read
-  that the same event sends, since TanStack Query decides at once, for every
+  that the same event sends, as TanStack Query decides at once, for every
   read of the screen, whether the return of the tab to the foreground reads
   it again; or what the screen shows of the cause. Where what would follow
   comes from a render or its effects, it then waits for the two animation
