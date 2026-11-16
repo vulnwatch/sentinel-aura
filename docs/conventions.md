@@ -460,8 +460,10 @@ that needs it; content of another kind needs a new row first.
   frames in which React renders what the cause set and runs the effects of
   that render. A delay that the behavior has, such as that of a tooltip or of
   a search while the user types, passes on a fake clock that the test moves,
-  never by waiting for it; only a test that measures the delay itself lets
-  it pass on the clock of the page.
+  or, where a fake clock would also stop timers that the test needs, such as
+  those of TanStack Query, through a reference that waits as long and shows
+  once it has passed; never by waiting for a fixed time. A test that
+  measures the delay itself measures it on the clock of the page.
 - Each unit or component test that a change adds, or whose assertions it
   changes, is seen to fail when the behavior that it checks breaks: the
   author breaks that behavior in the code, or for a fix restores the defect,
