@@ -449,6 +449,21 @@ that needs it; content of another kind needs a new row first.
   Query gives the screen the outcome. A test returns the tab to the foreground
   only when no read is in progress, since TanStack Query joins a read in
   progress rather than reading again.
+- A test that checks that something does not follow, such as another
+  request, a navigation, a message, or a tooltip, first waits until its
+  cause has been handled, through a state that the same cause produces, such
+  as the end of the change or the read that the check is about; another read
+  that the same event sends, as TanStack Query decides at once, for every
+  read of the screen, whether the return of the tab to the foreground reads
+  it again; or what the screen shows of the cause. Where what would follow
+  comes from a render or its effects, it then waits for the two animation
+  frames in which React renders what the cause set and runs the effects of
+  that render. A delay that the behavior has, such as that of a tooltip or of
+  a search while the user types, passes on a fake clock that the test moves,
+  or, where a fake clock would also stop timers that the test needs, such as
+  those of TanStack Query, through a reference that waits as long and shows
+  once it has passed; never by waiting for a fixed time. A test that
+  measures the delay itself measures it on the clock of the page.
 - Each unit or component test that a change adds, or whose assertions it
   changes, is seen to fail when the behavior that it checks breaks: the
   author breaks that behavior in the code, or for a fix restores the defect,

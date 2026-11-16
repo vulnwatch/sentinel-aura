@@ -2,6 +2,7 @@ import {
   focusManager,
   MutationObserver,
   QueryClientProvider,
+  QueryObserver,
   type QueryClient,
 } from "@tanstack/react-query";
 import {
@@ -144,12 +145,27 @@ function savedUrl() {
   return window.sessionStorage.getItem(RETURN_URL_KEY);
 }
 
-// Resolves once the pending callbacks of the timers have run, for a test that
-// checks that nothing more happens.
-function settle() {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 50);
+// Waits until the browser has rendered two more frames, in which React has
+// rendered what the screen received and run the effects of that render.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
+// Another read of the screen, observed as a screen observes it until it has
+// succeeded, which the return of the tab to the foreground reads again.
+// TanStack Query decides for every read at once, in the same task
+// (QueryCache.onFocus), so once this read is sent again, the read of the
+// signed-in user has been sent again too if it was to be. Returns the
+// function that stops observing it.
+async function observeTickets() {
+  const observer = new QueryObserver(client, {
+    queryKey: ["tickets"],
+    queryFn: ({ signal }) => apiRequest(TICKETS, { method: "GET", signal }),
   });
+  const unsubscribe = observer.subscribe(() => undefined);
+  await expect.poll(() => observer.getCurrentResult().status).toBe("success");
+  return unsubscribe;
 }
 
 describe("as the UI loads", () => {
@@ -394,22 +410,28 @@ describe("as the UI loads", () => {
         .element(screen.getByRole("button", { name: "Try again" }))
         .toBeVisible();
       await expect.element(screen.getByRole("link")).not.toBeInTheDocument();
-      await settle();
+      await nextFrames();
       expect(requestsTo(fetch, ME)).toBe(1);
     },
   );
 
   test("does not read the signed-in user again when the tab returns to the foreground while its failure shows", async () => {
-    const fetch = stubApi(() => errorResponse(404, "ROUTE_NOT_FOUND"));
+    const fetch = stubApi((request) =>
+      request.path === ME
+        ? errorResponse(404, "ROUTE_NOT_FOUND")
+        : jsonResponse(200, { data: [] }),
+    );
     const { screen } = await renderApp(SCREEN);
     await expect
       .element(screen.getByRole("button", { name: "Try again" }))
       .toBeVisible();
+    const unsubscribe = await observeTickets();
 
     await returnToForeground();
-    await settle();
+    await expect.poll(() => requestsTo(fetch, TICKETS)).toBe(2);
 
     expect(requestsTo(fetch, ME)).toBe(1);
+    unsubscribe();
   });
 });
 
@@ -573,7 +595,8 @@ describe("the signed-in user", () => {
     await readTickets();
 
     await expect.poll(() => requestsTo(spy, ME)).toBe(reads);
-    await settle();
+    await readsEnded();
+    await nextFrames();
     expect(requestsTo(spy, ME)).toBe(reads);
   });
 

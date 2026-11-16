@@ -107,6 +107,13 @@ describe.each([
   });
 });
 
+// Waits until the browser has rendered two more frames, in which the screen
+// has rendered and run its effects, which would start a navigation or a read.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 // While the session ends, the read of the signed-in user is discarded before
 // the screen leaves the page (src/session-gate.tsx, useSignedInUser): / then
 // knows no landing, shows nothing, and leads nowhere, and it never reads the
@@ -135,10 +142,7 @@ test("shows nothing and leads nowhere while no signed-in user is known", async (
   );
 
   await expect.poll(() => router.state.resolvedLocation?.href).toBe("/");
-  // Long enough for a navigation that the screen would start.
-  await new Promise((resolve) => {
-    setTimeout(resolve, 50);
-  });
+  await nextFrames();
   expect(router.state.location.href).toBe("/");
   expect(screen.container.textContent).toBe("");
   expect(requestsTo(fetch, ME)).toBe(0);

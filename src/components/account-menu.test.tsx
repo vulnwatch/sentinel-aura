@@ -1,10 +1,11 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { hashKey, type QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
+import { getLogoutMutationKey } from "../api/generated/authentication";
 import type { CurrentUserResponse } from "../api/generated/model";
 import { getGetCurrentUserProfileQueryKey } from "../api/generated/users";
 import { apiRequest } from "../api/request";
@@ -74,12 +75,36 @@ function readTickets() {
     .catch(() => undefined);
 }
 
-// Resolves once the pending callbacks of the timers have run, for a test that
-// checks that nothing more happens.
-function settle() {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 50);
+// Waits until the browser has rendered two more frames, in which React has
+// rendered what the outcome of the sign-out set and run the effects of that
+// render.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
+// Follows the sign-out in progress, and returns the function that waits until
+// it has ended, whatever its outcome, and the page has rendered what that
+// outcome set. A sign-out tells the cache of changes that it has ended also
+// once the end of the session has discarded it, when isMutating no longer
+// counts it.
+function followSignOut() {
+  let ended = false;
+  const unsubscribe = client.getMutationCache().subscribe((event) => {
+    if (
+      event.type === "updated" &&
+      (event.action.type === "success" || event.action.type === "error") &&
+      hashKey(event.mutation.options.mutationKey ?? []) ===
+        hashKey(getLogoutMutationKey())
+    ) {
+      ended = true;
+    }
   });
+  return async () => {
+    await expect.poll(() => ended).toBe(true);
+    unsubscribe();
+    await nextFrames();
+  };
 }
 
 beforeEach(async () => {
@@ -526,8 +551,9 @@ describe("Sign out", () => {
     expect(window.sessionStorage.getItem(RETURN_URL_KEY)).toBeNull();
     expect(hasSessionRecord()).toBe(false);
 
+    const signOutEnded = followSignOut();
     answer(errorResponse(503, "DATABASE_UNAVAILABLE"));
-    await settle();
+    await signOutEnded();
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
       .toBeVisible();
@@ -560,8 +586,9 @@ describe("Sign out", () => {
       .toBeVisible();
     expect(router.state.location.pathname).toBe("/login");
     await expect.element(screen.getByText(EXPIRED)).not.toBeInTheDocument();
+    const signOutEnded = followSignOut();
     answer(new Response(null, { status: 204 }));
-    await settle();
+    await signOutEnded();
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
       .toBeVisible();
