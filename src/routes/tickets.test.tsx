@@ -2028,9 +2028,9 @@ describe("the search", () => {
       .poll(() => router.state.location.href)
       .toBe("/tickets?view=new");
     await expect.element(searchFieldOf(screen)).toHaveValue("");
-    expect(queriesOf(spy, "list").at(-1)).toBe(
-      `${FILTERS.New}&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`,
-    );
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(`${FILTERS.New}&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`);
   });
 
   test("shows the term that applies when the URL changes, as with back", async () => {

@@ -72,6 +72,13 @@ function stubSession(initial: "signed-in" | "none") {
 // found to a signed-in user.
 const SCREEN = "/fictional/path";
 
+// Waits until the browser has rendered two more frames, after which the
+// effects of the commits before have run.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 async function renderApp(path: string) {
   const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -274,7 +281,12 @@ describe("the focus after a navigation", () => {
 
     router.history.push("/fictional/path?page=2");
 
-    await expect.poll(() => router.state.location.searchStr).toBe("?page=2");
+    // Once the router has shown the URL with the search, whose path the focus
+    // follows, and the screen has rendered it.
+    await expect
+      .poll(() => router.state.resolvedLocation?.searchStr)
+      .toBe("?page=2");
+    await nextFrames();
     await expect.element(entry).toHaveFocus();
   });
 });

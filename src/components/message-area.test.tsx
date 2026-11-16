@@ -145,6 +145,13 @@ function createTestRouter(path: string): AnyRouter {
   });
 }
 
+// Waits until the browser has rendered two more frames, after which the
+// effects of the commits before have run.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 async function renderArea(path = "/first", title = "First") {
   const router = createTestRouter(path);
   const screen = await render(<RouterProvider router={router} />);
@@ -353,6 +360,11 @@ test("keeps its messages when the search of the same screen changes", async () =
 
   router.history.push("/first?page=2");
 
+  // Once the router has shown the search, and the screen has rendered it.
+  await expect
+    .poll(() => router.state.resolvedLocation?.searchStr)
+    .toBe("?page=2");
+  await nextFrames();
   await expect.element(screen.getByText("First: message 1.")).toBeVisible();
 });
 

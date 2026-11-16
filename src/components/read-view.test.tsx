@@ -5,7 +5,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { CatchBoundary } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -17,7 +17,7 @@ import {
 } from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
-import { UpdatingBar } from "./loading";
+import { Loading, UpdatingBar } from "./loading";
 import {
   marksPlace,
   PartRead,
@@ -861,15 +861,50 @@ function MarkedList() {
   );
 }
 
+// Starts the loading indicator, which the test does not check, when the test
+// asks (delayPassed).
+let startReference: () => void = () => undefined;
+
+function DelayReference() {
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    startReference = () => {
+      setStarted(true);
+    };
+  }, []);
+  return started ? <Loading /> : null;
+}
+
+// Waits until the delay after which UpdatingBar shows has passed since now,
+// for a test that checks that it does not show: the loading indicator, which
+// waits as long, starts now and shows after the bar would have shown, had it
+// mounted before (src/components/loading.tsx).
+async function delayPassed(screen: Awaited<ReturnType<typeof render>>) {
+  startReference();
+  await expect
+    .element(screen.getByRole("progressbar", { name: "Loading" }))
+    .toBeVisible();
+}
+
+function updatingBar(screen: Awaited<ReturnType<typeof render>>) {
+  return screen.getByRole("progressbar", { name: "Updating" });
+}
+
 describe("marksPlace", () => {
   test("marks nothing until the read arrives, then its marks", async () => {
     const { promise, resolve } = later();
     respond.mockReturnValueOnce(promise);
-    const screen = await renderWithClient(<MarkedList />);
+    const screen = await renderWithClient(
+      <>
+        <MarkedList />
+        <DelayReference />
+      </>,
+    );
 
     await expect.element(screen.getByText("First item")).toBeVisible();
+    await delayPassed(screen);
     expect(screen.getByText("(marked)").query()).toBeNull();
-    expect(screen.getByRole("progressbar").query()).toBeNull();
+    expect(updatingBar(screen).query()).toBeNull();
     resolve({ title: "Second item" });
 
     await expect
@@ -955,27 +990,31 @@ describe("marksPlace", () => {
 
   test("marks the marks that stay shown as being updated while Try again reads them again", async () => {
     respond.mockResolvedValueOnce({ title: "First item" });
-    const screen = await renderWithClient(<MarkedList />);
+    const screen = await renderWithClient(
+      <>
+        <MarkedList />
+        <DelayReference />
+      </>,
+    );
     await expect.element(screen.getByText("First item (marked)")).toBeVisible();
     respond.mockRejectedValue(UNAVAILABLE);
     await refetch();
     await expect.element(screen.getByText(/couldn't be updated/)).toBeVisible();
-    expect(screen.getByRole("progressbar").query()).toBeNull();
+    await delayPassed(screen);
+    expect(updatingBar(screen).query()).toBeNull();
     const { promise, resolve } = later();
     respond.mockReset();
     respond.mockReturnValueOnce(promise);
 
     await screen.getByRole("button", { name: "Try again" }).click();
 
-    await expect
-      .element(screen.getByRole("progressbar", { name: "Updating" }))
-      .toBeInTheDocument();
+    await expect.element(updatingBar(screen)).toBeInTheDocument();
     await expect.element(screen.getByText("First item (marked)")).toBeVisible();
     resolve({ title: "Second item" });
     await expect
       .element(screen.getByText("Second item (marked)"))
       .toBeVisible();
-    expect(screen.getByRole("progressbar").query()).toBeNull();
+    expect(updatingBar(screen).query()).toBeNull();
   });
 
   test("removes the marks when a later read of them fails with a 404", async () => {

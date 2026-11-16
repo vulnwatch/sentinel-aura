@@ -450,6 +450,14 @@ async function readEnded(path: string) {
   });
 }
 
+// Waits until the browser has rendered two more frames, after which the
+// effects of the commits before have run, and what they set has rendered,
+// such as an announcement that an effect sets once the data of a read show.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 // A response that the test gives when it chooses.
 function later() {
   let resolve!: (response: Response) => void;
@@ -5695,6 +5703,8 @@ describe("the sources of the CVE", () => {
     await expect
       .element(sourceOf(screen, "NVD").getByText("Success"))
       .toBeVisible();
+    // The announcement would follow, set by an effect of that commit.
+    await nextFrames();
     expect(statusesOf(screen)).toEqual([]);
   });
 
@@ -5878,6 +5888,14 @@ async function revokeCarol(screen: Screen) {
 // The requests of the spy with the method.
 function requestsWith(spy: ReturnType<typeof stubApi>, method: string) {
   return spy.mock.calls.filter(([, init]) => init?.method === method);
+}
+
+// How many reads of the path the spy received, without the changes sent to
+// the same path, such as Grant Access.
+function readsOf(spy: ReturnType<typeof stubApi>, path: string): number {
+  return requestsWith(spy, "GET").filter(
+    ([input]) => urlOf(input).pathname === path,
+  ).length;
 }
 
 describe("the participants", () => {
@@ -6196,11 +6214,7 @@ describe("the access grants", () => {
     await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
     await expect.element(accessGrantsButton(screen)).toHaveFocus();
     // Not for a moment the heading, as the dialog left.
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
-      });
-    });
+    await nextFrames();
     await expect.element(accessGrantsButton(screen)).toHaveFocus();
   });
 
@@ -6262,7 +6276,7 @@ describe("the access grants", () => {
     await openAccessGrants(screen);
     const reads = {
       ticket: requestsTo(spy, TICKET),
-      grants: requestsTo(spy, ACCESS),
+      grants: readsOf(spy, ACCESS),
       actors: requestsTo(spy, ACTORS),
     };
 
@@ -6278,7 +6292,7 @@ describe("the access grants", () => {
     await expect.element(grantButton(screen)).toHaveFocus();
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
     await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
-    expect(requestsTo(spy, ACCESS)).toBeGreaterThan(reads.grants);
+    await expect.poll(() => readsOf(spy, ACCESS)).toBe(reads.grants + 1);
     await expect.poll(() => participantNames(screen)).toContain("Ana Garcia");
   });
 
@@ -6790,11 +6804,7 @@ describe("the access grants", () => {
       .not.toBeInTheDocument();
     await expect.element(dialog).toHaveFocus();
     // Not for a moment the heading, behind the dialog.
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
-      });
-    });
+    await nextFrames();
     await expect.element(dialog).toHaveFocus();
   });
 

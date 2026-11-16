@@ -129,6 +129,17 @@ async function returnToForeground() {
   focusManager.setFocused(true);
 }
 
+// Waits until no read is in progress and the screen has their outcome, for a
+// read whose outcome changes nothing that shows: TanStack Query tells the
+// screen of the end of a read in a later task, which runs before this one
+// ends.
+async function readsEnded() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 function savedUrl() {
   return window.sessionStorage.getItem(RETURN_URL_KEY);
 }
@@ -579,7 +590,7 @@ describe("the signed-in user", () => {
     await returnToForeground();
 
     await expect.poll(() => requestsTo(fetch, ME)).toBe(4);
-    await expect.poll(() => client.isFetching()).toBe(0);
+    await readsEnded();
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toBeVisible();

@@ -29,17 +29,20 @@ function renderPagination(pageNumber: number, total: number) {
   const list = createRoute({
     getParentRoute: () => root,
     path: "/",
+    // In a region, which shows that the route has rendered.
     component: () => (
-      <Pagination
-        page={pageNumber}
-        perPage={20}
-        total={total}
-        href={(target) =>
-          target === 1
-            ? "/"
-            : linkOptions({ to: "/tickets", search: { page: target } })
-        }
-      />
+      <section aria-label="List">
+        <Pagination
+          page={pageNumber}
+          perPage={20}
+          total={total}
+          href={(target) =>
+            target === 1
+              ? "/"
+              : linkOptions({ to: "/tickets", search: { page: target } })
+          }
+        />
+      </section>
     ),
   });
   const tickets = createRoute({
@@ -102,6 +105,9 @@ test.each([
 ])("shows nothing for %s", async (_, pageNumber, total) => {
   const screen = await renderPagination(pageNumber, total);
 
+  await expect
+    .element(screen.getByRole("region", { name: "List" }))
+    .toBeInTheDocument();
   expect(screen.getByRole("navigation").query()).toBeNull();
   expect(screen.container.textContent).toBe("");
 });

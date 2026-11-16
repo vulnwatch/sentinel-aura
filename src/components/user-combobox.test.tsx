@@ -85,6 +85,13 @@ async function renderField(props: FieldProps = {}) {
   return { screen, field: screen.getByRole("combobox", { name: "User" }) };
 }
 
+// Waits until the browser has rendered two more frames, after which the
+// field has rendered the term that settled, and a search of it has started.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 // The searches of the directory, as their queries.
 function searches(spy: ReturnType<typeof stubApi>): string[] {
   return spy.mock.calls
@@ -96,12 +103,17 @@ function searches(spy: ReturnType<typeof stubApi>): string[] {
 test("asks for at least 2 characters without reading the directory", async () => {
   const spy = stubApi(() => usersPage([]));
   const { screen, field } = await renderField();
+  // The clock of the pause, which the test moves past its end itself.
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
   await field.fill(" a ");
+  vi.advanceTimersByTime(SEARCH_DELAY_MS);
+  vi.useRealTimers();
 
   await expect
     .element(screen.getByText("Enter at least 2 characters."))
     .toBeVisible();
+  await nextFrames();
   expect(requestsTo(spy, USERS)).toBe(0);
 });
 
@@ -159,6 +171,7 @@ test("counts the characters of the term as Sentinel does, not the units of a str
   await expect
     .element(screen.getByText("Enter at least 2 characters."))
     .toBeVisible();
+  await nextFrames();
   expect(requestsTo(spy, USERS)).toBe(0);
 });
 

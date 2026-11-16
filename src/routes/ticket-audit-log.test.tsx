@@ -401,6 +401,19 @@ async function readsEnded() {
   await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
 }
 
+// Waits until no read of the path is in progress and the tab has its
+// outcome, for a read whose outcome the tab does not show yet, such as a
+// failure that waits for the Ticket: TanStack Query tells the tab of the end
+// of a read in a later task, which runs before this one ends.
+async function readEnded(path: string) {
+  await expect
+    .poll(() => client.isFetching({ queryKey: [path] }), { interval: 0 })
+    .toBe(0);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 // The tab returns to the foreground after being hidden, once no read is in
 // progress: a return during a read joins it rather than reading again
 // (TanStack Query's Query.onFocus), so the reads that a test expects after
@@ -3346,6 +3359,7 @@ describe("the errors", () => {
     // Sent again twice after a 5xx, as every read (docs/behaviors.md,
     // Retries and Unconfirmed Changes).
     await expect.poll(() => eventReads(spy)).toHaveLength(3);
+    await readEnded(EVENTS);
     await expect
       .element(panelOf(screen).getByRole("progressbar", { name: "Loading" }))
       .toBeVisible();
