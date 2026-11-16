@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.9.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.8.0...v0.9.0) (2026-11-16)
+
+
+### Features
+
+* **deps:** pin Sentinel 0.25.0 and name its SUSE Bugzilla source ([#274](https://github.com/vulnwatch/sentinel-aura/issues/274)) ([555172e](https://github.com/vulnwatch/sentinel-aura/commit/555172eaa65e448f66b140d261750c719e4bc48d))
+* **deps:** Update Sentinel to v0.24.0 ([#111](https://github.com/vulnwatch/sentinel-aura/issues/111)) ([463db29](https://github.com/vulnwatch/sentinel-aura/commit/463db29ab4c2a7180debdd82b5c6f415cc0d131c))
+
+
+### Bug Fixes
+
+* keep the focus after an Edit and the checks independent of timing ([#264](https://github.com/vulnwatch/sentinel-aura/issues/264)) ([995e050](https://github.com/vulnwatch/sentinel-aura/commit/995e050e06300b14cdd535c461bd4e811ece81c2))
+* move the focus to the heading after a dialog whose opener left ([#270](https://github.com/vulnwatch/sentinel-aura/issues/270)) ([7998ba5](https://github.com/vulnwatch/sentinel-aura/commit/7998ba54a33e0ccce830f195851816b0260695d2))
+
+
+### Dependencies
+
+* **deps:** Lock file maintenance ([#195](https://github.com/vulnwatch/sentinel-aura/issues/195)) ([c23aef9](https://github.com/vulnwatch/sentinel-aura/commit/c23aef97ae0c7dea7e4f3bf32b923bf47d58bc51))
+
 ## [0.8.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.7.0...v0.8.0) (2026-11-15)
 
 
