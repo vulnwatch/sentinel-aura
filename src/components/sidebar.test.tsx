@@ -79,6 +79,13 @@ function widthOf(element: Element): number {
   return element.getBoundingClientRect().width;
 }
 
+// Waits until the browser has rendered two more frames, in which React has
+// rendered what the focus set and run the effects of that render.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 describe("expanded", () => {
   test("shows the product name, the entries in their order, and the account button, beside the content", async () => {
     const { screen } = await renderApp(SCREEN);
@@ -270,10 +277,9 @@ describe("expanded", () => {
 
     await userEvent.keyboard("{Tab}");
 
+    // A tooltip shows at once on keyboard focus, without the delay of hover.
     await expect.element(entry).toHaveFocus();
-    await new Promise((resolve) => {
-      setTimeout(resolve, 400);
-    });
+    await nextFrames();
     expect(screen.getByRole("tooltip").query()).toBeNull();
   });
 

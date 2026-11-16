@@ -5,7 +5,15 @@ import {
   QueryObserver,
   type QueryClient,
 } from "@tanstack/react-query";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { apiRequest, NetworkError } from "./api/request";
 import { createQueryClient } from "./query-client";
 
@@ -26,6 +34,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const TICKETS = "/api/v1/tickets";
+const OTHER = "/api/v1/cves";
+
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -38,15 +49,14 @@ function jsonResponse(status: number, body: unknown) {
 function read() {
   return client.fetchQuery({
     queryKey: ["tickets"],
-    queryFn: ({ signal }) =>
-      apiRequest("/api/v1/tickets", { method: "GET", signal }),
+    queryFn: ({ signal }) => apiRequest(TICKETS, { method: "GET", signal }),
     retryDelay: 0,
   });
 }
 
 function change() {
   return new MutationObserver(client, {
-    mutationFn: () => apiRequest("/api/v1/tickets", { method: "POST" }),
+    mutationFn: () => apiRequest(TICKETS, { method: "POST" }),
   }).mutate();
 }
 
@@ -55,19 +65,33 @@ function change() {
 async function observe(until: "success" | "error") {
   const observer = new QueryObserver(client, {
     queryKey: ["tickets"],
-    queryFn: ({ signal }) =>
-      apiRequest("/api/v1/tickets", { method: "GET", signal }),
+    queryFn: ({ signal }) => apiRequest(TICKETS, { method: "GET", signal }),
   });
   const unsubscribe = observer.subscribe(() => undefined);
   await vi.waitUntil(() => observer.getCurrentResult().status === until);
   return unsubscribe;
 }
 
-// Resolves once the pending callbacks of the timers have run.
-function settle() {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 50);
+// Another read that a screen shows, observed as a screen observes it until it
+// has succeeded. The return of the tab to the foreground reads it again, and
+// so does the return of the network with refetchOnReconnect. TanStack Query
+// decides for every read at once, in the same task (QueryCache.onFocus;
+// QueryCache.onOnline), so once this read is sent again, the read of the test
+// has been sent again too if it was to be.
+async function observeOther(options: { refetchOnReconnect?: boolean } = {}) {
+  const observer = new QueryObserver(client, {
+    queryKey: ["cves"],
+    queryFn: ({ signal }) => apiRequest(OTHER, { method: "GET", signal }),
+    ...options,
   });
+  const unsubscribe = observer.subscribe(() => undefined);
+  await vi.waitUntil(() => observer.getCurrentResult().status === "success");
+  return unsubscribe;
+}
+
+// How many requests the replaced fetch has received for the path.
+function requestsTo(fetch: MockInstance<typeof window.fetch>, path: string) {
+  return fetch.mock.calls.filter(([input]) => input === path).length;
 }
 
 describe("a read", () => {
@@ -151,17 +175,23 @@ describe("a read", () => {
     test("is not read again when the tab returns to the foreground after it failed without data", async () => {
       const fetch = vi
         .spyOn(window, "fetch")
-        .mockImplementation(() =>
-          Promise.resolve(jsonResponse(404, { code: "TICKET_NOT_FOUND" })),
+        .mockImplementation((input) =>
+          Promise.resolve(
+            input === OTHER
+              ? jsonResponse(200, { data: [] })
+              : jsonResponse(404, { code: "TICKET_NOT_FOUND" }),
+          ),
         );
       const unsubscribe = await observe("error");
+      const unsubscribeOther = await observeOther();
 
       focusManager.setFocused(false);
       focusManager.setFocused(true);
-      await settle();
+      await expect.poll(() => requestsTo(fetch, OTHER)).toBe(2);
 
-      expect(fetch).toHaveBeenCalledOnce();
+      expect(requestsTo(fetch, TICKETS)).toBe(1);
       unsubscribe();
+      unsubscribeOther();
     });
 
     test("is read again when the tab returns to the foreground after a new read of its data failed", async () => {
@@ -189,13 +219,15 @@ describe("a read", () => {
           Promise.resolve(jsonResponse(200, { data: [] })),
         );
       const unsubscribe = await observe("success");
+      const unsubscribeOther = await observeOther({ refetchOnReconnect: true });
 
       onlineManager.setOnline(false);
       onlineManager.setOnline(true);
-      await settle();
+      await expect.poll(() => requestsTo(fetch, OTHER)).toBe(2);
 
-      expect(fetch).toHaveBeenCalledOnce();
+      expect(requestsTo(fetch, TICKETS)).toBe(1);
       unsubscribe();
+      unsubscribeOther();
     });
   });
 });
@@ -213,8 +245,8 @@ describe("a change", () => {
   ])("is never sent again after %s", async (_, response) => {
     const fetch = vi.spyOn(window, "fetch").mockImplementation(response);
 
+    // A change that is sent again is sent before it fails.
     await expect(change()).rejects.toBeInstanceOf(Error);
-    await settle();
     expect(fetch).toHaveBeenCalledOnce();
   });
 

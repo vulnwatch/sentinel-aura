@@ -131,9 +131,7 @@ test("reads the active users of the term once the user stops typing, and lists e
   vi.advanceTimersByTime(SEARCH_DELAY_MS - 1);
   await userEvent.keyboard("a ");
   vi.advanceTimersByTime(SEARCH_DELAY_MS - 1);
-  // A key that types nothing, which gives the page the time to search for a
-  // term that has settled.
-  await userEvent.keyboard("{Shift}");
+  await nextFrames();
   expect(requestsTo(spy, USERS)).toBe(0);
   vi.advanceTimersByTime(1);
   vi.useRealTimers();
