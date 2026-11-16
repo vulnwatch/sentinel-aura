@@ -26,7 +26,11 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  fakeTimers();
+  // Only after a test on the clock of the page: installing the fake clock
+  // again would drop the timers that the test left.
+  if (!vi.isFakeTimers()) {
+    fakeTimers();
+  }
   await userEvent.keyboard("{Escape}");
   await page.getByRole("button", { name: "Before" }).hover();
   vi.runAllTimers();
@@ -34,7 +38,7 @@ afterEach(async () => {
 });
 
 // Waits until the browser has rendered two more frames, in which React has
-// rendered what the timers that the test ran set, and run its effects.
+// rendered what the test set off and run the effects of that render.
 async function nextFrames() {
   await new Promise((done) => requestAnimationFrame(done));
   await new Promise((done) => requestAnimationFrame(done));
@@ -100,7 +104,7 @@ test("shows after the pointer has rested on the control for 300 ms", async () =>
 
   // 300 ms, less the rounding of the clock of the page, and well before
   // React Aria's own default of 1,500 ms.
-  expect(appeared - entered).toBeGreaterThanOrEqual(TOOLTIP_DELAY_MS - 1);
+  expect(appeared - entered).toBeGreaterThanOrEqual(299);
   expect(appeared - entered).toBeLessThan(1000);
 });
 
