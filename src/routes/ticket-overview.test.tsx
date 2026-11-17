@@ -9243,6 +9243,78 @@ describe("the SUSE assessment", () => {
       ]);
     });
 
+    test("shows nothing of a read that a newer vector overtakes, whose response arrives while the newer vector has not paused, and keeps the outcome before them until the newer score arrives", async () => {
+      // The saved vector with Integrity Low, whose read the vector with
+      // Integrity High overtakes before it is answered; each read waits until
+      // the test answers it.
+      const overtaken = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N";
+      const newer = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N";
+      const overtakenResponse = later();
+      const newerResponse = later();
+      const spy = stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: (query) => {
+          const vector = query.get("vector_string");
+          if (vector === overtaken) {
+            return overtakenResponse.promise;
+          }
+          return vector === newer ? newerResponse.promise : highScore(query);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      await readsEnded();
+      // The clock of the pause, and of the task in which TanStack Query gives
+      // the screen the outcome of a read, which the test moves itself.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      await press(segmentOf(dialog, "Integrity", "Low"));
+      vi.advanceTimersByTime(SCORE_DELAY_MS);
+      await expect
+        .poll(() => scoreReads(spy), { interval: 0 })
+        .toEqual([SUSE_V31.vector_string, overtaken]);
+      const record = recordScore(dialog);
+      await press(segmentOf(dialog, "Integrity", "High"));
+
+      overtakenResponse.resolve(baseScoreResponse(overtaken, 9.8, "critical"));
+
+      // Its read ends, and the clock, which stops short of the end of the
+      // pause of the newer vector, moves past the task in which the screen
+      // has its outcome.
+      await expect
+        .poll(
+          () =>
+            client.isFetching({
+              queryKey: [BASE_SCORE, { vector_string: overtaken }],
+            }),
+          { interval: 0 },
+        )
+        .toBe(0);
+      vi.advanceTimersByTime(SCORE_DELAY_MS - 1);
+      await nextFrames();
+      expect(
+        record.said.filter((said) => said !== "Base score 6.1, High"),
+      ).toEqual([]);
+      expect(scoreSaid(dialog)).toBe("Base score 6.1, High");
+      expect(seenOf(scorePlaceOf(dialog))).toEqual([
+        ["6.1", FG],
+        ["High", FG],
+      ]);
+      expect(dialog.getByText(/9\.8|Critical/).elements()).toEqual([]);
+      expect(scoreReads(spy)).toEqual([SUSE_V31.vector_string, overtaken]);
+      vi.advanceTimersByTime(1);
+      await expect
+        .poll(() => scoreReads(spy), { interval: 0 })
+        .toEqual([SUSE_V31.vector_string, overtaken, newer]);
+      vi.useRealTimers();
+      newerResponse.resolve(baseScoreResponse(newer, 7.1, "high"));
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 7.1, High");
+      record.stop();
+      expect(new Set(record.said)).toEqual(
+        new Set(["Base score 6.1, High", "Base score 7.1, High"]),
+      );
+    });
+
     test("keeps the outcome of the vector before while the score of a new vector is read, marked as being updated, until the new score arrives", async () => {
       const response = later();
       const spy = stubSuse(() => fictionalCvssAssessments(), {
