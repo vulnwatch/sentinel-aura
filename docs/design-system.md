@@ -367,6 +367,7 @@ Status).
 | `text-15` | 15 / 24 px | Everything else: running text, the sidebar, buttons, menus, fields, and messages |
 | `text-16` | 16 / 24 px | Level-two headings, the title of a dialog, and the product name |
 | `text-20` | 20 / 28 px, letter spacing −0.025 em | The level-one heading of a screen |
+| `text-40` | 40 / 44 px, letter spacing −0.025 em | A score that a form calculates as the user changes it, such as the Base score of a CVSS vector, as the calculator of FIRST shows it |
 
 The names state the sizes, so that a size shows in the code; Tailwind's own
 names, such as `text-sm`, do not exist. The uses above and the weights below

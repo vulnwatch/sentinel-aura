@@ -1045,8 +1045,33 @@ Delete SUSE CVSS Assessment):
     repeats in the version, such as "Confidentiality Vulnerable system".
     Below a metric whose choice differs from the assessment of another
     provider of the version shows that provider's value, such as "NVD:
-    Network", which describes the control. Beside Start from, the top of the
-    second column stays free.
+    Network", which describes the control.
+  - Beside Start from, at the top of the second column and ending where its
+    widest control ends, or after Start from in one column, the Base score
+    of the vector as Sentinel calculates it, Calculate CVSS Base Score,
+    `GET /api/v1/cvss/base-score` (Sentinel
+    `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score),
+    without a label: the score in `text-40`, as the calculator of FIRST shows
+    it, and below it the severity of the assessment with its mark in
+    `text-20`, both at weight 600 (`docs/design-system.md`, Type Scale;
+    Severity). Assistive technologies read it as "Base score 9.2, Critical".
+    The form reads it once the vector has paused for 250 ms, only for a
+    vector that it would send and that chooses every metric; a tab of Add
+    shows the outcome of its own vector at once. Another vector, and one that
+    Sentinel rejects, shows "0.0" and "None" in `fg-muted`, which assistive
+    technologies read as the reason, such as "No score. Choose every
+    metric.", "No score. Choose the metrics, or enter the vector.", the
+    check of the form below, or "No score. Sentinel doesn't accept this
+    vector.". Until the first outcome is known, the place shows the loading
+    indicator after 300 ms; while the score of a new vector is read, the
+    outcome of the vector before it stays, marked as being updated after
+    300 ms (`docs/behaviors.md`, Loading), and a read that a newer vector
+    overtakes shows nothing; the score of a vector is read once, also when
+    the tab returns to the foreground, since Sentinel's result depends only
+    on the vector. Its place is a status region, which announces each new
+    outcome without moving the focus, once the vector has paused
+    (`docs/behaviors.md`, Accessibility, Announcements). It does not show
+    for a tab of a version of which SUSE has an assessment.
   - Vector, a single-line field in monospace, described "The metrics write
     it, and a vector entered here chooses them.": a choice of a metric writes
     the vector of the metrics chosen, in FIRST's order, and a vector that the
@@ -1061,7 +1086,10 @@ Delete SUSE CVSS Assessment):
   version of which SUSE has an assessment, "SUSE already has a CVSS v4.0
   assessment: edit it in its row.". The error shows at the field when the
   user submits the form, the field takes the focus, and the error goes once
-  the input changes. Every other rule of the vector is Sentinel's.
+  the input changes. Every other rule of the vector is Sentinel's: a vector
+  that the read of its score rejects shows the error of `422
+  CVSS_INVALID_VECTOR` (States) at the field at once, without moving the
+  focus, until the input changes, and the form still sends it.
 - Sentinel sets or replaces the SUSE assessment of the version of the vector
   that it receives (same document, Set or Update SUSE CVSS Assessment), so
   Add reads the assessments again as it submits, and when SUSE has one of
@@ -1288,6 +1316,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   List Access Grants have arrived, with the loading indicator in their place
   until then; Access grants shows at once on a confidential Ticket, and its
   dialog shows the loading indicator in place of the grants until they arrive.
+  The dialog of Add SUSE assessment and Edit shows the loading indicator in
+  the place of the score until the first outcome of its vector is known
+  (Actions).
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -1420,6 +1451,13 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Changes). A failure of Delete shows at the top of its confirmation, which
   stays open, such as the `404 CVSS_ASSESSMENT_NOT_FOUND` of an assessment
   that another user deleted; the screen handles no code of it specifically.
+  The failure of the read of the score of the vector shows in the place of
+  the score, with Try again where it offers it, and leaves the form usable
+  and Save available (`docs/behaviors.md`, Where Errors Appear); the screen
+  handles one code of Calculate CVSS Base Score specifically, `422
+  CVSS_INVALID_VECTOR`, which shows at Vector as above and as no score in
+  the place of the score (Sentinel `docs/features/tickets/cvss-scoring.md`,
+  Calculate CVSS Base Score).
 - **Errors of Refetch.** A failure follows the default presentation of a
   change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
   after which the fetch may still run (`docs/behaviors.md`, Retries and
@@ -1510,10 +1548,11 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Severity; Eligibility Score Resolution; Provider Identity and Authority;
   Assessment Persistence and Ticket Status; API Endpoints (Shared Assessment
   Item; Get CVSS Assessments for a CVE; Set or Update SUSE CVSS Assessment;
-  Delete SUSE CVSS Assessment)
+  Delete SUSE CVSS Assessment; Calculate CVSS Base Score)
 - Sentinel `docs/features/tickets/ticket-mutations.md` — CVSS Status Matrix
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
-  Visibility; Endpoint Permission Map (CVEs; Tickets; Ticket References)
+  Visibility; Endpoint Permission Map (CVEs; CVSS; Tickets; Ticket
+  References)
 - Sentinel `docs/features/identity/user-management.md` — Directory API
   endpoints (List Users)
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
