@@ -71,7 +71,11 @@ interface RowFocusOptions<TRow> {
 // of the row that takes its place, or to that row without one, or to the
 // fallback when no row follows; otherwise, as when a read removes the row or
 // a change takes it out of the rows that the table shows, to the screen's
-// heading. A row that a read moves keeps it. holds tells that a row holds
+// heading. A row that a read moves keeps it. added tells that a change that
+// Sentinel confirmed added a row, which takes the focus at its control once
+// it shows when the element that started the change has left the page
+// meanwhile, such as an add action that the new row leaves with nothing to
+// add. holds tells that a row holds
 // the focus, as the row of a dialog that closes after a change that Sentinel
 // confirmed does before the dialog has returned the focus to it. The options
 // other than the rows and the read keep their identity from one render to
@@ -88,9 +92,13 @@ export function useRowFocusAfterRemoval<TRow>({
 }: RowFocusOptions<TRow>): {
   deleted: (id: string, index: number) => void;
   holds: (id: string) => void;
+  added: (id: string) => void;
 } {
   const removed = useRef<Removed>(undefined);
   const focused = useRef<string>(undefined);
+  // A row that a change added, with the instant at which Sentinel confirmed
+  // it (added).
+  const fresh = useRef<{ id: string; at: number }>(undefined);
 
   // The row that has the focus, which the focus leaves for good when it
   // moves out of the container, or when the pointer presses outside it; a
@@ -138,6 +146,10 @@ export function useRowFocusAfterRemoval<TRow>({
     if (pending !== undefined && failedAt >= pending && readAt < pending) {
       removed.current = undefined;
     }
+    const adding = fresh.current?.at;
+    if (adding !== undefined && failedAt >= adding && readAt < adding) {
+      fresh.current = undefined;
+    }
   }, [readAt, failedAt]);
 
   // React Aria's table takes the row away from the page in a later render
@@ -148,6 +160,35 @@ export function useRowFocusAfterRemoval<TRow>({
     const element = container.current;
     if (rows === undefined || element === null) {
       return;
+    }
+    // A row that a change added takes the focus, at its control, once it
+    // shows, when the element that started the change has left the page
+    // meanwhile, so that the focus is on the body or on the screen's
+    // heading, where that element hands it off: the row holds the action
+    // that reverses the change.
+    const added = fresh.current;
+    if (added !== undefined && rows.some((row) => rowId(row) === added.id)) {
+      fresh.current = undefined;
+      let waited = 0;
+      const show = () => {
+        if (!element.isConnected) {
+          return;
+        }
+        const row = rowOf(element, attribute, added.id);
+        if (row === null && waited < REMOVAL_FRAMES) {
+          waited += 1;
+          requestAnimationFrame(show);
+          return;
+        }
+        const active = document.activeElement;
+        if (
+          row !== null &&
+          (active === null || active === document.body || active.matches("h1"))
+        ) {
+          (control(row) ?? row).focus();
+        }
+      };
+      requestAnimationFrame(show);
     }
     const gone = removed.current;
     const holder = focused.current;
@@ -213,5 +254,8 @@ export function useRowFocusAfterRemoval<TRow>({
   const holds = useCallback((id: string) => {
     focused.current = id;
   }, []);
-  return { deleted, holds };
+  const added = useCallback((id: string) => {
+    fresh.current = { id, at: Date.now() };
+  }, []);
+  return { deleted, holds, added };
 }

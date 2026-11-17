@@ -153,6 +153,7 @@ import {
 } from "../components/detail-screen";
 import { DetailsName, DetailsValue } from "../components/details-popover";
 import { DialogTabs } from "../components/dialog-tabs";
+import { FOCUS_RING } from "../components/focus-ring";
 import { GroupBand } from "../components/group-band";
 import { IconButton } from "../components/icon-button";
 import { Label, LabelList } from "../components/label";
@@ -2645,9 +2646,24 @@ function metricValue(
   return typeof value === "string" ? value : undefined;
 }
 
-// An assessment as an option of Start from, such as "NVD, 7.5 High".
-function assessmentText(provider: string, assessment: CVSSAssessmentItem) {
-  return `${provider}, ${SCORE.format(assessment.score)} ${severityName(assessment.severity)}`;
+// An assessment as an option of Start from: its provider, its score, and its
+// severity with its mark, such as "NVD, 7.5 ● High", which the keyboard finds
+// by its text (docs/design-system.md, Severity; Forms).
+function assessmentOption(
+  value: string,
+  provider: string,
+  assessment: CVSSAssessmentItem,
+): FieldOption<string> {
+  return {
+    value,
+    label: `${provider}, ${SCORE.format(assessment.score)} ${severityName(assessment.severity)}`,
+    content: (
+      <span className="inline-flex items-baseline gap-1">
+        {`${provider},`} <Score value={assessment.score} />{" "}
+        <Severity severity={assessment.severity} />
+      </span>
+    ),
+  };
 }
 
 // The length of a text as Sentinel counts it, by code point.
@@ -2667,7 +2683,8 @@ interface MetricColumnProps {
 
 // A column of the metrics: each group its heading, then each metric its
 // name on the line of its values, a segmented control, the names in a
-// column of 140 px, and, below a metric whose choice differs from that of
+// column of 140 px, or above their values where the form is narrower than
+// 320 px, and, below a metric whose choice differs from that of
 // another provider's assessment, that provider's value, such as "NVD:
 // Network", which assistive technologies read with the control. A metric
 // whose name repeats in the version, such as Confidentiality in v4.0, is
@@ -2682,14 +2699,14 @@ function MetricColumn({
   const id = useId();
   const names = formMetrics(version).map((metric) => metric.name);
   return (
-    <div className="grid grid-cols-[8.75rem_auto] content-start items-center gap-x-3 gap-y-2">
+    <div className="grid grid-cols-1 content-start items-center gap-x-3 gap-y-2 @min-[20rem]:grid-cols-[8.75rem_auto]">
       {groups.map((group, index) => {
         const groupId = `${id}-group-${index}`;
         return (
           <Fragment key={group.term}>
             <h3
               id={groupId}
-              className={`col-span-2 text-14 font-semibold ${index > 0 ? "mt-3" : ""}`}
+              className={`col-span-full text-14 font-semibold ${index > 0 ? "mt-3" : ""}`}
             >
               {group.term}
             </h3>
@@ -2733,7 +2750,7 @@ function MetricColumn({
                   {differs.length > 0 && (
                     <span
                       id={differsId}
-                      className="col-start-2 -mt-1 text-13 text-fg-muted"
+                      className="-mt-1 text-13 text-fg-muted @min-[20rem]:col-start-2"
                     >
                       {differs.join(" · ")}
                     </span>
@@ -2772,13 +2789,12 @@ interface VectorFailure {
 
 const NO_VECTOR_FAILURE: VectorFailure = { field: undefined, form: undefined };
 
-// Add, with the assessments of the CVE as it opened; or Edit of an
-// assessment, with them.
+// Add, or Edit of an assessment, as it was when Edit opened, which gives the
+// form its input.
 type SuseDialogMode =
-  | { kind: "add"; assessments: CVECVSSAssessments }
+  | { kind: "add" }
   | {
       kind: "edit";
-      assessments: CVECVSSAssessments;
       assessment: CVSSAssessmentItem;
       version: EditableVersion;
     };
@@ -2787,10 +2803,21 @@ interface SuseAssessmentDialogProps {
   ticketId: string;
   cveId: string;
   mode: SuseDialogMode;
+  // The assessments of the CVE as the read of the part shows them.
+  assessments: CVECVSSAssessments;
   readAgain: () => void;
   onClose: () => void;
-  // Tells that Sentinel confirmed the change, with its outcome.
-  onDone: (text: string) => void;
+  // Tells that Sentinel confirmed the change, with its outcome and the
+  // assessment as Sentinel returns it.
+  onDone: (text: string, assessment: CVSSAssessmentItem) => void;
+}
+
+// The outcome of a change of the SUSE assessment, as Sentinel returns it.
+function suseChangedText(
+  kind: SuseDialogMode["kind"],
+  { data }: CVSSAssessmentResponse,
+): string {
+  return `SUSE assessment ${cvssVersion(data.cvss_version)} ${kind === "add" ? "added" : "changed"}.`;
 }
 
 // Add SUSE assessment and Edit, Set or Update SUSE CVSS Assessment,
@@ -2819,6 +2846,7 @@ function SuseAssessmentDialog({
   ticketId,
   cveId,
   mode,
+  assessments: shown,
   readAgain,
   onClose,
   onDone,
@@ -2827,15 +2855,15 @@ function SuseAssessmentDialog({
   const upsert = useUpsertSuseCvssAssessment({
     mutation: useChangeOutcome(
       ticketRecord(ticketId),
-      ({ data }: CVSSAssessmentResponse) =>
-        `SUSE assessment ${cvssVersion(data.cvss_version)} ${mode.kind === "add" ? "added" : "saved"}.`,
+      (response: CVSSAssessmentResponse) =>
+        suseChangedText(mode.kind, response),
       readAgain,
     ),
   });
   const formId = useId();
-  const assessments = mode.assessments.assessments;
+  const assessments = shown.assessments;
   const toAdd = versionsToAdd(assessments);
-  const defaultVersion = mode.assessments.default_cvss_version;
+  const defaultVersion = shown.default_cvss_version;
   const [version, setVersion] = useState<EditableVersion>(() => {
     if (mode.kind === "edit") {
       return mode.version;
@@ -2866,6 +2894,26 @@ function SuseAssessmentDialog({
   // A failure of the UI itself, which the router shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const vectorRef = useRef<HTMLInputElement>(null);
+  // The dialog takes the focus at the first field of its form as it opens
+  // (docs/behaviors.md, Accessibility, Dialogs), once: the form shows again
+  // with each tab.
+  const opened = useRef(false);
+  const firstField = useCallback((element: HTMLDivElement | null) => {
+    if (element !== null && !opened.current) {
+      opened.current = true;
+      element.querySelector<HTMLElement>("input, button")?.focus();
+    }
+  }, []);
+  // When the read before Add finds that SUSE has the version by then, the
+  // line of the tab that says so takes the focus as it shows in place of
+  // the form.
+  const takenFound = useRef(false);
+  const takenLine = useCallback((element: HTMLParagraphElement | null) => {
+    if (element !== null && takenFound.current) {
+      takenFound.current = false;
+      element.focus();
+    }
+  }, []);
   // After a failure at the field alone, the field takes the focus; the error
   // of the form takes it itself (docs/behaviors.md, Accessibility,
   // Announcements).
@@ -2914,17 +2962,11 @@ function SuseAssessmentDialog({
 
   const startOptions: FieldOption<string>[] = [
     ...(mode.kind === "edit"
-      ? [
-          {
-            value: SAVED,
-            label: assessmentText("SUSE, as saved", mode.assessment),
-          },
-        ]
+      ? [assessmentOption(SAVED, "SUSE, as saved", mode.assessment)]
       : []),
-    ...others.map((other) => ({
-      value: other.id,
-      label: assessmentText(other.provider_name, other),
-    })),
+    ...others.map((other) =>
+      assessmentOption(other.id, other.provider_name, other),
+    ),
   ];
 
   // The check of the vector before it is sent, or null.
@@ -3017,7 +3059,7 @@ function SuseAssessmentDialog({
           staleTime: 0,
         });
         if (!versionsToAdd(current.data.assessments).includes(version)) {
-          setFailure({ field: takenText(version), form: undefined });
+          takenFound.current = true;
           setBusy(false);
           return;
         }
@@ -3032,9 +3074,7 @@ function SuseAssessmentDialog({
         cveId,
         data: { vector_string: vector },
       });
-      onDone(
-        `SUSE assessment ${cvssVersion(response.data.cvss_version)} ${mode.kind === "add" ? "added" : "saved"}.`,
-      );
+      onDone(suseChangedText(mode.kind, response), response.data);
     } catch (error) {
       fail(error, false);
     }
@@ -3042,7 +3082,11 @@ function SuseAssessmentDialog({
   };
 
   const form = taken ? (
-    <p className="text-fg-muted">
+    <p
+      ref={takenLine}
+      tabIndex={-1}
+      className={`rounded text-fg-muted ${FOCUS_RING}`}
+    >
       {`SUSE already has a CVSS v${version} assessment: Edit in its row of the table changes it.`}
     </p>
   ) : (
@@ -3070,6 +3114,7 @@ function SuseAssessmentDialog({
                 <SelectField
                   label="Start from"
                   name="start"
+                  optional={mode.kind === "add"}
                   options={startOptions}
                   value={input.start}
                   onChange={(start) => {
@@ -3165,9 +3210,6 @@ function SuseAssessmentDialog({
         </>
       }
     >
-      {/* The dialog takes the focus on its first control as it opens: the tab
-          of the version in Add, so that the version is read first, and the
-          first field in Edit (docs/behaviors.md, Accessibility, Dialogs). */}
       {mode.kind === "add" ? (
         <DialogTabs
           label="CVSS version"
@@ -3188,12 +3230,15 @@ function SuseAssessmentDialog({
             setVersion(next);
             setFailure(NO_VECTOR_FAILURE);
           }}
-          focusSelected
         >
-          {form}
+          <div ref={firstField} className="contents">
+            {form}
+          </div>
         </DialogTabs>
       ) : (
-        <FirstFieldFocus>{form}</FirstFieldFocus>
+        <div ref={firstField} className="contents">
+          {form}
+        </div>
       )}
     </ModalDialog>
   );
@@ -3204,19 +3249,20 @@ function takenText(version: EditableVersion): string {
   return `SUSE already has a CVSS v${version} assessment: edit it in its row.`;
 }
 
-// An assessment that Delete deletes, with its place in the table, and the
-// assessments and the status of the Ticket as the confirmation opened.
+// An assessment that Delete deletes, with its place in the table.
 interface Deleting {
   assessment: CVSSAssessmentItem;
   index: number;
-  assessments: readonly CVSSAssessmentItem[];
-  status: string;
 }
 
 interface DeleteSuseDialogProps {
   ticketId: string;
   cveId: string;
   deleting: Deleting;
+  // The assessments of the CVE as the read of the part shows them, and the
+  // status of the Ticket as the screen shows it.
+  assessments: CVECVSSAssessments;
+  status: string;
   readAgain: () => void;
   onClose: () => void;
   onDone: (text: string) => void;
@@ -3227,14 +3273,18 @@ interface DeleteSuseDialogProps {
 // confirmation, since it cannot be undone in the UI and Sentinel calculates
 // the severity and the eligibility again (docs/behaviors.md, Confirmation):
 // its question names the assessment, and its consequence says that, and,
-// for the last SUSE assessment of the CVE of an Analyzed or Resolved Ticket,
-// that the Ticket returns to Analysis (Sentinel
-// docs/features/tickets/tickets.md, Gate: Analysis → Analyzed). Its error
-// shows at the top of the confirmation, which stays open.
+// for the assessment of the default CVSS version, that the eligibility score
+// is then the fallback 10.0 (Sentinel docs/features/tickets/cvss-scoring.md,
+// Eligibility Score Resolution), and, for the last SUSE assessment of the
+// CVE of an Analyzed or Resolved Ticket, that the Ticket returns to Analysis
+// (Sentinel docs/features/tickets/tickets.md, Gate: Analysis → Analyzed).
+// Its error shows at the top of the confirmation, which stays open.
 function DeleteSuseDialog({
   ticketId,
   cveId,
   deleting,
+  assessments,
+  status,
   readAgain,
   onClose,
   onDone,
@@ -3256,12 +3306,13 @@ function DeleteSuseDialog({
     throw uiFailure.error;
   }
   const last =
-    deleting.assessments.filter((item) => item.provider_name === SUSE)
+    assessments.assessments.filter((item) => item.provider_name === SUSE)
       .length === 1;
   const returns =
     last &&
-    (deleting.status === TicketStatusValue.analyzed ||
-      deleting.status === TicketStatusValue.resolved);
+    (status === TicketStatusValue.analyzed ||
+      status === TicketStatusValue.resolved);
+  const fallback = assessment.cvss_version === assessments.default_cvss_version;
   const confirm = async () => {
     setError(undefined);
     try {
@@ -3297,7 +3348,7 @@ function DeleteSuseDialog({
       isBusy={remove.isPending}
       error={error}
     >
-      {`Sentinel calculates the severity of the CVE and the eligibility of the Products again from the other assessments, which can change the priority and the deadlines of the Ticket.${returns ? " As the last SUSE assessment of the CVE, it also returns the Ticket to Analysis." : ""} This can't be undone.`}
+      {`Sentinel calculates the severity of the CVE again from the other assessments, and the eligibility of the Products, which can change the priority and the deadlines of the Ticket.${fallback ? ` Without a SUSE CVSS ${cvssVersion(assessment.cvss_version)} assessment, the eligibility score of the Products is the fallback 10.0.` : ""}${returns ? " As the last SUSE assessment of the CVE, it also returns the Ticket to Analysis." : ""} This can't be undone.`}
     </ConfirmationDialog>
   );
 }
@@ -3397,12 +3448,15 @@ function useReadAfterSuseChange(ticketId: string, cveId: string) {
   const readAgain = useReadAgain(ticketId, cveId);
   return useCallback(() => {
     readAgain(false);
-    for (const queryKey of [
-      getListTicketEventsQueryKey(ticketId),
-      getListTicketsQueryKey(),
-    ]) {
-      void client.invalidateQueries({ queryKey });
-    }
+    void client.invalidateQueries({
+      queryKey: getListTicketEventsQueryKey(ticketId),
+    });
+    // The reads of the Ticket list hold that of the duplicates of the Ticket,
+    // which readAgain has just sent again: it is kept, not sent twice.
+    void client.invalidateQueries(
+      { queryKey: getListTicketsQueryKey() },
+      { cancelRefetch: false },
+    );
   }, [client, readAgain, ticketId]);
 }
 
@@ -3449,7 +3503,6 @@ function CvssPart({ read, ticket }: CvssPartProps) {
   const readAgain = useReadAfterSuseChange(ticketId, cveId);
   const [dialog, setDialog] = useState<SuseDialogMode>();
   const [deleting, setDeleting] = useState<Deleting>();
-  const status = ticket.status;
   const actions = useMemo<RowActions | undefined>(
     () =>
       changes && data !== undefined
@@ -3458,7 +3511,6 @@ function CvssPart({ read, ticket }: CvssPartProps) {
               if (isEditableVersion(assessment.cvss_version)) {
                 setDialog({
                   kind: "edit",
-                  assessments: data,
                   assessment,
                   version: assessment.cvss_version,
                 });
@@ -3470,13 +3522,11 @@ function CvssPart({ read, ticket }: CvssPartProps) {
                 index: data.assessments.findIndex(
                   (row) => row.id === assessment.id,
                 ),
-                assessments: data.assessments,
-                status,
               });
             },
           }
         : undefined,
-    [changes, data, status],
+    [changes, data],
   );
   const columns = useMemo(() => columnsOf(actions), [actions]);
   return (
@@ -3493,7 +3543,7 @@ function CvssPart({ read, ticket }: CvssPartProps) {
                 size="small"
                 icon={Plus}
                 onPress={() => {
-                  setDialog({ kind: "add", assessments: data });
+                  setDialog({ kind: "add" });
                 }}
               >
                 Add SUSE assessment
@@ -3523,16 +3573,17 @@ function CvssPart({ read, ticket }: CvssPartProps) {
         </PartRead>
       </div>
       {outcome.region}
-      {dialog !== undefined && (
+      {dialog !== undefined && data !== undefined && (
         <SuseAssessmentDialog
           ticketId={ticketId}
           cveId={cveId}
           mode={dialog}
+          assessments={data}
           readAgain={readAgain}
           onClose={() => {
             setDialog(undefined);
           }}
-          onDone={(text) => {
+          onDone={(text, assessment) => {
             if (!mounted.current) {
               return;
             }
@@ -3540,19 +3591,25 @@ function CvssPart({ read, ticket }: CvssPartProps) {
             // The dialog returns the focus to the Edit that opened it as it
             // closes (docs/behaviors.md, Accessibility, Dialogs), so its row
             // holds the focus from now on, also before React Aria has
-            // returned it.
+            // returned it. After Add, it returns it to Add SUSE assessment,
+            // which the next read removes once SUSE has every version: the
+            // new row then takes it, at its Delete.
             if (dialog.kind === "edit") {
               rowFocus.holds(dialog.assessment.id);
+            } else {
+              rowFocus.added(assessment.id);
             }
             outcome.after(text);
           }}
         />
       )}
-      {deleting !== undefined && (
+      {deleting !== undefined && data !== undefined && (
         <DeleteSuseDialog
           ticketId={ticketId}
           cveId={cveId}
           deleting={deleting}
+          assessments={data}
+          status={ticket.status}
           readAgain={readAgain}
           onClose={() => {
             setDeleting(undefined);

@@ -1,5 +1,13 @@
 import type { LucideIcon } from "lucide-react";
-import { useCallback, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   Tooltip as AriaTooltip,
   Tab,
@@ -9,6 +17,7 @@ import {
   TooltipTriggerStateContext,
 } from "react-aria-components";
 import { FOCUS_RING } from "./focus-ring";
+import { TOOLTIP_DELAY_MS } from "./tooltip";
 
 // The tabs of a dialog, which show one of several forms of the same change,
 // such as the versions of a CVSS assessment (docs/design-system.md, Dialogs).
@@ -23,44 +32,133 @@ export interface DialogTab<T extends string> {
   mark?: { icon: LucideIcon; name: string; text: string } | undefined;
 }
 
+// How long the tooltip of a mark stays after the pointer leaves the tab or
+// the tooltip, so that the pointer can move from one to the other, as React
+// Aria's tooltips do.
+const MARK_CLOSE_DELAY_MS = 500;
+
+interface MarkTooltipProps {
+  triggerRef: RefObject<HTMLDivElement | null>;
+  isOpen: boolean;
+  // Tells whether the pointer rests on the tooltip.
+  onHoverChange: (hovered: boolean) => void;
+  // Hides the tooltip, as Escape does.
+  onDismiss: () => void;
+  text: string;
+}
+
+// The tooltip of the mark of a tab, in the look of every tooltip
+// (docs/design-system.md, Menus, Popovers, and Tooltips), which stays while
+// the pointer rests on it, and which Escape hides without closing the dialog
+// (WCAG 2.2, 1.4.13 Content on Hover or Focus). A tab takes no tooltip
+// trigger of its own, so the tab tells when it shows.
+function MarkTooltip({
+  triggerRef,
+  isOpen,
+  onHoverChange,
+  onDismiss,
+  text,
+}: MarkTooltipProps) {
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onDismiss();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [isOpen, onDismiss]);
+  return (
+    <TooltipTriggerStateContext
+      value={{
+        isOpen,
+        shouldSkipAnimation: true,
+        open: () => {},
+        close: onDismiss,
+      }}
+    >
+      <AriaTooltip
+        triggerRef={triggerRef}
+        placement="top"
+        offset={6}
+        className="max-w-72 rounded-md bg-fg text-13 font-medium text-surface shadow-lg"
+      >
+        <span
+          className="block px-2.5 py-1.5"
+          onPointerEnter={() => {
+            onHoverChange(true);
+          }}
+          onPointerLeave={() => {
+            onHoverChange(false);
+          }}
+        >
+          {text}
+        </span>
+      </AriaTooltip>
+    </TooltipTriggerStateContext>
+  );
+}
+
 interface DialogTabItemProps<T extends string> {
   tab: DialogTab<T>;
-  // Whether the tab takes the focus as it shows.
-  takesFocus: boolean;
 }
 
 // A tab: its label in text-14, fg-muted, 40 px high with 8 px of side
 // padding; selected, in fg at weight 600 over a bar of 2 px in link along
 // its bottom edge, as the tabs of a detail screen (docs/design-system.md,
 // Detail Screens). Its mark follows its label 6 px later, at 14 px in
-// fg-muted.
-function DialogTabItem<T extends string>({
-  tab,
-  takesFocus,
-}: DialogTabItemProps<T>) {
+// fg-muted, with its tooltip 300 ms after the pointer comes to rest on the
+// tab, while it rests on the tab or on the tooltip, and for 500 ms after it
+// leaves them, or while the tab has keyboard focus, until Escape hides it.
+function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
   const ref = useRef<HTMLDivElement>(null);
-  const [hovered, setHovered] = useState(false);
+  const [pointed, setPointed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const timer = useRef<number>(undefined);
   const noteId = useId();
   const { mark } = tab;
-  // React Aria renders this component to build its collection and shows the
-  // element of the tab apart from it, later, so the tab takes the focus as
-  // that element shows, once.
-  const focused = useRef(false);
-  const attach = useCallback(
-    (element: HTMLDivElement | null) => {
-      ref.current = element;
-      if (element !== null && takesFocus && !focused.current) {
-        focused.current = true;
-        element.focus();
-      }
+  useEffect(
+    () => () => {
+      window.clearTimeout(timer.current);
     },
-    [takesFocus],
+    [],
   );
+  // The pointer rests on the tab, which shows the tooltip after the delay of
+  // every tooltip, or on the tooltip, which keeps it, or has left them.
+  const point = useCallback((hovered: boolean, delay: number) => {
+    window.clearTimeout(timer.current);
+    if (hovered) {
+      timer.current = window.setTimeout(() => {
+        setPointed(true);
+      }, delay);
+    } else {
+      timer.current = window.setTimeout(() => {
+        setPointed(false);
+        setDismissed(false);
+      }, MARK_CLOSE_DELAY_MS);
+    }
+  }, []);
+  const dismiss = useCallback(() => {
+    setDismissed(true);
+  }, []);
   return (
     <Tab
       id={tab.id}
-      ref={attach}
-      onHoverChange={setHovered}
+      ref={ref}
+      onHoverChange={(hovered) => {
+        point(hovered, TOOLTIP_DELAY_MS);
+      }}
+      onFocusChange={(focused) => {
+        if (!focused) {
+          setDismissed(false);
+        }
+      }}
       aria-label={mark === undefined ? undefined : `${tab.label}, ${mark.name}`}
       aria-describedby={mark === undefined ? undefined : noteId}
       className={`-mb-px inline-flex h-10 cursor-default items-center gap-1.5 rounded-t border-b-2 border-transparent px-2 text-14 text-fg-muted data-hovered:text-fg data-selected:border-link data-selected:font-semibold data-selected:text-fg ${FOCUS_RING}`}
@@ -74,28 +172,15 @@ function DialogTabItem<T extends string>({
               <span id={noteId} hidden>
                 {mark.text}
               </span>
-              {/* The tooltip of the mark shows while the pointer rests on
-                  the tab or the tab has keyboard focus: a tab takes no
-                  tooltip trigger of its own. */}
-              <TooltipTriggerStateContext
-                value={{
-                  isOpen: hovered || isFocusVisible,
-                  shouldSkipAnimation: true,
-                  open: () => {},
-                  close: () => {
-                    setHovered(false);
-                  },
+              <MarkTooltip
+                triggerRef={ref}
+                isOpen={!dismissed && (pointed || isFocusVisible)}
+                onHoverChange={(hovered) => {
+                  point(hovered, 0);
                 }}
-              >
-                <AriaTooltip
-                  triggerRef={ref}
-                  placement="top"
-                  offset={6}
-                  className="max-w-72 rounded-md bg-fg px-2.5 py-1.5 text-13 font-medium text-surface shadow-lg"
-                >
-                  {mark.text}
-                </AriaTooltip>
-              </TooltipTriggerStateContext>
+                onDismiss={dismiss}
+                text={mark.text}
+              />
             </>
           )}
         </>
@@ -110,9 +195,6 @@ interface DialogTabsProps<T extends string> {
   tabs: readonly DialogTab<T>[];
   selected: T;
   onSelect: (id: T) => void;
-  // Whether the selected tab takes the focus as the tabs show, as the first
-  // control of a dialog (docs/behaviors.md, Accessibility, Dialogs).
-  focusSelected?: boolean;
   // The content of the selected tab.
   children: ReactNode;
 }
@@ -127,11 +209,8 @@ export function DialogTabs<T extends string>({
   tabs,
   selected,
   onSelect,
-  focusSelected = false,
   children,
 }: DialogTabsProps<T>) {
-  // The tab selected as the tabs show, which takes the focus.
-  const [first] = useState(selected);
   return (
     <Tabs
       selectedKey={selected}
@@ -148,11 +227,7 @@ export function DialogTabs<T extends string>({
         className="flex flex-wrap gap-x-4 border-b border-border"
       >
         {tabs.map((tab) => (
-          <DialogTabItem
-            key={tab.id}
-            tab={tab}
-            takesFocus={focusSelected && tab.id === first}
-          />
+          <DialogTabItem key={tab.id} tab={tab} />
         ))}
       </TabList>
       {tabs.map((tab) => (

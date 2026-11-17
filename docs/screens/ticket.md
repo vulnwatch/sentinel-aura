@@ -1018,22 +1018,28 @@ Delete SUSE CVSS Assessment):
     score of the Products." (Sentinel `docs/features/tickets/cvss-scoring.md`,
     Eligibility Score Resolution), and which assistive technologies read as
     "CVSS v3.1, the default version"; a default version that the pinned
-    contract does not list marks no tab. Add opens on the default version
-    when SUSE has no assessment of it, otherwise on the other, with the
-    focus on that tab, and each tab keeps its input. The tab of a version of
-    which SUSE has an assessment says "SUSE already has a CVSS v3.1
-    assessment: Edit in its row of the table changes it.", and Add SUSE
-    assessment is disabled there. Edit has no tabs: its version is in its
-    title.
+    contract does not list marks no tab. The tooltip shows as every tooltip
+    does, stays while the pointer rests on it, and Escape hides it without
+    closing the dialog. Add opens on the default version when SUSE has no
+    assessment of it, otherwise on the other, and each tab keeps its input.
+    The tab of a version of which SUSE has an assessment says "SUSE already
+    has a CVSS v3.1 assessment: Edit in its row of the table changes it." in
+    place of the form, and Add SUSE assessment is disabled there. Edit has no
+    tabs: its version is in its title. The first field of the form takes the
+    focus as the dialog opens.
   - Start from, a select of the assessments of the other providers of the
-    version, such as "NVD, 7.5 High", empty as Add opens, and in Edit on the
-    saved assessment, "SUSE, as saved, 5.5 Medium", before them. Choosing
-    one takes its vector. Without an assessment to offer, it does not show.
+    version, each its provider, its score, and its severity with its mark,
+    such as "NVD, 7.5 ● High": optional and empty as Add opens, and in Edit
+    on the saved assessment, "SUSE, as saved, 5.5 ● Medium", before them.
+    Choosing one takes its vector. Without an assessment to offer, it does
+    not show.
   - The Base metrics of the version, in the groups of FIRST's specifications
     as the popover of a vector shows them (Content, CVSS assessments):
     Exploitability in the first column, and Scope and Impact for v3.1, or
     Vulnerable system and Subsequent system for v4.0, in the second; one
-    column where the dialog is narrower. Each metric is a segmented control
+    column where the dialog is narrower, and the name of each metric above
+    its values where the form is narrower than 320 px. Each metric is a
+    segmented control
     (`docs/design-system.md`, Forms) with its values in the order of FIRST's
     calculator, named by the metric, and by its group too where its name
     repeats in the version, such as "Confidentiality Vulnerable system".
@@ -1059,9 +1065,9 @@ Delete SUSE CVSS Assessment):
 - Sentinel sets or replaces the SUSE assessment of the version of the vector
   that it receives (same document, Set or Update SUSE CVSS Assessment), so
   Add reads the assessments again as it submits, and when SUSE has one of
-  the version by then, says "SUSE already has a CVSS v3.1 assessment: edit it
-  in its row." at the field without sending the vector; two users who add
-  the same version at the same instant can still replace one another. Edit
+  the version by then, sends nothing: the tab then says so in place of its
+  form, and that line takes the focus. Two users who add the same version at
+  the same instant can still replace one another. Edit
   sends only a vector of its version, and closes without a request when the
   vector is the saved one.
 - Add SUSE assessment and Edit ask for no confirmation. With input, Cancel
@@ -1075,13 +1081,17 @@ Delete SUSE CVSS Assessment):
 - Delete asks for confirmation, since it cannot be undone in the UI and
   Sentinel calculates the severity and the eligibility again
   (`docs/behaviors.md`, Confirmation): "Delete SUSE assessment v3.1?",
-  "Sentinel calculates the severity of the CVE and the eligibility of the
-  Products again from the other assessments, which can change the priority
-  and the deadlines of the Ticket. This can't be undone.", with, before the
-  last sentence, "As the last SUSE assessment of the CVE, it also returns the
-  Ticket to Analysis." for the last SUSE assessment of the CVE of an
-  Analyzed or Resolved Ticket (Sentinel `docs/features/tickets/tickets.md`,
-  Gate: Analysis → Analyzed); Cancel, and Delete SUSE assessment, a danger
+  "Sentinel calculates the severity of the CVE again from the other
+  assessments, and the eligibility of the Products, which can change the
+  priority and the deadlines of the Ticket. This can't be undone.", with,
+  before the last sentence, "Without a SUSE CVSS v3.1 assessment, the
+  eligibility score of the Products is the fallback 10.0." for the
+  assessment of the default CVSS version (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Eligibility Score Resolution),
+  and "As the last SUSE assessment of the CVE, it also returns the Ticket to
+  Analysis." for the last SUSE assessment of the CVE of an Analyzed or
+  Resolved Ticket (Sentinel `docs/features/tickets/tickets.md`, Gate:
+  Analysis → Analyzed); Cancel, and Delete SUSE assessment, a danger
   button. While it is in progress, the confirmation cannot be closed; once
   Sentinel confirms it, the confirmation closes.
 - An effective change can assign an unassigned Ticket to the user, move it
@@ -1094,7 +1104,7 @@ Delete SUSE CVSS Assessment):
   the Ticket list.
 - The outcome of each is announced once a read of the assessments after it
   arrives, whatever the outcome of that read: "SUSE assessment v3.1 added.",
-  "SUSE assessment v3.1 saved.", or "SUSE assessment v3.1 deleted."
+  "SUSE assessment v3.1 changed.", or "SUSE assessment v3.1 deleted."
   (`docs/behaviors.md`, Outcome of a Change). The outcome of a change that
   ends after the user left the screen shows in the message area, and so does
   its failure, starting with the Ticket, as a link to its screen, such as
@@ -1103,9 +1113,13 @@ Delete SUSE CVSS Assessment):
   the assessment, the focus moves to the Delete of the row that takes its
   place, or to that row when it has no Delete, or to Add SUSE assessment
   when no row follows; when that read fails, the focus stays where it is.
-  When a read removes the row whose control holds the focus, or Add SUSE
-  assessment while it holds the focus, the focus moves to the screen's
-  heading (`docs/behaviors.md`, Accessibility, Focus after an action).
+  After Add, when the read of the assessments after it shows the new
+  assessment and no longer Add SUSE assessment, as SUSE then has every
+  version, the focus moves from Add SUSE assessment to the Delete of the new
+  row, which reverses the change. When a read removes the row whose control
+  holds the focus, or Add SUSE assessment while it holds the focus without a
+  change, the focus moves to the screen's heading (`docs/behaviors.md`,
+  Accessibility, Focus after an action).
 
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,

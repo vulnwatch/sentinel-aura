@@ -1514,7 +1514,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   in `on-accent` at weight 500. The row is as wide as its values and wraps
   where its place is narrower. Its name, in `text-14`, stands at the start of
   its line, in a column as wide as the longest name of its form, such as
-  140 px, 12 px before the control, and a note on the choice, such as the
+  140 px, 12 px before the control, or above the control where the form is
+  narrower than 320 px, and a note on the choice, such as the
   value of another assessment, follows below the control in `text-13`,
   `fg-muted`, which describes it. Assistive technologies read it as a group of
   radio buttons, between which the arrow keys move; the focus ring is drawn
@@ -1547,11 +1548,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   top of its content, such as the versions of a CVSS assessment: tabs as
   those of a detail screen (Detail Screens), above a `border` line across
   the width, with the content of the selected tab 20 px below it. A tab opens
-  when the user clicks it or presses Enter or Space, the selected one takes
-  the focus as the dialog opens, and each keeps its input while another
-  shows. An icon after the label, 6 px later, at 14 px in `fg-muted`, can mark
-  a tab, such as the default version, with a tooltip that says what it
-  means, shown on hover and on keyboard focus of the tab; assistive
+  when the user clicks it or presses Enter or Space, and each keeps its input
+  while another shows; the first field of the selected tab takes the focus
+  as the dialog opens. An icon after the label, 6 px later, at 14 px in
+  `fg-muted`, can mark a tab, such as the default version, with a tooltip
+  that says what it means, which shows, stays, and hides as every tooltip
+  does (Menus, Popovers, and Tooltips), on the hover and the keyboard focus
+  of the tab; Escape hides it without closing the dialog. Assistive
   technologies read the meaning of the mark in the name of the tab and its
   explanation as the description of the tab.
 - Its title is in `text-16`, weight 600, its text in `fg-muted`, and its
