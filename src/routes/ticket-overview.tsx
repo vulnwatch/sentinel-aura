@@ -2684,7 +2684,7 @@ function MetricColumn({
   return (
     <div className="grid grid-cols-[8.75rem_auto] content-start items-center gap-x-3 gap-y-2">
       {groups.map((group, index) => {
-        const groupId = `${id}-${group.term}`;
+        const groupId = `${id}-group-${index}`;
         return (
           <Fragment key={group.term}>
             <h3
@@ -2866,18 +2866,6 @@ function SuseAssessmentDialog({
   // A failure of the UI itself, which the router shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const vectorRef = useRef<HTMLInputElement>(null);
-  const content = useRef<HTMLDivElement>(null);
-  // The dialog takes the focus on its first control as it opens: the tab of
-  // the version in Add, so that the version is read first, and the first
-  // field in Edit (docs/behaviors.md, Accessibility, Dialogs).
-  const [first] = useState(
-    mode.kind === "add"
-      ? '[role="tab"][aria-selected="true"]'
-      : "input, button",
-  );
-  useEffect(() => {
-    content.current?.querySelector<HTMLElement>(first)?.focus();
-  }, [first]);
   // After a failure at the field alone, the field takes the focus; the error
   // of the form takes it itself (docs/behaviors.md, Accessibility,
   // Announcements).
@@ -3177,34 +3165,36 @@ function SuseAssessmentDialog({
         </>
       }
     >
-      <div ref={content}>
-        {mode.kind === "add" ? (
-          <DialogTabs
-            label="CVSS version"
-            tabs={EDITABLE_VERSIONS.map((item) => ({
-              id: item,
-              label: `CVSS ${cvssVersion(item)}`,
-              mark:
-                item === defaultVersion
-                  ? {
-                      icon: Star,
-                      name: "the default version",
-                      text: DEFAULT_VERSION_TEXT,
-                    }
-                  : undefined,
-            }))}
-            selected={version}
-            onSelect={(next) => {
-              setVersion(next);
-              setFailure(NO_VECTOR_FAILURE);
-            }}
-          >
-            {form}
-          </DialogTabs>
-        ) : (
-          form
-        )}
-      </div>
+      {/* The dialog takes the focus on its first control as it opens: the tab
+          of the version in Add, so that the version is read first, and the
+          first field in Edit (docs/behaviors.md, Accessibility, Dialogs). */}
+      {mode.kind === "add" ? (
+        <DialogTabs
+          label="CVSS version"
+          tabs={EDITABLE_VERSIONS.map((item) => ({
+            id: item,
+            label: `CVSS ${cvssVersion(item)}`,
+            mark:
+              item === defaultVersion
+                ? {
+                    icon: Star,
+                    name: "the default version",
+                    text: DEFAULT_VERSION_TEXT,
+                  }
+                : undefined,
+          }))}
+          selected={version}
+          onSelect={(next) => {
+            setVersion(next);
+            setFailure(NO_VECTOR_FAILURE);
+          }}
+          focusSelected
+        >
+          {form}
+        </DialogTabs>
+      ) : (
+        <FirstFieldFocus>{form}</FirstFieldFocus>
+      )}
     </ModalDialog>
   );
 }

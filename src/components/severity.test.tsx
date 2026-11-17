@@ -4,7 +4,7 @@ import type { Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
-import { Severity } from "./severity";
+import { Severity, severityName } from "./severity";
 
 // A severity (docs/design-system.md, Severity; Severity Marks), in the light
 // theme. Each test shows it in a cell of a table, whose accessible name
@@ -168,3 +168,20 @@ test("stands on the baseline of the text around it", async () => {
   expect(name.top).toBe(around.top);
   expect(name.bottom).toBe(around.bottom);
 });
+
+test.each([
+  ["critical", "Critical"],
+  ["high", "High"],
+  ["medium", "Medium"],
+  ["low", "Low"],
+  ["none", "None"],
+])("names %s %s without its mark", (value, name) => {
+  expect(severityName(value)).toBe(name);
+});
+
+test.each(["catastrophic", "constructor"])(
+  "names %s, which the pinned contract does not list, as received",
+  (value) => {
+    expect(severityName(value)).toBe(value);
+  },
+);

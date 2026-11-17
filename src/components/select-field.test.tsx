@@ -137,6 +137,50 @@ test("chooses an option from the keyboard", async () => {
     .toBeVisible();
 });
 
+// A form with the select of a type, which no option is chosen in at first.
+function UnchosenForm({
+  onChange,
+}: {
+  onChange: (value: FictionalType) => void;
+}) {
+  const [value, setValue] = useState<FictionalType | null>(null);
+  return (
+    <Form>
+      <SelectField
+        label="Type"
+        name="type"
+        options={TYPES}
+        value={value}
+        onChange={(chosen) => {
+          setValue(chosen);
+          onChange(chosen);
+        }}
+      />
+    </Form>
+  );
+}
+
+test("shows itself empty, with no option marked, before the user chooses one, and then the option chosen", async () => {
+  const onChange = vi.fn<(value: FictionalType) => void>();
+  const screen = await render(<UnchosenForm onChange={onChange} />);
+  await expect.element(selectOf(screen)).toBeVisible();
+  expect(selectOf(screen).element().textContent).toBe("");
+
+  await selectOf(screen).click();
+
+  const options = page.getByRole("listbox", { name: "Type" });
+  await expect.element(options).toBeVisible();
+  for (const option of options.getByRole("option").elements()) {
+    expect(option.getAttribute("aria-selected")).not.toBe("true");
+  }
+  await options.getByRole("option", { name: "Patch" }).click();
+
+  expect(onChange).toHaveBeenCalledExactlyOnceWith("patch");
+  await expect
+    .element(screen.getByRole("button", { name: "Patch Type" }))
+    .toBeVisible();
+});
+
 test("states the error of the form at its name after it, with a 2 px boundary in danger-icon", async () => {
   const screen = await render(
     <TypeForm errors={{ type: "This value isn't valid." }} />,

@@ -18,6 +18,8 @@ import type {
   CVSS20Assessment,
   CVSS30Assessment,
   CVSS40Assessment,
+  CVSSAssessmentItem,
+  CVSSAssessmentResponse,
   CurrentUserResponse,
   IBSRequestStateValue,
   PackageDetail,
@@ -35,6 +37,7 @@ import {
   actorsResponse,
   cvssResponse,
   errorResponse,
+  eventPage,
   FICTIONAL_ACTORS,
   FICTIONAL_USER,
   fictionalDirectoryUser,
@@ -45,6 +48,7 @@ import {
   validationError,
   fictionalAssessment,
   fictionalCvssAssessments,
+  fictionalEvent,
   fictionalPackage,
   fictionalProduct,
   fictionalReleaseRequest,
@@ -83,9 +87,11 @@ const TICKETS = "/api/v1/tickets";
 const TICKET = "/api/v1/tickets/SNTL-12";
 const YOUR_WORK = "/api/v1/my/packages/tickets/SNTL-12";
 const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
+const SUSE_ASSESSMENT = "/api/v1/cves/CVE-2099-0012/cvss/suse";
 const SOURCES = "/api/v1/cves/CVE-2099-0012/sources";
 const REFETCH = "/api/v1/cves/CVE-2099-0012/refetch";
 const ACTORS = "/api/v1/tickets/SNTL-12/actors";
+const EVENTS = "/api/v1/tickets/SNTL-12/audit-log";
 const ACCESS = "/api/v1/tickets/SNTL-12/access";
 const SUBMISSION_REQUESTS = "/api/v1/tickets/SNTL-12/submission-requests";
 const RELEASE_REQUESTS = "/api/v1/tickets/SNTL-12/release-requests";
@@ -184,16 +190,20 @@ interface Stub {
   grant: (body: unknown) => Response | Promise<Response>;
   // The response to Revoke Access, given its path.
   revoke: (path: string) => Response | Promise<Response>;
+  // The response to Set or Update SUSE CVSS Assessment, given its body.
+  upsertSuse: (body: unknown) => Response | Promise<Response>;
+  // The response to Delete SUSE CVSS Assessment, given its path.
+  deleteSuse: (path: string) => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst who maintains no
 // package unless the test says otherwise, Get Ticket, the read of the
 // duplicates, the read of the work of the user, the read of the CVSS
-// assessments, the read of the sources of the CVE, and its refetch, the
-// reads of the participants, by default without any, the reads of the
-// requests of a track, by default without any, the search of the directory,
-// and Grant and Revoke Access, and returns the spy, whose calls name the
-// requests.
+// assessments and the changes of the SUSE assessment, the read of the
+// sources of the CVE, and its refetch, the reads of the participants, by
+// default without any, the reads of the requests of a track, by default
+// without any, the search of the directory, Grant and Revoke Access, and the
+// reads of Audit log, and returns the spy, whose calls name the requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: OTHER_USER,
@@ -209,6 +219,8 @@ function stubTicket(fields: Partial<Stub> = {}) {
     users: () => usersPage([]),
     grant: () => grantResponse(fictionalGrant()),
     revoke: () => new Response(null, { status: 204 }),
+    upsertSuse: () => suseResponse(fictionalSuseAssessment()),
+    deleteSuse: () => new Response(null, { status: 204 }),
     ...fields,
   };
   return stubApi((request) => {
@@ -245,11 +257,23 @@ function stubTicket(fields: Partial<Stub> = {}) {
     if (request.path === USERS) {
       return stub.users(request.query);
     }
+    if (request.path === EVENTS) {
+      return eventPage([fictionalEvent()]);
+    }
     if (request.path.startsWith(`${TICKETS}/`)) {
       return stub.ticket();
     }
     if (request.path === CVSS) {
       return stub.cvss();
+    }
+    if (request.path === SUSE_ASSESSMENT && request.method === "POST") {
+      return stub.upsertSuse(request.body);
+    }
+    if (
+      request.path.startsWith(`${SUSE_ASSESSMENT}/`) &&
+      request.method === "DELETE"
+    ) {
+      return stub.deleteSuse(request.path);
     }
     if (request.path === SOURCES) {
       return stub.sources();
@@ -4456,6 +4480,7 @@ const KEV_UPDATED = "2099-10-07T04:00:00Z";
 // (docs/design-system.md, Tones).
 const MESSAGE_TONES = {
   info: "rgb(221, 244, 255)",
+  success: "rgb(218, 251, 225)",
   warning: "rgb(255, 248, 197)",
   danger: "rgb(255, 235, 233)",
 } as const;
@@ -6857,4 +6882,2444 @@ test("show Revoke access below its user where the dialog is narrow, at 320 CSS p
   expect(name.element().scrollWidth).toBeLessThanOrEqual(
     name.element().clientWidth,
   );
+});
+
+// ----------------------------------------------------------------------------
+// The SUSE assessment
+
+// An analyst who manages the CVSS assessments, who adds, edits, and deletes
+// the SUSE assessment of the CVE of a Ticket.
+const ASSESSOR: CurrentUserResponse = {
+  data: {
+    ...OTHER_USER.data,
+    capabilities: ["triage_ticket", "manage_cvss"],
+  },
+};
+
+// The messages of the failures of a change (docs/behaviors.md, Default
+// Presentation by Status; Missing and Inaccessible Records; Retries and
+// Unconfirmed Changes).
+const MESSAGE_CONFLICT =
+  "This can't be done in the current state, which may have changed. Check it and try again.";
+const MESSAGE_GONE =
+  "This no longer exists, or you no longer have access to it.";
+const MESSAGE_NOT_ACCEPTED = "Sentinel didn't accept this request.";
+const MESSAGE_UNCONFIRMED =
+  "Sentinel didn't confirm this change. It may have taken effect: check before trying again.";
+const MESSAGE_UNAVAILABLE =
+  "Sentinel isn't available right now. Try again later.";
+const MESSAGE_INVALID = "This value isn't valid.";
+
+// What the field of the vector says of itself, which assistive technologies
+// read with it before its error.
+const VECTOR_DESCRIPTION =
+  "The metrics write it, and a vector entered here chooses them.";
+
+// What the tooltip of the default CVSS version says.
+const DEFAULT_VERSION_TEXT =
+  "The default CVSS version: its SUSE assessment also sets the eligibility score of the Products.";
+
+// The SUSE CVSS v3.1 assessment of fictionalSuseAssessment, Medium 5.5, and
+// NVD's of fictionalAssessment, High 8.1.
+const SUSE_V31 = fictionalSuseAssessment();
+const NVD_V31 = fictionalAssessment();
+
+// A CNA's CVSS v3.1 assessment, High 7.5.
+const CNA_V31 = fictionalAssessment({
+  id: "00000000-0000-0000-0000-0000000000d5",
+  provider_name: "Fictional CNA",
+  score: 7.5,
+  severity: "high",
+  vector_string: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+  metrics: {
+    attack_vector: "network",
+    attack_complexity: "low",
+    privileges_required: "none",
+    user_interaction: "none",
+    scope: "unchanged",
+    confidentiality_impact: "none",
+    integrity_impact: "none",
+    availability_impact: "high",
+  },
+});
+
+// The SUSE CVSS v4.0 assessment, Medium 6.9.
+const SUSE_V40: CVSS40Assessment = {
+  ...NVD_V40,
+  id: "00000000-0000-0000-0000-0000000000d6",
+  provider_name: "SUSE",
+  score: 6.9,
+  severity: "medium",
+  vector_string:
+    "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+  metrics: {
+    attack_vector: "local",
+    attack_complexity: "low",
+    attack_requirements: "none",
+    privileges_required: "low",
+    user_interaction: "none",
+    vulnerable_system_confidentiality: "high",
+    vulnerable_system_integrity: "none",
+    vulnerable_system_availability: "none",
+    subsequent_system_confidentiality: "none",
+    subsequent_system_integrity: "none",
+    subsequent_system_availability: "none",
+  },
+  created_at: "2099-10-09T15:00:00Z",
+  updated_at: "2099-10-09T15:00:00Z",
+};
+
+// SUSE assessments of the versions that the screen shows read-only, v3.0
+// and v2.0.
+const SUSE_V30: CVSS30Assessment = {
+  ...fictionalSuseAssessment(),
+  id: "00000000-0000-0000-0000-0000000000d7",
+  cvss_version: "3.0",
+  vector_string: "CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+};
+const SUSE_V20: CVSS20Assessment = {
+  ...CNA_V20,
+  id: "00000000-0000-0000-0000-0000000000d8",
+  provider_name: "SUSE",
+};
+
+// The vectors that the user enters, of v3.1, High 7.5, and of v4.0.
+const VECTOR_V31 = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H";
+const VECTOR_V40 =
+  "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N";
+
+// The SUSE CVSS v3.1 assessment that Set or Update SUSE CVSS Assessment
+// returns for VECTOR_V31.
+const SAVED_V31 = fictionalAssessment({
+  ...CNA_V31,
+  id: SUSE_V31.id,
+  provider_name: "SUSE",
+  created_at: "2099-10-12T08:00:00Z",
+  updated_at: "2099-10-12T08:00:00Z",
+});
+
+// The metrics of each version, as their controls are named, in their order.
+const METRICS_V31 = [
+  "Attack vector",
+  "Attack complexity",
+  "Privileges required",
+  "User interaction",
+  "Scope",
+  "Confidentiality",
+  "Integrity",
+  "Availability",
+] as const;
+const METRICS_V40 = [
+  "Attack vector",
+  "Attack complexity",
+  "Attack requirements",
+  "Privileges required",
+  "User interaction",
+  "Confidentiality Vulnerable system",
+  "Integrity Vulnerable system",
+  "Availability Vulnerable system",
+  "Confidentiality Subsequent system",
+  "Integrity Subsequent system",
+  "Availability Subsequent system",
+] as const;
+
+// The consequence of Delete, with what it adds for the last SUSE assessment
+// of an Analyzed or Resolved Ticket.
+const DELETE_CONSEQUENCE =
+  "Sentinel calculates the severity of the CVE and the eligibility of the Products again from the other assessments, which can change the priority and the deadlines of the Ticket.";
+const RETURNS_TO_ANALYSIS =
+  " As the last SUSE assessment of the CVE, it also returns the Ticket to Analysis.";
+
+// The CVSS assessments of CVE-2099-0012, in the order of the API, by version,
+// then by provider, with the default CVSS version.
+function assessmentsWith(
+  assessments: CVSSAssessmentItem[],
+  defaultVersion: CVECVSSAssessments["default_cvss_version"] = "3.1",
+): CVECVSSAssessments {
+  return fictionalCvssAssessments({
+    assessments,
+    default_cvss_version: defaultVersion,
+  });
+}
+
+// The response of Set or Update SUSE CVSS Assessment: 201 for an assessment
+// that it created, 200 for one that it updated.
+function suseResponse(
+  assessment: CVSSAssessmentItem,
+  status: 200 | 201 = 200,
+): Response {
+  const body: CVSSAssessmentResponse = { data: assessment };
+  return jsonResponse(status, body);
+}
+
+// Answers as stubTicket does, for an analyst who manages the CVSS
+// assessments unless the test says otherwise, and answers the read of the
+// CVSS assessments with what read returns at the time.
+function stubSuse(read: () => object, fields: Partial<Stub> = {}) {
+  return stubTicket({
+    user: ASSESSOR,
+    cvss: () => jsonResponse(200, { data: read() }),
+    ...fields,
+  });
+}
+
+// Get Ticket's response with SNTL-12 in the status.
+function ticketIn(status: string) {
+  return () =>
+    jsonResponse(200, { data: { ...fictionalTicketDetail(), status } });
+}
+
+// Renders the screen of SNTL-12 and waits until it shows the table of the
+// CVSS assessments.
+async function renderSuse(path = "/tickets/SNTL-12") {
+  const rendered = await renderApp(path);
+  await expect
+    .element(
+      cvssPart(rendered.screen).getByRole("grid", {
+        name: "CVSS assessments",
+      }),
+    )
+    .toBeVisible();
+  return rendered;
+}
+
+function screenHeading(screen: Screen) {
+  return screen.getByRole("heading", {
+    level: 1,
+    name: "SNTL-12",
+    exact: true,
+  });
+}
+
+function addSuse(screen: Screen) {
+  return cvssPart(screen).getByRole("button", {
+    name: "Add SUSE assessment",
+    exact: true,
+  });
+}
+
+function editSuse(screen: Screen, version = "3.1") {
+  return cvssPart(screen).getByRole("button", {
+    name: `Edit SUSE assessment v${version}`,
+    exact: true,
+  });
+}
+
+function deleteSuse(screen: Screen, version = "3.1") {
+  return cvssPart(screen).getByRole("button", {
+    name: `Delete SUSE assessment v${version}`,
+    exact: true,
+  });
+}
+
+// The buttons of the table that change the SUSE assessment.
+function rowActions(screen: Screen): (string | null)[] {
+  return cvssPart(screen)
+    .getByRole("grid", { name: "CVSS assessments" })
+    .getByRole("button", { name: /^(Edit|Delete) SUSE assessment/ })
+    .elements()
+    .map((button) => button.getAttribute("aria-label"));
+}
+
+// The row of an assessment, which its provider and its version name.
+function assessmentRow(screen: Screen, provider: string, version: string) {
+  return cvssPart(screen).getByRole("row", {
+    name: `${provider} v${version}`,
+    exact: true,
+  });
+}
+
+function suseDialog(screen: Screen, name = "Add SUSE assessment") {
+  return screen.getByRole("dialog", { name, exact: true });
+}
+
+// The name of the tab of a version that is the default one: its label and
+// the name of its mark, before which the name that assistive technologies
+// compute has a space, as the mark is not inline.
+function markedName(version: string): RegExp {
+  return new RegExp(
+    `^CVSS v${version.replace(".", "\\.")} ?, the default version$`,
+  );
+}
+
+// The tab of a version, whether it is the default one or not.
+function versionTab(dialog: Locator, version: string) {
+  return dialog.getByRole("tab", {
+    name: new RegExp(
+      `^CVSS v${version.replace(".", "\\.")}( ?, the default version)?$`,
+    ),
+  });
+}
+
+function vectorOf(dialog: Locator) {
+  return dialog.getByRole("textbox", { name: "Vector", exact: true });
+}
+
+// The select of Start from, named by the option that it shows and its label.
+function startFromOf(dialog: Locator) {
+  return dialog.getByRole("button", { name: /Start from$/ });
+}
+
+function submitOf(dialog: Locator, label = "Add SUSE assessment") {
+  return dialog.getByRole("button", { name: label, exact: true });
+}
+
+function metricOf(dialog: Locator, name: string) {
+  return dialog.getByRole("radiogroup", { name, exact: true });
+}
+
+function segmentOf(dialog: Locator, metric: string, value: string) {
+  return metricOf(dialog, metric).getByRole("radio", {
+    name: value,
+    exact: true,
+  });
+}
+
+// The value chosen of each metric, or null for a metric without a choice.
+function choicesOf(dialog: Locator, metrics: readonly string[]) {
+  return metrics.map(
+    (name) =>
+      metricOf(dialog, name).getByRole("radio", { checked: true }).query()
+        ?.textContent ?? null,
+  );
+}
+
+// Opens Add SUSE assessment and waits until it shows the tab that it opens
+// on.
+async function openSuseAdd(screen: Screen) {
+  await addSuse(screen).click();
+  const dialog = suseDialog(screen);
+  await expect
+    .element(dialog.getByRole("tab", { selected: true }))
+    .toBeVisible();
+  return dialog;
+}
+
+// Opens Edit of the SUSE assessment of the version and waits until its first
+// field, Start from, has the focus.
+async function openSuseEdit(screen: Screen, version = "3.1") {
+  await editSuse(screen, version).click();
+  const dialog = suseDialog(screen, `Edit SUSE assessment v${version}`);
+  await expect.element(startFromOf(dialog)).toHaveFocus();
+  return dialog;
+}
+
+// Opens the options of Start from, and returns them.
+async function openStartFrom(dialog: Locator) {
+  await startFromOf(dialog).click();
+  const options = page.getByRole("listbox", { name: "Start from" });
+  await expect.element(options).toBeVisible();
+  return options;
+}
+
+function deleteConfirmation(screen: Screen, version = "3.1") {
+  return screen.getByRole("dialog", {
+    name: `Delete SUSE assessment v${version}?`,
+    exact: true,
+  });
+}
+
+// Opens the confirmation of Delete of the SUSE assessment of the version and
+// confirms it.
+async function confirmDelete(screen: Screen, version = "3.1") {
+  await deleteSuse(screen, version).click();
+  const confirmation = deleteConfirmation(screen, version);
+  await expect
+    .element(confirmation.getByRole("button", { name: "Cancel" }))
+    .toHaveFocus();
+  await confirmation
+    .getByRole("button", { name: "Delete SUSE assessment", exact: true })
+    .click();
+  return confirmation;
+}
+
+// What the status regions of the CVSS assessments say, other than nothing.
+function cvssAnnouncements(screen: Screen): string[] {
+  return cvssPart(screen)
+    .getByRole("status")
+    .elements()
+    .map((region) => region.textContent ?? "")
+    .filter((text) => text !== "");
+}
+
+// The requests of the CVSS assessments and of the changes of the SUSE
+// assessment, in their order, each as its method and its path.
+function assessmentRequests(spy: ReturnType<typeof stubApi>): string[] {
+  return spy.mock.calls
+    .map(([input, init]) => ({
+      method: init?.method ?? "GET",
+      path: urlOf(input).pathname,
+    }))
+    .filter(({ path }) => path.startsWith(CVSS))
+    .map(({ method, path }) => `${method} ${path}`);
+}
+
+// Whether every read of the path that the query client holds for a screen
+// that no longer shows it, such as a screen that the user left, is to be
+// read again, which that screen does once it shows again.
+function leftInvalidated(path: string): boolean {
+  const queries = client
+    .getQueryCache()
+    .findAll({ queryKey: [path], type: "inactive" });
+  return (
+    queries.length > 0 && queries.every((query) => query.state.isInvalidated)
+  );
+}
+
+// Waits until the error at the top of a dialog holds the focus, which it
+// takes once it has shown, in a render after the response.
+async function expectFocusOnError(error: Locator) {
+  await expect
+    .poll(() =>
+      error.element().closest("[tabindex]")?.contains(document.activeElement),
+    )
+    .toBe(true);
+}
+
+// Waits until the browser has rendered more frames than the part waits at
+// most for a row to leave the table before it moves the focus, after which
+// the focus has settled.
+async function frames() {
+  for (let frame = 0; frame < 15; frame += 1) {
+    await new Promise((resolve) => {
+      requestAnimationFrame(resolve);
+    });
+  }
+}
+
+// Waits until the element has the focus, and checks that it keeps it once the
+// table has settled, as React Aria's table moves the focus itself.
+async function expectFocusSettledOn(locator: Locator) {
+  await expect.element(locator).toHaveFocus();
+  await frames();
+  expect(document.activeElement).toBe(locator.element());
+}
+
+// Gives a control of a row the focus as a press of the pointer does, so that
+// React Aria's table records the cell that holds it.
+async function focusInRow(screen: Screen, control: Locator) {
+  await screenHeading(screen).click();
+  control.element().focus();
+  await expect.element(control).toHaveFocus();
+}
+
+type Router = Awaited<ReturnType<typeof renderApp>>["router"];
+
+// Leaves for Ticket list, while the change is in progress.
+async function leaveForTickets(router: Router, screen: Screen) {
+  await router.navigate({ to: "/tickets" });
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+    .toBeVisible();
+}
+
+// Opens Edit of the SUSE assessment of v3.1 and saves VECTOR_V31.
+async function editToV31(screen: Screen) {
+  const dialog = await openSuseEdit(screen);
+  await vectorOf(dialog).fill(VECTOR_V31);
+  await submitOf(dialog, "Save").click();
+}
+
+// Deletes an assessment among others, and waits until the read after it
+// has taken its row away from the table and its outcome is announced.
+async function deleteSuseAmong(before: CVSSAssessmentItem[], version: string) {
+  let assessments = assessmentsWith(before);
+  stubSuse(() => assessments, {
+    deleteSuse: () => {
+      assessments = assessmentsWith(
+        before.filter(
+          (item) =>
+            item.provider_name !== "SUSE" || item.cvss_version !== version,
+        ),
+      );
+      return new Response(null, { status: 204 });
+    },
+  });
+  const { screen } = await renderSuse();
+
+  await confirmDelete(screen, version);
+
+  await expect
+    .element(assessmentRow(screen, "SUSE", version))
+    .not.toBeInTheDocument();
+  await expect
+    .poll(() => cvssAnnouncements(screen))
+    .toEqual([`SUSE assessment v${version} deleted.`]);
+  return { screen };
+}
+
+describe("the SUSE assessment", () => {
+  describe("its actions", () => {
+    test("offer Edit and Delete at the end of the rows of the SUSE assessments of v3.1 and v4.0 alone, named after their version, and no Add SUSE assessment while SUSE has both", async () => {
+      stubSuse(() =>
+        assessmentsWith([
+          NVD_V40,
+          SUSE_V40,
+          NVD_V31,
+          SUSE_V31,
+          SUSE_V30,
+          SUSE_V20,
+        ]),
+      );
+      const { screen } = await renderSuse();
+
+      expect(rowActions(screen)).toEqual([
+        "Edit SUSE assessment v4.0",
+        "Delete SUSE assessment v4.0",
+        "Edit SUSE assessment v3.1",
+        "Delete SUSE assessment v3.1",
+      ]);
+      for (const [provider, version] of [
+        ["NVD", "4.0"],
+        ["NVD", "3.1"],
+        ["SUSE", "3.0"],
+        ["SUSE", "2.0"],
+      ] as const) {
+        expect(
+          assessmentRow(screen, provider, version)
+            .getByRole("button", { name: /SUSE assessment/ })
+            .elements(),
+        ).toEqual([]);
+      }
+      expect(addSuse(screen).query()).toBeNull();
+    });
+
+    test.each([
+      ["no SUSE assessment", [NVD_V40, NVD_V31]],
+      ["a SUSE assessment of v3.1 alone", [NVD_V31, SUSE_V31]],
+      ["a SUSE assessment of v4.0 alone", [SUSE_V40, NVD_V31]],
+      [
+        "SUSE assessments of the versions that it shows read-only",
+        [NVD_V31, SUSE_V30, SUSE_V20],
+      ],
+    ])(
+      "offer Add SUSE assessment at the end of the line of the heading with %s",
+      async (_, assessments) => {
+        stubSuse(() => assessmentsWith(assessments));
+        const { screen } = await renderSuse();
+
+        await expect.element(addSuse(screen)).toBeVisible();
+        const heading = cvssPart(screen)
+          .getByRole("heading", { level: 2, name: "CVSS assessments" })
+          .element()
+          .getBoundingClientRect();
+        const add = addSuse(screen).element().getBoundingClientRect();
+        expect(add.left).toBeGreaterThan(heading.right);
+        expect(add.top).toBeLessThan(heading.bottom);
+      },
+    );
+
+    test.each(["new", "analysis", "analyzed", "resolved"])(
+      "are offered on a Ticket in %s",
+      async (status) => {
+        stubSuse(() => fictionalCvssAssessments(), {
+          ticket: ticketIn(status),
+        });
+        const { screen } = await renderSuse();
+
+        await expect.element(addSuse(screen)).toBeVisible();
+        expect(rowActions(screen)).toEqual([
+          "Edit SUSE assessment v3.1",
+          "Delete SUSE assessment v3.1",
+        ]);
+      },
+    );
+
+    test.each<[string, CurrentUserResponse, () => Response]>([
+      [
+        "to a user who does not manage the CVSS assessments",
+        OTHER_USER,
+        ticketIn("analyzed"),
+      ],
+      ["on an Ignored Ticket", ASSESSOR, ticketIn("ignored")],
+      [
+        "on a Duplicated Ticket",
+        ASSESSOR,
+        () =>
+          ticketResponse(
+            fictionalTicketDetail({
+              status: "duplicated",
+              duplicate_of_ticket_id: "SNTL-1",
+            }),
+          ),
+      ],
+      [
+        "on a Ticket in a status that the pinned contract does not list",
+        ASSESSOR,
+        ticketIn("fictional_status"),
+      ],
+    ])(
+      "are not offered %s, nor the column of the actions",
+      async (_, user, ticket) => {
+        stubSuse(() => assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]), {
+          user,
+          ticket,
+        });
+        const { screen } = await renderSuse();
+
+        expect(
+          cvssPart(screen)
+            .getByRole("columnheader")
+            .elements()
+            .map((header) => header.textContent),
+        ).toEqual(["Provider", "Version", "Base score", "Vector"]);
+        expect(rowActions(screen)).toEqual([]);
+        expect(addSuse(screen).query()).toBeNull();
+      },
+    );
+
+    test.each([
+      ["Edit", editSuse],
+      ["Delete", deleteSuse],
+    ] as const)(
+      "show %s alone in the tooltip of the action",
+      async (action, buttonOf) => {
+        stubSuse(() => fictionalCvssAssessments());
+        const { screen } = await renderSuse();
+        // React Aria shows a tooltip on hover only once the user works with
+        // a pointer, as a click shows.
+        await screenHeading(screen).click();
+
+        await userEvent.hover(buttonOf(screen));
+
+        const tooltip = page.getByRole("tooltip");
+        await expect.element(tooltip).toBeVisible();
+        expect(tooltip.element().textContent).toBe(action);
+      },
+    );
+
+    test("offer Add SUSE assessment only once the read of the assessments has arrived", async () => {
+      const response = later();
+      stubSuse(() => fictionalCvssAssessments(), {
+        cvss: () => response.promise,
+      });
+      const { screen } = await renderTree();
+      await expect
+        .element(cvssPart(screen).getByRole("progressbar", { name: "Loading" }))
+        .toBeVisible();
+      expect(addSuse(screen).query()).toBeNull();
+
+      response.resolve(cvssResponse());
+
+      await expect.element(addSuse(screen)).toBeVisible();
+    });
+
+    test("offer no Add SUSE assessment after the read of the assessments failed", async () => {
+      stubSuse(() => fictionalCvssAssessments(), {
+        cvss: () => errorResponse(404, "CVE_NOT_FOUND"),
+      });
+      const { screen } = await renderTree();
+
+      await expect
+        .element(cvssPart(screen).getByText(MESSAGE_GONE))
+        .toBeVisible();
+      expect(addSuse(screen).query()).toBeNull();
+    });
+  });
+
+  describe("Add SUSE assessment", () => {
+    test("opens a dialog of two columns, 880 px wide, with the tabs of the versions, the default one marked and described, then Cancel and Add SUSE assessment", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+
+      const dialog = await openSuseAdd(screen);
+
+      expect(dialog.element().getBoundingClientRect().width).toBe(880);
+      await expect
+        .element(dialog.getByRole("tablist", { name: "CVSS version" }))
+        .toBeVisible();
+      const marked = dialog.getByRole("tab", { name: markedName("3.1") });
+      await expect
+        .element(marked)
+        .toHaveAccessibleDescription(DEFAULT_VERSION_TEXT);
+      const other = dialog.getByRole("tab", {
+        name: "CVSS v4.0",
+        exact: true,
+      });
+      await expect.element(other).not.toHaveAccessibleDescription();
+      expect(dialog.getByRole("tab").elements()).toEqual([
+        marked.element(),
+        other.element(),
+      ]);
+      expect(
+        dialog
+          .getByRole("button")
+          .elements()
+          .slice(-2)
+          .map((button) => button.textContent),
+      ).toEqual(["Cancel", "Add SUSE assessment"]);
+    });
+
+    test.each<
+      [
+        string,
+        CVSSAssessmentItem[],
+        CVECVSSAssessments["default_cvss_version"],
+        string,
+      ]
+    >([
+      [
+        "the default version v3.1, which SUSE lacks",
+        [NVD_V40, NVD_V31],
+        "3.1",
+        "3.1",
+      ],
+      [
+        "the default version v4.0, which SUSE lacks",
+        [NVD_V40, NVD_V31],
+        "4.0",
+        "4.0",
+      ],
+      [
+        "v4.0 when SUSE has the default version v3.1",
+        [NVD_V31, SUSE_V31],
+        "3.1",
+        "4.0",
+      ],
+      [
+        "v3.1 when SUSE has the default version v4.0",
+        [SUSE_V40, NVD_V31],
+        "4.0",
+        "3.1",
+      ],
+    ])("opens on %s", async (_, assessments, defaultVersion, opened) => {
+      stubSuse(() => assessmentsWith(assessments, defaultVersion));
+      const { screen } = await renderSuse();
+
+      await addSuse(screen).click();
+
+      const dialog = suseDialog(screen);
+      await expect
+        .element(versionTab(dialog, opened))
+        .toHaveAttribute("aria-selected", "true");
+      await expect
+        .element(dialog.getByRole("tab", { name: markedName(defaultVersion) }))
+        .toBeVisible();
+      await expect.element(vectorOf(dialog)).toHaveValue("");
+    });
+
+    test.each([
+      ["the pointer", "click"],
+      ["the keyboard", "keyboard"],
+    ] as const)(
+      "gives the focus to the tab that it opens on, opened with %s",
+      async (_, way) => {
+        stubSuse(() => fictionalCvssAssessments());
+        const { screen } = await renderSuse();
+
+        if (way === "click") {
+          await addSuse(screen).click();
+        } else {
+          await press(addSuse(screen));
+        }
+
+        const dialog = suseDialog(screen);
+        await expect.element(dialog).toBeVisible();
+        await expect.element(versionTab(dialog, "4.0")).toHaveFocus();
+      },
+    );
+
+    test("marks no tab when the default version is one that the pinned contract does not list", async () => {
+      stubSuse(() => ({
+        ...assessmentsWith([NVD_V31]),
+        default_cvss_version: "5.0",
+      }));
+      const { screen } = await renderSuse();
+
+      const dialog = await openSuseAdd(screen);
+
+      for (const name of ["CVSS v3.1", "CVSS v4.0"]) {
+        const tab = dialog.getByRole("tab", { name, exact: true });
+        await expect.element(tab).toBeVisible();
+        await expect.element(tab).not.toHaveAccessibleDescription();
+      }
+      await expect
+        .element(dialog.getByRole("tab", { name: "CVSS v3.1", exact: true }))
+        .toHaveAttribute("aria-selected", "true");
+    });
+
+    test("says in the tab of a version that SUSE has that Edit in its row changes it, with Add SUSE assessment disabled", async () => {
+      stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect
+        .element(versionTab(dialog, "4.0"))
+        .toHaveAttribute("aria-selected", "true");
+
+      await versionTab(dialog, "3.1").click();
+
+      await expect
+        .element(
+          dialog.getByText(
+            "SUSE already has a CVSS v3.1 assessment: Edit in its row of the table changes it.",
+          ),
+        )
+        .toBeVisible();
+      expect(vectorOf(dialog).query()).toBeNull();
+      await expect.element(submitOf(dialog)).toBeDisabled();
+
+      await versionTab(dialog, "4.0").click();
+
+      await expect.element(vectorOf(dialog)).toBeVisible();
+      await expect.element(submitOf(dialog)).toBeEnabled();
+    });
+
+    test("keeps the input of each tab while the user moves between them", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await vectorOf(dialog).fill(VECTOR_V31);
+      await versionTab(dialog, "4.0").click();
+      await expect.element(vectorOf(dialog)).toHaveValue("");
+      await segmentOf(dialog, "Attack requirements", "Present").click();
+      await expect.element(vectorOf(dialog)).toHaveValue("CVSS:4.0/AT:P");
+
+      await versionTab(dialog, "3.1").click();
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+      await expect
+        .element(segmentOf(dialog, "Availability", "High"))
+        .toBeChecked();
+
+      await versionTab(dialog, "4.0").click();
+      await expect.element(vectorOf(dialog)).toHaveValue("CVSS:4.0/AT:P");
+      await expect
+        .element(segmentOf(dialog, "Attack requirements", "Present"))
+        .toBeChecked();
+    });
+
+    test("reads the assessments again, then adds the vector without its surrounding whitespace with Set or Update SUSE CVSS Assessment, closes, returns the focus to Add SUSE assessment, and announces it once the assessments are read again", async () => {
+      let assessments = assessmentsWith([NVD_V40, NVD_V31]);
+      const bodies: unknown[] = [];
+      const spy = stubSuse(() => assessments, {
+        upsertSuse: (body) => {
+          bodies.push(body);
+          assessments = assessmentsWith([NVD_V40, NVD_V31, SAVED_V31]);
+          return suseResponse(SAVED_V31, 201);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      const before = assessmentRequests(spy).length;
+
+      await vectorOf(dialog).fill(`  ${VECTOR_V31}  `);
+      await submitOf(dialog).click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
+      await expect
+        .poll(() => cvssAnnouncements(screen))
+        .toEqual(["SUSE assessment v3.1 added."]);
+      expect(assessmentRequests(spy).slice(before)).toEqual([
+        `GET ${CVSS}`,
+        `POST ${SUSE_ASSESSMENT}`,
+        `GET ${CVSS}`,
+      ]);
+      await expect.element(assessmentRow(screen, "SUSE", "3.1")).toBeVisible();
+      await expectFocusSettledOn(addSuse(screen));
+    });
+
+    test("says at the vector that SUSE has the version, without adding it, when the read before the change shows that SUSE has it", async () => {
+      let assessments = assessmentsWith([NVD_V40, NVD_V31]);
+      const spy = stubSuse(() => assessments);
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      // Meanwhile another analyst added it.
+      assessments = assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]);
+      const reads = readsOf(spy, CVSS);
+
+      await press(submitOf(dialog));
+
+      const field = vectorOf(dialog);
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(
+          `${VECTOR_DESCRIPTION} SUSE already has a CVSS v3.1 assessment: edit it in its row.`,
+        );
+      await expect.element(field).toBeInvalid();
+      await expect.element(field).toHaveFocus();
+      expect(readsOf(spy, CVSS)).toBe(reads + 1);
+      expect(requestsWith(spy, "POST")).toHaveLength(0);
+      await expect.element(field).toHaveValue(VECTOR_V31);
+    });
+
+    test("shows the failure of the read before the change at the top of the form, which takes the focus and keeps the input, without adding it", async () => {
+      let fails = false;
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        cvss: () =>
+          fails
+            ? errorResponse(503, "SERVICE_UNAVAILABLE")
+            : cvssResponse(assessmentsWith([NVD_V40, NVD_V31])),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      fails = true;
+
+      await submitOf(dialog).click();
+
+      const error = dialog.getByText(MESSAGE_UNAVAILABLE);
+      await expect.element(error).toBeVisible();
+      expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES.danger);
+      await expect.element(dialog.getByText(REFERENCE)).toBeVisible();
+      await expectFocusOnError(error);
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+      await expect.element(vectorOf(dialog)).not.toBeInvalid();
+      expect(requestsWith(spy, "POST")).toHaveLength(0);
+    });
+
+    test("is busy from the read before the change until Sentinel answers the change, sends one change, and cannot be closed meanwhile", async () => {
+      const reread = later();
+      const response = later();
+      let submitted = false;
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        cvss: () =>
+          submitted
+            ? reread.promise
+            : cvssResponse(assessmentsWith([NVD_V40, NVD_V31])),
+        upsertSuse: () => response.promise,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      submitted = true;
+
+      await userEvent.keyboard("{Enter}");
+
+      const button = submitOf(dialog);
+      await expect.element(button).toHaveAttribute("aria-disabled", "true");
+      await expect
+        .element(dialog.getByRole("button", { name: "Cancel" }))
+        .toBeDisabled();
+      await userEvent.keyboard("{Enter}");
+      await userEvent.keyboard("{Escape}");
+      await expect.poll(() => readsOf(spy, CVSS)).toBe(2);
+      expect(requestsWith(spy, "POST")).toHaveLength(0);
+      reread.resolve(cvssResponse(assessmentsWith([NVD_V40, NVD_V31])));
+      await expect.poll(() => requestsWith(spy, "POST")).toHaveLength(1);
+      await userEvent.keyboard("{Enter}");
+      await userEvent.keyboard("{Escape}");
+      await expect.element(button).toHaveAttribute("aria-disabled", "true");
+      await expect.element(dialog).toBeVisible();
+      expect(
+        screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+      ).toBeNull();
+
+      response.resolve(suseResponse(SAVED_V31, 201));
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(requestsWith(spy, "POST")).toHaveLength(1);
+    });
+  });
+
+  describe("Start from", () => {
+    test("is empty as Add SUSE assessment opens, and offers the assessments of the other providers of the version alone, by provider, score, and severity", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, CNA_V31, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      expect(startFromOf(dialog).element().textContent).toBe("");
+
+      const options = await openStartFrom(dialog);
+
+      expect(
+        options
+          .getByRole("option")
+          .elements()
+          .map((option) => option.textContent),
+      ).toEqual(["Fictional CNA, 7.5 High", "NVD, 8.1 High"]);
+      for (const option of options.getByRole("option").elements()) {
+        expect(option.getAttribute("aria-selected")).not.toBe("true");
+      }
+    });
+
+    test("fills the vector of the assessment chosen, which chooses its metrics", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, CNA_V31, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      const options = await openStartFrom(dialog);
+
+      await options
+        .getByRole("option", { name: "NVD, 8.1 High", exact: true })
+        .click();
+
+      await expect.element(vectorOf(dialog)).toHaveValue(NVD_V31_VECTOR);
+      expect(startFromOf(dialog).element().textContent).toBe("NVD, 8.1 High");
+      expect(choicesOf(dialog, METRICS_V31)).toEqual([
+        "Network",
+        "High",
+        "None",
+        "None",
+        "Unchanged",
+        "High",
+        "High",
+        "High",
+      ]);
+    });
+
+    test("is not offered without an assessment of another provider of the version", async () => {
+      stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+
+      const dialog = await openSuseAdd(screen);
+
+      await expect.element(vectorOf(dialog)).toBeVisible();
+      expect(startFromOf(dialog).query()).toBeNull();
+    });
+
+    test("starts in Edit at the assessment as saved, and offers it before the assessments of the other providers", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      expect(startFromOf(dialog).element().textContent).toBe(
+        "SUSE, as saved, 5.5 Medium",
+      );
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue(SUSE_V31.vector_string);
+
+      const options = await openStartFrom(dialog);
+      expect(
+        options
+          .getByRole("option")
+          .elements()
+          .map((option) => option.textContent),
+      ).toEqual(["SUSE, as saved, 5.5 Medium", "NVD, 8.1 High"]);
+      await options
+        .getByRole("option", { name: "NVD, 8.1 High", exact: true })
+        .click();
+      await expect.element(vectorOf(dialog)).toHaveValue(NVD_V31_VECTOR);
+
+      await (
+        await openStartFrom(dialog)
+      )
+        .getByRole("option", {
+          name: "SUSE, as saved, 5.5 Medium",
+          exact: true,
+        })
+        .click();
+
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue(SUSE_V31.vector_string);
+    });
+  });
+
+  describe("the metrics", () => {
+    test.each<
+      [
+        string,
+        CVECVSSAssessments["default_cvss_version"],
+        string[],
+        [string, string[]][],
+      ]
+    >([
+      [
+        "v3.1",
+        "3.1",
+        ["Exploitability", "Scope", "Impact"],
+        [
+          ["Attack vector", ["Network", "Adjacent", "Local", "Physical"]],
+          ["Attack complexity", ["Low", "High"]],
+          ["Privileges required", ["None", "Low", "High"]],
+          ["User interaction", ["None", "Required"]],
+          ["Scope", ["Unchanged", "Changed"]],
+          ["Confidentiality", ["None", "Low", "High"]],
+          ["Integrity", ["None", "Low", "High"]],
+          ["Availability", ["None", "Low", "High"]],
+        ],
+      ],
+      [
+        "v4.0",
+        "4.0",
+        ["Exploitability", "Vulnerable system", "Subsequent system"],
+        [
+          ["Attack vector", ["Network", "Adjacent", "Local", "Physical"]],
+          ["Attack complexity", ["Low", "High"]],
+          ["Attack requirements", ["None", "Present"]],
+          ["Privileges required", ["None", "Low", "High"]],
+          ["User interaction", ["None", "Passive", "Active"]],
+          ["Confidentiality Vulnerable system", ["High", "Low", "None"]],
+          ["Integrity Vulnerable system", ["High", "Low", "None"]],
+          ["Availability Vulnerable system", ["High", "Low", "None"]],
+          ["Confidentiality Subsequent system", ["High", "Low", "None"]],
+          ["Integrity Subsequent system", ["High", "Low", "None"]],
+          ["Availability Subsequent system", ["High", "Low", "None"]],
+        ],
+      ],
+    ])(
+      "of %s show in the groups of the version, each metric a segmented control of its values, none chosen as Add opens, a name that repeats named with its group",
+      async (_, version, groups, metrics) => {
+        stubSuse(() => assessmentsWith([NVD_V40, NVD_V31], version));
+        const { screen } = await renderSuse();
+
+        const dialog = await openSuseAdd(screen);
+
+        expect(
+          dialog
+            .getByRole("heading", { level: 3 })
+            .elements()
+            .map((heading) => heading.textContent),
+        ).toEqual(groups);
+        expect(dialog.getByRole("radiogroup").elements()).toEqual(
+          metrics.map(([name]) => metricOf(dialog, name).element()),
+        );
+        for (const [name, values] of metrics) {
+          expect(
+            metricOf(dialog, name)
+              .getByRole("radio")
+              .elements()
+              .map((radio) => radio.textContent),
+          ).toEqual(values);
+        }
+        expect(dialog.getByRole("radio", { checked: true }).elements()).toEqual(
+          [],
+        );
+      },
+    );
+
+    test("write the vector of the metrics chosen, in the order of FIRST, as the user chooses them", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await segmentOf(dialog, "Availability", "High").click();
+      await expect.element(vectorOf(dialog)).toHaveValue("CVSS:3.1/A:H");
+      await segmentOf(dialog, "Attack vector", "Network").click();
+      await expect.element(vectorOf(dialog)).toHaveValue("CVSS:3.1/AV:N/A:H");
+      await segmentOf(dialog, "Scope", "Changed").click();
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue("CVSS:3.1/AV:N/S:C/A:H");
+
+      await segmentOf(dialog, "Attack vector", "Local").click();
+
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue("CVSS:3.1/AV:L/S:C/A:H");
+      expect(choicesOf(dialog, METRICS_V31)).toEqual([
+        "Local",
+        null,
+        null,
+        null,
+        "Changed",
+        null,
+        null,
+        "High",
+      ]);
+    });
+
+    test("write the metric of the group chosen in v4.0, whose names repeat", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31], "4.0"));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await segmentOf(
+        dialog,
+        "Confidentiality Subsequent system",
+        "High",
+      ).click();
+      await expect.element(vectorOf(dialog)).toHaveValue("CVSS:4.0/SC:H");
+      await segmentOf(
+        dialog,
+        "Confidentiality Vulnerable system",
+        "Low",
+      ).click();
+
+      await expect.element(vectorOf(dialog)).toHaveValue("CVSS:4.0/VC:L/SC:H");
+    });
+
+    test("are chosen by a vector that the user enters, and by nothing of another version", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await vectorOf(dialog).fill(
+        "CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:C/C:L/I:N/A:H",
+      );
+
+      await expect
+        .poll(() => choicesOf(dialog, METRICS_V31))
+        .toEqual([
+          "Local",
+          "High",
+          "High",
+          "Required",
+          "Changed",
+          "Low",
+          "None",
+          "High",
+        ]);
+
+      await vectorOf(dialog).fill("CVSS:3.1/AV:P/AC:L");
+      await expect
+        .poll(() => choicesOf(dialog, METRICS_V31))
+        .toEqual(["Physical", "Low", null, null, null, null, null, null]);
+      // A choice then adds to what the vector chose.
+      await segmentOf(dialog, "Integrity", "Low").click();
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue("CVSS:3.1/AV:P/AC:L/I:L");
+
+      await vectorOf(dialog).fill(VECTOR_V40);
+      await expect
+        .poll(() => dialog.getByRole("radio", { checked: true }).elements())
+        .toEqual([]);
+    });
+
+    test("show below a metric whose choice differs from another provider's assessment of the version that provider's value, which describes its control, and nothing below one that matches", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, CNA_V31, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect.element(metricOf(dialog, "Attack vector")).toBeVisible();
+      expect(dialog.getByText(/^(NVD|Fictional CNA): /).elements()).toEqual([]);
+
+      await vectorOf(dialog).fill(
+        "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      );
+
+      await expect
+        .element(metricOf(dialog, "Attack vector"))
+        .toHaveAccessibleDescription("Fictional CNA: Network · NVD: Network");
+      await expect
+        .element(metricOf(dialog, "Attack complexity"))
+        .toHaveAccessibleDescription("NVD: High");
+      await expect
+        .element(metricOf(dialog, "Confidentiality"))
+        .toHaveAccessibleDescription("Fictional CNA: None");
+      for (const name of [
+        "Privileges required",
+        "User interaction",
+        "Scope",
+        "Availability",
+      ]) {
+        await expect
+          .element(metricOf(dialog, name))
+          .not.toHaveAccessibleDescription();
+      }
+      const note = dialog.getByText("NVD: High", { exact: true });
+      expect(boxOf(note).top).toBeGreaterThanOrEqual(
+        boxOf(metricOf(dialog, "Attack complexity")).bottom,
+      );
+      // The assessment of the other version says nothing of these metrics.
+      expect(dialog.getByText(/^NVD: Local/).elements()).toEqual([]);
+    });
+
+    test("show no note for a value of another provider that the pinned contract does not list", async () => {
+      stubSuse(() => ({
+        ...assessmentsWith([]),
+        assessments: [
+          {
+            ...NVD_V31,
+            metrics: { ...NVD_V31.metrics, attack_vector: "fictional_vector" },
+          },
+        ],
+      }));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await vectorOf(dialog).fill(
+        "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      );
+
+      await expect
+        .element(metricOf(dialog, "Attack complexity"))
+        .toHaveAccessibleDescription("NVD: High");
+      await expect
+        .element(metricOf(dialog, "Attack vector"))
+        .not.toHaveAccessibleDescription();
+      expect(dialog.getByText(/^NVD: /).elements()).toHaveLength(1);
+    });
+  });
+
+  describe("the checks of the vector", () => {
+    test.each<[string, CVSSAssessmentItem[], string, string]>([
+      [
+        "an empty vector",
+        [NVD_V40, NVD_V31],
+        "",
+        "Choose the metrics, or enter the vector.",
+      ],
+      [
+        "a vector of whitespace alone",
+        [NVD_V40, NVD_V31],
+        "   ",
+        "Choose the metrics, or enter the vector.",
+      ],
+      [
+        "a vector longer than 200 characters, counted by code point",
+        [NVD_V40, NVD_V31],
+        `CVSS:3.1/${"😀".repeat(192)}`,
+        "Enter at most 200 characters.",
+      ],
+      [
+        "a vector of v4.0, which SUSE lacks too",
+        [NVD_V40, NVD_V31],
+        VECTOR_V40,
+        "Enter a CVSS v3.1 vector, which starts with CVSS:3.1/.",
+      ],
+      [
+        "a vector without a version",
+        [NVD_V40, NVD_V31],
+        "AV:N/AC:L/Au:N/C:P/I:P/A:P",
+        "Enter a CVSS v3.1 vector, which starts with CVSS:3.1/.",
+      ],
+      [
+        "a vector of v4.0, which SUSE has",
+        [SUSE_V40, NVD_V31],
+        VECTOR_V40,
+        "SUSE already has a CVSS v4.0 assessment: edit it in its row.",
+      ],
+    ])(
+      "state the error of %s in Add at the vector, which takes the focus, without a request",
+      async (_, assessments, vector, message) => {
+        const spy = stubSuse(() => assessmentsWith(assessments));
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await expect
+          .element(versionTab(dialog, "3.1"))
+          .toHaveAttribute("aria-selected", "true");
+        if (vector !== "") {
+          await vectorOf(dialog).fill(vector);
+        }
+        const reads = readsOf(spy, CVSS);
+
+        await press(submitOf(dialog));
+
+        const field = vectorOf(dialog);
+        await expect
+          .element(field)
+          .toHaveAccessibleDescription(`${VECTOR_DESCRIPTION} ${message}`);
+        await expect.element(field).toBeInvalid();
+        await expect.element(field).toHaveFocus();
+        expect(readsOf(spy, CVSS)).toBe(reads);
+        expect(requestsWith(spy, "POST")).toHaveLength(0);
+      },
+    );
+
+    test.each([
+      ["an empty vector", "", "Choose the metrics, or enter the vector."],
+      [
+        "a vector of v4.0, also when SUSE has an assessment of v4.0",
+        VECTOR_V40,
+        "Enter a CVSS v3.1 vector, which starts with CVSS:3.1/.",
+      ],
+    ])(
+      "state the error of %s in Edit at the vector, without a request",
+      async (_, vector, message) => {
+        const spy = stubSuse(() => assessmentsWith([SUSE_V40, SUSE_V31]));
+        const { screen } = await renderSuse();
+        const dialog = await openSuseEdit(screen);
+        await vectorOf(dialog).fill(vector);
+
+        await press(submitOf(dialog, "Save"));
+
+        const field = vectorOf(dialog);
+        await expect
+          .element(field)
+          .toHaveAccessibleDescription(`${VECTOR_DESCRIPTION} ${message}`);
+        await expect.element(field).toHaveFocus();
+        expect(requestsWith(spy, "POST")).toHaveLength(0);
+      },
+    );
+
+    test("accept a vector of 200 characters, counted by code point as Sentinel counts them", async () => {
+      // 200 code points, of which the emoji take two code units each.
+      const vector = `CVSS:3.1/${"😀".repeat(191)}`;
+      const bodies: unknown[] = [];
+      stubSuse(() => fictionalCvssAssessments(), {
+        upsertSuse: (body) => {
+          bodies.push(body);
+          return errorResponse(422, "CVSS_INVALID_VECTOR");
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(vector);
+
+      await press(submitOf(dialog, "Save"));
+
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveAccessibleDescription(
+          `${VECTOR_DESCRIPTION} Sentinel doesn't accept this vector. Enter a complete CVSS v3.1 Base vector.`,
+        );
+      expect(bodies).toEqual([{ vector_string: vector }]);
+    });
+
+    test.each<[string, (dialog: Locator) => Promise<void>]>([
+      [
+        "the user types",
+        async (dialog) => {
+          await vectorOf(dialog).fill("C");
+        },
+      ],
+      [
+        "the user chooses a metric",
+        async (dialog) => {
+          await segmentOf(dialog, "Scope", "Unchanged").click();
+        },
+      ],
+      [
+        "the user moves to another tab",
+        async (dialog) => {
+          await versionTab(dialog, "4.0").click();
+          await versionTab(dialog, "3.1").click();
+        },
+      ],
+    ])("clear the error once %s", async (_, change) => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await press(submitOf(dialog));
+      await expect.element(vectorOf(dialog)).toBeInvalid();
+
+      await change(dialog);
+
+      await expect.element(vectorOf(dialog)).not.toBeInvalid();
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveAccessibleDescription(VECTOR_DESCRIPTION);
+    });
+  });
+
+  describe("Edit", () => {
+    test("opens a dialog of two columns without tabs, named after the version, with the saved vector and its metrics, then Cancel and Save", async () => {
+      stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+
+      const dialog = await openSuseEdit(screen);
+
+      expect(dialog.element().getBoundingClientRect().width).toBe(880);
+      expect(dialog.getByRole("tablist").query()).toBeNull();
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue(SUSE_V31.vector_string);
+      expect(choicesOf(dialog, METRICS_V31)).toEqual([
+        "Local",
+        "Low",
+        "Low",
+        "None",
+        "Unchanged",
+        "High",
+        "None",
+        "None",
+      ]);
+      expect(
+        dialog
+          .getByRole("button")
+          .elements()
+          .slice(-2)
+          .map((button) => button.textContent),
+      ).toEqual(["Cancel", "Save"]);
+    });
+
+    test("opens on the version of its row, v4.0", async () => {
+      stubSuse(() => assessmentsWith([SUSE_V40, NVD_V31, SUSE_V31]));
+      const { screen } = await renderSuse();
+
+      const dialog = await openSuseEdit(screen, "4.0");
+
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue(SUSE_V40.vector_string);
+      expect(choicesOf(dialog, METRICS_V40)).toEqual([
+        "Local",
+        "Low",
+        "None",
+        "Low",
+        "None",
+        "High",
+        "None",
+        "None",
+        "None",
+        "None",
+        "None",
+      ]);
+    });
+
+    test.each([
+      ["as saved", SUSE_V31.vector_string],
+      ["with surrounding whitespace", `  ${SUSE_V31.vector_string} `],
+    ])(
+      "closes on Save without a request with the vector %s, and returns the focus to Edit",
+      async (_, vector) => {
+        const spy = stubSuse(() => fictionalCvssAssessments());
+        const { screen } = await renderSuse();
+        const dialog = await openSuseEdit(screen);
+        await vectorOf(dialog).fill(vector);
+
+        await submitOf(dialog, "Save").click();
+
+        await expect.element(dialog).not.toBeInTheDocument();
+        expect(requestsWith(spy, "POST")).toHaveLength(0);
+        await expect.element(editSuse(screen)).toHaveFocus();
+      },
+    );
+
+    test("saves a changed vector with Set or Update SUSE CVSS Assessment without reading first, then announces it once the assessments are read again, and returns the focus to Edit", async () => {
+      let assessments = fictionalCvssAssessments();
+      const bodies: unknown[] = [];
+      const spy = stubSuse(() => assessments, {
+        upsertSuse: (body) => {
+          bodies.push(body);
+          assessments = assessmentsWith([NVD_V31, SAVED_V31]);
+          return suseResponse(SAVED_V31);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      const before = assessmentRequests(spy).length;
+
+      await vectorOf(dialog).fill(` ${VECTOR_V31}`);
+      await submitOf(dialog, "Save").click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
+      await expect
+        .poll(() => cvssAnnouncements(screen))
+        .toEqual(["SUSE assessment v3.1 saved."]);
+      expect(assessmentRequests(spy).slice(before)).toEqual([
+        `POST ${SUSE_ASSESSMENT}`,
+        `GET ${CVSS}`,
+      ]);
+      await expect
+        .element(
+          assessmentRow(screen, "SUSE", "3.1").getByText(VECTOR_V31, {
+            exact: true,
+          }),
+        )
+        .toBeVisible();
+      await expectFocusSettledOn(editSuse(screen));
+    });
+
+    test("is busy while the change is in progress, and cannot be closed", async () => {
+      const response = later();
+      const spy = stubSuse(() => fictionalCvssAssessments(), {
+        upsertSuse: () => response.promise,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await submitOf(dialog, "Save").click();
+
+      await expect
+        .element(submitOf(dialog, "Save"))
+        .toHaveAttribute("aria-disabled", "true");
+      await expect
+        .element(dialog.getByRole("button", { name: "Cancel" }))
+        .toBeDisabled();
+      await userEvent.keyboard("{Escape}");
+      await expect.element(dialog).toBeVisible();
+      expect(requestsWith(spy, "POST")).toHaveLength(1);
+
+      response.resolve(suseResponse(SAVED_V31));
+
+      await expect.element(dialog).not.toBeInTheDocument();
+    });
+  });
+
+  describe("the failure of a change", () => {
+    test.each([
+      [
+        "422 CVSS_INVALID_VECTOR",
+        () => errorResponse(422, "CVSS_INVALID_VECTOR"),
+        "Sentinel doesn't accept this vector. Enter a complete CVSS v3.1 Base vector.",
+      ],
+      [
+        "a field error of the vector",
+        () => validationError([["body", "vector_string"]]),
+        MESSAGE_INVALID,
+      ],
+    ])(
+      "shows %s at the vector, which takes the focus, and keeps the input",
+      async (_, response, message) => {
+        stubSuse(() => fictionalCvssAssessments(), { upsertSuse: response });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseEdit(screen);
+        await vectorOf(dialog).fill(VECTOR_V31);
+
+        await submitOf(dialog, "Save").click();
+
+        const field = vectorOf(dialog);
+        await expect
+          .element(field)
+          .toHaveAccessibleDescription(`${VECTOR_DESCRIPTION} ${message}`);
+        await expect.element(field).toBeInvalid();
+        await expect.element(field).toHaveFocus();
+        await expect.element(field).toHaveValue(VECTOR_V31);
+        expect(dialog.getByRole("alert").query()).toBeNull();
+      },
+    );
+
+    test("names the version of the tab in the error of 422 CVSS_INVALID_VECTOR in Add", async () => {
+      stubSuse(() => fictionalCvssAssessments(), {
+        upsertSuse: () => errorResponse(422, "CVSS_INVALID_VECTOR"),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect
+        .element(versionTab(dialog, "4.0"))
+        .toHaveAttribute("aria-selected", "true");
+      await vectorOf(dialog).fill(VECTOR_V40);
+
+      await submitOf(dialog).click();
+
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveAccessibleDescription(
+          `${VECTOR_DESCRIPTION} Sentinel doesn't accept this vector. Enter a complete CVSS v4.0 Base vector.`,
+        );
+      await expect.element(vectorOf(dialog)).toHaveFocus();
+    });
+
+    test.each([
+      [
+        "409 TICKET_NOT_MUTABLE, as an error",
+        () => errorResponse(409, "TICKET_NOT_MUTABLE"),
+        MESSAGE_CONFLICT,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "404 CVE_NOT_FOUND, as an error",
+        () => errorResponse(404, "CVE_NOT_FOUND"),
+        MESSAGE_GONE,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "a VALIDATION_ERROR of another member, as an error",
+        () => validationError([["body", "fictional_member"]]),
+        MESSAGE_NOT_ACCEPTED,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "a 422 with a code that the pinned contract does not list, as an error",
+        () => errorResponse(422, "FICTIONAL_CODE"),
+        MESSAGE_NOT_ACCEPTED,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "a status and a code that the pinned contract does not list, as an error",
+        () => errorResponse(418, "FICTIONAL_CODE"),
+        MESSAGE_NOT_ACCEPTED,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "a 500 that Sentinel did not confirm, as a warning",
+        () => errorResponse(500, "INTERNAL_ERROR"),
+        MESSAGE_UNCONFIRMED,
+        MESSAGE_TONES.warning,
+      ],
+      [
+        "a network failure, as a warning",
+        () => Promise.reject(new TypeError("Failed to fetch")),
+        MESSAGE_UNCONFIRMED,
+        MESSAGE_TONES.warning,
+      ],
+    ])(
+      "shows %s at the top of the form, which takes the focus and keeps the input",
+      async (_, response, message, tone) => {
+        stubSuse(() => fictionalCvssAssessments(), { upsertSuse: response });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseEdit(screen);
+        await vectorOf(dialog).fill(VECTOR_V31);
+
+        await submitOf(dialog, "Save").click();
+
+        const error = dialog.getByText(message);
+        await expect.element(error).toBeVisible();
+        expect(backgroundBehind(error.element())).toBe(tone);
+        await expectFocusOnError(error);
+        expect(boxOf(error).bottom).toBeLessThan(
+          boxOf(metricOf(dialog, "Attack vector")).top,
+        );
+        await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+        await expect.element(vectorOf(dialog)).not.toBeInvalid();
+      },
+    );
+
+    test("shows the reference of a change that Sentinel did not confirm", async () => {
+      stubSuse(() => fictionalCvssAssessments(), {
+        upsertSuse: () => errorResponse(503, "SERVICE_UNAVAILABLE"),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await submitOf(dialog, "Save").click();
+
+      await expect.element(dialog.getByText(MESSAGE_UNCONFIRMED)).toBeVisible();
+      await expect.element(dialog.getByText(REFERENCE)).toBeVisible();
+    });
+
+    test("shows the error of the vector and of the form for a VALIDATION_ERROR with an error of another member, the form taking the focus", async () => {
+      stubSuse(() => fictionalCvssAssessments(), {
+        upsertSuse: () =>
+          validationError([
+            ["body", "vector_string"],
+            ["body", "fictional_member"],
+          ]),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await submitOf(dialog, "Save").click();
+
+      const error = dialog.getByText(MESSAGE_NOT_ACCEPTED);
+      await expect.element(error).toBeVisible();
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveAccessibleDescription(
+          `${VECTOR_DESCRIPTION} ${MESSAGE_INVALID}`,
+        );
+      await expectFocusOnError(error);
+    });
+  });
+
+  describe("the reads after a change", () => {
+    // A maintainer of fictional-openssl who manages the CVSS assessments.
+    const MAINTAINING_ASSESSOR: CurrentUserResponse = {
+      data: { ...MAINTAINER.data, capabilities: ["manage_cvss"] },
+    };
+
+    test.each<[string, (screen: Screen) => Promise<unknown>, Partial<Stub>]>([
+      [
+        "Edit that Sentinel confirms",
+        editToV31,
+        { upsertSuse: () => suseResponse(SAVED_V31) },
+      ],
+      [
+        "Edit that Sentinel refuses",
+        editToV31,
+        { upsertSuse: () => errorResponse(409, "TICKET_NOT_MUTABLE") },
+      ],
+      ["Delete that Sentinel confirms", confirmDelete, {}],
+      [
+        "Delete that Sentinel did not confirm",
+        confirmDelete,
+        { deleteSuse: () => errorResponse(503, "SERVICE_UNAVAILABLE") },
+      ],
+    ])(
+      "read again after %s the Ticket, the assessments, the users who acted on it, its access grants, the work of a maintainer, its duplicates, its audit log, and the Ticket list",
+      async (_, change, fields) => {
+        const spy = stubSuse(() => fictionalCvssAssessments(), {
+          user: MAINTAINING_ASSESSOR,
+          ticket: () => confidentialTicket({ packages: [fictionalPackage()] }),
+          grants: () => grantsResponse(),
+          ...fields,
+        });
+        // The user saw the Ticket list, and Audit log, before Overview.
+        const { router, screen } = await renderApp("/tickets");
+        await expect
+          .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+          .toBeVisible();
+        await router.navigate({
+          to: "/tickets/$ticketId/audit-log",
+          params: { ticketId: "SNTL-12" },
+        });
+        await expect
+          .element(screen.getByRole("tabpanel", { name: "Audit log" }))
+          .toBeVisible();
+        await screen.getByRole("tab", { name: "Overview" }).click();
+        await expect
+          .element(
+            cvssPart(screen).getByRole("grid", { name: "CVSS assessments" }),
+          )
+          .toBeVisible();
+        await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(1);
+        await expect.poll(() => readsOf(spy, ACCESS)).toBe(1);
+        await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+        const reads = {
+          ticket: requestsTo(spy, TICKET),
+          cvss: readsOf(spy, CVSS),
+          actors: requestsTo(spy, ACTORS),
+          grants: readsOf(spy, ACCESS),
+          work: requestsTo(spy, YOUR_WORK),
+          duplicates: readsOf(spy, TICKETS),
+        };
+        expect(leftInvalidated(EVENTS)).toBe(false);
+        expect(leftInvalidated(TICKETS)).toBe(false);
+
+        await change(screen);
+
+        await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
+        await expect.poll(() => readsOf(spy, CVSS)).toBe(reads.cvss + 1);
+        await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
+        await expect.poll(() => readsOf(spy, ACCESS)).toBe(reads.grants + 1);
+        await expect
+          .poll(() => requestsTo(spy, YOUR_WORK))
+          .toBe(reads.work + 1);
+        await expect
+          .poll(() => readsOf(spy, TICKETS))
+          .toBeGreaterThan(reads.duplicates);
+        expect(leftInvalidated(EVENTS)).toBe(true);
+        expect(leftInvalidated(TICKETS)).toBe(true);
+      },
+    );
+  });
+
+  describe("the announcement of a change", () => {
+    test.each([
+      [
+        "arrives",
+        () => cvssResponse(assessmentsWith([NVD_V40, NVD_V31, SAVED_V31])),
+      ],
+      ["fails", () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION")],
+    ])(
+      "comes in the part once the next read of the assessments after Add %s, not before",
+      async (_, response) => {
+        const reread = later();
+        let added = false;
+        stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+          cvss: () =>
+            added
+              ? reread.promise
+              : cvssResponse(assessmentsWith([NVD_V40, NVD_V31])),
+          upsertSuse: () => {
+            added = true;
+            return suseResponse(SAVED_V31, 201);
+          },
+        });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await vectorOf(dialog).fill(VECTOR_V31);
+
+        await submitOf(dialog).click();
+
+        await expect.element(dialog).not.toBeInTheDocument();
+        await frames();
+        expect(cvssAnnouncements(screen)).toEqual([]);
+        reread.resolve(response());
+
+        await expect
+          .poll(() => cvssAnnouncements(screen))
+          .toContain("SUSE assessment v3.1 added.");
+        expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
+      },
+    );
+
+    test.each([
+      ["arrives", () => cvssResponse(assessmentsWith([NVD_V31, SAVED_V31]))],
+      ["fails", () => errorResponse(404, "CVE_NOT_FOUND")],
+    ])(
+      "comes in the part once the next read of the assessments after Edit %s, not before",
+      async (_, response) => {
+        const reread = later();
+        let saved = false;
+        stubSuse(() => fictionalCvssAssessments(), {
+          cvss: () => (saved ? reread.promise : cvssResponse()),
+          upsertSuse: () => {
+            saved = true;
+            return suseResponse(SAVED_V31);
+          },
+        });
+        const { screen } = await renderSuse();
+
+        await editToV31(screen);
+
+        await expect
+          .element(suseDialog(screen, "Edit SUSE assessment v3.1"))
+          .not.toBeInTheDocument();
+        await frames();
+        expect(cvssAnnouncements(screen)).toEqual([]);
+        reread.resolve(response());
+
+        await expect
+          .poll(() => cvssAnnouncements(screen))
+          .toContain("SUSE assessment v3.1 saved.");
+      },
+    );
+
+    test.each([
+      ["arrives", () => cvssResponse(assessmentsWith([NVD_V31]))],
+      ["fails", () => errorResponse(503, "DATABASE_UNAVAILABLE")],
+    ])(
+      "comes in the part once the next read of the assessments after Delete %s, not before",
+      async (_, response) => {
+        const reread = later();
+        let removed = false;
+        stubSuse(() => fictionalCvssAssessments(), {
+          cvss: () => (removed ? reread.promise : cvssResponse()),
+          deleteSuse: () => {
+            removed = true;
+            return new Response(null, { status: 204 });
+          },
+        });
+        const { screen } = await renderSuse();
+
+        const confirmation = await confirmDelete(screen);
+
+        await expect.element(confirmation).not.toBeInTheDocument();
+        await frames();
+        expect(cvssAnnouncements(screen)).toEqual([]);
+        reread.resolve(response());
+
+        await expect
+          .poll(() => cvssAnnouncements(screen))
+          .toContain("SUSE assessment v3.1 deleted.");
+      },
+    );
+  });
+
+  describe("a change that ends after the user left the screen", () => {
+    test.each<
+      [
+        string,
+        (screen: Screen) => Promise<void>,
+        "upsertSuse" | "deleteSuse",
+        () => Response | Promise<Response>,
+        string,
+        string,
+      ]
+    >([
+      [
+        "Add",
+        async (screen) => {
+          const dialog = await openSuseAdd(screen);
+          await vectorOf(dialog).fill(VECTOR_V40);
+          await submitOf(dialog).click();
+        },
+        "upsertSuse",
+        () => suseResponse(SUSE_V40, 201),
+        "SNTL-12: SUSE assessment v4.0 added.",
+        MESSAGE_TONES.success,
+      ],
+      [
+        "Edit",
+        async (screen) => {
+          const dialog = await openSuseEdit(screen);
+          await vectorOf(dialog).fill(VECTOR_V31);
+          await submitOf(dialog, "Save").click();
+        },
+        "upsertSuse",
+        () => suseResponse(SAVED_V31),
+        "SNTL-12: SUSE assessment v3.1 saved.",
+        MESSAGE_TONES.success,
+      ],
+      [
+        "Delete",
+        async (screen) => {
+          await confirmDelete(screen);
+        },
+        "deleteSuse",
+        () => new Response(null, { status: 204 }),
+        "SNTL-12: SUSE assessment v3.1 deleted.",
+        MESSAGE_TONES.success,
+      ],
+      [
+        "Add that Sentinel refuses",
+        async (screen) => {
+          const dialog = await openSuseAdd(screen);
+          await vectorOf(dialog).fill(VECTOR_V40);
+          await submitOf(dialog).click();
+        },
+        "upsertSuse",
+        () => errorResponse(409, "TICKET_NOT_MUTABLE"),
+        `SNTL-12: ${MESSAGE_CONFLICT}`,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "Delete that Sentinel did not confirm",
+        async (screen) => {
+          await confirmDelete(screen);
+        },
+        "deleteSuse",
+        () => errorResponse(503, "SERVICE_UNAVAILABLE"),
+        `SNTL-12: ${MESSAGE_UNCONFIRMED}`,
+        MESSAGE_TONES.warning,
+      ],
+    ])(
+      "shows the outcome of %s in the message area, naming the Ticket with a link to it",
+      async (_, start, operation, outcome, text, tone) => {
+        const response = later();
+        const pending = () => response.promise;
+        const spy = stubSuse(
+          () => assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]),
+          operation === "upsertSuse"
+            ? { upsertSuse: pending }
+            : { deleteSuse: pending },
+        );
+        const { router, screen } = await renderSuse();
+        await start(screen);
+        await expect
+          .poll(() =>
+            spy.mock.calls.filter(([input]) =>
+              urlOf(input).pathname.startsWith(SUSE_ASSESSMENT),
+            ),
+          )
+          .toHaveLength(1);
+        await leaveForTickets(router, screen);
+
+        response.resolve(await outcome());
+
+        const message = screen.getByText(text);
+        await expect.element(message).toBeVisible();
+        expect(backgroundBehind(message.element())).toBe(tone);
+        const link = screen.getByRole("link", { name: "SNTL-12", exact: true });
+        await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-12");
+
+        await link.click();
+
+        await expect.element(screenHeading(screen)).toBeVisible();
+      },
+    );
+  });
+
+  describe("Discard changes", () => {
+    test.each<[string, (dialog: Locator) => Promise<void>]>([
+      [
+        "a vector",
+        async (dialog) => {
+          await vectorOf(dialog).fill(VECTOR_V31);
+        },
+      ],
+      [
+        "a metric",
+        async (dialog) => {
+          await segmentOf(dialog, "Scope", "Changed").click();
+        },
+      ],
+      [
+        "an assessment to start from",
+        async (dialog) => {
+          await (
+            await openStartFrom(dialog)
+          )
+            .getByRole("option", { name: "NVD, 8.1 High", exact: true })
+            .click();
+        },
+      ],
+      [
+        "a vector in the other tab",
+        async (dialog) => {
+          await vectorOf(dialog).fill(VECTOR_V31);
+          await versionTab(dialog, "4.0").click();
+          await expect.element(vectorOf(dialog)).toHaveValue("");
+        },
+      ],
+    ])(
+      "is asked before Cancel or Escape discard %s in Add, keeps it on Keep editing, and closes on Discard",
+      async (_, enter) => {
+        const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await enter(dialog);
+        const vector = vectorOf(dialog).element();
+        const entered = vector instanceof HTMLInputElement ? vector.value : "";
+
+        await dialog.getByRole("button", { name: "Cancel" }).click();
+
+        const discard = screen.getByRole("dialog", {
+          name: "Discard changes?",
+        });
+        await expect
+          .element(discard.getByRole("button", { name: "Keep editing" }))
+          .toHaveFocus();
+        await expect
+          .element(
+            discard.getByText(
+              "The SUSE assessment that you entered isn't added.",
+            ),
+          )
+          .toBeVisible();
+        await discard.getByRole("button", { name: "Keep editing" }).click();
+        await expect.element(discard).not.toBeInTheDocument();
+        await expect.element(vectorOf(dialog)).toHaveValue(entered);
+
+        vectorOf(dialog).element().focus();
+        await userEvent.keyboard("{Escape}");
+        await expect.element(discard).toBeVisible();
+        await discard
+          .getByRole("button", { name: "Discard", exact: true })
+          .click();
+
+        await expect.element(dialog).not.toBeInTheDocument();
+        await expect.element(addSuse(screen)).toHaveFocus();
+        expect(requestsWith(spy, "POST")).toHaveLength(0);
+        // The dialog opens again empty.
+        const again = await openSuseAdd(screen);
+        await expect.element(vectorOf(again)).toHaveValue("");
+        await versionTab(again, "4.0").click();
+        await expect.element(vectorOf(again)).toHaveValue("");
+      },
+    );
+
+    test("is asked before Cancel or Escape discard a changed vector in Edit, keeps it on Keep editing, and closes on Discard", async () => {
+      const spy = stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+
+      const discard = screen.getByRole("dialog", { name: "Discard changes?" });
+      await expect
+        .element(discard.getByRole("button", { name: "Keep editing" }))
+        .toHaveFocus();
+      await expect
+        .element(
+          discard.getByText(
+            "Your changes to this SUSE assessment aren't saved.",
+          ),
+        )
+        .toBeVisible();
+      await discard.getByRole("button", { name: "Keep editing" }).click();
+      await expect.element(discard).not.toBeInTheDocument();
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+
+      vectorOf(dialog).element().focus();
+      await userEvent.keyboard("{Escape}");
+      await expect.element(discard).toBeVisible();
+      await discard
+        .getByRole("button", { name: "Discard", exact: true })
+        .click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      await expect.element(editSuse(screen)).toHaveFocus();
+      expect(requestsWith(spy, "POST")).toHaveLength(0);
+    });
+
+    test.each([
+      ["Add without input", true],
+      ["Edit without a change", false],
+    ])(
+      "is not asked on Cancel or Escape in %s, which closes at once and returns the focus to the button that opened it",
+      async (_, add) => {
+        stubSuse(() => fictionalCvssAssessments());
+        const { screen } = await renderSuse();
+        for (const way of ["Cancel", "Escape"]) {
+          const dialog = await (add
+            ? openSuseAdd(screen)
+            : openSuseEdit(screen));
+
+          if (way === "Escape") {
+            await userEvent.keyboard("{Escape}");
+          } else {
+            await dialog.getByRole("button", { name: "Cancel" }).click();
+          }
+
+          await expect.element(dialog).not.toBeInTheDocument();
+          expect(
+            screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+          ).toBeNull();
+          await expect
+            .element(add ? addSuse(screen) : editSuse(screen))
+            .toHaveFocus();
+        }
+      },
+    );
+
+    test("is not asked in Edit once the vector is the saved one again", async () => {
+      stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await segmentOf(dialog, "Integrity", "High").click();
+      await segmentOf(dialog, "Integrity", "None").click();
+      await expect
+        .element(vectorOf(dialog))
+        .toHaveValue(SUSE_V31.vector_string);
+
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+      ).toBeNull();
+    });
+  });
+
+  describe("Delete", () => {
+    test("asks for confirmation, naming the assessment, with the consequence, Cancel, which takes the focus, and Delete SUSE assessment as a danger button", async () => {
+      stubSuse(() => assessmentsWith([NVD_V31, SUSE_V31]), {
+        ticket: ticketIn("analysis"),
+      });
+      const { screen } = await renderSuse();
+
+      await deleteSuse(screen).click();
+
+      const confirmation = deleteConfirmation(screen);
+      await expect
+        .element(confirmation.getByRole("button", { name: "Cancel" }))
+        .toHaveFocus();
+      await expect
+        .element(
+          confirmation.getByText(
+            `${DELETE_CONSEQUENCE} This can't be undone.`,
+            {
+              exact: true,
+            },
+          ),
+        )
+        .toBeVisible();
+      const action = confirmation.getByRole("button", {
+        name: "Delete SUSE assessment",
+        exact: true,
+      });
+      expect(getComputedStyle(action.element()).backgroundColor).toBe(
+        "rgb(207, 34, 46)",
+      );
+      expect(confirmation.element().getBoundingClientRect().width).toBe(400);
+    });
+
+    test.each<[string, string, CVSSAssessmentItem[], boolean]>([
+      [
+        "the last SUSE assessment of an Analyzed Ticket",
+        "analyzed",
+        [NVD_V31, SUSE_V31],
+        true,
+      ],
+      [
+        "the last SUSE assessment of a Resolved Ticket",
+        "resolved",
+        [NVD_V31, SUSE_V31],
+        true,
+      ],
+      [
+        "the last SUSE assessment of a Ticket in Analysis",
+        "analysis",
+        [NVD_V31, SUSE_V31],
+        false,
+      ],
+      [
+        "the last SUSE assessment of a New Ticket",
+        "new",
+        [NVD_V31, SUSE_V31],
+        false,
+      ],
+      [
+        "one of two SUSE assessments of an Analyzed Ticket",
+        "analyzed",
+        [SUSE_V40, NVD_V31, SUSE_V31],
+        false,
+      ],
+      [
+        "a SUSE assessment beside one of v2.0 of an Analyzed Ticket",
+        "analyzed",
+        [NVD_V31, SUSE_V31, SUSE_V20],
+        false,
+      ],
+    ])(
+      "says for %s whether it returns the Ticket to Analysis",
+      async (_, status, assessments, returns) => {
+        stubSuse(() => assessmentsWith(assessments), {
+          ticket: ticketIn(status),
+        });
+        const { screen } = await renderSuse();
+
+        await deleteSuse(screen).click();
+
+        await expect
+          .element(
+            deleteConfirmation(screen).getByText(
+              `${DELETE_CONSEQUENCE}${returns ? RETURNS_TO_ANALYSIS : ""} This can't be undone.`,
+              { exact: true },
+            ),
+          )
+          .toBeVisible();
+      },
+    );
+
+    test("deletes the assessment of its version with Delete SUSE CVSS Assessment, then removes its row once the assessments are read again", async () => {
+      let assessments = assessmentsWith([SUSE_V40, NVD_V31, SUSE_V31]);
+      const removed: string[] = [];
+      stubSuse(() => assessments, {
+        deleteSuse: (path) => {
+          removed.push(path);
+          assessments = assessmentsWith([SUSE_V40, NVD_V31]);
+          return new Response(null, { status: 204 });
+        },
+      });
+      const { screen } = await renderSuse();
+
+      const confirmation = await confirmDelete(screen);
+
+      await expect.element(confirmation).not.toBeInTheDocument();
+      await expect
+        .element(assessmentRow(screen, "SUSE", "3.1"))
+        .not.toBeInTheDocument();
+      expect(removed).toEqual([`${SUSE_ASSESSMENT}/3.1`]);
+      await expect
+        .poll(() => cvssAnnouncements(screen))
+        .toEqual(["SUSE assessment v3.1 deleted."]);
+    });
+
+    test("keeps the assessment after Cancel, without a request", async () => {
+      const spy = stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+
+      await deleteSuse(screen).click();
+      await deleteConfirmation(screen)
+        .getByRole("button", { name: "Cancel" })
+        .click();
+
+      await expect.element(deleteConfirmation(screen)).not.toBeInTheDocument();
+      await expect.element(deleteSuse(screen)).toHaveFocus();
+      expect(requestsWith(spy, "DELETE")).toHaveLength(0);
+    });
+
+    test("keeps the confirmation open while Delete is in progress", async () => {
+      const response = later();
+      stubSuse(() => fictionalCvssAssessments(), {
+        deleteSuse: () => response.promise,
+      });
+      const { screen } = await renderSuse();
+
+      const confirmation = await confirmDelete(screen);
+
+      await expect
+        .element(
+          confirmation.getByRole("button", {
+            name: "Delete SUSE assessment",
+            exact: true,
+          }),
+        )
+        .toHaveAttribute("aria-disabled", "true");
+      await userEvent.keyboard("{Escape}");
+      await expect.element(confirmation).toBeVisible();
+      response.resolve(new Response(null, { status: 204 }));
+      await expect.element(confirmation).not.toBeInTheDocument();
+    });
+
+    test.each([
+      [
+        "an assessment that no longer exists, as an error",
+        () => errorResponse(404, "CVSS_ASSESSMENT_NOT_FOUND"),
+        MESSAGE_GONE,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "a Ticket that does not accept the change, as an error",
+        () => errorResponse(409, "TICKET_NOT_MUTABLE"),
+        MESSAGE_CONFLICT,
+        MESSAGE_TONES.danger,
+      ],
+      [
+        "a change that Sentinel did not confirm, as a warning",
+        () => errorResponse(503, "SERVICE_UNAVAILABLE"),
+        MESSAGE_UNCONFIRMED,
+        MESSAGE_TONES.warning,
+      ],
+      [
+        "a status and a code that the pinned contract does not list, as an error",
+        () => errorResponse(418, "FICTIONAL_CODE"),
+        MESSAGE_NOT_ACCEPTED,
+        MESSAGE_TONES.danger,
+      ],
+    ])(
+      "shows the failure of %s at the top of the confirmation, which stays open and takes the focus",
+      async (_, response, message, tone) => {
+        stubSuse(() => fictionalCvssAssessments(), { deleteSuse: response });
+        const { screen } = await renderSuse();
+
+        const confirmation = await confirmDelete(screen);
+
+        const error = confirmation.getByText(message);
+        await expect.element(error).toBeVisible();
+        expect(backgroundBehind(error.element())).toBe(tone);
+        await expectFocusOnError(error);
+        await expect.element(confirmation).toBeVisible();
+      },
+    );
+
+    describe("the focus after Delete", () => {
+      test("moves to the Delete of the row that takes its place", async () => {
+        const { screen } = await deleteSuseAmong([SUSE_V40, SUSE_V31], "4.0");
+
+        await expectFocusSettledOn(deleteSuse(screen, "3.1"));
+      });
+
+      test("moves to the row that takes its place when it has no Delete", async () => {
+        const { screen } = await deleteSuseAmong(
+          [NVD_V40, SUSE_V40, NVD_V31],
+          "4.0",
+        );
+
+        await expectFocusSettledOn(assessmentRow(screen, "NVD", "3.1"));
+      });
+
+      test("moves to Add SUSE assessment when no row follows, also when Add SUSE assessment shows only after the read", async () => {
+        const { screen } = await deleteSuseAmong(
+          [NVD_V40, SUSE_V40, NVD_V31, SUSE_V31],
+          "3.1",
+        );
+
+        await expectFocusSettledOn(addSuse(screen));
+      });
+
+      test("moves no more once the read after Delete fails, and moves to the screen's heading when a later read removes the row of the focus", async () => {
+        let phase: "before" | "failing" | "gone" = "before";
+        stubSuse(() => fictionalCvssAssessments(), {
+          cvss: () => {
+            if (phase === "failing") {
+              return errorResponse(503, "DATABASE_UNAVAILABLE");
+            }
+            return cvssResponse(
+              phase === "gone"
+                ? assessmentsWith([NVD_V31])
+                : fictionalCvssAssessments(),
+            );
+          },
+          deleteSuse: () => {
+            phase = "failing";
+            return new Response(null, { status: 204 });
+          },
+        });
+        const { screen } = await renderSuse();
+
+        await confirmDelete(screen);
+
+        await expect
+          .element(cvssPart(screen).getByText(/^This couldn't be updated\./))
+          .toBeVisible();
+        const row = assessmentRow(screen, "SUSE", "3.1");
+        await expect
+          .poll(() => row.element().contains(document.activeElement))
+          .toBe(true);
+        await frames();
+        expect(row.element().contains(document.activeElement)).toBe(true);
+        // Meanwhile another analyst deleted it, or Sentinel had.
+        phase = "gone";
+
+        await returnToForeground();
+
+        await expect.element(row).not.toBeInTheDocument();
+        await expectFocusSettledOn(screenHeading(screen));
+      });
+    });
+  });
+
+  describe("the focus after a read", () => {
+    test("moves to the screen's heading when a read removes the row whose Edit has the focus", async () => {
+      let assessments = fictionalCvssAssessments();
+      stubSuse(() => assessments);
+      const { screen } = await renderSuse();
+      await focusInRow(screen, editSuse(screen));
+      // Meanwhile another analyst deleted it.
+      assessments = assessmentsWith([NVD_V31]);
+
+      await returnToForeground();
+
+      await expect
+        .element(assessmentRow(screen, "SUSE", "3.1"))
+        .not.toBeInTheDocument();
+      await expectFocusSettledOn(screenHeading(screen));
+    });
+
+    test("moves to the screen's heading when a read removes Add SUSE assessment while it has the focus", async () => {
+      let assessments = fictionalCvssAssessments();
+      stubSuse(() => assessments);
+      const { screen } = await renderSuse();
+      addSuse(screen).element().focus();
+      await expect.element(addSuse(screen)).toHaveFocus();
+      // Meanwhile another analyst added the assessment of v4.0.
+      assessments = assessmentsWith([SUSE_V40, NVD_V31, SUSE_V31]);
+
+      await returnToForeground();
+
+      await expect.element(addSuse(screen)).not.toBeInTheDocument();
+      await expectFocusSettledOn(screenHeading(screen));
+    });
+  });
 });

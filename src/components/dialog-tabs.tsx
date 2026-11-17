@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import {
   Tooltip as AriaTooltip,
   Tab,
@@ -25,6 +25,8 @@ export interface DialogTab<T extends string> {
 
 interface DialogTabItemProps<T extends string> {
   tab: DialogTab<T>;
+  // Whether the tab takes the focus as it shows.
+  takesFocus: boolean;
 }
 
 // A tab: its label in text-14, fg-muted, 40 px high with 8 px of side
@@ -32,16 +34,34 @@ interface DialogTabItemProps<T extends string> {
 // its bottom edge, as the tabs of a detail screen (docs/design-system.md,
 // Detail Screens). Its mark follows its label 6 px later, at 14 px in
 // fg-muted.
-function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
+function DialogTabItem<T extends string>({
+  tab,
+  takesFocus,
+}: DialogTabItemProps<T>) {
   const ref = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
   const noteId = useId();
   const { mark } = tab;
+  // React Aria renders this component to build its collection and shows the
+  // element of the tab apart from it, later, so the tab takes the focus as
+  // that element shows, once.
+  const focused = useRef(false);
+  const attach = useCallback(
+    (element: HTMLDivElement | null) => {
+      ref.current = element;
+      if (element !== null && takesFocus && !focused.current) {
+        focused.current = true;
+        element.focus();
+      }
+    },
+    [takesFocus],
+  );
   return (
     <Tab
       id={tab.id}
-      ref={ref}
+      ref={attach}
       onHoverChange={setHovered}
+      aria-label={mark === undefined ? undefined : `${tab.label}, ${mark.name}`}
       aria-describedby={mark === undefined ? undefined : noteId}
       className={`-mb-px inline-flex h-10 cursor-default items-center gap-1.5 rounded-t border-b-2 border-transparent px-2 text-14 text-fg-muted data-hovered:text-fg data-selected:border-link data-selected:font-semibold data-selected:text-fg ${FOCUS_RING}`}
     >
@@ -51,7 +71,6 @@ function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
           {mark !== undefined && (
             <>
               <mark.icon aria-hidden className="size-3.5 text-fg-muted" />
-              <span className="sr-only">{`, ${mark.name}`}</span>
               <span id={noteId} hidden>
                 {mark.text}
               </span>
@@ -91,6 +110,9 @@ interface DialogTabsProps<T extends string> {
   tabs: readonly DialogTab<T>[];
   selected: T;
   onSelect: (id: T) => void;
+  // Whether the selected tab takes the focus as the tabs show, as the first
+  // control of a dialog (docs/behaviors.md, Accessibility, Dialogs).
+  focusSelected?: boolean;
   // The content of the selected tab.
   children: ReactNode;
 }
@@ -105,8 +127,11 @@ export function DialogTabs<T extends string>({
   tabs,
   selected,
   onSelect,
+  focusSelected = false,
   children,
 }: DialogTabsProps<T>) {
+  // The tab selected as the tabs show, which takes the focus.
+  const [first] = useState(selected);
   return (
     <Tabs
       selectedKey={selected}
@@ -123,7 +148,11 @@ export function DialogTabs<T extends string>({
         className="flex flex-wrap gap-x-4 border-b border-border"
       >
         {tabs.map((tab) => (
-          <DialogTabItem key={tab.id} tab={tab} />
+          <DialogTabItem
+            key={tab.id}
+            tab={tab}
+            takesFocus={focusSelected && tab.id === first}
+          />
         ))}
       </TabList>
       {tabs.map((tab) => (

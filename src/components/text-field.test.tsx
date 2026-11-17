@@ -142,6 +142,53 @@ test("names a field that may not stay empty by its label alone", async () => {
   expect(screen.getByText("(optional)").query()).toBeNull();
 });
 
+test("states what it takes after its control, in text-13 and fg-muted, as the description of its control", async () => {
+  const screen = await render(
+    <TextField
+      label="Vector"
+      description="The metrics write it, and a vector entered here chooses them."
+    />,
+  );
+  const field = screen.getByRole("textbox", { name: "Vector" });
+  const description = screen.getByText(
+    "The metrics write it, and a vector entered here chooses them.",
+  );
+
+  await expect
+    .element(field)
+    .toHaveAccessibleDescription(
+      "The metrics write it, and a vector entered here chooses them.",
+    );
+  expect(
+    description.element().getBoundingClientRect().top,
+  ).toBeGreaterThanOrEqual(field.element().getBoundingClientRect().bottom);
+  const style = getComputedStyle(description.element());
+  expect([style.fontSize, style.color]).toEqual(["13px", FG_MUTED]);
+});
+
+test("has no description without one", async () => {
+  const screen = await render(<TextField label="Vector" />);
+
+  await expect
+    .element(screen.getByRole("textbox", { name: "Vector" }))
+    .not.toHaveAccessibleDescription();
+});
+
+test("shows a value that users copy character by character in monospace, and any other in the font of the text", async () => {
+  const screen = await render(
+    <>
+      <TextField label="Vector" monospace />
+      <TextField label="Title" />
+    </>,
+  );
+
+  const vector = screen.getByRole("textbox", { name: "Vector" }).element();
+  const title = screen.getByRole("textbox", { name: "Title" }).element();
+  expect(getComputedStyle(vector).fontFamily).toContain("monospace");
+  expect(getComputedStyle(title).fontFamily).not.toContain("monospace");
+  expect(getComputedStyle(title).fontFamily).toContain("Inter");
+});
+
 // A form with a multi-line field of at most 20 characters.
 function DescriptionForm() {
   const [value, setValue] = useState("");
@@ -242,6 +289,26 @@ describe("a multi-line field", () => {
     expect(error.element().getBoundingClientRect().top).toBeGreaterThanOrEqual(
       field.element().getBoundingClientRect().bottom,
     );
+  });
+
+  test("states what it takes after its control, as the description of its control", async () => {
+    const screen = await render(
+      <TextAreaField
+        label="Description"
+        description="What the reference holds."
+      />,
+    );
+    const field = screen.getByRole("textbox", { name: "Description" });
+
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription("What the reference holds.");
+    expect(
+      screen
+        .getByText("What the reference holds.")
+        .element()
+        .getBoundingClientRect().top,
+    ).toBeGreaterThanOrEqual(field.element().getBoundingClientRect().bottom);
   });
 
   test("lets the form reach its control", async () => {
