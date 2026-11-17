@@ -76,11 +76,13 @@ function MarkTooltip({
   }, [isOpen, onDismiss]);
   return (
     <TooltipTriggerStateContext
+      // React Aria's tooltip opens and closes itself as the pointer enters
+      // and leaves it; the tab decides instead.
       value={{
         isOpen,
         shouldSkipAnimation: true,
         open: () => {},
-        close: onDismiss,
+        close: () => {},
       }}
     >
       <AriaTooltip
@@ -129,15 +131,25 @@ function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
     },
     [],
   );
-  // The pointer rests on the tab, which shows the tooltip after the delay of
-  // every tooltip, or on the tooltip, which keeps it, or has left them.
-  const point = useCallback((hovered: boolean, delay: number) => {
+  // Where the pointer rests: on the tab, which shows the tooltip after the
+  // delay of every tooltip, or on the tooltip, which keeps it. React Aria
+  // ends the hover of the tab as the pointer moves onto the tooltip, outside
+  // the tab, after the tooltip has told that the pointer rests on it, so each
+  // keeps its own state, and the tooltip hides once the pointer has left
+  // both.
+  const over = useRef({ tab: false, tooltip: false });
+  const point = useCallback((part: "tab" | "tooltip", hovered: boolean) => {
+    over.current = { ...over.current, [part]: hovered };
     window.clearTimeout(timer.current);
     if (hovered) {
-      timer.current = window.setTimeout(() => {
+      if (part === "tooltip") {
         setPointed(true);
-      }, delay);
-    } else {
+      } else {
+        timer.current = window.setTimeout(() => {
+          setPointed(true);
+        }, TOOLTIP_DELAY_MS);
+      }
+    } else if (!over.current.tab && !over.current.tooltip) {
       timer.current = window.setTimeout(() => {
         setPointed(false);
         setDismissed(false);
@@ -152,7 +164,7 @@ function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
       id={tab.id}
       ref={ref}
       onHoverChange={(hovered) => {
-        point(hovered, TOOLTIP_DELAY_MS);
+        point("tab", hovered);
       }}
       onFocusChange={(focused) => {
         if (!focused) {
@@ -176,7 +188,7 @@ function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
                 triggerRef={ref}
                 isOpen={!dismissed && (pointed || isFocusVisible)}
                 onHoverChange={(hovered) => {
-                  point(hovered, 0);
+                  point("tooltip", hovered);
                 }}
                 onDismiss={dismiss}
                 text={mark.text}

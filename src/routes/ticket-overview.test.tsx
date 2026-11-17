@@ -6915,6 +6915,10 @@ const MESSAGE_INVALID = "This value isn't valid.";
 const VECTOR_DESCRIPTION =
   "The metrics write it, and a vector entered here chooses them.";
 
+// What the tab of a version of which SUSE has an assessment says in Add.
+const TAKEN_V31 =
+  "SUSE already has a CVSS v3.1 assessment: Edit in its row of the table changes it.";
+
 // What the tooltip of the default CVSS version says.
 const DEFAULT_VERSION_TEXT =
   "The default CVSS version: its SUSE assessment also sets the eligibility score of the Products.";
@@ -7023,12 +7027,17 @@ const METRICS_V40 = [
   "Availability Subsequent system",
 ] as const;
 
-// The consequence of Delete, with what it adds for the last SUSE assessment
-// of an Analyzed or Resolved Ticket.
+// The consequence of Delete, with what it adds for the assessment of the
+// default CVSS version, and for the last SUSE assessment of an Analyzed or
+// Resolved Ticket, then its last sentence.
 const DELETE_CONSEQUENCE =
-  "Sentinel calculates the severity of the CVE and the eligibility of the Products again from the other assessments, which can change the priority and the deadlines of the Ticket.";
+  "Sentinel calculates the severity of the CVE again from the other assessments, and the eligibility of the Products, which can change the priority and the deadlines of the Ticket.";
+function fallbackSentence(version: string): string {
+  return ` Without a SUSE CVSS v${version} assessment, the eligibility score of the Products is the fallback 10.0.`;
+}
 const RETURNS_TO_ANALYSIS =
   " As the last SUSE assessment of the CVE, it also returns the Ticket to Analysis.";
+const CANNOT_BE_UNDONE = " This can't be undone.";
 
 // The CVSS assessments of CVE-2099-0012, in the order of the API, by version,
 // then by provider, with the default CVSS version.
@@ -7133,20 +7142,20 @@ function suseDialog(screen: Screen, name = "Add SUSE assessment") {
   return screen.getByRole("dialog", { name, exact: true });
 }
 
-// The name of the tab of a version that is the default one: its label and
-// the name of its mark, before which the name that assistive technologies
-// compute has a space, as the mark is not inline.
-function markedName(version: string): RegExp {
-  return new RegExp(
-    `^CVSS v${version.replace(".", "\\.")} ?, the default version$`,
-  );
+// The tab of the version that is the default one, named by its label and the
+// name of its mark.
+function markedTab(dialog: Locator, version: string) {
+  return dialog.getByRole("tab", {
+    name: `CVSS v${version}, the default version`,
+    exact: true,
+  });
 }
 
 // The tab of a version, whether it is the default one or not.
 function versionTab(dialog: Locator, version: string) {
   return dialog.getByRole("tab", {
     name: new RegExp(
-      `^CVSS v${version.replace(".", "\\.")}( ?, the default version)?$`,
+      `^CVSS v${version.replace(".", "\\.")}(, the default version)?$`,
     ),
   });
 }
@@ -7155,9 +7164,10 @@ function vectorOf(dialog: Locator) {
   return dialog.getByRole("textbox", { name: "Vector", exact: true });
 }
 
-// The select of Start from, named by the option that it shows and its label.
+// The select of Start from, named by the option that it shows and its label,
+// "Start from (optional)" in Add and "Start from" in Edit.
 function startFromOf(dialog: Locator) {
-  return dialog.getByRole("button", { name: /Start from$/ });
+  return dialog.getByRole("button", { name: /Start from( \(optional\))?$/ });
 }
 
 function submitOf(dialog: Locator, label = "Add SUSE assessment") {
@@ -7204,10 +7214,39 @@ async function openSuseEdit(screen: Screen, version = "3.1") {
   return dialog;
 }
 
+// The marks of the severities in the light theme (docs/design-system.md,
+// Severity Marks).
+const MARK_HIGH = "rgb(247, 107, 21)";
+const MARK_MEDIUM = "rgb(245, 196, 0)";
+
+// The color of the mark of the severity that an element shows, a dot that is
+// hidden from assistive technologies, or undefined without one.
+function markOf(element: Element): string | undefined {
+  const dot = element.querySelector('svg[aria-hidden="true"] circle');
+  return dot === null ? undefined : getComputedStyle(dot).fill;
+}
+
+// The element of a dialog that scrolls its content, the nearest one around
+// the element that scrolls.
+function contentScrollerOf(element: Element): Element {
+  for (
+    let current = element.parentElement;
+    current !== null;
+    current = current.parentElement
+  ) {
+    if (getComputedStyle(current).overflowY === "auto") {
+      return current;
+    }
+  }
+  throw new Error("No element around it scrolls");
+}
+
 // Opens the options of Start from, and returns them.
 async function openStartFrom(dialog: Locator) {
   await startFromOf(dialog).click();
-  const options = page.getByRole("listbox", { name: "Start from" });
+  const options = page.getByRole("listbox", {
+    name: /^Start from( \(optional\))?$/,
+  });
   await expect.element(options).toBeVisible();
   return options;
 }
@@ -7384,6 +7423,41 @@ describe("the SUSE assessment", () => {
       expect(addSuse(screen).query()).toBeNull();
     });
 
+    test("offer neither Edit nor Delete on a SUSE assessment of a version that the pinned contract does not list", async () => {
+      stubSuse(() => ({
+        ...assessmentsWith([]),
+        assessments: [
+          {
+            ...SUSE_V40,
+            id: "00000000-0000-0000-0000-0000000000d9",
+            cvss_version: "5.0",
+            vector_string: "CVSS:5.0/AV:L",
+          },
+          NVD_V31,
+          SUSE_V31,
+        ],
+      }));
+      const { screen } = await renderSuse();
+
+      await expect
+        .element(
+          cvssPart(screen).getByRole("row", { name: "SUSE 5.0", exact: true }),
+        )
+        .toBeVisible();
+      expect(rowActions(screen)).toEqual([
+        "Edit SUSE assessment v3.1",
+        "Delete SUSE assessment v3.1",
+      ]);
+      expect(
+        cvssPart(screen)
+          .getByRole("row", { name: "SUSE 5.0", exact: true })
+          .getByRole("button", { name: /SUSE assessment/ })
+          .elements(),
+      ).toEqual([]);
+      // SUSE has no assessment of v4.0 that the screen changes.
+      await expect.element(addSuse(screen)).toBeVisible();
+    });
+
     test.each([
       ["no SUSE assessment", [NVD_V40, NVD_V31]],
       ["a SUSE assessment of v3.1 alone", [NVD_V31, SUSE_V31]],
@@ -7548,7 +7622,7 @@ describe("the SUSE assessment", () => {
   });
 
   describe("Add SUSE assessment", () => {
-    test("opens a dialog of two columns, 880 px wide, with the tabs of the versions, the default one marked and described, then Cancel and Add SUSE assessment", async () => {
+    test("opens a dialog 880 px wide, with the tabs of the versions, the default one marked and described, then Cancel and Add SUSE assessment", async () => {
       stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
       const { screen } = await renderSuse();
 
@@ -7558,7 +7632,7 @@ describe("the SUSE assessment", () => {
       await expect
         .element(dialog.getByRole("tablist", { name: "CVSS version" }))
         .toBeVisible();
-      const marked = dialog.getByRole("tab", { name: markedName("3.1") });
+      const marked = markedTab(dialog, "3.1");
       await expect
         .element(marked)
         .toHaveAccessibleDescription(DEFAULT_VERSION_TEXT);
@@ -7622,32 +7696,89 @@ describe("the SUSE assessment", () => {
       await expect
         .element(versionTab(dialog, opened))
         .toHaveAttribute("aria-selected", "true");
-      await expect
-        .element(dialog.getByRole("tab", { name: markedName(defaultVersion) }))
-        .toBeVisible();
+      await expect.element(markedTab(dialog, defaultVersion)).toBeVisible();
       await expect.element(vectorOf(dialog)).toHaveValue("");
     });
 
-    test.each([
-      ["the pointer", "click"],
-      ["the keyboard", "keyboard"],
-    ] as const)(
-      "gives the focus to the tab that it opens on, opened with %s",
-      async (_, way) => {
-        stubSuse(() => fictionalCvssAssessments());
+    test.each<
+      [
+        string,
+        CVSSAssessmentItem[],
+        (screen: Screen) => Promise<void>,
+        (screen: Screen) => Locator,
+      ]
+    >([
+      [
+        "Start from in Add, opened with the pointer",
+        [NVD_V40, NVD_V31],
+        async (screen) => {
+          await addSuse(screen).click();
+        },
+        (screen) => startFromOf(suseDialog(screen)),
+      ],
+      [
+        "Start from in Add, opened from the keyboard",
+        [NVD_V40, NVD_V31],
+        async (screen) => {
+          await press(addSuse(screen));
+        },
+        (screen) => startFromOf(suseDialog(screen)),
+      ],
+      [
+        "the first segment in Add without Start from",
+        [NVD_V31, SUSE_V31],
+        async (screen) => {
+          await addSuse(screen).click();
+        },
+        (screen) => segmentOf(suseDialog(screen), "Attack vector", "Network"),
+      ],
+      [
+        "Start from in Edit",
+        [NVD_V31, SUSE_V31],
+        async (screen) => {
+          await editSuse(screen).click();
+        },
+        (screen) =>
+          startFromOf(suseDialog(screen, "Edit SUSE assessment v3.1")),
+      ],
+    ])(
+      "gives the focus to the first field of its form as it opens: %s",
+      async (_, assessments, open, field) => {
+        stubSuse(() => assessmentsWith(assessments));
         const { screen } = await renderSuse();
 
-        if (way === "click") {
-          await addSuse(screen).click();
-        } else {
-          await press(addSuse(screen));
-        }
+        await open(screen);
 
-        const dialog = suseDialog(screen);
-        await expect.element(dialog).toBeVisible();
-        await expect.element(versionTab(dialog, "4.0")).toHaveFocus();
+        await expectFocusSettledOn(field(screen));
       },
     );
+
+    test("leaves the focus on a tab that the user opens, with the pointer or the keyboard, rather than moving it into its form", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect.element(startFromOf(dialog)).toHaveFocus();
+
+      await versionTab(dialog, "4.0").click();
+
+      await expect
+        .element(versionTab(dialog, "4.0"))
+        .toHaveAttribute("aria-selected", "true");
+      await expect
+        .element(metricOf(dialog, "Attack requirements"))
+        .toBeVisible();
+      await expectFocusSettledOn(versionTab(dialog, "4.0"));
+
+      await userEvent.keyboard("{ArrowLeft}");
+      await expect.element(versionTab(dialog, "3.1")).toHaveFocus();
+      await userEvent.keyboard("{Enter}");
+
+      await expect
+        .element(versionTab(dialog, "3.1"))
+        .toHaveAttribute("aria-selected", "true");
+      await expect.element(metricOf(dialog, "Scope")).toBeVisible();
+      await expectFocusSettledOn(versionTab(dialog, "3.1"));
+    });
 
     test("marks no tab when the default version is one that the pinned contract does not list", async () => {
       stubSuse(() => ({
@@ -7679,11 +7810,7 @@ describe("the SUSE assessment", () => {
       await versionTab(dialog, "3.1").click();
 
       await expect
-        .element(
-          dialog.getByText(
-            "SUSE already has a CVSS v3.1 assessment: Edit in its row of the table changes it.",
-          ),
-        )
+        .element(dialog.getByText(TAKEN_V31, { exact: true }))
         .toBeVisible();
       expect(vectorOf(dialog).query()).toBeNull();
       await expect.element(submitOf(dialog)).toBeDisabled();
@@ -7749,7 +7876,7 @@ describe("the SUSE assessment", () => {
       await expectFocusSettledOn(addSuse(screen));
     });
 
-    test("says at the vector that SUSE has the version, without adding it, when the read before the change shows that SUSE has it", async () => {
+    test("says in place of the form that SUSE has the version, with Add SUSE assessment disabled and the focus on that line, without adding it, when the read before the change shows that SUSE has it by then", async () => {
       let assessments = assessmentsWith([NVD_V40, NVD_V31]);
       const spy = stubSuse(() => assessments);
       const { screen } = await renderSuse();
@@ -7761,17 +7888,83 @@ describe("the SUSE assessment", () => {
 
       await press(submitOf(dialog));
 
-      const field = vectorOf(dialog);
-      await expect
-        .element(field)
-        .toHaveAccessibleDescription(
-          `${VECTOR_DESCRIPTION} SUSE already has a CVSS v3.1 assessment: edit it in its row.`,
-        );
-      await expect.element(field).toBeInvalid();
-      await expect.element(field).toHaveFocus();
+      const line = dialog.getByText(TAKEN_V31, { exact: true });
+      await expect.element(line).toBeVisible();
+      await expectFocusSettledOn(line);
+      expect(vectorOf(dialog).query()).toBeNull();
+      await expect.element(submitOf(dialog)).toBeDisabled();
+      expect(
+        dialog
+          .getByText(
+            "SUSE already has a CVSS v3.1 assessment: edit it in its row.",
+          )
+          .query(),
+      ).toBeNull();
       expect(readsOf(spy, CVSS)).toBe(reads + 1);
       expect(requestsWith(spy, "POST")).toHaveLength(0);
-      await expect.element(field).toHaveValue(VECTOR_V31);
+    });
+
+    test("turns the tab of a version into the line that says that SUSE has it once a read while it is open shows that SUSE has it, and keeps the form of the other tab", async () => {
+      let assessments = assessmentsWith([NVD_V40, NVD_V31]);
+      stubSuse(() => assessments);
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect.element(vectorOf(dialog)).toBeVisible();
+      // Meanwhile another analyst added it.
+      assessments = assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]);
+
+      await returnToForeground();
+
+      await expect
+        .element(dialog.getByText(TAKEN_V31, { exact: true }))
+        .toBeVisible();
+      expect(vectorOf(dialog).query()).toBeNull();
+      await expect.element(submitOf(dialog)).toBeDisabled();
+
+      await versionTab(dialog, "4.0").click();
+
+      await expect.element(vectorOf(dialog)).toBeVisible();
+      await expect.element(submitOf(dialog)).toBeEnabled();
+    });
+
+    test("keeps the focus in the dialog when a read while it is open replaces the form that holds it with the line that says that SUSE has the version", async () => {
+      let assessments = assessmentsWith([NVD_V40, NVD_V31]);
+      stubSuse(() => assessments);
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      await expect.element(vectorOf(dialog)).toHaveFocus();
+      assessments = assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]);
+
+      await returnToForeground();
+
+      await expect
+        .element(dialog.getByText(TAKEN_V31, { exact: true }))
+        .toBeVisible();
+      await frames();
+      expect(document.activeElement).not.toBe(document.body);
+      expect(dialog.element().contains(document.activeElement)).toBe(true);
+    });
+
+    test("marks the default version as the read of the assessments shows it while it is open", async () => {
+      let assessments = assessmentsWith([NVD_V40, NVD_V31], "3.1");
+      stubSuse(() => assessments);
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect.element(markedTab(dialog, "3.1")).toBeVisible();
+      // Meanwhile an administrator changed the default CVSS version.
+      assessments = assessmentsWith([NVD_V40, NVD_V31], "4.0");
+
+      await returnToForeground();
+
+      await expect.element(markedTab(dialog, "4.0")).toBeVisible();
+      await expect
+        .element(markedTab(dialog, "4.0"))
+        .toHaveAccessibleDescription(DEFAULT_VERSION_TEXT);
+      const other = dialog.getByRole("tab", { name: "CVSS v3.1", exact: true });
+      await expect.element(other).not.toHaveAccessibleDescription();
+      // The version of the form stays the one that the user sees.
+      await expect.element(other).toHaveAttribute("aria-selected", "true");
     });
 
     test("shows the failure of the read before the change at the top of the form, which takes the focus and keeps the input, without adding it", async () => {
@@ -7841,14 +8034,106 @@ describe("the SUSE assessment", () => {
       await expect.element(dialog).not.toBeInTheDocument();
       expect(requestsWith(spy, "POST")).toHaveLength(1);
     });
+
+    test("moves the focus from Add SUSE assessment to the Delete of the new row once the read after Add of the last version that SUSE lacked shows the row and no longer Add SUSE assessment", async () => {
+      let assessments = assessmentsWith([SUSE_V40, NVD_V31]);
+      stubSuse(() => assessments, {
+        upsertSuse: () => {
+          assessments = assessmentsWith([SUSE_V40, NVD_V31, SAVED_V31]);
+          return suseResponse(SAVED_V31, 201);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await submitOf(dialog).click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      await expect.element(addSuse(screen)).not.toBeInTheDocument();
+      await expect.element(assessmentRow(screen, "SUSE", "3.1")).toBeVisible();
+      await expectFocusSettledOn(deleteSuse(screen, "3.1"));
+    });
+
+    test("moves the focus no more once the read after Add fails, and to the screen's heading when a later read removes Add SUSE assessment", async () => {
+      let phase: "before" | "failing" | "added" = "before";
+      stubSuse(() => assessmentsWith([SUSE_V40, NVD_V31]), {
+        cvss: () => {
+          if (phase === "failing") {
+            return errorResponse(503, "DATABASE_UNAVAILABLE");
+          }
+          return cvssResponse(
+            phase === "added"
+              ? assessmentsWith([SUSE_V40, NVD_V31, SAVED_V31])
+              : assessmentsWith([SUSE_V40, NVD_V31]),
+          );
+        },
+        upsertSuse: () => {
+          phase = "failing";
+          return suseResponse(SAVED_V31, 201);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await submitOf(dialog).click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      await expect
+        .element(cvssPart(screen).getByText(/^This couldn't be updated\./))
+        .toBeVisible();
+      await expectFocusSettledOn(addSuse(screen));
+      // Meanwhile Sentinel shows the assessment that it added.
+      phase = "added";
+
+      await returnToForeground();
+
+      await expect.element(addSuse(screen)).not.toBeInTheDocument();
+      await expect.element(assessmentRow(screen, "SUSE", "3.1")).toBeVisible();
+      await expectFocusSettledOn(screenHeading(screen));
+    });
+
+    test("hides the tooltip of the default version with Escape and stays open", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect.element(startFromOf(dialog)).toHaveFocus();
+
+      // Back to the tab of the default version, from the keyboard.
+      await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+
+      await expect.element(markedTab(dialog, "3.1")).toHaveFocus();
+      const tooltip = page.getByRole("tooltip");
+      await expect.element(tooltip).toBeVisible();
+      expect(tooltip.element().textContent).toBe(DEFAULT_VERSION_TEXT);
+      await userEvent.keyboard("{Escape}");
+      await expect.element(tooltip).not.toBeInTheDocument();
+      await frames();
+      await expect.element(dialog).toBeVisible();
+      await expect.element(markedTab(dialog, "3.1")).toHaveFocus();
+
+      // Without the tooltip, Escape closes the dialog.
+      await userEvent.keyboard("{Escape}");
+
+      await expect.element(dialog).not.toBeInTheDocument();
+    });
   });
 
   describe("Start from", () => {
-    test("is empty as Add SUSE assessment opens, and offers the assessments of the other providers of the version alone, by provider, score, and severity", async () => {
+    test("is optional and empty as Add SUSE assessment opens, and offers the assessments of the other providers of the version alone, each by its provider, its score, and its severity with its mark", async () => {
       stubSuse(() => assessmentsWith([NVD_V40, CNA_V31, NVD_V31]));
       const { screen } = await renderSuse();
       const dialog = await openSuseAdd(screen);
-      expect(startFromOf(dialog).element().textContent).toBe("");
+      const field = dialog.getByRole("button", {
+        name: "Start from (optional)",
+        exact: true,
+      });
+      await expect.element(field).toBeVisible();
+      expect(field.element().textContent).toBe("");
+      const optional = dialog.getByText("(optional)", { exact: true });
+      expect(getComputedStyle(optional.element()).color).toBe(FG_MUTED);
+      expect(getComputedStyle(optional.element()).fontWeight).toBe("400");
 
       const options = await openStartFrom(dialog);
 
@@ -7860,7 +8145,15 @@ describe("the SUSE assessment", () => {
       ).toEqual(["Fictional CNA, 7.5 High", "NVD, 8.1 High"]);
       for (const option of options.getByRole("option").elements()) {
         expect(option.getAttribute("aria-selected")).not.toBe("true");
+        // The mark of the severity, which assistive technologies do not read.
+        expect(markOf(option)).toBe(MARK_HIGH);
       }
+      // Assistive technologies, and the keyboard, find each by its text.
+      await expect
+        .element(
+          options.getByRole("option", { name: "NVD, 8.1 High", exact: true }),
+        )
+        .toBeVisible();
     });
 
     test("fills the vector of the assessment chosen, which chooses its metrics", async () => {
@@ -7874,7 +8167,14 @@ describe("the SUSE assessment", () => {
         .click();
 
       await expect.element(vectorOf(dialog)).toHaveValue(NVD_V31_VECTOR);
-      expect(startFromOf(dialog).element().textContent).toBe("NVD, 8.1 High");
+      // The field shows the option as the option shows it.
+      const field = dialog.getByRole("button", {
+        name: "NVD, 8.1 High Start from (optional)",
+        exact: true,
+      });
+      await expect.element(field).toBeVisible();
+      expect(field.element().textContent).toBe("NVD, 8.1 High");
+      expect(markOf(field.element())).toBe(MARK_HIGH);
       expect(choicesOf(dialog, METRICS_V31)).toEqual([
         "Network",
         "High",
@@ -7897,13 +8197,18 @@ describe("the SUSE assessment", () => {
       expect(startFromOf(dialog).query()).toBeNull();
     });
 
-    test("starts in Edit at the assessment as saved, and offers it before the assessments of the other providers", async () => {
+    test("starts in Edit, labelled Start from, at the assessment as saved, and offers it before the assessments of the other providers", async () => {
       stubSuse(() => assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]));
       const { screen } = await renderSuse();
       const dialog = await openSuseEdit(screen);
-      expect(startFromOf(dialog).element().textContent).toBe(
-        "SUSE, as saved, 5.5 Medium",
-      );
+      const field = dialog.getByRole("button", {
+        name: "SUSE, as saved, 5.5 Medium Start from",
+        exact: true,
+      });
+      await expect.element(field).toBeVisible();
+      expect(field.element().textContent).toBe("SUSE, as saved, 5.5 Medium");
+      expect(markOf(field.element())).toBe(MARK_MEDIUM);
+      expect(dialog.getByText("(optional)").query()).toBeNull();
       await expect
         .element(vectorOf(dialog))
         .toHaveValue(SUSE_V31.vector_string);
@@ -7915,6 +8220,12 @@ describe("the SUSE assessment", () => {
           .elements()
           .map((option) => option.textContent),
       ).toEqual(["SUSE, as saved, 5.5 Medium", "NVD, 8.1 High"]);
+      expect(
+        options
+          .getByRole("option")
+          .elements()
+          .map((option) => markOf(option)),
+      ).toEqual([MARK_MEDIUM, MARK_HIGH]);
       await options
         .getByRole("option", { name: "NVD, 8.1 High", exact: true })
         .click();
@@ -8005,6 +8316,70 @@ describe("the SUSE assessment", () => {
         expect(dialog.getByRole("radio", { checked: true }).elements()).toEqual(
           [],
         );
+      },
+    );
+
+    // The form of v3.1 with Start from, and that of v4.0 without it, as no
+    // other provider has an assessment of v4.0.
+    test.each<
+      [number, CVECVSSAssessments["default_cvss_version"], string, string]
+    >([
+      [1280, "3.1", "with Start from", "Scope"],
+      [320, "3.1", "with Start from", "Scope"],
+      [1280, "4.0", "without Start from", "Vulnerable system"],
+      [320, "4.0", "without Start from", "Vulnerable system"],
+    ])(
+      "stand at %i CSS pixels, for v%s %s, in two columns where the dialog is wide enough and otherwise in one, the name of each metric before its values or, in a narrow form, above them, without scrolling sideways",
+      async (width, version, _, second) => {
+        await page.viewport(width, 800);
+        stubSuse(() => assessmentsWith([NVD_V31], version));
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        const exploitability = dialog.getByRole("heading", {
+          level: 3,
+          name: "Exploitability",
+          exact: true,
+        });
+        const next = dialog.getByRole("heading", {
+          level: 3,
+          name: second,
+          exact: true,
+        });
+        await expect.element(next).toBeVisible();
+        // The metrics of Exploitability, the last of which is User
+        // interaction.
+        const firstColumn =
+          version === "3.1" ? METRICS_V31.slice(0, 4) : METRICS_V40.slice(0, 5);
+        const last = boxOf(metricOf(dialog, "User interaction"));
+        const name = boxOf(dialog.getByText("Attack vector", { exact: true }));
+        const control = boxOf(metricOf(dialog, "Attack vector"));
+
+        if (width === 1280) {
+          // The second group stands beside Exploitability, 40 px after the
+          // widest control of the first column at least.
+          expect(
+            Math.abs(boxOf(next).top - boxOf(exploitability).top),
+          ).toBeLessThan(1);
+          const widest = Math.max(
+            ...firstColumn.map(
+              (metric) => boxOf(metricOf(dialog, metric)).right,
+            ),
+          );
+          expect(boxOf(next).left - widest).toBeGreaterThanOrEqual(40);
+          // The name stands at the start of the line of its values.
+          expect(name.right).toBeLessThanOrEqual(control.left);
+          expect(name.top).toBeLessThan(control.bottom);
+          expect(name.bottom).toBeGreaterThan(control.top);
+        } else {
+          expect(boxOf(next).top).toBeGreaterThanOrEqual(last.bottom);
+          expect(name.bottom).toBeLessThanOrEqual(control.top);
+          expect(boxOf(dialog).right).toBeLessThanOrEqual(width);
+        }
+        const content = contentScrollerOf(
+          metricOf(dialog, "Attack vector").element(),
+        );
+        expect(content.scrollWidth).toBeLessThanOrEqual(content.clientWidth);
+        expect(document.documentElement.scrollWidth).toBe(width);
       },
     );
 
@@ -8108,6 +8483,8 @@ describe("the SUSE assessment", () => {
         "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
       );
 
+      // Both assessments of v3.1, and not NVD's of v4.0, whose vector also
+      // says AV:N.
       await expect
         .element(metricOf(dialog, "Attack vector"))
         .toHaveAccessibleDescription("Fictional CNA: Network · NVD: Network");
@@ -8131,8 +8508,6 @@ describe("the SUSE assessment", () => {
       expect(boxOf(note).top).toBeGreaterThanOrEqual(
         boxOf(metricOf(dialog, "Attack complexity")).bottom,
       );
-      // The assessment of the other version says nothing of these metrics.
-      expect(dialog.getByText(/^NVD: Local/).elements()).toEqual([]);
     });
 
     test("show no note for a value of another provider that the pinned contract does not list", async () => {
@@ -8314,7 +8689,7 @@ describe("the SUSE assessment", () => {
   });
 
   describe("Edit", () => {
-    test("opens a dialog of two columns without tabs, named after the version, with the saved vector and its metrics, then Cancel and Save", async () => {
+    test("opens a dialog 880 px wide without tabs, named after the version, with the saved vector and its metrics, then Cancel and Save", async () => {
       stubSuse(() => fictionalCvssAssessments());
       const { screen } = await renderSuse();
 
@@ -8408,7 +8783,7 @@ describe("the SUSE assessment", () => {
       expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
       await expect
         .poll(() => cvssAnnouncements(screen))
-        .toEqual(["SUSE assessment v3.1 saved."]);
+        .toEqual(["SUSE assessment v3.1 changed."]);
       expect(assessmentRequests(spy).slice(before)).toEqual([
         `POST ${SUSE_ASSESSMENT}`,
         `GET ${CVSS}`,
@@ -8686,7 +9061,13 @@ describe("the SUSE assessment", () => {
           .toBe(reads.work + 1);
         await expect
           .poll(() => readsOf(spy, TICKETS))
-          .toBeGreaterThan(reads.duplicates);
+          .toBe(reads.duplicates + 1);
+        // Once every read has ended, each was sent once: the duplicates too,
+        // which both the reads of the tab and those of the Ticket list hold.
+        await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+        expect(readsOf(spy, TICKETS)).toBe(reads.duplicates + 1);
+        expect(requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
+        expect(readsOf(spy, CVSS)).toBe(reads.cvss + 1);
         expect(leftInvalidated(EVENTS)).toBe(true);
         expect(leftInvalidated(TICKETS)).toBe(true);
       },
@@ -8761,7 +9142,7 @@ describe("the SUSE assessment", () => {
 
         await expect
           .poll(() => cvssAnnouncements(screen))
-          .toContain("SUSE assessment v3.1 saved.");
+          .toContain("SUSE assessment v3.1 changed.");
       },
     );
 
@@ -8828,7 +9209,7 @@ describe("the SUSE assessment", () => {
         },
         "upsertSuse",
         () => suseResponse(SAVED_V31),
-        "SNTL-12: SUSE assessment v3.1 saved.",
+        "SNTL-12: SUSE assessment v3.1 changed.",
         MESSAGE_TONES.success,
       ],
       [
@@ -9076,13 +9457,12 @@ describe("the SUSE assessment", () => {
       await expect
         .element(confirmation.getByRole("button", { name: "Cancel" }))
         .toHaveFocus();
+      // The assessment of the default CVSS version, v3.1.
       await expect
         .element(
           confirmation.getByText(
-            `${DELETE_CONSEQUENCE} This can't be undone.`,
-            {
-              exact: true,
-            },
+            `${DELETE_CONSEQUENCE}${fallbackSentence("3.1")}${CANNOT_BE_UNDONE}`,
+            { exact: true },
           ),
         )
         .toBeVisible();
@@ -9096,63 +9476,184 @@ describe("the SUSE assessment", () => {
       expect(confirmation.element().getBoundingClientRect().width).toBe(400);
     });
 
-    test.each<[string, string, CVSSAssessmentItem[], boolean]>([
+    test.each<
       [
-        "the last SUSE assessment of an Analyzed Ticket",
+        string,
+        string,
+        CVSSAssessmentItem[],
+        CVECVSSAssessments["default_cvss_version"],
+        string,
+        boolean,
+        boolean,
+      ]
+    >([
+      [
+        "the last SUSE assessment, of the default version, of an Analyzed Ticket",
         "analyzed",
         [NVD_V31, SUSE_V31],
+        "3.1",
+        "3.1",
+        true,
         true,
       ],
       [
-        "the last SUSE assessment of a Resolved Ticket",
+        "the last SUSE assessment, of the default version, of a Resolved Ticket",
         "resolved",
         [NVD_V31, SUSE_V31],
+        "3.1",
+        "3.1",
+        true,
         true,
       ],
       [
         "the last SUSE assessment of a Ticket in Analysis",
         "analysis",
         [NVD_V31, SUSE_V31],
+        "3.1",
+        "3.1",
+        true,
         false,
       ],
       [
         "the last SUSE assessment of a New Ticket",
         "new",
         [NVD_V31, SUSE_V31],
+        "3.1",
+        "3.1",
+        true,
         false,
       ],
       [
-        "one of two SUSE assessments of an Analyzed Ticket",
+        "one of two SUSE assessments, of the default version, of an Analyzed Ticket",
         "analyzed",
         [SUSE_V40, NVD_V31, SUSE_V31],
+        "3.1",
+        "3.1",
+        true,
         false,
       ],
       [
         "a SUSE assessment beside one of v2.0 of an Analyzed Ticket",
         "analyzed",
         [NVD_V31, SUSE_V31, SUSE_V20],
+        "3.1",
+        "3.1",
+        true,
+        false,
+      ],
+      [
+        "the SUSE assessment of v4.0 while the default version is v3.1",
+        "analysis",
+        [SUSE_V40, NVD_V31, SUSE_V31],
+        "3.1",
+        "4.0",
+        false,
+        false,
+      ],
+      [
+        "the SUSE assessment of v4.0, the default version",
+        "analysis",
+        [SUSE_V40, NVD_V31, SUSE_V31],
+        "4.0",
+        "4.0",
+        true,
+        false,
+      ],
+      [
+        "the last SUSE assessment, of v4.0, of an Analyzed Ticket whose default version is v3.1",
+        "analyzed",
+        [SUSE_V40, NVD_V31],
+        "3.1",
+        "4.0",
+        false,
+        true,
+      ],
+      [
+        "the SUSE assessment of v3.1 while the default version is v4.0",
+        "analysis",
+        [SUSE_V40, NVD_V31, SUSE_V31],
+        "4.0",
+        "3.1",
+        false,
         false,
       ],
     ])(
-      "says for %s whether it returns the Ticket to Analysis",
-      async (_, status, assessments, returns) => {
-        stubSuse(() => assessmentsWith(assessments), {
+      "says for %s whether the eligibility score falls back and whether it returns the Ticket to Analysis",
+      async (
+        _,
+        status,
+        assessments,
+        defaultVersion,
+        version,
+        fallback,
+        returns,
+      ) => {
+        stubSuse(() => assessmentsWith(assessments, defaultVersion), {
           ticket: ticketIn(status),
         });
         const { screen } = await renderSuse();
 
-        await deleteSuse(screen).click();
+        await deleteSuse(screen, version).click();
 
         await expect
           .element(
-            deleteConfirmation(screen).getByText(
-              `${DELETE_CONSEQUENCE}${returns ? RETURNS_TO_ANALYSIS : ""} This can't be undone.`,
+            deleteConfirmation(screen, version).getByText(
+              `${DELETE_CONSEQUENCE}${fallback ? fallbackSentence(version) : ""}${returns ? RETURNS_TO_ANALYSIS : ""}${CANNOT_BE_UNDONE}`,
               { exact: true },
             ),
           )
           .toBeVisible();
       },
     );
+
+    test("says nothing of the eligibility score falling back when the default version is one that the pinned contract does not list", async () => {
+      stubSuse(
+        () => ({
+          ...assessmentsWith([NVD_V31, SUSE_V31]),
+          default_cvss_version: "5.0",
+        }),
+        { ticket: ticketIn("analysis") },
+      );
+      const { screen } = await renderSuse();
+
+      await deleteSuse(screen).click();
+
+      await expect
+        .element(
+          deleteConfirmation(screen).getByText(
+            `${DELETE_CONSEQUENCE}${CANNOT_BE_UNDONE}`,
+            { exact: true },
+          ),
+        )
+        .toBeVisible();
+    });
+
+    test("states the consequence as the read of the assessments shows them while it is open", async () => {
+      let assessments = assessmentsWith([SUSE_V40, NVD_V31, SUSE_V31]);
+      stubSuse(() => assessments, { ticket: ticketIn("analyzed") });
+      const { screen } = await renderSuse();
+      await deleteSuse(screen).click();
+      const confirmation = deleteConfirmation(screen);
+      const without = `${DELETE_CONSEQUENCE}${fallbackSentence("3.1")}${CANNOT_BE_UNDONE}`;
+      await expect
+        .element(confirmation.getByText(without, { exact: true }))
+        .toBeVisible();
+      // Meanwhile another analyst deleted the SUSE assessment of v4.0, and an
+      // administrator made v4.0 the default version.
+      assessments = assessmentsWith([NVD_V31, SUSE_V31], "4.0");
+
+      await returnToForeground();
+
+      await expect
+        .element(
+          confirmation.getByText(
+            `${DELETE_CONSEQUENCE}${RETURNS_TO_ANALYSIS}${CANNOT_BE_UNDONE}`,
+            { exact: true },
+          ),
+        )
+        .toBeVisible();
+      await expect.element(confirmation).toBeVisible();
+    });
 
     test("deletes the assessment of its version with Delete SUSE CVSS Assessment, then removes its row once the assessments are read again", async () => {
       let assessments = assessmentsWith([SUSE_V40, NVD_V31, SUSE_V31]);

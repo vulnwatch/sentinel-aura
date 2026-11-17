@@ -2904,12 +2904,23 @@ function SuseAssessmentDialog({
       element.querySelector<HTMLElement>("input, button")?.focus();
     }
   }, []);
-  // When the read before Add finds that SUSE has the version by then, the
-  // line of the tab that says so takes the focus as it shows in place of
-  // the form.
+  // The line of a tab that says that SUSE has the version takes the focus
+  // as it shows in place of the form, when the read before Add finds it, or
+  // when a read takes the form away while it holds the focus, which the
+  // browser then leaves on the page or on the dialog (docs/behaviors.md,
+  // Accessibility, Focus after an action).
   const takenFound = useRef(false);
   const takenLine = useCallback((element: HTMLParagraphElement | null) => {
-    if (element !== null && takenFound.current) {
+    if (element === null) {
+      return;
+    }
+    const active = document.activeElement;
+    if (
+      takenFound.current ||
+      active === null ||
+      active === document.body ||
+      active.getAttribute("role") === "dialog"
+    ) {
       takenFound.current = false;
       element.focus();
     }
@@ -3107,7 +3118,7 @@ function SuseAssessmentDialog({
       {/* Two columns, each as wide as its widest line, where the dialog is
           wide enough, otherwise one. */}
       <div className="@container">
-        <div className="grid gap-y-5 @min-[52rem]:grid-cols-[max-content_max-content] @min-[52rem]:justify-between @min-[52rem]:gap-x-10">
+        <div className="grid grid-cols-1 gap-y-5 @min-[52rem]:grid-cols-[max-content_max-content] @min-[52rem]:justify-between @min-[52rem]:gap-x-10">
           {startOptions.length > 0 && (
             <>
               <div className="w-80 max-w-full">
