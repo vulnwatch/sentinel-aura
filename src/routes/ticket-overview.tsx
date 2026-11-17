@@ -2962,7 +2962,10 @@ function useVectorScore(
   const paused = usePausedVector(version, current);
   const reason = reasonOf(paused);
   const read = useBaseScore(paused, reason === null);
-  const known = reason !== null || read.status !== "pending";
+  const answered = reason !== null || read.status !== "pending";
+  // Whether the outcome of the vector of the form is known: a vector that
+  // changed since it paused overtakes its read.
+  const known = answered && current === paused;
   // The vector whose outcome shows, which follows the paused vector once
   // its outcome is known.
   const [shown, setShown] = useState<VersionVector | null>(null);
@@ -2979,12 +2982,11 @@ function useVectorScore(
     outcome = scoreOutcome(reasonOf(previous), previousRead, version);
   }
   // A failure offers Try again for the vector of the form alone.
-  if (outcome.kind === "failed" && (!known || current !== paused)) {
+  if (outcome.kind === "failed" && !known) {
     outcome = { kind: "waiting" };
   }
   const rejection =
     known &&
-    current === paused &&
     reason === null &&
     read.status === "error" &&
     isRequestFailure(read.error)
@@ -2992,7 +2994,7 @@ function useVectorScore(
       : undefined;
   return {
     place: (
-      <ScorePlace outcome={outcome} updating={!known || read.isFetching} />
+      <ScorePlace outcome={outcome} updating={!answered || read.isFetching} />
     ),
     rejection,
   };
