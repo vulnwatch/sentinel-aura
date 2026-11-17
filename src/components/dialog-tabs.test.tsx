@@ -345,6 +345,22 @@ describe("the tooltip of a mark", () => {
     expect(escapes).toEqual(["Escape"]);
   });
 
+  test("shows again once the pointer has left the tab after Escape hid it, and rests on it again", async () => {
+    const { before, marked, tooltip } = await renderVersions();
+    await marked.hover();
+    vi.advanceTimersByTime(TOOLTIP_DELAY_MS);
+    await expect.element(tooltip).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await expect.element(tooltip).not.toBeInTheDocument();
+
+    await before.hover();
+    vi.advanceTimersByTime(CLOSE_DELAY_MS);
+    await marked.hover();
+    vi.advanceTimersByTime(TOOLTIP_DELAY_MS);
+
+    await expect.element(tooltip).toBeVisible();
+  });
+
   test("does not show on the focus of a press of the pointer once the pointer has left its tab", async () => {
     const { before, marked, tooltip } = await renderVersions();
 
@@ -366,4 +382,54 @@ describe("the tooltip of a mark", () => {
 
     expect(tooltip.query()).toBeNull();
   });
+});
+
+// The tabs in a place that centers them with their content, as a dialog
+// does, v4.0 selected at first, whose content is shorter than that of v3.1,
+// so that the tabs move as the selected tab changes.
+function CenteredVersions() {
+  const [selected, setSelected] = useState<Version>("4.0");
+  return (
+    <div className="flex h-screen flex-col justify-center">
+      <DialogTabs
+        label="CVSS version"
+        tabs={TABS}
+        selected={selected}
+        onSelect={setSelected}
+      >
+        <p className={selected === "3.1" ? "h-40" : "h-10"}>
+          {`The form of v${selected}`}
+        </p>
+      </DialogTabs>
+    </div>
+  );
+}
+
+test("places the tooltip of a mark again above its tab once the tab, selected, has moved with the content", async () => {
+  const screen = await render(<CenteredVersions />);
+  const marked = screen.getByRole("tab", {
+    name: "CVSS v3.1, the default version",
+    exact: true,
+  });
+  const tooltip = page.getByRole("tooltip");
+  await userEvent.keyboard("{Tab}");
+  await expect
+    .element(screen.getByRole("tab", { name: "CVSS v4.0", exact: true }))
+    .toHaveFocus();
+  await userEvent.keyboard("{ArrowLeft}");
+  await expect.element(tooltip).toBeVisible();
+  const before = marked.element().getBoundingClientRect().top;
+
+  await userEvent.keyboard("{Enter}");
+
+  await expect.element(screen.getByText("The form of v3.1")).toBeVisible();
+  expect(marked.element().getBoundingClientRect().top).toBeLessThan(before);
+  // 6 px above the tab, where it moved.
+  await expect
+    .poll(
+      () =>
+        marked.element().getBoundingClientRect().top -
+        tooltip.element().getBoundingClientRect().bottom,
+    )
+    .toBeCloseTo(6, 0);
 });

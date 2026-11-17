@@ -7780,6 +7780,29 @@ describe("the SUSE assessment", () => {
       await expectFocusSettledOn(versionTab(dialog, "3.1"));
     });
 
+    test("leaves the focus on the tab of a version that SUSE has as the user opens it from its form, without moving it through the line that says so", async () => {
+      stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect
+        .element(segmentOf(dialog, "Attack vector", "Network"))
+        .toHaveFocus();
+      // What takes the focus, which assistive technologies announce.
+      const focused: Element[] = [];
+      dialog.element().addEventListener("focusin", (event) => {
+        if (event.target instanceof Element) {
+          focused.push(event.target);
+        }
+      });
+
+      await versionTab(dialog, "3.1").click();
+
+      const line = dialog.getByText(TAKEN_V31, { exact: true });
+      await expect.element(line).toBeVisible();
+      await expectFocusSettledOn(versionTab(dialog, "3.1"));
+      expect(focused).toEqual([versionTab(dialog, "3.1").element()]);
+    });
+
     test("marks no tab when the default version is one that the pinned contract does not list", async () => {
       stubSuse(() => ({
         ...assessmentsWith([NVD_V31]),
@@ -7927,24 +7950,35 @@ describe("the SUSE assessment", () => {
       await expect.element(submitOf(dialog)).toBeEnabled();
     });
 
-    test("keeps the focus in the dialog when a read while it is open replaces the form that holds it with the line that says that SUSE has the version", async () => {
-      let assessments = assessmentsWith([NVD_V40, NVD_V31]);
-      stubSuse(() => assessments);
-      const { screen } = await renderSuse();
-      const dialog = await openSuseAdd(screen);
-      await vectorOf(dialog).fill(VECTOR_V31);
-      await expect.element(vectorOf(dialog)).toHaveFocus();
-      assessments = assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]);
+    test.each([
+      ["", false],
+      [", also after the user has opened the other tab and come back", true],
+    ])(
+      "keeps the focus in the dialog, on the line that says that SUSE has the version, when a read while it is open replaces the form that holds it with that line%s",
+      async (_, switched) => {
+        let assessments = assessmentsWith([NVD_V40, NVD_V31]);
+        stubSuse(() => assessments);
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        if (switched) {
+          await versionTab(dialog, "4.0").click();
+          await expect
+            .element(metricOf(dialog, "Attack requirements"))
+            .toBeVisible();
+          await versionTab(dialog, "3.1").click();
+          await expect.element(metricOf(dialog, "Scope")).toBeVisible();
+        }
+        await vectorOf(dialog).fill(VECTOR_V31);
+        await expect.element(vectorOf(dialog)).toHaveFocus();
+        assessments = assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]);
 
-      await returnToForeground();
+        await returnToForeground();
 
-      await expect
-        .element(dialog.getByText(TAKEN_V31, { exact: true }))
-        .toBeVisible();
-      await frames();
-      expect(document.activeElement).not.toBe(document.body);
-      expect(dialog.element().contains(document.activeElement)).toBe(true);
-    });
+        const line = dialog.getByText(TAKEN_V31, { exact: true });
+        await expect.element(line).toBeVisible();
+        await expectFocusSettledOn(line);
+      },
+    );
 
     test("marks the default version as the read of the assessments shows it while it is open", async () => {
       let assessments = assessmentsWith([NVD_V40, NVD_V31], "3.1");
@@ -8508,6 +8542,25 @@ describe("the SUSE assessment", () => {
       expect(boxOf(note).top).toBeGreaterThanOrEqual(
         boxOf(metricOf(dialog, "Attack complexity")).bottom,
       );
+    });
+
+    test("show another provider's value below the values of its metric, where they start, in a form narrower than 320 px, without scrolling sideways", async () => {
+      await page.viewport(320, 800);
+      stubSuse(() => assessmentsWith([NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await vectorOf(dialog).fill(
+        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      );
+
+      const control = metricOf(dialog, "Attack complexity");
+      await expect.element(control).toHaveAccessibleDescription("NVD: High");
+      const note = boxOf(dialog.getByText("NVD: High", { exact: true }));
+      expect(note.top).toBeGreaterThanOrEqual(boxOf(control).bottom);
+      expect(note.left).toBe(boxOf(control).left);
+      const content = contentScrollerOf(control.element());
+      expect(content.scrollWidth).toBeLessThanOrEqual(content.clientWidth);
     });
 
     test("show no note for a value of another provider that the pinned contract does not list", async () => {
@@ -9648,6 +9701,38 @@ describe("the SUSE assessment", () => {
         .element(
           confirmation.getByText(
             `${DELETE_CONSEQUENCE}${RETURNS_TO_ANALYSIS}${CANNOT_BE_UNDONE}`,
+            { exact: true },
+          ),
+        )
+        .toBeVisible();
+      await expect.element(confirmation).toBeVisible();
+    });
+
+    test("states whether it returns the Ticket to Analysis as the read of the Ticket shows its status while it is open", async () => {
+      let status = "analysis";
+      stubSuse(() => assessmentsWith([NVD_V31, SUSE_V31]), {
+        ticket: () => ticketIn(status)(),
+      });
+      const { screen } = await renderSuse();
+      await deleteSuse(screen).click();
+      const confirmation = deleteConfirmation(screen);
+      await expect
+        .element(
+          confirmation.getByText(
+            `${DELETE_CONSEQUENCE}${fallbackSentence("3.1")}${CANNOT_BE_UNDONE}`,
+            { exact: true },
+          ),
+        )
+        .toBeVisible();
+      // Meanwhile another analyst completed the analysis.
+      status = "analyzed";
+
+      await returnToForeground();
+
+      await expect
+        .element(
+          confirmation.getByText(
+            `${DELETE_CONSEQUENCE}${fallbackSentence("3.1")}${RETURNS_TO_ANALYSIS}${CANNOT_BE_UNDONE}`,
             { exact: true },
           ),
         )
