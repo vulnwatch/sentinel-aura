@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.25.0"
+    "version": "0.26.0"
   },
   "paths": {
     "/health": {
@@ -9432,6 +9432,83 @@
         }
       }
     },
+    "/api/v1/cvss/base-score": {
+      "get": {
+        "tags": [
+          "CVSS"
+        ],
+        "summary": "Calculate the Base score of a CVSS vector",
+        "description": "Parses one CVSS Base vector as Set or Update SUSE CVSS Assessment does and returns its canonical vector, version, Base score, assessment severity, and expanded Base metrics, without storing anything: the result depends only on the vector and is the same for every caller. A vector that the SUSE upsert rejects is rejected with the same status and code, and a vector with a non-Base metric is rejected, never reduced. Requires authentication (JWT session or API key).",
+        "operationId": "get_cvss_base_score_api_v1_cvss_base_score_get",
+        "parameters": [
+          {
+            "name": "vector_string",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "CVSS Base vector (v2.0, v3.0, v3.1, or v4.0), at most 200 characters as received. Leading and trailing whitespace is trimmed; the rest must be a complete Base vector in official case, with the prefix of its version (none for v2.0) and every Base metric exactly once in any order, and no Temporal, Environmental, Threat, or Supplemental metric. Any other value returns `422 CVSS_INVALID_VECTOR`.",
+              "examples": [
+                "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+              ],
+              "title": "Vector String"
+            },
+            "description": "CVSS Base vector (v2.0, v3.0, v3.1, or v4.0), at most 200 characters as received. Leading and trailing whitespace is trimmed; the rest must be a complete Base vector in official case, with the prefix of its version (none for v2.0) and every Base metric exactly once in any order, and no Temporal, Environmental, Threat, or Supplemental metric. Any other value returns `422 CVSS_INVALID_VECTOR`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CVSSBaseScoreResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`CVSS_INVALID_VECTOR`: the string passes the schema checks but violates the accepted Base-vector contract. `VALIDATION_ERROR`: the request fails validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Get Cvss Base Score Api V1 Cvss Base Score Get"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cnas": {
       "get": {
         "tags": [
@@ -12695,6 +12772,42 @@
         "title": "CVSS20Assessment",
         "description": "A CVSS v2.0 assessment."
       },
+      "CVSS20BaseScore": {
+        "properties": {
+          "cvss_version": {
+            "type": "string",
+            "const": "2.0",
+            "title": "Cvss Version"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Calculated Base score (0.0-10.0)."
+          },
+          "severity": {
+            "$ref": "#/components/schemas/CVSSAssessmentSeverity",
+            "description": "Version-specific assessment severity (v2.0: low, medium, high; v3.0, v3.1, v4.0: none through critical). Not the unified CVE severity."
+          },
+          "vector_string": {
+            "type": "string",
+            "title": "Vector String",
+            "description": "Canonical complete Base vector."
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/CVSS2Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cvss_version",
+          "score",
+          "severity",
+          "vector_string",
+          "metrics"
+        ],
+        "title": "CVSS20BaseScore",
+        "description": "The Base score of a CVSS v2.0 vector."
+      },
       "CVSS2AccessComplexity": {
         "type": "string",
         "enum": [
@@ -12831,6 +12944,42 @@
         "title": "CVSS30Assessment",
         "description": "A CVSS v3.0 assessment."
       },
+      "CVSS30BaseScore": {
+        "properties": {
+          "cvss_version": {
+            "type": "string",
+            "const": "3.0",
+            "title": "Cvss Version"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Calculated Base score (0.0-10.0)."
+          },
+          "severity": {
+            "$ref": "#/components/schemas/CVSSAssessmentSeverity",
+            "description": "Version-specific assessment severity (v2.0: low, medium, high; v3.0, v3.1, v4.0: none through critical). Not the unified CVE severity."
+          },
+          "vector_string": {
+            "type": "string",
+            "title": "Vector String",
+            "description": "Canonical complete Base vector."
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/CVSS3Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cvss_version",
+          "score",
+          "severity",
+          "vector_string",
+          "metrics"
+        ],
+        "title": "CVSS30BaseScore",
+        "description": "The Base score of a CVSS v3.0 vector."
+      },
       "CVSS31Assessment": {
         "properties": {
           "id": {
@@ -12893,6 +13042,42 @@
         ],
         "title": "CVSS31Assessment",
         "description": "A CVSS v3.1 assessment."
+      },
+      "CVSS31BaseScore": {
+        "properties": {
+          "cvss_version": {
+            "type": "string",
+            "const": "3.1",
+            "title": "Cvss Version"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Calculated Base score (0.0-10.0)."
+          },
+          "severity": {
+            "$ref": "#/components/schemas/CVSSAssessmentSeverity",
+            "description": "Version-specific assessment severity (v2.0: low, medium, high; v3.0, v3.1, v4.0: none through critical). Not the unified CVE severity."
+          },
+          "vector_string": {
+            "type": "string",
+            "title": "Vector String",
+            "description": "Canonical complete Base vector."
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/CVSS3Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cvss_version",
+          "score",
+          "severity",
+          "vector_string",
+          "metrics"
+        ],
+        "title": "CVSS31BaseScore",
+        "description": "The Base score of a CVSS v3.1 vector."
       },
       "CVSS3Metrics": {
         "properties": {
@@ -13015,6 +13200,42 @@
         ],
         "title": "CVSS40Assessment",
         "description": "A CVSS v4.0 assessment."
+      },
+      "CVSS40BaseScore": {
+        "properties": {
+          "cvss_version": {
+            "type": "string",
+            "const": "4.0",
+            "title": "Cvss Version"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Calculated Base score (0.0-10.0)."
+          },
+          "severity": {
+            "$ref": "#/components/schemas/CVSSAssessmentSeverity",
+            "description": "Version-specific assessment severity (v2.0: low, medium, high; v3.0, v3.1, v4.0: none through critical). Not the unified CVE severity."
+          },
+          "vector_string": {
+            "type": "string",
+            "title": "Vector String",
+            "description": "Canonical complete Base vector."
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/CVSS4Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cvss_version",
+          "score",
+          "severity",
+          "vector_string",
+          "metrics"
+        ],
+        "title": "CVSS40BaseScore",
+        "description": "The Base score of a CVSS v4.0 vector."
       },
       "CVSS4AttackRequirements": {
         "type": "string",
@@ -13157,6 +13378,44 @@
         ],
         "title": "CVSSAttackVector",
         "description": "CVSS v3.x and v4.0 Attack Vector (`AV`) wire values."
+      },
+      "CVSSBaseScore": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CVSS20BaseScore"
+          },
+          {
+            "$ref": "#/components/schemas/CVSS30BaseScore"
+          },
+          {
+            "$ref": "#/components/schemas/CVSS31BaseScore"
+          },
+          {
+            "$ref": "#/components/schemas/CVSS40BaseScore"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "cvss_version",
+          "mapping": {
+            "2.0": "#/components/schemas/CVSS20BaseScore",
+            "3.0": "#/components/schemas/CVSS30BaseScore",
+            "3.1": "#/components/schemas/CVSS31BaseScore",
+            "4.0": "#/components/schemas/CVSS40BaseScore"
+          }
+        }
+      },
+      "CVSSBaseScoreResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CVSSBaseScore"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "CVSSBaseScoreResponse",
+        "description": "`GET /api/v1/cvss/base-score` response envelope."
       },
       "CVSSEligibilityResult": {
         "properties": {
