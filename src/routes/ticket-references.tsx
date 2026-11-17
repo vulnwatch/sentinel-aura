@@ -1,22 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  createRoute,
-  linkOptions,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Pencil, Plus, Trash, X } from "lucide-react";
 import {
   createRef,
   useCallback,
   useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type FormEvent,
-  type RefObject,
 } from "react";
 import { Form } from "react-aria-components";
 import { z } from "zod";
@@ -48,6 +41,11 @@ import {
 import { getGetTicketQueryKey, useGetTicket } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
 import { Button } from "../components/button";
+import {
+  useChangeOutcome,
+  useMounted,
+  useOutcomeAfterRead,
+} from "../components/change-outcome";
 import { ClampedText } from "../components/clamped-text";
 import {
   EmptyState,
@@ -64,7 +62,6 @@ import {
 } from "../components/filters";
 import { IconButton } from "../components/icon-button";
 import { Loading, UpdatingBar } from "../components/loading";
-import { useShowMessage, type MessageRecord } from "../components/message-area";
 import {
   ConfirmationDialog,
   DialogErrorMessage,
@@ -74,13 +71,14 @@ import {
 } from "../components/modal-dialog";
 import { OptionsStatus } from "../components/options";
 import { dataPlace, placeMessage } from "../components/read-view";
-import { FocusHandOff, focusScreenHeading } from "../components/screen-heading";
+import { useRowFocusAfterRemoval } from "../components/row-focus";
+import { FocusHandOff } from "../components/screen-heading";
 import { SelectField, type FieldOption } from "../components/select-field";
 import { TextAreaField, TextField } from "../components/text-field";
 import { addressText, WebAddress, WebLink } from "../components/web-link";
 import { sameSearch, stringifySearch, valueListParam } from "../search-params";
 import { useSignedInUser } from "../session-gate";
-import { CVE_FETCHER_NAMES, ticketRoute } from "./ticket";
+import { CVE_FETCHER_NAMES, ticketRecord, ticketRoute } from "./ticket";
 
 // The tab References of the Ticket screen (docs/screens/ticket.md,
 // References): the references of the Ticket, from List References, which a
@@ -279,24 +277,10 @@ function columnsOf(
 // ----------------------------------------------------------------------------
 // Changes
 
-// Whether the component is still on the page, so that the outcome of a
-// change that ends after the user left the screen shows in the message area
-// instead (docs/behaviors.md, Outcome of a Change).
-function useMounted(): RefObject<boolean> {
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  return mounted;
-}
-
 // What a change of the references of a Ticket affects, which the screen
-// reads again whatever its outcome: the references, the audit log, the users
-// who acted on the Ticket, and the Ticket (docs/behaviors.md, Outcome of a
-// Change).
+// reads again whatever its outcome (useChangeOutcome): the references, the
+// audit log, the users who acted on the Ticket, and the Ticket
+// (docs/behaviors.md, Outcome of a Change).
 function useReadAgain(ticketId: string) {
   const client = useQueryClient();
   return useCallback(() => {
@@ -309,50 +293,6 @@ function useReadAgain(ticketId: string) {
       void client.invalidateQueries({ queryKey });
     }
   }, [client, ticketId]);
-}
-
-// The callbacks of a change of a reference, which apply also once the dialog
-// that started it has left the page: the screen reads again what the change
-// affects, and the outcome of a change that ends after the user left the
-// screen shows in the message area, naming the Ticket with a link to it
-// (docs/behaviors.md, Outcome of a Change). The text of a success names the
-// reference, given the response of the change.
-function useChangeOutcome<TData>(
-  ticketId: string,
-  success: (data: TData) => string,
-) {
-  const mounted = useMounted();
-  const showMessage = useShowMessage();
-  const readAgain = useReadAgain(ticketId);
-  const record: MessageRecord = {
-    name: ticketId,
-    href: linkOptions({ to: "/tickets/$ticketId", params: { ticketId } }),
-  };
-  return {
-    gcTime: 0,
-    onSuccess: (data: TData) => {
-      if (!mounted.current) {
-        showMessage({ tone: "success", text: success(data), record });
-      }
-    },
-    onError: (failure: unknown) => {
-      if (mounted.current || !isRequestFailure(failure)) {
-        return;
-      }
-      const presentation = presentChangeFailure(failure);
-      if (presentation !== undefined) {
-        showMessage({
-          tone: presentation.unconfirmed ? "warning" : "danger",
-          text: presentation.message,
-          reference: presentation.reference,
-          record,
-        });
-      }
-    },
-    onSettled: () => {
-      readAgain();
-    },
-  };
 }
 
 // The choice of the type in the form: a type of the contract;
@@ -542,11 +482,15 @@ function ReferenceDialog({
   onClose,
   onDone,
 }: ReferenceDialogProps) {
+  // The outcome of a change that ends after the user left the tab names the
+  // Ticket (useChangeOutcome).
+  const record = ticketRecord(ticketId);
+  const readAgain = useReadAgain(ticketId);
   const add = useAddReference({
-    mutation: useChangeOutcome(ticketId, addedText),
+    mutation: useChangeOutcome(record, addedText, readAgain),
   });
   const update = useUpdateReference({
-    mutation: useChangeOutcome(ticketId, changedText),
+    mutation: useChangeOutcome(record, changedText, readAgain),
   });
   const formId = useId();
   const [initial] = useState(() =>
@@ -797,8 +741,13 @@ function DeleteDialog({
   onDone,
 }: DeleteDialogProps) {
   const deleted = `Reference ${referenceName(reference)} deleted.`;
+  const readAgain = useReadAgain(ticketId);
   const remove = useDeleteReference({
-    mutation: useChangeOutcome(ticketId, () => deleted),
+    mutation: useChangeOutcome(
+      ticketRecord(ticketId),
+      () => deleted,
+      readAgain,
+    ),
   });
   const [error, setError] = useState<DialogError>();
   // A failure of the UI itself, which the router shows (src/router.ts).
@@ -843,46 +792,23 @@ function DeleteDialog({
   );
 }
 
-// The announcement of the outcome of a change, with a key that changes with
-// each, so that the same text is announced again.
-interface Announcement {
-  key: number;
-  text: string;
-}
-
 // A reference that Delete deletes, with its place in the table, which the
-// focus takes once a read no longer returns it.
+// focus takes once a read no longer returns it (useRowFocusAfterRemoval).
 interface Removed {
   reference: TicketReferenceResponse;
   index: number;
-  // When Sentinel confirmed it, after which the first read of the
-  // references decides: a read that fails drops it, and a later read that
-  // removes the row moves the focus as for any row that a read removes.
-  at?: number;
 }
 
-// The reference of the row that holds an element, or undefined outside the
-// rows.
-function referenceIdOf(element: Element): string | undefined {
-  return (
-    element
-      .closest("tbody > tr")
-      ?.querySelector("[data-reference-id]")
-      ?.getAttribute("data-reference-id") ?? undefined
-  );
+// The identifier of a reference, which identifies its row.
+function referenceId(reference: TicketReferenceResponse): string {
+  return reference.id;
 }
 
-// The row of a reference in the table, by its identifier.
-function rowOf(place: Element, id: string): HTMLElement | null {
-  return (
-    place
-      .querySelector(`[data-reference-id="${CSS.escape(id)}"]`)
-      ?.closest<HTMLElement>("tbody > tr") ?? null
-  );
+// The Delete of the row of a reference, which takes the focus after Delete
+// of the row before it, or null without one.
+function deleteIn(row: HTMLElement): HTMLElement | null {
+  return row.querySelector<HTMLElement>(`button[aria-label^="${DELETE}"]`);
 }
-
-// How many frames the tab waits at most for the table to take a row away.
-const REMOVAL_FRAMES = 10;
 
 // ----------------------------------------------------------------------------
 // The filters
@@ -1026,7 +952,6 @@ function TicketReferences() {
   const read = useListReferences(ticketId);
   const search = ticketReferencesRoute.useSearch();
   const navigate = useNavigate();
-  const showMessage = useShowMessage();
   // Whether the tab is still on the page as a change ends: once the user
   // has left it, the change shows its outcome itself (useChangeOutcome).
   const mounted = useMounted();
@@ -1042,180 +967,29 @@ function TicketReferences() {
 
   const [dialog, setDialog] = useState<DialogMode>();
   const [deleting, setDeleting] = useState<Removed>();
-  const [announcement, setAnnouncement] = useState<Announcement>();
-  // The outcome of a change, which waits for the first read of the
-  // references after it, and whether it shows in the message area.
-  const announced = useRef<{ text: string; at: number; message: boolean }>(
-    undefined,
-  );
-  const removed = useRef<Removed>(undefined);
-  const focused = useRef<string>(undefined);
   const add = useRef<HTMLDivElement>(null);
   const references = useRef<HTMLDivElement>(null);
+  // The outcome of a change, which the tab announces once a read of the
+  // references after it arrives, or shows in the message area, naming the
+  // Ticket once the user has left the tab (useOutcomeAfterRead).
+  const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
+  const outcome = useOutcomeAfterRead(read, record);
+  // The focus when the row that holds it leaves the table: after Delete, to
+  // the Delete of the row that takes its place, or to that row without one,
+  // or to Add reference when no row follows; otherwise, as when a read
+  // removes it or an Edit takes it out of the filters, to the screen's
+  // heading (useRowFocusAfterRemoval).
+  const fallback = useCallback(() => add.current?.querySelector("button"), []);
+  const rowFocus = useRowFocusAfterRemoval({
+    container: references,
+    rows,
+    rowId: referenceId,
+    attribute: "data-reference-id",
+    control: deleteIn,
+    fallback,
+    read,
+  });
 
-  // The reference of the row that has the focus, which the focus leaves for
-  // good when it moves elsewhere, or when the pointer presses elsewhere; a
-  // row that leaves the page takes the focus without either. A dialog that
-  // a row opened takes it, and gives it back to the row after an Edit that
-  // Sentinel confirmed, as the dialog closes.
-  useEffect(() => {
-    const element = references.current;
-    if (element === null) {
-      return undefined;
-    }
-    const onFocusIn = (event: FocusEvent) => {
-      if (event.target instanceof Element) {
-        focused.current = referenceIdOf(event.target);
-      }
-    };
-    const onFocusOut = (event: FocusEvent) => {
-      if (
-        event.relatedTarget instanceof Node &&
-        !element.contains(event.relatedTarget)
-      ) {
-        focused.current = undefined;
-      }
-    };
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && !element.contains(event.target)) {
-        focused.current = undefined;
-      }
-    };
-    element.addEventListener("focusin", onFocusIn);
-    element.addEventListener("focusout", onFocusOut);
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      element.removeEventListener("focusin", onFocusIn);
-      element.removeEventListener("focusout", onFocusOut);
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, []);
-
-  // An outcome for the message area that still waits for its read as the
-  // user leaves the tab shows at once, naming the Ticket, as the outcome of
-  // a change that ends after the user left does (useChangeOutcome).
-  useEffect(
-    () => () => {
-      const done = announced.current;
-      if (done?.message === true) {
-        announced.current = undefined;
-        showMessage({
-          tone: "success",
-          text: done.text,
-          record: {
-            name: ticketId,
-            href: linkOptions({
-              to: "/tickets/$ticketId",
-              params: { ticketId },
-            }),
-          },
-        });
-      }
-    },
-    [showMessage, ticketId],
-  );
-
-  const readAt = read.dataUpdatedAt;
-  const failedAt = read.errorUpdatedAt;
-  // The announcement of a change waits for the first read of the references
-  // after it.
-  useLayoutEffect(() => {
-    const done = announced.current;
-    if (done !== undefined && (readAt >= done.at || failedAt >= done.at)) {
-      announced.current = undefined;
-      if (done.message) {
-        showMessage({ tone: "success", text: done.text });
-      } else {
-        setAnnouncement((current) => ({
-          key: (current?.key ?? 0) + 1,
-          text: done.text,
-        }));
-      }
-    }
-    const pending = removed.current?.at;
-    if (pending !== undefined && failedAt >= pending && readAt < pending) {
-      removed.current = undefined;
-    }
-  }, [readAt, failedAt, showMessage]);
-
-  // When the row that holds the focus leaves the table: after Delete, to the
-  // Delete of the row that takes its place, or to that row without one, or
-  // to Add reference when no row follows; otherwise, as when a read removes
-  // it or an Edit takes it out of the filters, to the screen's heading.
-  // React Aria's table takes the row away from the page in a later render
-  // and moves the focus within the table itself, so the focus moves once
-  // the row has left the page, unless the user moved it out of the tab
-  // meanwhile.
-  useEffect(() => {
-    const element = references.current;
-    if (rows === undefined || element === null) {
-      return;
-    }
-    const gone = removed.current;
-    const holder = focused.current;
-    let goneId: string;
-    let moveFocus: () => void;
-    if (
-      gone !== undefined &&
-      !rows.some((row) => row.id === gone.reference.id)
-    ) {
-      removed.current = undefined;
-      focused.current = undefined;
-      goneId = gone.reference.id;
-      const next = rows[gone.index];
-      moveFocus = () => {
-        const row = next === undefined ? null : rowOf(element, next.id);
-        (row === null
-          ? add.current?.querySelector("button")
-          : (row.querySelector<HTMLElement>(
-              `button[aria-label^="${DELETE}"]`,
-            ) ?? row)
-        )?.focus();
-      };
-    } else if (holder !== undefined && !rows.some((row) => row.id === holder)) {
-      focused.current = undefined;
-      goneId = holder;
-      moveFocus = focusScreenHeading;
-    } else {
-      return;
-    }
-    let frames = 0;
-    const move = () => {
-      if (!element.isConnected) {
-        return;
-      }
-      // While the focus is on the body after the row left, or on the
-      // screen's heading, where a dialog that closed returns it when the
-      // element that opened it has left, React Aria's table has yet to move
-      // it into the row that takes its place, which would take it back from
-      // where the tab moves it.
-      const unsettled =
-        document.activeElement === document.body ||
-        document.activeElement?.matches("h1") === true;
-      if (
-        (rowOf(element, goneId) !== null || unsettled) &&
-        frames < REMOVAL_FRAMES
-      ) {
-        frames += 1;
-        requestAnimationFrame(move);
-        return;
-      }
-      const active = document.activeElement;
-      if (
-        active === null ||
-        active === document.body ||
-        active.matches("h1") ||
-        element.contains(active)
-      ) {
-        moveFocus();
-      }
-    };
-    requestAnimationFrame(move);
-  }, [rows]);
-
-  const announceAfterRead = (text: string) => {
-    announced.current = { text, at: Date.now(), message: false };
-  };
   const actions = useMemo<RowActions | undefined>(
     () =>
       manages
@@ -1352,7 +1126,7 @@ function TicketReferences() {
             label="References"
             columns={columns}
             rows={rows}
-            rowId={(reference) => reference.id}
+            rowId={referenceId}
             empty={
               <EmptyState
                 message={NO_MATCH}
@@ -1374,9 +1148,7 @@ function TicketReferences() {
       <output className="sr-only">
         <span key={key}>{filtered}</span>
       </output>
-      <output className="sr-only">
-        <span key={announcement?.key}>{announcement?.text}</span>
-      </output>
+      {outcome.region}
       {dialog !== undefined && (
         <ReferenceDialog
           ticketId={ticketId}
@@ -1395,18 +1167,14 @@ function TicketReferences() {
             // returned it: a read that takes the row away meanwhile moves the
             // focus to the screen's heading.
             if (dialog.kind === "edit") {
-              focused.current = dialog.reference.id;
+              rowFocus.holds(dialog.reference.id);
             }
             // A reference that the filters hide shows nowhere where the user
             // acted, so its outcome shows in the message area
             // (docs/behaviors.md, Outcome of a Change), also once the next
             // read has arrived, after the dialog has given the page back to
             // assistive technologies.
-            announced.current = {
-              text,
-              at: Date.now(),
-              message: !matches(reference, search),
-            };
+            outcome.after(text, !matches(reference, search));
           }}
         />
       )}
@@ -1421,9 +1189,9 @@ function TicketReferences() {
             if (!mounted.current) {
               return;
             }
-            removed.current = { ...deleting, at: Date.now() };
+            rowFocus.deleted(deleting.reference.id, deleting.index);
             setDeleting(undefined);
-            announceAfterRead(text);
+            outcome.after(text);
           }}
         />
       )}
