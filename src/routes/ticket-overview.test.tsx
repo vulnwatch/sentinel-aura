@@ -31,7 +31,7 @@ import type {
 import { formatDateTime } from "../components/date-time";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
-import { participantsOf } from "./ticket-overview";
+import { participantsOf, SCORE_DELAY_MS } from "./ticket-overview";
 import { RETURN_URL_KEY, SESSION_RECORD_KEY } from "../session";
 import {
   actorsResponse,
@@ -7413,6 +7413,100 @@ async function deleteSuseAmong(before: CVSSAssessmentItem[], version: string) {
   return { screen };
 }
 
+// The place of the Base score in the dialog, a status region.
+function scorePlaceOf(dialog: Locator) {
+  return dialog.getByRole("status");
+}
+
+// What an element says to assistive technologies: its text without what it
+// hides from them.
+function spokenOf(element: Element): string {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const texts: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if (node.parentElement?.closest('[aria-hidden="true"]') === null) {
+      texts.push(node.textContent ?? "");
+    }
+  }
+  return texts.join("");
+}
+
+// What the place of the score shows that assistive technologies do not
+// read, each text with its color.
+function seenOf(place: Locator): [string, string][] {
+  const walker = document.createTreeWalker(
+    place.element(),
+    NodeFilter.SHOW_TEXT,
+  );
+  const texts: [string, string][] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    const parent = node.parentElement;
+    if (parent !== null && parent.closest('[aria-hidden="true"]') !== null) {
+      texts.push([node.textContent ?? "", colorOf(parent)]);
+    }
+  }
+  return texts;
+}
+
+// What the place of the score of the dialog says to assistive technologies.
+function scoreSaid(dialog: Locator): string {
+  return spokenOf(scorePlaceOf(dialog).element());
+}
+
+// Records what the place of the score says to assistive technologies after
+// each change of the dialog, until stop, so that a test sees an outcome
+// that shows for one render alone.
+function recordScore(dialog: Locator) {
+  const said: string[] = [];
+  const observer = new MutationObserver(() => {
+    const place = scorePlaceOf(dialog).query();
+    said.push(place === null ? "" : spokenOf(place));
+  });
+  observer.observe(dialog.element(), {
+    subtree: true,
+    childList: true,
+    characterData: true,
+  });
+  return {
+    said,
+    stop: () => {
+      observer.disconnect();
+    },
+  };
+}
+
+// Calculate CVSS Base Score's response for every vector: High 6.1.
+function highScore(query: URLSearchParams): Response {
+  return baseScoreResponse(query.get("vector_string") ?? "", 6.1, "high");
+}
+
+// Its response as Sentinel rejects a vector with a Temporal metric, 422
+// CVSS_INVALID_VECTOR, and High 6.1 for every other vector.
+function rejectingTemporal(query: URLSearchParams): Response {
+  const vector = query.get("vector_string") ?? "";
+  return vector.includes("/E:")
+    ? errorResponse(422, "CVSS_INVALID_VECTOR")
+    : baseScoreResponse(vector, 6.1, "high");
+}
+
+// The vectors of the reads of the Base score, in their order.
+function scoreReads(spy: ReturnType<typeof stubApi>): (string | null)[] {
+  return spy.mock.calls
+    .map(([input]) => urlOf(input))
+    .filter((url) => url.pathname === BASE_SCORE)
+    .map((url) => url.searchParams.get("vector_string"));
+}
+
+// Waits until no read is in progress and the screen shows the outcome of
+// each, before a test fakes the clock, on which TanStack Query gives the
+// screen the outcome of a read (readEnded).
+async function readsEnded() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 describe("the SUSE assessment", () => {
   describe("its actions", () => {
     test("offer Edit and Delete at the end of the rows of the SUSE assessments of v3.1 and v4.0 alone, named after their version, and no Add SUSE assessment while SUSE has both", async () => {
@@ -8764,6 +8858,605 @@ describe("the SUSE assessment", () => {
       await expect
         .element(vectorOf(dialog))
         .toHaveAccessibleDescription(VECTOR_DESCRIPTION);
+    });
+  });
+
+  describe("its Base score", () => {
+    // What the place of the score says of an empty vector.
+    const NO_VECTOR = "No score. Choose the metrics, or enter the vector.";
+    // A vector of v3.1 with a Temporal metric, which Sentinel does not
+    // accept, and the error of the field for it.
+    const TEMPORAL_V31 = `${VECTOR_V31}/E:P`;
+    const NOT_ACCEPTED_V31 =
+      "Sentinel doesn't accept this vector. Enter a complete CVSS v3.1 Base vector.";
+    const MESSAGE_NETWORK =
+      "Sentinel can't be reached. Check your connection and try again.";
+    // The mark of None in the light theme (docs/design-system.md, Severity
+    // Marks).
+    const MARK_NONE = "rgb(139, 148, 158)";
+
+    test("is read for the saved vector as Edit opens, without a pause, and shows the score and the severity with its mark, hidden from assistive technologies, which read them as one sentence", async () => {
+      const response = later();
+      const spy = stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: () => response.promise,
+      });
+      const { screen } = await renderSuse();
+      await focusInRow(screen, editSuse(screen));
+      await readsEnded();
+      // The clock of the pause, which stays where it is until the read is
+      // sent.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+      await userEvent.keyboard("{Enter}");
+
+      await expect
+        .poll(() => scoreReads(spy), { interval: 0 })
+        .toEqual([SUSE_V31.vector_string]);
+      vi.useRealTimers();
+      response.resolve(baseScoreResponse(SUSE_V31.vector_string, 6.1, "high"));
+      const dialog = suseDialog(screen, "Edit SUSE assessment v3.1");
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      const place = scorePlaceOf(dialog);
+      expect(seenOf(place)).toEqual([
+        ["6.1", FG],
+        ["High", FG],
+      ]);
+      expect(markOf(place.element())).toBe(MARK_HIGH);
+      await expect
+        .element(place.getByText("6.1", { exact: true }))
+        .toBeVisible();
+      await expect
+        .element(place.getByText("High", { exact: true }))
+        .toBeVisible();
+    });
+
+    test("is read for the vector without its surrounding whitespace", async () => {
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        baseScore: highScore,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await vectorOf(dialog).fill(`  ${VECTOR_V31} `);
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      expect(scoreReads(spy)).toEqual([VECTOR_V31]);
+    });
+
+    test("is read once the vector has paused for 250 ms, for the last vector alone, rather than at each change", async () => {
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        baseScore: highScore,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      vectorOf(dialog).element().focus();
+      await readsEnded();
+      // The clock of the pause, which the test moves itself: the keyboard
+      // types and presses without moving it.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+      // A vector that chooses every metric, typed key by key, then two
+      // choices of a metric, each change shortly before the pause after the
+      // one before ends.
+      await userEvent.keyboard("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L");
+      vi.advanceTimersByTime(SCORE_DELAY_MS - 1);
+      await press(segmentOf(dialog, "Availability", "None"));
+      vi.advanceTimersByTime(SCORE_DELAY_MS - 1);
+      await press(segmentOf(dialog, "Availability", "High"));
+      vi.advanceTimersByTime(SCORE_DELAY_MS - 1);
+      await nextFrames();
+      expect(scoreReads(spy)).toEqual([]);
+      vi.advanceTimersByTime(1);
+      vi.useRealTimers();
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      expect(scoreReads(spy)).toEqual([VECTOR_V31]);
+    });
+
+    test.each<[string, CVSSAssessmentItem[], string, string]>([
+      ["an empty vector", [NVD_V40, NVD_V31], "", NO_VECTOR],
+      [
+        "a vector that does not choose every metric",
+        [NVD_V40, NVD_V31],
+        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N",
+        "No score. Choose every metric.",
+      ],
+      [
+        "a vector of the other version",
+        [NVD_V40, NVD_V31],
+        VECTOR_V40,
+        "No score. Enter a CVSS v3.1 vector, which starts with CVSS:3.1/.",
+      ],
+      [
+        "a vector longer than 200 characters that chooses every metric",
+        [NVD_V40, NVD_V31],
+        `${VECTOR_V31}/${"😀".repeat(156)}`,
+        "No score. Enter at most 200 characters.",
+      ],
+      [
+        "a vector of a version of which SUSE has an assessment",
+        [SUSE_V40, NVD_V31],
+        VECTOR_V40,
+        "No score. SUSE already has a CVSS v4.0 assessment: edit it in its row.",
+      ],
+    ])(
+      "is not read for %s in Add, whose place shows 0.0 and None in fg-muted, which assistive technologies read as the reason",
+      async (_, assessments, vector, reason) => {
+        const spy = stubSuse(() => assessmentsWith(assessments));
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await expect
+          .element(versionTab(dialog, "3.1"))
+          .toHaveAttribute("aria-selected", "true");
+
+        if (vector !== "") {
+          await vectorOf(dialog).fill(vector);
+        }
+
+        await expect.poll(() => scoreSaid(dialog)).toBe(reason);
+        const place = scorePlaceOf(dialog);
+        expect(seenOf(place)).toEqual([
+          ["0.0", FG_MUTED],
+          ["None", FG_MUTED],
+        ]);
+        expect(markOf(place.element())).toBe(MARK_NONE);
+        await nextFrames();
+        expect(scoreReads(spy)).toEqual([]);
+      },
+    );
+
+    test("does not show in the tab of a version of which SUSE has an assessment", async () => {
+      stubSuse(() => fictionalCvssAssessments());
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect.poll(() => scoreSaid(dialog)).toBe(NO_VECTOR);
+
+      await versionTab(dialog, "3.1").click();
+
+      await expect
+        .element(dialog.getByText(TAKEN_V31, { exact: true }))
+        .toBeVisible();
+      expect(scorePlaceOf(dialog).query()).toBeNull();
+    });
+
+    test("shows nothing of a read that a newer vector overtakes", async () => {
+      const first = later();
+      const other = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L";
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        baseScore: (query) =>
+          query.get("vector_string") === VECTOR_V31
+            ? first.promise
+            : highScore(query),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      await expect.poll(() => scoreReads(spy)).toEqual([VECTOR_V31]);
+      await vectorOf(dialog).fill(other);
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      const record = recordScore(dialog);
+
+      first.resolve(baseScoreResponse(VECTOR_V31, 9.8, "critical"));
+
+      await readEnded(BASE_SCORE);
+      await nextFrames();
+      record.stop();
+      expect(
+        record.said.filter((said) => said !== "Base score 6.1, High"),
+      ).toEqual([]);
+      expect(scoreSaid(dialog)).toBe("Base score 6.1, High");
+      expect(seenOf(scorePlaceOf(dialog))).toEqual([
+        ["6.1", FG],
+        ["High", FG],
+      ]);
+      expect(dialog.getByText(/9\.8|Critical/).elements()).toEqual([]);
+      expect(scoreReads(spy)).toEqual([VECTOR_V31, other]);
+    });
+
+    test("keeps the outcome of the vector before while the score of a new vector is read, marked as being updated, until the new score arrives", async () => {
+      const response = later();
+      const spy = stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: (query) =>
+          query.get("vector_string") === VECTOR_V31
+            ? response.promise
+            : highScore(query),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await expect
+        .poll(() => scoreReads(spy))
+        .toEqual([SUSE_V31.vector_string, VECTOR_V31]);
+      const updating = dialog.getByRole("progressbar", { name: "Updating" });
+      await expect.element(updating).toBeVisible();
+      expect(scoreSaid(dialog)).toBe("Base score 6.1, High");
+      expect(seenOf(scorePlaceOf(dialog))).toEqual([
+        ["6.1", FG],
+        ["High", FG],
+      ]);
+      response.resolve(baseScoreResponse(VECTOR_V31, 7.5, "high"));
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 7.5, High");
+      await expect.element(updating).not.toBeInTheDocument();
+    });
+
+    test("shows the loading indicator in its place, beside Start from, until the first outcome of the vector is known", async () => {
+      const response = later();
+      stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: () => response.promise,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      const loading = dialog.getByRole("progressbar", { name: "Loading" });
+
+      await expect.element(loading).toBeVisible();
+      expect(scoreSaid(dialog)).toBe("");
+      expect(boxOf(loading).left).toBeGreaterThan(
+        boxOf(startFromOf(dialog)).right,
+      );
+      expect(boxOf(loading).bottom).toBeLessThanOrEqual(
+        boxOf(metricOf(dialog, "Attack vector")).top,
+      );
+      expect(
+        dialog.getByRole("progressbar", { name: "Updating" }).query(),
+      ).toBeNull();
+      response.resolve(baseScoreResponse(SUSE_V31.vector_string, 6.1, "high"));
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      await expect.element(loading).not.toBeInTheDocument();
+    });
+
+    test.each<[string, (dialog: Locator) => Locator]>([
+      ["on the field", (dialog) => vectorOf(dialog)],
+      ["on a metric", (dialog) => segmentOf(dialog, "Availability", "Low")],
+    ])(
+      "shows 422 CVSS_INVALID_VECTOR of the read at the vector at once and no score in its place, leaving the focus %s",
+      async (_, focused) => {
+        stubSuse(() => fictionalCvssAssessments(), {
+          baseScore: rejectingTemporal,
+        });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseEdit(screen);
+        await vectorOf(dialog).fill(TEMPORAL_V31);
+        focused(dialog).element().focus();
+
+        await expect
+          .element(vectorOf(dialog))
+          .toHaveAccessibleDescription(
+            `${VECTOR_DESCRIPTION} ${NOT_ACCEPTED_V31}`,
+          );
+        await expect.element(vectorOf(dialog)).toBeInvalid();
+        await expect
+          .poll(() => scoreSaid(dialog))
+          .toBe("No score. Sentinel doesn't accept this vector.");
+        expect(seenOf(scorePlaceOf(dialog))).toEqual([
+          ["0.0", FG_MUTED],
+          ["None", FG_MUTED],
+        ]);
+        await expectFocusSettledOn(focused(dialog));
+      },
+    );
+
+    test("takes the error of 422 CVSS_INVALID_VECTOR of the read away from the vector as soon as the input changes, before the vector pauses", async () => {
+      stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: rejectingTemporal,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(TEMPORAL_V31);
+      await expect.element(vectorOf(dialog)).toBeInvalid();
+      await readsEnded();
+      // The clock of the pause, which does not move: the pause after the
+      // change does not end.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+      await press(segmentOf(dialog, "Availability", "Low"));
+
+      await expect
+        .poll(() => vectorOf(dialog).element(), { interval: 0 })
+        .not.toBeInvalid();
+      await expect
+        .poll(() => vectorOf(dialog).element(), { interval: 0 })
+        .toHaveAccessibleDescription(VECTOR_DESCRIPTION);
+      await expect
+        .poll(() => vectorOf(dialog).element(), { interval: 0 })
+        .toHaveValue("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L");
+      vi.useRealTimers();
+    });
+
+    test("leaves Save sending a vector that the read rejects with 422 CVSS_INVALID_VECTOR", async () => {
+      const bodies: unknown[] = [];
+      stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: rejectingTemporal,
+        upsertSuse: (body) => {
+          bodies.push(body);
+          return errorResponse(422, "CVSS_INVALID_VECTOR");
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(TEMPORAL_V31);
+      await expect.element(vectorOf(dialog)).toBeInvalid();
+
+      await submitOf(dialog, "Save").click();
+
+      await expect
+        .poll(() => bodies)
+        .toEqual([{ vector_string: TEMPORAL_V31 }]);
+      await expect.element(vectorOf(dialog)).toHaveFocus();
+    });
+
+    test.each<
+      [string, () => Response | Promise<Response>, string, boolean, number]
+    >([
+      [
+        "a 503, read three times",
+        () => errorResponse(503, "SERVICE_UNAVAILABLE"),
+        MESSAGE_UNAVAILABLE,
+        true,
+        3,
+      ],
+      [
+        "a network failure, read three times",
+        () => Promise.reject(new TypeError("Failed to fetch")),
+        MESSAGE_NETWORK,
+        true,
+        3,
+      ],
+      [
+        "a VALIDATION_ERROR of the vector, read once",
+        () => validationError([["query", "vector_string"]]),
+        MESSAGE_NOT_ACCEPTED,
+        false,
+        1,
+      ],
+      [
+        "a 422 with a code that the pinned contract does not list, read once",
+        () => errorResponse(422, "FICTIONAL_CODE"),
+        MESSAGE_NOT_ACCEPTED,
+        false,
+        1,
+      ],
+      [
+        "a status and a code that the pinned contract does not list, read once",
+        () => errorResponse(418, "FICTIONAL_CODE"),
+        MESSAGE_NOT_ACCEPTED,
+        false,
+        1,
+      ],
+    ])(
+      "shows the failure of %s in its place, with Try again where it offers it, without an error at the vector, and Add SUSE assessment still adds it",
+      async (_, response, message, retry, reads) => {
+        const bodies: unknown[] = [];
+        const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+          baseScore: response,
+          upsertSuse: (body) => {
+            bodies.push(body);
+            return suseResponse(SAVED_V31, 201);
+          },
+        });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+
+        await vectorOf(dialog).fill(VECTOR_V31);
+
+        const place = scorePlaceOf(dialog);
+        await expect.element(place.getByText(message)).toBeVisible();
+        expect(scoreReads(spy)).toEqual(
+          Array.from({ length: reads }, () => VECTOR_V31),
+        );
+        const tryAgain = place.getByRole("button", { name: "Try again" });
+        if (retry) {
+          await expect.element(tryAgain).toBeVisible();
+        } else {
+          expect(tryAgain.query()).toBeNull();
+        }
+        await expect.element(vectorOf(dialog)).not.toBeInvalid();
+        await expect
+          .element(vectorOf(dialog))
+          .toHaveAccessibleDescription(VECTOR_DESCRIPTION);
+
+        await submitOf(dialog).click();
+
+        await expect.element(dialog).not.toBeInTheDocument();
+        expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
+      },
+    );
+
+    test("is read again on Try again after a failure, and then shows", async () => {
+      let fails = true;
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        baseScore: (query) =>
+          fails ? errorResponse(503, "SERVICE_UNAVAILABLE") : highScore(query),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      const place = scorePlaceOf(dialog);
+      await expect.element(place.getByText(MESSAGE_UNAVAILABLE)).toBeVisible();
+      fails = false;
+
+      await place.getByRole("button", { name: "Try again" }).click();
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      expect(scoreReads(spy)).toEqual([
+        VECTOR_V31,
+        VECTOR_V31,
+        VECTOR_V31,
+        VECTOR_V31,
+      ]);
+    });
+
+    test("shows in each tab of Add the outcome of its own vector at once, never that of the other tab, and the score of a tab again without reading it again", async () => {
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31], "4.0"), {
+        baseScore: highScore,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await expect
+        .element(versionTab(dialog, "4.0"))
+        .toHaveAttribute("aria-selected", "true");
+      await vectorOf(dialog).fill(VECTOR_V40);
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      await readsEnded();
+      const record = recordScore(dialog);
+      // The clock of the pause, which does not move: what a tab shows before
+      // the pause ends is what it shows at once.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+      await press(versionTab(dialog, "3.1"));
+
+      await expect
+        .poll(() => scoreSaid(dialog), { interval: 0 })
+        .toBe(NO_VECTOR);
+      await nextFrames();
+      expect(new Set(record.said.splice(0))).toEqual(new Set([NO_VECTOR]));
+
+      await press(versionTab(dialog, "4.0"));
+
+      await expect
+        .poll(() => scoreSaid(dialog), { interval: 0 })
+        .toBe("Base score 6.1, High");
+      await nextFrames();
+      expect(new Set(record.said)).toEqual(new Set(["Base score 6.1, High"]));
+      record.stop();
+      vi.useRealTimers();
+      expect(scoreReads(spy)).toEqual([VECTOR_V40]);
+    });
+
+    test("shows in a tab of Add whose vector is being read the loading indicator, and nothing of the outcome of the other tab", async () => {
+      // The reads of VECTOR_V31 wait until the test lets them through, each
+      // with its own response.
+      const gate = later();
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        baseScore: (query) =>
+          query.get("vector_string") === VECTOR_V31
+            ? gate.promise.then(() =>
+                baseScoreResponse(VECTOR_V31, 9.8, "critical"),
+              )
+            : highScore(query),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      await expect.poll(() => scoreReads(spy)).toEqual([VECTOR_V31]);
+      await versionTab(dialog, "4.0").click();
+      await expect.element(vectorOf(dialog)).toHaveValue("");
+      await vectorOf(dialog).fill(VECTOR_V40);
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      const record = recordScore(dialog);
+
+      await versionTab(dialog, "3.1").click();
+
+      await expect
+        .element(dialog.getByRole("progressbar", { name: "Loading" }))
+        .toBeVisible();
+      record.stop();
+      expect(record.said.filter((said) => said !== "")).toEqual([]);
+      expect(scoreSaid(dialog)).toBe("");
+      gate.resolve(new Response());
+
+      await expect
+        .poll(() => scoreSaid(dialog))
+        .toBe("Base score 9.8, Critical");
+    });
+
+    test("is read once for a vector: neither when the vector returns to it nor when the tab returns to the foreground", async () => {
+      // The saved vector with Integrity High.
+      const changed = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N";
+      const spy = stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: (query) =>
+          query.get("vector_string") === changed
+            ? baseScoreResponse(changed, 7.1, "high")
+            : highScore(query),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      await segmentOf(dialog, "Integrity", "High").click();
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 7.1, High");
+
+      await segmentOf(dialog, "Integrity", "None").click();
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      await nextFrames();
+      expect(scoreReads(spy)).toEqual([SUSE_V31.vector_string, changed]);
+      const reads = readsOf(spy, CVSS);
+
+      await returnToForeground();
+
+      // The assessments, which the tab reads again, tell that the return has
+      // been handled.
+      await expect.poll(() => readsOf(spy, CVSS)).toBe(reads + 1);
+      await nextFrames();
+      expect(scoreReads(spy)).toEqual([SUSE_V31.vector_string, changed]);
+    });
+
+    test.each<[string, (dialog: Locator) => Promise<Locator>]>([
+      [
+        "on the field, as the user enters the vector",
+        async (dialog) => {
+          await vectorOf(dialog).fill(VECTOR_V31);
+          return vectorOf(dialog);
+        },
+      ],
+      [
+        "on a metric, as the user chooses it",
+        async (dialog) => {
+          await vectorOf(dialog).fill(
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N",
+          );
+          const segment = segmentOf(dialog, "Availability", "High");
+          await press(segment);
+          return segment;
+        },
+      ],
+    ])(
+      "announces the score in its status region, leaving the focus %s",
+      async (_, change) => {
+        stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+          baseScore: highScore,
+        });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await expect.poll(() => scoreSaid(dialog)).toBe(NO_VECTOR);
+
+        const focused = await change(dialog);
+
+        await expect
+          .element(scorePlaceOf(dialog).getByText("Base score 6.1, High"))
+          .toBeInTheDocument();
+        expect(scoreSaid(dialog)).toBe("Base score 6.1, High");
+        await expectFocusSettledOn(focused);
+      },
+    );
+
+    test("shows a severity that the pinned contract does not list as received, which assistive technologies read as received", async () => {
+      stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: (query) =>
+          baseScoreResponse(
+            query.get("vector_string") ?? "",
+            6.1,
+            "fictional_level",
+          ),
+      });
+      const { screen } = await renderSuse();
+
+      const dialog = await openSuseEdit(screen);
+
+      await expect
+        .poll(() => scoreSaid(dialog))
+        .toBe("Base score 6.1, fictional_level");
+      const place = scorePlaceOf(dialog);
+      expect(seenOf(place)).toEqual([
+        ["6.1", FG],
+        ["fictional_level", FG],
+      ]);
+      // The hollow dot of a value that the pinned contract does not list.
+      expect(markOf(place.element())).toBe("none");
     });
   });
 

@@ -18,8 +18,9 @@ afterEach(() => {
 });
 
 const SCALE = 3;
-// fg of the light theme, canvas, the page, and neutral-icon.
+// fg and fg-muted of the light theme, canvas, the page, and neutral-icon.
 const FG = "rgb(31, 35, 40)";
+const FG_MUTED = "rgb(89, 99, 110)";
 const CANVAS = "#f6f8fa";
 const NEUTRAL_ICON = "#6e7781";
 
@@ -101,6 +102,22 @@ test.each([
     expect(dot.outside).toEqual([CANVAS, CANVAS, CANVAS]);
   },
 );
+
+test.each([
+  ["fg-muted when it is muted", true, FG_MUTED],
+  ["fg without muted", false, FG],
+])("shows the name in %s", async (_, muted, color) => {
+  const { screen, figure } = await renderValue(
+    muted ? <Severity severity="none" muted /> : <Severity severity="none" />,
+  );
+
+  await expect
+    .element(screen.getByRole("cell", { name: "None", exact: true }))
+    .toBeVisible();
+  expect(
+    getComputedStyle(figure.getByText("None", { exact: true }).element()).color,
+  ).toBe(color);
+});
 
 test("shows the name 6 px after the dot of 8 px", async () => {
   const { figure } = await renderValue(<Severity severity="high" />);
