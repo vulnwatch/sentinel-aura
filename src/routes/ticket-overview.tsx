@@ -2909,22 +2909,30 @@ function SuseAssessmentDialog({
   // when a read takes the form away while it holds the focus, which the
   // browser then leaves on the page or on the dialog (docs/behaviors.md,
   // Accessibility, Focus after an action).
+  // A form that the user takes away by opening another tab leaves the focus
+  // on that tab.
   const takenFound = useRef(false);
+  const switched = useRef(false);
   const takenLine = useCallback((element: HTMLParagraphElement | null) => {
     if (element === null) {
       return;
     }
     const active = document.activeElement;
-    if (
-      takenFound.current ||
+    const lost =
       active === null ||
       active === document.body ||
-      active.getAttribute("role") === "dialog"
-    ) {
+      active.getAttribute("role") === "dialog";
+    if (takenFound.current || (lost && !switched.current)) {
       takenFound.current = false;
       element.focus();
     }
   }, []);
+  // Once the tab that the user opened shows, a read that takes its form
+  // away is no longer the user's switch.
+  useEffect(() => {
+    switched.current = false;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- each version shown is the event that the effect follows
+  }, [version]);
   // After a failure at the field alone, the field takes the focus; the error
   // of the form takes it itself (docs/behaviors.md, Accessibility,
   // Announcements).
@@ -3238,6 +3246,7 @@ function SuseAssessmentDialog({
           }))}
           selected={version}
           onSelect={(next) => {
+            switched.current = true;
             setVersion(next);
             setFailure(NO_VECTOR_FAILURE);
           }}

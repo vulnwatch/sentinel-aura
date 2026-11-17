@@ -175,7 +175,7 @@ function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
       aria-describedby={mark === undefined ? undefined : noteId}
       className={`-mb-px inline-flex h-10 cursor-default items-center gap-1.5 rounded-t border-b-2 border-transparent px-2 text-14 text-fg-muted data-hovered:text-fg data-selected:border-link data-selected:font-semibold data-selected:text-fg ${FOCUS_RING}`}
     >
-      {({ isFocusVisible }) => (
+      {({ isFocusVisible, isSelected }) => (
         <>
           {tab.label}
           {mark !== undefined && (
@@ -184,7 +184,11 @@ function DialogTabItem<T extends string>({ tab }: DialogTabItemProps<T>) {
               <span id={noteId} hidden>
                 {mark.text}
               </span>
+              {/* Placed again as the tab is selected or not, since the
+                  content of the dialog, and with it the place of the tab,
+                  changes then. */}
               <MarkTooltip
+                key={String(isSelected)}
                 triggerRef={ref}
                 isOpen={!dismissed && (pointed || isFocusVisible)}
                 onHoverChange={(hovered) => {
