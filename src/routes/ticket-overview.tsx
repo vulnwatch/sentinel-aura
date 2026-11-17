@@ -126,6 +126,7 @@ import {
   useListTickets,
   useRevokeTicketAccess,
 } from "../api/generated/tickets";
+import { ApiError } from "../api/request";
 import { AbsentValue } from "../components/absent-value";
 import { Button } from "../components/button";
 import {
@@ -2750,9 +2751,10 @@ function MetricColumn({
                     }}
                   />
                   {differs.length > 0 && (
+                    // It wraps within its column, which it does not widen.
                     <span
                       id={differsId}
-                      className="-mt-1 text-13 text-fg-muted @min-[20rem]:col-start-2"
+                      className="-mt-1 w-0 min-w-full text-13 text-fg-muted @min-[20rem]:col-start-2"
                     >
                       {differs.join(" · ")}
                     </span>
@@ -2795,13 +2797,25 @@ function usePausedVector(version: EditableVersion, vector: string): string {
   return paused.version === version ? paused.vector : vector;
 }
 
+// Whether a read of a score failed with a 422, CVSS_INVALID_VECTOR or
+// VALIDATION_ERROR, which depends on the vector alone.
+function rejectsVector(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 422;
+}
+
 // The read of the score of a vector, sent when enabled. Its result depends
 // only on the vector (Sentinel docs/features/tickets/cvss-scoring.md,
-// Calculate CVSS Base Score), so the score of a vector is read once.
+// Calculate CVSS Base Score), so the score of a vector is read once, and so
+// is a vector that Sentinel rejects; Try again reads it again.
 function useBaseScore(vector: string, enabled: boolean) {
   return useGetCvssBaseScore(
     { vector_string: vector },
-    { query: { enabled, staleTime: Infinity } },
+    {
+      query: {
+        enabled: (query) => enabled && !rejectsVector(query.state.error),
+        staleTime: Infinity,
+      },
+    },
   );
 }
 
@@ -2846,8 +2860,8 @@ const REJECTED_TEXT = "Sentinel doesn't accept this vector.";
 
 interface ScorePlaceProps {
   outcome: ScoreOutcome;
-  // Whether what shows is no longer the outcome of the vector of the form,
-  // which is read or waits for its pause.
+  // Whether the score of the vector is being read, while the outcome of the
+  // vector before it shows.
   updating: boolean;
 }
 
@@ -2964,6 +2978,10 @@ function useVectorScore(
   } else if (previous !== null) {
     outcome = scoreOutcome(reasonOf(previous), previousRead, version);
   }
+  // A failure offers Try again for the vector of the form alone.
+  if (outcome.kind === "failed" && (!known || current !== paused)) {
+    outcome = { kind: "waiting" };
+  }
   const rejection =
     known &&
     current === paused &&
@@ -2974,10 +2992,7 @@ function useVectorScore(
       : undefined;
   return {
     place: (
-      <ScorePlace
-        outcome={outcome}
-        updating={current !== paused || !known || read.isFetching}
-      />
+      <ScorePlace outcome={outcome} updating={!known || read.isFetching} />
     ),
     rejection,
   };
@@ -3736,7 +3751,11 @@ function CvssPart({ read, ticket }: CvssPartProps) {
     SUSE_CHANGEABLE_STATUSES.has(ticket.status);
   const ticketId = ticket.ticket_id;
   const cveId = ticket.cve?.cve_id ?? "";
+  // The assessments of the open dialogs, which keep their input and show
+  // their error at the top of their form after a 403 or a 404, and those
+  // that the part shows, after which Add SUSE assessment follows them.
   const data = read.data?.data;
+  const shownData = dataShown(read)?.data;
   const mounted = useMounted();
   const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
   const outcome = useOutcomeAfterRead(read, record);
@@ -3778,7 +3797,7 @@ function CvssPart({ read, ticket }: CvssPartProps) {
             },
           }
         : undefined,
-    [changes, data],
+    [changes, data, setDialog, setDeleting],
   );
   const columns = useMemo(() => columnsOf(actions), [actions]);
   return (
@@ -3787,8 +3806,8 @@ function CvssPart({ read, ticket }: CvssPartProps) {
       heading="CVSS assessments"
       actions={
         changes &&
-        data !== undefined &&
-        versionsToAdd(data.assessments).length > 0 ? (
+        shownData !== undefined &&
+        versionsToAdd(shownData.assessments).length > 0 ? (
           <FocusHandOff>
             <div ref={add}>
               <Button

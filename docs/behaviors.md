@@ -446,7 +446,11 @@ returns, whatever Sentinel guarantees for its field:
   the error offers it, or until the screen opens again (Where Errors Appear).
   What a popover reads as it opens, such as the details of a CNA, is not read
   again while it stays open, even when the tab returns to the foreground
-  meanwhile (`docs/design-system.md`, Menus, Popovers, and Tooltips).
+  meanwhile (`docs/design-system.md`, Menus, Popovers, and Tooltips). Nor is
+  a read whose result Sentinel states depends only on what the read sends,
+  such as the Base score of a CVSS vector (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score): the
+  screen reads it once for each input.
 - A read at intervals is not sent while the tab is hidden, since the screen
   reads its data again when the tab returns. Once a read at intervals has
   failed, its error shows as Where Errors Appear states, and no further read

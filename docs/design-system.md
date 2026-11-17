@@ -367,7 +367,7 @@ Status).
 | `text-15` | 15 / 24 px | Everything else: running text, the sidebar, buttons, menus, fields, and messages |
 | `text-16` | 16 / 24 px | Level-two headings, the title of a dialog, and the product name |
 | `text-20` | 20 / 28 px, letter spacing −0.025 em | The level-one heading of a screen |
-| `text-40` | 40 / 44 px, letter spacing −0.025 em | A score that a form calculates as the user changes it, such as the Base score of a CVSS vector, as the calculator of FIRST shows it |
+| `text-40` | 40 / 44 px, letter spacing −0.025 em | A score that a form shows as the user changes its input, such as the Base score of a CVSS vector, as the calculator of FIRST shows it, with its severity below it in `text-20` |
 
 The names state the sizes, so that a size shows in the code; Tailwind's own
 names, such as `text-sm`, do not exist. The uses above and the weights below
@@ -517,7 +517,8 @@ that it sits with the icons around it.
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
   following its radius, or inside it for an element whose edges would cut
   it: a row or a cell of a table (Tables), a menu item (Menus, Popovers, and
-  Tooltips), the main content after the link that skips to it (Main
+  Tooltips), a segment of a segmented control, in `on-accent` on the chosen
+  one (Forms), the main content after the link that skips to it (Main
   Content), and the sidebar opened over the content (Sidebar). It shows on
   keyboard focus, and no element removes it (`docs/behaviors.md`,
   Accessibility).
@@ -711,7 +712,10 @@ The resolved severity of a Ticket or a CVE is `critical`, `high`, `medium`,
 - The severity of one CVSS assessment, by the scale of its version, is not
   the resolved severity (Sentinel `docs/features/tickets/cvss-scoring.md`,
   Core Distinctions; Version-Specific Assessment Severity), but it has the
-  same values, and shows in the same way.
+  same values, and shows in the same way. Where a score that a form shows
+  stands for no score yet, such as "0.0" before every metric of a vector is
+  chosen, the score and the name None are in `fg-muted`, and assistive
+  technologies read the reason instead.
 
 ### Priority
 
@@ -1520,9 +1524,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   value of another assessment, follows below the control in `text-13`,
   `fg-muted`, which describes it. Assistive technologies read it as a group of
   radio buttons, between which the arrow keys move; the focus ring is drawn
-  inside the segment, in `on-accent` on the chosen one. Groups of such
-  controls take a heading in `text-14`, weight 600, 12 px above the first
-  group that follows another.
+  inside the segment, in `on-accent` on the chosen one. The controls are
+  8 px apart; groups of such controls take a heading in `text-14`, weight
+  600, 8 px above their first control and 20 px below the group before.
 - A field whose value users copy character by character, such as a CVSS
   vector, shows its value in monospace (Font).
 - A switch turns a choice of a screen on or off at once, outside a form, such
