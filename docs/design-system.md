@@ -467,6 +467,7 @@ that the code imports ship.
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
 | The access grants of a confidential Ticket | `user-round-key` |
 | Change a field of a record in place, edit a row of a table | `pencil` |
+| The default CVSS version | `star` |
 | Delete a row of a table | `trash` |
 | The other actions of a record within a part, such as a package | `ellipsis` |
 | Restore an excluded record | `undo-2` |
@@ -1429,7 +1430,12 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Forms
 
-- A form is one column, at most 448 px wide, with its fields 12 px apart.
+- A form is one column, at most 448 px wide, with its fields 12 px apart. A
+  form whose choices are many short rows, such as the metrics of a CVSS
+  vector, can hold two columns, each as wide as its widest row, the first at
+  the start and the second at the end of the form, 40 px apart at least, with
+  its fields 20 px apart; where its place is narrower, they are one column,
+  the first above the second.
 - Each field has its label above it, in `text-15`, weight 500; a field that
   may stay empty adds " (optional)" to its label in `fg-muted`, at weight 400.
   The control is 40 px high, on `surface`, with a `border-strong` boundary, a
@@ -1499,6 +1505,24 @@ states it, such as that of a Ticket; the other audit logs are tables
   does (Buttons and Links). The days of the months around it are left out,
   and the days take the height of six weeks in every month, so that the
   calendar keeps its size and Previous and Next their place.
+- A segmented control chooses one value among a few, every value visible, as
+  the calculator of FIRST shows the values of a metric of a CVSS vector: its
+  values are segments 32 px high in a row with a `border-strong` boundary and
+  a 6 px radius, apart by `border-strong` lines, each its label in `text-14`
+  with 12 px of side padding, `surface-hover` under the pointer; the chosen
+  one has an `accent` fill, `accent-hover` under the pointer, with its label
+  in `on-accent` at weight 500. The row is as wide as its values and wraps
+  where its place is narrower. Its name, in `text-14`, stands at the start of
+  its line, in a column as wide as the longest name of its form, such as
+  140 px, 12 px before the control, and a note on the choice, such as the
+  value of another assessment, follows below the control in `text-13`,
+  `fg-muted`, which describes it. Assistive technologies read it as a group of
+  radio buttons, between which the arrow keys move; the focus ring is drawn
+  inside the segment, in `on-accent` on the chosen one. Groups of such
+  controls take a heading in `text-14`, weight 600, 12 px above the first
+  group that follows another.
+- A field whose value users copy character by character, such as a CVSS
+  vector, shows its value in monospace (Font).
 - A switch turns a choice of a screen on or off at once, outside a form, such
   as showing the hidden records of a part: a rail 28 by 16 px, round, with a
   1 px `border-strong` boundary on `neutral-soft` and a knob of 12 px in
@@ -1516,8 +1540,20 @@ states it, such as that of a Ticket; the other audit logs are tables
   8 px radius, `shadow-xl`, and 20 px of padding: at most 400 px wide for a
   confirmation and 560 px for a dialog with a form, or 488 px for a dialog
   whose content is a form alone, the 448 px of the form with the padding of
-  the dialog, so that its buttons end where its fields do (Forms). A dialog
-  taller than the window scrolls its content and keeps its buttons in view.
+  the dialog, so that its buttons end where its fields do, or 880 px for a
+  dialog whose form holds two columns (Forms). A dialog taller than the
+  window scrolls its content and keeps its buttons in view.
+- A dialog can show one of several forms of the same change on tabs at the
+  top of its content, such as the versions of a CVSS assessment: tabs as
+  those of a detail screen (Detail Screens), above a `border` line across
+  the width, with the content of the selected tab 20 px below it. A tab opens
+  when the user clicks it or presses Enter or Space, the selected one takes
+  the focus as the dialog opens, and each keeps its input while another
+  shows. An icon after the label, 6 px later, at 14 px in `fg-muted`, can mark
+  a tab, such as the default version, with a tooltip that says what it
+  means, shown on hover and on keyboard focus of the tab; assistive
+  technologies read the meaning of the mark in the name of the tab and its
+  explanation as the description of the tab.
 - Its title is in `text-16`, weight 600, its text in `fg-muted`, and its
   buttons, 40 px high, close it aligned to its end: Cancel, or Keep editing,
   as a secondary button, then the action, primary or danger as Buttons and
