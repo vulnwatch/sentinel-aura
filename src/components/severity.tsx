@@ -45,6 +45,9 @@ interface SeverityProps {
   // a heading row, where no column header names it; an en dash otherwise
   // (docs/behaviors.md, Absent Values).
   absentName?: string;
+  // Whether the name is in fg-muted, as where it stands for no value, such
+  // as the score of a vector that Sentinel cannot score.
+  muted?: boolean;
 }
 
 // A severity (docs/design-system.md, Severity): a dot of 8 px in its mark,
@@ -53,13 +56,19 @@ interface SeverityProps {
 // technologies, which read the name. null is an absent value, and a value
 // that the pinned contract does not list shows as received after a hollow
 // dot in neutral-icon (docs/behaviors.md, Unknown Values).
-export function Severity({ severity, absentName }: SeverityProps) {
+export function Severity({
+  severity,
+  absentName,
+  muted = false,
+}: SeverityProps) {
   if (severity === null) {
     return <AbsentValue name={absentName} />;
   }
   const known = SEVERITIES.get(severity);
   return (
-    <span className="inline-flex items-baseline gap-1.5 text-fg">
+    <span
+      className={`inline-flex items-baseline gap-1.5 ${muted ? "text-fg-muted" : "text-fg"}`}
+    >
       <svg
         aria-hidden
         viewBox="0 0 8 8"

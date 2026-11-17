@@ -90,6 +90,7 @@ const CVSS = "/api/v1/cves/CVE-2099-0012/cvss";
 const SUSE_ASSESSMENT = "/api/v1/cves/CVE-2099-0012/cvss/suse";
 const SOURCES = "/api/v1/cves/CVE-2099-0012/sources";
 const REFETCH = "/api/v1/cves/CVE-2099-0012/refetch";
+const BASE_SCORE = "/api/v1/cvss/base-score";
 const ACTORS = "/api/v1/tickets/SNTL-12/actors";
 const EVENTS = "/api/v1/tickets/SNTL-12/audit-log";
 const ACCESS = "/api/v1/tickets/SNTL-12/access";
@@ -194,6 +195,8 @@ interface Stub {
   upsertSuse: (body: unknown) => Response | Promise<Response>;
   // The response to Delete SUSE CVSS Assessment, given its path.
   deleteSuse: (path: string) => Response | Promise<Response>;
+  // The response to Calculate CVSS Base Score, given its query.
+  baseScore: (query: URLSearchParams) => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst who maintains no
@@ -221,6 +224,7 @@ function stubTicket(fields: Partial<Stub> = {}) {
     revoke: () => new Response(null, { status: 204 }),
     upsertSuse: () => suseResponse(fictionalSuseAssessment()),
     deleteSuse: () => new Response(null, { status: 204 }),
+    baseScore: (query) => baseScoreResponse(query.get("vector_string") ?? ""),
     ...fields,
   };
   return stubApi((request) => {
@@ -274,6 +278,9 @@ function stubTicket(fields: Partial<Stub> = {}) {
       request.method === "DELETE"
     ) {
       return stub.deleteSuse(request.path);
+    }
+    if (request.path === BASE_SCORE) {
+      return stub.baseScore(request.query);
     }
     if (request.path === SOURCES) {
       return stub.sources();
@@ -7053,6 +7060,25 @@ function assessmentsWith(
 
 // The response of Set or Update SUSE CVSS Assessment: 201 for an assessment
 // that it created, 200 for one that it updated.
+// Calculate CVSS Base Score's response for a vector: a fictional score and
+// severity, 5.5 and medium unless the test says otherwise, of the version
+// of its prefix.
+function baseScoreResponse(
+  vector: string,
+  score = 5.5,
+  severity = "medium",
+): Response {
+  return jsonResponse(200, {
+    data: {
+      cvss_version: vector.startsWith("CVSS:4.0/") ? "4.0" : "3.1",
+      score,
+      severity,
+      vector_string: vector,
+      metrics: {},
+    },
+  });
+}
+
 function suseResponse(
   assessment: CVSSAssessmentItem,
   status: 200 | 201 = 200,

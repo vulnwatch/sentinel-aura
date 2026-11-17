@@ -1393,6 +1393,11 @@ test.describe("for an analyst", () => {
     await expect(metric(dialog, "Integrity")).toHaveAccessibleDescription(
       "NVD: High",
     );
+    // Beside Start from, the score of the new vector, as Sentinel calculates
+    // it once the vector has paused.
+    await expect(
+      dialog.getByText("Base score 6.1, Medium", { exact: true }),
+    ).toBeAttached();
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-cvss-edit.png");
 
@@ -1461,6 +1466,9 @@ test.describe("for an analyst", () => {
     await expect(
       metric(dialog, "Attack requirements"),
     ).toHaveAccessibleDescription("NVD: None");
+    await expect(
+      dialog.getByText("Base score 9.2, Critical", { exact: true }),
+    ).toBeAttached();
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-cvss-add.png");
 
@@ -1547,6 +1555,13 @@ test.describe("for an analyst", () => {
     ).toBeVisible();
     await expect(vector).toBeFocused();
     expect(sent).toEqual([]);
+    // Neither is the vector scored.
+    await expect(
+      dialog.getByText(
+        "No score. SUSE already has a CVSS v3.1 assessment: edit it in its row.",
+        { exact: true },
+      ),
+    ).toBeAttached();
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-cvss-add-error.png");
   });
@@ -1637,22 +1652,34 @@ test.describe("for an analyst", () => {
       // With a Temporal metric, which Sentinel refuses with 422
       // CVSS_INVALID_VECTOR (Sentinel docs/features/tickets/cvss-scoring.md,
       // Input Rules).
+      await expect(
+        dialog.getByText("Base score 7.5, High", { exact: true }),
+      ).toBeAttached();
       const temporal = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P";
       await vector.fill(temporal);
+
+      // Sentinel's read of its score rejects it, which the field says
+      // before the form is submitted.
+      const rejected = dialog.getByText(
+        "Sentinel doesn't accept this vector. Enter a complete CVSS v3.1 Base vector.",
+        { exact: true },
+      );
+      await expect(rejected).toBeVisible();
+      await expect(
+        dialog.getByText("No score. Sentinel doesn't accept this vector.", {
+          exact: true,
+        }),
+      ).toBeAttached();
+      await expectAccessible(page);
       const submit = dialog.getByRole("button", {
         name: "Add SUSE assessment",
         exact: true,
       });
       await submit.click();
 
-      const rejected = dialog.getByText(
-        "Sentinel doesn't accept this vector. Enter a complete CVSS v3.1 Base vector.",
-        { exact: true },
-      );
       await expect(rejected).toBeVisible();
       await expect(vector).toBeFocused();
       await expect(vector).toHaveValue(temporal);
-      await expectAccessible(page);
 
       // A choice of a metric writes the vector of the metrics chosen,
       // without the Temporal metric.
@@ -1660,6 +1687,9 @@ test.describe("for an analyst", () => {
       const added = "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H";
       await expect(vector).toHaveValue(added);
       await expect(rejected).toHaveCount(0);
+      await expect(
+        dialog.getByText("Base score 6.2, Medium", { exact: true }),
+      ).toBeAttached();
       await submit.click();
 
       // The reads after the change, of the assessments and of the Ticket,

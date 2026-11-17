@@ -59,6 +59,7 @@ import {
   useRefetchCve,
   useUpsertSuseCvssAssessment,
 } from "../api/generated/cves";
+import { useGetCvssBaseScore } from "../api/generated/cvss";
 import {
   useListReleaseRequests,
   useListSubmissionRequests,
@@ -153,6 +154,7 @@ import {
 } from "../components/detail-screen";
 import { DetailsName, DetailsValue } from "../components/details-popover";
 import { DialogTabs } from "../components/dialog-tabs";
+import { ErrorInPlace } from "../components/error-in-place";
 import { FOCUS_RING } from "../components/focus-ring";
 import { GroupBand } from "../components/group-band";
 import { IconButton } from "../components/icon-button";
@@ -2765,6 +2767,222 @@ function MetricColumn({
   );
 }
 
+// How long the dialog waits once the vector stops changing before it reads
+// its score, so that it does not read it at each key.
+export const SCORE_DELAY_MS = 250;
+
+// A vector of the form of a version.
+interface VersionVector {
+  version: EditableVersion;
+  vector: string;
+}
+
+// The vector once it has stopped changing for SCORE_DELAY_MS; the tab of
+// another version shows its own vector at once.
+function usePausedVector(version: EditableVersion, vector: string): string {
+  const [paused, setPaused] = useState<VersionVector>({ version, vector });
+  if (paused.version !== version) {
+    setPaused({ version, vector });
+  }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPaused({ version, vector });
+    }, SCORE_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [version, vector]);
+  return paused.version === version ? paused.vector : vector;
+}
+
+// The read of the score of a vector, sent when enabled. Its result depends
+// only on the vector (Sentinel docs/features/tickets/cvss-scoring.md,
+// Calculate CVSS Base Score), so the score of a vector is read once.
+function useBaseScore(vector: string, enabled: boolean) {
+  return useGetCvssBaseScore(
+    { vector_string: vector },
+    { query: { enabled, staleTime: Infinity } },
+  );
+}
+
+type BaseScoreRead = ReturnType<typeof useBaseScore>;
+
+// What the place of the score shows for a vector: why it has no score,
+// without a read; its score as Sentinel's read returns it; that Sentinel
+// rejects it; the failure of the read; or nothing yet.
+type ScoreOutcome =
+  | { kind: "none"; reason: string }
+  | { kind: "score"; score: number; severity: string }
+  | { kind: "rejected" }
+  | { kind: "failed"; read: BaseScoreRead }
+  | { kind: "waiting" };
+
+function scoreOutcome(
+  reason: string | null,
+  read: BaseScoreRead,
+  version: EditableVersion,
+): ScoreOutcome {
+  if (reason !== null) {
+    return { kind: "none", reason };
+  }
+  if (read.status === "success") {
+    return {
+      kind: "score",
+      score: read.data.data.score,
+      severity: read.data.data.severity,
+    };
+  }
+  if (read.status === "error") {
+    return isRequestFailure(read.error) &&
+      cvssVectorError(read.error, version) !== undefined
+      ? { kind: "rejected" }
+      : { kind: "failed", read };
+  }
+  return { kind: "waiting" };
+}
+
+// What a vector that Sentinel rejects says in the place of its score.
+const REJECTED_TEXT = "Sentinel doesn't accept this vector.";
+
+interface ScorePlaceProps {
+  outcome: ScoreOutcome;
+  // Whether what shows is no longer the outcome of the vector of the form,
+  // which is read or waits for its pause.
+  updating: boolean;
+}
+
+// The Base score of the vector of the form, beside Start from, at the end of
+// the second column, or after Start from in one column: the score in
+// text-40, as the calculator of FIRST shows it, and below it the severity
+// with its mark in text-20, both at weight 600, without a label. A vector
+// that Sentinel does not score shows 0.0 and None in fg-muted, which
+// assistive technologies read as the reason, such as "No score. Choose every
+// metric."; the failure of the read shows in its place, with Try again. A
+// status region, so that each outcome is announced without moving the
+// focus, once the vector has paused; what shows while the next outcome is
+// read is marked as being updated (docs/behaviors.md, Loading). It does not
+// widen its column.
+function ScorePlace({ outcome, updating }: ScorePlaceProps) {
+  let content: ReactNode = null;
+  if (outcome.kind === "score") {
+    content = (
+      <>
+        <span
+          aria-hidden
+          className="text-40 font-semibold tabular-nums text-fg"
+        >
+          {SCORE.format(outcome.score)}
+        </span>
+        <span aria-hidden className="text-20 font-semibold">
+          <Severity severity={outcome.severity} />
+        </span>
+        <span className="sr-only">{`Base score ${SCORE.format(outcome.score)}, ${severityName(outcome.severity)}`}</span>
+      </>
+    );
+  } else if (outcome.kind === "none" || outcome.kind === "rejected") {
+    content = (
+      <>
+        <span
+          aria-hidden
+          className="text-40 font-semibold tabular-nums text-fg-muted"
+        >
+          {SCORE.format(0)}
+        </span>
+        <span aria-hidden className="text-20 font-semibold">
+          <Severity severity="none" muted />
+        </span>
+        <span className="sr-only">{`No score. ${outcome.kind === "none" ? outcome.reason : REJECTED_TEXT}`}</span>
+      </>
+    );
+  } else if (outcome.kind === "failed") {
+    const { read } = outcome;
+    content = (
+      <ErrorInPlace
+        error={read.error}
+        placement="part"
+        onRetry={() => {
+          void read.refetch();
+        }}
+      />
+    );
+  }
+  return (
+    <div className="relative min-h-18 w-0 min-w-full">
+      {updating && outcome.kind !== "waiting" && <UpdatingBar />}
+      {outcome.kind === "waiting" && <Loading inValue />}
+      <output
+        className={
+          outcome.kind === "failed"
+            ? "block"
+            : "flex flex-col items-start @min-[52rem]:items-end"
+        }
+      >
+        {content}
+      </output>
+    </div>
+  );
+}
+
+interface VectorScore {
+  // The place of the score.
+  place: ReactNode;
+  // The error of a vector that Sentinel's read rejects, which its field
+  // shows while it holds that vector, or undefined.
+  rejection: string | undefined;
+}
+
+// The Base score of the vector of the form of a version, Calculate CVSS Base
+// Score, GET /api/v1/cvss/base-score, which applies to a vector the rules of
+// Set or Update SUSE CVSS Assessment and stores nothing (Sentinel
+// docs/features/tickets/cvss-scoring.md, Calculate CVSS Base Score): read
+// once the vector has paused, and only when the form would send it and it
+// names every metric, otherwise reasonOf says why it has no score. While the
+// score of a new vector is read, the outcome of the vector before it stays,
+// and a read that a newer vector overtakes shows nothing.
+function useVectorScore(
+  version: EditableVersion,
+  vector: string,
+  reasonOf: (vector: string) => string | null,
+): VectorScore {
+  const current = vector.trim();
+  const paused = usePausedVector(version, current);
+  const reason = reasonOf(paused);
+  const read = useBaseScore(paused, reason === null);
+  const known = reason !== null || read.status !== "pending";
+  // The vector whose outcome shows, which follows the paused vector once
+  // its outcome is known.
+  const [shown, setShown] = useState<VersionVector | null>(null);
+  if (known && (shown?.version !== version || shown.vector !== paused)) {
+    setShown({ version, vector: paused });
+  }
+  const previous = shown?.version === version ? shown.vector : null;
+  // Its read, which the query client keeps, and which is not sent again.
+  const previousRead = useBaseScore(previous ?? "", false);
+  let outcome: ScoreOutcome = { kind: "waiting" };
+  if (known) {
+    outcome = scoreOutcome(reason, read, version);
+  } else if (previous !== null) {
+    outcome = scoreOutcome(reasonOf(previous), previousRead, version);
+  }
+  const rejection =
+    known &&
+    current === paused &&
+    reason === null &&
+    read.status === "error" &&
+    isRequestFailure(read.error)
+      ? cvssVectorError(read.error, version)
+      : undefined;
+  return {
+    place: (
+      <ScorePlace
+        outcome={outcome}
+        updating={current !== paused || !known || read.isFetching}
+      />
+    ),
+    rejection,
+  };
+}
+
 // What the tooltip of the default CVSS version says (Sentinel
 // docs/features/tickets/cvss-scoring.md, Eligibility Score Resolution).
 const DEFAULT_VERSION_TEXT =
@@ -2829,7 +3047,10 @@ function suseChangedText(
 // Each tab keeps its input. Start from takes the vector of an assessment of
 // another provider of the version, or in Edit the saved one; each metric is
 // a segmented control, whose choice writes the vector, and a vector typed in
-// its field chooses them. The form checks the vector before sending it: it
+// its field chooses them. Beside Start from, the score of the vector as
+// Sentinel calculates it (useVectorScore); a vector that Sentinel's read
+// rejects shows its error at the field at once, without moving the focus,
+// and the form still sends it. The form checks the vector before sending it: it
 // is required, at most 200 characters, and of the version of the tab; Add
 // reads the assessments again first, so that it never replaces one that
 // SUSE has (Sentinel docs/features/tickets/cvss-scoring.md, Set or Update
@@ -2941,9 +3162,6 @@ function SuseAssessmentDialog({
       vectorRef.current?.focus();
     }
   }, [failure]);
-  if (uiFailure !== undefined) {
-    throw uiFailure.error;
-  }
 
   const input = inputs[version];
   const { prefix } = VERSION_FORMS[version];
@@ -3009,6 +3227,19 @@ function SuseAssessmentDialog({
     }
     return null;
   };
+
+  // Why a vector has no score, or null: the check before it is sent, or a
+  // metric that it does not choose.
+  const scoreReason = (vector: string): string | null =>
+    check(vector) ??
+    (chosenOf(version, vector).size < formMetrics(version).length
+      ? "Choose every metric."
+      : null);
+  const score = useVectorScore(version, input.vector, scoreReason);
+  const vectorError = failure.field ?? score.rejection;
+  if (uiFailure !== undefined) {
+    throw uiFailure.error;
+  }
 
   // A failure of the read of the assessments before Add, or of the change.
   const fail = (error: unknown, read: boolean) => {
@@ -3116,7 +3347,7 @@ function SuseAssessmentDialog({
         void submit();
       }}
       validationErrors={
-        failure.field === undefined ? {} : { vector_string: failure.field }
+        vectorError === undefined ? {} : { vector_string: vectorError }
       }
       className="flex flex-col gap-5"
     >
@@ -3127,29 +3358,30 @@ function SuseAssessmentDialog({
           wide enough, otherwise one. */}
       <div className="@container">
         <div className="grid grid-cols-1 gap-y-5 @min-[52rem]:grid-cols-[max-content_max-content] @min-[52rem]:justify-between @min-[52rem]:gap-x-10">
-          {startOptions.length > 0 && (
-            <>
-              <div className="w-80 max-w-full">
-                <SelectField
-                  label="Start from"
-                  name="start"
-                  optional={mode.kind === "add"}
-                  options={startOptions}
-                  value={input.start}
-                  onChange={(start) => {
-                    const from =
-                      start === SAVED
-                        ? saved
-                        : others.find((other) => other.id === start)
-                            ?.vector_string;
-                    change({ start, vector: from ?? "" });
-                  }}
-                />
-              </div>
-              {/* Beside Start from, the second column has nothing yet. */}
-              <div aria-hidden className="hidden @min-[52rem]:block" />
-            </>
+          {startOptions.length > 0 ? (
+            <div className="w-80 max-w-full">
+              <SelectField
+                label="Start from"
+                name="start"
+                optional={mode.kind === "add"}
+                options={startOptions}
+                value={input.start}
+                onChange={(start) => {
+                  const from =
+                    start === SAVED
+                      ? saved
+                      : others.find((other) => other.id === start)
+                          ?.vector_string;
+                  change({ start, vector: from ?? "" });
+                }}
+              />
+            </div>
+          ) : (
+            // Without Start from, the score keeps its place in the second
+            // column.
+            <div aria-hidden className="hidden @min-[52rem]:block" />
           )}
+          {score.place}
           <MetricColumn
             version={version}
             groups={VERSION_FORMS[version].groups.slice(0, 1)}
