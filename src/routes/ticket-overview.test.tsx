@@ -7488,6 +7488,36 @@ describe("the SUSE assessment", () => {
       },
     );
 
+    // React Aria's table makes a cell a tab stop once a control in it has
+    // had the focus, and so a target of its own, which needs 24 px beside
+    // the buttons of the actions (WCAG 2.5.8, Target Size (Minimum)).
+    test.each([1280, 320])(
+      "leave the cells of the vector and of the actions 24 px of their own beside their buttons, at %i CSS pixels",
+      async (width) => {
+        await page.viewport(width, 800);
+        stubSuse(() => assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]));
+        const { screen } = await renderSuse();
+        const row = assessmentRow(screen, "SUSE", "3.1");
+        const cellOf = (button: string) =>
+          row.getByRole("gridcell").filter({
+            has: page.getByRole("button", { name: button, exact: true }),
+          });
+        const vector = row.getByRole("button", {
+          name: SUSE_V31.vector_string,
+          exact: true,
+        });
+        await expect.element(vector).toBeVisible();
+
+        expect(
+          boxOf(cellOf(SUSE_V31.vector_string)).right - boxOf(vector).right,
+        ).toBeGreaterThanOrEqual(24);
+        expect(
+          boxOf(editSuse(screen)).left -
+            boxOf(cellOf("Edit SUSE assessment v3.1")).left,
+        ).toBeGreaterThanOrEqual(24);
+      },
+    );
+
     test("offer Add SUSE assessment only once the read of the assessments has arrived", async () => {
       const response = later();
       stubSuse(() => fictionalCvssAssessments(), {
@@ -8412,6 +8442,9 @@ describe("the SUSE assessment", () => {
         .toBeDisabled();
       await userEvent.keyboard("{Escape}");
       await expect.element(dialog).toBeVisible();
+      expect(
+        screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+      ).toBeNull();
       expect(requestsWith(spy, "POST")).toHaveLength(1);
 
       response.resolve(suseResponse(SAVED_V31));
