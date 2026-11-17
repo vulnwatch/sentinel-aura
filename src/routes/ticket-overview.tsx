@@ -3335,7 +3335,21 @@ function columnsOf(
     return ASSESSMENT_COLUMNS;
   }
   return [
-    ...ASSESSMENT_COLUMNS,
+    // Before the actions of a row, the vector keeps 14 px after it, which
+    // with the padding of the cell leave the cell 24 px of its own beside its
+    // button: React Aria's table makes the cell a tab stop once the button
+    // has had the focus, and so a target of its own (WCAG 2.5.8, Target Size
+    // (Minimum)).
+    ...ASSESSMENT_COLUMNS.map((column) =>
+      column.id === "vector"
+        ? {
+            ...column,
+            render: (assessment: CVSSAssessmentItem) => (
+              <div className="pe-3.5">{column.render(assessment)}</div>
+            ),
+          }
+        : column,
+    ),
     {
       id: "actions",
       name: "Actions",
