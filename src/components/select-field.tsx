@@ -26,8 +26,9 @@ interface SelectFieldProps<T extends string> {
   // it.
   name: string;
   options: readonly FieldOption<T>[];
-  // The option chosen.
-  value: T;
+  // The option chosen, or null before the user chooses one, which shows the
+  // field empty.
+  value: T | null;
   onChange: (value: T) => void;
   // The button of the field, which a form focuses when the field has an
   // error.
@@ -66,8 +67,10 @@ export function SelectField<T extends string>({
         className={`flex h-10 items-center justify-between gap-2 rounded-md border border-border-strong bg-surface px-4 text-start text-15 text-fg group-data-invalid/select:border-2 group-data-invalid/select:border-danger-icon group-data-invalid/select:px-3.75 ${FOCUS_RING}`}
       >
         <SelectValue className="flex min-w-0 items-center">
-          {({ selectedText }) => (
-            <span className="truncate">{selectedText}</span>
+          {({ selectedText, isPlaceholder }) => (
+            <span className="truncate">
+              {isPlaceholder ? "" : selectedText}
+            </span>
           )}
         </SelectValue>
         <ChevronDown aria-hidden className="size-4 shrink-0 text-fg-muted" />

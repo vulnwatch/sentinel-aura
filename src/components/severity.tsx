@@ -25,6 +25,13 @@ const SEVERITIES = new Map<string, KnownSeverity>(
   } satisfies Record<SeverityValue | CVSSAssessmentSeverity, KnownSeverity>),
 );
 
+// The name of a severity, such as "High", or the value as received when the
+// pinned contract does not list it (docs/behaviors.md, Unknown Values), for a
+// text that shows a severity without its mark, such as an option of a select.
+export function severityName(severity: string): string {
+  return SEVERITIES.get(severity)?.name ?? severity;
+}
+
 interface SeverityProps {
   // The resolved severity of a Ticket or a CVE: a value of SeverityValue,
   // another value that a later Sentinel release returns, or null when no
