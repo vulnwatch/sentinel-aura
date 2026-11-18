@@ -20,7 +20,10 @@ import "./styles.css";
 import { App } from "./app";
 import { Button } from "./components/button";
 import { RootLayout } from "./routes/root";
-import { getLogoutMutationOptions } from "./api/generated/authentication";
+import {
+  getLogoutMutationKey,
+  getLogoutMutationOptions,
+} from "./api/generated/authentication";
 import type { CurrentUserResponse } from "./api/generated/model";
 import { getGetCurrentUserProfileQueryKey } from "./api/generated/users";
 import { apiRequest } from "./api/request";
@@ -766,5 +769,92 @@ describe("Sign in, once a session exists", () => {
     expect(router.state.location.href).toBe("/tickets");
     expect(router.history.length).toBe(1);
     expect(savedUrl()).toBeNull();
+  });
+});
+
+// The navigations that the session forces ask nothing and discard the input
+// not yet submitted (docs/behaviors.md, Session State): a screen whose input
+// a blocker of the router protects, as the question before discarding it
+// does (src/components/discard-question.tsx), blocks every other navigation
+// away from it. Returns the screen, and the navigations that its blocker was
+// asked about.
+async function renderHeld() {
+  const app = await renderApp(SCREEN);
+  await expect
+    .element(app.screen.getByRole("heading", { level: 1, name: "Not found" }))
+    .toBeVisible();
+  const asked: string[] = [];
+  app.router.history.block({
+    blockerFn: ({ currentLocation, nextLocation }) => {
+      if (currentLocation.pathname !== SCREEN) {
+        return false;
+      }
+      asked.push(nextLocation.pathname);
+      return true;
+    },
+  });
+  return { ...app, asked };
+}
+
+describe("with input not yet submitted on the screen", () => {
+  test("a 401 leads to Sign in without asking", async () => {
+    const { session } = stubSession("signed-in", unauthorized);
+    const { router, screen, asked } = await renderHeld();
+
+    session.user = undefined;
+    await readTickets();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(asked).toEqual([]);
+  });
+
+  test("a 401 while a sign-out is in progress opens Sign in without asking", async () => {
+    let answer!: () => void;
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    const { session } = stubSession("signed-in", async (request) => {
+      if (request.method === "POST") {
+        await answered;
+        return new Response(null, { status: 204 });
+      }
+      return unauthorized();
+    });
+    const { router, screen, asked } = await renderHeld();
+    const signOut = new MutationObserver(client, getLogoutMutationOptions())
+      .mutate()
+      .catch(() => undefined);
+    await expect
+      .poll(() => client.isMutating({ mutationKey: getLogoutMutationKey() }))
+      .toBe(1);
+
+    session.user = undefined;
+    await readTickets();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))
+      .toBeVisible();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(asked).toEqual([]);
+    expect(savedUrl()).toBeNull();
+    answer();
+    await signOut;
+  });
+
+  test("another user leads to their landing without asking", async () => {
+    const { session } = stubSession("signed-in", () => ticketPage([]));
+    const { router, screen, asked } = await renderHeld();
+
+    session.user = READER;
+    await returnToForeground();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+    expect(router.state.location.href).toBe("/tickets");
+    expect(asked).toEqual([]);
   });
 });

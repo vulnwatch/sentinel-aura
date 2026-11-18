@@ -1098,21 +1098,22 @@ Delete SUSE CVSS Assessment):
   of its version, and closes without a request when the vector is the saved
   one.
 - Add SUSE assessment and Edit ask for no confirmation. With input that the
-  user changed, Cancel and Escape ask "Discard changes?", "The SUSE assessment
-  that you entered isn't added." in Add or "Your changes to this SUSE
-  assessment aren't saved." in Edit, with Keep editing and Discard
-  (`docs/behaviors.md`, Confirmation). While the request is in progress, the
-  action is busy and the dialog cannot be closed (`docs/behaviors.md`,
-  Loading); once Sentinel confirms it, the dialog closes, and the focus
-  returns to the button that opened it (`docs/behaviors.md`, Accessibility,
-  Dialogs). After Add, when the other tab holds input and SUSE lacks its
-  version by the read before Add, the dialog stays open on that tab instead
-  (`docs/design-system.md`, Dialogs): "SUSE assessment v3.1 added." shows
-  above the tabs as a `success` message, which is announced, the tab of the
-  version added drops its input and says that SUSE has it once the read
-  after the change arrives, and the action of the dialog, Add SUSE
-  assessment, holds the focus, also after Enter in Vector, whose form leaves
-  with its tab.
+  user changed, Cancel, Escape, and a navigation of the UI, such as back, ask
+  "Discard changes?", "The SUSE assessment that you entered isn't added." in
+  Add or "Your changes to this SUSE assessment aren't saved." in Edit, with
+  Keep editing and Discard (`docs/behaviors.md`, Confirmation). While the
+  request is in progress, the action is busy and the dialog cannot be closed
+  (`docs/behaviors.md`, Loading), and a navigation asks nothing, also while
+  the other tab of Add holds input. Once Sentinel confirms the change, the
+  dialog closes, and the focus returns to the button that opened it
+  (`docs/behaviors.md`, Accessibility, Dialogs). After Add, when the other
+  tab holds input and SUSE lacks its version by the read before Add, the
+  dialog stays open on that tab instead (`docs/design-system.md`, Dialogs):
+  "SUSE assessment v3.1 added." shows above the tabs as a `success` message,
+  which is announced, the tab of the version added drops its input and says
+  that SUSE has it once the read after the change arrives, and the action of
+  the dialog, Add SUSE assessment, holds the focus, also after Enter in
+  Vector, whose form leaves with its tab.
 - Delete asks for confirmation, since it cannot be undone in the UI and
   Sentinel calculates the severity and the eligibility again
   (`docs/behaviors.md`, Confirmation): "Delete SUSE assessment v3.1?",
@@ -1181,10 +1182,12 @@ Access; Revoke Access):
   empties, the focus stays where it was, on Grant access or in the field, and
   the dialog announces it, such as "Access granted to Carol White."
   (`docs/behaviors.md`, Outcome of a Change).
-- While the field holds a user chosen and not yet granted, Close and Escape
-  ask "Discard changes?", "The user that you chose isn't granted access.",
-  with Keep editing and Discard (`docs/behaviors.md`, Confirmation); a term
-  typed without a choice is dropped without a question.
+- While the field holds a user chosen and not yet granted, Close, Escape, and
+  a navigation of the UI, such as back, ask "Discard changes?", "The user that
+  you chose isn't granted access.", with Keep editing and Discard
+  (`docs/behaviors.md`, Confirmation); a term typed without a choice is
+  dropped without a question. While a grant or a revocation is in progress,
+  the user chosen counts as submitted, and a navigation asks nothing.
 - Revoke access, a secondary button at the end of each grant, named after its
   user with the username, such as "Revoke access of Carol White @cwhite",
   asks for confirmation, since it ends another person's access
@@ -1202,9 +1205,15 @@ Access; Revoke Access):
   none follows, in the dialog that holds it (`docs/behaviors.md`,
   Accessibility, Focus after an action).
 - The outcome of each is announced in a status region of the dialog, which the
-  rest of the page cannot hold while the dialog is open. Whatever the outcome,
-  the screen then reads again the Ticket, its access grants, the users who
-  acted on it, and its audit log.
+  rest of the page cannot hold while the dialog is open. The outcome of a
+  change that ends after the user left the tab shows in the message area,
+  and so does its failure, with the message of its status
+  (`docs/behaviors.md`, Default Presentation by Status; Retries and
+  Unconfirmed Changes), starting with the Ticket, as a link to its screen,
+  such as "SNTL-24: Access granted to Carol White.", when the user is on
+  another screen (`docs/behaviors.md`, Outcome of a Change). Whatever the
+  outcome, the screen then reads again the Ticket, its access grants, the
+  users who acted on it, and its audit log.
 
 **Add reference**, Add Reference,
 `POST /api/v1/tickets/{ticket_id}/references`; **Edit**, Update Reference,
@@ -1269,13 +1278,15 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   without a request when the user changed none (Sentinel `docs/api-spec.md`,
   Partial Update Semantics).
 - Add reference and Edit ask for no confirmation. With input that the user
-  changed, Cancel and Escape ask "Discard changes?", "The reference that you
-  entered isn't added." in Add reference or "Your changes to this reference
-  aren't saved." in Edit, with Keep editing and Discard (`docs/behaviors.md`,
+  changed, Cancel, Escape, and a navigation of the UI, such as back or another
+  filter of the tab, ask "Discard changes?", "The reference that you entered
+  isn't added." in Add reference or "Your changes to this reference aren't
+  saved." in Edit, with Keep editing and Discard (`docs/behaviors.md`,
   Confirmation). While the request is in progress, the action is busy and
-  the dialog cannot be closed (`docs/behaviors.md`, Loading); once Sentinel
-  confirms it, the dialog closes, and the focus returns to the button that
-  opened it (`docs/behaviors.md`, Accessibility, Dialogs).
+  the dialog cannot be closed (`docs/behaviors.md`, Loading), and a
+  navigation asks nothing. Once Sentinel confirms the change, the dialog
+  closes, and the focus returns to the button that opened it
+  (`docs/behaviors.md`, Accessibility, Dialogs).
 - Delete asks for confirmation, since it cannot be undone in the UI
   (`docs/behaviors.md`, Confirmation): "Delete reference “Fictional
   advisory”?", "The reference is removed from this Ticket. This can't be
@@ -1290,7 +1301,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   a Change). When the reference that Sentinel returns after Add reference or
   Edit does not match the filters that apply, the table does not show it, so
   its outcome shows in the message area instead, once the same read has
-  arrived, such as "Reference “Fictional advisory” added." (same section).
+  arrived, such as "Reference “Fictional advisory” added." (same section);
+  the filters that apply as the change ends decide, also those that the user
+  chose while it was in progress.
   The outcome of a change that ends after the user left the tab shows in the
   message area too, and so does its failure, starting with the Ticket, as a
   link to its screen, such as "SNTL-42: Reference “Fictional advisory”

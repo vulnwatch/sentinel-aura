@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import {
   createRoute,
   linkOptions,
@@ -107,6 +107,7 @@ import type {
   SSVCAutomatable,
   SSVCExploitation,
   SSVCTechnicalImpact,
+  TicketAccessGrantDataResponse,
   TicketAccessGrantResponse,
   TicketDetail,
   TrackDetail,
@@ -121,6 +122,7 @@ import {
   getGetTicketQueryKey,
   getListTicketAccessGrantsQueryKey,
   getListTicketsQueryKey,
+  getRevokeTicketAccessMutationKey,
   useGrantTicketAccess,
   useListTicketAccessGrants,
   useListTickets,
@@ -155,6 +157,7 @@ import {
 } from "../components/detail-screen";
 import { DetailsName, DetailsValue } from "../components/details-popover";
 import { DialogTabs } from "../components/dialog-tabs";
+import { useDiscardQuestion } from "../components/discard-question";
 import { ErrorInPlace } from "../components/error-in-place";
 import { FOCUS_RING } from "../components/focus-ring";
 import { GroupBand } from "../components/group-band";
@@ -3078,9 +3081,12 @@ function suseChangedText(
 // failure at the top of the form, which takes it, as a warning when
 // Sentinel did not confirm the change (docs/behaviors.md, Where Errors
 // Appear). Edit without a change closes without a request. With input,
-// Cancel and Escape ask "Discard changes?" first (docs/behaviors.md,
-// Confirmation). While the change is in progress, the dialog cannot be
-// closed.
+// Cancel, Escape, and every navigation of the UI, such as Back, ask "Discard
+// changes?" first, and closing or reloading the page shows the browser's own
+// prompt (docs/behaviors.md, Confirmation). While the change is in progress,
+// the dialog cannot be closed, and its input counts as submitted, that of
+// every tab included: a navigation asks nothing, and the outcome shows on the
+// screen that the user is on (useChangeOutcome).
 function SuseAssessmentDialog({
   ticketId,
   cveId,
@@ -3125,7 +3131,6 @@ function SuseAssessmentDialog({
   // What Add added while the dialog stays open on another tab.
   const [added, setAdded] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [discarding, setDiscarding] = useState(false);
   // A new object for each failure, so that each shows again.
   const [failure, setFailure] = useState<VectorFailure>(NO_VECTOR_FAILURE);
   // A failure of the UI itself, which the router shows (src/router.ts).
@@ -3191,13 +3196,16 @@ function SuseAssessmentDialog({
     mode.kind === "edit"
       ? entered !== saved
       : EDITABLE_VERSIONS.some((item) => inputs[item] !== "");
-  const close = () => {
-    if (changed) {
-      setDiscarding(true);
-    } else {
-      onClose();
-    }
-  };
+  // While the change is in progress, the input of every tab counts as
+  // submitted.
+  const { close, question } = useDiscardQuestion({
+    held: changed && !busy,
+    consequence:
+      mode.kind === "add"
+        ? "The SUSE assessment that you entered isn't added."
+        : "Your changes to this SUSE assessment aren't saved.",
+    onDiscard: onClose,
+  });
   const change = (vector: string) => {
     setInputs((current) => ({ ...current, [version]: vector }));
     setFailure(NO_VECTOR_FAILURE);
@@ -3488,25 +3496,7 @@ function SuseAssessmentDialog({
           >
             {mode.kind === "add" ? "Add SUSE assessment" : "Save"}
           </Button>
-          <ConfirmationDialog
-            isOpen={discarding}
-            onCancel={() => {
-              setDiscarding(false);
-            }}
-            title="Discard changes?"
-            action="Discard"
-            cancelLabel="Keep editing"
-            onConfirm={() => {
-              setDiscarding(false);
-              onClose();
-            }}
-            isBusy={false}
-            error={undefined}
-          >
-            {mode.kind === "add"
-              ? "The SUSE assessment that you entered isn't added."
-              : "Your changes to this SUSE assessment aren't saved."}
-          </ConfirmationDialog>
+          {question}
         </>
       }
     >
@@ -4614,6 +4604,12 @@ const NOT_CONFIDENTIAL_TEXT =
 // the user holds a grant already.
 const GRANTED = "Granted";
 
+// The outcome of a grant, naming its user, such as "Access granted to Carol
+// White.".
+function grantedText(user: TicketAccessGrantResponse["user"]): string {
+  return `Access granted to ${displayName(user)}.`;
+}
+
 interface GrantAccessFormProps {
   ticketId: string;
   // The users who hold a grant, whom the field does not offer.
@@ -4645,7 +4641,8 @@ interface GrantAccessFormProps {
 // error at the top of the form, which takes it, as a warning when Sentinel
 // did not confirm the change (docs/behaviors.md, Where Errors Appear;
 // Retries and Unconfirmed Changes). Whatever its outcome, the screen then
-// reads again what it affects.
+// reads again what it affects, and the outcome of a grant that ends after
+// the user left the tab shows in the message area (useChangeOutcome).
 function GrantAccessForm({
   ticketId,
   granted,
@@ -4655,7 +4652,14 @@ function GrantAccessForm({
   announce,
   inputRef,
 }: GrantAccessFormProps) {
-  const grant = useGrantTicketAccess({ mutation: { gcTime: 0 } });
+  const grant = useGrantTicketAccess({
+    mutation: useChangeOutcome(
+      ticketRecord(ticketId),
+      (response: TicketAccessGrantDataResponse) =>
+        grantedText(response.data.user),
+      readAgain,
+    ),
+  });
   const [user, setUser] = useState<UserDirectoryData | null>(null);
   // A new field after each grant, which empties it, and whether the new
   // field takes the focus, as the field that it replaces had it.
@@ -4733,13 +4737,12 @@ function GrantAccessForm({
       choose(null);
       refocus.current = document.activeElement === inputRef.current;
       setFieldKey((key) => key + 1);
-      announce(`Access granted to ${displayName(response.data.user)}.`);
+      announce(grantedText(response.data.user));
     } catch (error) {
       fail(error);
     }
     setBusy(false);
     onBusyChange(false);
-    readAgain();
   };
 
   return (
@@ -4806,10 +4809,20 @@ interface GrantItemProps {
 // Confirmation; Sentinel docs/features/tickets/tickets.md, Revoke Access).
 // Its error shows at the top of the confirmation, which stays open; once
 // Sentinel confirms it, the confirmation closes. Whatever its outcome, the
-// screen then reads again what it affects.
+// screen then reads again what it affects, and the outcome of a revocation
+// that ends after the user left the tab shows in the message area
+// (useChangeOutcome).
 function GrantItem({ ticketId, grant, revoke }: GrantItemProps) {
   const name = displayName(grant.user);
-  const mutation = useRevokeTicketAccess({ mutation: { gcTime: 0 } });
+  const mutation = useRevokeTicketAccess({
+    mutation: useChangeOutcome(
+      ticketRecord(ticketId),
+      () => `Access of ${name} revoked.`,
+      () => {
+        revoke?.readAgain();
+      },
+    ),
+  });
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<DialogError>();
   // A failure of the UI itself, which the router shows (src/router.ts).
@@ -4840,7 +4853,6 @@ function GrantItem({ ticketId, grant, revoke }: GrantItemProps) {
         });
       }
     }
-    revoke.readAgain();
   };
   return (
     <li className="flex flex-wrap items-start gap-x-3 gap-y-2 py-2">
@@ -4914,15 +4926,18 @@ interface AccessGrantsDialogProps {
 // items a border line parts, or "No access grants.", which load and fail as
 // a part does; and Close, which closes it, as Escape does, except while a
 // grant is in progress. While the field holds a user chosen and not yet
-// granted, Close and Escape ask "Discard changes?" first
-// (docs/behaviors.md, Confirmation). The outcome of a grant or a revocation
-// is announced in a status region of the dialog, which the rest of the page
-// cannot hold while the dialog is open. When a grant whose line holds the
-// focus leaves the list, as after its Revoke access, the focus moves to the
-// Revoke access of the grant that followed it, or to the user field when
-// none follows (docs/behaviors.md, Accessibility, Focus after an action). A
-// Ticket that is no longer confidential keeps the dialog open, which then
-// says so in place of its form and its grants, and takes the focus.
+// granted, Close, Escape, and every navigation of the UI, such as Back, ask
+// "Discard changes?" first, and closing or reloading the page shows the
+// browser's own prompt (docs/behaviors.md, Confirmation); while a grant or
+// a revocation is in progress, the user chosen counts as submitted. The
+// outcome of a grant or a revocation is announced in a status region of the
+// dialog, which the rest of the page cannot hold while the dialog is open.
+// When a grant whose line holds the focus leaves the list, as after its
+// Revoke access, the focus moves to the Revoke access of the grant that
+// followed it, or to the user field when none follows (docs/behaviors.md,
+// Accessibility, Focus after an action). A Ticket that is no longer
+// confidential keeps the dialog open, which then says so in place of its
+// form and its grants, and takes the focus.
 function AccessGrantsDialog({
   ticketId,
   read,
@@ -4934,7 +4949,17 @@ function AccessGrantsDialog({
   const readAgain = useReadAfterAccessChange(ticketId);
   const [busy, setBusy] = useState(false);
   const [chosen, setChosen] = useState(false);
-  const [discarding, setDiscarding] = useState(false);
+  // Whether a revocation of this Ticket is in progress, also one that an
+  // earlier opening of the dialog started.
+  const revoking =
+    useIsMutating({
+      mutationKey: getRevokeTicketAccessMutationKey(),
+      predicate: ({ state: { variables } }) =>
+        typeof variables === "object" &&
+        variables !== null &&
+        "ticketId" in variables &&
+        variables.ticketId === ticketId,
+    }) > 0;
   const [announcement, setAnnouncement] = useState<Announcement>();
   const announce = useCallback((text: string) => {
     setAnnouncement((current) => ({ key: (current?.key ?? 0) + 1, text }));
@@ -5006,13 +5031,11 @@ function AccessGrantsDialog({
     setChosen(false);
     onClose();
   };
-  const close = () => {
-    if (chosen && confidential) {
-      setDiscarding(true);
-    } else {
-      finish();
-    }
-  };
+  const { close, question } = useDiscardQuestion({
+    held: isOpen && confidential && chosen && !busy && !revoking,
+    consequence: "The user that you chose isn't granted access.",
+    onDiscard: finish,
+  });
   return (
     <ModalDialog
       isOpen={isOpen}
@@ -5025,23 +5048,7 @@ function AccessGrantsDialog({
           <Button size="large" isDisabled={busy} onPress={close}>
             Close
           </Button>
-          <ConfirmationDialog
-            isOpen={discarding}
-            onCancel={() => {
-              setDiscarding(false);
-            }}
-            title="Discard changes?"
-            action="Discard"
-            cancelLabel="Keep editing"
-            onConfirm={() => {
-              setDiscarding(false);
-              finish();
-            }}
-            isBusy={false}
-            error={undefined}
-          >
-            The user that you chose isn't granted access.
-          </ConfirmationDialog>
+          {question}
         </>
       }
     >

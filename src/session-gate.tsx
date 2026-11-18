@@ -53,7 +53,10 @@ import {
 // before any screen, Sign in when the browser has no valid session, the
 // return from Sign in once a session exists, and Sign out. The UI cannot
 // read the session cookie, so it learns the state of the session only from
-// the API's responses (docs/architecture.md, Session Cookie).
+// the API's responses (docs/architecture.md, Session Cookie). The
+// navigations that the session forces, to Sign in and to the landing of
+// another user, skip the question before input not yet submitted is
+// discarded, and discard it (src/components/discard-question.tsx).
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -172,7 +175,7 @@ export function readSignedInUser(
     const read = await getCurrentUserProfile({ signal });
     if (shown !== undefined && shown.data.id !== read.data.id) {
       discardApiData(client, isUserQuery);
-      void router.navigate({ to: "/", replace: true });
+      void router.navigate({ to: "/", replace: true, ignoreBlocker: true });
     }
     return read;
   };
@@ -221,7 +224,7 @@ function isSigningOut(client: QueryClient): boolean {
 // signed-in user is sent again, so that the 401 of that read finds Sign in.
 function endSignedOutSession(client: QueryClient, router: AnyRouter) {
   forgetSession();
-  void router.navigate({ to: "/login", replace: true });
+  void router.navigate({ to: "/login", replace: true, ignoreBlocker: true });
   discardApiData(client, () => false);
 }
 
@@ -322,6 +325,7 @@ export function SessionGate({ children }: SessionGateProps) {
       to: "/login",
       replace: true,
       state: { ledToSignIn: true },
+      ignoreBlocker: true,
     });
   }, [client, router]);
 

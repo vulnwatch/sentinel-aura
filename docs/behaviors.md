@@ -670,7 +670,8 @@ it:
   closing a dialog with changes, or with a user chosen in a combobox of users
   and not yet submitted; a term typed in the search or a filter of a list and
   not applied, or in a combobox without a choice, is not such input, and is
-  dropped without a question.
+  dropped without a question, and neither are the username and the password
+  of Sign in.
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
@@ -688,9 +689,24 @@ A confirmation dialog:
 - offers a button named after the action, such as "Revoke API key", and
   "Cancel"; and
 - asks before discarding input "Discard changes?", with "Discard" and "Keep
-  editing". Closing or reloading the page, or following a link that the
-  browser loads (Links to Other Sites), with changed input leaves the
-  question to the browser's own prompt.
+  editing", when the form or the dialog closes and before every navigation of
+  the UI while it holds the input, such as back and forward, also one that
+  stays on the screen, such as another filter or anchor: Keep editing keeps
+  the screen, the dialog, the input, and the URL, and Discard drops the
+  input, closes the dialog, and lets the navigation go on. Closing or
+  reloading the page, following a link that the browser loads (Links to
+  Other Sites), or going back or forward to a page that the browser loads,
+  with changed input, leaves the question to the browser's own prompt.
+
+While a change of a form or a dialog is in progress, all of its input counts
+as submitted, that of another tab of the dialog included
+(`docs/design-system.md`, Dialogs): a navigation asks nothing and goes on, and
+so does the change, and closing or reloading the page shows no prompt for it
+(Links to Other Sites). A navigation that leaves the screen, or the tab of a
+detail screen that holds the dialog, takes the dialog away, and the outcome
+of the change shows where the user is (Loading; Outcome of a Change); one that
+stays there leaves the dialog open, which shows the outcome as after any
+change, in the state that the screen then shows, such as its new filters.
 
 ### Outcome of a Change
 
@@ -1004,12 +1020,3 @@ meanwhile.
   compact form names the user in its tooltip (`docs/design-system.md`,
   Representation of a User). The change that builds User adds the link and
   the card wherever a user shows, and this entry is then removed.
-- **The question before leaving with input.** Confirmation leaves the
-  question before discarding input to the browser's own prompt when the user
-  closes or reloads the page, and asks "Discard changes?" before a navigation
-  of the UI leaves it; no screen asks either yet. Until a change adds them for
-  every screen, a dialog with input asks "Discard changes?" on its own Close
-  and Escape, as the dialog of the access grants of a Ticket does, and
-  closing, reloading, or leaving the page with the browser's Back drops the
-  input without a question. That
-  change then removes this entry.

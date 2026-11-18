@@ -1420,6 +1420,63 @@ test.describe("for an analyst", () => {
     await expect(edit).toBeFocused();
   });
 
+  test("asks before Back discards a change of the SUSE assessment, also to a state of the same screen, keeping the dialog, the vector, the URL, and the page where they are on Keep editing", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-16#cvss");
+    await expectOverviewShown(page);
+    // Show hidden adds an entry to the browser history and keeps the page
+    // where it is, so that Back returns to the screen without the hidden
+    // records.
+    await part(page, "Packages").getByText("Show hidden 5").click();
+    await expect(page).toHaveURL("/tickets/SNTL-16?hidden=shown#cvss");
+    const edit = cvssButton(page, "Edit SUSE assessment v3.1");
+    await edit.click();
+    const dialog = suseDialog(page, "Edit SUSE assessment v3.1");
+    await metricValue(dialog, "Integrity", "Low").click();
+    const vector = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N";
+    await expect(vectorField(dialog)).toHaveValue(vector);
+    await expectAccessible(page);
+    const scrolled = await page.evaluate(() => window.scrollY);
+    expect(scrolled).toBeGreaterThan(0);
+
+    await page.evaluate(() => {
+      history.back();
+    });
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText(
+      "Your changes to this SUSE assessment aren't saved.",
+    );
+    await expect(
+      discard.getByRole("button", { name: "Keep editing" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await discard.getByRole("button", { name: "Keep editing" }).click();
+    await expect(discard).toHaveCount(0);
+    await expect(page).toHaveURL("/tickets/SNTL-16?hidden=shown#cvss");
+    await expect(vectorField(dialog)).toHaveValue(vector);
+    await expect(
+      page.getByRole("switch", { name: "Show hidden 5" }),
+    ).toBeChecked();
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+
+    await page.evaluate(() => {
+      history.back();
+    });
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).toHaveURL("/tickets/SNTL-16#cvss");
+    await expect(
+      page.getByRole("switch", { name: "Show hidden 5" }),
+    ).not.toBeChecked();
+    await expect(cvssTable(page)).toContainText(
+      "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+    );
+  });
+
   test("opens Add SUSE assessment on the default version, and starts another version from the assessment of another provider", async ({
     page,
   }) => {
@@ -2549,6 +2606,100 @@ test.describe("the references", () => {
     await expect(dialog).toHaveCount(0);
     await expect(add).toBeFocused();
     await expect(referenceLinks(page)).toHaveCount(2);
+  });
+
+  test("asks before Back and Forward discard the input of Add reference, keeping the dialog, the input, and the URL on Keep editing, and leaves the question to the browser's own prompt before a reload", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12");
+    await expectOverviewShown(page);
+    // Overview, References, and Audit log in the browser history, then back
+    // to References, with an entry on each side.
+    await page.getByRole("tab", { name: "References" }).click();
+    await expect(referencesTable(page)).toBeVisible();
+    await page.getByRole("tab", { name: "Audit log" }).click();
+    await expect(page).toHaveURL("/tickets/SNTL-12/audit-log");
+    await page.evaluate(() => {
+      history.back();
+    });
+    await expect(page).toHaveURL("/tickets/SNTL-12/references");
+    await referencesButton(page, "Add reference").click();
+    const dialog = page.getByRole("dialog", { name: "Add reference" });
+    const address = dialog.getByRole("textbox", {
+      name: "Address",
+      exact: true,
+    });
+    await address.fill("https://advisories.example.com/fictional-zlib/2099-1");
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+
+    for (const step of ["back", "forward"] as const) {
+      await page.evaluate((direction) => {
+        history[direction]();
+      }, step);
+
+      await expect(discard).toContainText(
+        "The reference that you entered isn't added.",
+      );
+      await expect(
+        discard.getByRole("button", { name: "Keep editing" }),
+      ).toBeFocused();
+      await expectAccessible(page);
+      await discard.getByRole("button", { name: "Keep editing" }).click();
+      await expect(discard).toHaveCount(0);
+      await expect(page).toHaveURL("/tickets/SNTL-12/references");
+      await expect(address).toHaveValue(
+        "https://advisories.example.com/fictional-zlib/2099-1",
+      );
+    }
+
+    // The browser's own prompt, which keeps the page when the user stays.
+    const prompts: string[] = [];
+    page.once("dialog", (prompt) => {
+      prompts.push(prompt.type());
+      void prompt.dismiss();
+    });
+    await page.evaluate(() => {
+      location.reload();
+    });
+    await expect.poll(() => prompts).toEqual(["beforeunload"]);
+    await expect(address).toHaveValue(
+      "https://advisories.example.com/fictional-zlib/2099-1",
+    );
+
+    await page.evaluate(() => {
+      history.back();
+    });
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect(page).toHaveURL("/tickets/SNTL-12");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("tabpanel", { name: "Overview" }),
+    ).toBeVisible();
+  });
+
+  test("reloads without a prompt while Add reference holds no input", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await openReferences(page, "SNTL-12");
+    const prompts: string[] = [];
+    page.on("dialog", (prompt) => {
+      prompts.push(prompt.type());
+      void prompt.dismiss();
+    });
+    await referencesButton(page, "Add reference").click();
+    await expect(
+      page.getByRole("dialog", { name: "Add reference" }),
+    ).toBeVisible();
+    await expectAccessible(page);
+
+    await page.reload();
+
+    await expect(referencesTable(page)).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(prompts).toEqual([]);
   });
 
   test("opens Edit reference with the values of a reference, and the confirmation of Delete, each closed without a change", async ({
