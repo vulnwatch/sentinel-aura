@@ -8159,6 +8159,37 @@ describe("the SUSE assessment", () => {
         `POST ${SUSE_ASSESSMENT}`,
         `GET ${CVSS}`,
       ]);
+      // The dialog says what it added: the part announces nothing.
+      expect(cvssAnnouncements(screen)).toEqual([]);
+    });
+
+    test("stays open on the tab of the other version after Add submitted with Enter in Vector, whose form leaves with its tab, and keeps the focus on Add SUSE assessment", async () => {
+      const bodies: unknown[] = [];
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        upsertSuse: (body) => {
+          bodies.push(body);
+          return suseResponse(SAVED_V31, 201);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await enterInBothTabs(dialog);
+      vectorOf(dialog).element().focus();
+      await expect.element(vectorOf(dialog)).toHaveFocus();
+
+      await userEvent.keyboard("{Enter}");
+
+      await expect
+        .element(
+          dialog.getByText("SUSE assessment v3.1 added.", { exact: true }),
+        )
+        .toBeVisible();
+      await expect
+        .element(versionTab(dialog, "4.0"))
+        .toHaveAttribute("aria-selected", "true");
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V40);
+      await expectFocusSettledOn(submitOf(dialog));
+      expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
     });
 
     test("adds the version of the other tab on Add again, then closes, moves the focus to the Delete of the new row once the read after it no longer shows Add SUSE assessment, and announces what it added", async () => {
@@ -8811,6 +8842,50 @@ describe("the SUSE assessment", () => {
         expect(shown.element().textContent).toBe(option);
       },
     );
+
+    test("shows the first of two assessments with the vector that the form holds, also once the user chooses the second", async () => {
+      // An assessment of another provider with CNA_V31's vector, after it.
+      const same = fictionalAssessment({
+        ...CNA_V31,
+        id: "00000000-0000-0000-0000-0000000000e4",
+        provider_name: "Fictional Security Team",
+      });
+      stubSuse(() => assessmentsWith([NVD_V40, CNA_V31, same, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      const first = dialog.getByRole("button", {
+        name: "Fictional CNA, 7.5 High Start from (optional)",
+        exact: true,
+      });
+
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      await expect.element(first).toBeVisible();
+      expect(first.element().textContent).toBe("Fictional CNA, 7.5 High");
+      const options = await openStartFrom(dialog);
+      expect(
+        options
+          .getByRole("option")
+          .elements()
+          .map((option) => option.textContent),
+      ).toEqual([
+        "Fictional CNA, 7.5 High",
+        "Fictional Security Team, 7.5 High",
+        "NVD, 8.1 High",
+      ]);
+
+      await options
+        .getByRole("option", {
+          name: "Fictional Security Team, 7.5 High",
+          exact: true,
+        })
+        .click();
+
+      await expect.element(options).not.toBeInTheDocument();
+      await nextFrames();
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+      expect(first.element().textContent).toBe("Fictional CNA, 7.5 High");
+    });
   });
 
   describe("the metrics", () => {
@@ -10011,6 +10086,76 @@ describe("the SUSE assessment", () => {
       },
     );
 
+    test.each<
+      [
+        string,
+        (dialog: Locator) => Promise<void>,
+        (dialog: Locator) => Promise<void>,
+      ]
+    >([
+      [
+        "from the other tab",
+        async (dialog) => {
+          await versionTab(dialog, "4.0").click();
+          await expect
+            .element(metricOf(dialog, "Attack requirements"))
+            .toBeVisible();
+        },
+        async (dialog) => {
+          await versionTab(dialog, "3.1").click();
+        },
+      ],
+      [
+        "from another vector",
+        async (dialog) => {
+          await vectorOf(dialog).fill(LOW_V31);
+          await expect
+            .poll(() => scoreSaid(dialog))
+            .toBe("Base score 6.1, High");
+        },
+        async (dialog) => {
+          await vectorOf(dialog).fill(VECTOR_V31);
+        },
+      ],
+    ])(
+      "shows the failure of a 422 with a code that the pinned contract does not list again in its place as the form returns to its vector %s, without waiting for a read or reading it again",
+      async (_, leave, back) => {
+        const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+          baseScore: (query) =>
+            query.get("vector_string") === VECTOR_V31
+              ? errorResponse(422, "FICTIONAL_CODE")
+              : highScore(query),
+        });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await vectorOf(dialog).fill(VECTOR_V31);
+        const place = scorePlaceOf(dialog);
+        await expect
+          .element(place.getByText(MESSAGE_NOT_ACCEPTED))
+          .toBeVisible();
+        const readsOfVector = () =>
+          scoreReads(spy).filter((vector) => vector === VECTOR_V31);
+        expect(readsOfVector()).toHaveLength(1);
+        await leave(dialog);
+        const record = recordScore(dialog);
+
+        await back(dialog);
+
+        await expect
+          .element(place.getByText(MESSAGE_NOT_ACCEPTED))
+          .toBeVisible();
+        await nextFrames();
+        record.stop();
+        // The place never waited for a read meanwhile.
+        expect(record.said).not.toContain("");
+        expect(readsOfVector()).toHaveLength(1);
+        expect(
+          place.getByRole("button", { name: "Try again" }).query(),
+        ).toBeNull();
+        await expect.element(vectorOf(dialog)).not.toBeInvalid();
+      },
+    );
+
     test.each<[string, () => Response | Promise<Response>, string]>([
       [
         "a 503",
@@ -10072,6 +10217,58 @@ describe("the SUSE assessment", () => {
         await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
       },
     );
+
+    test("shows the loading indicator after a failure of the read only once the read of the next vector has taken 300 ms, never while that vector has not paused", async () => {
+      const response = later();
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        baseScore: (query) =>
+          query.get("vector_string") === VECTOR_V31
+            ? errorResponse(503, "SERVICE_UNAVAILABLE")
+            : response.promise,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      await expect
+        .element(scorePlaceOf(dialog).getByText(MESSAGE_UNAVAILABLE))
+        .toBeVisible();
+      await readsEnded();
+      // The clock of the pause and of the delay of the indicator, which the
+      // test moves itself.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const loading = dialog.getByRole("progressbar", { name: "Loading" });
+
+      // Three choices of a metric, each shortly before the pause after the
+      // one before ends, which keep the vector from pausing for longer than
+      // the delay of the indicator, and end on LOW_V31.
+      await press(segmentOf(dialog, "Availability", "Low"));
+      vi.advanceTimersByTime(SCORE_DELAY_MS - 1);
+      await press(segmentOf(dialog, "Availability", "None"));
+      vi.advanceTimersByTime(SCORE_DELAY_MS - 1);
+      await press(segmentOf(dialog, "Availability", "Low"));
+      vi.advanceTimersByTime(SCORE_DELAY_MS - 1);
+      expect(3 * (SCORE_DELAY_MS - 1)).toBeGreaterThan(LOADING_DELAY_MS);
+      await nextFrames();
+      expect(loading.query()).toBeNull();
+      expect(scoreSaid(dialog)).toBe("");
+      expect(scoreReads(spy)).toEqual([VECTOR_V31, VECTOR_V31, VECTOR_V31]);
+
+      vi.advanceTimersByTime(1);
+
+      await expect
+        .poll(() => scoreReads(spy), { interval: 0 })
+        .toEqual([VECTOR_V31, VECTOR_V31, VECTOR_V31, LOW_V31]);
+      vi.advanceTimersByTime(LOADING_DELAY_MS - 1);
+      await nextFrames();
+      expect(loading.query()).toBeNull();
+      vi.advanceTimersByTime(1);
+      await expect.poll(() => loading.query(), { interval: 0 }).not.toBeNull();
+      vi.useRealTimers();
+      response.resolve(baseScoreResponse(LOW_V31, 6.1, "high"));
+
+      await expect.poll(() => scoreSaid(dialog)).toBe("Base score 6.1, High");
+      await expect.element(loading).not.toBeInTheDocument();
+    });
 
     test("shows in each tab of Add the outcome of its own vector at once, never that of the other tab, and the score of a tab again without reading it again", async () => {
       const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31], "4.0"), {
