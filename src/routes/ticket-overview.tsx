@@ -634,13 +634,12 @@ function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
     user?.capabilities.includes("triage_ticket") === true &&
     ASSIGNABLE_STATUSES.has(ticket.status);
   const eligible =
-    user !== undefined && admits(user.assignment_eligibility, ticket)
-      ? user
-      : undefined;
-  // The signed-in user whom the open popover offers first, as it offered them
-  // as it opened (docs/behaviors.md, The Signed-in User).
-  const [openedWith, setOpenedWith] = useState(eligible);
-  const me = open ? openedWith : eligible;
+    user !== undefined && admits(user.assignment_eligibility, ticket);
+  // Whether the open popover offers the signed-in user first, as it did as it
+  // opened (docs/behaviors.md, The Signed-in User).
+  const [offeredAtOpen, setOfferedAtOpen] = useState(false);
+  const me =
+    user !== undefined && (open ? offeredAtOpen : eligible) ? user : undefined;
 
   const fail = (failure: unknown) => {
     if (!isRequestFailure(failure)) {
@@ -725,7 +724,7 @@ function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
       }
       setOpen(next);
       if (next) {
-        setOpenedWith(eligible);
+        setOfferedAtOpen(eligible);
         setFieldError(undefined);
         setError(undefined);
       }

@@ -139,15 +139,16 @@ function animationsIn(element: Element): string[] {
 function groupsOf(
   screen: Awaited<ReturnType<typeof renderPicker>>["screen"],
 ): (string | null)[][] {
-  const groups = screen
+  return screen
     .getByRole("listbox", { name: "Users" })
-    .element()
-    .querySelectorAll("section");
-  return [...groups]
+    .getByRole("group")
+    .elements()
     .map((group) =>
-      [...group.querySelectorAll("[role=option]")].map(
-        (option) => option.textContent,
-      ),
+      page
+        .elementLocator(group)
+        .getByRole("option")
+        .elements()
+        .map((option) => option.textContent),
     )
     .filter((names) => names.length > 0);
 }
@@ -515,12 +516,13 @@ test("shows its error at the field, and tells when the term changes", async () =
 
   // In a status region, so that it is announced while the field keeps the
   // focus.
-  expect(
-    screen
-      .getByText("This user can't be the assignee of this Ticket.")
-      .element()
-      .closest("output"),
-  ).not.toBeNull();
+  await expect
+    .element(
+      screen
+        .getByRole("status")
+        .getByText("This user can't be the assignee of this Ticket."),
+    )
+    .toBeVisible();
 
   await field.fill("b");
   expect(onInput).toHaveBeenCalled();

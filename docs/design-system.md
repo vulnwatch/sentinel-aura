@@ -1335,22 +1335,21 @@ states it, such as that of a Ticket; the other audit logs are tables
   Tooltips).
 - A field that a user can change shows that user a pencil at the end of its
   line: an icon button of 24 px with `pencil` at 14 px, named by its action,
-  such as "Edit assignee", which its tooltip shows. It opens the control of
-  the field in a popover below it, or above it where the window has no room
-  below, moved toward the start where it would pass the end of the window,
-  such as a search field with the matching users listed below it, in
-  the states of a combobox (Forms), 320 px wide, as the popover of a name,
-  with 16 px of padding, as a popover that holds fields, and its content
-  scrolling within it in a window shorter than it is (Menus, Popovers, and
-  Tooltips), whose choice applies at once; or a dialog where the change
-  needs more than one choice (Dialogs). While
-  the change of a popover is in progress, its choice is busy and the popover
-  cannot be closed; once Sentinel confirms the change, the popover closes,
-  the focus returns to the pencil, and the result is announced
-  (`docs/behaviors.md`, Outcome of a Change), and when the change fails, the
-  popover stays open with its error, at its field or at its top
-  (`docs/behaviors.md`, Where Errors Appear). While the change is in
-  progress, the pencil is busy too (`docs/behaviors.md`, Loading).
+  such as "Edit assignee", which its tooltip shows. It opens the control of the
+  field in a popover below it, or above it where the window has no room below,
+  moved toward the start where it would pass the end of the window, such as a
+  search field with the matching users listed below it, in the states of a
+  combobox (Forms), whose choice applies at once; or a dialog where the change
+  needs more than one choice (Dialogs). The popover is 320 px wide, as the
+  popover of a name, with 16 px of padding, as a popover that holds fields, and
+  its content scrolls within it in a window shorter than it is (Menus,
+  Popovers, and Tooltips). While the change of a popover is in progress, its
+  choice is busy and the popover cannot be closed; once Sentinel confirms the
+  change, the popover closes, the focus returns to the pencil, and the result
+  is announced (`docs/behaviors.md`, Outcome of a Change), and when the change
+  fails, the popover stays open with its error, at its field or at its top
+  (`docs/behaviors.md`, Where Errors Appear). While the change is in progress,
+  the pencil is busy too (`docs/behaviors.md`, Loading).
 - Each part of the record, such as the CVSS assessments of a Ticket, is a
   section on the background of the page, below a `border` line: its
   level-two heading in `text-16`, weight 600, 24 px below the line, with its

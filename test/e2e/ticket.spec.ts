@@ -2022,9 +2022,12 @@ test.describe("for an analyst", () => {
       await expect(announced("Assigned to you.")).toHaveCount(1);
 
       await pencil.click();
-      await expect(
-        popover.getByRole("option", { name: "Unassign yourself" }),
-      ).toBeVisible();
+      await expect(popover.getByRole("option")).toHaveText([
+        "Unassign yourself",
+        "Alice Smith @asmithYou",
+        "Bob Wilson @bwilson",
+        "Carol White @cwhite",
+      ]);
       await expectAccessible(page);
       await popover.getByRole("option", { name: "Unassign yourself" }).click();
 

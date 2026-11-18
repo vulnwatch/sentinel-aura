@@ -7417,6 +7417,13 @@ describe("the assignee", () => {
     expect(
       animationsIn(userOption(screen, "Bob Wilson @bwilson").element()),
     ).toEqual(["spin"]);
+    await expect
+      .element(
+        assigneePopover(screen)
+          .getByRole("status")
+          .getByText("Changing the assignee."),
+      )
+      .toBeVisible();
     await userEvent.keyboard("{Escape}");
     interactOutside();
     await nextFrames();
