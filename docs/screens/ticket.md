@@ -1484,8 +1484,7 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   says so in place of its explanation, the form, the grants, and their
   confirmation, and takes the focus (Participants).
 - **Errors of Edit assignee.** A failure shows in the popover, which stays open
-  (`docs/behaviors.md`, Where Errors Appear), and its error takes the focus as
-  that of a form does (`docs/behaviors.md`, Accessibility, Announcements). The
+  (`docs/behaviors.md`, Where Errors Appear; Accessibility, Announcements). The
   screen handles three codes specifically, at the search field: `404
   USER_NOT_FOUND`, "Sentinel doesn't know this user."; `409
   TICKET_ASSIGNEE_INACTIVE`, "This user is inactive, so they can't be the

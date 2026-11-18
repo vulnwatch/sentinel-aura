@@ -1661,8 +1661,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   and an item of a single selection ends with `check` at 16 px when it is
   selected. While the change that an item started is in progress, the item is
   busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
-  `check` at its end, as it takes the place of the icon of a busy button
-  (Buttons and Links; `docs/behaviors.md`, Loading).
+  icon, as on a busy button (Buttons and Links), or, in an item of a single
+  selection, of its `check` at its end (`docs/behaviors.md`, Loading).
 - A tooltip inverts the colors of text: `surface` on an `fg` background, in
   `text-13`, weight 500, with a 6 px radius and 6 px by 10 px of padding; how
   many more values a "+N" has than its tooltip lists is in `muted-on-fg`
