@@ -7013,6 +7013,22 @@ const SAVED_V31 = fictionalAssessment({
   updated_at: "2099-10-12T08:00:00Z",
 });
 
+// The SUSE CVSS v4.0 assessment that Set or Update SUSE CVSS Assessment
+// returns for VECTOR_V40, High 8.7.
+const SAVED_V40: CVSS40Assessment = {
+  ...SUSE_V40,
+  score: 8.7,
+  severity: "high",
+  vector_string: VECTOR_V40,
+  metrics: {
+    ...NVD_V40.metrics,
+    vulnerable_system_confidentiality: "none",
+    vulnerable_system_integrity: "none",
+  },
+  created_at: "2099-10-12T08:00:00Z",
+  updated_at: "2099-10-12T08:00:00Z",
+};
+
 // The metrics of each version, as their controls are named, in their order.
 const METRICS_V31 = [
   "Attack vector",
@@ -7263,6 +7279,17 @@ async function openSuseEdit(screen: Screen, version = "3.1") {
   return dialog;
 }
 
+// Enters VECTOR_V31 in the tab of v3.1 of Add, on which it opens, and
+// VECTOR_V40 in that of v4.0, then returns to the tab of v3.1.
+async function enterInBothTabs(dialog: Locator) {
+  await vectorOf(dialog).fill(VECTOR_V31);
+  await versionTab(dialog, "4.0").click();
+  await expect.element(vectorOf(dialog)).toHaveValue("");
+  await vectorOf(dialog).fill(VECTOR_V40);
+  await versionTab(dialog, "3.1").click();
+  await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+}
+
 // The marks of the severities in the light theme (docs/design-system.md,
 // Severity Marks).
 const MARK_HIGH = "rgb(247, 107, 21)";
@@ -7436,9 +7463,10 @@ async function deleteSuseAmong(before: CVSSAssessmentItem[], version: string) {
   return { screen };
 }
 
-// The place of the Base score in the dialog, a status region.
+// The place of the Base score in the dialog, a status region named after
+// it, since Add has another one.
 function scorePlaceOf(dialog: Locator) {
-  return dialog.getByRole("status");
+  return dialog.getByRole("status", { name: "Base score", exact: true });
 }
 
 // What an element says to assistive technologies: its text without what it
@@ -8061,6 +8089,221 @@ describe("the SUSE assessment", () => {
       await expectFocusSettledOn(addSuse(screen));
     });
 
+    test("stays open after Add on the tab of the other version, which holds input and which SUSE lacks by the read before Add, says above the tabs what it added in a status region, drops the input of the version added, whose tab says that SUSE has it once the read after the change arrives, keeps the focus on Add SUSE assessment, and sends nothing more", async () => {
+      let added = false;
+      // The read of the assessments after the change, which waits until the
+      // test answers it.
+      const after = later();
+      const bodies: unknown[] = [];
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        cvss: () =>
+          added
+            ? after.promise
+            : cvssResponse(assessmentsWith([NVD_V40, NVD_V31])),
+        upsertSuse: (body) => {
+          bodies.push(body);
+          added = true;
+          return suseResponse(SAVED_V31, 201);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await enterInBothTabs(dialog);
+      const regions = dialog.getByRole("status").elements();
+      const before = assessmentRequests(spy).length;
+
+      await press(submitOf(dialog));
+
+      const text = "SUSE assessment v3.1 added.";
+      const message = dialog.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      // A status region that was there before it announces it.
+      const region = dialog.getByRole("status").filter({ hasText: text });
+      expect(regions).toContain(region.element());
+      expect(region.element().textContent).toBe(text);
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+      expect(boxOf(message).bottom).toBeLessThanOrEqual(
+        boxOf(dialog.getByRole("tablist", { name: "CVSS version" })).top,
+      );
+      await expect
+        .element(versionTab(dialog, "4.0"))
+        .toHaveAttribute("aria-selected", "true");
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V40);
+      await expectFocusSettledOn(submitOf(dialog));
+      expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
+      await expect
+        .poll(() => assessmentRequests(spy).slice(before))
+        .toEqual([`GET ${CVSS}`, `POST ${SUSE_ASSESSMENT}`, `GET ${CVSS}`]);
+
+      await versionTab(dialog, "3.1").click();
+
+      // Before the read after the change arrives, the tab shows its form,
+      // empty.
+      await expect.element(vectorOf(dialog)).toHaveValue("");
+      expect(dialog.getByRole("radio", { checked: true }).elements()).toEqual(
+        [],
+      );
+      after.resolve(
+        cvssResponse(assessmentsWith([NVD_V40, NVD_V31, SAVED_V31])),
+      );
+
+      await expect
+        .element(dialog.getByText(TAKEN_V31, { exact: true }))
+        .toBeVisible();
+      await readEnded(CVSS);
+      await nextFrames();
+      await expect.element(dialog).toBeVisible();
+      expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
+      expect(assessmentRequests(spy).slice(before)).toEqual([
+        `GET ${CVSS}`,
+        `POST ${SUSE_ASSESSMENT}`,
+        `GET ${CVSS}`,
+      ]);
+    });
+
+    test("adds the version of the other tab on Add again, then closes, moves the focus to the Delete of the new row once the read after it no longer shows Add SUSE assessment, and announces what it added", async () => {
+      let assessments = assessmentsWith([NVD_V40, NVD_V31]);
+      const bodies: unknown[] = [];
+      stubSuse(() => assessments, {
+        upsertSuse: (body) => {
+          bodies.push(body);
+          if (bodies.length === 1) {
+            assessments = assessmentsWith([NVD_V40, NVD_V31, SAVED_V31]);
+            return suseResponse(SAVED_V31, 201);
+          }
+          assessments = assessmentsWith([
+            NVD_V40,
+            SAVED_V40,
+            NVD_V31,
+            SAVED_V31,
+          ]);
+          return suseResponse(SAVED_V40, 201);
+        },
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await enterInBothTabs(dialog);
+      await submitOf(dialog).click();
+      await expect
+        .element(
+          dialog.getByText("SUSE assessment v3.1 added.", { exact: true }),
+        )
+        .toBeVisible();
+      await expect
+        .element(versionTab(dialog, "4.0"))
+        .toHaveAttribute("aria-selected", "true");
+
+      await submitOf(dialog).click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(bodies).toEqual([
+        { vector_string: VECTOR_V31 },
+        { vector_string: VECTOR_V40 },
+      ]);
+      await expect
+        .poll(() => cvssAnnouncements(screen))
+        .toEqual(["SUSE assessment v4.0 added."]);
+      await expect.element(addSuse(screen)).not.toBeInTheDocument();
+      await expect.element(assessmentRow(screen, "SUSE", "4.0")).toBeVisible();
+      await expect.element(assessmentRow(screen, "SUSE", "3.1")).toBeVisible();
+      await expectFocusSettledOn(deleteSuse(screen, "4.0"));
+    });
+
+    test("asks Discard changes? on Cancel after an Add after which it stays open only for the input of the other tab, and closes without asking once that input is gone", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        upsertSuse: () => suseResponse(SAVED_V31, 201),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await enterInBothTabs(dialog);
+      await press(submitOf(dialog));
+      await expect
+        .element(
+          dialog.getByText("SUSE assessment v3.1 added.", { exact: true }),
+        )
+        .toBeVisible();
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V40);
+
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+
+      const discard = screen.getByRole("dialog", { name: "Discard changes?" });
+      await expect
+        .element(
+          discard.getByText(
+            "The SUSE assessment that you entered isn't added.",
+          ),
+        )
+        .toBeVisible();
+      await discard.getByRole("button", { name: "Keep editing" }).click();
+      await expect.element(discard).not.toBeInTheDocument();
+      await vectorOf(dialog).fill("");
+
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(discard.query()).toBeNull();
+    });
+
+    test.each<
+      [
+        string,
+        CVSSAssessmentItem[],
+        (dialog: Locator) => Promise<void>,
+        (screen: Screen) => Locator,
+      ]
+    >([
+      [
+        "the other tab holds no input",
+        [],
+        async (dialog) => {
+          await enterInBothTabs(dialog);
+          await versionTab(dialog, "4.0").click();
+          await vectorOf(dialog).fill("");
+          await versionTab(dialog, "3.1").click();
+          await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+        },
+        (screen) => addSuse(screen),
+      ],
+      [
+        "the read before Add shows that SUSE has the version of the other tab by then",
+        [SUSE_V40],
+        enterInBothTabs,
+        (screen) => deleteSuse(screen, "3.1"),
+      ],
+    ])(
+      "closes after Add when %s, and announces what it added, with the focus as after every Add",
+      async (_, meanwhile, enter, focused) => {
+        let assessments = assessmentsWith([NVD_V40, NVD_V31]);
+        const bodies: unknown[] = [];
+        stubSuse(() => assessments, {
+          upsertSuse: (body) => {
+            bodies.push(body);
+            assessments = assessmentsWith([
+              NVD_V40,
+              ...meanwhile,
+              NVD_V31,
+              SAVED_V31,
+            ]);
+            return suseResponse(SAVED_V31, 201);
+          },
+        });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await enter(dialog);
+        // What another analyst added meanwhile.
+        assessments = assessmentsWith([NVD_V40, ...meanwhile, NVD_V31]);
+
+        await submitOf(dialog).click();
+
+        await expect.element(dialog).not.toBeInTheDocument();
+        expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
+        await expect
+          .poll(() => cvssAnnouncements(screen))
+          .toEqual(["SUSE assessment v3.1 added."]);
+        await expectFocusSettledOn(focused(screen));
+      },
+    );
+
     test("says in place of the form that SUSE has the version, with Add SUSE assessment disabled and the focus on that line, without adding it, when the read before the change shows that SUSE has it by then", async () => {
       let assessments = assessmentsWith([NVD_V40, NVD_V31]);
       const spy = stubSuse(() => assessments);
@@ -8258,25 +8501,39 @@ describe("the SUSE assessment", () => {
       expect(requestsWith(spy, "POST")).toHaveLength(1);
     });
 
-    test("moves the focus from Add SUSE assessment to the Delete of the new row once the read after Add of the last version that SUSE lacked shows the row and no longer Add SUSE assessment", async () => {
-      let assessments = assessmentsWith([SUSE_V40, NVD_V31]);
-      stubSuse(() => assessments, {
-        upsertSuse: () => {
-          assessments = assessmentsWith([SUSE_V40, NVD_V31, SAVED_V31]);
-          return suseResponse(SAVED_V31, 201);
-        },
-      });
-      const { screen } = await renderSuse();
-      const dialog = await openSuseAdd(screen);
-      await vectorOf(dialog).fill(VECTOR_V31);
+    test.each([
+      ["with the pointer", false],
+      ["from the keyboard", true],
+    ])(
+      "moves the focus from Add SUSE assessment to the Delete of the new row once the read after Add of the last version that SUSE lacked, pressed %s, shows the row and no longer Add SUSE assessment",
+      async (_, keyboard) => {
+        let assessments = assessmentsWith([SUSE_V40, NVD_V31]);
+        stubSuse(() => assessments, {
+          upsertSuse: () => {
+            assessments = assessmentsWith([SUSE_V40, NVD_V31, SAVED_V31]);
+            return suseResponse(SAVED_V31, 201);
+          },
+        });
+        const { screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        await vectorOf(dialog).fill(VECTOR_V31);
 
-      await submitOf(dialog).click();
+        // The table takes a focus that enters it from the keyboard to the row
+        // that it holds as focused, its first row at first.
+        if (keyboard) {
+          await press(submitOf(dialog));
+        } else {
+          await submitOf(dialog).click();
+        }
 
-      await expect.element(dialog).not.toBeInTheDocument();
-      await expect.element(addSuse(screen)).not.toBeInTheDocument();
-      await expect.element(assessmentRow(screen, "SUSE", "3.1")).toBeVisible();
-      await expectFocusSettledOn(deleteSuse(screen, "3.1"));
-    });
+        await expect.element(dialog).not.toBeInTheDocument();
+        await expect.element(addSuse(screen)).not.toBeInTheDocument();
+        await expect
+          .element(assessmentRow(screen, "SUSE", "3.1"))
+          .toBeVisible();
+        await expectFocusSettledOn(deleteSuse(screen, "3.1"));
+      },
+    );
 
     test("moves the focus no more once the read after Add fails, and to the screen's heading when a later read removes Add SUSE assessment", async () => {
       let phase: "before" | "failing" | "added" = "before";
@@ -8420,18 +8677,21 @@ describe("the SUSE assessment", () => {
       expect(startFromOf(dialog).query()).toBeNull();
     });
 
-    test("starts in Edit, labelled Start from, at the assessment as saved, and offers it before the assessments of the other providers", async () => {
+    test("starts in Edit, labelled Start from (optional), at the assessment as saved, and offers it before the assessments of the other providers", async () => {
       stubSuse(() => assessmentsWith([NVD_V40, NVD_V31, SUSE_V31]));
       const { screen } = await renderSuse();
       const dialog = await openSuseEdit(screen);
       const field = dialog.getByRole("button", {
-        name: "SUSE, as saved, 5.5 Medium Start from",
+        name: "SUSE, as saved, 5.5 Medium Start from (optional)",
         exact: true,
       });
       await expect.element(field).toBeVisible();
       expect(field.element().textContent).toBe("SUSE, as saved, 5.5 Medium");
       expect(markOf(field.element())).toBe(MARK_MEDIUM);
-      expect(dialog.getByText("(optional)").query()).toBeNull();
+      const optional = dialog.getByText("(optional)", { exact: true });
+      await expect.element(optional).toBeVisible();
+      expect(getComputedStyle(optional.element()).color).toBe(FG_MUTED);
+      expect(getComputedStyle(optional.element()).fontWeight).toBe("400");
       await expect
         .element(vectorOf(dialog))
         .toHaveValue(SUSE_V31.vector_string);
@@ -8467,6 +8727,90 @@ describe("the SUSE assessment", () => {
         .element(vectorOf(dialog))
         .toHaveValue(SUSE_V31.vector_string);
     });
+
+    test.each<
+      [
+        string,
+        CVSSAssessmentItem[],
+        (screen: Screen) => Promise<Locator>,
+        string,
+        string,
+        [string, string],
+      ]
+    >([
+      [
+        "the assessment as saved, as Edit opens",
+        [NVD_V40, NVD_V31, SUSE_V31],
+        (screen) => openSuseEdit(screen),
+        "SUSE, as saved, 5.5 Medium",
+        SUSE_V31.vector_string,
+        ["High", "None"],
+      ],
+      [
+        "the assessment of NVD, once chosen in Add",
+        [NVD_V40, NVD_V31],
+        async (screen) => {
+          const dialog = await openSuseAdd(screen);
+          await (
+            await openStartFrom(dialog)
+          )
+            .getByRole("option", { name: "NVD, 8.1 High", exact: true })
+            .click();
+          return dialog;
+        },
+        "NVD, 8.1 High",
+        NVD_V31_VECTOR,
+        ["Low", "High"],
+      ],
+    ])(
+      "shows %s while the form holds its vector, nothing once a metric changes it, and the assessment again when the user chooses it, when the metrics return to its vector, and when the user enters it with surrounding whitespace",
+      async (_, assessments, open, option, vector, [changed, original]) => {
+        stubSuse(() => assessmentsWith(assessments));
+        const { screen } = await renderSuse();
+        const dialog = await open(screen);
+        const shown = dialog.getByRole("button", {
+          name: `${option} Start from (optional)`,
+          exact: true,
+        });
+        const empty = dialog.getByRole("button", {
+          name: "Start from (optional)",
+          exact: true,
+        });
+        await expect.element(shown).toBeVisible();
+        await expect.element(vectorOf(dialog)).toHaveValue(vector);
+
+        await segmentOf(dialog, "Integrity", changed).click();
+
+        await expect.element(empty).toBeVisible();
+        expect(empty.element().textContent).toBe("");
+        expect(markOf(empty.element())).toBeUndefined();
+
+        await (
+          await openStartFrom(dialog)
+        )
+          .getByRole("option", { name: option, exact: true })
+          .click();
+
+        await expect.element(vectorOf(dialog)).toHaveValue(vector);
+        await expect.element(shown).toBeVisible();
+        expect(shown.element().textContent).toBe(option);
+        await segmentOf(dialog, "Integrity", changed).click();
+        await expect.element(empty).toBeVisible();
+
+        await segmentOf(dialog, "Integrity", original).click();
+
+        await expect.element(vectorOf(dialog)).toHaveValue(vector);
+        await expect.element(shown).toBeVisible();
+        // CNA_V31's vector, which no assessment that it offers has.
+        await vectorOf(dialog).fill(VECTOR_V31);
+        await expect.element(empty).toBeVisible();
+
+        await vectorOf(dialog).fill(`  ${vector} `);
+
+        await expect.element(shown).toBeVisible();
+        expect(shown.element().textContent).toBe(option);
+      },
+    );
   });
 
   describe("the metrics", () => {
