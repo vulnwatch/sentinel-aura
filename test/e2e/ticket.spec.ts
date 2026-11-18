@@ -1393,6 +1393,9 @@ test.describe("for an analyst", () => {
     await expect(metric(dialog, "Integrity")).toHaveAccessibleDescription(
       "NVD: High",
     );
+    // Start from no longer shows the assessment as saved, whose vector the
+    // form no longer holds.
+    await expect(startFrom(dialog)).toHaveText("");
     // Beside Start from, the score of the new vector, as Sentinel calculates
     // it once the vector has paused.
     await expect(
@@ -1466,6 +1469,7 @@ test.describe("for an analyst", () => {
     await expect(
       metric(dialog, "Attack requirements"),
     ).toHaveAccessibleDescription("NVD: None");
+    await expect(startFrom(dialog)).toHaveText("");
     await expect(
       dialog.getByText("Base score 9.2, Critical", { exact: true }),
     ).toBeAttached();
