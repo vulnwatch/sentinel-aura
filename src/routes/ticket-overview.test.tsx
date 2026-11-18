@@ -7920,7 +7920,7 @@ describe("the SUSE assessment", () => {
         async (screen) => {
           await addSuse(screen).click();
         },
-        (screen) => segmentOf(suseDialog(screen), "Attack vector", "Network"),
+        (screen) => segmentOf(suseDialog(screen), "Attack vector", "Physical"),
       ],
       [
         "Start from in Edit",
@@ -7975,7 +7975,7 @@ describe("the SUSE assessment", () => {
       const { screen } = await renderSuse();
       const dialog = await openSuseAdd(screen);
       await expect
-        .element(segmentOf(dialog, "Attack vector", "Network"))
+        .element(segmentOf(dialog, "Attack vector", "Physical"))
         .toHaveFocus();
       // What takes the focus, which assistive technologies announce.
       const focused: Element[] = [];
@@ -8902,10 +8902,10 @@ describe("the SUSE assessment", () => {
         "3.1",
         ["Exploitability", "Scope", "Impact"],
         [
-          ["Attack vector", ["Network", "Adjacent", "Local", "Physical"]],
-          ["Attack complexity", ["Low", "High"]],
-          ["Privileges required", ["None", "Low", "High"]],
-          ["User interaction", ["None", "Required"]],
+          ["Attack vector", ["Physical", "Local", "Adjacent", "Network"]],
+          ["Attack complexity", ["High", "Low"]],
+          ["Privileges required", ["High", "Low", "None"]],
+          ["User interaction", ["Required", "None"]],
           ["Scope", ["Unchanged", "Changed"]],
           ["Confidentiality", ["None", "Low", "High"]],
           ["Integrity", ["None", "Low", "High"]],
@@ -8917,17 +8917,17 @@ describe("the SUSE assessment", () => {
         "4.0",
         ["Exploitability", "Vulnerable system", "Subsequent system"],
         [
-          ["Attack vector", ["Network", "Adjacent", "Local", "Physical"]],
-          ["Attack complexity", ["Low", "High"]],
-          ["Attack requirements", ["None", "Present"]],
-          ["Privileges required", ["None", "Low", "High"]],
-          ["User interaction", ["None", "Passive", "Active"]],
-          ["Confidentiality Vulnerable system", ["High", "Low", "None"]],
-          ["Integrity Vulnerable system", ["High", "Low", "None"]],
-          ["Availability Vulnerable system", ["High", "Low", "None"]],
-          ["Confidentiality Subsequent system", ["High", "Low", "None"]],
-          ["Integrity Subsequent system", ["High", "Low", "None"]],
-          ["Availability Subsequent system", ["High", "Low", "None"]],
+          ["Attack vector", ["Physical", "Local", "Adjacent", "Network"]],
+          ["Attack complexity", ["High", "Low"]],
+          ["Attack requirements", ["Present", "None"]],
+          ["Privileges required", ["High", "Low", "None"]],
+          ["User interaction", ["Active", "Passive", "None"]],
+          ["Confidentiality Vulnerable system", ["None", "Low", "High"]],
+          ["Integrity Vulnerable system", ["None", "Low", "High"]],
+          ["Availability Vulnerable system", ["None", "Low", "High"]],
+          ["Confidentiality Subsequent system", ["None", "Low", "High"]],
+          ["Integrity Subsequent system", ["None", "Low", "High"]],
+          ["Availability Subsequent system", ["None", "Low", "High"]],
         ],
       ],
     ])(

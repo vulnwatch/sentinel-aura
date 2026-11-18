@@ -2375,8 +2375,8 @@ interface FormValue {
 }
 
 // A metric of the form: its abbreviation in the vector, its field in
-// metrics of the API, its name, and its values in the order of FIRST's
-// calculator.
+// metrics of the API, its name, and its values from the one that lowers the
+// Base score to the one that raises it, in every version.
 interface FormMetric {
   abbreviation: string;
   field: string;
@@ -2398,21 +2398,21 @@ interface VersionForm {
 }
 
 const ATTACK_VECTOR: readonly FormValue[] = [
-  { letter: "N", value: CVSSAttackVector.network },
-  { letter: "A", value: CVSSAttackVector.adjacent },
-  { letter: "L", value: CVSSAttackVector.local },
   { letter: "P", value: CVSSAttackVector.physical },
+  { letter: "L", value: CVSSAttackVector.local },
+  { letter: "A", value: CVSSAttackVector.adjacent },
+  { letter: "N", value: CVSSAttackVector.network },
 ];
 
 const ATTACK_COMPLEXITY: readonly FormValue[] = [
-  { letter: "L", value: CVSSAttackComplexity.low },
   { letter: "H", value: CVSSAttackComplexity.high },
+  { letter: "L", value: CVSSAttackComplexity.low },
 ];
 
 const PRIVILEGES_REQUIRED: readonly FormValue[] = [
-  { letter: "N", value: CVSSPrivilegesRequired.none },
-  { letter: "L", value: CVSSPrivilegesRequired.low },
   { letter: "H", value: CVSSPrivilegesRequired.high },
+  { letter: "L", value: CVSSPrivilegesRequired.low },
+  { letter: "N", value: CVSSPrivilegesRequired.none },
 ];
 
 const NONE_LOW_HIGH: readonly FormValue[] = [
@@ -2420,8 +2420,6 @@ const NONE_LOW_HIGH: readonly FormValue[] = [
   { letter: "L", value: CVSSImpact.low },
   { letter: "H", value: CVSSImpact.high },
 ];
-
-const HIGH_LOW_NONE: readonly FormValue[] = NONE_LOW_HIGH.toReversed();
 
 const VERSION_FORMS: Readonly<Record<EditableVersion, VersionForm>> = {
   "3.1": {
@@ -2453,8 +2451,8 @@ const VERSION_FORMS: Readonly<Record<EditableVersion, VersionForm>> = {
             field: "user_interaction",
             name: "User interaction",
             values: [
-              { letter: "N", value: CVSS3UserInteraction.none },
               { letter: "R", value: CVSS3UserInteraction.required },
+              { letter: "N", value: CVSS3UserInteraction.none },
             ],
           },
         ],
@@ -2521,8 +2519,8 @@ const VERSION_FORMS: Readonly<Record<EditableVersion, VersionForm>> = {
             field: "attack_requirements",
             name: "Attack requirements",
             values: [
-              { letter: "N", value: CVSS4AttackRequirements.none },
               { letter: "P", value: CVSS4AttackRequirements.present },
+              { letter: "N", value: CVSS4AttackRequirements.none },
             ],
           },
           {
@@ -2536,9 +2534,9 @@ const VERSION_FORMS: Readonly<Record<EditableVersion, VersionForm>> = {
             field: "user_interaction",
             name: "User interaction",
             values: [
-              { letter: "N", value: CVSS4UserInteraction.none },
-              { letter: "P", value: CVSS4UserInteraction.passive },
               { letter: "A", value: CVSS4UserInteraction.active },
+              { letter: "P", value: CVSS4UserInteraction.passive },
+              { letter: "N", value: CVSS4UserInteraction.none },
             ],
           },
         ],
@@ -2550,19 +2548,19 @@ const VERSION_FORMS: Readonly<Record<EditableVersion, VersionForm>> = {
             abbreviation: "VC",
             field: "vulnerable_system_confidentiality",
             name: "Confidentiality",
-            values: HIGH_LOW_NONE,
+            values: NONE_LOW_HIGH,
           },
           {
             abbreviation: "VI",
             field: "vulnerable_system_integrity",
             name: "Integrity",
-            values: HIGH_LOW_NONE,
+            values: NONE_LOW_HIGH,
           },
           {
             abbreviation: "VA",
             field: "vulnerable_system_availability",
             name: "Availability",
-            values: HIGH_LOW_NONE,
+            values: NONE_LOW_HIGH,
           },
         ],
       },
@@ -2573,19 +2571,19 @@ const VERSION_FORMS: Readonly<Record<EditableVersion, VersionForm>> = {
             abbreviation: "SC",
             field: "subsequent_system_confidentiality",
             name: "Confidentiality",
-            values: HIGH_LOW_NONE,
+            values: NONE_LOW_HIGH,
           },
           {
             abbreviation: "SI",
             field: "subsequent_system_integrity",
             name: "Integrity",
-            values: HIGH_LOW_NONE,
+            values: NONE_LOW_HIGH,
           },
           {
             abbreviation: "SA",
             field: "subsequent_system_availability",
             name: "Availability",
-            values: HIGH_LOW_NONE,
+            values: NONE_LOW_HIGH,
           },
         ],
       },

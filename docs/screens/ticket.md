@@ -1036,9 +1036,11 @@ Delete SUSE CVSS Assessment):
     Exploitability in the first column, and Scope and Impact for v3.1, or
     Vulnerable system and Subsequent system for v4.0, in the second; one
     column where the dialog is narrower. Each metric is a segmented control
-    (`docs/design-system.md`, Forms) with its values in the order of FIRST's
-    calculator, named by the metric, and by its group too where its name
-    repeats in the version, such as "Confidentiality Vulnerable system".
+    (`docs/design-system.md`, Forms) with its values from the one that
+    lowers the Base score to the one that raises it, in both versions, such
+    as "Physical, Local, Adjacent, Network" for Attack vector and "None, Low,
+    High" for Confidentiality, named by the metric, and by its group too where its name repeats in
+    the version, such as "Confidentiality Vulnerable system".
     Below a metric whose choice differs from the assessments of other
     providers of the version shows their values, in the order of the API,
     such as "NVD: Network · GitHub: Local", which wraps within its column.

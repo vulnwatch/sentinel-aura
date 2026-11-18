@@ -1444,7 +1444,9 @@ test.describe("for an analyst", () => {
     await expect(v31).toHaveAttribute("aria-selected", "true");
     await expect(dialog.getByRole("radiogroup")).toHaveCount(8);
     await expect(startFrom(dialog)).toHaveCount(0);
-    await expect(metricValue(dialog, "Attack vector", "Network")).toBeFocused();
+    await expect(
+      metricValue(dialog, "Attack vector", "Physical"),
+    ).toBeFocused();
     await expect(vectorField(dialog)).toHaveValue("");
     await expectAccessible(page);
 
@@ -1512,7 +1514,9 @@ test.describe("for an analyst", () => {
     const v40 = dialog.getByRole("tab", { name: "CVSS v4.0", exact: true });
     await expect(v40).toHaveAttribute("aria-selected", "true");
     await expect(startFrom(dialog)).toHaveCount(0);
-    await expect(metricValue(dialog, "Attack vector", "Network")).toBeFocused();
+    await expect(
+      metricValue(dialog, "Attack vector", "Physical"),
+    ).toBeFocused();
     const submit = dialog.getByRole("button", {
       name: "Add SUSE assessment",
       exact: true,
