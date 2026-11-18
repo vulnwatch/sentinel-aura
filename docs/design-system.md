@@ -1555,7 +1555,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   the width, with the content of the selected tab 20 px below it. A tab opens
   when the user clicks it or presses Enter or Space, and each keeps its input
   while another shows; the first field of the selected tab takes the focus
-  as the dialog opens. An icon after the label, 6 px later, at 14 px in
+  as the dialog opens. After the action of a tab succeeds, the dialog stays
+  open on another tab that holds input and where the action still applies,
+  with a `success` message above the tabs that says what the action did
+  (Messages). An icon after the label, 6 px later, at 14 px in
   `fg-muted`, can mark a tab, such as the default version, with a tooltip
   that says what it means, which shows, stays, and hides as every tooltip
   does (Menus, Popovers, and Tooltips), on the hover and the keyboard focus

@@ -1025,12 +1025,14 @@ Delete SUSE CVSS Assessment):
     "SUSE already has a CVSS v3.1 assessment: Edit in its row of the table
     changes it." in place of the form, and Add SUSE assessment is disabled
     there. Edit has no tabs: its version is in its title.
-  - Start from, a select of the assessments of the other providers of the
-    version, each its provider, its score, and its severity with its mark,
-    such as "NVD, 7.5 ● High": optional and empty as Add opens, and in Edit
-    on the saved assessment, "SUSE, as saved, 5.5 ● Medium", before them.
-    Choosing one takes its vector. Without an assessment to offer, it does
-    not show.
+  - Start from, optional, a select of the assessments of the other
+    providers of the version, each its provider, its score, and its severity
+    with its mark, such as "NVD, 7.5 ● High", and in Edit, before them, the
+    saved assessment, "SUSE, as saved, 5.5 ● Medium". It shows the
+    assessment whose vector the form holds, or nothing: empty as Add opens,
+    on the saved assessment as Edit opens, and empty once the vector differs
+    from every assessment that it offers. Choosing one takes its vector.
+    Without an assessment to offer, it does not show.
   - The Base metrics of the version, in the groups of FIRST's specifications
     as the popover of a vector shows them (Content, CVSS assessments):
     Exploitability in the first column, and Scope and Impact for v3.1, or
@@ -1102,7 +1104,12 @@ Delete SUSE CVSS Assessment):
   action is busy and the dialog cannot be closed (`docs/behaviors.md`,
   Loading); once Sentinel confirms it, the dialog closes, and the focus
   returns to the button that opened it (`docs/behaviors.md`, Accessibility,
-  Dialogs).
+  Dialogs). After Add, when the other tab holds input and SUSE lacks its
+  version by the read before Add, the dialog stays open on that tab instead
+  (`docs/design-system.md`, Dialogs): "SUSE assessment v3.1 added." shows
+  above the tabs as a `success` message, which is announced, the tab of the
+  version added drops its input and says that SUSE has it once the read
+  after the change arrives, and the focus stays on Add SUSE assessment.
 - Delete asks for confirmation, since it cannot be undone in the UI and
   Sentinel calculates the severity and the eligibility again
   (`docs/behaviors.md`, Confirmation): "Delete SUSE assessment v3.1?",
@@ -1128,8 +1135,9 @@ Delete SUSE CVSS Assessment):
   duplicates, the work of a maintainer on it, the CVSS assessments, the
   users who acted on it, its access grants, its audit log, and the reads of
   the Ticket list.
-- The outcome of each is announced once a read of the assessments after it
-  arrives, whatever the outcome of that read: "SUSE assessment v3.1 added.",
+- The outcome of each, except an Add after which the dialog stays open, is
+  announced once a read of the assessments after it arrives, whatever the
+  outcome of that read: "SUSE assessment v3.1 added.",
   "SUSE assessment v3.1 changed.", or "SUSE assessment v3.1 deleted."
   (`docs/behaviors.md`, Outcome of a Change). The outcome of a change that
   ends after the user left the tab shows in the message area, and so does
