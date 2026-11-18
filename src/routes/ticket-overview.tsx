@@ -2861,7 +2861,7 @@ const REJECTED_TEXT = "Sentinel doesn't accept this vector.";
 interface ScorePlaceProps {
   outcome: ScoreOutcome;
   // Whether the score of the vector is being read, while the outcome of the
-  // vector before it shows.
+  // vector before it shows, or nothing yet.
   updating: boolean;
 }
 
@@ -2923,7 +2923,7 @@ function ScorePlace({ outcome, updating }: ScorePlaceProps) {
   return (
     <div className="relative min-h-18 w-0 min-w-full">
       {updating && outcome.kind !== "waiting" && <UpdatingBar />}
-      {outcome.kind === "waiting" && <Loading inValue />}
+      {updating && outcome.kind === "waiting" && <Loading inValue />}
       <output
         aria-label="Base score"
         className={
@@ -3364,10 +3364,19 @@ function SuseAssessmentDialog({
       if (next === undefined) {
         onDone(text, response.data);
       } else {
+        // The action keeps the focus, also when the form that held it, such
+        // as after Enter in Vector, leaves with its tab (docs/behaviors.md,
+        // Accessibility, Focus after an action).
+        const action = document.querySelector<HTMLElement>(
+          `button[form="${CSS.escape(formId)}"]`,
+        );
         setInputs((current) => ({ ...current, [version]: "" }));
         setAdded(text);
         switched.current = true;
         setVersion(next);
+        requestAnimationFrame(() => {
+          action?.focus();
+        });
       }
     } catch (error) {
       fail(error, false);

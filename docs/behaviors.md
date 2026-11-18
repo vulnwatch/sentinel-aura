@@ -704,10 +704,13 @@ A confirmation dialog:
 - Any other successful change shows a short message that says what happened,
   such as "API key revoked.".
 - Messages appear in one message area at the top of the main content, which
-  every screen shares. A message stays until the user dismisses it or opens
-  another screen. The outcome of a change that ends after the user left its
-  screen appears on the screen that the user is on, and names the record that
-  it concerns, with a link to it, such as "SNTL-42: Priority changed to P2.".
+  every screen shares. A dialog that stays open after its change, for a
+  further change of the same kind, shows the outcome at its top instead, as a
+  message that is announced (`docs/design-system.md`, Dialogs). A message
+  stays until the user dismisses it or opens another screen. The outcome of a
+  change that ends after the user left its screen appears on the screen that
+  the user is on, and names the record that it concerns, with a link to it,
+  such as "SNTL-42: Priority changed to P2.".
 - An operation that Sentinel accepts with `202` has started, not finished:
   its message says so, such as "Refetch started.", and links to the screen
   that shows its progress, when one does.

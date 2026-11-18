@@ -216,11 +216,10 @@ the layout changes.
 CVE, from Get CVSS Assessments for a CVE, `GET /api/v1/cves/{cve_id}/cvss`,
 with the actions on the SUSE assessment (Actions; Sentinel
 `docs/features/tickets/cvss-scoring.md`, Get CVSS Assessments for a CVE;
-Shared Assessment Item). A score shows with one
-decimal and tabular figures; a CVSS version shows with a "v", such as "v3.1",
-so that it is not read as a score, and a version that the pinned contract
-does not list shows as received, without the "v" (`docs/behaviors.md`,
-Unknown Values).
+Shared Assessment Item). A score shows with one decimal and tabular figures; a
+CVSS version shows with a "v", such as "v3.1", so that it is not read as a
+score, and a version that the pinned contract does not list shows as received,
+without the "v" (`docs/behaviors.md`, Unknown Values).
 
 - What the assessments resolve, which Sentinel resolves apart (Sentinel
   `docs/features/tickets/cvss-scoring.md`, Core Distinctions), on lines whose
@@ -998,17 +997,15 @@ Delete SUSE CVSS Assessment):
   list (Sentinel `docs/features/tickets/ticket-mutations.md`, CVSS Status
   Matrix; Sentinel `docs/api-spec.md`, Manual-Zone Mutability Guard;
   `docs/behaviors.md`, Unknown Values).
-- Add SUSE assessment, a secondary button 32 px high with `plus` at the end
-  of the line of the heading of the part, shows once the read of the
-  assessments has arrived, until SUSE has assessments of both v3.1 and
-  v4.0.
-  Edit and Delete are icon buttons with `pencil` and `trash` at the end of
-  the row of a SUSE assessment of these versions (`docs/design-system.md`,
-  Tables), whose tooltips say "Edit" and "Delete", named such as "Edit SUSE
-  assessment v3.1". Before them, the cell of the vector has 24 px of end
-  padding rather than 10 px, so that the cell, which the table makes a tab
-  stop once its button has had the focus, keeps 24 px of its own beside the
-  button.
+- Add SUSE assessment, a secondary button 32 px high with `plus` at the end of
+  the line of the heading of the part, shows once the read of the assessments
+  has arrived, until SUSE has assessments of both v3.1 and v4.0. Edit and
+  Delete are icon buttons with `pencil` and `trash` at the end of the row of a
+  SUSE assessment of these versions (`docs/design-system.md`, Tables), whose
+  tooltips say "Edit" and "Delete", named such as "Edit SUSE assessment v3.1".
+  Before them, the cell of the vector has 24 px of end padding rather than
+  10 px, so that the cell, which the table makes a tab stop once its button has
+  had the focus, keeps 24 px of its own beside the button.
 - Add SUSE assessment and Edit open a dialog at most 880 px wide whose form
   holds two columns (`docs/design-system.md`, Dialogs; Forms), titled "Add
   SUSE assessment" or "Edit SUSE assessment v3.1":
@@ -1031,7 +1028,8 @@ Delete SUSE CVSS Assessment):
     saved assessment, "SUSE, as saved, 5.5 ● Medium". It shows the
     assessment whose vector the form holds, or nothing: empty as Add opens,
     on the saved assessment as Edit opens, and empty once the vector differs
-    from every assessment that it offers. Choosing one takes its vector.
+    from every assessment that it offers; of two assessments with the same
+    vector, it shows the first. Choosing one takes its vector.
     Without an assessment to offer, it does not show.
   - The Base metrics of the version, in the groups of FIRST's specifications
     as the popover of a vector shows them (Content, CVSS assessments):
@@ -1109,7 +1107,8 @@ Delete SUSE CVSS Assessment):
   (`docs/design-system.md`, Dialogs): "SUSE assessment v3.1 added." shows
   above the tabs as a `success` message, which is announced, the tab of the
   version added drops its input and says that SUSE has it once the read
-  after the change arrives, and the focus stays on Add SUSE assessment.
+  after the change arrives, and Add SUSE assessment holds the focus, also
+  after Enter in Vector, whose form leaves with its tab.
 - Delete asks for confirmation, since it cannot be undone in the UI and
   Sentinel calculates the severity and the eligibility again
   (`docs/behaviors.md`, Confirmation): "Delete SUSE assessment v3.1?",
@@ -1117,16 +1116,15 @@ Delete SUSE CVSS Assessment):
   assessments, and the eligibility of the Products, which can change the
   priority and the deadlines of the Ticket. This can't be undone.", with,
   before the last sentence, "Without a SUSE CVSS v3.1 assessment, the
-  eligibility score of the Products is the fallback 10.0." for the
-  assessment of the default CVSS version (Sentinel
-  `docs/features/tickets/cvss-scoring.md`, Eligibility Score Resolution),
-  and "As the last SUSE assessment of the CVE, it also returns the Ticket to
+  eligibility score of the Products is the fallback 10.0." for the assessment
+  of the default CVSS version (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Eligibility Score Resolution), and
+  "As the last SUSE assessment of the CVE, it also returns the Ticket to
   Analysis." for the last SUSE assessment of the CVE of an Analyzed or
-  Resolved Ticket (Sentinel `docs/features/tickets/tickets.md`, Gate:
-  Analysis → Analyzed; Automatic Status Evaluation); Cancel, and Delete SUSE
-  assessment, a danger
-  button. While it is in progress, the confirmation cannot be closed; once
-  Sentinel confirms it, the confirmation closes.
+  Resolved Ticket (Sentinel `docs/features/tickets/tickets.md`, Gate: Analysis
+  → Analyzed; Automatic Status Evaluation); Cancel, and Delete SUSE
+  assessment, a danger button. While it is in progress, the confirmation
+  cannot be closed; once Sentinel confirms it, the confirmation closes.
 - An effective change can assign an unassigned Ticket to the user, move it
   from New to Analysis, and change its severity, its priority, its
   deadlines, the eligibility of its Products, and its status (Sentinel
@@ -1137,12 +1135,12 @@ Delete SUSE CVSS Assessment):
   the Ticket list.
 - The outcome of each, except an Add after which the dialog stays open, is
   announced once a read of the assessments after it arrives, whatever the
-  outcome of that read: "SUSE assessment v3.1 added.",
-  "SUSE assessment v3.1 changed.", or "SUSE assessment v3.1 deleted."
-  (`docs/behaviors.md`, Outcome of a Change). The outcome of a change that
-  ends after the user left the tab shows in the message area, and so does
-  its failure, starting with the Ticket, as a link to its screen, such as
-  "SNTL-24: SUSE assessment v3.1 added.".
+  outcome of that read: "SUSE assessment v3.1 added.", "SUSE assessment v3.1
+  changed.", or "SUSE assessment v3.1 deleted." (`docs/behaviors.md`, Outcome
+  of a Change). The outcome of a change that ends after the user left the tab
+  shows in the message area, and so does its failure, starting with the
+  Ticket, as a link to its screen, such as "SNTL-24: SUSE assessment v3.1
+  added.", when the user is on another screen.
 - After Delete, once the read of the assessments after it no longer returns
   the assessment, the focus moves to the Delete of the row that takes its
   place, or to that row when it has no Delete, or to Add SUSE assessment
@@ -1457,14 +1455,13 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Changes). A failure of Delete shows at the top of its confirmation, which
   stays open, such as the `404 CVSS_ASSESSMENT_NOT_FOUND` of an assessment
   that another user deleted; the screen handles no code of it specifically.
-  The failure of the read of the score of the vector shows in the place of
-  the score, with Try again where it offers it while the form holds that
-  vector, and leaves the form and its action usable (`docs/behaviors.md`,
-  Where Errors Appear); the screen
-  handles one code of Calculate CVSS Base Score specifically, `422
-  CVSS_INVALID_VECTOR`, which shows at Vector as above and as no score in
-  the place of the score (Sentinel `docs/features/tickets/cvss-scoring.md`,
-  Calculate CVSS Base Score).
+  The failure of the read of the score of the vector shows in the place of the
+  score, with Try again where it offers it while the form holds that vector,
+  and leaves the form and its action usable (`docs/behaviors.md`, Where Errors
+  Appear); the screen handles one code of Calculate CVSS Base Score
+  specifically, `422 CVSS_INVALID_VECTOR`, which shows at Vector as above and
+  as no score in the place of the score (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score).
 - **Errors of Refetch.** A failure follows the default presentation of a
   change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
   after which the fetch may still run (`docs/behaviors.md`, Retries and
