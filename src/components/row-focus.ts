@@ -185,7 +185,19 @@ export function useRowFocusAfterRemoval<TRow>({
           row !== null &&
           (active === null || active === document.body || active.matches("h1"))
         ) {
-          (control(row) ?? row).focus();
+          // React Aria's table takes a focus that enters it from the
+          // keyboard to the row that it holds as focused, its first row at
+          // first: the row takes the focus first, which the table then holds,
+          // and its control in the next frame.
+          row.focus();
+          const target = control(row);
+          if (target !== null) {
+            requestAnimationFrame(() => {
+              if (document.activeElement === row) {
+                target.focus();
+              }
+            });
+          }
         }
       };
       requestAnimationFrame(show);
