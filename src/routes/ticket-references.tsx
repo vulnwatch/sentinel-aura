@@ -53,6 +53,7 @@ import {
   type TableColumn,
 } from "../components/data-table";
 import { DateTime } from "../components/date-time";
+import { useDiscardQuestion } from "../components/discard-question";
 import {
   FilterGroup,
   Filters,
@@ -473,9 +474,13 @@ interface ReferenceDialogProps {
 // error of a VALIDATION_ERROR show at their field, which takes the focus;
 // every other failure at the top of the form, which takes it, as a warning
 // when Sentinel did not confirm the change (docs/behaviors.md, Where Errors
-// Appear). With input that the user changed, Cancel and Escape ask "Discard
-// changes?" first (docs/behaviors.md, Confirmation). While the change is in
-// progress, the dialog cannot be closed.
+// Appear). With input that the user changed, Cancel, Escape, and every
+// navigation of the UI, such as Back, ask "Discard changes?" first, and
+// closing or reloading the page shows the browser's own prompt
+// (docs/behaviors.md, Confirmation). While the change is in progress, the
+// dialog cannot be closed, and its input counts as submitted: a navigation
+// goes on without a question, and the outcome shows on the screen that the
+// user is on (useChangeOutcome).
 function ReferenceDialog({
   ticketId,
   mode,
@@ -498,7 +503,6 @@ function ReferenceDialog({
   );
   const [input, setInput] = useState(initial);
   const [busy, setBusy] = useState(false);
-  const [discarding, setDiscarding] = useState(false);
   // The errors of the fields and of the form, a new object for each
   // failure, so that each shows again.
   const [failure, setFailure] = useState<FormFailure>(NO_FAILURE);
@@ -522,22 +526,23 @@ function ReferenceDialog({
       refs[field].current?.focus();
     }
   }, [failure, refs]);
-  if (uiFailure !== undefined) {
-    throw uiFailure.error;
-  }
-
   const changed =
     input.url !== initial.url ||
     input.title !== initial.title ||
     input.type !== initial.type ||
     input.description !== initial.description;
-  const close = () => {
-    if (changed) {
-      setDiscarding(true);
-    } else {
-      onClose();
-    }
-  };
+  const { close, question } = useDiscardQuestion({
+    held: changed && !busy,
+    consequence:
+      mode.kind === "add"
+        ? "The reference that you entered isn't added."
+        : "Your changes to this reference aren't saved.",
+    onDiscard: onClose,
+  });
+  if (uiFailure !== undefined) {
+    throw uiFailure.error;
+  }
+
   const change = (field: keyof ReferenceInput) => (value: string) => {
     setInput((current) => ({ ...current, [field]: value }));
   };
@@ -625,25 +630,7 @@ function ReferenceDialog({
           >
             {mode.kind === "add" ? "Add reference" : "Save"}
           </Button>
-          <ConfirmationDialog
-            isOpen={discarding}
-            onCancel={() => {
-              setDiscarding(false);
-            }}
-            title="Discard changes?"
-            action="Discard"
-            cancelLabel="Keep editing"
-            onConfirm={() => {
-              setDiscarding(false);
-              onClose();
-            }}
-            isBusy={false}
-            error={undefined}
-          >
-            {mode.kind === "add"
-              ? "The reference that you entered isn't added."
-              : "Your changes to this reference aren't saved."}
-          </ConfirmationDialog>
+          {question}
         </>
       }
     >

@@ -1,5 +1,9 @@
 import { focusManager, type QueryClient } from "@tanstack/react-query";
-import { createMemoryHistory } from "@tanstack/react-router";
+import {
+  createHashHistory,
+  createMemoryHistory,
+  type RouterHistory,
+} from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent, type Locator } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
@@ -181,6 +185,9 @@ afterEach(async () => {
   // Before the responses go, so that the screen of the test reads nothing
   // more.
   await cleanup();
+  hashHistory?.destroy();
+  hashHistory = undefined;
+  window.location.hash = "";
   client.clear();
   vi.restoreAllMocks();
   focusManager.setFocused(undefined);
@@ -256,9 +263,17 @@ function showing(...references: TicketReferenceResponse[]) {
   return stubReferences({ references: () => referencesResponse(references) });
 }
 
-async function renderApp(path: string) {
+// The history of a test that follows Back as the browser's history does,
+// without changing the address of the document of the tests.
+let hashHistory: RouterHistory | undefined;
+
+async function renderApp(path: string, history: "memory" | "hash" = "memory") {
+  if (history === "hash") {
+    window.location.hash = `#${path}`;
+    hashHistory = createHashHistory();
+  }
   const router = createAppRouter({
-    history: createMemoryHistory({ initialEntries: [path] }),
+    history: hashHistory ?? createMemoryHistory({ initialEntries: [path] }),
   });
   const screen = await render(<App router={router} queryClient={client} />);
   return { router, screen };
@@ -268,8 +283,8 @@ type Screen = Awaited<ReturnType<typeof renderApp>>["screen"];
 
 // Renders the tab and waits until it shows the Ticket and its references,
 // or that it has none.
-async function renderTab(path = PATH) {
-  const rendered = await renderApp(path);
+async function renderTab(path = PATH, history: "memory" | "hash" = "memory") {
+  const rendered = await renderApp(path, history);
   await expect.element(heading(rendered.screen, "SNTL-12")).toBeVisible();
   await expect
     .element(
@@ -2403,6 +2418,89 @@ describe("Add reference", () => {
       );
     },
   );
+  test("asks before Back discards the input, also for another filter of the tab, keeps the dialog, the input, and the URL on Keep editing, and closes the dialog on Discard", async () => {
+    const { spy } = stubReferences();
+    const { router, screen } = await renderTab(PATH, "hash");
+    router.history.push(`${PATH}?type=patch`);
+    await expect.poll(() => window.location.hash).toBe(`#${PATH}?type=patch`);
+    const dialog = await openAdd(screen);
+    await fieldOf(dialog, "Address").fill(ADDED.url);
+
+    router.history.back();
+
+    const discard = screen.getByRole("dialog", { name: "Discard changes?" });
+    await expect
+      .element(discard.getByRole("button", { name: "Keep editing" }))
+      .toHaveFocus();
+    await expect
+      .element(discard.getByText("The reference that you entered isn't added."))
+      .toBeVisible();
+    await discard.getByRole("button", { name: "Keep editing" }).click();
+    await expect.element(discard).not.toBeInTheDocument();
+    await expect.poll(() => window.location.hash).toBe(`#${PATH}?type=patch`);
+    await expect.element(fieldOf(dialog, "Address")).toHaveValue(ADDED.url);
+    await expect.element(fieldOf(dialog, "Address")).toHaveFocus();
+
+    router.history.back();
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    // The router follows Back to the tab without the filter.
+    await expect.poll(() => router.state.location.href).toBe(PATH);
+    expect(window.location.hash).toBe(`#${PATH}`);
+    await expect
+      .element(screen.getByRole("button", { name: "Filters" }))
+      .toBeVisible();
+    expect(requestsWith(spy, "POST")).toHaveLength(0);
+  });
+
+  test("asks before a navigation to another screen discards the input, and leaves on Discard", async () => {
+    stubReferences();
+    const { router, screen } = await renderTab();
+    const dialog = await openAdd(screen);
+    await fieldOf(dialog, "Address").fill(ADDED.url);
+
+    router.history.push("/tickets");
+
+    const discard = screen.getByRole("dialog", { name: "Discard changes?" });
+    await expect.element(discard).toBeVisible();
+    expect(router.state.location.pathname).toBe(PATH);
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+  });
+
+  test("asks nothing before a navigation while nothing was entered, nor while the change is in progress", async () => {
+    const response = later();
+    stubReferences({ add: () => response.promise });
+    const { router, screen } = await renderTab();
+    const dialog = await openAdd(screen);
+    router.history.push(`${PATH}?type=patch`);
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(`${PATH}?type=patch`);
+    await fieldOf(dialog, "Address").fill(ADDED.url);
+    await submit(dialog, "Add reference");
+    await expect
+      .element(dialog.getByRole("button", { name: "Add reference" }))
+      .toHaveAttribute("aria-disabled", "true");
+
+    await leave(router, screen);
+
+    expect(
+      screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+    ).toBeNull();
+    response.resolve(referenceResponse(ADDED, 201));
+    await expect
+      .element(
+        screen.getByText(
+          "SNTL-12: Reference “Fictional packaging issue” added.",
+        ),
+      )
+      .toBeVisible();
+  });
 });
 
 describe("Edit reference", () => {
@@ -2783,6 +2881,35 @@ describe("Edit reference", () => {
 
     await expect.element(dialog).not.toBeInTheDocument();
     await expect.element(editOf(screen, ADVISORY)).toHaveFocus();
+    expect(requestsWith(spy, "PATCH")).toHaveLength(0);
+  });
+
+  test("asks before Back discards the changes, and keeps them on Keep editing", async () => {
+    const { spy } = stubReferences();
+    const { router, screen } = await renderTab(PATH, "hash");
+    router.history.push(`${PATH}?type=advisory`);
+    await expect
+      .poll(() => window.location.hash)
+      .toBe(`#${PATH}?type=advisory`);
+    const dialog = await openEdit(screen, ADVISORY);
+    await fieldOf(dialog, "Title (optional)").fill("Fictional title");
+
+    router.history.back();
+
+    const discard = screen.getByRole("dialog", { name: "Discard changes?" });
+    await expect
+      .element(
+        discard.getByText("Your changes to this reference aren't saved."),
+      )
+      .toBeVisible();
+    await discard.getByRole("button", { name: "Keep editing" }).click();
+    await expect.element(discard).not.toBeInTheDocument();
+    await expect
+      .poll(() => window.location.hash)
+      .toBe(`#${PATH}?type=advisory`);
+    await expect
+      .element(fieldOf(dialog, "Title (optional)"))
+      .toHaveValue("Fictional title");
     expect(requestsWith(spy, "PATCH")).toHaveLength(0);
   });
 

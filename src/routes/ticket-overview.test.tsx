@@ -6586,6 +6586,149 @@ describe("the access grants", () => {
     await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
   });
 
+  test("ask before a navigation of the UI discards the user chosen, keep the dialog and the user on Keep editing, and leave on Discard", async () => {
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse(),
+      users: () => usersPage([fictionalDirectoryUser()]),
+    });
+    const { router, screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+
+    router.history.push("/tickets");
+
+    const discard = screen.getByRole("dialog", { name: "Discard changes?" });
+    await expect
+      .element(
+        discard.getByText("The user that you chose isn't granted access."),
+      )
+      .toBeVisible();
+    await discard.getByRole("button", { name: "Keep editing" }).click();
+    await expect.element(discard).not.toBeInTheDocument();
+    await nextFrames();
+    expect(router.state.location.pathname).toBe("/tickets/SNTL-12");
+    await expect.element(userField(screen)).toHaveValue("Ana Garcia @agarcia");
+
+    router.history.push("/tickets");
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+  });
+
+  test("ask nothing before a navigation while a revocation is in progress with a user chosen", async () => {
+    const response = later();
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse([CAROL]),
+      users: () => usersPage([fictionalDirectoryUser()]),
+      revoke: () => response.promise,
+    });
+    const { router, screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+    await revokeCarol(screen);
+    await expect
+      .element(
+        confirmationOf(screen, "Carol White").getByRole("button", {
+          name: "Revoke access",
+          exact: true,
+        }),
+      )
+      .toHaveAttribute("aria-disabled", "true");
+
+    await leaveForTickets(router, screen);
+
+    expect(
+      screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+    ).toBeNull();
+    response.resolve(new Response(null, { status: 204 }));
+    await expect
+      .element(screen.getByText("SNTL-12: Access of Carol White revoked."))
+      .toBeVisible();
+  });
+
+  test.each<
+    [string, (screen: Screen) => Promise<void>, () => Response, string, string]
+  >([
+    [
+      "a grant",
+      async (screen) => {
+        await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+        await grantButton(screen).click();
+        await expect
+          .element(grantButton(screen))
+          .toHaveAttribute("aria-disabled", "true");
+      },
+      () => grantResponse(fictionalGrant({ user: FICTIONAL_ACTORS[0]! })),
+      "SNTL-12: Access granted to Ana Garcia.",
+      MESSAGE_TONES.success,
+    ],
+    [
+      "a grant that Sentinel refuses",
+      async (screen) => {
+        await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+        await grantButton(screen).click();
+        await expect
+          .element(grantButton(screen))
+          .toHaveAttribute("aria-disabled", "true");
+      },
+      () => errorResponse(409, "TICKET_NOT_CONFIDENTIAL"),
+      `SNTL-12: ${MESSAGE_CONFLICT}`,
+      MESSAGE_TONES.danger,
+    ],
+    [
+      "a revocation",
+      async (screen) => {
+        await revokeCarol(screen);
+        await expect
+          .element(
+            confirmationOf(screen, "Carol White").getByRole("button", {
+              name: "Revoke access",
+              exact: true,
+            }),
+          )
+          .toHaveAttribute("aria-disabled", "true");
+      },
+      () => new Response(null, { status: 204 }),
+      "SNTL-12: Access of Carol White revoked.",
+      MESSAGE_TONES.success,
+    ],
+  ])(
+    "leave without a question while %s is in progress, and show its outcome in the message area, naming the Ticket",
+    async (_, start, outcome, text, tone) => {
+      const response = later();
+      stubTicket({
+        user: MANAGER,
+        ticket: () => confidentialTicket(),
+        grants: () => grantsResponse([CAROL]),
+        users: () => usersPage([fictionalDirectoryUser()]),
+        grant: () => response.promise,
+        revoke: () => response.promise,
+      });
+      const { router, screen } = await renderParticipants();
+      await openAccessGrants(screen);
+      await start(screen);
+
+      await leaveForTickets(router, screen);
+
+      expect(
+        screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+      ).toBeNull();
+      response.resolve(outcome());
+      const message = screen.getByText(text);
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(tone);
+      await expect
+        .element(screen.getByRole("link", { name: "SNTL-12", exact: true }))
+        .toHaveAttribute("href", "/tickets/SNTL-12");
+    },
+  );
+
   test("close without a question with a term typed and no user chosen", async () => {
     stubTicket({
       user: MANAGER,
@@ -11175,6 +11318,74 @@ describe("the SUSE assessment", () => {
             .element(add ? addSuse(screen) : editSuse(screen))
             .toHaveFocus();
         }
+      },
+    );
+
+    test("is asked before a navigation of the UI in Edit, also one that stays on the screen, keeps the dialog, the vector, and the URL on Keep editing, and closes the dialog on Discard", async () => {
+      const spy = stubSuse(() => fictionalCvssAssessments());
+      const { router, screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+
+      router.history.push("/tickets/SNTL-12?hidden=shown");
+
+      const discard = screen.getByRole("dialog", { name: "Discard changes?" });
+      await expect
+        .element(
+          discard.getByText(
+            "Your changes to this SUSE assessment aren't saved.",
+          ),
+        )
+        .toBeVisible();
+      await discard.getByRole("button", { name: "Keep editing" }).click();
+      await expect.element(discard).not.toBeInTheDocument();
+      await nextFrames();
+      expect(router.state.location.href).toBe("/tickets/SNTL-12");
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+
+      router.history.push("/tickets/SNTL-12?hidden=shown");
+      await discard
+        .getByRole("button", { name: "Discard", exact: true })
+        .click();
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      await expect
+        .poll(() => router.state.location.href)
+        .toBe("/tickets/SNTL-12?hidden=shown");
+      expect(requestsWith(spy, "POST")).toHaveLength(0);
+    });
+
+    test.each([
+      ["the tab that it sends holds input", false],
+      ["another tab holds input too", true],
+    ])(
+      "is not asked before a navigation while Add is in progress and %s, and its outcome shows in the message area",
+      async (_, both) => {
+        const response = later();
+        stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+          upsertSuse: () => response.promise,
+        });
+        const { router, screen } = await renderSuse();
+        const dialog = await openSuseAdd(screen);
+        if (both) {
+          await enterInBothTabs(dialog);
+        } else {
+          await vectorOf(dialog).fill(VECTOR_V31);
+        }
+        await submitOf(dialog).click();
+        await expect
+          .element(submitOf(dialog))
+          .toHaveAttribute("aria-disabled", "true");
+
+        await leaveForTickets(router, screen);
+
+        expect(
+          screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+        ).toBeNull();
+        response.resolve(suseResponse(SAVED_V31, 201));
+        await expect
+          .element(screen.getByText("SNTL-12: SUSE assessment v3.1 added."))
+          .toBeVisible();
       },
     );
 
