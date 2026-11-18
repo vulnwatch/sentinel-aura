@@ -248,6 +248,24 @@ export function referenceAddressError(
     : undefined;
 }
 
+// The error of the vector field of Add SUSE assessment or Edit that a failure
+// states, or undefined for a failure of the form: 422 CVSS_INVALID_VECTOR, a
+// vector that passes the shape of the request but is not a complete CVSS
+// Base vector of an accepted version, such as one with a Temporal metric
+// (Sentinel docs/features/tickets/cvss-scoring.md, Input Rules; Set or Update
+// SUSE CVSS Assessment). The version is the one that the dialog sets, such as
+// "3.1".
+export function cvssVectorError(
+  failure: RequestFailure,
+  version: string,
+): string | undefined {
+  return failure instanceof ApiError &&
+    failure.status === 422 &&
+    failure.code === "CVSS_INVALID_VECTOR"
+    ? `Sentinel doesn't accept this vector. Enter a complete CVSS v${version} Base vector.`
+    : undefined;
+}
+
 // Whether a read of the access grants of a Ticket failed because the Ticket
 // is no longer confidential, 409 TICKET_NOT_CONFIDENTIAL, after which it has
 // no grants (Sentinel docs/features/tickets/tickets.md, List Access Grants;

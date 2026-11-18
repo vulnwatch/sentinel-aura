@@ -4,6 +4,7 @@ import {
   FieldError,
   Input,
   Label,
+  Text,
   TextArea,
   TextField as AriaTextField,
   type TextFieldProps as AriaTextFieldProps,
@@ -18,11 +19,18 @@ type FieldProps = Omit<
   label: string;
   // Whether the field may stay empty, which its label states.
   optional?: boolean;
+  // What the field takes, which follows the control (docs/design-system.md,
+  // Forms).
+  description?: string;
 };
 
 export type TextFieldProps = FieldProps & {
   // The input element, which a form focuses when the field has an error.
   inputRef?: Ref<HTMLInputElement>;
+  // Whether the value is one that users copy character by character, such
+  // as a CVSS vector, which shows in monospace (docs/design-system.md,
+  // Font).
+  monospace?: boolean;
 };
 
 export type TextAreaFieldProps = FieldProps & {
@@ -53,6 +61,16 @@ function FieldLabel({ label, optional }: FieldLabelProps) {
   );
 }
 
+// The description of a field, in text-13, fg-muted, after the control, which
+// assistive technologies read with it.
+function FieldDescription({ text }: { text: string | undefined }) {
+  return text === undefined ? null : (
+    <Text slot="description" className="text-13 text-fg-muted">
+      {text}
+    </Text>
+  );
+}
+
 // The error of a field, after circle-alert at 14 px, in text-13, weight 500,
 // danger-on-soft, which assistive technologies read with the control.
 export function FieldErrorMessage() {
@@ -69,19 +87,25 @@ export function FieldErrorMessage() {
 }
 
 // A single-line field of a form (docs/design-system.md, Forms): its label
-// above it, the control, and its error after it, which assistive technologies
-// read with the control. A form that its fields validate checks them when the
+// above it, the control, its description and its error after it, which
+// assistive technologies read with the control. A form that its fields validate checks them when the
 // user submits it.
 export function TextField({
   label,
   optional = false,
+  description,
   inputRef,
+  monospace = false,
   ...props
 }: TextFieldProps) {
   return (
     <AriaTextField {...props} className="flex flex-col gap-1.5">
       <FieldLabel label={label} optional={optional} />
-      <Input ref={inputRef} className={`h-10 ${CONTROL}`} />
+      <Input
+        ref={inputRef}
+        className={`h-10 ${monospace ? "font-mono" : ""} ${CONTROL}`}
+      />
+      <FieldDescription text={description} />
       <FieldErrorMessage />
     </AriaTextField>
   );
@@ -93,6 +117,7 @@ export function TextField({
 export function TextAreaField({
   label,
   optional = false,
+  description,
   inputRef,
   ...props
 }: TextAreaFieldProps) {
@@ -104,6 +129,7 @@ export function TextAreaField({
         rows={3}
         className={`min-h-22 resize-y py-2 data-invalid:py-1.75 ${CONTROL}`}
       />
+      <FieldDescription text={description} />
       <FieldErrorMessage />
     </AriaTextField>
   );

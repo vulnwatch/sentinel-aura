@@ -12,22 +12,23 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 ## Purpose
 
 The Ticket screen shows one Ticket: its heading row with its main values; in
-the tab Overview its CVE, the CVSS assessments of its CVE, its package tree,
-with the IBS requests of its tracks, its details, the sources of its CVE, which
-an analyst refetches, and who is involved in it, with the access grants of a
-confidential Ticket, which an analyst who manages confidentiality grants and
-revokes; in the tab References its references, the advisories, patches, and
-other pages of other sites that analysts read while they analyze it, which an
-analyst who manages references adds, edits, and deletes; in the tab Affected
-versions the versions of the software that its CVE affects, as the CVE record,
-its ADPs, GHSA, and OSV report them, which an analyst compares with the tracks
-of its packages; and in the tab Audit log its history, which an analyst
-searches and filters to reconstruct who changed what and what Sentinel did by
-itself. Vulnerability and restricted analysts work in it all day; every other
-user reads it, as a package maintainer does a Ticket of one of their packages
-that an analyst shares, and finds in its package tree the tracks that wait for
-them (`docs/screen-map.md`, Users and Frequent Tasks; Areas and Screens). It
-shows the same Ticket to every user who can see it.
+the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
+assessment an analyst who manages CVSS adds, edits, and deletes, its package
+tree, with the IBS requests of its tracks, its details, the sources of its
+CVE, which an analyst refetches, and who is involved in it, with the access
+grants of a confidential Ticket, which an analyst who manages confidentiality
+grants and revokes; in the tab References its references, the advisories,
+patches, and other pages of other sites that analysts read while they analyze
+it, which an analyst who manages references adds, edits, and deletes; in the
+tab Affected versions the versions of the software that its CVE affects, as
+the CVE record, its ADPs, GHSA, and OSV report them, which an analyst compares
+with the tracks of its packages; and in the tab Audit log its history, which
+an analyst searches and filters to reconstruct who changed what and what
+Sentinel did by itself. Vulnerability and restricted analysts work in it all
+day; every other user reads it, as a package maintainer does a Ticket of one
+of their packages that an analyst shares, and finds in its package tree the
+tracks that wait for them (`docs/screen-map.md`, Users and Frequent Tasks;
+Areas and Screens). It shows the same Ticket to every user who can see it.
 
 ## Access
 
@@ -36,15 +37,16 @@ Ticket that Get Ticket returns to the user, whose scope, access grants, and
 package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
-The screen is the same for every user, except that it offers Refetch to a
-user who holds `triage_ticket`, Grant access and Revoke access to a user who
-holds `manage_confidentiality`, and Add reference, and Edit and Delete on the
-manual references, to a user who holds `manage_references` (Actions; Sentinel
-`docs/features/identity/rbac.md`, Endpoint Permission Map (CVEs; Tickets;
-Ticket References)), and marks for a maintainer the tracks that wait for them
-(Packages). Every user who sees a confidential Ticket sees its access grants,
-whatever their capabilities (Sentinel `docs/features/tickets/tickets.md`,
-List Access Grants).
+The screen is the same for every user, except that it offers Refetch to a user
+who holds `triage_ticket`, Add SUSE assessment, and Edit and Delete on the
+SUSE assessments, to a user who holds `manage_cvss`, Grant access and Revoke
+access to a user who holds `manage_confidentiality`, and Add reference, and
+Edit and Delete on the manual references, to a user who holds
+`manage_references` (Actions; Sentinel `docs/features/identity/rbac.md`,
+Endpoint Permission Map (CVEs; Tickets; Ticket References)), and marks for a
+maintainer the tracks that wait for them (Packages). Every user who sees a
+confidential Ticket sees its access grants, whatever their capabilities
+(Sentinel `docs/features/tickets/tickets.md`, List Access Grants).
 
 ## Navigation
 
@@ -212,12 +214,12 @@ the layout changes.
 
 **CVSS assessments**, the second part of the main column, for a Ticket with a
 CVE, from Get CVSS Assessments for a CVE, `GET /api/v1/cves/{cve_id}/cvss`,
-read-only (Sentinel `docs/features/tickets/cvss-scoring.md`, Get CVSS
-Assessments for a CVE; Shared Assessment Item). A score shows with one
-decimal and tabular figures; a CVSS version shows with a "v", such as "v3.1",
-so that it is not read as a score, and a version that the pinned contract
-does not list shows as received, without the "v" (`docs/behaviors.md`,
-Unknown Values).
+with the actions on the SUSE assessment (Actions; Sentinel
+`docs/features/tickets/cvss-scoring.md`, Get CVSS Assessments for a CVE;
+Shared Assessment Item). A score shows with one decimal and tabular figures; a
+CVSS version shows with a "v", such as "v3.1", so that it is not read as a
+score, and a version that the pinned contract does not list shows as received,
+without the "v" (`docs/behaviors.md`, Unknown Values).
 
 - What the assessments resolve, which Sentinel resolves apart (Sentinel
   `docs/features/tickets/cvss-scoring.md`, Core Distinctions), on lines whose
@@ -979,6 +981,182 @@ user who holds `triage_ticket` (Sentinel
 - Whatever its outcome, the screen then reads its data again, the sources
   included.
 
+**Add SUSE assessment** and **Edit**, Set or Update SUSE CVSS Assessment,
+`POST /api/v1/cves/{cve_id}/cvss/suse`, and **Delete**, Delete SUSE CVSS
+Assessment, `DELETE /api/v1/cves/{cve_id}/cvss/suse/{cvss_version}`, in the
+part CVSS assessments, for a user who holds `manage_cvss` (Sentinel
+`docs/features/tickets/cvss-scoring.md`, Set or Update SUSE CVSS Assessment;
+Delete SUSE CVSS Assessment):
+
+- The screen changes the SUSE assessments of v3.1 and v4.0, the versions that
+  can be the default CVSS version (same document, Core Distinctions). Sentinel
+  accepts one of every version that it lists, and the screen shows one of
+  another version without actions. Sentinel refuses a change on an Ignored
+  or Duplicated Ticket with `409 TICKET_NOT_MUTABLE`, so the screen offers
+  none there, nor on a Ticket of a status that the pinned contract does not
+  list (Sentinel `docs/features/tickets/ticket-mutations.md`, CVSS Status
+  Matrix; Sentinel `docs/api-spec.md`, Manual-Zone Mutability Guard;
+  `docs/behaviors.md`, Unknown Values).
+- Add SUSE assessment, a secondary button 32 px high with `plus` at the end of
+  the line of the heading of the part, shows once the read of the assessments
+  has arrived, until SUSE has assessments of both v3.1 and v4.0. Edit and
+  Delete are icon buttons with `pencil` and `trash` at the end of the row of a
+  SUSE assessment of these versions (`docs/design-system.md`, Tables), whose
+  tooltips say "Edit" and "Delete", named such as "Edit SUSE assessment v3.1".
+  Before them, the cell of the vector has 24 px of end padding rather than
+  10 px, so that the cell, which the table makes a tab stop once its button has
+  had the focus, keeps 24 px of its own beside the button.
+- Add SUSE assessment and Edit open a dialog at most 880 px wide whose form
+  holds two columns (`docs/design-system.md`, Dialogs; Forms), titled "Add
+  SUSE assessment" or "Edit SUSE assessment v3.1":
+  - Add starts with tabs of the versions, CVSS v3.1 and CVSS v4.0
+    (`docs/design-system.md`, Dialogs). The default CVSS version,
+    `default_cvss_version`, is marked with `star`, whose tooltip says "The
+    default CVSS version: its SUSE assessment also sets the eligibility
+    score of the Products." (Sentinel `docs/features/tickets/cvss-scoring.md`,
+    Eligibility Score Resolution), and which assistive technologies read as
+    "CVSS v3.1, the default version"; a default version that the pinned
+    contract does not list marks no tab. Add opens on the default version
+    when SUSE has no assessment of it, otherwise on the first version that
+    SUSE lacks. The tab of a version of which SUSE has an assessment says
+    "SUSE already has a CVSS v3.1 assessment: Edit in its row of the table
+    changes it." in place of the form, and Add SUSE assessment is disabled
+    there. Edit has no tabs: its version is in its title.
+  - Start from, optional, a select of the assessments of the other
+    providers of the version, each its provider, its score, and its severity
+    with its mark, such as "NVD, 7.5 ● High", and in Edit, before them, the
+    saved assessment, "SUSE, as saved, 5.5 ● Medium". It shows the
+    assessment whose vector the form holds, or nothing: empty as Add opens,
+    on the saved assessment as Edit opens, and empty once the vector differs
+    from every assessment that it offers; of two assessments with the same
+    vector, it shows the first. Choosing one takes its vector.
+    Without an assessment to offer, it does not show.
+  - The Base metrics of the version, in the groups of FIRST's specifications
+    as the popover of a vector shows them (Content, CVSS assessments):
+    Exploitability in the first column, and Scope and Impact for v3.1, or
+    Vulnerable system and Subsequent system for v4.0, in the second; one
+    column where the dialog is narrower. Each metric is a segmented control
+    (`docs/design-system.md`, Forms) with its values from the one that
+    lowers the Base score to the one that raises it, in both versions, such
+    as "Physical, Local, Adjacent, Network" for Attack vector and "None, Low,
+    High" for Confidentiality, named by the metric, and by its group too
+    where its name repeats in the version, such as "Confidentiality
+    Vulnerable system".
+    Below a metric whose choice differs from the assessments of other
+    providers of the version shows their values, in the order of the API,
+    such as "NVD: Network · GitHub: Local", which wraps within its column.
+  - Beside Start from, at the top of the second column and ending where its
+    widest control ends, or after Start from in one column, the Base score
+    of the vector as Sentinel calculates it, Calculate CVSS Base Score,
+    `GET /api/v1/cvss/base-score` (Sentinel
+    `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score),
+    without a label: the score in `text-40`, as the calculator of FIRST shows
+    it, and below it the severity of the assessment with its mark in
+    `text-20`, both at weight 600 (`docs/design-system.md`, Type Scale;
+    Severity). Assistive technologies read it as "Base score 9.2, Critical".
+    The form reads the score of the vector as the dialog or a tab of Add
+    opens, and after a change once the vector has paused for 250 ms, only
+    for a vector that passes the checks of the form below and chooses every
+    metric. Another vector, and one that Sentinel rejects, shows "0.0" and
+    "None" in `fg-muted`, which assistive technologies read as the reason:
+    "No score." followed by the message of the check, such as "No score.
+    Choose the metrics, or enter the vector.", by "Choose every metric.", or
+    by "Sentinel doesn't accept this vector.". While the score of a new
+    vector is read, the outcome of the vector before it stays, marked as
+    being updated (`docs/behaviors.md`, Loading), and a read that a newer
+    vector overtakes shows nothing; the score of a vector, and the rejection
+    of a vector, are read once (`docs/behaviors.md`, Loading). Its place is a
+    status region, which announces each new outcome without moving the
+    focus, once the vector has paused (`docs/behaviors.md`, Accessibility,
+    Announcements). It does not show for a tab of a version of which SUSE
+    has an assessment.
+  - Vector, a single-line field in monospace, described "The metrics write
+    it, and a vector entered here chooses them.": a choice of a metric writes
+    the vector of the metrics chosen, in FIRST's order, and a vector that the
+    user enters chooses the metrics that it names.
+  - Then Cancel and the action, a primary button: "Add SUSE assessment", or
+    "Save" in Edit.
+- The form checks the vector without its surrounding whitespace before
+  sending it, and sends it without that whitespace (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Input Rules): empty, "Choose the
+  metrics, or enter the vector."; more than 200 characters, "Enter at most
+  200 characters."; a vector without the prefix of its version,
+  "Enter a CVSS v3.1 vector, which starts with CVSS:3.1/.", or in Add, for a
+  version of which SUSE has an assessment, "SUSE already has a CVSS v4.0
+  assessment: edit it in its row.". The error shows at the field when the
+  user submits the form, the field takes the focus, and the error goes once
+  the input changes. Every other rule of the vector is Sentinel's: a vector
+  that the read of its score rejects shows the error of `422
+  CVSS_INVALID_VECTOR` (States) at the field at once, without moving the
+  focus, until the input changes, and the form still sends it.
+- Sentinel sets or replaces the SUSE assessment of the version of the vector
+  that it receives (same document, Set or Update SUSE CVSS Assessment), so
+  Add reads the assessments again as it submits, and when SUSE has one of
+  the version by then, sends nothing: the tab then says so in place of its
+  form, and that line takes the focus. Two users who add the same version at
+  the same instant can still replace one another. Edit sends only a vector
+  of its version, and closes without a request when the vector is the saved
+  one.
+- Add SUSE assessment and Edit ask for no confirmation. With input that the
+  user changed, Cancel and Escape ask "Discard changes?", "The SUSE assessment
+  that you entered isn't added." in Add or "Your changes to this SUSE
+  assessment aren't saved." in Edit, with Keep editing and Discard
+  (`docs/behaviors.md`, Confirmation). While the request is in progress, the
+  action is busy and the dialog cannot be closed (`docs/behaviors.md`,
+  Loading); once Sentinel confirms it, the dialog closes, and the focus
+  returns to the button that opened it (`docs/behaviors.md`, Accessibility,
+  Dialogs). After Add, when the other tab holds input and SUSE lacks its
+  version by the read before Add, the dialog stays open on that tab instead
+  (`docs/design-system.md`, Dialogs): "SUSE assessment v3.1 added." shows
+  above the tabs as a `success` message, which is announced, the tab of the
+  version added drops its input and says that SUSE has it once the read
+  after the change arrives, and the action of the dialog, Add SUSE
+  assessment, holds the focus, also after Enter in Vector, whose form leaves
+  with its tab.
+- Delete asks for confirmation, since it cannot be undone in the UI and
+  Sentinel calculates the severity and the eligibility again
+  (`docs/behaviors.md`, Confirmation): "Delete SUSE assessment v3.1?",
+  "Sentinel calculates the severity of the CVE again from the other
+  assessments, and the eligibility of the Products, which can change the
+  priority and the deadlines of the Ticket. This can't be undone.", with,
+  before the last sentence, "Without a SUSE CVSS v3.1 assessment, the
+  eligibility score of the Products is the fallback 10.0." for the assessment
+  of the default CVSS version (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Eligibility Score Resolution), and
+  "As the last SUSE assessment of the CVE, it also returns the Ticket to
+  Analysis." for the last SUSE assessment of the CVE of an Analyzed or
+  Resolved Ticket (Sentinel `docs/features/tickets/tickets.md`, Gate: Analysis
+  → Analyzed; Automatic Status Evaluation); Cancel, and Delete SUSE
+  assessment, a danger button. While it is in progress, the confirmation
+  cannot be closed; once Sentinel confirms it, the confirmation closes.
+- An effective change can assign an unassigned Ticket to the user, move it
+  from New to Analysis, and change its severity, its priority, its
+  deadlines, the eligibility of its Products, and its status (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Assessment Persistence and Ticket
+  Status). Whatever the outcome, the screen then reads again the Ticket, its
+  duplicates, the work of a maintainer on it, the CVSS assessments, the
+  users who acted on it, its access grants, its audit log, and the reads of
+  the Ticket list.
+- The outcome of each, except an Add after which the dialog stays open, is
+  announced once a read of the assessments after it arrives, whatever the
+  outcome of that read: "SUSE assessment v3.1 added.", "SUSE assessment v3.1
+  changed.", or "SUSE assessment v3.1 deleted." (`docs/behaviors.md`, Outcome
+  of a Change). The outcome of a change that ends after the user left the tab
+  shows in the message area, and so does its failure, starting with the
+  Ticket, as a link to its screen, such as "SNTL-24: SUSE assessment v3.1
+  added.", when the user is on another screen.
+- After Delete, once the read of the assessments after it no longer returns
+  the assessment, the focus moves to the Delete of the row that takes its
+  place, or to that row when it has no Delete, or to Add SUSE assessment
+  when no row follows; when that read fails, the focus stays where it is.
+  After Add, when the read of the assessments after it shows the new
+  assessment and no longer Add SUSE assessment, as SUSE then has both
+  versions, the focus moves from Add SUSE assessment to the Delete of the new
+  row, which reverses the change. When a read removes the row whose control
+  holds the focus, or Add SUSE assessment while it holds the focus without a
+  change, the focus moves to the screen's heading (`docs/behaviors.md`,
+  Accessibility, Focus after an action).
+
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,
 `DELETE /api/v1/tickets/{ticket_id}/access/{user}`, in the dialog of the
@@ -1146,6 +1324,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   List Access Grants have arrived, with the loading indicator in their place
   until then; Access grants shows at once on a confidential Ticket, and its
   dialog shows the loading indicator in place of the grants until they arrive.
+  The dialog of Add SUSE assessment and Edit shows the loading indicator in
+  the place of the score until the first outcome of its vector is known
+  (Actions).
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
@@ -1262,6 +1443,29 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   empty state leaves the page while it holds the focus, the focus moves to
   the screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
   action).
+- **Errors of Add SUSE assessment, Edit, and Delete.** The screen handles
+  one code of Set or Update SUSE CVSS Assessment specifically: `422
+  CVSS_INVALID_VECTOR`, a vector that Sentinel does not accept, such as one
+  with a Temporal metric, says "Sentinel doesn't accept this vector. Enter a
+  complete CVSS v3.1 Base vector." at Vector (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Input Rules; Set or Update SUSE
+  CVSS Assessment). A field error of a `VALIDATION_ERROR` for
+  `vector_string` shows at Vector. Each takes the focus at the field. Every
+  other failure, of the change or of the read of the assessments before Add,
+  shows at the top of the form, which keeps the input and takes the focus,
+  such as the `409 TICKET_NOT_MUTABLE` of a Ticket that became Ignored or
+  Duplicated meanwhile, as a warning when Sentinel did not confirm the change
+  (`docs/behaviors.md`, Where Errors Appear; Retries and Unconfirmed
+  Changes). A failure of Delete shows at the top of its confirmation, which
+  stays open, such as the `404 CVSS_ASSESSMENT_NOT_FOUND` of an assessment
+  that another user deleted; the screen handles no code of it specifically.
+  The failure of the read of the score of the vector shows in the place of the
+  score, with Try again where it offers it while the form holds that vector,
+  and leaves the form and its action usable (`docs/behaviors.md`, Where Errors
+  Appear); the screen handles one code of Calculate CVSS Base Score
+  specifically, `422 CVSS_INVALID_VECTOR`, which shows at Vector as above and
+  as no score in the place of the score (Sentinel
+  `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score).
 - **Errors of Refetch.** A failure follows the default presentation of a
   change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
   after which the fetch may still run (`docs/behaviors.md`, Retries and
@@ -1289,11 +1493,11 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Links to Other Sites; Loading and Empty States; Dates and Times;
   Confirmations and Outcomes; Accessibility; Wording; Representation of a
   User
-- `docs/design-system.md` — Tones; Font; Focus and Motion; Main Content;
-  Values; Severity; Deadline Badge; Track Milestones; Labels; Other Values;
-  Buttons and Links; Lists; Tables; Timelines; Detail Screens; Forms;
-  Dialogs; Messages; Loading; Empty States; Errors in Place of Content;
-  Menus, Popovers, and Tooltips; Icons by Need; Representation of a User
+- `docs/design-system.md` — Tones; Type Scale; Font; Focus and Motion; Main
+  Content; Values; Severity; Deadline Badge; Track Milestones; Labels; Other
+  Values; Buttons and Links; Lists; Tables; Timelines; Detail Screens; Forms;
+  Dialogs; Messages; Loading; Empty States; Errors in Place of Content; Menus,
+  Popovers, and Tooltips; Icons by Need; Representation of a User
 - Sentinel `docs/features/tickets/ticket-audit-log.md` — Event Type Contract
   (Rules); Canonical Automatic Comment Vocabulary; Cross-Event Ordering,
   Locking, and Rollback; detail JSONB Schema Contract; List Ticket Events;
@@ -1304,7 +1508,8 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   API Schemas; API Endpoints (List References; Add Reference; Update
   Reference; Delete Reference)
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status
-  Transitions; Gate: Analyzed → Resolved; Duplicate Handling; Confidential
+  Transitions; Gate: Analysis → Analyzed; Gate: Analyzed → Resolved;
+  Automatic Status Evaluation; Duplicate Handling; Confidential
   Tickets (Identifier Disclosure Boundary; Coordinated Release Date); Ignore
   Reason; Response Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket;
   List Tickets (Duplicate filter); Set Confidentiality; Access Grant
@@ -1347,17 +1552,21 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Display Name); Auto-Ignore Policy (Flag); Security; API Endpoints
   (Response Schemas; Get CNA)
 - Sentinel `docs/features/tickets/cvss-scoring.md` — Core Distinctions;
-  Accepted Base Vectors (Version Precedence; CVSS v2.0 Base Metrics; CVSS
-  v3.0 and v3.1 Base Metrics; CVSS v4.0 Base Metrics); Severity; Eligibility
-  Score Resolution; API Endpoints (Shared Assessment Item; Get CVSS
-  Assessments for a CVE)
+  Accepted Base Vectors (Input Rules; Version Precedence; CVSS v2.0 Base
+  Metrics; CVSS v3.0 and v3.1 Base Metrics; CVSS v4.0 Base Metrics);
+  Severity; Eligibility Score Resolution; Provider Identity and Authority;
+  Assessment Persistence and Ticket Status; API Endpoints (Shared Assessment
+  Item; Get CVSS Assessments for a CVE; Set or Update SUSE CVSS Assessment;
+  Delete SUSE CVSS Assessment; Calculate CVSS Base Score)
+- Sentinel `docs/features/tickets/ticket-mutations.md` — CVSS Status Matrix
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
-  Visibility; Endpoint Permission Map (CVEs; Tickets; Ticket References)
+  Visibility; Endpoint Permission Map (CVEs; CVSS; Tickets; Ticket
+  References)
 - Sentinel `docs/features/identity/user-management.md` — Directory API
   endpoints (List Users)
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Ticket Identifier Resolution; User Identifier
   Resolution; CVE Identifier Resolution; CNA Identifier Resolution; CVE
   Accessibility Check; Pagination; Enum Filter Validation; Date Range
-  Interpretation; Infrastructure Dependency Errors (HTTP 503); Partial Update
-  Semantics; User References in Responses
+  Interpretation; Infrastructure Dependency Errors (HTTP 503); Manual-Zone
+  Mutability Guard; Partial Update Semantics; User References in Responses

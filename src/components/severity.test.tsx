@@ -4,7 +4,7 @@ import type { Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
-import { Severity } from "./severity";
+import { Severity, severityName } from "./severity";
 
 // A severity (docs/design-system.md, Severity; Severity Marks), in the light
 // theme. Each test shows it in a cell of a table, whose accessible name
@@ -18,8 +18,9 @@ afterEach(() => {
 });
 
 const SCALE = 3;
-// fg of the light theme, canvas, the page, and neutral-icon.
+// fg and fg-muted of the light theme, canvas, the page, and neutral-icon.
 const FG = "rgb(31, 35, 40)";
+const FG_MUTED = "rgb(89, 99, 110)";
 const CANVAS = "#f6f8fa";
 const NEUTRAL_ICON = "#6e7781";
 
@@ -102,6 +103,22 @@ test.each([
   },
 );
 
+test.each([
+  ["fg-muted when it is muted", true, FG_MUTED],
+  ["fg without muted", false, FG],
+])("shows the name in %s", async (_, muted, color) => {
+  const { screen, figure } = await renderValue(
+    muted ? <Severity severity="none" muted /> : <Severity severity="none" />,
+  );
+
+  await expect
+    .element(screen.getByRole("cell", { name: "None", exact: true }))
+    .toBeVisible();
+  expect(
+    getComputedStyle(figure.getByText("None", { exact: true }).element()).color,
+  ).toBe(color);
+});
+
 test("shows the name 6 px after the dot of 8 px", async () => {
   const { figure } = await renderValue(<Severity severity="high" />);
   const name = figure.getByText("High", { exact: true });
@@ -168,3 +185,20 @@ test("stands on the baseline of the text around it", async () => {
   expect(name.top).toBe(around.top);
   expect(name.bottom).toBe(around.bottom);
 });
+
+test.each([
+  ["critical", "Critical"],
+  ["high", "High"],
+  ["medium", "Medium"],
+  ["low", "Low"],
+  ["none", "None"],
+])("names %s %s without its mark", (value, name) => {
+  expect(severityName(value)).toBe(name);
+});
+
+test.each(["catastrophic", "constructor"])(
+  "names %s, which the pinned contract does not list, as received",
+  (value) => {
+    expect(severityName(value)).toBe(value);
+  },
+);

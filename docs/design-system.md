@@ -367,6 +367,7 @@ Status).
 | `text-15` | 15 / 24 px | Everything else: running text, the sidebar, buttons, menus, fields, and messages |
 | `text-16` | 16 / 24 px | Level-two headings, the title of a dialog, and the product name |
 | `text-20` | 20 / 28 px, letter spacing −0.025 em | The level-one heading of a screen |
+| `text-40` | 40 / 44 px, letter spacing −0.025 em | A score that a form shows as the user changes its input, such as the Base score of a CVSS vector, as the calculator of FIRST shows it, with its severity below it in `text-20` |
 
 The names state the sizes, so that a size shows in the code; Tailwind's own
 names, such as `text-sm`, do not exist. The uses above and the weights below
@@ -467,6 +468,7 @@ that the code imports ship.
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
 | The access grants of a confidential Ticket | `user-round-key` |
 | Change a field of a record in place, edit a row of a table | `pencil` |
+| The default CVSS version | `star` |
 | Delete a row of a table | `trash` |
 | The other actions of a record within a part, such as a package | `ellipsis` |
 | Restore an excluded record | `undo-2` |
@@ -515,7 +517,8 @@ that it sits with the icons around it.
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
   following its radius, or inside it for an element whose edges would cut
   it: a row or a cell of a table (Tables), a menu item (Menus, Popovers, and
-  Tooltips), the main content after the link that skips to it (Main
+  Tooltips), a segment of a segmented control, in `on-accent` on the chosen
+  one (Forms), the main content after the link that skips to it (Main
   Content), and the sidebar opened over the content (Sidebar). It shows on
   keyboard focus, and no element removes it (`docs/behaviors.md`,
   Accessibility).
@@ -709,7 +712,10 @@ The resolved severity of a Ticket or a CVE is `critical`, `high`, `medium`,
 - The severity of one CVSS assessment, by the scale of its version, is not
   the resolved severity (Sentinel `docs/features/tickets/cvss-scoring.md`,
   Core Distinctions; Version-Specific Assessment Severity), but it has the
-  same values, and shows in the same way.
+  same values, and shows in the same way. Where a score that a form shows
+  stands for no score yet, such as "0.0" before every metric of a vector is
+  chosen, the score and the name None are in `fg-muted`, and assistive
+  technologies read the reason instead.
 
 ### Priority
 
@@ -1429,7 +1435,12 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Forms
 
-- A form is one column, at most 448 px wide, with its fields 12 px apart.
+- A form is one column, at most 448 px wide, with its fields 12 px apart. A
+  form whose choices are many short rows, such as the metrics of a CVSS
+  vector, can hold two columns, each as wide as its widest row, the first at
+  the start and the second at the end of the form, 40 px apart at least, with
+  its fields 20 px apart; where its place is narrower, they are one column,
+  the first above the second.
 - Each field has its label above it, in `text-15`, weight 500; a field that
   may stay empty adds " (optional)" to its label in `fg-muted`, at weight 400.
   The control is 40 px high, on `surface`, with a `border-strong` boundary, a
@@ -1499,6 +1510,25 @@ states it, such as that of a Ticket; the other audit logs are tables
   does (Buttons and Links). The days of the months around it are left out,
   and the days take the height of six weeks in every month, so that the
   calendar keeps its size and Previous and Next their place.
+- A segmented control chooses one value among a few, every value visible, as
+  the calculator of FIRST shows the values of a metric of a CVSS vector: its
+  values are segments 32 px high in a row with a `border-strong` boundary and
+  a 6 px radius, apart by `border-strong` lines, each its label in `text-14`
+  with 12 px of side padding, `surface-hover` under the pointer; the chosen
+  one has an `accent` fill, `accent-hover` under the pointer, with its label
+  in `on-accent` at weight 500. The row is as wide as its values and wraps
+  where its place is narrower. Its name, in `text-14`, stands at the start of
+  its line, in a column as wide as the longest name of its form, such as
+  140 px, 12 px before the control, or above the control where the form is
+  narrower than 320 px, and a note on the choice, such as the
+  value of another assessment, follows below the control in `text-13`,
+  `fg-muted`, which describes it. Assistive technologies read it as a group of
+  radio buttons, between which the arrow keys move; the focus ring is drawn
+  inside the segment, in `on-accent` on the chosen one. The controls are
+  8 px apart; groups of such controls take a heading in `text-14`, weight
+  600, 8 px above their first control and 20 px below the group before.
+- A field whose value users copy character by character, such as a CVSS
+  vector, shows its value in monospace (Font).
 - A switch turns a choice of a screen on or off at once, outside a form, such
   as showing the hidden records of a part: a rail 28 by 16 px, round, with a
   1 px `border-strong` boundary on `neutral-soft` and a knob of 12 px in
@@ -1516,8 +1546,25 @@ states it, such as that of a Ticket; the other audit logs are tables
   8 px radius, `shadow-xl`, and 20 px of padding: at most 400 px wide for a
   confirmation and 560 px for a dialog with a form, or 488 px for a dialog
   whose content is a form alone, the 448 px of the form with the padding of
-  the dialog, so that its buttons end where its fields do (Forms). A dialog
-  taller than the window scrolls its content and keeps its buttons in view.
+  the dialog, so that its buttons end where its fields do, or 880 px for a
+  dialog whose form holds two columns (Forms). A dialog taller than the
+  window scrolls its content and keeps its buttons in view.
+- A dialog can show one of several forms of the same change on tabs at the
+  top of its content, such as the versions of a CVSS assessment: tabs as
+  those of a detail screen (Detail Screens), above a `border` line across
+  the width, with the content of the selected tab 20 px below it. A tab opens
+  when the user clicks it or presses Enter or Space, and each keeps its input
+  while another shows; the first field of the selected tab takes the focus
+  as the dialog opens. After the action of a tab succeeds, the dialog stays
+  open on another tab that holds input and where the action still applies,
+  with a `success` message above the tabs that says what the action did
+  (Messages). An icon after the label, 6 px later, at 14 px in
+  `fg-muted`, can mark a tab, such as the default version, with a tooltip
+  that says what it means, which shows, stays, and hides as every tooltip
+  does (Menus, Popovers, and Tooltips), on the hover and the keyboard focus
+  of the tab; Escape hides it without closing the dialog. Assistive
+  technologies read the meaning of the mark in the name of the tab and its
+  explanation as the description of the tab.
 - Its title is in `text-16`, weight 600, its text in `fg-muted`, and its
   buttons, 40 px high, close it aligned to its end: Cancel, or Keep editing,
   as a secondary button, then the action, primary or danger as Buttons and

@@ -79,6 +79,7 @@ const TYPE_SIZES: [
   ["text-15", "15px", "24px", "normal"],
   ["text-16", "16px", "24px", "normal"],
   ["text-20", "20px", "28px", "-0.5px"],
+  ["text-40", "40px", "44px", "-1px"],
 ];
 
 // A color as the browser computes it: rgb(r, g, b) for a hexadecimal color.

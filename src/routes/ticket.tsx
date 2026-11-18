@@ -19,6 +19,7 @@ import {
   DetailTabs,
   type DetailTab,
 } from "../components/detail-tabs";
+import type { MessageRecord } from "../components/message-area";
 import { NotFound } from "../components/not-found";
 import { ExplainedPriority } from "../components/priority-explanation";
 import { UpdatingBar } from "../components/loading";
@@ -91,6 +92,16 @@ export function useShownTicket(): {
     ticket: read.data.data,
     now: read.dataUpdatedAt,
     twoColumns: screen.twoColumns,
+  };
+}
+
+// The Ticket as the record of the outcome of a change of a tab: its
+// identifier, with the address of the screen, which the outcome names when
+// it appears on another screen (docs/behaviors.md, Outcome of a Change).
+export function ticketRecord(ticketId: string): MessageRecord {
+  return {
+    name: ticketId,
+    href: linkOptions({ to: "/tickets/$ticketId", params: { ticketId } }),
   };
 }
 

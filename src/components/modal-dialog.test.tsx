@@ -134,6 +134,26 @@ test("is at most 488 px wide for a form alone, centered over the page", async ()
   expect(box.left + box.width / 2).toBe(640);
 });
 
+test("is at most 880 px wide for a form in two columns, centered over the page", async () => {
+  const screen = await render(
+    <ModalDialog
+      isOpen
+      onClose={() => undefined}
+      width="two-columns"
+      title="Add SUSE assessment"
+      buttons={<Button>Cancel</Button>}
+    >
+      Fictional content
+    </ModalDialog>,
+  );
+
+  const dialog = screen.getByRole("dialog", { name: "Add SUSE assessment" });
+  await expect.element(dialog).toBeVisible();
+  const box = dialog.element().getBoundingClientRect();
+  expect(box.width).toBe(880);
+  expect(box.left + box.width / 2).toBe(640);
+});
+
 test("breaks a word of its title longer than its line, such as an address, at 320 CSS pixels", async () => {
   await page.viewport(320, 640);
   const address = `https://advisories.example.com/${"fictional-".repeat(12)}advisory`;

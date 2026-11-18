@@ -165,6 +165,89 @@ async function trackIdsOf(
   return { packageId, trackId };
 }
 
+// The value of a field of the heading row, by its term: the definition of
+// the same rank as the term, as the heading row comes first in the main
+// content and each of its terms has one.
+async function headingValue(page: Page, term: string) {
+  const main = page.getByRole("main");
+  const terms = await main.getByRole("term").allTextContents();
+  const index = terms.indexOf(term);
+  expect(index, `the term ${term} of the heading row`).toBeGreaterThanOrEqual(
+    0,
+  );
+  return main.getByRole("definition").nth(index);
+}
+
+// A button of the part CVSS assessments, by its whole name, such as Add SUSE
+// assessment, or Edit SUSE assessment v3.1 on the row of that assessment.
+function cvssButton(page: Page, name: string) {
+  return part(page, "CVSS assessments").getByRole("button", {
+    name,
+    exact: true,
+  });
+}
+
+// The buttons of the part CVSS assessments that change the SUSE assessment:
+// Add SUSE assessment, and Edit and Delete on the row of an assessment.
+function suseButtons(locator: Locator) {
+  return locator.getByRole("button", { name: /SUSE assessment/ });
+}
+
+// The row of an assessment, which its provider and its version name.
+function assessmentRow(page: Page, provider: string, version: string) {
+  return cvssTable(page).getByRole("row", {
+    name: `${provider} v${version}`,
+    exact: true,
+  });
+}
+
+// The status regions of the part CVSS assessments that hold a text, such as
+// the announcement of the outcome of a change.
+function cvssStatus(page: Page, text: string) {
+  return part(page, "CVSS assessments")
+    .getByRole("status")
+    .filter({ hasText: text });
+}
+
+// Add SUSE assessment, or Edit of a SUSE assessment, by its title.
+function suseDialog(page: Page, name = "Add SUSE assessment") {
+  return page.getByRole("dialog", { name, exact: true });
+}
+
+// The field of the vector of a dialog of the SUSE assessment.
+function vectorField(dialog: Locator) {
+  return dialog.getByRole("textbox", { name: "Vector", exact: true });
+}
+
+// The select of Start from, named by the option that it shows and its label,
+// "Start from (optional)" in Add.
+function startFrom(dialog: Locator) {
+  return dialog.getByRole("button", { name: /Start from(?: \(optional\))?$/ });
+}
+
+// Chooses an option of Start from, once its open options are checked
+// (docs/conventions.md, End-to-End Tests).
+async function chooseStart(page: Page, dialog: Locator, option: string) {
+  await startFrom(dialog).click();
+  const options = page.getByRole("listbox", { name: "Start from" });
+  await expect(options).toBeVisible();
+  await expectAccessible(page);
+  await options.getByRole("option", { name: option, exact: true }).click();
+  await expect(startFrom(dialog)).toHaveText(option);
+}
+
+// A metric of a dialog of the SUSE assessment, a group of radio buttons
+// named after the metric, and in v4.0 after its group too where its name
+// repeats, such as "Confidentiality Vulnerable system".
+function metric(dialog: Locator, name: string) {
+  return dialog.getByRole("radiogroup", { name, exact: true });
+}
+
+// A value of a metric, a radio button of its group.
+function metricValue(dialog: Locator, name: string, value: string) {
+  return metric(dialog, name).getByRole("radio", { name: value, exact: true });
+}
+
 test.describe("for an analyst", () => {
   test("shows a Ticket with its heading row, its CVE, and its details", async ({
     page,
@@ -1103,7 +1186,7 @@ test.describe("for an analyst", () => {
     await expect(ltss).toBeFocused();
   });
 
-  test("shows the CVSS assessments of a CVE, whose SUSE assessment sets its severity and the eligibility score", async ({
+  test("shows the CVSS assessments of a CVE, whose SUSE assessment sets its severity and the eligibility score, with Add SUSE assessment and Edit and Delete on the row of the SUSE assessment", async ({
     page,
   }) => {
     await signIn(page, "asmith");
@@ -1126,6 +1209,7 @@ test.describe("for an analyst", () => {
       "Version",
       "Base score",
       "Vector",
+      "Actions",
     ]);
     await expect(cvssTable(page).getByRole("rowheader")).toHaveText([
       "NVD",
@@ -1136,9 +1220,31 @@ test.describe("for an analyst", () => {
     await expect(cvssTable(page).getByRole("gridcell")).toHaveText([
       "7.8 High",
       "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "",
       "5.5 Medium",
       "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "",
     ]);
+    // asmith holds manage_cvss through the vulnerability_analyst role, and
+    // SNTL-16 is Resolved, a status in which Sentinel changes the SUSE
+    // assessment of its CVE (Users; Tickets): Add SUSE assessment, for
+    // v4.0, which SUSE lacks, and Edit and Delete on the row of the SUSE
+    // assessment alone.
+    await expect(cvssButton(page, "Add SUSE assessment")).toBeVisible();
+    const suse = assessmentRow(page, "SUSE", "3.1");
+    await expect(
+      suse.getByRole("button", {
+        name: "Edit SUSE assessment v3.1",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      suse.getByRole("button", {
+        name: "Delete SUSE assessment v3.1",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(suseButtons(assessmentRow(page, "NVD", "3.1"))).toHaveCount(0);
     await expectOverviewShown(page);
     await expect(
       part(page, "CVSS assessments").getByRole("heading", { level: 2 }),
@@ -1245,6 +1351,449 @@ test.describe("for an analyst", () => {
     await expectOverviewShown(page);
     await expectScreenshot(page, "ticket-cvss-empty.png");
   });
+
+  test("opens Edit of the SUSE assessment on its vector as saved, with the values of NVD where they differ, and asks before discarding a change", async ({
+    page,
+  }) => {
+    // SUSE's v3.1 assessment of CVE-2099-0016, the CVE of SNTL-16, scores
+    // its integrity and its availability None, and NVD's High (CVEs).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-16#cvss");
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves Edit: the click waits for it.
+    await expectOverviewShown(page);
+    const edit = cvssButton(page, "Edit SUSE assessment v3.1");
+
+    await edit.click();
+
+    // Without the tabs of the versions, its first field, Start from, has
+    // the focus, on the assessment as saved.
+    const dialog = suseDialog(page, "Edit SUSE assessment v3.1");
+    await expect(startFrom(dialog)).toBeFocused();
+    await expect(startFrom(dialog)).toHaveText("SUSE, as saved, 5.5 Medium");
+    await expect(dialog.getByRole("tab")).toHaveCount(0);
+    const vector = vectorField(dialog);
+    await expect(vector).toHaveValue(
+      "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+    );
+    await expect(metricValue(dialog, "Integrity", "None")).toBeChecked();
+    await expect(dialog.getByText(/^NVD: /)).toHaveText([
+      "NVD: High",
+      "NVD: High",
+    ]);
+
+    await metricValue(dialog, "Integrity", "Low").click();
+
+    // The choice writes the vector, and the value of NVD stays below the
+    // metric, which assistive technologies read with it.
+    await expect(metricValue(dialog, "Integrity", "Low")).toBeChecked();
+    await expect(vector).toHaveValue(
+      "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N",
+    );
+    await expect(metric(dialog, "Integrity")).toHaveAccessibleDescription(
+      "NVD: High",
+    );
+    // Start from no longer shows the assessment as saved, whose vector the
+    // form no longer holds.
+    await expect(startFrom(dialog)).toHaveText("");
+    // Beside Start from, the score of the new vector, as Sentinel calculates
+    // it once the vector has paused.
+    await expect(
+      dialog.getByText("Base score 6.1, Medium", { exact: true }),
+    ).toBeAttached();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-cvss-edit.png");
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText(
+      "Your changes to this SUSE assessment aren't saved.",
+    );
+    await expect(
+      discard.getByRole("button", { name: "Keep editing" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-cvss-discard.png");
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(edit).toBeFocused();
+  });
+
+  test("opens Add SUSE assessment on the default version, and starts another version from the assessment of another provider", async ({
+    page,
+  }) => {
+    // CVE-2099-0007, the CVE of SNTL-7, which is New, has NVD's v4.0
+    // assessment alone, and the default CVSS version is v3.1 (Tickets;
+    // CVEs; System Settings).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-7#cvss");
+    await expectOverviewShown(page);
+    const add = cvssButton(page, "Add SUSE assessment");
+
+    await add.click();
+
+    // On the tab of the default version, which SUSE lacks; no other
+    // provider has a v3.1 assessment to start from, so the first field of
+    // the form, which has the focus, is the first metric.
+    const dialog = suseDialog(page);
+    const v31 = dialog.getByRole("tab", {
+      name: "CVSS v3.1, the default version",
+      exact: true,
+    });
+    await expect(v31).toHaveAttribute("aria-selected", "true");
+    await expect(dialog.getByRole("radiogroup")).toHaveCount(8);
+    await expect(startFrom(dialog)).toHaveCount(0);
+    await expect(
+      metricValue(dialog, "Attack vector", "Physical"),
+    ).toBeFocused();
+    await expect(vectorField(dialog)).toHaveValue("");
+    await expectAccessible(page);
+
+    await dialog.getByRole("tab", { name: "CVSS v4.0", exact: true }).click();
+
+    await expect(dialog.getByRole("radiogroup")).toHaveCount(11);
+    await chooseStart(page, dialog, "NVD, 9.3 Critical");
+    const vector = vectorField(dialog);
+    await expect(vector).toHaveValue(
+      "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+    );
+    await expect(
+      metricValue(dialog, "Confidentiality Vulnerable system", "High"),
+    ).toBeChecked();
+    await expect(dialog.getByText(/^NVD: /)).toHaveCount(0);
+
+    await metricValue(dialog, "Attack requirements", "Present").click();
+
+    await expect(vector).toHaveValue(
+      "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+    );
+    await expect(
+      metric(dialog, "Attack requirements"),
+    ).toHaveAccessibleDescription("NVD: None");
+    await expect(startFrom(dialog)).toHaveText("");
+    await expect(
+      dialog.getByText("Base score 9.2, Critical", { exact: true }),
+    ).toBeAttached();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-cvss-add.png");
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText(
+      "The SUSE assessment that you entered isn't added.",
+    );
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(add).toBeFocused();
+  });
+
+  test("says in Add SUSE assessment that SUSE already has an assessment of a version, also for a vector of that version entered on another tab, without sending it", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-16#cvss");
+    await expectOverviewShown(page);
+    // The changes of the SUSE assessment of CVE-2099-0016 that the page
+    // sends.
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      const { pathname } = new URL(request.url());
+      if (pathname.startsWith("/api/v1/cves/CVE-2099-0016/cvss/suse")) {
+        sent.push(`${request.method()} ${pathname}`);
+      }
+    });
+
+    await cvssButton(page, "Add SUSE assessment").click();
+
+    // On v4.0, since SUSE has the v3.1 assessment of CVE-2099-0016 (CVEs),
+    // with the focus on the first metric: no other provider has a v4.0
+    // assessment to start from.
+    const dialog = suseDialog(page);
+    const v40 = dialog.getByRole("tab", { name: "CVSS v4.0", exact: true });
+    await expect(v40).toHaveAttribute("aria-selected", "true");
+    await expect(startFrom(dialog)).toHaveCount(0);
+    await expect(
+      metricValue(dialog, "Attack vector", "Physical"),
+    ).toBeFocused();
+    const submit = dialog.getByRole("button", {
+      name: "Add SUSE assessment",
+      exact: true,
+    });
+
+    const v31 = dialog.getByRole("tab", {
+      name: "CVSS v3.1, the default version",
+      exact: true,
+    });
+    // The tooltip of its mark, under the pointer, says what the default
+    // version is.
+    await v31.hover();
+    await expect(page.getByRole("tooltip")).toHaveText(
+      "The default CVSS version: its SUSE assessment also sets the eligibility score of the Products.",
+    );
+
+    await v31.click();
+
+    const taken = dialog.getByText(
+      "SUSE already has a CVSS v3.1 assessment: Edit in its row of the table changes it.",
+      { exact: true },
+    );
+    await expect(taken).toBeVisible();
+    await expect(vectorField(dialog)).toHaveCount(0);
+    await expect(submit).toBeDisabled();
+    await expectAccessible(page);
+    // The pointer leaves the tab, whose tooltip hides, so that the reference
+    // shows the tab without it.
+    await taken.hover();
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await expectScreenshot(page, "ticket-cvss-add-taken.png");
+
+    await v40.click();
+    const vector = vectorField(dialog);
+    // NVD's v3.1 vector of CVE-2099-0016.
+    await vector.fill("CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H");
+    await submit.click();
+
+    await expect(
+      dialog.getByText(
+        "SUSE already has a CVSS v3.1 assessment: edit it in its row.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(vector).toBeFocused();
+    expect(sent).toEqual([]);
+    // Neither is the vector scored.
+    await expect(
+      dialog.getByText(
+        "No score. SUSE already has a CVSS v3.1 assessment: edit it in its row.",
+        { exact: true },
+      ),
+    ).toBeAttached();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-cvss-add-error.png");
+  });
+
+  test("asks for confirmation of Delete of the SUSE assessment, which says that the eligibility score becomes the fallback and that the Ticket returns to Analysis, and keeps the assessment on Cancel", async ({
+    page,
+  }) => {
+    // SNTL-16 is Resolved, and its SUSE assessment, of the default version
+    // v3.1, is the only one of its CVE (Tickets; CVEs; System Settings), so
+    // that without it the eligibility score is the fallback, and Delete
+    // returns the Ticket to Analysis.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-16#cvss");
+    await expectOverviewShown(page);
+    const remove = cvssButton(page, "Delete SUSE assessment v3.1");
+
+    await remove.click();
+
+    const confirmation = page.getByRole("dialog", {
+      name: "Delete SUSE assessment v3.1?",
+      exact: true,
+    });
+    await expect(confirmation).toContainText(
+      "Sentinel calculates the severity of the CVE again from the other assessments, and the eligibility of the Products, which can change the priority and the deadlines of the Ticket. Without a SUSE CVSS v3.1 assessment, the eligibility score of the Products is the fallback 10.0. As the last SUSE assessment of the CVE, it also returns the Ticket to Analysis. This can't be undone.",
+    );
+    await expect(
+      confirmation.getByRole("button", {
+        name: "Delete SUSE assessment",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      confirmation.getByRole("button", { name: "Cancel" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-cvss-delete.png");
+
+    await confirmation.getByRole("button", { name: "Cancel" }).click();
+
+    await expect(confirmation).toHaveCount(0);
+    await expect(remove).toBeFocused();
+    await expect(cvssTable(page).getByRole("rowheader")).toHaveText([
+      "NVD",
+      "v3.1",
+      "SUSE",
+      "v3.1",
+    ]);
+  });
+
+  test(
+    "adds the SUSE assessment of a CVE once Sentinel accepts its vector, which assigns the Ticket and moves it to Analysis, staying open on the other version that holds input, then edits it and deletes it, after which the focus moves to Add SUSE assessment",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-24, New and unassigned, without packages, whose CVE-2099-0022
+      // has NVD's v3.1 assessment alone, and no other test of this project
+      // opens it, so its CVSS assessments, its status, its assignee, and its
+      // audit log are this test's own (Tickets; CVEs). An effective change
+      // of the SUSE assessment by an analyst assigns an unassigned New
+      // Ticket to them and moves it to Analysis (Sentinel
+      // docs/features/tickets/cvss-scoring.md, Assessment Persistence and
+      // Ticket Status).
+      await signIn(page, "asmith");
+      await page.goto("/tickets/SNTL-24");
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      const assignee = await detail(page, "Assignee");
+      await expect(status).toHaveText("New");
+      await expect(assignee).toHaveText("Unassigned");
+      const add = cvssButton(page, "Add SUSE assessment");
+
+      await add.click();
+
+      // On the default version, with the focus on the first field of the
+      // form, Start from, which offers NVD's assessment.
+      const dialog = suseDialog(page);
+      await expect(
+        dialog.getByRole("tab", {
+          name: "CVSS v3.1, the default version",
+          exact: true,
+        }),
+      ).toHaveAttribute("aria-selected", "true");
+      await expect(startFrom(dialog)).toBeFocused();
+      await chooseStart(page, dialog, "NVD, 7.5 High");
+      const vector = vectorField(dialog);
+      await expect(vector).toHaveValue(
+        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      );
+      // With a Temporal metric, which Sentinel refuses with 422
+      // CVSS_INVALID_VECTOR (Sentinel docs/features/tickets/cvss-scoring.md,
+      // Input Rules).
+      await expect(
+        dialog.getByText("Base score 7.5, High", { exact: true }),
+      ).toBeAttached();
+      const temporal = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P";
+      await vector.fill(temporal);
+
+      // Sentinel's read of its score rejects it, which the field says
+      // before the form is submitted.
+      const rejected = dialog.getByText(
+        "Sentinel doesn't accept this vector. Enter a complete CVSS v3.1 Base vector.",
+        { exact: true },
+      );
+      await expect(rejected).toBeVisible();
+      await expect(
+        dialog.getByText("No score. Sentinel doesn't accept this vector.", {
+          exact: true,
+        }),
+      ).toBeAttached();
+      await expectAccessible(page);
+      const submit = dialog.getByRole("button", {
+        name: "Add SUSE assessment",
+        exact: true,
+      });
+      await submit.click();
+
+      await expect(rejected).toBeVisible();
+      await expect(vector).toBeFocused();
+      await expect(vector).toHaveValue(temporal);
+
+      // A choice of a metric writes the vector of the metrics chosen,
+      // without the Temporal metric.
+      await metricValue(dialog, "Attack vector", "Local").click();
+      const added = "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H";
+      await expect(vector).toHaveValue(added);
+      await expect(rejected).toHaveCount(0);
+      await expect(
+        dialog.getByText("Base score 6.2, Medium", { exact: true }),
+      ).toBeAttached();
+      // The tab of v4.0, which SUSE lacks too, holds input as well.
+      const v40 = dialog.getByRole("tab", { name: "CVSS v4.0", exact: true });
+      await v40.click();
+      await metricValue(dialog, "Attack vector", "Network").click();
+      await expect(vector).toHaveValue("CVSS:4.0/AV:N");
+      await dialog
+        .getByRole("tab", { name: "CVSS v3.1, the default version" })
+        .click();
+      await expect(vector).toHaveValue(added);
+      await submit.click();
+
+      // The dialog stays open on v4.0, whose input it keeps, and says what it
+      // added, with the focus on its action. The reads after the change, of
+      // the assessments and of the Ticket, have arrived before anything is
+      // pointed at again.
+      await expect(
+        dialog.getByText("SUSE assessment v3.1 added.", { exact: true }),
+      ).toBeVisible();
+      await expect(v40).toHaveAttribute("aria-selected", "true");
+      await expect(vector).toHaveValue("CVSS:4.0/AV:N");
+      await expect(submit).toBeFocused();
+      const suse = assessmentRow(page, "SUSE", "3.1");
+      await expect(
+        suse.getByRole("button", { name: added, exact: true }),
+      ).toBeVisible();
+      await expect(
+        await valueOf(page, "CVSS assessments", "Severity"),
+      ).toHaveText(
+        / from SUSE CVSS v3\.1, which also sets the eligibility score of the Products$/,
+      );
+      await expect(status).toHaveText("Analysis");
+      await expect(assignee).toHaveText("Alice Smith");
+      await expectAccessible(page);
+      await expectScreenshot(page, "ticket-cvss-add-stays-open.png");
+
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+      await page
+        .getByRole("dialog", { name: "Discard changes?" })
+        .getByRole("button", { name: "Discard", exact: true })
+        .click();
+
+      await expect(dialog).toHaveCount(0);
+      // Add SUSE assessment stays, for v4.0, which SUSE lacks.
+      await expect(add).toBeFocused();
+
+      await cvssButton(page, "Edit SUSE assessment v3.1").click();
+
+      const edit = suseDialog(page, "Edit SUSE assessment v3.1");
+      await expect(startFrom(edit)).toBeFocused();
+      await expect(vectorField(edit)).toHaveValue(added);
+      await metricValue(edit, "Availability", "Low").click();
+      const edited = "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L";
+      await expect(vectorField(edit)).toHaveValue(edited);
+      await edit.getByRole("button", { name: "Save", exact: true }).click();
+
+      await expect(edit).toHaveCount(0);
+      await expect(
+        suse.getByRole("button", { name: edited, exact: true }),
+      ).toBeVisible();
+      await expect(
+        suse.getByRole("button", { name: added, exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        cvssStatus(page, "SUSE assessment v3.1 changed."),
+      ).toHaveCount(1);
+      await expect(cvssButton(page, "Edit SUSE assessment v3.1")).toBeFocused();
+
+      await cvssButton(page, "Delete SUSE assessment v3.1").click();
+
+      // The assessment is of the default version, so without it the
+      // eligibility score is the fallback; SNTL-24 is in Analysis, so Delete
+      // does not return it there.
+      const confirmation = page.getByRole("dialog", {
+        name: "Delete SUSE assessment v3.1?",
+        exact: true,
+      });
+      await expect(confirmation).toContainText(
+        "Sentinel calculates the severity of the CVE again from the other assessments, and the eligibility of the Products, which can change the priority and the deadlines of the Ticket. Without a SUSE CVSS v3.1 assessment, the eligibility score of the Products is the fallback 10.0. This can't be undone.",
+      );
+      await confirmation
+        .getByRole("button", { name: "Delete SUSE assessment", exact: true })
+        .click();
+
+      await expect(confirmation).toHaveCount(0);
+      await expect(suse).toHaveCount(0);
+      await expect(cvssTable(page).getByRole("rowheader")).toHaveText([
+        "NVD",
+        "v3.1",
+      ]);
+      await expect(
+        cvssStatus(page, "SUSE assessment v3.1 deleted."),
+      ).toHaveCount(1);
+      // No row follows the deleted one.
+      await expect(add).toBeFocused();
+    },
+  );
 
   test("shows the sources of a CVE, with a failing source, every source disabled and so without Refetch", async ({
     page,

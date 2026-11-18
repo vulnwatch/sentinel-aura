@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   Button as AriaButton,
   Label,
@@ -15,8 +15,12 @@ import { FieldErrorMessage } from "./text-field";
 export interface FieldOption<T extends string> {
   // The value that the field holds when the option is chosen.
   value: T;
-  // Its label, which the field shows once it is chosen.
+  // Its label, which the field shows once it is chosen, and by which the
+  // keyboard finds it.
   label: string;
+  // What the option shows in place of its label, such as a severity with its
+  // mark, in the option and in the field once it is chosen.
+  content?: ReactNode;
 }
 
 interface SelectFieldProps<T extends string> {
@@ -26,8 +30,11 @@ interface SelectFieldProps<T extends string> {
   // it.
   name: string;
   options: readonly FieldOption<T>[];
-  // The option chosen.
-  value: T;
+  // The option chosen, or null before the user chooses one, which shows the
+  // field empty.
+  value: T | null;
+  // Whether the field may stay empty, which its label states.
+  optional?: boolean;
   onChange: (value: T) => void;
   // The button of the field, which a form focuses when the field has an
   // error.
@@ -45,9 +52,11 @@ export function SelectField<T extends string>({
   name,
   options,
   value,
+  optional = false,
   onChange,
   buttonRef,
 }: SelectFieldProps<T>) {
+  const chosen = options.find((option) => option.value === value);
   return (
     <Select
       name={name}
@@ -60,14 +69,21 @@ export function SelectField<T extends string>({
       }}
       className="group/select flex flex-col gap-1.5"
     >
-      <Label className="text-15 font-medium">{label}</Label>
+      <Label className="text-15 font-medium">
+        {label}
+        {optional && (
+          <span className="font-normal text-fg-muted"> (optional)</span>
+        )}
+      </Label>
       <AriaButton
         ref={buttonRef}
         className={`flex h-10 items-center justify-between gap-2 rounded-md border border-border-strong bg-surface px-4 text-start text-15 text-fg group-data-invalid/select:border-2 group-data-invalid/select:border-danger-icon group-data-invalid/select:px-3.75 ${FOCUS_RING}`}
       >
         <SelectValue className="flex min-w-0 items-center">
-          {({ selectedText }) => (
-            <span className="truncate">{selectedText}</span>
+          {({ selectedText, isPlaceholder }) => (
+            <span className="truncate">
+              {isPlaceholder ? "" : (chosen?.content ?? selectedText)}
+            </span>
           )}
         </SelectValue>
         <ChevronDown aria-hidden className="size-4 shrink-0 text-fg-muted" />
@@ -81,7 +97,7 @@ export function SelectField<T extends string>({
               id={option.value}
               textValue={option.label}
             >
-              {option.label}
+              {option.content ?? option.label}
             </Option>
           ))}
         </ListBox>

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  cvssVectorError,
   grantAccessFieldError,
   isNotConfidential,
   isRequestFailure,
@@ -436,6 +437,35 @@ describe("referenceAddressError", () => {
     ],
   ])("leaves %s to the form", (_, failure) => {
     expect(referenceAddressError(failure)).toBeUndefined();
+  });
+});
+
+describe("cvssVectorError", () => {
+  test.each(["3.1", "4.0"])(
+    "states the error of the vector field of 422 CVSS_INVALID_VECTOR, naming the version %s",
+    (version) => {
+      expect(
+        cvssVectorError(errorResponse(422, "CVSS_INVALID_VECTOR"), version),
+      ).toBe(
+        `Sentinel doesn't accept this vector. Enter a complete CVSS v${version} Base vector.`,
+      );
+    },
+  );
+
+  test.each([
+    ["the code with another status", errorResponse(400, "CVSS_INVALID_VECTOR")],
+    ["another 422 code", errorResponse(422, "VALIDATION_ERROR")],
+    [
+      "a 422 code that the pinned contract does not list",
+      errorResponse(422, "FICTIONAL_CODE"),
+    ],
+    ["a 422 without a code", errorResponse(422)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("leaves %s to the form", (_, failure) => {
+    expect(cvssVectorError(failure, "3.1")).toBeUndefined();
   });
 });
 
