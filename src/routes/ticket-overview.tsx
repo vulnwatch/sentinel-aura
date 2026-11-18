@@ -169,7 +169,7 @@ import {
 } from "../components/marked-value";
 import { Loading, UpdatingBar } from "../components/loading";
 import { useShowMessage, type MessageRecord } from "../components/message-area";
-import type { MessageTone } from "../components/message";
+import { Message, type MessageTone } from "../components/message";
 import {
   ConfirmationDialog,
   DialogErrorMessage,
@@ -2925,6 +2925,7 @@ function ScorePlace({ outcome, updating }: ScorePlaceProps) {
       {updating && outcome.kind !== "waiting" && <UpdatingBar />}
       {outcome.kind === "waiting" && <Loading inValue />}
       <output
+        aria-label="Base score"
         className={
           outcome.kind === "failed"
             ? "block"
@@ -3008,11 +3009,10 @@ const DEFAULT_VERSION_TEXT =
 // What Start from offers in Edit for the assessment as Sentinel stores it.
 const SAVED = "saved";
 
-// The input of a version, as the user enters it.
-interface VectorInput {
+// An option of Start from, with the vector that it takes.
+interface StartOption {
+  option: FieldOption<string>;
   vector: string;
-  // The option of Start from chosen, or null before one is.
-  start: string | null;
 }
 
 // What a submission that failed shows: the error of the vector, and the
@@ -3061,8 +3061,11 @@ function suseChangedText(
 // versions, the default one marked with star, on the default version when
 // SUSE has no assessment of it, otherwise on the other; the tab of a version
 // of which SUSE has one says so, and Add SUSE assessment is disabled there.
-// Each tab keeps its input. Start from takes the vector of an assessment of
-// another provider of the version, or in Edit the saved one; each metric is
+// Each tab keeps its input; after Add, the dialog stays open on another tab
+// that holds input while SUSE lacks its version, and says what was added.
+// Start from takes the vector of an assessment of another provider of the
+// version, or in Edit the saved one, and shows the assessment whose vector
+// the form holds, or nothing; each metric is
 // a segmented control, whose choice writes the vector, and a vector typed in
 // its field chooses them. Beside Start from, the score of the vector as
 // Sentinel calculates it (useVectorScore); a vector that Sentinel's read
@@ -3113,18 +3116,16 @@ function SuseAssessmentDialog({
     );
   });
   const saved = mode.kind === "edit" ? mode.assessment.vector_string : "";
+  // The vector of each version, as the user enters it.
   const [inputs, setInputs] = useState<
-    Readonly<Record<EditableVersion, VectorInput>>
-  >(() => {
-    const empty: VectorInput = { vector: "", start: null };
-    return {
-      "3.1": empty,
-      "4.0": empty,
-      ...(mode.kind === "edit"
-        ? { [mode.version]: { vector: saved, start: SAVED } }
-        : {}),
-    };
-  });
+    Readonly<Record<EditableVersion, string>>
+  >(() => ({
+    "3.1": "",
+    "4.0": "",
+    ...(mode.kind === "edit" ? { [mode.version]: saved } : {}),
+  }));
+  // What Add added while the dialog stays open on another tab.
+  const [added, setAdded] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   // A new object for each failure, so that each shows again.
@@ -3180,18 +3181,18 @@ function SuseAssessmentDialog({
     }
   }, [failure]);
 
-  const input = inputs[version];
+  const entered = inputs[version];
   const { prefix } = VERSION_FORMS[version];
   const taken = mode.kind === "add" && !toAdd.includes(version);
   const others = assessments.filter(
     (assessment) =>
       assessment.provider_name !== SUSE && assessment.cvss_version === version,
   );
-  const chosen = chosenOf(version, input.vector);
+  const chosen = chosenOf(version, entered);
   const changed =
     mode.kind === "edit"
-      ? input.vector !== saved
-      : EDITABLE_VERSIONS.some((item) => inputs[item].vector !== "");
+      ? entered !== saved
+      : EDITABLE_VERSIONS.some((item) => inputs[item] !== "");
   const close = () => {
     if (changed) {
       setDiscarding(true);
@@ -3199,29 +3200,34 @@ function SuseAssessmentDialog({
       onClose();
     }
   };
-  const change = (next: Partial<VectorInput>) => {
-    setInputs((current) => ({
-      ...current,
-      [version]: { ...current[version], ...next },
-    }));
+  const change = (vector: string) => {
+    setInputs((current) => ({ ...current, [version]: vector }));
     setFailure(NO_VECTOR_FAILURE);
   };
 
   // A choice of a metric writes the vector of the metrics chosen.
   const choose = (abbreviation: string, letter: string) => {
-    change({
-      vector: vectorOf(version, new Map([...chosen, [abbreviation, letter]])),
-    });
+    change(vectorOf(version, new Map([...chosen, [abbreviation, letter]])));
   };
 
-  const startOptions: FieldOption<string>[] = [
+  const starts: StartOption[] = [
     ...(mode.kind === "edit"
-      ? [assessmentOption(SAVED, "SUSE, as saved", mode.assessment)]
+      ? [
+          {
+            option: assessmentOption(SAVED, "SUSE, as saved", mode.assessment),
+            vector: saved,
+          },
+        ]
       : []),
-    ...others.map((other) =>
-      assessmentOption(other.id, other.provider_name, other),
-    ),
+    ...others.map((other) => ({
+      option: assessmentOption(other.id, other.provider_name, other),
+      vector: other.vector_string,
+    })),
   ];
+  // Start from shows the assessment whose vector the form holds, so that
+  // choosing an assessment always takes its vector.
+  const start =
+    starts.find((item) => item.vector === entered.trim())?.option.value ?? null;
 
   // The check of the vector before it is sent, or null.
   const check = (vector: string): string | null => {
@@ -3252,7 +3258,7 @@ function SuseAssessmentDialog({
     (chosenOf(version, vector).size < formMetrics(version).length
       ? "Choose every metric."
       : null);
-  const score = useVectorScore(version, input.vector, scoreReason);
+  const score = useVectorScore(version, entered, scoreReason);
   const vectorError = failure.field ?? score.rejection;
   if (uiFailure !== undefined) {
     throw uiFailure.error;
@@ -3305,7 +3311,7 @@ function SuseAssessmentDialog({
     if (busy || taken) {
       return;
     }
-    const vector = input.vector.trim();
+    const vector = entered.trim();
     const problem = check(vector);
     if (problem !== null) {
       setFailure({ field: problem, form: undefined });
@@ -3317,6 +3323,7 @@ function SuseAssessmentDialog({
     }
     setFailure(NO_VECTOR_FAILURE);
     setBusy(true);
+    let lacking = toAdd;
     if (mode.kind === "add") {
       // Sentinel replaces the assessment of the version of the vector, so
       // Add reads them again: another user may have added it meanwhile.
@@ -3325,7 +3332,8 @@ function SuseAssessmentDialog({
           ...getGetCveCvssAssessmentsQueryOptions(cveId),
           staleTime: 0,
         });
-        if (!versionsToAdd(current.data.assessments).includes(version)) {
+        lacking = versionsToAdd(current.data.assessments);
+        if (!lacking.includes(version)) {
           takenFound.current = true;
           setBusy(false);
           return;
@@ -3341,7 +3349,26 @@ function SuseAssessmentDialog({
         cveId,
         data: { vector_string: vector },
       });
-      onDone(suseChangedText(mode.kind, response), response.data);
+      const text = suseChangedText(mode.kind, response);
+      // After Add, the dialog stays open on another tab that holds input
+      // while SUSE lacks its version, so that the user adds it too.
+      const next =
+        mode.kind === "add"
+          ? EDITABLE_VERSIONS.find(
+              (item) =>
+                item !== version &&
+                inputs[item].trim() !== "" &&
+                lacking.includes(item),
+            )
+          : undefined;
+      if (next === undefined) {
+        onDone(text, response.data);
+      } else {
+        setInputs((current) => ({ ...current, [version]: "" }));
+        setAdded(text);
+        switched.current = true;
+        setVersion(next);
+      }
     } catch (error) {
       fail(error, false);
     }
@@ -3375,21 +3402,21 @@ function SuseAssessmentDialog({
           wide enough, otherwise one. */}
       <div className="@container">
         <div className="grid grid-cols-1 gap-y-5 @min-[52rem]:grid-cols-[max-content_max-content] @min-[52rem]:justify-between @min-[52rem]:gap-x-10">
-          {startOptions.length > 0 ? (
+          {starts.length > 0 ? (
             <div className="w-80 max-w-full">
               <SelectField
                 label="Start from"
                 name="start"
-                optional={mode.kind === "add"}
-                options={startOptions}
-                value={input.start}
-                onChange={(start) => {
-                  const from =
-                    start === SAVED
-                      ? saved
-                      : others.find((other) => other.id === start)
-                          ?.vector_string;
-                  change({ start, vector: from ?? "" });
+                optional
+                options={starts.map((item) => item.option)}
+                value={start}
+                onChange={(value) => {
+                  const from = starts.find(
+                    (item) => item.option.value === value,
+                  );
+                  if (from !== undefined) {
+                    change(from.vector);
+                  }
                 }}
               />
             </div>
@@ -3421,10 +3448,8 @@ function SuseAssessmentDialog({
         monospace
         autoComplete="off"
         description="The metrics write it, and a vector entered here chooses them."
-        value={input.vector}
-        onChange={(vector) => {
-          change({ vector });
-        }}
+        value={entered}
+        onChange={change}
         inputRef={vectorRef}
       />
     </Form>
@@ -3479,31 +3504,42 @@ function SuseAssessmentDialog({
       }
     >
       {mode.kind === "add" ? (
-        <DialogTabs
-          label="CVSS version"
-          tabs={EDITABLE_VERSIONS.map((item) => ({
-            id: item,
-            label: `CVSS ${cvssVersion(item)}`,
-            mark:
-              item === defaultVersion
-                ? {
-                    icon: Star,
-                    name: "the default version",
-                    text: DEFAULT_VERSION_TEXT,
-                  }
-                : undefined,
-          }))}
-          selected={version}
-          onSelect={(next) => {
-            switched.current = true;
-            setVersion(next);
-            setFailure(NO_VECTOR_FAILURE);
-          }}
-        >
-          <div ref={firstField} className="contents">
-            {form}
-          </div>
-        </DialogTabs>
+        <>
+          {/* What Add added while the dialog stays open, in a status region
+              that is there before it, so that it is announced. */}
+          <output className="block">
+            {added !== undefined && (
+              <div className="mb-3">
+                <Message tone="success">{added}</Message>
+              </div>
+            )}
+          </output>
+          <DialogTabs
+            label="CVSS version"
+            tabs={EDITABLE_VERSIONS.map((item) => ({
+              id: item,
+              label: `CVSS ${cvssVersion(item)}`,
+              mark:
+                item === defaultVersion
+                  ? {
+                      icon: Star,
+                      name: "the default version",
+                      text: DEFAULT_VERSION_TEXT,
+                    }
+                  : undefined,
+            }))}
+            selected={version}
+            onSelect={(next) => {
+              switched.current = true;
+              setVersion(next);
+              setFailure(NO_VECTOR_FAILURE);
+            }}
+          >
+            <div ref={firstField} className="contents">
+              {form}
+            </div>
+          </DialogTabs>
+        </>
       ) : (
         <div ref={firstField} className="contents">
           {form}
