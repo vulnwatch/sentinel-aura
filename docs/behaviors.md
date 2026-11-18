@@ -141,10 +141,12 @@ document that do not take effect yet.
   `docs/features/identity/rbac.md`, Permission Checking), so these reads keep
   current the elements that depend on the capabilities and on the assignment
   eligibility of the user (`docs/screen-map.md`, Roles; Capabilities of the
-  Signed-in User). An open dialog is the exception: it keeps offering the
-  actions that it offered as it opened, until it closes, so that the error of
-  a change that Sentinel refuses, such as a `403` after the user lost a role,
-  stays in it (Where Errors Appear); it offers them anew as it opens again.
+  Signed-in User). An open dialog, or an open popover of a field
+  (`docs/design-system.md`, Detail Screens), is the exception: it keeps
+  offering the actions that it offered as it opened, until it closes, so that
+  the error of a change that Sentinel refuses, such as a `403` after the user
+  lost a role, stays in it (Where Errors Appear); it offers them anew as it
+  opens again.
   While the error of a read of the signed-in user shows in place of the
   screen (Session State), it is read again only with Try again, as a screen's
   read whose error shows in place of content is (Loading).
@@ -221,8 +223,8 @@ message follows Wording.
 | A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again. Once a read of them has succeeded, a later read of them that fails keeps its marks, as a new read of the same data does, but its message names them, such as "The tracks that wait for you couldn't be updated.", so that it is not read as a failure of the data that they mark; a `403` or `404` removes them as for the first read |
 | A read that only gives a field its initial value or its limits, such as the first day of a period | Nowhere: the field stays usable without them, with its widest limits, and takes them once a later read of them succeeds; after a read of them has succeeded, a later read that fails keeps them |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
-| A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
-| Any other change | In the message area (Outcome of a Change) |
+| A change submitted from a form, a dialog, or the popover of a field (`docs/design-system.md`, Detail Screens) | In the form, the dialog, or the popover, which keeps the input: each field error at its field, and every other error in a message at the top of the form or of the popover |
+| Any other change, and the change of a popover that a change of layout closed while it was in progress (`docs/design-system.md`, Detail Screens) | In the message area (Outcome of a Change) |
 
 - An error in place of the content of a screen or of a part, and the message
   next to data that stays shown, offer an action that tries again after a
@@ -466,8 +468,9 @@ returns, whatever Sentinel guarantees for its field:
 - A change in progress marks the control that started it as busy, and that
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while
-  its change is in progress. Leaving the screen does not cancel a change
-  (Outcome of a Change).
+  its change is in progress, nor can the popover of a field, except by a
+  change of layout (`docs/design-system.md`, Detail Screens). Leaving the
+  screen does not cancel a change (Outcome of a Change).
 
 ### Empty States
 

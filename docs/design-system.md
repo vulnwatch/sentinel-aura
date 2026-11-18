@@ -1339,10 +1339,16 @@ states it, such as that of a Ticket; the other audit logs are tables
   the field in a popover below it, or above it where the window has no room
   below, moved toward the start where it would pass the end of the window,
   such as a search field with the matching users listed below it, in
-  the states of a combobox (Forms), whose choice applies at once and closes
-  the popover; or a dialog where the change needs more than one choice
-  (Dialogs). While the change is in progress, the pencil is busy
-  (`docs/behaviors.md`, Loading).
+  the states of a combobox (Forms), with 16 px of padding, as a popover that
+  holds fields (Menus, Popovers, and Tooltips), whose choice applies at once;
+  or a dialog where the change needs more than one choice (Dialogs). While
+  the change of a popover is in progress, its choice is busy and the popover
+  cannot be closed; once Sentinel confirms the change, the popover closes,
+  the focus returns to the pencil, and the result is announced
+  (`docs/behaviors.md`, Outcome of a Change), and when the change fails, the
+  popover stays open with its error, at its field or at its top
+  (`docs/behaviors.md`, Where Errors Appear). While the change is in
+  progress, the pencil is busy too (`docs/behaviors.md`, Loading).
 - Each part of the record, such as the CVSS assessments of a Ticket, is a
   section on the background of the page, below a `border` line: its
   level-two heading in `text-16`, weight 600, 24 px below the line, with its
@@ -1401,9 +1407,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   to its new place. While a dialog of such a section is open, the layout
   waits until it closes, so that its input and a change in progress stay;
   the dialog fits the window meanwhile (Dialogs). A popover of such a section
-  closes, as on a click outside it, and a control of the section whose
-  change is in progress stays busy in its new place (`docs/behaviors.md`,
-  Loading). When the element with the focus is in such a section, the focus
+  closes, as on a click outside it, also while its change is in progress,
+  whose outcome then shows as that of a change made outside a popover
+  (`docs/behaviors.md`, Where Errors Appear), and a control of the section
+  whose change is in progress stays busy in its new place
+  (`docs/behaviors.md`, Loading). When the element with the focus is in such a section, the focus
   moves to the screen's heading, which comes into view (`docs/behaviors.md`,
   Accessibility, Focus after an action); elsewhere it stays where it is, and
   the page keeps its scroll position as the browser adjusts it.
@@ -1490,6 +1498,17 @@ states it, such as that of a Ticket; the other audit logs are tables
   which its screen document names, shows the label that says why and is
   disabled. The user chosen shows in the field as the display name, `@`, and
   the username.
+- A combobox of users whose screen document lists its users at once, such as
+  the assignee picker of a Ticket, which lists only the users who can be the
+  assignee (`docs/screen-map.md`, Roles, Principles), reads the first 20 of
+  them, by username, as it opens, without a term, and lists them below the
+  field in the same form, with, below them, when more are there, how many,
+  such as "The first 20 of 63 users. Type to find the others.". With 1
+  character, the list stays the one without a term; from 2 characters, it
+  reads and lists the users that match, as above. A user whom its screen
+  document puts first, such as the signed-in user, comes first, with the
+  label that names them, such as You, in the list without a term among the
+  first 20, and in the users that match when they match.
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would
