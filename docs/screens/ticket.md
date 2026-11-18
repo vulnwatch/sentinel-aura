@@ -966,11 +966,11 @@ Self-Unassignment):
   `docs/features/identity/user-management.md`, List Users), as a combobox of
   users that lists its users at once (`docs/design-system.md`, Forms): the
   first 20 by username without a term, and those that match from 2 characters.
-  The signed-in user comes first, with the label You, apart from the other
-  users by a `border` line, when their assignment eligibility as the popover
-  opens admits the Ticket: `all` for a confidential Ticket, `all` or
-  `non_confidential` for every other Ticket; a value that the pinned contract
-  does not list admits none (States). The assignee is chosen, with `check`. The
+  The signed-in user comes first, with the label You, at once (States), apart
+  from the other users by a `border` line, when their assignment eligibility
+  as the popover opens admits the Ticket: `all` for a confidential Ticket,
+  `all` or `non_confidential` for every other Ticket; a value that the pinned
+  contract does not list admits none. The assignee is chosen, with `check`. The
   popover reads its users each time it opens, and for each term, and not when
   the tab returns to the foreground (`docs/behaviors.md`, Loading).
 - For a signed-in user who is the assignee, "Unassign yourself" comes first
