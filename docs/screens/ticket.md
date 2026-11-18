@@ -1209,11 +1209,11 @@ Access; Revoke Access):
   change that ends after the user left the tab shows in the message area,
   and so does its failure, with the message of its status
   (`docs/behaviors.md`, Default Presentation by Status; Retries and
-  Unconfirmed Changes), starting with the
-  Ticket, as a link to its screen, such as "SNTL-24: Access granted to Carol
-  White.", when the user is on another screen (`docs/behaviors.md`, Outcome
-  of a Change). Whatever the outcome, the screen then reads again the Ticket,
-  its access grants, the users who acted on it, and its audit log.
+  Unconfirmed Changes), starting with the Ticket, as a link to its screen,
+  such as "SNTL-24: Access granted to Carol White.", when the user is on
+  another screen (`docs/behaviors.md`, Outcome of a Change). Whatever the
+  outcome, the screen then reads again the Ticket, its access grants, the
+  users who acted on it, and its audit log.
 
 **Add reference**, Add Reference,
 `POST /api/v1/tickets/{ticket_id}/references`; **Edit**, Update Reference,
@@ -1301,7 +1301,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   a Change). When the reference that Sentinel returns after Add reference or
   Edit does not match the filters that apply, the table does not show it, so
   its outcome shows in the message area instead, once the same read has
-  arrived, such as "Reference “Fictional advisory” added." (same section).
+  arrived, such as "Reference “Fictional advisory” added." (same section);
+  the filters that apply as the change ends decide, also those that the user
+  chose while it was in progress.
   The outcome of a change that ends after the user left the tab shows in the
   message area too, and so does its failure, starting with the Ticket, as a
   link to its screen, such as "SNTL-42: Reference “Fictional advisory”

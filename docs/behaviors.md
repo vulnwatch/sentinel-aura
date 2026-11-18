@@ -705,8 +705,8 @@ so does the change, and closing or reloading the page shows no prompt for it
 (Links to Other Sites). A navigation that leaves the screen, or the tab of a
 detail screen that holds the dialog, takes the dialog away, and the outcome
 of the change shows where the user is (Loading; Outcome of a Change); one that
-stays there leaves the dialog open, which shows the outcome as it would
-without the navigation.
+stays there leaves the dialog open, which shows the outcome as after any
+change, in the state that the screen then shows, such as its new filters.
 
 ### Outcome of a Change
 

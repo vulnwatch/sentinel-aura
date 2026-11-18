@@ -1964,6 +1964,41 @@ describe("Add reference", () => {
     expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
   });
 
+  test("shows in the message area the outcome of a reference that the filters which the user chose during the change hide", async () => {
+    const response = later();
+    stubReferences({ add: () => response.promise });
+    const { router, screen } = await renderTab();
+    const dialog = await openAdd(screen);
+    await fieldOf(dialog, "Address").fill(ADDED.url);
+    await submit(dialog, "Add reference");
+    await expect
+      .element(dialog.getByRole("button", { name: "Add reference" }))
+      .toHaveAttribute("aria-disabled", "true");
+    router.history.push(`${PATH}?type=patch`);
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(`${PATH}?type=patch`);
+
+    response.resolve(referenceResponse(ADDED, 201));
+
+    await expect
+      .element(
+        screen.getByText("Reference “Fictional packaging issue” added.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+    expect(
+      backgroundBehind(
+        screen
+          .getByText("Reference “Fictional packaging issue” added.", {
+            exact: true,
+          })
+          .element(),
+      ),
+    ).toBe(MESSAGE_TONES.success);
+  });
+
   test("reads again the references, the Ticket, its audit log, and the users who acted on it after the change", async () => {
     const { spy } = stubReferences();
     const { screen } = await renderApp("/tickets/SNTL-12/audit-log");

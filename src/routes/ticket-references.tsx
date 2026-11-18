@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -938,6 +939,12 @@ function TicketReferences() {
     useGetTicket(ticketId, { query: { enabled: false } }).data !== undefined;
   const read = useListReferences(ticketId);
   const search = ticketReferencesRoute.useSearch();
+  // The filters that apply as a change ends, which the user can change while
+  // it is in progress, such as with back.
+  const applies = useRef(search);
+  useLayoutEffect(() => {
+    applies.current = search;
+  }, [search]);
   const navigate = useNavigate();
   // Whether the tab is still on the page as a change ends: once the user
   // has left it, the change shows its outcome itself (useChangeOutcome).
@@ -1161,7 +1168,7 @@ function TicketReferences() {
             // (docs/behaviors.md, Outcome of a Change), also once the next
             // read has arrived, after the dialog has given the page back to
             // assistive technologies.
-            outcome.after(text, !matches(reference, search));
+            outcome.after(text, !matches(reference, applies.current));
           }}
         />
       )}
