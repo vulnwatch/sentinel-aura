@@ -240,11 +240,33 @@ export async function withFixedDates<T>(
 // from one load of the dataset to the next, with the dates at their fixed
 // widths.
 export async function expectScreenshot(page: Page, name: string) {
-  await withFixedDates(page, () =>
-    expect(page).toHaveScreenshot(name, {
-      mask: [avatars(page), dateTimes(page)],
-    }),
-  );
+  await withFixedDates(page, async () => {
+    // A date that a popover open above it covers whole, such as one of the
+    // details of a record below the popover of a field, shows nothing of its
+    // own, and its mask would cover the popover instead. React Aria marks a
+    // popover with the side of its trigger on which it opens.
+    const dates = dateTimes(page);
+    const shown = await dates.evaluateAll((elements) => {
+      const popovers = [...document.querySelectorAll("[data-placement]")];
+      return elements.flatMap((element, index) => {
+        const box = element.getBoundingClientRect();
+        const covered = popovers.some((popover) => {
+          const over = popover.getBoundingClientRect();
+          return (
+            !popover.contains(element) &&
+            box.left >= over.left &&
+            box.right <= over.right &&
+            box.top >= over.top &&
+            box.bottom <= over.bottom
+          );
+        });
+        return covered ? [] : [index];
+      });
+    });
+    await expect(page).toHaveScreenshot(name, {
+      mask: [avatars(page), ...shown.map((index) => dates.nth(index))],
+    });
+  });
 }
 
 export const test = base.extend<{ pageChecks: undefined }>({

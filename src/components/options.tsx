@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, LoaderCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListBoxItem } from "react-aria-components";
 import { INSIDE_FOCUS_RING } from "./focus-ring";
@@ -21,14 +21,23 @@ interface OptionProps {
   textValue: string;
   // Its label, such as a user in the full form.
   children: ReactNode;
+  // Whether the change that choosing it started is in progress, where the
+  // choice applies at once (docs/design-system.md, Detail Screens).
+  isBusy?: boolean;
 }
 
 // An option, 36 px high with a 6 px radius and 10 px of side padding, in
 // text-15, on surface-hover under the pointer and on focus, with the focus
 // ring inside it on keyboard focus, and check at its end when it is chosen.
-// A disabled option shows at 60 % opacity, as a disabled button does
+// A disabled option shows at 60 % opacity, as a disabled button does, and a
+// busy one shows loader-circle, turning, at the end in place of check
 // (docs/design-system.md, Buttons and Links).
-export function Option({ id, textValue, children }: OptionProps) {
+export function Option({
+  id,
+  textValue,
+  children,
+  isBusy = false,
+}: OptionProps) {
   return (
     <ListBoxItem
       id={id}
@@ -36,10 +45,17 @@ export function Option({ id, textValue, children }: OptionProps) {
       className={`group flex min-h-9 cursor-default items-center justify-between gap-2 rounded-md px-2.5 text-15 text-fg data-disabled:opacity-60 data-focused:bg-surface-hover ${INSIDE_FOCUS_RING}`}
     >
       <span className="flex min-w-0 items-center">{children}</span>
-      <Check
-        aria-hidden
-        className="invisible size-4 shrink-0 group-data-selected:visible"
-      />
+      {isBusy ? (
+        <LoaderCircle
+          aria-hidden
+          className="size-4 shrink-0 animate-spin text-fg-muted motion-reduce:animate-none"
+        />
+      ) : (
+        <Check
+          aria-hidden
+          className="invisible size-4 shrink-0 group-data-selected:visible"
+        />
+      )}
     </ListBoxItem>
   );
 }

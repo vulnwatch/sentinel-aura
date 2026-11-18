@@ -28,29 +28,29 @@ import { placeMessage } from "./read-view";
 // docs/features/identity/user-management.md, List Users).
 
 // The shortest and the longest term that List Users searches.
-const SEARCH_MIN_LENGTH = 2;
-const SEARCH_MAX_LENGTH = 500;
+export const SEARCH_MIN_LENGTH = 2;
+export const SEARCH_MAX_LENGTH = 500;
 
 // The most users that the field lists for a term, the first by username;
 // a longer term narrows them.
-const LISTED_USERS = 20;
+export const LISTED_USERS = 20;
 
 // How long the field waits after the user stops typing before it reads the
 // users of the term, so that it does not read them for every character.
 export const SEARCH_DELAY_MS = 250;
 
-const COUNT = new Intl.NumberFormat("en-US");
+export const COUNT = new Intl.NumberFormat("en-US");
 
 // The length of a term as Sentinel counts it, in characters, rather than in
 // the UTF-16 code units of a string of JavaScript (Sentinel
 // docs/features/identity/user-management.md, List Users).
-function characters(term: string): number {
+export function characters(term: string): number {
   // oxlint-disable-next-line typescript/no-misused-spread -- the code points are what Sentinel counts, as Python's len does
   return [...term].length;
 }
 
 // The term of the field once the user has stopped typing for SEARCH_DELAY_MS.
-function useSettledTerm(input: string): string {
+export function useSettledTerm(input: string): string {
   const [term, setTerm] = useState(input);
   useEffect(() => {
     const timer = setTimeout(() => {

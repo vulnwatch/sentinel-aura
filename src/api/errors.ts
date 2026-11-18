@@ -229,6 +229,55 @@ export function grantAccessFieldError(
   return undefined;
 }
 
+// The messages of the user field of the assignee of a Ticket, at the field
+// (docs/screens/ticket.md, States): Sentinel knows no such user, the user is
+// inactive, or the user cannot be the assignee of the Ticket (Sentinel
+// docs/features/tickets/tickets.md, Assign Ticket; Reassignment).
+const MESSAGE_ASSIGNEE_NOT_FOUND = "Sentinel doesn't know this user.";
+const MESSAGE_ASSIGNEE_INACTIVE =
+  "This user is inactive, so they can't be the assignee.";
+const MESSAGE_ASSIGNEE_NOT_ELIGIBLE =
+  "This user can't be the assignee of this Ticket.";
+
+// The error of the user field of the assignee that a failure of Assign
+// Ticket states, or undefined for a failure of the popover: 404
+// USER_NOT_FOUND, 409 TICKET_ASSIGNEE_INACTIVE, and 400
+// TICKET_ASSIGNEE_NOT_ELIGIBLE.
+export function assigneeFieldError(
+  failure: RequestFailure,
+): string | undefined {
+  if (!(failure instanceof ApiError)) {
+    return undefined;
+  }
+  if (failure.status === 404 && failure.code === "USER_NOT_FOUND") {
+    return MESSAGE_ASSIGNEE_NOT_FOUND;
+  }
+  if (failure.status === 409 && failure.code === "TICKET_ASSIGNEE_INACTIVE") {
+    return MESSAGE_ASSIGNEE_INACTIVE;
+  }
+  if (
+    failure.status === 400 &&
+    failure.code === "TICKET_ASSIGNEE_NOT_ELIGIBLE"
+  ) {
+    return MESSAGE_ASSIGNEE_NOT_ELIGIBLE;
+  }
+  return undefined;
+}
+
+// Whether Assign Ticket failed because the assignee is not the one that the
+// screen showed: 409 TICKET_ASSIGNEE_CHANGED, or 409
+// TICKET_ASSIGNEE_NOT_CALLER, for a self-unassignment of a Ticket that
+// another user took meanwhile (Sentinel docs/features/tickets/tickets.md,
+// Reassignment, Expected assignee; Self-Unassignment).
+export function isAssigneeChanged(failure: RequestFailure): boolean {
+  return (
+    failure instanceof ApiError &&
+    failure.status === 409 &&
+    (failure.code === "TICKET_ASSIGNEE_CHANGED" ||
+      failure.code === "TICKET_ASSIGNEE_NOT_CALLER")
+  );
+}
+
 // The message of the address field of a reference that another reference of
 // the Ticket has, after normalization, 409 RESOURCE_CONFLICT (Sentinel
 // docs/features/tickets/ticket-references.md, Add Reference; Update

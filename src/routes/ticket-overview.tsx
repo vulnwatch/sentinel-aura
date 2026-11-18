@@ -35,11 +35,13 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { Form } from "react-aria-components";
+import { DialogTrigger, Form } from "react-aria-components";
 import { z } from "zod";
 import {
+  assigneeFieldError,
   cvssVectorError,
   grantAccessFieldError,
+  isAssigneeChanged,
   isNotConfidential,
   isRequestFailure,
   MESSAGE_INVALID_VALUE,
@@ -107,9 +109,11 @@ import type {
   SSVCAutomatable,
   SSVCExploitation,
   SSVCTechnicalImpact,
+  ListUsersAssignmentEligibilityItem,
   TicketAccessGrantDataResponse,
   TicketAccessGrantResponse,
   TicketDetail,
+  TicketDetailResponse,
   TrackDetail,
   UserDirectoryData,
 } from "../api/generated/model";
@@ -123,12 +127,15 @@ import {
   getListTicketAccessGrantsQueryKey,
   getListTicketsQueryKey,
   getRevokeTicketAccessMutationKey,
+  useAssignTicket,
+  useGetTicket,
   useGrantTicketAccess,
   useListTicketAccessGrants,
   useListTickets,
   useRevokeTicketAccess,
 } from "../api/generated/tickets";
 import { ApiError } from "../api/request";
+import { getListUsersQueryKey } from "../api/generated/users";
 import { AbsentValue } from "../components/absent-value";
 import { Button } from "../components/button";
 import {
@@ -162,6 +169,7 @@ import { ErrorInPlace } from "../components/error-in-place";
 import { FOCUS_RING } from "../components/focus-ring";
 import { GroupBand } from "../components/group-band";
 import { IconButton } from "../components/icon-button";
+import { InfoPopover } from "../components/info-popover";
 import { Label, LabelList } from "../components/label";
 import { Link } from "../components/link";
 import { Maintainers } from "../components/maintainers";
@@ -214,6 +222,7 @@ import {
 import { displayName, User, type UserFields } from "../components/user";
 import { UserComboBox } from "../components/user-combobox";
 import { UserGroup } from "../components/user-group";
+import { UserPicker } from "../components/user-picker";
 import { WebLink } from "../components/web-link";
 import { sameSearch } from "../search-params";
 import { useSignedInUser } from "../session-gate";
@@ -476,15 +485,373 @@ function Duplicates({ read }: DuplicatesProps) {
   );
 }
 
+// The statuses of a Ticket in which Sentinel accepts an assignment: Ignored
+// and Duplicated refuse it with 409 TICKET_NOT_MUTABLE, and a status that the
+// pinned contract does not list offers no action (Sentinel
+// docs/features/tickets/tickets.md, Reassignment; Sentinel
+// docs/api-spec.md, Manual-Zone Mutability Guard; docs/behaviors.md, Unknown
+// Values).
+const ASSIGNABLE_STATUSES = new Set<string>([
+  TicketStatusValue.new,
+  TicketStatusValue.analysis,
+  TicketStatusValue.analyzed,
+  TicketStatusValue.resolved,
+]);
+
+// The assignment eligibility of the users who can be the assignee of a
+// Ticket: all for a confidential Ticket, all and non_confidential for every
+// other Ticket (docs/screen-map.md, Roles, Principles; Sentinel
+// docs/features/identity/user-management.md, List Users).
+function eligibilityOf(
+  ticket: TicketDetail,
+): ListUsersAssignmentEligibilityItem[] {
+  return ticket.is_confidential ? ["all"] : ["all", "non_confidential"];
+}
+
+// Whether an assignment eligibility admits the Ticket; a value that the
+// pinned contract does not list admits none (docs/screen-map.md, Roles,
+// Principles).
+function admits(eligibility: string, ticket: TicketDetail): boolean {
+  return (
+    eligibility === "all" ||
+    (eligibility === "non_confidential" && !ticket.is_confidential)
+  );
+}
+
+// The outcome of an assignment, as Sentinel returns the Ticket after it,
+// such as "Assigned to Bob Wilson.", "Assigned to you.", or, after a
+// self-unassignment, "You're no longer the assignee.".
+function assignedText(
+  { data }: TicketDetailResponse,
+  signedInUser: string | undefined,
+): string {
+  if (data.assignee === null) {
+    return "You're no longer the assignee.";
+  }
+  return data.assignee.id === signedInUser
+    ? "Assigned to you."
+    : `Assigned to ${displayName(data.assignee)}.`;
+}
+
+// The choice whose assignment is in progress: a user's id, or "action" for a
+// self-unassignment (UserPicker).
+function choiceOf(userId: string | null): string {
+  return userId ?? "action";
+}
+
+// What the popover of the assignee shows at its top after a failure: that
+// the assignee changed meanwhile, from the instant of the failure, once the
+// read of the Ticket after it has arrived, or another error of the change.
+type AssigneeError =
+  { kind: "changed"; at: number } | { kind: "failure"; error: DialogError };
+
+// Reads again what an assignment affects: the Ticket, whose status it can
+// change, the work of a maintainer on it, the users who acted on it, its
+// audit log, and the reads of the Ticket list, the duplicates of the Ticket
+// among them (docs/behaviors.md, Outcome of a Change).
+function useReadAfterAssignment(ticketId: string) {
+  const client = useQueryClient();
+  return useCallback(() => {
+    for (const queryKey of [
+      getGetTicketQueryKey(ticketId),
+      getGetTicketPackageWorkQueryKey(ticketId),
+      getListTicketActorsQueryKey(ticketId),
+      getListTicketEventsQueryKey(ticketId),
+      getListTicketsQueryKey(),
+    ]) {
+      void client.invalidateQueries({ queryKey });
+    }
+  }, [client, ticketId]);
+}
+
+// The assignment of the Ticket from its details, Assign Ticket, PATCH
+// /api/v1/tickets/{ticket_id}/assignee, for a user who holds triage_ticket
+// (Sentinel docs/features/tickets/tickets.md, Assign Ticket): the state of
+// the pencil of the assignee and of its popover, which the screen keeps
+// across a change of layout, which moves the details (docs/design-system.md,
+// Detail Screens). The request carries as the expected assignee the one that
+// the screen shows. It asks for no confirmation (docs/behaviors.md,
+// Confirmation). While it is in progress, the pencil and the choice are busy,
+// and the popover cannot be closed; once Sentinel confirms it, the popover
+// closes, the focus returns to the pencil, and the outcome is announced once
+// the read of the Ticket after it arrives. A failure shows in the popover:
+// the errors of the user field at the field, which keeps the focus as the
+// choice leaves it there, after which the users are read again; an assignee that changed meanwhile, at the
+// top of the popover, with the assignee that the Ticket has now, once the
+// read of the Ticket after it arrives; every other failure at the top of the
+// popover, as a warning when Sentinel did not confirm the change. A change of
+// layout closes the popover, also while its change is in progress, whose
+// failure then shows in the message area; the outcome of an assignment that
+// ends after the user left the tab shows there too, naming the Ticket
+// (docs/behaviors.md, Where Errors Appear; Outcome of a Change). Whatever the
+// outcome, the screen then reads again what the assignment affects.
+function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
+  const ticketId = ticket.ticket_id;
+  const client = useQueryClient();
+  const user = useSignedInUser();
+  const showMessage = useShowMessage();
+  const mounted = useMounted();
+  const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
+  const ticketRead = useGetTicket(ticketId, { query: { enabled: false } });
+  const outcome = useOutcomeAfterRead(ticketRead, record);
+  const readAgain = useReadAfterAssignment(ticketId);
+  const assign = useAssignTicket({
+    mutation: useChangeOutcome(
+      record,
+      (response: TicketDetailResponse) => assignedText(response, user?.id),
+      readAgain,
+    ),
+  });
+  const [open, setOpen] = useState(false);
+  const openRef = useRef(open);
+  useLayoutEffect(() => {
+    openRef.current = open;
+  }, [open]);
+  // A change of layout closes the popover, as a click outside it does, so
+  // that it does not open again in the new place of the details.
+  const [layout, setLayout] = useState(twoColumns);
+  if (layout !== twoColumns) {
+    setLayout(twoColumns);
+    setOpen(false);
+  }
+  const [fieldError, setFieldError] = useState<string>();
+  const [error, setError] = useState<AssigneeError>();
+  // A failure of the UI itself, which the router shows (src/router.ts).
+  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
+  if (uiFailure !== undefined) {
+    throw uiFailure.error;
+  }
+  const pending = assign.isPending;
+  const capable =
+    user?.capabilities.includes("triage_ticket") === true &&
+    ASSIGNABLE_STATUSES.has(ticket.status);
+  const me =
+    user !== undefined && admits(user.assignment_eligibility, ticket)
+      ? user
+      : undefined;
+
+  const fail = (failure: unknown) => {
+    if (!isRequestFailure(failure)) {
+      setUiFailure({ error: failure });
+      return;
+    }
+    if (!openRef.current) {
+      const presentation = presentChangeFailure(failure);
+      if (presentation !== undefined) {
+        showMessage({
+          tone: presentation.unconfirmed ? "warning" : "danger",
+          text: presentation.message,
+          reference: presentation.reference,
+        });
+      }
+      return;
+    }
+    const atField =
+      assigneeFieldError(failure) ??
+      (validationErrorFields(failure, ["user_id"] as const).fields.length > 0
+        ? MESSAGE_INVALID_VALUE
+        : undefined);
+    if (atField !== undefined) {
+      setFieldError(atField);
+      void client.invalidateQueries({ queryKey: getListUsersQueryKey() });
+      return;
+    }
+    if (isAssigneeChanged(failure)) {
+      setError({ kind: "changed", at: Date.now() });
+      return;
+    }
+    const presentation = presentChangeFailure(failure);
+    if (presentation !== undefined) {
+      setError({
+        kind: "failure",
+        error: {
+          message: presentation.message,
+          reference: presentation.reference,
+          unconfirmed: presentation.unconfirmed,
+        },
+      });
+    }
+  };
+
+  const choose = async (choice: UserFields | null) => {
+    if (pending) {
+      return;
+    }
+    setFieldError(undefined);
+    setError(undefined);
+    try {
+      const response = await assign.mutateAsync({
+        ticketId,
+        data: {
+          user_id: choice?.id ?? null,
+          expected_assignee_id: ticket.assignee?.id ?? null,
+        },
+      });
+      if (mounted.current) {
+        setOpen(false);
+        outcome.after(assignedText(response, user?.id));
+      }
+    } catch (failure) {
+      if (mounted.current) {
+        fail(failure);
+      }
+    }
+  };
+
+  return {
+    // Whether the details show the pencil: to a user who holds
+    // triage_ticket, on a Ticket whose status admits an assignment, and while
+    // the popover is open or its change is in progress, which keep it as
+    // they started (docs/behaviors.md, The Signed-in User).
+    offered: capable || open || pending,
+    open,
+    setOpen: (next: boolean) => {
+      // The popover cannot be opened again or closed while its change is in
+      // progress (docs/behaviors.md, Loading).
+      if (pending) {
+        return;
+      }
+      setOpen(next);
+      if (next) {
+        setFieldError(undefined);
+        setError(undefined);
+      }
+    },
+    pending,
+    busy: pending ? choiceOf(assign.variables?.data.user_id ?? null) : null,
+    // The signed-in user, and the same user when their assignment eligibility
+    // admits the Ticket.
+    userId: user?.id,
+    me,
+    choose,
+    fieldError,
+    clearFieldError: () => {
+      setFieldError(undefined);
+    },
+    error,
+    ticketRead,
+    region: outcome.region,
+  };
+}
+
+type Assignee = ReturnType<typeof useAssignee>;
+
+interface AssigneeErrorMessageProps {
+  ticket: TicketDetail;
+  assignee: Assignee;
+}
+
+// The error at the top of the popover of the assignee: that the assignee
+// changed meanwhile, once the read of the Ticket after the failure has
+// arrived, with the assignee that the Ticket has now, such as "The assignee
+// changed meanwhile: the Ticket is now assigned to Bob Wilson.", or without it
+// when that read failed; or another error of the change. It takes the focus
+// as it shows (docs/behaviors.md, Accessibility, Announcements).
+function AssigneeErrorMessage({ ticket, assignee }: AssigneeErrorMessageProps) {
+  const { error, ticketRead, userId: me } = assignee;
+  let changed: string | undefined;
+  if (error?.kind === "changed") {
+    if (ticketRead.dataUpdatedAt >= error.at) {
+      let now = "unassigned";
+      if (ticket.assignee !== null) {
+        now =
+          ticket.assignee.id === me
+            ? "assigned to you"
+            : `assigned to ${displayName(ticket.assignee)}`;
+      }
+      changed = `The assignee changed meanwhile: the Ticket is now ${now}.`;
+    } else if (ticketRead.errorUpdatedAt >= error.at) {
+      changed = "The assignee changed meanwhile.";
+    }
+  }
+  const shown = useMemo<DialogError | undefined>(() => {
+    if (error?.kind === "failure") {
+      return error.error;
+    }
+    return changed === undefined
+      ? undefined
+      : { message: changed, reference: undefined, unconfirmed: false };
+  }, [error, changed]);
+  return shown === undefined ? null : <DialogErrorMessage error={shown} />;
+}
+
+interface AssigneeFieldProps {
+  ticket: TicketDetail;
+  assignee: Assignee;
+}
+
+// The assignee in the full form, or "Unassigned", and, for a user who can
+// change it, at the end of its line, the pencil, an icon button of 24 px with
+// pencil at 14 px, named "Edit assignee", which its tooltip shows, busy while
+// an assignment is in progress (docs/design-system.md, Detail Screens). It
+// opens the popover of the assignee below it, 320 px wide with 16 px of
+// padding, named "Assignee", whose search field takes the focus as it opens:
+// the error of the last assignment at its top, then the users who can be the assignee of the Ticket, the signed-in user
+// first with the label You when their own assignment eligibility admits the
+// Ticket, the assignee marked as chosen, and, for a signed-in user who is
+// the assignee, Unassign yourself before them, which returns the Ticket to
+// the queue (Sentinel docs/features/tickets/tickets.md, Self-Unassignment).
+// Choosing a user who is not the assignee assigns the Ticket at once.
+function AssigneeField({ ticket, assignee }: AssigneeFieldProps) {
+  const value =
+    ticket.assignee === null ? (
+      <AbsentValue name="Unassigned" />
+    ) : (
+      <User user={ticket.assignee} />
+    );
+  if (!assignee.offered) {
+    return value;
+  }
+  const { me } = assignee;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1">{value}</div>
+      <DialogTrigger isOpen={assignee.open} onOpenChange={assignee.setOpen}>
+        <IconButton
+          label="Edit assignee"
+          icon={Pencil}
+          size="inline"
+          isBusy={assignee.pending}
+          onPress={() => undefined}
+        />
+        <InfoPopover width="wide" label="Assignee">
+          <AssigneeErrorMessage ticket={ticket} assignee={assignee} />
+          <FirstFieldFocus>
+            <UserPicker
+              label="Search users"
+              eligibility={eligibilityOf(ticket)}
+              first={me === undefined ? undefined : { user: me, label: "You" }}
+              chosen={ticket.assignee?.id ?? null}
+              busy={assignee.busy}
+              action={
+                ticket.assignee !== null &&
+                ticket.assignee.id === assignee.userId
+                  ? "Unassign yourself"
+                  : undefined
+              }
+              onChoose={(choice) => {
+                void assignee.choose(choice === "action" ? null : choice);
+              }}
+              error={assignee.fieldError}
+              onInput={assignee.clearFieldError}
+            />
+          </FirstFieldFocus>
+        </InfoPopover>
+      </DialogTrigger>
+    </div>
+  );
+}
+
 interface DetailsProps {
   ticket: TicketDetail;
   now: number;
   duplicates: DuplicatesRead;
+  assignee: Assignee;
 }
 
-// The details of the Ticket, read-only, as a description list
-// (docs/design-system.md, Detail Screens): the assignee in the full form, or
-// "Unassigned"; the Coordinated Release Date while the Ticket is
+// The details of the Ticket, as a description list (docs/design-system.md,
+// Detail Screens): the assignee in the full form, or "Unassigned", with its
+// pencil for a user who can change it (AssigneeField); the Coordinated Release Date while the Ticket is
 // confidential, as an absent value without a date, and while it has one,
 // also after it became non-confidential (Sentinel
 // docs/features/tickets/tickets.md, Coordinated Release Date); the
@@ -493,16 +860,12 @@ interface DetailsProps {
 // "Last modified", as the Ticket list names it. Users show without a link
 // and a card while the UI has no screen User (docs/behaviors.md, Open
 // Decisions).
-function Details({ ticket, now, duplicates }: DetailsProps) {
+function Details({ ticket, now, duplicates, assignee }: DetailsProps) {
   return (
     <SideSection id={DETAILS_ANCHOR} heading="Details">
       <DescriptionList>
         <DescriptionItem term="Assignee">
-          {ticket.assignee === null ? (
-            <AbsentValue name="Unassigned" />
-          ) : (
-            <User user={ticket.assignee} />
-          )}
+          <AssigneeField ticket={ticket} assignee={assignee} />
         </DescriptionItem>
         {(ticket.is_confidential || ticket.coordinated_release_at !== null) && (
           <DescriptionItem term="Coordinated Release Date">
@@ -5285,6 +5648,7 @@ function TicketOverview() {
   const cvss = useCvssAssessments(ticket);
   const sources = useCveSources(ticket);
   const participants = useParticipantReads(ticket);
+  const assignee = useAssignee(ticket, twoColumns);
   // The reads of the tab, which useReadAgain reads again too.
   useAnchorTarget([
     duplicates,
@@ -5295,31 +5659,39 @@ function TicketOverview() {
     participants.grants,
   ]);
   return (
-    <DetailColumns
-      twoColumns={twoColumns}
-      leadingSections={
-        <Details ticket={ticket} now={now} duplicates={duplicates} />
-      }
-      trailingSections={
-        <>
-          {ticket.cve !== null && (
-            <SourcesSection
-              ticketId={ticket.ticket_id}
-              cveId={ticket.cve.cve_id}
-              read={sources}
-            />
-          )}
-          <ParticipantsSection ticket={ticket} reads={participants} />
-        </>
-      }
-      parts={
-        <>
-          <CvePart cve={ticket.cve} />
-          {ticket.cve !== null && <CvssPart read={cvss} ticket={ticket} />}
-          <PackagesPart ticket={ticket} now={now} yourWork={yourWork} />
-        </>
-      }
-    />
+    <>
+      <DetailColumns
+        twoColumns={twoColumns}
+        leadingSections={
+          <Details
+            ticket={ticket}
+            now={now}
+            duplicates={duplicates}
+            assignee={assignee}
+          />
+        }
+        trailingSections={
+          <>
+            {ticket.cve !== null && (
+              <SourcesSection
+                ticketId={ticket.ticket_id}
+                cveId={ticket.cve.cve_id}
+                read={sources}
+              />
+            )}
+            <ParticipantsSection ticket={ticket} reads={participants} />
+          </>
+        }
+        parts={
+          <>
+            <CvePart cve={ticket.cve} />
+            {ticket.cve !== null && <CvssPart read={cvss} ticket={ticket} />}
+            <PackagesPart ticket={ticket} now={now} yourWork={yourWork} />
+          </>
+        }
+      />
+      {assignee.region}
+    </>
   );
 }
 
