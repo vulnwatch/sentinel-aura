@@ -1616,7 +1616,7 @@ test.describe("for an analyst", () => {
   });
 
   test(
-    "adds the SUSE assessment of a CVE once Sentinel accepts its vector, which assigns the Ticket and moves it to Analysis, then edits it and deletes it, after which the focus moves to Add SUSE assessment",
+    "adds the SUSE assessment of a CVE once Sentinel accepts its vector, which assigns the Ticket and moves it to Analysis, staying open on the other version that holds input, then edits it and deletes it, after which the focus moves to Add SUSE assessment",
     { tag: "@changes-data" },
     async ({ page }) => {
       // SNTL-24, New and unassigned, without packages, whose CVE-2099-0022
@@ -1694,18 +1694,31 @@ test.describe("for an analyst", () => {
       await expect(
         dialog.getByText("Base score 6.2, Medium", { exact: true }),
       ).toBeAttached();
+      // The tab of v4.0, which SUSE lacks too, holds input as well.
+      const v40 = dialog.getByRole("tab", { name: "CVSS v4.0", exact: true });
+      await v40.click();
+      await metricValue(dialog, "Attack vector", "Network").click();
+      await expect(vector).toHaveValue("CVSS:4.0/AV:N");
+      await dialog
+        .getByRole("tab", { name: "CVSS v3.1, the default version" })
+        .click();
+      await expect(vector).toHaveValue(added);
       await submit.click();
 
-      // The reads after the change, of the assessments and of the Ticket,
-      // have arrived before anything is pointed at again.
-      await expect(dialog).toHaveCount(0);
+      // The dialog stays open on v4.0, whose input it keeps, and says what it
+      // added, with the focus on its action. The reads after the change, of
+      // the assessments and of the Ticket, have arrived before anything is
+      // pointed at again.
+      await expect(
+        dialog.getByText("SUSE assessment v3.1 added.", { exact: true }),
+      ).toBeVisible();
+      await expect(v40).toHaveAttribute("aria-selected", "true");
+      await expect(vector).toHaveValue("CVSS:4.0/AV:N");
+      await expect(submit).toBeFocused();
       const suse = assessmentRow(page, "SUSE", "3.1");
       await expect(
         suse.getByRole("button", { name: added, exact: true }),
       ).toBeVisible();
-      await expect(cvssStatus(page, "SUSE assessment v3.1 added.")).toHaveCount(
-        1,
-      );
       await expect(
         await valueOf(page, "CVSS assessments", "Severity"),
       ).toHaveText(
@@ -1713,6 +1726,16 @@ test.describe("for an analyst", () => {
       );
       await expect(status).toHaveText("Analysis");
       await expect(assignee).toHaveText("Alice Smith");
+      await expectAccessible(page);
+      await expectScreenshot(page, "ticket-cvss-add-stays-open.png");
+
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+      await page
+        .getByRole("dialog", { name: "Discard changes?" })
+        .getByRole("button", { name: "Discard", exact: true })
+        .click();
+
+      await expect(dialog).toHaveCount(0);
       // Add SUSE assessment stays, for v4.0, which SUSE lacks.
       await expect(add).toBeFocused();
 
