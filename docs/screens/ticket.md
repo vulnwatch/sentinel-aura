@@ -1039,8 +1039,9 @@ Delete SUSE CVSS Assessment):
     (`docs/design-system.md`, Forms) with its values from the one that
     lowers the Base score to the one that raises it, in both versions, such
     as "Physical, Local, Adjacent, Network" for Attack vector and "None, Low,
-    High" for Confidentiality, named by the metric, and by its group too where its name repeats in
-    the version, such as "Confidentiality Vulnerable system".
+    High" for Confidentiality, named by the metric, and by its group too
+    where its name repeats in the version, such as "Confidentiality
+    Vulnerable system".
     Below a metric whose choice differs from the assessments of other
     providers of the version shows their values, in the order of the API,
     such as "NVD: Network · GitHub: Local", which wraps within its column.
