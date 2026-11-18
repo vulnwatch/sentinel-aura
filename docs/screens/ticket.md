@@ -1107,8 +1107,9 @@ Delete SUSE CVSS Assessment):
   (`docs/design-system.md`, Dialogs): "SUSE assessment v3.1 added." shows
   above the tabs as a `success` message, which is announced, the tab of the
   version added drops its input and says that SUSE has it once the read
-  after the change arrives, and Add SUSE assessment holds the focus, also
-  after Enter in Vector, whose form leaves with its tab.
+  after the change arrives, and the action of the dialog, Add SUSE
+  assessment, holds the focus, also after Enter in Vector, whose form leaves
+  with its tab.
 - Delete asks for confirmation, since it cannot be undone in the UI and
   Sentinel calculates the severity and the eligibility again
   (`docs/behaviors.md`, Confirmation): "Delete SUSE assessment v3.1?",
