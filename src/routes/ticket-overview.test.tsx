@@ -1,4 +1,8 @@
-import { focusManager, type QueryClient } from "@tanstack/react-query";
+import {
+  focusManager,
+  MutationObserver as ChangeObserver,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { createMemoryHistory } from "@tanstack/react-router";
 import {
   CircleQuestionMark,
@@ -33,6 +37,7 @@ import type {
 } from "../api/generated/model";
 import { formatDateTime } from "../components/date-time";
 import { LOADING_DELAY_MS } from "../components/loading";
+import { getRevokeTicketAccessMutationKey } from "../api/generated/tickets";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { participantsOf, SCORE_DELAY_MS } from "./ticket-overview";
@@ -6619,6 +6624,40 @@ describe("the access grants", () => {
       .toBeVisible();
   });
 
+  test("ask before Close discards the user chosen while a revocation of another Ticket is in progress", async () => {
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse([CAROL]),
+      users: () => usersPage([fictionalDirectoryUser()]),
+    });
+    const { screen } = await renderParticipants();
+    // A revocation on another Ticket, which the user started there and which
+    // has not ended.
+    void new ChangeObserver<never, Error, { ticketId: string; user: string }>(
+      client,
+      {
+        mutationKey: getRevokeTicketAccessMutationKey(),
+        mutationFn: () => new Promise<never>(() => undefined),
+      },
+    ).mutate({ ticketId: "SNTL-13", user: CAROL.user.id });
+    await expect
+      .poll(() =>
+        client.isMutating({ mutationKey: getRevokeTicketAccessMutationKey() }),
+      )
+      .toBe(1);
+    await openAccessGrants(screen);
+    await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+
+    await accessGrantsDialog(screen)
+      .getByRole("button", { name: "Close" })
+      .click();
+
+    await expect
+      .element(screen.getByRole("dialog", { name: "Discard changes?" }))
+      .toBeVisible();
+  });
+
   test("ask nothing before a navigation while a revocation is in progress with a user chosen", async () => {
     const response = later();
     stubTicket({
@@ -11355,39 +11394,31 @@ describe("the SUSE assessment", () => {
       expect(requestsWith(spy, "POST")).toHaveLength(0);
     });
 
-    test.each([
-      ["the tab that it sends holds input", false],
-      ["another tab holds input too", true],
-    ])(
-      "is not asked before a navigation while Add is in progress and %s, and its outcome shows in the message area",
-      async (_, both) => {
-        const response = later();
-        stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
-          upsertSuse: () => response.promise,
-        });
-        const { router, screen } = await renderSuse();
-        const dialog = await openSuseAdd(screen);
-        if (both) {
-          await enterInBothTabs(dialog);
-        } else {
-          await vectorOf(dialog).fill(VECTOR_V31);
-        }
-        await submitOf(dialog).click();
-        await expect
-          .element(submitOf(dialog))
-          .toHaveAttribute("aria-disabled", "true");
+    // Add with input in the tab that it sends alone is "shows the outcome of
+    // Add in the message area" of a change that ends after the user left.
+    test("is not asked before a navigation while Add is in progress and another tab holds input, and its outcome shows in the message area", async () => {
+      const response = later();
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
+        upsertSuse: () => response.promise,
+      });
+      const { router, screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      await enterInBothTabs(dialog);
+      await submitOf(dialog).click();
+      await expect
+        .element(submitOf(dialog))
+        .toHaveAttribute("aria-disabled", "true");
 
-        await leaveForTickets(router, screen);
+      await leaveForTickets(router, screen);
 
-        expect(
-          screen.getByRole("dialog", { name: "Discard changes?" }).query(),
-        ).toBeNull();
-        response.resolve(suseResponse(SAVED_V31, 201));
-        await expect
-          .element(screen.getByText("SNTL-12: SUSE assessment v3.1 added."))
-          .toBeVisible();
-      },
-    );
+      expect(
+        screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+      ).toBeNull();
+      response.resolve(suseResponse(SAVED_V31, 201));
+      await expect
+        .element(screen.getByText("SNTL-12: SUSE assessment v3.1 added."))
+        .toBeVisible();
+    });
 
     test("is not asked in Edit once the vector is the saved one again", async () => {
       stubSuse(() => fictionalCvssAssessments());

@@ -1208,7 +1208,8 @@ Access; Revoke Access):
   rest of the page cannot hold while the dialog is open. The outcome of a
   change that ends after the user left the tab shows in the message area,
   and so does its failure, with the message of its status
-  (`docs/behaviors.md`, Default Presentation by Status), starting with the
+  (`docs/behaviors.md`, Default Presentation by Status; Retries and
+  Unconfirmed Changes), starting with the
   Ticket, as a link to its screen, such as "SNTL-24: Access granted to Carol
   White.", when the user is on another screen (`docs/behaviors.md`, Outcome
   of a Change). Whatever the outcome, the screen then reads again the Ticket,

@@ -700,12 +700,13 @@ A confirmation dialog:
 
 While a change of a form or a dialog is in progress, all of its input counts
 as submitted, that of another tab of the dialog included
-(`docs/design-system.md`, Dialogs): a navigation asks nothing and goes on,
-closing or reloading the page shows no prompt for it, and the change goes on.
-A navigation that leaves the screen takes the dialog away, and the outcome of
-the change shows on the screen that the user is on (Loading; Outcome of a
-Change); one that stays on the screen keeps the dialog open until the change
-ends.
+(`docs/design-system.md`, Dialogs): a navigation asks nothing and goes on, and
+so does the change, and closing or reloading the page shows no prompt for it
+(Links to Other Sites). A navigation that leaves the screen, or the tab of a
+detail screen that holds the dialog, takes the dialog away, and the outcome
+of the change shows where the user is (Loading; Outcome of a Change); one that
+stays there leaves the dialog open, which shows the outcome as it would
+without the navigation.
 
 ### Outcome of a Change
 

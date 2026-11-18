@@ -4949,10 +4949,17 @@ function AccessGrantsDialog({
   const readAgain = useReadAfterAccessChange(ticketId);
   const [busy, setBusy] = useState(false);
   const [chosen, setChosen] = useState(false);
-  // Whether a revocation is in progress, as one dialog of the access grants
-  // is open at a time.
+  // Whether a revocation of this Ticket is in progress, also one that an
+  // earlier opening of the dialog started.
   const revoking =
-    useIsMutating({ mutationKey: getRevokeTicketAccessMutationKey() }) > 0;
+    useIsMutating({
+      mutationKey: getRevokeTicketAccessMutationKey(),
+      predicate: ({ state: { variables } }) =>
+        typeof variables === "object" &&
+        variables !== null &&
+        "ticketId" in variables &&
+        variables.ticketId === ticketId,
+    }) > 0;
   const [announcement, setAnnouncement] = useState<Announcement>();
   const announce = useCallback((text: string) => {
     setAnnouncement((current) => ({ key: (current?.key ?? 0) + 1, text }));
