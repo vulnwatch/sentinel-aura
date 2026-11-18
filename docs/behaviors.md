@@ -141,10 +141,13 @@ document that do not take effect yet.
   `docs/features/identity/rbac.md`, Permission Checking), so these reads keep
   current the elements that depend on the capabilities and on the assignment
   eligibility of the user (`docs/screen-map.md`, Roles; Capabilities of the
-  Signed-in User). An open dialog is the exception: it keeps offering the
-  actions that it offered as it opened, until it closes, so that the error of
-  a change that Sentinel refuses, such as a `403` after the user lost a role,
-  stays in it (Where Errors Appear); it offers them anew as it opens again.
+  Signed-in User). An open dialog, or an open popover of a field
+  (`docs/design-system.md`, Detail Screens), is the exception: it keeps
+  offering the actions that it offered as it opened, until it closes, so that
+  the error of a change that Sentinel refuses, such as a `403` after the user
+  lost a role, stays in it (Where Errors Appear); it offers them anew as it
+  opens again. The pencil that opens such a popover stays as it was while the
+  popover is open and while its change is in progress.
   While the error of a read of the signed-in user shows in place of the
   screen (Session State), it is read again only with Try again, as a screen's
   read whose error shows in place of content is (Loading).
@@ -221,8 +224,8 @@ message follows Wording.
 | A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again. Once a read of them has succeeded, a later read of them that fails keeps its marks, as a new read of the same data does, but its message names them, such as "The tracks that wait for you couldn't be updated.", so that it is not read as a failure of the data that they mark; a `403` or `404` removes them as for the first read |
 | A read that only gives a field its initial value or its limits, such as the first day of a period | Nowhere: the field stays usable without them, with its widest limits, and takes them once a later read of them succeeds; after a read of them has succeeded, a later read that fails keeps them |
 | A new read of the same data that the screen shows, such as when the tab returns to the foreground | Next to that data, which stays shown: "This couldn't be updated." followed by the message of its status, which goes while the data is read again and returns if that read fails too; a `403` or `404` replaces the data as for the first read, because the user may no longer see it |
-| A change submitted from a form or a dialog | In the form or the dialog, which keeps the input: each field error at its field, and every other error in a message at the top of the form |
-| Any other change | In the message area (Outcome of a Change) |
+| A change submitted from a form, a dialog, or the popover of a field (`docs/design-system.md`, Detail Screens) | In the form, the dialog, or the popover, which keeps the input: each field error at its field, and every other error in a message at the top of the form or of the popover |
+| Any other change, and the change of a popover that a change of layout closed while it was in progress (`docs/design-system.md`, Detail Screens) | In the message area (Outcome of a Change) |
 
 - An error in place of the content of a screen or of a part, and the message
   next to data that stays shown, offer an action that tries again after a
@@ -248,7 +251,8 @@ message follows Wording.
   Sentinel counts them, by code point. A field error of a `VALIDATION_ERROR`
   response is matched to its field by its `loc` (`docs/conventions.md`, Error
   Codes and Messages) and says "This value isn't valid."; one that matches no
-  field is an error of the form.
+  field is an error of the form, or of the popover of a field
+  (`docs/design-system.md`, Detail Screens).
 
 ### Default Presentation by Status
 
@@ -260,7 +264,7 @@ message follows Wording.
 | `403` | "You don't have permission to do this.", or in place of the content of a screen "You don't have permission to view this page." The UI also reads the signed-in user again (The Signed-in User) |
 | `404` | Missing and Inaccessible Records |
 | `409` | "This can't be done in the current state, which may have changed. Check it and try again." |
-| `422` | The field errors of a `VALIDATION_ERROR` of a form as Where Errors Appear states; every other `422`, and a `VALIDATION_ERROR` of a request that no form sent, as `400` |
+| `422` | The field errors of a `VALIDATION_ERROR` of a form, or of the popover of a field, as Where Errors Appear states; every other `422`, and a `VALIDATION_ERROR` of a request that neither sent, as `400` |
 | `429` | "Too many attempts. Try again later." |
 | `500`, and a successful response that the UI cannot read | "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below." |
 | `502`, `503`, `504`, and every other `5xx` | "Sentinel isn't available right now. Try again later." |
@@ -446,11 +450,13 @@ returns, whatever Sentinel guarantees for its field:
   the error offers it, or until the screen opens again (Where Errors Appear).
   What a popover reads as it opens, such as the details of a CNA, is not read
   again while it stays open, even when the tab returns to the foreground
-  meanwhile (`docs/design-system.md`, Menus, Popovers, and Tooltips). Nor is
-  a read whose result Sentinel states depends only on what the read sends,
-  such as the Base score of a CVSS vector (Sentinel
-  `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score): the
-  screen reads it once for each input.
+  meanwhile (`docs/design-system.md`, Menus, Popovers, and Tooltips), except
+  after a change of the popover of a field that fails at its field, such as for
+  a user who can no longer be chosen, which shows that the read is out of date
+  (Outcome of a Change). Nor is a read whose result Sentinel states depends
+  only on what the read sends, such as the Base score of a CVSS vector
+  (Sentinel `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base
+  Score): the screen reads it once for each input.
 - A read at intervals is not sent while the tab is hidden, since the screen
   reads its data again when the tab returns. Once a read at intervals has
   failed, its error shows as Where Errors Appear states, and no further read
@@ -466,8 +472,9 @@ returns, whatever Sentinel guarantees for its field:
 - A change in progress marks the control that started it as busy, and that
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while
-  its change is in progress. Leaving the screen does not cancel a change
-  (Outcome of a Change).
+  its change is in progress, nor can the popover of a field, except by a
+  change of layout (`docs/design-system.md`, Detail Screens). Leaving the
+  screen does not cancel a change (Outcome of a Change).
 
 ### Empty States
 
@@ -804,9 +811,11 @@ also meets these requirements, which they cannot check:
   outcome of a change or the error of an action, is announced without moving
   the focus, and so is the end of an operation that a screen follows, once a
   read shows it (Outcome of a Change; 4.1.3 Status Messages). After a form is
-  submitted with errors, the focus moves to the message at the top of the
-  form, or, when only fields have errors, to the first of them (3.3.1 Error
-  Identification).
+  submitted with errors, or a change of the popover of a field fails
+  (`docs/design-system.md`, Detail Screens), the focus moves to the message at
+  the top of the form or of the popover, or, when only fields have errors, to
+  the first of them, which in the popover is the field that holds the focus
+  already (3.3.1 Error Identification).
 - **Reflow and text size.** Screens work at a width of 320 CSS pixels without
   scrolling in two directions, except data tables, which scroll within
   themselves, and text enlarged to 200 % loses no content or function (1.4.4

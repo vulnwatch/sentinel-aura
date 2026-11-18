@@ -1910,6 +1910,143 @@ test.describe("for an analyst", () => {
       .poll(async () => (await title.boundingBox())?.y ?? -1)
       .toBeGreaterThanOrEqual(0);
   });
+
+  test("opens the assignee picker of a Ticket from its details, with the users who can be its assignee, and closes it without a change", async ({
+    page,
+  }) => {
+    // SNTL-12 is assigned to asmith. The users who can be the assignee of a
+    // non-confidential Ticket are the active analysts who are not bot
+    // accounts: asmith, bwilson, and cwhite, a restricted analyst (Users;
+    // Tickets).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12");
+    await expectOverviewShown(page);
+    const pencil = part(page, "Details").getByRole("button", {
+      name: "Edit assignee",
+    });
+    const popover = page.getByRole("dialog", { name: "Assignee" });
+    const options = popover.getByRole("option");
+
+    await withFixedDates(page, async () => {
+      await pencil.click();
+      await expect(options).toHaveText([
+        "Unassign yourself",
+        "Alice Smith @asmithYou",
+        "Bob Wilson @bwilson",
+        "Carol White @cwhite",
+      ]);
+      await expectScreenshot(page, "ticket-assignee.png");
+    });
+    await expect(
+      popover.getByRole("searchbox", { name: "Search users" }),
+    ).toBeFocused();
+    await expect(
+      popover.getByRole("option", { name: "Alice Smith @asmith You" }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expectAccessible(page);
+
+    // From 2 characters, the users that match.
+    await page.keyboard.type("bo");
+    await expect(options).toHaveText(["Bob Wilson @bwilson"]);
+    await expectAccessible(page);
+
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await expect(popover).toHaveCount(0);
+    await expect(pencil).toBeFocused();
+    await expect(await detail(page, "Assignee")).toHaveText("Alice Smith");
+  });
+
+  test("lists only the users who can be the assignee of a confidential Ticket", async ({
+    page,
+  }) => {
+    // SNTL-18 is confidential: cwhite, a restricted analyst, sees it through
+    // an access grant but cannot be its assignee (Tickets; Embargoes).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-18");
+    await expectOverviewShown(page);
+
+    await part(page, "Details")
+      .getByRole("button", { name: "Edit assignee" })
+      .click();
+
+    await expect(
+      page.getByRole("dialog", { name: "Assignee" }).getByRole("option"),
+    ).toHaveText([
+      "Unassign yourself",
+      "Alice Smith @asmithYou",
+      "Bob Wilson @bwilson",
+    ]);
+    await expectAccessible(page);
+  });
+
+  test(
+    "assigns a New Ticket to the signed-in user, which moves it to Analysis, then returns it to the queue, then assigns it to a colleague",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-23, New and unassigned, which no other test of this project
+      // opens, so its assignee, its status, and its audit log are this
+      // test's own (Tickets). An assignment moves a New Ticket to Analysis;
+      // a self-unassignment keeps its status (Sentinel
+      // docs/features/tickets/tickets.md, Assign Ticket; Self-Unassignment).
+      await signIn(page, "asmith");
+      await page.goto("/tickets/SNTL-23");
+      await expectOverviewShown(page);
+      const assignee = await detail(page, "Assignee");
+      const status = await headingValue(page, "Status");
+      await expect(assignee).toHaveText("Unassigned");
+      await expect(status).toHaveText("New");
+      const pencil = part(page, "Details").getByRole("button", {
+        name: "Edit assignee",
+      });
+      const popover = page.getByRole("dialog", { name: "Assignee" });
+      const announced = (text: string) =>
+        page.getByRole("status").filter({ hasText: text });
+
+      // The popover of an unassigned Ticket offers no Unassign yourself.
+      await pencil.click();
+      await expect(popover.getByRole("option")).toHaveText([
+        "Alice Smith @asmithYou",
+        "Bob Wilson @bwilson",
+        "Carol White @cwhite",
+      ]);
+      await expectAccessible(page);
+      await popover
+        .getByRole("option", { name: "Alice Smith @asmith You" })
+        .click();
+
+      await expect(popover).toHaveCount(0);
+      await expect(pencil).toBeFocused();
+      await expect(assignee).toHaveText("Alice Smith");
+      await expect(status).toHaveText("Analysis");
+      await expect(announced("Assigned to you.")).toHaveCount(1);
+
+      await pencil.click();
+      await expect(popover.getByRole("option")).toHaveText([
+        "Unassign yourself",
+        "Alice Smith @asmithYou",
+        "Bob Wilson @bwilson",
+        "Carol White @cwhite",
+      ]);
+      await expectAccessible(page);
+      await popover.getByRole("option", { name: "Unassign yourself" }).click();
+
+      await expect(popover).toHaveCount(0);
+      await expect(assignee).toHaveText("Unassigned");
+      await expect(status).toHaveText("Analysis");
+      await expect(announced("You're no longer the assignee.")).toHaveCount(1);
+
+      await pencil.click();
+      await popover
+        .getByRole("option", { name: "Bob Wilson @bwilson" })
+        .click();
+
+      await expect(popover).toHaveCount(0);
+      await expect(assignee).toHaveText("Bob Wilson");
+      await expect(announced("Assigned to Bob Wilson.")).toHaveCount(1);
+      await expectAccessible(page);
+    },
+  );
 });
 
 // The timeline of the tab Audit log: the events of each day as a list.

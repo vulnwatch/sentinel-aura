@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
+  assigneeFieldError,
   cvssVectorError,
   grantAccessFieldError,
+  isAssigneeChanged,
   isNotConfidential,
   isRequestFailure,
   presentChangeFailure,
@@ -413,6 +415,68 @@ describe("grantAccessFieldError", () => {
     ],
   ])("leaves %s to the form", (_, failure) => {
     expect(grantAccessFieldError(failure)).toBeUndefined();
+  });
+});
+
+describe("assigneeFieldError", () => {
+  test.each([
+    [404, "USER_NOT_FOUND", "Sentinel doesn't know this user."],
+    [
+      409,
+      "TICKET_ASSIGNEE_INACTIVE",
+      "This user is inactive, so they can't be the assignee.",
+    ],
+    [
+      400,
+      "TICKET_ASSIGNEE_NOT_ELIGIBLE",
+      "This user can't be the assignee of this Ticket.",
+    ],
+  ])("states the error of the user field of %i %s", (status, code, message) => {
+    expect(assigneeFieldError(errorResponse(status, code))).toBe(message);
+  });
+
+  test.each([
+    ["the codes with another status", errorResponse(409, "USER_NOT_FOUND")],
+    ["another code", errorResponse(409, "TICKET_ASSIGNEE_CHANGED")],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(400, "FICTIONAL_CODE"),
+    ],
+    ["an error without a code", errorResponse(404)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("leaves %s to the popover", (_, failure) => {
+    expect(assigneeFieldError(failure)).toBeUndefined();
+  });
+});
+
+describe("isAssigneeChanged", () => {
+  test.each(["TICKET_ASSIGNEE_CHANGED", "TICKET_ASSIGNEE_NOT_CALLER"])(
+    "tells that the assignee changed from 409 %s",
+    (code) => {
+      expect(isAssigneeChanged(errorResponse(409, code))).toBe(true);
+    },
+  );
+
+  test.each([
+    [
+      "the code with another status",
+      errorResponse(400, "TICKET_ASSIGNEE_CHANGED"),
+    ],
+    ["another code", errorResponse(409, "TICKET_NOT_MUTABLE")],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+    ],
+    ["an error without a code", errorResponse(409)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("does not for %s", (_, failure) => {
+    expect(isAssigneeChanged(failure)).toBe(false);
   });
 });
 

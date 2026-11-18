@@ -1335,14 +1335,21 @@ states it, such as that of a Ticket; the other audit logs are tables
   Tooltips).
 - A field that a user can change shows that user a pencil at the end of its
   line: an icon button of 24 px with `pencil` at 14 px, named by its action,
-  such as "Edit assignee", which its tooltip shows. It opens the control of
-  the field in a popover below it, or above it where the window has no room
-  below, moved toward the start where it would pass the end of the window,
-  such as a search field with the matching users listed below it, in
-  the states of a combobox (Forms), whose choice applies at once and closes
-  the popover; or a dialog where the change needs more than one choice
-  (Dialogs). While the change is in progress, the pencil is busy
-  (`docs/behaviors.md`, Loading).
+  such as "Edit assignee", which its tooltip shows. It opens the control of the
+  field in a popover below it, or above it where the window has no room below,
+  moved toward the start where it would pass the end of the window, such as a
+  search field with the matching users listed below it, in the states of a
+  combobox (Forms), whose choice applies at once; or a dialog where the change
+  needs more than one choice (Dialogs). The popover is 320 px wide, as the
+  popover of a name, with 16 px of padding, as a popover that holds fields, and
+  its content scrolls within it in a window shorter than it is (Menus,
+  Popovers, and Tooltips). While the change of a popover is in progress, its
+  choice and the pencil are busy, and the popover cannot be closed
+  (`docs/behaviors.md`, Loading); once Sentinel confirms the change, the
+  popover closes, the focus returns to the pencil, and the result is announced
+  (`docs/behaviors.md`, Outcome of a Change), and when the change fails, the
+  popover stays open with its error, at its field or at its top
+  (`docs/behaviors.md`, Where Errors Appear).
 - Each part of the record, such as the CVSS assessments of a Ticket, is a
   section on the background of the page, below a `border` line: its
   level-two heading in `text-16`, weight 600, 24 px below the line, with its
@@ -1401,12 +1408,15 @@ states it, such as that of a Ticket; the other audit logs are tables
   to its new place. While a dialog of such a section is open, the layout
   waits until it closes, so that its input and a change in progress stay;
   the dialog fits the window meanwhile (Dialogs). A popover of such a section
-  closes, as on a click outside it, and a control of the section whose
-  change is in progress stays busy in its new place (`docs/behaviors.md`,
-  Loading). When the element with the focus is in such a section, the focus
-  moves to the screen's heading, which comes into view (`docs/behaviors.md`,
-  Accessibility, Focus after an action); elsewhere it stays where it is, and
-  the page keeps its scroll position as the browser adjusts it.
+  closes, as on a click outside it, also while its change is in progress,
+  whose outcome then shows as that of a change made outside a popover
+  (`docs/behaviors.md`, Where Errors Appear), and a control of the section
+  whose change is in progress stays busy in its new place
+  (`docs/behaviors.md`, Loading). When the element with the focus is in such
+  a section, the focus moves to the screen's heading, which comes into view
+  (`docs/behaviors.md`, Accessibility, Focus after an action); elsewhere it
+  stays where it is, and the page keeps its scroll position as the browser
+  adjusts it.
 - With two columns, while the page scrolls, the side column stays at the top
   of its place, 24 px below the message area and the compact heading, as it
   starts 24 px below the line of the tabs, until the end of the page comes
@@ -1490,6 +1500,21 @@ states it, such as that of a Ticket; the other audit logs are tables
   which its screen document names, shows the label that says why and is
   disabled. The user chosen shows in the field as the display name, `@`, and
   the username.
+- A combobox of users whose screen document lists its users at once, such as
+  the assignee picker of a Ticket, which lists only the users who can be the
+  assignee (`docs/screen-map.md`, Roles, Principles), reads the first 20 of
+  them, by username, as it opens, without a term, and lists them below the
+  field in the same form, with, below them, when more are there, how many,
+  such as "The first 20 of 63 users. Type to find the others.". With 1
+  character, the list stays the one without a term; from 2 characters, it
+  reads and lists the users that match, as above. A user whom its screen
+  document puts first, such as the signed-in user, comes first, with the
+  label that names them, such as You, apart from the other users by a
+  `border` line, as a group of options: without a term at once, as one of
+  the 20, also when they are not among the first 20 by username, and with a
+  term when they match. Its field keeps the term, and the user who holds the
+  field shows as the chosen item of a single selection, with `check` (Menus,
+  Popovers, and Tooltips).
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would
@@ -1625,16 +1650,19 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Menus, Popovers, and Tooltips
 
-- A menu or a popover is on `surface`, with a `border` line, an 8 px radius,
-  a shadow, and 4 px of padding, or 16 px for a popover that holds fields,
-  such as that of Filters (Lists), or 12 px for the calendar of a date field
-  (Forms). A menu item is 36 px high with a 6 px radius
-  and 10 px of side padding, its icon at 16 px in `fg-muted` before its label
-  in `text-15`, and `surface-hover` under the pointer and on focus, with the
-  focus ring inside it on keyboard focus (Focus and Motion). The
-  heading of a section is in `text-12`, weight 500, `fg-muted`; groups are
-  separated by `border` lines; and an item of a single selection ends with
-  `check` at 16 px when it is selected.
+- A menu or a popover is on `surface`, with a `border` line, an 8 px radius, a
+  shadow, and 4 px of padding, or 16 px for a popover that holds fields, such
+  as that of Filters (Lists), or 12 px for the calendar of a date field
+  (Forms). A menu item is 36 px high with a 6 px radius and 10 px of side
+  padding, its icon at 16 px in `fg-muted` before its label in `text-15`, and
+  `surface-hover` under the pointer and on focus, with the focus ring inside it
+  on keyboard focus (Focus and Motion). The heading of a section is in
+  `text-12`, weight 500, `fg-muted`; groups are separated by `border` lines;
+  and an item of a single selection ends with `check` at 16 px when it is
+  selected. While the change that an item started is in progress, the item is
+  busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
+  icon, as on a busy button (Buttons and Links), or, in an item of a single
+  selection, of its `check` at its end (`docs/behaviors.md`, Loading).
 - A tooltip inverts the colors of text: `surface` on an `fg` background, in
   `text-13`, weight 500, with a 6 px radius and 6 px by 10 px of padding; how
   many more values a "+N" has than its tooltip lists is in `muted-on-fg`
