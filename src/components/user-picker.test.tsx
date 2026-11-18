@@ -1,6 +1,6 @@
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { commands, page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import type { ListUsersAssignmentEligibilityItem } from "../api/generated/model";
@@ -8,7 +8,6 @@ import { createQueryClient } from "../query-client";
 import {
   errorResponse,
   fictionalDirectoryUser,
-  requestsTo,
   stubApi,
   urlOf,
   usersPage,
@@ -16,6 +15,12 @@ import {
 import type { UserFields } from "./user";
 import { SEARCH_DELAY_MS } from "./user-combobox";
 import { UserPicker } from "./user-picker";
+
+declare module "vitest/browser" {
+  interface BrowserCommands {
+    emulateReducedMotion: (reduce: boolean) => Promise<void>;
+  }
+}
 
 // A combobox of users that lists its users at once (docs/design-system.md,
 // Forms), which reads the directory (Sentinel
@@ -52,6 +57,7 @@ afterEach(async () => {
   client.clear();
   vi.restoreAllMocks();
   vi.useRealTimers();
+  await commands.emulateReducedMotion(false);
   await page.viewport(414, 896);
 });
 
@@ -89,6 +95,7 @@ async function renderPicker({
           busy={busy}
           action={action}
           onChoose={onChoose}
+          busyText="Changing the assignee."
           error={error}
           onInput={onInput}
         />
@@ -117,6 +124,32 @@ function optionNames(
     .getByRole("option")
     .elements()
     .map((option) => option.textContent);
+}
+
+// The names of the animations that run in an element and its descendants.
+function animationsIn(element: Element): string[] {
+  return element
+    .getAnimations({ subtree: true })
+    .map((animation) =>
+      animation instanceof CSSAnimation ? animation.animationName : "",
+    );
+}
+
+// The options of each group of the list, by their names.
+function groupsOf(
+  screen: Awaited<ReturnType<typeof renderPicker>>["screen"],
+): (string | null)[][] {
+  const groups = screen
+    .getByRole("listbox", { name: "Users" })
+    .element()
+    .querySelectorAll("section");
+  return [...groups]
+    .map((group) =>
+      [...group.querySelectorAll("[role=option]")].map(
+        (option) => option.textContent,
+      ),
+    )
+    .filter((names) => names.length > 0);
 }
 
 // Waits until the browser has rendered two more frames, after which the
@@ -164,31 +197,70 @@ test("puts the first user first with its label, also when the page does not hold
   const { screen } = await renderPicker({ first: ALICE });
 
   await expect
-    .element(screen.getByRole("option", { name: "Alice Smith @asmith You" }))
+    .element(
+      screen.getByText("The first 20 of 63 users. Type to find the others."),
+    )
     .toBeVisible();
   const names = optionNames(screen);
   expect(names).toHaveLength(20);
   expect(names[0]).toBe("Alice Smith @asmithYou");
   expect(names[19]).toBe("Fictional User 18 @user18");
-  await expect
-    .element(
-      screen.getByText("The first 20 of 63 users. Type to find the others."),
-    )
-    .toBeVisible();
 });
 
-test("lists the first user once when the page holds them", async () => {
+test("lists the first user once when the page holds them, in a group of their own before the others", async () => {
   stubApi(() => usersPage([ANA, ALICE, BOB]));
+  const { screen } = await renderPicker({ first: ALICE });
+
+  await expect
+    .element(screen.getByRole("option", { name: "Bob Wilson @bwilson" }))
+    .toBeVisible();
+  expect(groupsOf(screen)).toEqual([
+    ["Alice Smith @asmithYou"],
+    ["Ana Garcia @agarcia", "Bob Wilson @bwilson"],
+  ]);
+});
+
+test("shows the first user at once, while the others load", async () => {
+  let respond!: (response: Response) => void;
+  stubApi(
+    () =>
+      new Promise<Response>((resolve) => {
+        respond = resolve;
+      }),
+  );
   const { screen } = await renderPicker({ first: ALICE });
 
   await expect
     .element(screen.getByRole("option", { name: "Alice Smith @asmith You" }))
     .toBeVisible();
-  expect(optionNames(screen)).toEqual([
-    "Alice Smith @asmithYou",
-    "Ana Garcia @agarcia",
-    "Bob Wilson @bwilson",
-  ]);
+  await expect
+    .element(screen.getByRole("progressbar", { name: "Loading" }))
+    .toBeVisible();
+  respond(usersPage([ANA]));
+  await expect
+    .element(screen.getByRole("option", { name: "Ana Garcia @agarcia" }))
+    .toBeVisible();
+});
+
+test("shows the option that the arrow keys make current with the focus ring inside it", async () => {
+  stubApi(() => usersPage([ANA, BOB]));
+  const { screen, field } = await renderPicker();
+  const bob = screen.getByRole("option", { name: "Bob Wilson @bwilson" });
+  await expect.element(bob).toBeVisible();
+  field.element().focus();
+
+  await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+
+  await expect
+    .poll(() => getComputedStyle(bob.element()).outlineStyle)
+    .toBe("solid");
+  expect(getComputedStyle(bob.element()).outlineWidth).toBe("2px");
+  expect(
+    getComputedStyle(
+      screen.getByRole("option", { name: "Ana Garcia @agarcia" }).element(),
+    ).outlineStyle,
+  ).toBe("none");
+  await expect.element(field).toHaveFocus();
 });
 
 test("keeps the users without a term for 1 character, and reads those that match from 2 once the user stops typing", async () => {
@@ -351,6 +423,11 @@ test("offers its action before the users while no term is typed", async () => {
     "Ana Garcia @agarcia",
   ]);
 
+  expect(groupsOf(screen)).toEqual([
+    ["Unassign yourself"],
+    ["Ana Garcia @agarcia"],
+  ]);
+
   await action.click();
   expect(onChoose).toHaveBeenCalledExactlyOnceWith("action");
 
@@ -358,26 +435,66 @@ test("offers its action before the users while no term is typed", async () => {
   await expect.element(action).not.toBeInTheDocument();
 });
 
-test("marks the choice in progress busy, and takes no other choice meanwhile", async () => {
+test("marks the choice in progress busy, says so, and takes no other choice meanwhile", async () => {
   stubApi(() => usersPage([ANA, BOB]));
   const onChoose = vi.fn();
   const { screen } = await renderPicker({ busy: BOB.id, onChoose });
   const bob = screen.getByRole("option", { name: "Bob Wilson @bwilson" });
   await expect.element(bob).toBeVisible();
 
-  expect(bob.element().querySelector(".animate-spin")).not.toBeNull();
-  expect(
-    screen
-      .getByRole("option", { name: "Ana Garcia @agarcia" })
-      .element()
-      .querySelector(".animate-spin"),
-  ).toBeNull();
-  await screen.getByRole("option", { name: "Ana Garcia @agarcia" }).click();
+  expect(animationsIn(bob.element())).toEqual(["spin"]);
+  const ana = screen.getByRole("option", { name: "Ana Garcia @agarcia" });
+  expect(animationsIn(ana.element())).toEqual([]);
+  await expect
+    .element(screen.getByRole("status").getByText("Changing the assignee."))
+    .toBeVisible();
+  await ana.click();
   expect(onChoose).not.toHaveBeenCalled();
 });
 
+test("marks its action busy while it is in progress, its mark standing still under reduced motion", async () => {
+  stubApi(() => usersPage([ANA]));
+  const { screen } = await renderPicker({
+    action: "Unassign yourself",
+    busy: "action",
+  });
+  const action = screen.getByRole("option", { name: "Unassign yourself" });
+  await expect.element(action).toBeVisible();
+  expect(animationsIn(action.element())).toEqual(["spin"]);
+
+  await commands.emulateReducedMotion(true);
+
+  await expect.poll(() => animationsIn(action.element())).toEqual([]);
+});
+
+test("ends its search field with Clear search while it holds a term, which brings back the users without a term and the action, and takes at most 500 characters", async () => {
+  stubApi((request) =>
+    usersPage(request.query.get("search") === "bo" ? [BOB] : [ANA, BOB]),
+  );
+  const { screen, field } = await renderPicker({ action: "Unassign yourself" });
+  const clear = screen.getByRole("button", { name: "Clear search" });
+  await expect
+    .element(screen.getByRole("option", { name: "Ana Garcia @agarcia" }))
+    .toBeVisible();
+  expect(clear.query()).toBeNull();
+  await expect.element(field).toHaveAttribute("maxlength", "500");
+
+  await field.fill("bo");
+  await expect.poll(() => optionNames(screen)).toEqual(["Bob Wilson @bwilson"]);
+  await clear.click();
+
+  await expect.element(field).toHaveValue("");
+  await expect
+    .poll(() => optionNames(screen))
+    .toEqual([
+      "Unassign yourself",
+      "Ana Garcia @agarcia",
+      "Bob Wilson @bwilson",
+    ]);
+});
+
 test("shows its error at the field, and tells when the term changes", async () => {
-  const spy = stubApi(() => usersPage([]));
+  stubApi(() => usersPage([]));
   const onInput = vi.fn();
   const { screen, field } = await renderPicker({
     error: "This user can't be the assignee of this Ticket.",
@@ -396,7 +513,15 @@ test("shows its error at the field, and tells when the term changes", async () =
       "This user can't be the assignee of this Ticket.",
     );
 
+  // In a status region, so that it is announced while the field keeps the
+  // focus.
+  expect(
+    screen
+      .getByText("This user can't be the assignee of this Ticket.")
+      .element()
+      .closest("output"),
+  ).not.toBeNull();
+
   await field.fill("b");
   expect(onInput).toHaveBeenCalled();
-  expect(requestsTo(spy, USERS)).toBe(1);
 });

@@ -146,7 +146,8 @@ document that do not take effect yet.
   offering the actions that it offered as it opened, until it closes, so that
   the error of a change that Sentinel refuses, such as a `403` after the user
   lost a role, stays in it (Where Errors Appear); it offers them anew as it
-  opens again.
+  opens again. The pencil that opens such a popover stays as it was while the
+  popover is open and while its change is in progress.
   While the error of a read of the signed-in user shows in place of the
   screen (Session State), it is read again only with Try again, as a screen's
   read whose error shows in place of content is (Loading).
@@ -262,7 +263,7 @@ message follows Wording.
 | `403` | "You don't have permission to do this.", or in place of the content of a screen "You don't have permission to view this page." The UI also reads the signed-in user again (The Signed-in User) |
 | `404` | Missing and Inaccessible Records |
 | `409` | "This can't be done in the current state, which may have changed. Check it and try again." |
-| `422` | The field errors of a `VALIDATION_ERROR` of a form as Where Errors Appear states; every other `422`, and a `VALIDATION_ERROR` of a request that no form sent, as `400` |
+| `422` | The field errors of a `VALIDATION_ERROR` of a form, or of the popover of a field, as Where Errors Appear states; every other `422`, and a `VALIDATION_ERROR` of a request that neither sent, as `400` |
 | `429` | "Too many attempts. Try again later." |
 | `500`, and a successful response that the UI cannot read | "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below." |
 | `502`, `503`, `504`, and every other `5xx` | "Sentinel isn't available right now. Try again later." |
@@ -448,7 +449,10 @@ returns, whatever Sentinel guarantees for its field:
   the error offers it, or until the screen opens again (Where Errors Appear).
   What a popover reads as it opens, such as the details of a CNA, is not read
   again while it stays open, even when the tab returns to the foreground
-  meanwhile (`docs/design-system.md`, Menus, Popovers, and Tooltips). Nor is
+  meanwhile (`docs/design-system.md`, Menus, Popovers, and Tooltips), except
+  after a change of the popover of a field that fails at its field, such as
+  for a user who can no longer be chosen, which shows that the read is out of
+  date (Outcome of a Change). Nor is
   a read whose result Sentinel states depends only on what the read sends,
   such as the Base score of a CVSS vector (Sentinel
   `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score): the

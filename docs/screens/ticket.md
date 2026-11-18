@@ -15,21 +15,21 @@ The Ticket screen shows one Ticket: its heading row with its main values; in
 the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
 assessment an analyst who manages CVSS adds, edits, and deletes, its package
 tree, with the IBS requests of its tracks, its details, whose assignee an
-analyst changes, the sources of its CVE, which an analyst refetches, and who
-is involved in it, with the access
-grants of a confidential Ticket, which an analyst who manages confidentiality
-grants and revokes; in the tab References its references, the advisories,
-patches, and other pages of other sites that analysts read while they analyze
-it, which an analyst who manages references adds, edits, and deletes; in the
-tab Affected versions the versions of the software that its CVE affects, as
-the CVE record, its ADPs, GHSA, and OSV report them, which an analyst compares
-with the tracks of its packages; and in the tab Audit log its history, which
-an analyst searches and filters to reconstruct who changed what and what
-Sentinel did by itself. Vulnerability and restricted analysts work in it all
-day; every other user reads it, as a package maintainer does a Ticket of one
-of their packages that an analyst shares, and finds in its package tree the
-tracks that wait for them (`docs/screen-map.md`, Users and Frequent Tasks;
-Areas and Screens). It shows the same Ticket to every user who can see it.
+analyst changes, the sources of its CVE, which an analyst refetches, and who is
+involved in it, with the access grants of a confidential Ticket, which an
+analyst who manages confidentiality grants and revokes; in the tab References
+its references, the advisories, patches, and other pages of other sites that
+analysts read while they analyze it, which an analyst who manages references
+adds, edits, and deletes; in the tab Affected versions the versions of the
+software that its CVE affects, as the CVE record, its ADPs, GHSA, and OSV
+report them, which an analyst compares with the tracks of its packages; and in
+the tab Audit log its history, which an analyst searches and filters to
+reconstruct who changed what and what Sentinel did by itself. Vulnerability and
+restricted analysts work in it all day; every other user reads it, as a package
+maintainer does a Ticket of one of their packages that an analyst shares, and
+finds in its package tree the tracks that wait for them (`docs/screen-map.md`,
+Users and Frequent Tasks; Areas and Screens). It shows the same Ticket to every
+user who can see it.
 
 ## Access
 
@@ -39,16 +39,16 @@ package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
 The screen is the same for every user, except that it offers Refetch and Edit
-assignee to a user who holds `triage_ticket`, Add SUSE assessment, and Edit and Delete on the
-SUSE assessments, to a user who holds `manage_cvss`, Grant access and Revoke
-access to a user who holds `manage_confidentiality`, and Add reference, and
-Edit and Delete on the manual references, to a user who holds
-`manage_references` (Actions; Sentinel `docs/features/identity/rbac.md`,
-Endpoint Permission Map (CVEs; Tickets; Ticket References)), lists the
-signed-in user first among the users who can be the assignee when their
-assignment eligibility admits the Ticket (`docs/screen-map.md`, Roles,
-Principles), and marks for a
-maintainer the tracks that wait for them (Packages). Every user who sees a
+assignee to a user who holds `triage_ticket`, Add SUSE assessment, and Edit
+and Delete on the SUSE assessments, to a user who holds `manage_cvss`, Grant
+access and Revoke access to a user who holds `manage_confidentiality`, and
+Add reference, and Edit and Delete on the manual references, to a user who
+holds `manage_references` (Actions; Sentinel
+`docs/features/identity/rbac.md`, Endpoint Permission Map (CVEs; Tickets;
+Ticket References)), lists the signed-in user first among the users who can
+be the assignee when their assignment eligibility admits the Ticket
+(`docs/screen-map.md`, Roles, Principles), and marks for a maintainer the
+tracks that wait for them (Packages). Every user who sees a
 confidential Ticket sees its access grants, whatever their capabilities
 (Sentinel `docs/features/tickets/tickets.md`, List Access Grants).
 
@@ -966,15 +966,18 @@ Self-Unassignment):
   `docs/features/identity/user-management.md`, List Users), as a combobox of
   users that lists its users at once (`docs/design-system.md`, Forms): the
   first 20 by username without a term, and those that match from 2
-  characters. The signed-in user comes first, with the label You, when their
-  assignment eligibility admits the Ticket: `all` for a confidential Ticket,
+  characters. The signed-in user comes first, with the label You, apart
+  from the other users by a `border` line, when their assignment eligibility
+  as the popover opens admits the Ticket: `all` for a confidential Ticket,
   `all` or `non_confidential` for every other Ticket; a value that the
-  pinned contract does not list admits none. The assignee is chosen, with
-  `check`. The popover reads its users each time it opens, and for each
-  term, and not when the tab returns to the foreground
+  pinned contract does not list admits none. They show at once, from the
+  read of the signed-in user, while the other users load. The assignee is
+  chosen, with `check`. The popover reads its users each time it opens, and
+  for each term, and not when the tab returns to the foreground
   (`docs/behaviors.md`, Loading).
-- For a signed-in user who is the assignee, "Unassign yourself" comes before
-  the users while no term is typed, apart from them by a `border` line: it
+- For a signed-in user who is the assignee, "Unassign yourself" comes first
+  while no term is typed, before the signed-in user, in the group that the
+  line sets apart from the other users: it
   returns the Ticket to the queue of the unassigned Tickets, and no user
   unassigns another (Sentinel `docs/features/tickets/tickets.md`,
   Self-Unassignment).
@@ -983,25 +986,31 @@ Self-Unassignment):
   sends `null`; no assignment asks for confirmation, also one that replaces
   another user (`docs/behaviors.md`, Confirmation). Typing makes no user
   current, so that Enter chooses only a user that the arrow keys made
-  current. The request sends the `id` of the user as `user_id`, and, as
+  current. Choosing the assignee, which is already chosen, does nothing. The
+  request sends the `id` of the user as `user_id`, and, as
   `expected_assignee_id`, the `id` of the assignee that the screen shows, or
   `null` for a Ticket that it shows unassigned (Sentinel
   `docs/features/tickets/tickets.md`, Reassignment, Expected assignee).
-- While the assignment is in progress, the choice shows the loading
-  indicator in place of `check`, Edit assignee is busy, and the popover
-  cannot be closed (`docs/behaviors.md`, Loading). Once Sentinel confirms
-  it, the popover closes, the focus returns to Edit assignee, and once the
-  read of the Ticket after it arrives, the screen announces it: "Assigned to
-  Bob Wilson.", "Assigned to you.", or "You're no longer the assignee."
+- While the assignment is in progress, the choice shows `loader-circle` in
+  place of `check`, the popover says "Changing the assignee." in its status
+  region, takes no other choice, and cannot be closed, and Edit assignee is
+  busy (`docs/behaviors.md`, Loading). Once Sentinel confirms it, the
+  popover closes, the focus returns to Edit assignee, and once the read of
+  the Ticket after it arrives, whatever the outcome of that read, the screen
+  announces it, naming the assignee that Sentinel returns: "Assigned to Bob
+  Wilson.", "Assigned to you.", or "You're no longer the assignee."
   (`docs/behaviors.md`, Outcome of a Change).
 - An assignment can move a New Ticket to Analysis and change its status
-  (Sentinel `docs/features/tickets/tickets.md`, Assign Ticket). Whatever the
+  (Sentinel `docs/features/tickets/tickets.md`, Status Transitions;
+  Automatic Status Evaluation). Whatever the
   outcome, the screen then reads again the Ticket, the work of a maintainer
   on it, the users who acted on it, its audit log, and the reads of the
   Ticket list.
 - When a change of layout closes the popover while the assignment is in
-  progress, its failure shows in the message area, and its success is
-  announced as above (`docs/design-system.md`, Detail Screens). The outcome
+  progress, its failure shows in the message area in the presentation of its
+  status (`docs/behaviors.md`, Default Presentation by Status), and its
+  success is announced as above (`docs/design-system.md`, Detail Screens).
+  The outcome
   of an assignment that ends after the user left the tab shows in the
   message area, and so does its failure, starting with the Ticket, as a link
   to its screen, such as "SNTL-42: Assigned to Bob Wilson.", when the user is
@@ -1487,8 +1496,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   assignee."; and `400 TICKET_ASSIGNEE_NOT_ELIGIBLE`, "This user can't be the
   assignee of this Ticket." (Sentinel `docs/features/tickets/tickets.md`,
   Assign Ticket; Reassignment, Target constraint); a field error of a
-  `VALIDATION_ERROR` for `user_id` also shows there. After each, the popover
-  reads its users again, and the error goes once the term changes. It handles
+  `VALIDATION_ERROR` for `user_id` also shows there. Each is announced, and
+  after each, the popover reads its users again (`docs/behaviors.md`,
+  Loading), and the error goes once the term changes. It handles
   two more codes specifically, at the top of the popover: `409
   TICKET_ASSIGNEE_CHANGED`, for an assignee that changed since the screen
   read the Ticket, and `409 TICKET_ASSIGNEE_NOT_CALLER`, for a Ticket that
@@ -1496,7 +1506,8 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Expected assignee; Self-Unassignment): once the read of the Ticket after
   it arrives, "The assignee changed meanwhile: the Ticket is now assigned to
   Bob Wilson.", "… assigned to you.", or "… unassigned.", and the popover
-  then marks the assignee that the Ticket now has; or "The assignee changed
+  then marks the assignee that the Ticket now has, and offers Unassign
+  yourself only when it is the signed-in user; or "The assignee changed
   meanwhile." when that read fails. Every other failure shows at the top of
   the popover in the presentation of its status, as a warning when Sentinel
   did not confirm the change (`docs/behaviors.md`, Default Presentation by
@@ -1600,10 +1611,10 @@ Ignored and Duplicated included, so the screen offers it whatever the status
 
 - `docs/screen-map.md` — Users and Frequent Tasks; Areas and Screens; Links
   Between Areas; Browser History; Contract URLs; Roles
-- `docs/behaviors.md` — Errors; Invalid Search Parameters; Unknown Values;
-  Links to Other Sites; Loading and Empty States; Dates and Times;
-  Confirmations and Outcomes; Accessibility; Wording; Representation of a
-  User
+- `docs/behaviors.md` — Session (The Signed-in User); Errors; Invalid Search
+  Parameters; Unknown Values; Links to Other Sites; Loading and Empty States;
+  Dates and Times; Confirmations and Outcomes; Accessibility; Wording;
+  Representation of a User
 - `docs/design-system.md` — Tones; Type Scale; Font; Focus and Motion; Main
   Content; Values; Severity; Deadline Badge; Track Milestones; Labels; Other
   Values; Buttons and Links; Lists; Tables; Timelines; Detail Screens; Forms;

@@ -1339,9 +1339,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   the field in a popover below it, or above it where the window has no room
   below, moved toward the start where it would pass the end of the window,
   such as a search field with the matching users listed below it, in
-  the states of a combobox (Forms), with 16 px of padding, as a popover that
-  holds fields (Menus, Popovers, and Tooltips), whose choice applies at once;
-  or a dialog where the change needs more than one choice (Dialogs). While
+  the states of a combobox (Forms), 320 px wide, as the popover of a name,
+  with 16 px of padding, as a popover that holds fields, and its content
+  scrolling within it in a window shorter than it is (Menus, Popovers, and
+  Tooltips), whose choice applies at once; or a dialog where the change
+  needs more than one choice (Dialogs). While
   the change of a popover is in progress, its choice is busy and the popover
   cannot be closed; once Sentinel confirms the change, the popover closes,
   the focus returns to the pencil, and the result is announced
@@ -1411,10 +1413,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   whose outcome then shows as that of a change made outside a popover
   (`docs/behaviors.md`, Where Errors Appear), and a control of the section
   whose change is in progress stays busy in its new place
-  (`docs/behaviors.md`, Loading). When the element with the focus is in such a section, the focus
-  moves to the screen's heading, which comes into view (`docs/behaviors.md`,
-  Accessibility, Focus after an action); elsewhere it stays where it is, and
-  the page keeps its scroll position as the browser adjusts it.
+  (`docs/behaviors.md`, Loading). When the element with the focus is in such
+  a section, the focus moves to the screen's heading, which comes into view
+  (`docs/behaviors.md`, Accessibility, Focus after an action); elsewhere it
+  stays where it is, and the page keeps its scroll position as the browser
+  adjusts it.
 - With two columns, while the page scrolls, the side column stays at the top
   of its place, 24 px below the message area and the compact heading, as it
   starts 24 px below the line of the tabs, until the end of the page comes
@@ -1507,8 +1510,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   character, the list stays the one without a term; from 2 characters, it
   reads and lists the users that match, as above. A user whom its screen
   document puts first, such as the signed-in user, comes first, with the
-  label that names them, such as You, in the list without a term among the
-  first 20, and in the users that match when they match.
+  label that names them, such as You, apart from the other users by a
+  `border` line, as a group of options: without a term at once, as one of
+  the 20, also when they are not among the first 20 by username, and with a
+  term when they match. Its field keeps the term, and the user who holds the
+  field shows as the chosen item of a single selection, with `check` (Menus,
+  Popovers, and Tooltips).
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would

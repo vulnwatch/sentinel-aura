@@ -1,7 +1,7 @@
 import { Check, LoaderCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListBoxItem } from "react-aria-components";
-import { INSIDE_FOCUS_RING } from "./focus-ring";
+import { ITEM_FOCUS_RING } from "./focus-ring";
 import { displayName, User, type UserFields } from "./user";
 
 // The options of a select or a combobox, which open as a menu below their
@@ -42,7 +42,7 @@ export function Option({
     <ListBoxItem
       id={id}
       textValue={textValue}
-      className={`group flex min-h-9 cursor-default items-center justify-between gap-2 rounded-md px-2.5 text-15 text-fg data-disabled:opacity-60 data-focused:bg-surface-hover ${INSIDE_FOCUS_RING}`}
+      className={`group flex min-h-9 cursor-default items-center justify-between gap-2 rounded-md px-2.5 text-15 text-fg data-disabled:opacity-60 data-focused:bg-surface-hover ${ITEM_FOCUS_RING}`}
     >
       <span className="flex min-w-0 items-center">{children}</span>
       {isBusy ? (

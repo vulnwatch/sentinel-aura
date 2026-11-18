@@ -1957,7 +1957,7 @@ test.describe("for an analyst", () => {
     await expect(await detail(page, "Assignee")).toHaveText("Alice Smith");
   });
 
-  test("lists only the users who can be the assignee of a confidential Ticket, and offers no pencil on an Ignored one", async ({
+  test("lists only the users who can be the assignee of a confidential Ticket", async ({
     page,
   }) => {
     // SNTL-18 is confidential: cwhite, a restricted analyst, sees it through
@@ -1977,13 +1977,7 @@ test.describe("for an analyst", () => {
       "Alice Smith @asmithYou",
       "Bob Wilson @bwilson",
     ]);
-
-    // SNTL-17 is Ignored, so its assignee does not change.
-    await page.goto("/tickets/SNTL-17");
-    await expectOverviewShown(page);
-    await expect(
-      part(page, "Details").getByRole("button", { name: "Edit assignee" }),
-    ).toHaveCount(0);
+    await expectAccessible(page);
   });
 
   test(
@@ -2009,7 +2003,14 @@ test.describe("for an analyst", () => {
       const announced = (text: string) =>
         page.getByRole("status").filter({ hasText: text });
 
+      // The popover of an unassigned Ticket offers no Unassign yourself.
       await pencil.click();
+      await expect(popover.getByRole("option")).toHaveText([
+        "Alice Smith @asmithYou",
+        "Bob Wilson @bwilson",
+        "Carol White @cwhite",
+      ]);
+      await expectAccessible(page);
       await popover
         .getByRole("option", { name: "Alice Smith @asmith You" })
         .click();
@@ -2021,6 +2022,10 @@ test.describe("for an analyst", () => {
       await expect(announced("Assigned to you.")).toHaveCount(1);
 
       await pencil.click();
+      await expect(
+        popover.getByRole("option", { name: "Unassign yourself" }),
+      ).toBeVisible();
+      await expectAccessible(page);
       await popover.getByRole("option", { name: "Unassign yourself" }).click();
 
       await expect(popover).toHaveCount(0);
@@ -3299,19 +3304,6 @@ test("shows a maintainer the access grants of a confidential Ticket, without Gra
   await expect(dialog.getByRole("combobox")).toHaveCount(0);
   await expect(
     dialog.getByRole("button", { name: /^Revoke access/ }),
-  ).toHaveCount(0);
-});
-
-test("offers a reader no pencil of the assignee", async ({ page }) => {
-  // dbrown holds no role, so no triage_ticket (Users).
-  await signIn(page, "dbrown");
-
-  await page.goto("/tickets/SNTL-12");
-  await expectOverviewShown(page);
-
-  await expect(await detail(page, "Assignee")).toHaveText("Alice Smith");
-  await expect(
-    part(page, "Details").getByRole("button", { name: "Edit assignee" }),
   ).toHaveCount(0);
 });
 

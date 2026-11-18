@@ -7227,6 +7227,18 @@ describe("the assignee", () => {
     await expect.element(assigneeValue(screen)).toHaveTextContent("Bob Wilson");
   });
 
+  test.each(["new", "analysis", "analyzed", "resolved"] as const)(
+    "has a pencil on a Ticket in %s",
+    async (status) => {
+      stubTicket({
+        ticket: () => ticketResponse(fictionalTicketDetail({ status })),
+      });
+      const { screen } = await renderDetails();
+
+      await expect.element(editAssignee(screen)).toBeVisible();
+    },
+  );
+
   test.each<[string, Partial<Stub>]>([
     ["without triage_ticket", { user: FICTIONAL_USER }],
     [
@@ -7307,26 +7319,56 @@ describe("the assignee", () => {
     await expect.element(editAssignee(screen)).toHaveFocus();
   });
 
-  test.each<[string, string]>([
-    ["can be the assignee of no confidential Ticket", "non_confidential"],
-    ["has an eligibility that the pinned contract does not list", "fictional"],
+  test.each<[string, string, boolean, string[]]>([
+    [
+      "all, on a confidential Ticket",
+      "all",
+      true,
+      ["Alice Smith @asmithYou", "Bob Wilson @bwilson"],
+    ],
+    [
+      "non_confidential, on a non-confidential Ticket",
+      "non_confidential",
+      false,
+      ["Alice Smith @asmithYou", "Bob Wilson @bwilson"],
+    ],
+    [
+      "non_confidential, on a confidential Ticket",
+      "non_confidential",
+      true,
+      ["Bob Wilson @bwilson"],
+    ],
+    [
+      "a value that the pinned contract does not list, on a non-confidential Ticket",
+      "fictional",
+      false,
+      ["Bob Wilson @bwilson"],
+    ],
   ])(
-    "lists the users who can be the assignee of a confidential Ticket, without the signed-in user first when they %s",
-    async (_, eligibility) => {
+    "puts the signed-in user first by their assignment eligibility, %s, among the users of the eligibility that the Ticket admits",
+    async (_, eligibility, confidential, options) => {
       const spy = stubTicket({
         user: {
           data: { ...OTHER_USER.data, assignment_eligibility: eligibility },
         },
-        ticket: () => confidentialTicket({ assignee: BOB }),
+        ticket: () =>
+          ticketResponse(
+            fictionalTicketDetail({
+              is_confidential: confidential,
+              assignee: BOB,
+            }),
+          ),
         users: () => usersPage([BOB_ENTRY]),
       });
       const { screen } = await renderDetails();
 
       await openAssignee(screen, "Bob Wilson @bwilson");
 
-      expect(assigneeOptions(screen)).toEqual(["Bob Wilson @bwilson"]);
+      expect(assigneeOptions(screen)).toEqual(options);
       expect(directoryReads(spy)).toEqual([
-        "?assignment_eligibility=all&per_page=20",
+        confidential
+          ? "?assignment_eligibility=all&per_page=20"
+          : "?assignment_eligibility=all&assignment_eligibility=non_confidential&per_page=20",
       ]);
     },
   );
@@ -7373,10 +7415,8 @@ describe("the assignee", () => {
       { user_id: BOB.id, expected_assignee_id: null },
     ]);
     expect(
-      userOption(screen, "Bob Wilson @bwilson")
-        .element()
-        .querySelector(".animate-spin"),
-    ).not.toBeNull();
+      animationsIn(userOption(screen, "Bob Wilson @bwilson").element()),
+    ).toEqual(["spin"]);
     await userEvent.keyboard("{Escape}");
     interactOutside();
     await nextFrames();
@@ -7513,10 +7553,17 @@ describe("the assignee", () => {
     },
   );
 
-  test.each(["TICKET_ASSIGNEE_CHANGED", "TICKET_ASSIGNEE_NOT_CALLER"])(
+  test.each<[string, TicketDetail["assignee"], string]>([
+    // Another user took the unassigned Ticket before the user chose Ana.
+    ["TICKET_ASSIGNEE_CHANGED", null, "Ana Garcia @agarcia"],
+    // Another user took the Ticket before the signed-in user, its assignee,
+    // unassigned themselves (Sentinel docs/features/tickets/tickets.md,
+    // Self-Unassignment).
+    ["TICKET_ASSIGNEE_NOT_CALLER", ALICE, "Unassign yourself"],
+  ])(
     "says at the top of the popover who the assignee is now after 409 %s, once the Ticket is read again",
-    async (code) => {
-      let assignee: TicketDetail["assignee"] = null;
+    async (code, before, choice) => {
+      let assignee = before;
       stubTicket({
         ticket: () => assignedTo(assignee),
         users: () => usersPage([ANA_ENTRY, BOB_ENTRY]),
@@ -7526,9 +7573,9 @@ describe("the assignee", () => {
         },
       });
       const { screen } = await renderDetails();
-      await openAssignee(screen, "Ana Garcia @agarcia");
+      await openAssignee(screen, choice);
 
-      await userOption(screen, "Ana Garcia @agarcia").click();
+      await userOption(screen, choice).click();
 
       const message = assigneePopover(screen).getByText(
         "The assignee changed meanwhile: the Ticket is now assigned to Bob Wilson.",
@@ -7548,6 +7595,8 @@ describe("the assignee", () => {
       await expect
         .element(assigneeValue(screen))
         .toHaveTextContent("Bob Wilson");
+      // The signed-in user is no longer the assignee.
+      expect(userOption(screen, "Unassign yourself").query()).toBeNull();
     },
   );
 
@@ -7598,12 +7647,14 @@ describe("the assignee", () => {
 
     await expect
       .element(
-        screen.getByText("The assignee changed meanwhile.", { exact: true }),
+        assigneePopover(screen).getByText("The assignee changed meanwhile.", {
+          exact: true,
+        }),
       )
-      .toBeInTheDocument();
+      .toBeVisible();
   });
 
-  test.each<[string, () => Response, string, string]>([
+  test.each<[string, () => Response, string, "danger" | "warning"]>([
     [
       "409 TICKET_NOT_MUTABLE",
       () => errorResponse(409, "TICKET_NOT_MUTABLE"),
@@ -7646,32 +7697,35 @@ describe("the assignee", () => {
       const box = text.element().closest("[tabindex]");
       expect(box).not.toBeNull();
       await expect.element(page.elementLocator(box!)).toHaveFocus();
-      expect(
-        box!.querySelector(
-          `.${tone === "danger" ? "bg-danger-soft" : "bg-warning-soft"}`,
-        ),
-      ).not.toBeNull();
+      expect(backgroundBehind(text.element())).toBe(MESSAGE_TONES[tone]);
       await expect
         .element(editAssignee(screen))
         .not.toHaveAttribute("aria-disabled");
     },
   );
 
-  test("keeps the pencil and the popover after a 403 that removes triage_ticket, until the popover closes", async () => {
-    let user = OTHER_USER;
+  test("keeps the pencil and the popover with the signed-in user first after a 403 that removes triage_ticket and their eligibility, until the popover closes", async () => {
+    let user: UserBody = OTHER_USER;
     const spy = stubTicket({
       user: () => user,
       ticket: () => assignedTo(null),
       users: () => usersPage([BOB_ENTRY]),
       assign: () => {
-        user = { data: { ...OTHER_USER.data, roles: [], capabilities: [] } };
+        user = {
+          data: {
+            ...OTHER_USER.data,
+            roles: [],
+            capabilities: [],
+            assignment_eligibility: "none",
+          },
+        };
         return errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION");
       },
     });
     const { screen } = await renderDetails();
     await openAssignee(screen, "Bob Wilson @bwilson");
 
-    await userOption(screen, "Bob Wilson @bwilson").click();
+    await userOption(screen, "Alice Smith @asmith You").click();
 
     await expect
       .element(
@@ -7680,14 +7734,70 @@ describe("the assignee", () => {
         ),
       )
       .toBeVisible();
-    await expect.poll(() => requestsTo(spy, ME)).toBeGreaterThan(1);
+    // Once the read of the signed-in user after the 403 has ended.
+    await expect.poll(() => requestsTo(spy, ME)).toBe(2);
+    await readEnded(ME);
     await nextFrames();
     await expect.element(assigneePopover(screen)).toBeVisible();
+    expect(assigneeOptions(screen)).toEqual([
+      "Alice Smith @asmithYou",
+      "Bob Wilson @bwilson",
+    ]);
 
     await userEvent.keyboard("{Escape}");
 
     await expect.element(assigneePopover(screen)).not.toBeInTheDocument();
     await expect.element(editAssignee(screen)).not.toBeInTheDocument();
+  });
+
+  test("reads again after an assignment the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, but not its duplicates", async () => {
+    const spy = stubTicket({
+      user: { data: { ...MAINTAINER.data, capabilities: ["triage_ticket"] } },
+      ticket: () =>
+        ticketResponse(
+          fictionalTicketDetail({
+            assignee: BOB,
+            packages: [fictionalPackage()],
+          }),
+        ),
+      users: () => usersPage([ANA_ENTRY, BOB_ENTRY]),
+      assign: () => assignedTo(BOB),
+    });
+    // The user saw the Ticket list, and Audit log, before Overview.
+    const { router, screen } = await renderApp("/tickets");
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+    await router.navigate({
+      to: "/tickets/$ticketId/audit-log",
+      params: { ticketId: "SNTL-12" },
+    });
+    await expect
+      .element(screen.getByRole("tabpanel", { name: "Audit log" }))
+      .toBeVisible();
+    await screen.getByRole("tab", { name: "Overview" }).click();
+    await expect.element(detailsPart(screen)).toBeVisible();
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(1);
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    const reads = {
+      ticket: requestsTo(spy, TICKET),
+      actors: requestsTo(spy, ACTORS),
+      work: requestsTo(spy, YOUR_WORK),
+      duplicates: readsOf(spy, TICKETS),
+    };
+    expect(leftInvalidated(EVENTS)).toBe(false);
+    expect(leftInvalidated(TICKETS)).toBe(false);
+    await openAssignee(screen, "Ana Garcia @agarcia");
+
+    await userOption(screen, "Ana Garcia @agarcia").click();
+
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
+    await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(reads.work + 1);
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    expect(readsOf(spy, TICKETS)).toBe(reads.duplicates);
+    expect(leftInvalidated(EVENTS)).toBe(true);
+    expect(leftInvalidated(TICKETS)).toBe(true);
   });
 
   test("closes the popover when the layout changes, the focus moving to the heading of the screen", async () => {

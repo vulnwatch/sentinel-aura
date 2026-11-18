@@ -547,8 +547,9 @@ type AssigneeError =
 
 // Reads again what an assignment affects: the Ticket, whose status it can
 // change, the work of a maintainer on it, the users who acted on it, its
-// audit log, and the reads of the Ticket list, the duplicates of the Ticket
-// among them (docs/behaviors.md, Outcome of a Change).
+// audit log, and the reads of the Ticket list, but for the duplicates of the
+// Ticket, whose identifiers, confidentiality, and number an assignment of
+// their original does not change (docs/behaviors.md, Outcome of a Change).
 function useReadAfterAssignment(ticketId: string) {
   const client = useQueryClient();
   return useCallback(() => {
@@ -557,34 +558,41 @@ function useReadAfterAssignment(ticketId: string) {
       getGetTicketPackageWorkQueryKey(ticketId),
       getListTicketActorsQueryKey(ticketId),
       getListTicketEventsQueryKey(ticketId),
-      getListTicketsQueryKey(),
     ]) {
       void client.invalidateQueries({ queryKey });
     }
+    const duplicates = JSON.stringify(
+      getListTicketsQueryKey(duplicatesOf(ticketId)),
+    );
+    void client.invalidateQueries({
+      queryKey: getListTicketsQueryKey(),
+      predicate: (query) => JSON.stringify(query.queryKey) !== duplicates,
+    });
   }, [client, ticketId]);
 }
 
 // The assignment of the Ticket from its details, Assign Ticket, PATCH
 // /api/v1/tickets/{ticket_id}/assignee, for a user who holds triage_ticket
-// (Sentinel docs/features/tickets/tickets.md, Assign Ticket): the state of
-// the pencil of the assignee and of its popover, which the screen keeps
-// across a change of layout, which moves the details (docs/design-system.md,
-// Detail Screens). The request carries as the expected assignee the one that
-// the screen shows. It asks for no confirmation (docs/behaviors.md,
-// Confirmation). While it is in progress, the pencil and the choice are busy,
-// and the popover cannot be closed; once Sentinel confirms it, the popover
-// closes, the focus returns to the pencil, and the outcome is announced once
-// the read of the Ticket after it arrives. A failure shows in the popover:
-// the errors of the user field at the field, which keeps the focus as the
-// choice leaves it there, after which the users are read again; an assignee that changed meanwhile, at the
-// top of the popover, with the assignee that the Ticket has now, once the
-// read of the Ticket after it arrives; every other failure at the top of the
-// popover, as a warning when Sentinel did not confirm the change. A change of
-// layout closes the popover, also while its change is in progress, whose
-// failure then shows in the message area; the outcome of an assignment that
-// ends after the user left the tab shows there too, naming the Ticket
-// (docs/behaviors.md, Where Errors Appear; Outcome of a Change). Whatever the
-// outcome, the screen then reads again what the assignment affects.
+// (Sentinel docs/features/tickets/tickets.md, Assign Ticket): the state of the
+// pencil of the assignee and of its popover, which the screen keeps across a
+// change of layout, which moves the details (docs/design-system.md, Detail
+// Screens). The request carries as the expected assignee the one that the
+// screen shows. It asks for no confirmation (docs/behaviors.md, Confirmation).
+// While it is in progress, the pencil and the choice are busy, and the popover
+// cannot be closed; once Sentinel confirms it, the popover closes, the focus
+// returns to the pencil, and the outcome is announced once the read of the
+// Ticket after it arrives. A failure shows in the popover: the errors of the
+// user field at the field, which keeps the focus as the choice leaves it
+// there, after which the users are read again; an assignee that changed
+// meanwhile, at the top of the popover, with the assignee that the Ticket has
+// now, once the read of the Ticket after it arrives; every other failure at
+// the top of the popover, as a warning when Sentinel did not confirm the
+// change. A change of layout closes the popover, also while its change is in
+// progress, whose failure then shows in the message area; the outcome of an
+// assignment that ends after the user left the tab shows there too, naming the
+// Ticket (docs/behaviors.md, Where Errors Appear; Outcome of a Change).
+// Whatever the outcome, the screen then reads again what the assignment
+// affects.
 function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
   const ticketId = ticket.ticket_id;
   const client = useQueryClient();
@@ -625,10 +633,14 @@ function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
   const capable =
     user?.capabilities.includes("triage_ticket") === true &&
     ASSIGNABLE_STATUSES.has(ticket.status);
-  const me =
+  const eligible =
     user !== undefined && admits(user.assignment_eligibility, ticket)
       ? user
       : undefined;
+  // The signed-in user whom the open popover offers first, as it offered them
+  // as it opened (docs/behaviors.md, The Signed-in User).
+  const [openedWith, setOpenedWith] = useState(eligible);
+  const me = open ? openedWith : eligible;
 
   const fail = (failure: unknown) => {
     if (!isRequestFailure(failure)) {
@@ -713,6 +725,7 @@ function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
       }
       setOpen(next);
       if (next) {
+        setOpenedWith(eligible);
         setFieldError(undefined);
         setError(undefined);
       }
@@ -786,12 +799,13 @@ interface AssigneeFieldProps {
 // an assignment is in progress (docs/design-system.md, Detail Screens). It
 // opens the popover of the assignee below it, 320 px wide with 16 px of
 // padding, named "Assignee", whose search field takes the focus as it opens:
-// the error of the last assignment at its top, then the users who can be the assignee of the Ticket, the signed-in user
-// first with the label You when their own assignment eligibility admits the
-// Ticket, the assignee marked as chosen, and, for a signed-in user who is
-// the assignee, Unassign yourself before them, which returns the Ticket to
-// the queue (Sentinel docs/features/tickets/tickets.md, Self-Unassignment).
-// Choosing a user who is not the assignee assigns the Ticket at once.
+// the error of the last assignment at its top, then the users who can be the
+// assignee of the Ticket, the signed-in user first with the label You when
+// their own assignment eligibility admits the Ticket, the assignee marked as
+// chosen, and, for a signed-in user who is the assignee, Unassign yourself
+// before them, which returns the Ticket to the queue (Sentinel
+// docs/features/tickets/tickets.md, Self-Unassignment). Choosing a user who is
+// not the assignee assigns the Ticket at once.
 function AssigneeField({ ticket, assignee }: AssigneeFieldProps) {
   const value =
     ticket.assignee === null ? (
@@ -832,6 +846,7 @@ function AssigneeField({ ticket, assignee }: AssigneeFieldProps) {
               onChoose={(choice) => {
                 void assignee.choose(choice === "action" ? null : choice);
               }}
+              busyText="Changing the assignee."
               error={assignee.fieldError}
               onInput={assignee.clearFieldError}
             />
@@ -851,15 +866,14 @@ interface DetailsProps {
 
 // The details of the Ticket, as a description list (docs/design-system.md,
 // Detail Screens): the assignee in the full form, or "Unassigned", with its
-// pencil for a user who can change it (AssigneeField); the Coordinated Release Date while the Ticket is
-// confidential, as an absent value without a date, and while it has one,
-// also after it became non-confidential (Sentinel
-// docs/features/tickets/tickets.md, Coordinated Release Date); the
-// deadlines; the original of a duplicate, which is only an identifier, or the
-// duplicates of any other Ticket; the creation; and the last change, as
-// "Last modified", as the Ticket list names it. Users show without a link
-// and a card while the UI has no screen User (docs/behaviors.md, Open
-// Decisions).
+// pencil for a user who can change it (AssigneeField); the Coordinated Release
+// Date while the Ticket is confidential, as an absent value without a date,
+// and while it has one, also after it became non-confidential (Sentinel
+// docs/features/tickets/tickets.md, Coordinated Release Date); the deadlines;
+// the original of a duplicate, which is only an identifier, or the duplicates
+// of any other Ticket; the creation; and the last change, as "Last modified",
+// as the Ticket list names it. Users show without a link and a card while the
+// UI has no screen User (docs/behaviors.md, Open Decisions).
 function Details({ ticket, now, duplicates, assignee }: DetailsProps) {
   return (
     <SideSection id={DETAILS_ANCHOR} heading="Details">
