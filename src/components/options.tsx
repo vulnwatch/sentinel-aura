@@ -29,9 +29,10 @@ interface OptionProps {
 // An option, 36 px high with a 6 px radius and 10 px of side padding, in
 // text-15, on surface-hover under the pointer and on focus, with the focus
 // ring inside it on keyboard focus, and check at its end when it is chosen.
-// A disabled option shows at 60 % opacity, as a disabled button does, and a
-// busy one shows loader-circle, turning, at the end in place of check
-// (docs/design-system.md, Buttons and Links).
+// A disabled option shows at 60 % opacity, as a disabled button does
+// (docs/design-system.md, Buttons and Links), and a busy one shows
+// loader-circle, turning, at the end in place of check (Menus, Popovers, and
+// Tooltips).
 export function Option({
   id,
   textValue,

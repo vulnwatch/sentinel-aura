@@ -811,9 +811,11 @@ also meets these requirements, which they cannot check:
   outcome of a change or the error of an action, is announced without moving
   the focus, and so is the end of an operation that a screen follows, once a
   read shows it (Outcome of a Change; 4.1.3 Status Messages). After a form is
-  submitted with errors, the focus moves to the message at the top of the
-  form, or, when only fields have errors, to the first of them (3.3.1 Error
-  Identification).
+  submitted with errors, or a change of the popover of a field fails
+  (`docs/design-system.md`, Detail Screens), the focus moves to the message at
+  the top of the form or of the popover, or, when only fields have errors, to
+  the first of them, which in the popover is the field that holds the focus
+  already (3.3.1 Error Identification).
 - **Reflow and text size.** Screens work at a width of 320 CSS pixels without
   scrolling in two directions, except data tables, which scroll within
   themselves, and text enlarged to 200 % loses no content or function (1.4.4

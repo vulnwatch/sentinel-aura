@@ -1344,12 +1344,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   popover of a name, with 16 px of padding, as a popover that holds fields, and
   its content scrolls within it in a window shorter than it is (Menus,
   Popovers, and Tooltips). While the change of a popover is in progress, its
-  choice is busy and the popover cannot be closed; once Sentinel confirms the
-  change, the popover closes, the focus returns to the pencil, and the result
-  is announced (`docs/behaviors.md`, Outcome of a Change), and when the change
-  fails, the popover stays open with its error, at its field or at its top
-  (`docs/behaviors.md`, Where Errors Appear). While the change is in progress,
-  the pencil is busy too (`docs/behaviors.md`, Loading).
+  choice and the pencil are busy, and the popover cannot be closed
+  (`docs/behaviors.md`, Loading); once Sentinel confirms the change, the
+  popover closes, the focus returns to the pencil, and the result is announced
+  (`docs/behaviors.md`, Outcome of a Change), and when the change fails, the
+  popover stays open with its error, at its field or at its top
+  (`docs/behaviors.md`, Where Errors Appear).
 - Each part of the record, such as the CVSS assessments of a Ticket, is a
   section on the background of the page, below a `border` line: its
   level-two heading in `text-16`, weight 600, 24 px below the line, with its
@@ -1650,16 +1650,19 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Menus, Popovers, and Tooltips
 
-- A menu or a popover is on `surface`, with a `border` line, an 8 px radius,
-  a shadow, and 4 px of padding, or 16 px for a popover that holds fields,
-  such as that of Filters (Lists), or 12 px for the calendar of a date field
-  (Forms). A menu item is 36 px high with a 6 px radius
-  and 10 px of side padding, its icon at 16 px in `fg-muted` before its label
-  in `text-15`, and `surface-hover` under the pointer and on focus, with the
-  focus ring inside it on keyboard focus (Focus and Motion). The
-  heading of a section is in `text-12`, weight 500, `fg-muted`; groups are
-  separated by `border` lines; and an item of a single selection ends with
-  `check` at 16 px when it is selected.
+- A menu or a popover is on `surface`, with a `border` line, an 8 px radius, a
+  shadow, and 4 px of padding, or 16 px for a popover that holds fields, such
+  as that of Filters (Lists), or 12 px for the calendar of a date field
+  (Forms). A menu item is 36 px high with a 6 px radius and 10 px of side
+  padding, its icon at 16 px in `fg-muted` before its label in `text-15`, and
+  `surface-hover` under the pointer and on focus, with the focus ring inside it
+  on keyboard focus (Focus and Motion). The heading of a section is in
+  `text-12`, weight 500, `fg-muted`; groups are separated by `border` lines;
+  and an item of a single selection ends with `check` at 16 px when it is
+  selected. While the change that an item started is in progress, the item is
+  busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
+  `check` at its end, as it takes the place of the icon of a busy button
+  (Buttons and Links; `docs/behaviors.md`, Loading).
 - A tooltip inverts the colors of text: `surface` on an `fg` background, in
   `text-13`, weight 500, with a 6 px radius and 6 px by 10 px of padding; how
   many more values a "+N" has than its tooltip lists is in `muted-on-fg`

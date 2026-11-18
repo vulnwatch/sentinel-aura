@@ -988,15 +988,15 @@ Self-Unassignment):
   assignee that the screen shows, or `null` for a Ticket that it shows
   unassigned (Sentinel `docs/features/tickets/tickets.md`, Reassignment,
   Expected assignee).
-- While the assignment is in progress, the choice shows `loader-circle` in
-  place of `check`, the popover says "Changing the assignee." in its status
-  region, takes no other choice, and cannot be closed, and Edit assignee is
-  busy (`docs/behaviors.md`, Loading). Once Sentinel confirms it, the popover
-  closes, the focus returns to Edit assignee, and once the read of the Ticket
-  after it arrives, whatever the outcome of that read, the screen announces it,
-  naming the assignee that Sentinel returns: "Assigned to Bob Wilson.",
-  "Assigned to you.", or "You're no longer the assignee." (`docs/behaviors.md`,
-  Outcome of a Change).
+- While the assignment is in progress, the choice is busy
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips), the popover says
+  "Changing the assignee." in its status region, takes no other choice, and
+  cannot be closed, and Edit assignee is busy (`docs/behaviors.md`, Loading).
+  Once Sentinel confirms it, the popover closes, the focus returns to Edit
+  assignee, and once the read of the Ticket after it arrives, whatever the
+  outcome of that read, the screen announces it, naming the assignee that
+  Sentinel returns: "Assigned to Bob Wilson.", "Assigned to you.", or "You're
+  no longer the assignee." (`docs/behaviors.md`, Outcome of a Change).
 - An assignment can move a New Ticket to Analysis and change its status
   (Sentinel `docs/features/tickets/tickets.md`, Status Transitions; Automatic
   Status Evaluation). Whatever the outcome, the screen then reads again the
@@ -1484,8 +1484,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   says so in place of its explanation, the form, the grants, and their
   confirmation, and takes the focus (Participants).
 - **Errors of Edit assignee.** A failure shows in the popover, which stays open
-  (`docs/behaviors.md`, Where Errors Appear). The screen handles three codes
-  specifically, at the search field, which keeps the focus: `404
+  (`docs/behaviors.md`, Where Errors Appear), and its error takes the focus as
+  that of a form does (`docs/behaviors.md`, Accessibility, Announcements). The
+  screen handles three codes specifically, at the search field: `404
   USER_NOT_FOUND`, "Sentinel doesn't know this user."; `409
   TICKET_ASSIGNEE_INACTIVE`, "This user is inactive, so they can't be the
   assignee."; and `400 TICKET_ASSIGNEE_NOT_ELIGIBLE`, "This user can't be the
@@ -1507,8 +1508,7 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   presentation of its status, as a warning when Sentinel did not confirm the
   change (`docs/behaviors.md`, Default Presentation by Status; Retries and
   Unconfirmed Changes), such as the `409 TICKET_NOT_MUTABLE` of a Ticket that
-  became Ignored meanwhile. A message at the top of the popover takes the
-  focus.
+  became Ignored meanwhile.
 - **References.** The toolbar shows at once with the tabs, and the
   references as they arrive, without waiting for the Ticket; a failure of
   the references shows once the Ticket has arrived, so that a Ticket that
