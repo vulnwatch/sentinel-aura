@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.27.0"
+    "version": "0.28.0"
   },
   "paths": {
     "/health": {
@@ -10156,6 +10156,100 @@
         }
       }
     },
+    "/api/v1/maintained-packages": {
+      "get": {
+        "tags": [
+          "Maintained Packages"
+        ],
+        "summary": "Search Maintained Packages",
+        "description": "Returns a paginated list of the names of the source packages that SMELT maintains, from the latest snapshot that Sentinel synchronized, optionally matching a term. Each name is the exact name that Add Package to Ticket accepts. The order is fixed: the names that start with the term first, then the others, each group in Unicode code-point order. The endpoint does not contact SMELT; before the first snapshot, the list is empty. Requires authentication (JWT session or API key).",
+        "operationId": "search_maintained_package_names_api_v1_maintained_packages_get",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Case-insensitive substring match on the name. Outer whitespace is trimmed once; an empty result means no filter. `%`, `_`, and backslash are literal.",
+              "title": "Search",
+              "maxLength": 500
+            },
+            "description": "Case-insensitive substring match on the name. Outer whitespace is trimmed once; an empty result means no filter. `%`, `_`, and backslash are literal."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 1,
+              "description": "Page number.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number."
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page; maximum 100.",
+              "default": 20,
+              "title": "Per Page"
+            },
+            "description": "Items per page; maximum 100."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintainedPackageListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/my/packages/pending": {
       "get": {
         "tags": [
@@ -15295,6 +15389,42 @@
         "title": "LoginResponse",
         "description": "Response body for a successful `POST /api/v1/auth/login` call."
       },
+      "MaintainedPackageItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The source package name exactly as SMELT maintains it, with its letter case."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "MaintainedPackageItem",
+        "description": "One name of `GET /api/v1/maintained-packages`."
+      },
+      "MaintainedPackageListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MaintainedPackageItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "MaintainedPackageListResponse",
+        "description": "Response body of `GET /api/v1/maintained-packages` (paginated)."
+      },
       "MaintainerTicketWork": {
         "properties": {
           "pending": {
@@ -15491,9 +15621,9 @@
           "package_name": {
             "type": "string",
             "maxLength": 255,
-            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._+\\-]{0,253}[a-zA-Z0-9]$",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._+\\-]{0,254}$",
             "title": "Package Name",
-            "description": "Source package name: 2 to 255 characters, starting and ending with an ASCII letter or digit; only letters, digits, `.`, `_`, `+`, and `-` are allowed. Required.",
+            "description": "Source package name: 1 to 255 characters, starting with an ASCII letter or digit; only letters, digits, `.`, `_`, `+`, and `-` are allowed. Required.",
             "examples": [
               "openssl-3"
             ]
