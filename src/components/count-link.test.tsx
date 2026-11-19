@@ -12,6 +12,7 @@ import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { parseSearch, stringifySearch } from "../search-params";
+import { pointerAwayFrom } from "../test-pointer";
 import { CountLink } from "./count-link";
 import { RouterLinks } from "./router-links";
 
@@ -169,8 +170,8 @@ test("is 32 px high, in text-14, on surface with a border line and a 6 px radius
   const screen = await rendered;
   const link = screen.getByRole("link", { name: "3 Active P1" });
   await expect.element(link).toBeVisible();
-  // Away from the pointer, which an earlier test can leave over it.
-  await userEvent.unhover(link);
+  // The pointer away from the link, where an earlier test can leave it.
+  await pointerAwayFrom(link);
 
   const style = getComputedStyle(link.element());
   expect([

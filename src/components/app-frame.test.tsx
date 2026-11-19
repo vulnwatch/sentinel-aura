@@ -19,6 +19,7 @@ import {
   ticketPage,
   unauthorized,
 } from "../test-api";
+import { pointerAwayFrom } from "../test-pointer";
 
 // The frame of every screen (docs/screen-map.md, Sidebar;
 // docs/design-system.md, Page Layout; docs/behaviors.md, Accessibility).
@@ -128,8 +129,8 @@ describe("with a signed-in user", () => {
     const box = skip.element().getBoundingClientRect();
     expect([box.left, box.top]).toEqual([8, 8]);
     expect(box.height).toBe(36);
-    // Away from the pointer, which an earlier test can leave over it.
-    await userEvent.unhover(skip);
+    // The pointer away from the link, where an earlier test can leave it.
+    await pointerAwayFrom(skip);
     // A primary button, over the sidebar: accent of the light theme.
     expect(getComputedStyle(skip.element()).backgroundColor).toBe(
       "rgb(9, 105, 218)",

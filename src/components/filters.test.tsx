@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent, type Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import {
   FilterGroup,
   Filters,
@@ -101,8 +102,8 @@ test("is a secondary button 32 px high named Filters while no filter applies", a
   const button = screen.getByRole("button", { name: "Filters", exact: true });
 
   await expect.element(button).toBeVisible();
-  // Away from the pointer, which an earlier test can leave over it.
-  await userEvent.unhover(button);
+  // The pointer away from the button, where an earlier test can leave it.
+  await pointerAwayFrom(button);
   const style = getComputedStyle(button.element());
   expect([
     button.element().getBoundingClientRect().height,

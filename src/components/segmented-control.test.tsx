@@ -3,6 +3,7 @@ import { expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import { SegmentedControl, type SegmentedOption } from "./segmented-control";
 
 // A segmented control (docs/design-system.md, Forms), in the light theme.
@@ -58,6 +59,8 @@ test("shows the chosen segment in accent, its label in on-accent at weight 500, 
   const screen = await render(<Metric initial="L" />);
 
   await expect.element(radioOf(screen, "Local")).toBeChecked();
+  // The pointer away from the segments, where an earlier test can leave it.
+  await pointerAwayFrom(screen.getByRole("radiogroup"));
   const chosen = getComputedStyle(radioOf(screen, "Local").element());
   expect([chosen.backgroundColor, chosen.color, chosen.fontWeight]).toEqual([
     ACCENT,

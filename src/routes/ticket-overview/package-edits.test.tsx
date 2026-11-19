@@ -23,6 +23,7 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import { pointerAwayFrom } from "../../test-pointer";
 import {
   ACTORS,
   announcements,
@@ -51,6 +52,7 @@ import {
   productEligibilityResponse,
   productMarkerResponse,
   productOf,
+  readEnded,
   readsOf,
   renderTree,
   returnToForeground,
@@ -303,6 +305,8 @@ describe("the edits of the package tree", () => {
       .element(select)
       .toHaveAccessibleName(`Affectedness of ${OPENSSL_SP7}: Affected`);
     await expect.element(select).toHaveTextContent("Affected");
+    // The pointer away from the select, where an earlier test can leave it.
+    await pointerAwayFrom(select);
     // A quiet select, without a boundary or a fill, in fg.
     const style = getComputedStyle(select.element());
     expect(style.borderTopWidth).toBe("0px");
@@ -623,6 +627,44 @@ describe("the edits of the package tree", () => {
       .not.toBeInTheDocument();
     await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
   });
+
+  test.each<[string, string, () => Response]>([
+    ["a package", "fictional-openssl", () => packageMarkerResponse(false)],
+    ["a track", OPENSSL_SP7, () => trackMarkerResponse(false)],
+  ])(
+    "leave the focus on the screen's heading after an exclusion of %s whose read after it still shows the record, as after another user restored it meanwhile",
+    async (_name, record, response) => {
+      const read = later();
+      let excluded = false;
+      showingEditable(undefined, {
+        ticket: () =>
+          excluded
+            ? read.promise
+            : ticketResponse(
+                fictionalTicketDetail({ packages: editableTree() }),
+              ),
+        packageChange: () => {
+          excluded = true;
+          return response();
+        },
+      });
+      const { screen } = await renderTree();
+      await chooseAction(screen, record, "Exclude");
+      await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+      await expect.element(actionsOf(screen, record)).toHaveFocus();
+
+      // The screen's heading, from which the focus moves after an exclusion
+      // that hides its record.
+      screenHeading(screen).element().focus();
+      read.resolve(
+        ticketResponse(fictionalTicketDetail({ packages: editableTree() })),
+      );
+
+      await readEnded(TICKET);
+      await expect.element(actionsOf(screen, record)).toBeVisible();
+      await expectFocusSettledOn(screenHeading(screen));
+    },
+  );
 
   test("move the focus after an exclusion of the last track of a package that shows to the menu of its package", async () => {
     let tree = editableTree();
@@ -2024,6 +2066,46 @@ describe("the actions of a Product", () => {
       .element(packagesPart(screen).getByText("All packages are hidden."))
       .toBeVisible();
     await expectFocusSettledOn(showHidden(screen));
+  });
+
+  test("leave the focus on the screen's heading after an exclusion of the Product whose read after it still shows the Product, as after another user restored it meanwhile", async () => {
+    const read = later();
+    let excluded = false;
+    showingEditable(undefined, {
+      ticket: () =>
+        excluded
+          ? read.promise
+          : ticketResponse(
+              fictionalTicketDetail({
+                packages: productTree({}, [desktopProduct()]),
+              }),
+            ),
+      packageChange: () => {
+        excluded = true;
+        return productMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+    await chooseProductAction(screen, SP7_PRODUCT, "Exclude from this track");
+    await expect
+      .element(productPopover(screen, SP7_PRODUCT))
+      .not.toBeInTheDocument();
+    await expect.element(productName(screen, SP7_PRODUCT)).toHaveFocus();
+
+    // The screen's heading, from which the focus moves after an exclusion
+    // that hides its record.
+    screenHeading(screen).element().focus();
+    read.resolve(
+      ticketResponse(
+        fictionalTicketDetail({
+          packages: productTree({}, [desktopProduct()]),
+        }),
+      ),
+    );
+
+    await readEnded(TICKET);
+    await expect.element(productName(screen, SP7_PRODUCT)).toBeVisible();
+    await expectFocusSettledOn(screenHeading(screen));
   });
 
   test("keep the Product after an exclusion while Show hidden is on, in gray with its label, with the focus on its name, and announce the outcome", async () => {

@@ -11,6 +11,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import { RouterLinks } from "./router-links";
 import { addressText, WebAddress, WebLink } from "./web-link";
 
@@ -279,11 +280,11 @@ describe("the underline of a link", () => {
     expect(getComputedStyle(inText.element()).textDecorationLine).toBe(
       "underline",
     );
-    await userEvent.unhover(listed);
+    await pointerAwayFrom(listed);
     await expect.poll(decoration).toBe("none");
     await listed.hover();
     await expect.poll(decoration).toBe("underline");
-    await userEvent.unhover(listed);
+    await pointerAwayFrom(listed);
     await expect.poll(decoration).toBe("none");
     await userEvent.keyboard("{Tab}");
     await expect.element(listed).toHaveFocus();

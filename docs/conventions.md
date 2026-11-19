@@ -186,7 +186,8 @@ rules; review enforces the rest.
 | `src/api/` | The shared request function (`request.ts`), and the mapping of error codes to messages and of field errors to the fields of a form (`errors.ts`) |
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
 | `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` beneath the shared request function (Tests) |
-| `src/test-screenshot.ts` | What several component tests share: the colors of the pixels of a screenshot of an element, such as a mark that is hidden from assistive technologies, taken once the pictures of the element have loaded (Tests) |
+| `src/test-pointer.ts` | What several component tests share: the move of the pointer away from an element, before a check of how the element looks at rest (Tests) |
+| `src/test-screenshot.ts` | What several component tests share: the colors of the pixels of a screenshot of an element, such as a mark that is hidden from assistive technologies, taken once the pictures of the element have loaded, with the pointer away from it (Tests) |
 | `src/test-setup.ts` | The setup that Vitest runs in the document of every unit and component test file before its tests: it gives that document the focus, which Playwright's Firefox does not reliably move into it |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
 | `test/e2e/` | The end-to-end tests, those of how the UI is served included, and their shared fixture, `fixtures.ts` (End-to-End Tests), and the configuration of the reverse proxy in front of the UI and the API, `proxy.conf` (`docs/architecture.md`, Development Environment) |
@@ -465,6 +466,15 @@ that needs it; content of another kind needs a new row first.
   those of TanStack Query, through a reference that waits as long and shows
   once it has passed; never by waiting for a fixed time. A test that
   measures the delay itself measures it on the clock of the page.
+- A test that checks how an element looks at rest, such as a color or an
+  underline that changes under the pointer, first moves the pointer to a point
+  that the element does not cover, such as with `pointerAwayFrom` of
+  `src/test-pointer.ts`, or onto another element that it names: Vitest runs
+  several test files one after another in each page, the pointer rests where
+  an earlier test of the same file or of another one left it, and an element
+  that renders under it shows its look under the pointer. `userEvent.unhover`
+  does not suffice, since it moves the pointer to the center of the body,
+  which the element can cover.
 - Each unit or component test that a change adds, or whose assertions it
   changes, is seen to fail when the behavior that it checks breaks: the
   author breaks that behavior in the code, or for a fix restores the defect,
