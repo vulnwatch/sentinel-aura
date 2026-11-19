@@ -14461,6 +14461,82 @@ describe("the actions of a Product", () => {
     await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
   });
 
+  test.each<[string, Partial<ProductDetail>, string]>([
+    ["Mark as eligible", { eligible: false }, "Marking as eligible."],
+    ["Mark as not eligible", {}, "Marking as not eligible."],
+    [
+      "Return to automatic eligibility",
+      SET_BY_HAND,
+      "Returning to automatic eligibility.",
+    ],
+    ["Exclude from this track", {}, "Excluding."],
+    [
+      "Restore",
+      {
+        deleted_at: "2099-10-10T10:00:00Z",
+        actionable: false,
+        non_actionable_reason: "product_excluded",
+      },
+      "Restoring.",
+    ],
+  ])(
+    "describe %s while it is in progress, on its item alone",
+    async (action, product, description) => {
+      const response = later();
+      showingEditable(() => productTree(product), {
+        packageChange: () => response.promise,
+      });
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+      const popover = await chooseProductAction(screen, SP7_PRODUCT, action);
+
+      await expect
+        .element(popover.getByRole("menuitem", { name: action, exact: true }))
+        .toHaveAccessibleDescription(description);
+      expect(
+        popover
+          .getByRole("menuitem")
+          .elements()
+          .filter((item) => item.textContent?.endsWith(".")),
+      ).toHaveLength(1);
+      response.resolve(
+        action === "Exclude from this track" || action === "Restore"
+          ? productMarkerResponse(action === "Restore")
+          : productEligibilityResponse(action === "Mark as eligible"),
+      );
+      await expect.element(popover).not.toBeInTheDocument();
+    },
+  );
+
+  test("follow the Product as a read shows it while the popover is open, the focus staying on the item whose action changes", async () => {
+    let tree = productTree();
+    showingEditable(() => tree);
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    const popover = await openProduct(screen, SP7_PRODUCT);
+    await userEvent.keyboard("{Tab}{ArrowDown}");
+    const exclude = popover.getByRole("menuitem", {
+      name: "Exclude from this track",
+    });
+    await expect.element(exclude).toHaveFocus();
+    // Meanwhile another user excludes the Product.
+    tree = productTree({
+      deleted_at: "2099-10-10T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "product_excluded",
+    });
+
+    await returnToForeground();
+
+    const restore = popover.getByRole("menuitem", {
+      name: "Restore",
+      exact: true,
+    });
+    await expect.element(restore).toHaveFocus();
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual(["Mark as not eligible", "Restore"]);
+  });
+
   test("keep the actions that the popover offered as it opened, after a read of the signed-in user takes manage_packages away", async () => {
     let user = PACKAGE_MANAGER;
     showingEditable(() => productTree(), { user: () => user });

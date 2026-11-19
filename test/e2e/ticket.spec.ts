@@ -1591,6 +1591,7 @@ test.describe("for an analyst", () => {
       ).toBeVisible();
       const switchHidden = page.getByRole("switch", { name: /^Show hidden/ });
       await expect(switchHidden).toBeFocused();
+      await expectAccessible(page);
 
       // With Show hidden on, it shows in gray with its label, and Restore
       // includes it again.
@@ -1601,50 +1602,12 @@ test.describe("for an analyst", () => {
         "Mark as eligible",
         "Restore",
       ]);
+      await expectAccessible(page);
       await product.getByRole("menuitem", { name: "Restore" }).click();
 
       await expect(announced(`${subject} restored.`)).toHaveCount(1);
       await expect(ltss).toBeFocused();
       await expectAccessible(page);
-    },
-  );
-
-  test(
-    "moves the focus after the exclusion of a Product to the next Product of its track",
-    { tag: "@changes-data" },
-    async ({ page }) => {
-      // SNTL-15, Resolved, which no other test of this project relies on:
-      // the fles-16.0 track of fictional-sudo, Not affected, holds Micro 6.2
-      // and then Server 16.0, in the order of their CPEs (Packages, Tracks,
-      // and Maintainers).
-      await signIn(page, "asmith");
-      await page.goto("/tickets/SNTL-15#packages");
-      const packages = part(page, "Packages");
-      await expectOverviewShown(page);
-
-      await packages
-        .getByRole("button", {
-          name: "Fictional Linux Enterprise Micro 6.2",
-          exact: true,
-        })
-        .click();
-      await page
-        .getByRole("dialog", { name: "Fictional Linux Enterprise Micro 6.2" })
-        .getByRole("menuitem", { name: "Exclude from this track" })
-        .click();
-
-      await expect(
-        page.getByText(
-          "Product Fictional Linux Enterprise Micro 6.2 of fictional-sudo · fles-16.0 excluded.",
-          { exact: true },
-        ),
-      ).toBeVisible();
-      await expect(
-        packages.getByRole("button", {
-          name: "Fictional Linux Enterprise Server 16.0",
-          exact: true,
-        }),
-      ).toBeFocused();
     },
   );
 

@@ -2193,10 +2193,11 @@ interface ProductNameProps {
 }
 
 // The name of a Product, which opens its details (ProductDetails), and, for
-// a user who excludes and restores the records of the package tree, its
-// actions, as they were when the popover opened (docs/behaviors.md, The
-// Signed-in User): Mark as eligible or Mark as not eligible, whichever
-// changes its eligibility, Override Product Eligibility, PATCH
+// a user who excluded and restored the records of the package tree as the
+// popover opened (docs/behaviors.md, The Signed-in User), its actions, which
+// follow the Product as the screen shows it, except while one is in
+// progress: Mark as eligible or Mark as not eligible, whichever changes its
+// eligibility, Override Product Eligibility, PATCH
 // .../products/{ticket_package_product_id}; Return to automatic eligibility,
 // with eligible null, while its eligibility is set by hand; and Exclude from
 // this track, Soft-Delete Product, POST .../products/{id}/exclude, or
@@ -2318,6 +2319,9 @@ function ProductName({
     }
   };
 
+  // Each item keeps its id while a read changes its action, as from Exclude
+  // to Restore, so that it keeps the focus; an item that a read removes
+  // leaves the focus on the menu.
   const item = (
     action: ProductAction,
     icon: LucideIcon,
@@ -2325,7 +2329,7 @@ function ProductName({
     busyText: string,
   ) => (
     <MenuAction
-      id={action}
+      id={action === "restore" ? "exclude" : action}
       icon={icon}
       busy={running?.action === action ? busyText : undefined}
       shouldCloseOnSelect={false}

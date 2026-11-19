@@ -147,10 +147,11 @@ document that do not take effect yet.
   Menus, Popovers, and Tooltips) is the exception: it keeps offering the
   actions that it offered as it opened, until it closes, so that the error
   of a change that Sentinel refuses, such as a `403` after the user lost a
-  role, stays in it (Where Errors Appear), and so that a menu or a popover
-  keeps the item whose change is in progress; it offers them anew as it
-  opens again. The pencil or the button that opens such a popover or menu
-  stays as it was while it is open and while its change is in progress.
+  role, stays in a dialog or the popover of a field (Where Errors Appear),
+  and so that a menu or the popover of a name keeps the item whose change is
+  in progress; it offers them anew as it opens again. The pencil or the
+  button that opens such a popover or menu stays as it was while it is open
+  and while its change is in progress.
   While the error of a read of the signed-in user shows in place of the
   screen (Session State), it is read again only with Try again, as a screen's
   read whose error shows in place of content is (Loading).
