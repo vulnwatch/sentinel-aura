@@ -4,7 +4,7 @@ import {
   DialogTrigger,
   Menu,
 } from "react-aria-components";
-import { FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import { InfoPopover, PopoverLine, PopoverTitle } from "./info-popover";
 
 // The button of a name or a value that opens a popover: in the style of the
@@ -47,7 +47,9 @@ interface DetailsNameProps {
 // 600, wrapping; below it, in text-13, fg-muted, what identifies the record
 // further; a border line with 12 px of space above and below it; the
 // details; and, with actions, another such line and the menu "Actions", one
-// stop of Tab, whose items start their icons where the details start. While
+// stop of Tab, whose items start their icons where the details start, with
+// the focus ring inside it when it holds the focus itself, as when a read
+// removed the item that held it. While
 // an action is in progress, Escape and a click outside leave the popover
 // open.
 export function DetailsName({
@@ -87,7 +89,10 @@ export function DetailsName({
         {actions !== undefined && (
           <>
             <PopoverLine />
-            <Menu aria-label="Actions" className="-mx-2.5 outline-none">
+            <Menu
+              aria-label="Actions"
+              className={`-mx-2.5 rounded-md ${INSIDE_FOCUS_RING}`}
+            >
               {actions}
             </Menu>
           </>

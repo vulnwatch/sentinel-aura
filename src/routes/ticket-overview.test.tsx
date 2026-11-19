@@ -14591,6 +14591,9 @@ describe("the actions of a Product", () => {
     const menu = popover.getByRole("menu", { name: "Actions", exact: true });
     await expectFocusSettledOn(menu);
     await expect.element(popover).toBeVisible();
+    // The focus ring shows inside the menu.
+    const ring = getComputedStyle(menu.element());
+    expect([ring.outlineStyle, ring.outlineWidth]).toEqual(["solid", "2px"]);
 
     await userEvent.keyboard("{ArrowDown}");
 
