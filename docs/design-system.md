@@ -471,6 +471,7 @@ that the code imports ship.
 | The default CVSS version | `star` |
 | Delete a row of a table | `trash` |
 | The other actions of a record within a part, such as a package | `ellipsis` |
+| Exclude a record | `ban` |
 | Restore an excluded record | `undo-2` |
 | Refetch | `refresh-cw` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
@@ -1364,7 +1365,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   32 px high, with a 6 px radius and 12 px of side padding, which holds its
   heading, one level below the heading of its place, such as level three in
   a part or level two in a tab without parts, in `text-15`, weight 600,
-  followed by its values and labels, and ends with its actions. Its items
+  followed by its values and labels, and ends with its actions, which stay
+  at the end of its first line where the heading and its values wrap. Its items
   follow 12 px below the band, indented by the 12 px of its padding, and the
   band of the next group is 32 px below them. Its items can be a description
   list, 12 px apart, whose values are lists of lines, such as the sources of
@@ -1554,6 +1556,21 @@ states it, such as that of a Ticket; the other audit logs are tables
   600, 8 px above their first control and 20 px below the group before.
 - A field whose value users copy character by character, such as a CVSS
   vector, shows its value in monospace (Font).
+- A select of a value of a record within the line of the record, whose
+  choice applies at once, such as the affectedness of a track of a Ticket,
+  is quiet, so that a long list of records stays light: a button 28 px high,
+  without a boundary or a fill, with a 6 px radius, 8 px of space before the
+  value and 6 px after `chevron-down`, `surface-hover` under the pointer,
+  in `text-14` and `fg`, which keeps its colors in a hidden record (Detail
+  Screens); the value shows as its choice does, such as with its mark, then
+  `chevron-down` at 14 px in `fg-muted`, 6 px later. Its name states what it
+  chooses, its record, and the value, such as "Affectedness of
+  fictional-openssl, SUSE:FLES-15-SP7:Update: Affected". It opens its
+  choices as a menu of single selection below its start, at least as wide
+  as it, the chosen one with `check` (Menus, Popovers, and Tooltips), rather
+  than as the options of a select, which change the value while the user
+  types on the button closed. Choosing the value chosen closes the menu
+  without a change.
 - A switch turns a choice of a screen on or off at once, outside a form, such
   as showing the hidden records of a part: a rail 28 by 16 px, round, with a
   1 px `border-strong` boundary on `neutral-soft` and a knob of 12 px in
@@ -1662,7 +1679,16 @@ states it, such as that of a Ticket; the other audit logs are tables
   selected. While the change that an item started is in progress, the item is
   busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
   icon, as on a busy button (Buttons and Links), or, in an item of a single
-  selection, of its `check` at its end (`docs/behaviors.md`, Loading).
+  selection, of its `check` at its end (`docs/behaviors.md`, Loading). An
+  item whose change applies at once keeps its menu open, busy, until
+  Sentinel answers; the menu cannot be closed meanwhile, and then closes,
+  with the focus on its button (`docs/behaviors.md`, Loading).
+- The other actions of a record within a part, such as a package or a track
+  of a Ticket, are a menu: an icon button of 24 px with `ellipsis` at 16 px,
+  named "Actions of" and its record, such as "Actions of fictional-openssl",
+  whose tooltip says "Actions", at the end of the line or the band of the
+  record, which opens the actions below its end, at least as wide as their
+  longest item (Detail Screens). The menu takes the name of its button.
 - A tooltip inverts the colors of text: `surface` on an `fg` background, in
   `text-13`, weight 500, with a 6 px radius and 6 px by 10 px of padding; how
   many more values a "+N" has than its tooltip lists is in `muted-on-fg`
