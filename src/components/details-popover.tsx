@@ -1,5 +1,9 @@
-import type { ReactNode } from "react";
-import { Button as AriaButton, DialogTrigger } from "react-aria-components";
+import type { ReactNode, Ref } from "react";
+import {
+  Button as AriaButton,
+  DialogTrigger,
+  Menu,
+} from "react-aria-components";
 import { FOCUS_RING } from "./focus-ring";
 import { InfoPopover, PopoverLine, PopoverTitle } from "./info-popover";
 
@@ -22,23 +26,55 @@ interface DetailsNameProps {
   // The details of the record, as a description list
   // (src/components/description-list.tsx).
   children: ReactNode;
+  // Whether the popover is open, for a name whose screen follows it, such as
+  // one that offers actions as they were when it opened.
+  isOpen?: boolean | undefined;
+  onOpenChange?: ((isOpen: boolean) => void) | undefined;
+  // The actions of the record, the items of a menu (MenuAction), for a user
+  // who can take them.
+  actions?: ReactNode;
+  // Whether the change of one of its actions is in progress, which its item
+  // shows: the popover cannot be closed until the change ends
+  // (docs/behaviors.md, Loading).
+  busy?: boolean | undefined;
+  ref?: Ref<HTMLButtonElement> | undefined;
 }
 
-// A name that opens a popover with the details of its record
-// (docs/design-system.md, Menus, Popovers, and Tooltips), such as a Product
-// of a package tree. Its popover, 320 px wide (InfoPopover), holds its
-// title, the name, in text-16, weight 600, wrapping; below it, in text-13,
-// fg-muted, what identifies the record further; a border line with 12 px of
-// space above and below it; and the details.
+// A name that opens a popover with the details of its record, and with its
+// actions for a user who can take them (docs/design-system.md, Menus,
+// Popovers, and Tooltips), such as a Product of a package tree. Its popover,
+// 320 px wide (InfoPopover), holds its title, the name, in text-16, weight
+// 600, wrapping; below it, in text-13, fg-muted, what identifies the record
+// further; a border line with 12 px of space above and below it; the
+// details; and, with actions, another such line and the menu "Actions", one
+// stop of Tab, whose items start their icons where the details start. While
+// an action is in progress, Escape and a click outside leave the popover
+// open.
 export function DetailsName({
   name,
   label,
   identifier,
   children,
+  isOpen,
+  onOpenChange,
+  actions,
+  busy = false,
+  ref,
 }: DetailsNameProps) {
   return (
-    <DialogTrigger>
-      <AriaButton aria-label={label} className={`${OPENER} wrap-break-word`}>
+    <DialogTrigger
+      isOpen={isOpen}
+      onOpenChange={(open) => {
+        if (!busy) {
+          onOpenChange?.(open);
+        }
+      }}
+    >
+      <AriaButton
+        ref={ref}
+        aria-label={label}
+        className={`${OPENER} wrap-break-word`}
+      >
         {name}
       </AriaButton>
       <InfoPopover width="wide">
@@ -48,6 +84,14 @@ export function DetailsName({
         )}
         <PopoverLine />
         {children}
+        {actions !== undefined && (
+          <>
+            <PopoverLine />
+            <Menu aria-label="Actions" className="-mx-2.5 outline-none">
+              {actions}
+            </Menu>
+          </>
+        )}
       </InfoPopover>
     </DialogTrigger>
   );

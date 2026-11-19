@@ -16,6 +16,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Star,
   Trash,
   TriangleAlert,
@@ -108,6 +109,7 @@ import type {
   LifecyclePhaseValue,
   PackageDetail,
   ProductDetail,
+  ProductEligibilityResponse,
   ProductReasonValue,
   SSVCAutomatable,
   SSVCExploitation,
@@ -129,8 +131,11 @@ import {
 import {
   useChangeTrackStatus,
   useExcludePackage,
+  useExcludeProduct,
   useExcludeTrack,
+  useOverrideProductEligibility,
   useRestorePackage,
+  useRestoreProduct,
   useRestoreTrack,
 } from "../api/generated/ticket-packages";
 import {
@@ -1526,17 +1531,20 @@ function affectednessName(status: string): string {
 }
 
 // A record of the package tree that an exclusion that Sentinel confirmed
-// hides, while "Show hidden" is off: a package, or a track of it, with the
-// instant at which Sentinel confirmed it, after which the first read of the
-// Ticket decides where the focus moves (useFocusAfterExclusion).
+// hides, while "Show hidden" is off: a package, a track of it, or a Product
+// of the track, with the instant at which Sentinel confirmed it, after which
+// the first read of the Ticket decides where the focus moves
+// (useFocusAfterExclusion).
 interface HiddenRecord {
   packageId: string;
   trackId?: string;
+  productId?: string;
   at: number;
 }
 
-// The menus of the actions of the records, by the id of their record, which
-// take the focus after an exclusion hides the record before them.
+// The menus of the actions of the packages and tracks, and the names of the
+// Products, by the id of their record, which take the focus after an
+// exclusion hides the record before them.
 interface RecordTriggers {
   ref: (id: string) => (element: HTMLButtonElement | null) => void;
   get: (id: string) => HTMLButtonElement | undefined;
@@ -1589,8 +1597,9 @@ function handOffAfterClose(button: () => HTMLElement | null | undefined) {
 // What the records of the package tree need for their edits (PackagesPart).
 interface TreeEdits {
   ticketId: string;
-  // Whether the user excludes and restores the records: with
-  // manage_packages, on a Ticket whose status accepts the edit.
+  // Whether the user excludes and restores the records and sets the
+  // eligibility of the Products: with manage_packages, on a Ticket whose
+  // status accepts the edit.
   manages: boolean;
   // The affectedness that the user sets on the tracks, as the capabilities
   // and the Ticket allow (docs/screen-map.md, Roles, Principles).
@@ -1969,14 +1978,60 @@ function TrackAffectedness({
   );
 }
 
+// The element that takes the focus after an exclusion hid its record
+// (useFocusAfterExclusion), given the package tree that the read after it
+// shows: after a Product, the name of the next Product of its track that
+// shows, otherwise the menu of the actions of its track, and, when the track
+// no longer shows either, as after an exclusion of the track; after a track,
+// the menu of the next track of its package that shows, otherwise that of
+// its package, and, when the package no longer shows either, as after an
+// exclusion of the package; after a package, the menu of the next package
+// that shows, otherwise "Show hidden", which leads to Restore. null while the
+// record still shows, as when another user restored it meanwhile.
+function focusTargetAfter(
+  packages: readonly PackageDetail[],
+  gone: Omit<HiddenRecord, "at">,
+  triggers: RecordTriggers,
+  showHidden: HTMLElement | null,
+): HTMLElement | null | undefined {
+  const index = packages.findIndex((item) => item.id === gone.packageId);
+  const ticketPackage = packages[index];
+  if (gone.trackId !== undefined && ticketPackage?.actionable === true) {
+    const tracks = ticketPackage.tracks;
+    const at = tracks.findIndex((track) => track.id === gone.trackId);
+    const track = tracks[at];
+    if (track?.actionable === true) {
+      if (gone.productId === undefined) {
+        return null;
+      }
+      const products = track.products;
+      const place = products.findIndex(
+        (product) => product.id === gone.productId,
+      );
+      if (products[place]?.actionable === true) {
+        return null;
+      }
+      const next = products
+        .slice(place + 1)
+        .find((product) => product.actionable);
+      return triggers.get(next?.id ?? track.id);
+    }
+    const next = tracks.slice(at + 1).find((item) => item.actionable);
+    return triggers.get(next?.id ?? ticketPackage.id);
+  }
+  if (gone.trackId === undefined && ticketPackage?.actionable === true) {
+    return null;
+  }
+  const next = packages.slice(index + 1).find((item) => item.actionable);
+  return next === undefined
+    ? showHidden?.querySelector("input")
+    : triggers.get(next.id);
+}
+
 // Where the focus moves after an exclusion hides its record while "Show
 // hidden" is off, once the read of the Ticket after it shows the record no
-// longer (docs/behaviors.md, Accessibility, Focus after an action): after a
-// track, to the menu of the actions of the next track of its package that
-// shows, otherwise to that of its package, and, when the package no longer
-// shows either, as after an exclusion of the package: to the menu of the
-// next package that shows, otherwise to "Show hidden", which leads to
-// Restore. When that read fails, the focus stays where it is, and it moves
+// longer (focusTargetAfter; docs/behaviors.md, Accessibility, Focus after an
+// action). When that read fails, the focus stays where it is, and it moves
 // only from the record that left the page, or from the screen's heading,
 // so that a user who moved it meanwhile keeps it.
 function useFocusAfterExclusion(
@@ -2004,27 +2059,12 @@ function useFocusAfterExclusion(
       return;
     }
     hidden.current = undefined;
-    const index = packages.findIndex((item) => item.id === gone.packageId);
-    const ticketPackage = packages[index];
-    let target: HTMLElement | null | undefined;
-    if (gone.trackId !== undefined && ticketPackage?.actionable === true) {
-      const tracks = ticketPackage.tracks;
-      const at = tracks.findIndex((track) => track.id === gone.trackId);
-      if (tracks[at]?.actionable === true) {
-        return;
-      }
-      const next = tracks.slice(at + 1).find((track) => track.actionable);
-      target = triggers.get(next?.id ?? ticketPackage.id);
-    } else {
-      if (gone.trackId === undefined && ticketPackage?.actionable === true) {
-        return;
-      }
-      const next = packages.slice(index + 1).find((item) => item.actionable);
-      target =
-        next === undefined
-          ? showHidden.current?.querySelector("input")
-          : triggers.get(next.id);
-    }
+    const target = focusTargetAfter(
+      packages,
+      gone,
+      triggers,
+      showHidden.current,
+    );
     const active = document.activeElement;
     if (
       (active === null || active === document.body || active.matches("h1")) &&
@@ -2122,8 +2162,234 @@ function ProductDetails({ product, release }: ProductDetailsProps) {
   );
 }
 
+// The actions of a Product that its popover offers (ProductName).
+type ProductAction = "eligibility" | "automatic" | "exclude" | "restore";
+
+// What the actions of a Product depend on, as the popover offers them: its
+// eligibility, whether a user set it by hand, and whether its own marker
+// excludes it.
+interface ProductState {
+  eligible: boolean;
+  override: boolean;
+  excluded: boolean;
+}
+
+function productState(product: ProductDetail): ProductState {
+  return {
+    eligible: product.eligible,
+    override: product.is_eligible_override,
+    excluded: product.deleted_at !== null,
+  };
+}
+
+interface ProductNameProps {
+  product: ProductDetail;
+  release: Release | undefined;
+  packageId: string;
+  packageName: string;
+  trackId: string;
+  reference: string;
+  edits: TreeEdits;
+}
+
+// The name of a Product, which opens its details (ProductDetails), and, for
+// a user who excludes and restores the records of the package tree, its
+// actions, as they were when the popover opened (docs/behaviors.md, The
+// Signed-in User): Mark as eligible or Mark as not eligible, whichever
+// changes its eligibility, Override Product Eligibility, PATCH
+// .../products/{ticket_package_product_id}; Return to automatic eligibility,
+// with eligible null, while its eligibility is set by hand; and Exclude from
+// this track, Soft-Delete Product, POST .../products/{id}/exclude, or
+// Restore, Restore Product, POST .../products/{id}/restore, for a Product
+// that its own marker excludes (Sentinel
+// docs/features/packages/package-model.md, Override Product Eligibility,
+// Reset behavior; Soft-Delete Product; Restore Product). Sentinel accepts
+// them also on a hidden Product. None asks for confirmation: the exclusion
+// of a Product ends no access, since maintainership concerns the package
+// (Sentinel docs/features/packages/package-maintainership.md, Confidential
+// Ticket Visibility), and another action reverses each. While an action is
+// in progress, its item is busy and the popover cannot be closed; once
+// Sentinel answers, the popover closes and the focus returns to the name.
+// The outcome is announced once the read of the Ticket after it arrives, or
+// shows in the message area then when the Product no longer shows, as after
+// an exclusion while "Show hidden" is off; a failure shows in the message
+// area, and one that says that another user did the same meanwhile says the
+// state that the Product now has (docs/behaviors.md, Where Errors Appear;
+// Outcome of a Change). The hooks of the changes live here, with the name,
+// which stays on the page while the popover closes.
+function ProductName({
+  product,
+  release,
+  packageId,
+  packageName,
+  trackId,
+  reference,
+  edits,
+}: ProductNameProps) {
+  const showMessage = useShowMessage();
+  const mounted = useMounted();
+  const [open, setOpen] = useState(false);
+  const [offersAtOpen, setOffersAtOpen] = useState(false);
+  // The action in progress, with the state of the Product as it started,
+  // which its item keeps until Sentinel answers.
+  const [running, setRunning] = useState<{
+    action: ProductAction;
+    state: ProductState;
+  }>();
+  // A failure of the UI itself, which the router shows (src/router.ts).
+  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
+  const subject = `Product ${product.product_name} of ${packageName} · ${reference}`;
+  const record = { packageId, trackId, productId: product.id };
+  const eligibilityText = ({ data }: ProductEligibilityResponse) => {
+    const value = data.eligible ? "eligible" : "not eligible";
+    return data.is_eligible_override
+      ? `${subject} marked as ${value}.`
+      : `${subject} returned to automatic eligibility, ${value}.`;
+  };
+  const eligibility = useOverrideProductEligibility({
+    mutation: useChangeOutcome(
+      edits.record,
+      eligibilityText,
+      edits.readAgain,
+      (response: ProductEligibilityResponse) => {
+        edits.after(eligibilityText(response));
+      },
+    ),
+  });
+  const exclude = useExcludeProduct({
+    mutation: useMarkerOutcome(edits, record, `${subject} excluded.`),
+  });
+  const restore = useRestoreProduct({
+    mutation: useMarkerOutcome(edits, record, `${subject} restored.`),
+  });
+  if (uiFailure !== undefined) {
+    throw uiFailure.error;
+  }
+  const busy = running !== undefined;
+  const state = running?.state ?? productState(product);
+  const ids = {
+    ticketId: edits.ticketId,
+    packageId,
+    trackId,
+    ticketPackageProductId: product.id,
+  };
+
+  const run = async (action: ProductAction) => {
+    if (busy) {
+      return;
+    }
+    setRunning({ action, state });
+    try {
+      if (action === "eligibility" || action === "automatic") {
+        await eligibility.mutateAsync({
+          ...ids,
+          data: { eligible: action === "automatic" ? null : !state.eligible },
+        });
+      } else {
+        await (action === "exclude" ? exclude : restore).mutateAsync(ids);
+      }
+    } catch (failure) {
+      if (!mounted.current) {
+        return;
+      }
+      if (!isRequestFailure(failure)) {
+        setUiFailure({ error: failure });
+        return;
+      }
+      const conflict =
+        action === "exclude" || action === "restore"
+          ? presentMarkerConflict(failure, action, subject)
+          : undefined;
+      const presentation =
+        conflict === undefined ? presentChangeFailure(failure) : undefined;
+      if (conflict !== undefined) {
+        showMessage({ tone: "info", text: conflict });
+      } else if (presentation !== undefined) {
+        showMessage({
+          tone: presentation.unconfirmed ? "warning" : "danger",
+          text: presentation.message,
+          reference: presentation.reference,
+        });
+      }
+    }
+    if (mounted.current) {
+      setRunning(undefined);
+      setOpen(false);
+    }
+  };
+
+  const item = (
+    action: ProductAction,
+    icon: LucideIcon,
+    label: string,
+    busyText: string,
+  ) => (
+    <MenuAction
+      id={action}
+      icon={icon}
+      busy={running?.action === action ? busyText : undefined}
+      shouldCloseOnSelect={false}
+      onAction={() => {
+        void run(action);
+      }}
+    >
+      {label}
+    </MenuAction>
+  );
+  const actions = (
+    <>
+      {state.eligible
+        ? item(
+            "eligibility",
+            UserPen,
+            "Mark as not eligible",
+            "Marking as not eligible.",
+          )
+        : item(
+            "eligibility",
+            UserPen,
+            "Mark as eligible",
+            "Marking as eligible.",
+          )}
+      {state.override &&
+        item(
+          "automatic",
+          RotateCcw,
+          "Return to automatic eligibility",
+          "Returning to automatic eligibility.",
+        )}
+      {state.excluded
+        ? item("restore", Undo2, "Restore", "Restoring.")
+        : item("exclude", Ban, "Exclude from this track", "Excluding.")}
+    </>
+  );
+  return (
+    <DetailsName
+      ref={edits.triggers.ref(product.id)}
+      name={product.product_name}
+      identifier={<span className="font-mono">{product.product_cpe}</span>}
+      isOpen={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) {
+          setOffersAtOpen(edits.manages);
+        }
+      }}
+      actions={offersAtOpen ? actions : undefined}
+      busy={busy}
+    >
+      <ProductDetails product={product} release={release} />
+    </DetailsName>
+  );
+}
+
 interface ProductItemProps {
   product: ProductDetail;
+  packageId: string;
+  packageName: string;
+  trackId: string;
+  reference: string;
+  edits: TreeEdits;
   // Whether the track that holds the Product is hidden.
   trackHidden: boolean;
   // Whether the track that holds the Product expects a fix (expectsFix).
@@ -2139,17 +2405,22 @@ interface ProductItemProps {
   releaseGates: boolean;
 }
 
-// A Product of a track: its name, which opens its details, in fg-muted when
-// it is hidden or not eligible, and wraps; user-pen at 14 px in fg-muted when
-// its eligibility is set by hand, read as ", eligibility set by hand"; the
-// label Not eligible, and the labels of its own hidden state. Its release
-// (releaseOf) shows in its details; at the end of its line only when the
-// Product keeps the Ticket from Resolved: triangle-alert at 14 px in
-// warning-icon, then "Not released", or "Release not observed", in text-13,
-// weight 500, warning-on-soft, at the end of the next line where the line
-// wraps.
+// A Product of a track: its name, which opens its details and its actions
+// (ProductName), in fg-muted when it is hidden or not eligible, and wraps;
+// user-pen at 14 px in fg-muted when its eligibility is set by hand, read as
+// ", eligibility set by hand"; the label Not eligible, and the labels of its
+// own hidden state. Its release (releaseOf) shows in its details; at the end
+// of its line only when the Product keeps the Ticket from Resolved:
+// triangle-alert at 14 px in warning-icon, then "Not released", or "Release
+// not observed", in text-13, weight 500, warning-on-soft, at the end of the
+// next line where the line wraps.
 function ProductItem({
   product,
+  packageId,
+  packageName,
+  trackId,
+  reference,
+  edits,
   trackHidden,
   fixExpected,
   releaseObserved: observed,
@@ -2169,12 +2440,15 @@ function ProductItem({
       <span
         className={`flex min-w-0 flex-wrap items-center gap-x-1.5 ${mutedIf(hidden || !product.eligible)}`}
       >
-        <DetailsName
-          name={product.product_name}
-          identifier={<span className="font-mono">{product.product_cpe}</span>}
-        >
-          <ProductDetails product={product} release={release} />
-        </DetailsName>
+        <ProductName
+          product={product}
+          release={release}
+          packageId={packageId}
+          packageName={packageName}
+          trackId={trackId}
+          reference={reference}
+          edits={edits}
+        />
         {product.is_eligible_override && (
           <>
             <UserPen aria-hidden className="size-3.5 shrink-0 text-fg-muted" />
@@ -2631,6 +2905,11 @@ function TrackItem({
             <ProductItem
               key={product.id}
               product={product}
+              packageId={packageId}
+              packageName={packageName}
+              trackId={track.id}
+              reference={track.reference}
+              edits={edits}
               trackHidden={hidden}
               fixExpected={expectsFix(track)}
               releaseGates={hasCve && track.status === "fixed"}
@@ -2846,8 +3125,9 @@ interface PackagesPartProps {
 // (docs/behaviors.md, Where Errors Appear; Loading). A Ticket without packages shows
 // "No packages.", and a tree whose packages are all hidden, "All packages
 // are hidden.". A user who holds manage_packages, on a Ticket whose status
-// accepts the edit, excludes and restores its packages and tracks and sets
-// their affectedness, and a user who holds admin_ticket_ops sets Fixed, as
+// accepts the edit, excludes and restores its packages, tracks, and Products,
+// sets the affectedness of the tracks and the eligibility of the Products,
+// and a user who holds admin_ticket_ops sets Fixed, as
 // does manage_packages on a Ticket without a CVE (TreeEdits; Sentinel
 // docs/features/identity/rbac.md, Endpoint Permission Map, Ticket Packages);
 // after an edit, the screen reads again what it affects.
