@@ -13317,6 +13317,36 @@ describe("the edits of the package tree", () => {
     await expectFocusSettledOn(actionsOf(screen, OPENSSL_FLES));
   });
 
+  test("leave the focus where the user moved it before the read after an exclusion that hides its record arrives", async () => {
+    let tree = editableTree();
+    const read = later();
+    let excluded = false;
+    showingEditable(undefined, {
+      ticket: () =>
+        excluded
+          ? read.promise
+          : ticketResponse(fictionalTicketDetail({ packages: tree })),
+      packageChange: () => {
+        excluded = true;
+        return trackMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+    await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+    await expect.element(actionsOf(screen, OPENSSL_SP7)).toHaveFocus();
+
+    // Meanwhile the user moves the focus to the menu of fictional-zlib.
+    actionsOf(screen, "fictional-zlib").element().focus();
+    tree = treeWithoutSp7();
+    read.resolve(ticketResponse(fictionalTicketDetail({ packages: tree })));
+
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
+  });
+
   test("move the focus after an exclusion of the last track of a package that shows to the menu of its package", async () => {
     let tree = editableTree();
     showingEditable(() => tree, {
