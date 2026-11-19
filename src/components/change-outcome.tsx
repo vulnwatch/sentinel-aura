@@ -93,8 +93,8 @@ interface WaitingOutcome {
 // announces it once that read has arrived; with inMessageArea, for an
 // outcome that shows nowhere where the user acted, the message area shows it
 // then instead. The record keeps its identity while it names the same
-// record, as from useMemo: another record shows at once what waits for the
-// message area.
+// record, as from useMemo: another record shows at once in the message area
+// what waits.
 export function useOutcomeAfterRead(
   read: { dataUpdatedAt: number; errorUpdatedAt: number },
   record: MessageRecord,
@@ -106,14 +106,15 @@ export function useOutcomeAfterRead(
   const [announcement, setAnnouncement] = useState<Announcement>();
   const waiting = useRef<WaitingOutcome>(undefined);
 
-  // An outcome for the message area that still waits for its read as the
-  // user leaves the component shows at once, naming the record, as the
-  // outcome of a change that ends after the user left does
-  // (useChangeOutcome).
+  // An outcome that still waits for its read as the component leaves the
+  // page, as when the user leaves it or when that read replaces it, such as
+  // with a 404 after a change that ended the user's access, shows at once in
+  // the message area, naming the record, as the outcome of a change that
+  // ends after the user left does (useChangeOutcome).
   useEffect(
     () => () => {
       const done = waiting.current;
-      if (done?.message === true) {
+      if (done !== undefined) {
         waiting.current = undefined;
         showMessage({ tone: "success", text: done.text, record });
       }

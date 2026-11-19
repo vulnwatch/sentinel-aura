@@ -1684,8 +1684,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   Sentinel answers; the menu cannot be closed meanwhile, and then closes,
   with the focus on its button (`docs/behaviors.md`, Loading).
 - The other actions of a record within a part, such as a package or a track
-  of a Ticket, are a menu: an icon button of 24 px with `ellipsis` at 16 px,
-  named "Actions of" and its record, such as "Actions of fictional-openssl",
+  of a Ticket, are a menu: an icon button of 24 px with `ellipsis` at 16 px
+  in `fg`, which keeps its color in a hidden record (Detail Screens), named
+  "Actions of" and its record, such as "Actions of fictional-openssl",
   whose tooltip says "Actions", at the end of the line or the band of the
   record, which opens the actions below its end, at least as wide as their
   longest item (Detail Screens). The menu takes the name of its button.

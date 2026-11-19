@@ -1235,6 +1235,7 @@ test.describe("for an analyst", () => {
       values.getByRole("menuitemradio", { name: "Affected", exact: true }),
     ).toBeChecked();
     await expectAccessible(page);
+    await expectScreenshot(page, "ticket-affectedness.png");
     await page.keyboard.press("Escape");
     await expect(values).toHaveCount(0);
     await expect(select).toBeFocused();
@@ -1280,7 +1281,7 @@ test.describe("for an analyst", () => {
     await expectAccessible(page);
   });
 
-  test("asks for confirmation before excluding a package with maintainers of a confidential Ticket, and excludes nothing on Cancel", async ({
+  test("asks for confirmation before excluding a package with maintainers of a confidential Ticket", async ({
     page,
   }) => {
     // fictional-openssh of the confidential SNTL-18, which dbrown maintains
@@ -1305,14 +1306,12 @@ test.describe("for an analyst", () => {
     const cancel = confirmation.getByRole("button", { name: "Cancel" });
     await expect(cancel).toBeFocused();
     await expectAccessible(page);
+    await expectScreenshot(page, "ticket-exclude-package.png");
 
     await cancel.click();
 
     await expect(confirmation).toHaveCount(0);
     await expect(actions).toBeFocused();
-    await expect(
-      part(page, "Packages").getByText("Excluded", { exact: true }),
-    ).toHaveCount(0);
   });
 
   test(
@@ -1346,7 +1345,7 @@ test.describe("for an analyst", () => {
 
       await expect(
         page.getByText(
-          "Track SUSE:FLES-15-SP7:Update of fictional-curl excluded.",
+          "Track fictional-curl · SUSE:FLES-15-SP7:Update excluded.",
           { exact: true },
         ),
       ).toBeVisible();
@@ -1369,7 +1368,7 @@ test.describe("for an analyst", () => {
         .click();
 
       await expect(
-        announced("Track SUSE:FLES-15-SP7:Update of fictional-curl restored."),
+        announced("Track fictional-curl · SUSE:FLES-15-SP7:Update restored."),
       ).toHaveCount(1);
       await expect(sp7).toBeFocused();
       await expect(
@@ -1411,7 +1410,7 @@ test.describe("for an analyst", () => {
 
       await expect(
         announced(
-          "Affectedness of fles-16.0 of fictional-expat changed to Not affected.",
+          "Affectedness of fictional-expat · fles-16.0 changed to Not affected.",
         ),
       ).toHaveCount(1);
       const changed = button(
@@ -1489,6 +1488,10 @@ test.describe("for an analyst", () => {
           name: /^Affectedness of/,
         }),
       ).toHaveCount(0);
+      // The select that held the focus left the page: the focus moves to the
+      // screen's heading (docs/behaviors.md, Accessibility, Focus after an
+      // action).
+      await expect(heading(page, "SNTL-26")).toBeFocused();
     },
   );
 

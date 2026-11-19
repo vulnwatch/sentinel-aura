@@ -521,9 +521,9 @@ describe("presentMarkerConflict", () => {
       presentMarkerConflict(
         errorResponse(422, "PACKAGE_NOT_EXCLUDED"),
         "restore",
-        "Track fles-16.0 of fictional-zlib",
+        "Track fictional-zlib · fles-16.0",
       ),
-    ).toBe("Track fles-16.0 of fictional-zlib is no longer excluded.");
+    ).toBe("Track fictional-zlib · fles-16.0 is no longer excluded.");
   });
 
   test.each<[string, RequestFailure, "exclude" | "restore"]>([

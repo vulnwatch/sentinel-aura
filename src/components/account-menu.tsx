@@ -150,7 +150,16 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
   }
 
   return (
-    <MenuTrigger isOpen={isOpen} onOpenChange={setOpen}>
+    <MenuTrigger
+      isOpen={isOpen}
+      onOpenChange={(open) => {
+        // The menu cannot be closed while Sign out is in progress
+        // (docs/behaviors.md, Loading).
+        if (!signOut.busy) {
+          setOpen(open);
+        }
+      }}
+    >
       <AccountTrigger user={user} compact={compact} />
       <Popover
         placement="top start"

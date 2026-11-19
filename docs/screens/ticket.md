@@ -1307,8 +1307,8 @@ Exclusion and Actionability; API Endpoints):
   reads of the Ticket list.
 - The outcome is announced once the read of the Ticket after it arrives,
   whatever the outcome of that read: "Package fictional-openssl excluded.",
-  "Track SUSE:FLES-15-SP7:Update of fictional-openssl restored.", or
-  "Affectedness of SUSE:FLES-15-SP7:Update of fictional-openssl changed to
+  "Track fictional-openssl · SUSE:FLES-15-SP7:Update restored.", or
+  "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to
   Not affected.", with the affectedness that Sentinel returns. When the
   record no longer shows, as after an exclusion while "Show hidden" is off,
   the outcome shows in the message area then instead (`docs/behaviors.md`,
@@ -1326,7 +1326,11 @@ Exclusion and Actionability; API Endpoints):
   and a later read that removes the record moves it to the screen's heading,
   as when any read removes the element with the focus. While "Show hidden"
   is on, the record stays, in gray with its label, and the focus stays on
-  its menu.
+  its menu. When a read removes a select or a menu of actions while it, or
+  its open menu, holds the focus, as after Fixed for a user who can set no
+  other value on the track, or after a read of the signed-in user took the
+  capability away, the focus moves to the screen's heading once the menu
+  has closed (`docs/behaviors.md`, Accessibility, Focus after an action).
 
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,
@@ -1614,7 +1618,7 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   screen handles two codes specifically, which say that another user did
   the same meanwhile: `409 PACKAGE_ALREADY_EXCLUDED` of Exclude, "Package
   fictional-openssl is already excluded.", and `422 PACKAGE_NOT_EXCLUDED` of
-  Restore, "Track SUSE:FLES-15-SP7:Update of fictional-openssl is no longer
+  Restore, "Track fictional-openssl · SUSE:FLES-15-SP7:Update is no longer
   excluded.", each in the message area in the `info` tone, also after a
   confirmation, which then closes (Sentinel
   `docs/features/packages/package-model.md`, Soft-Delete Package from Ticket;

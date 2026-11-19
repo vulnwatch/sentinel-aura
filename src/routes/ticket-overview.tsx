@@ -1564,6 +1564,24 @@ function createRecordTriggers(): RecordTriggers {
   };
 }
 
+// Moves the focus to the screen's heading once a menu has closed whose
+// button the screen no longer offers, as after a read of the signed-in user
+// took its capability away while it was open: React Aria cannot return the
+// focus to the button, which leaves the page with the menu
+// (docs/behaviors.md, Accessibility, Focus after an action).
+function handOffAfterClose() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (
+        document.activeElement === null ||
+        document.activeElement === document.body
+      ) {
+        focusScreenHeading();
+      }
+    });
+  });
+}
+
 // What the records of the package tree need for their edits (PackagesPart).
 interface TreeEdits {
   ticketId: string;
@@ -1756,15 +1774,22 @@ function MarkerActions({
   }
   return (
     <>
-      <ActionsMenu
-        label={`Actions of ${name}`}
-        isOpen={open}
-        onOpenChange={setOpen}
-        busy={pending}
-        ref={edits.triggers.ref(record.trackId ?? record.packageId)}
-      >
-        {item}
-      </ActionsMenu>
+      <FocusHandOff>
+        <ActionsMenu
+          label={`Actions of ${name}`}
+          isOpen={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (!next && !edits.manages) {
+              handOffAfterClose();
+            }
+          }}
+          busy={pending}
+          ref={edits.triggers.ref(record.trackId ?? record.packageId)}
+        >
+          {item}
+        </ActionsMenu>
+      </FocusHandOff>
       {confirmation !== undefined && (
         <ConfirmationDialog
           isOpen={confirming}
@@ -1804,7 +1829,7 @@ interface TrackAffectednessProps {
 // not list, the value with its mark. It asks for no confirmation
 // (docs/behaviors.md, Confirmation). The outcome is announced once the read
 // of the Ticket after it arrives, such as "Affectedness of
-// SUSE:FLES-15-SP7:Update of fictional-openssl changed to Affected."; a
+// fictional-openssl · SUSE:FLES-15-SP7:Update changed to Affected."; a
 // failure shows in the message area.
 function TrackAffectedness({
   track,
@@ -1820,7 +1845,7 @@ function TrackAffectedness({
   );
   // A failure of the UI itself, which the router shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
-  const subject = `${track.reference} of ${packageName}`;
+  const subject = `${packageName} · ${track.reference}`;
   const changedText = ({ data }: TrackStatusResponse) =>
     `Affectedness of ${subject} changed to ${affectednessName(data.status)}.`;
   const change = useChangeTrackStatus({
@@ -1830,17 +1855,18 @@ function TrackAffectedness({
     throw uiFailure.error;
   }
   const pending = change.isPending;
-  const offered = open || pending ? offeredAtOpen : edits.settable;
-  const choices = AFFECTEDNESS_ORDER.filter(
-    (status) => offered.has(status) || status === track.status,
-  );
+  const choicesOf = (settable: ReadonlySet<string>) =>
+    AFFECTEDNESS_ORDER.filter(
+      (status) => settable.has(status) || status === track.status,
+    );
+  // Whether the values settable offer another value than the current one,
+  // which the pinned contract lists.
+  const offers = (settable: ReadonlySet<string>) =>
+    AFFECTEDNESS.has(track.status) &&
+    choicesOf(settable).some((status) => status !== track.status);
+  const choices = choicesOf(open || pending ? offeredAtOpen : edits.settable);
   const value = <MarkedValue value={track.status} known={AFFECTEDNESS} />;
-  if (
-    !open &&
-    !pending &&
-    (!AFFECTEDNESS.has(track.status) ||
-      !choices.some((status) => status !== track.status))
-  ) {
+  if (!open && !pending && !offers(edits.settable)) {
     return value;
   }
 
@@ -1881,28 +1907,32 @@ function TrackAffectedness({
   };
 
   return (
-    <ChoiceMenu
-      label={`Affectedness of ${packageName}, ${track.reference}: ${affectednessName(track.status)}`}
-      value={value}
-      choices={choices.map((status) => ({
-        id: status,
-        textValue: affectednessName(status),
-        content: <MarkedValue value={status} known={AFFECTEDNESS} />,
-      }))}
-      chosen={track.status}
-      busy={pending ? (change.variables?.data.status ?? null) : null}
-      busyText="Changing the affectedness."
-      isOpen={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (next) {
-          setOfferedAtOpen(edits.settable);
-        }
-      }}
-      onChoose={(choice) => {
-        void choose(choice);
-      }}
-    />
+    <FocusHandOff>
+      <ChoiceMenu
+        label={`Affectedness of ${packageName}, ${track.reference}: ${affectednessName(track.status)}`}
+        value={value}
+        choices={choices.map((status) => ({
+          id: status,
+          textValue: affectednessName(status),
+          content: <MarkedValue value={status} known={AFFECTEDNESS} />,
+        }))}
+        chosen={track.status}
+        busy={pending ? (change.variables?.data.status ?? null) : null}
+        busyText="Changing the affectedness."
+        isOpen={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (next) {
+            setOfferedAtOpen(edits.settable);
+          } else if (!offers(edits.settable)) {
+            handOffAfterClose();
+          }
+        }}
+        onChoose={(choice) => {
+          void choose(choice);
+        }}
+      />
+    </FocusHandOff>
   );
 }
 
@@ -2398,7 +2428,7 @@ function TrackActions({
   packageName,
   edits,
 }: TrackActionsProps) {
-  const subject = `Track ${track.reference} of ${packageName}`;
+  const subject = `Track ${packageName} · ${track.reference}`;
   const ids = { ticketId: edits.ticketId, packageId, trackId: track.id };
   const exclude = useExcludeTrack({
     mutation: useChangeOutcome(

@@ -21,10 +21,11 @@ interface ActionsMenuProps {
 
 // The other actions of a record within a part of a detail screen, such as a
 // package of a Ticket (docs/design-system.md, Menus, Popovers, and Tooltips):
-// an icon button of 24 px with ellipsis at 16 px, named by the actions and
-// their record, whose tooltip says "Actions", which opens them as a menu
-// below its end. An item whose change applies at once keeps the menu open,
-// busy, until Sentinel answers.
+// an icon button of 24 px with ellipsis at 16 px in fg, which keeps its color
+// in a hidden record (Detail Screens), named by the actions and their record,
+// whose tooltip says "Actions", which opens them as a menu below its end. An
+// item whose change applies at once keeps the menu open, busy, until
+// Sentinel answers.
 export function ActionsMenu({
   label,
   isOpen,
@@ -42,15 +43,17 @@ export function ActionsMenu({
         }
       }}
     >
-      <IconButton
-        ref={ref}
-        label={label}
-        tooltip="Actions"
-        icon={Ellipsis}
-        size="small"
-        isBusy={busy}
-        onPress={() => undefined}
-      />
+      <span className="flex text-fg">
+        <IconButton
+          ref={ref}
+          label={label}
+          tooltip="Actions"
+          icon={Ellipsis}
+          size="small"
+          isBusy={busy}
+          onPress={() => undefined}
+        />
+      </span>
       <MenuPopover placement="bottom end">
         <Menu className="min-w-44 outline-none">{children}</Menu>
       </MenuPopover>
