@@ -142,14 +142,15 @@ document that do not take effect yet.
   current the elements that depend on the capabilities and on the assignment
   eligibility of the user (`docs/screen-map.md`, Roles; Capabilities of the
   Signed-in User). An open dialog, an open popover of a field
-  (`docs/design-system.md`, Detail Screens), or an open menu is the
-  exception: it keeps offering the actions that it offered as it opened,
-  until it closes, so that the error of a change that Sentinel refuses, such
-  as a `403` after the user lost a role, stays in it (Where Errors Appear),
-  and so that a menu keeps the item whose change is in progress; it offers
-  them anew as it opens again. The pencil or the button that opens
-  such a popover or menu stays as it was while it is open and while its
-  change is in progress.
+  (`docs/design-system.md`, Detail Screens), an open menu, or the open
+  popover of a name with the actions of its record (`docs/design-system.md`,
+  Menus, Popovers, and Tooltips) is the exception: it keeps offering the
+  actions that it offered as it opened, until it closes, so that the error
+  of a change that Sentinel refuses, such as a `403` after the user lost a
+  role, stays in it (Where Errors Appear), and so that a menu or a popover
+  keeps the item whose change is in progress; it offers them anew as it
+  opens again. The pencil or the button that opens such a popover or menu
+  stays as it was while it is open and while its change is in progress.
   While the error of a read of the signed-in user shows in place of the
   screen (Session State), it is read again only with Try again, as a screen's
   read whose error shows in place of content is (Loading).
@@ -475,9 +476,9 @@ returns, whatever Sentinel guarantees for its field:
   control cannot start the change again until it ends; the rest of the screen
   stays usable, and a form keeps its input. A dialog cannot be closed while
   its change is in progress, nor can the popover of a field, except by a
-  change of layout (`docs/design-system.md`, Detail Screens), nor a menu
-  whose item started the change (`docs/design-system.md`, Menus, Popovers,
-  and Tooltips). Leaving the
+  change of layout (`docs/design-system.md`, Detail Screens), nor a menu, or
+  the popover of a name, whose item started the change
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips). Leaving the
   screen does not cancel a change (Outcome of a Change).
 
 ### Empty States

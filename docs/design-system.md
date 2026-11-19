@@ -464,7 +464,8 @@ that the code imports ship.
 | The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
 | The state of a request: in progress, accepted, failed (Other Values) | `git-pull-request`, `git-merge`, `git-pull-request-closed` |
 | A confidential Ticket | `lock` |
-| A priority override, an eligibility set by hand | `user-pen` |
+| A priority override, an eligibility set by hand, and the actions that set an eligibility by hand | `user-pen` |
+| Return a value set by hand to its automatic value, such as the eligibility of a Product | `rotate-ccw` |
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
 | The access grants of a confidential Ticket | `user-round-key` |
 | Change a field of a record in place, edit a row of a table | `pencil` |
@@ -1679,7 +1680,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   selected. While the change that an item started is in progress, the item is
   busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
   icon, as on a busy button (Buttons and Links), or, in an item of a single
-  selection, of its `check` at its end (`docs/behaviors.md`, Loading). An
+  selection, of its `check` at its end (`docs/behaviors.md`, Loading), and
+  assistive technologies read with the item, as its description, the change
+  in progress, in the words that its screen document gives it, such as
+  "Excluding."; the item keeps the focus. An
   item whose change applies at once keeps its menu open, busy, until
   Sentinel answers; the menu cannot be closed meanwhile, and then closes,
   with the focus on its button (`docs/behaviors.md`, Loading).
@@ -1714,7 +1718,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   `text-13`, `fg-muted`, what identifies the record further, such as a CPE; a
   `border` line with 12 px of space above and below it; the details as a
   description list (Detail Screens); and, with actions, another such line and
-  the actions as menu items. A field of the details whose value can run to
+  the actions as the items of a menu named "Actions", one stop of the Tab
+  key within which the arrow keys move, the icons of the items at the start
+  of the details. A field of the details whose value can run to
   many lines, such as the scope of a CNA, comes last, its term above its
   value, as in a list narrower than 280 px, across the width of the list,
   and, where its screen document states it, cut to its first four lines with
