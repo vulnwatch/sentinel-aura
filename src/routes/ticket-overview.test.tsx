@@ -13750,6 +13750,40 @@ describe("the edits of the package tree", () => {
     await expectFocusSettledOn(screenHeading(screen));
   });
 
+  test.each(["the menu of the actions", "the select of the affectedness"])(
+    "move the focus to the screen's heading when Sentinel refuses the change of %s that the screen no longer offers, after a read of the signed-in user took manage_packages away",
+    async (control) => {
+      let user = PACKAGE_MANAGER;
+      showingEditable(undefined, {
+        user: () => user,
+        packageChange: () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
+      });
+      const { screen } = await renderTree();
+      const actions = control === "the menu of the actions";
+      await (
+        actions
+          ? actionsOf(screen, OPENSSL_SP7)
+          : affectednessOf(screen, OPENSSL_SP7)
+      ).click();
+      await expect.element(screen.getByRole("menu")).toBeVisible();
+      user = OTHER_USER;
+      await returnToForeground();
+      await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+
+      await (
+        actions
+          ? screen.getByRole("menuitem", { name: "Exclude", exact: true })
+          : screen.getByRole("menuitemradio", { name: "Not affected" })
+      ).click();
+
+      await expect
+        .element(screen.getByText("You don't have permission to do this."))
+        .toBeVisible();
+      await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+      await expectFocusSettledOn(screenHeading(screen));
+    },
+  );
+
   test("keep the values that the select of the affectedness offered as it opened, after a read of the signed-in user takes manage_packages away", async () => {
     let user = PACKAGE_MANAGER;
     showingEditable(undefined, { user: () => user });

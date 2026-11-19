@@ -1568,7 +1568,9 @@ function createRecordTriggers(): RecordTriggers {
 // button the screen no longer offers, as after a read of the signed-in user
 // took its capability away while it was open: React Aria cannot return the
 // focus to the button, which leaves the page with the menu
-// (docs/behaviors.md, Accessibility, Focus after an action).
+// (docs/behaviors.md, Accessibility, Focus after an action). Where the button
+// stays, React Aria has returned the focus to it by then, and the focus
+// stays there.
 function handOffAfterClose() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -1725,6 +1727,7 @@ function MarkerActions({
       if (conflict !== undefined) {
         setOpen(false);
         setConfirming(false);
+        handOffAfterClose();
         showMessage({ tone: "info", text: conflict });
         return;
       }
@@ -1737,6 +1740,7 @@ function MarkerActions({
         return;
       }
       setOpen(false);
+      handOffAfterClose();
       showMessage({
         tone: presentation.unconfirmed ? "warning" : "danger",
         text: presentation.message,
@@ -1917,6 +1921,7 @@ function TrackAffectedness({
         return;
       }
       setOpen(false);
+      handOffAfterClose();
       const presentation = presentChangeFailure(failure);
       if (presentation !== undefined) {
         showMessage({
@@ -1966,8 +1971,8 @@ function TrackAffectedness({
 // shows either, as after an exclusion of the package: to the menu of the
 // next package that shows, otherwise to "Show hidden", which leads to
 // Restore. When that read fails, the focus stays where it is, and it moves
-// only from the record that left the page, so that a user who moved it
-// meanwhile keeps it.
+// only from the record that left the page, or from the screen's heading,
+// so that a user who moved it meanwhile keeps it.
 function useFocusAfterExclusion(
   packages: readonly PackageDetail[],
   read: { dataUpdatedAt: number; errorUpdatedAt: number },
