@@ -12,9 +12,9 @@
  */
 export interface PackageAdditionRequest {
   /**
-   * Source package name: 2 to 255 characters, starting and ending with an ASCII letter or digit; only letters, digits, `.`, `_`, `+`, and `-` are allowed. Required.
+   * Source package name: 1 to 255 characters, starting with an ASCII letter or digit; only letters, digits, `.`, `_`, `+`, and `-` are allowed. Required.
    * @maxLength 255
-   * @pattern ^[a-zA-Z0-9][a-zA-Z0-9._+\-]{0,253}[a-zA-Z0-9]$
+   * @pattern ^[a-zA-Z0-9][a-zA-Z0-9._+\-]{0,254}$
    */
   package_name: string;
 }
