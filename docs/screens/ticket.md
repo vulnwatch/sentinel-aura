@@ -1274,11 +1274,11 @@ Exclusion and Actionability; API Endpoints):
   Analysis, Affected, Not affected, Fixed, and Won't fix: Fixed with
   `admin_ticket_ops`, or with `manage_packages` on a Ticket without a CVE,
   and the others with `manage_packages` (same document, Manual Transitions;
-  `docs/screen-map.md`, Roles, Principles). So a user who holds `admin_ticket_ops` alone sees the select
-  with Fixed, and no menu of actions, and a Fixed track shows them its
-  affectedness as text. An affectedness that the pinned contract does not
-  list shows as received, without a select. The request sends the value
-  chosen as `status`.
+  `docs/screen-map.md`, Roles, Principles). So a user who holds
+  `admin_ticket_ops` alone sees the select with Fixed, and no menu of
+  actions, and a Fixed track shows them its affectedness as text. An
+  affectedness that the pinned contract does not list shows as received,
+  without a select. The request sends the value chosen as `status`.
 - None asks for confirmation, except the exclusion of a package with
   maintainers of a confidential Ticket, which ends their access to it unless
   another path gives it to them (`docs/behaviors.md`, Confirmation; Sentinel
@@ -1301,8 +1301,9 @@ Exclusion and Actionability; API Endpoints):
   "Restoring.", or "Changing the affectedness.".
 - An edit can assign an unassigned Ticket to the user, move it from New to
   Analysis, and change its status and its deadlines (Sentinel
-  `docs/features/packages/package-model.md`, User-Attributed Status Change; Sentinel `docs/features/tickets/tickets.md`,
-  Auto-Assignment on Unassigned Tickets; Automatic Status Evaluation).
+  `docs/features/packages/package-model.md`, User-Attributed Status Change;
+  Sentinel `docs/features/tickets/tickets.md`, Auto-Assignment on Unassigned
+  Tickets; Automatic Status Evaluation).
   Whatever the outcome, the screen then reads again the Ticket, the work of
   a maintainer on it, the users who acted on it, its audit log, and the
   reads of the Ticket list.
@@ -1318,8 +1319,9 @@ Exclusion and Actionability; API Endpoints):
   the Ticket, as a link to its screen, such as "SNTL-12: Package
   fictional-openssl excluded.", when the user is on another screen.
 - After an exclusion that hides its record, once the read of the Ticket
-  after it no longer shows the record, the focus moves to the menu of the
-  actions of the next track of its package that shows, otherwise to that of
+  after it no longer shows the record, while the focus is still on its menu
+  or on the screen's heading, the focus moves to the menu of the actions of
+  the next track of its package that shows, otherwise to that of
   its package; after an exclusion of a package, or of a track whose package
   no longer shows, to the menu of the next package that shows, otherwise to
   "Show hidden", which leads to Restore (`docs/behaviors.md`, Accessibility,
@@ -1328,13 +1330,13 @@ Exclusion and Actionability; API Endpoints):
   a later read that removes the record moves it to the screen's heading, as
   when any read removes the element with the focus; so does a read that
   removes the record after an exclusion that failed, such as one that
-  another user made meanwhile. While "Show hidden"
-  is on, the record stays, in gray with its label, and the focus stays on
-  its menu. When a read removes a select or a menu of actions while it, or
-  its open menu, holds the focus, as after Fixed for a user who can set no
-  other value on the track, or after a read of the signed-in user took the
-  capability away, the focus moves to the screen's heading once the menu
-  has closed (`docs/behaviors.md`, Accessibility, Focus after an action).
+  another user made meanwhile. While "Show hidden" is on, the record stays,
+  in gray with its label, and the focus stays on its menu. When a read
+  removes a select or a menu of actions while it, or its open menu, holds
+  the focus, as after Fixed for a user who can set no other value on the
+  track, or after a read of the signed-in user took the capability away, the
+  focus moves to the screen's heading once the menu has closed
+  (`docs/behaviors.md`, Accessibility, Focus after an action).
 
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,

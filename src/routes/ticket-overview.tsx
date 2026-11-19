@@ -1569,14 +1569,16 @@ function createRecordTriggers(): RecordTriggers {
 // took its capability away while it was open: React Aria cannot return the
 // focus to the button, which leaves the page with the menu
 // (docs/behaviors.md, Accessibility, Focus after an action). Where the button
-// stays, React Aria has returned the focus to it by then, and the focus
-// stays there.
-function handOffAfterClose() {
+// stays, React Aria returns the focus to it, in a later frame in some
+// browsers, and the focus is left to it.
+function handOffAfterClose(button: () => HTMLElement | null | undefined) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
+      const element = button();
       if (
-        document.activeElement === null ||
-        document.activeElement === document.body
+        (document.activeElement === null ||
+          document.activeElement === document.body) &&
+        (element === null || element === undefined || !element.isConnected)
       ) {
         focusScreenHeading();
       }
@@ -1698,6 +1700,7 @@ function MarkerActions({
   if (uiFailure !== undefined) {
     throw uiFailure.error;
   }
+  const button = () => edits.triggers.get(record.trackId ?? record.packageId);
   const pending = exclude.pending || restore.pending;
   if (!edits.manages && !open && !pending && !confirming) {
     return null;
@@ -1727,7 +1730,7 @@ function MarkerActions({
       if (conflict !== undefined) {
         setOpen(false);
         setConfirming(false);
-        handOffAfterClose();
+        handOffAfterClose(button);
         showMessage({ tone: "info", text: conflict });
         return;
       }
@@ -1740,7 +1743,7 @@ function MarkerActions({
         return;
       }
       setOpen(false);
-      handOffAfterClose();
+      handOffAfterClose(button);
       showMessage({
         tone: presentation.unconfirmed ? "warning" : "danger",
         text: presentation.message,
@@ -1801,7 +1804,7 @@ function MarkerActions({
           onOpenChange={(next) => {
             setOpen(next);
             if (!next && !edits.manages) {
-              handOffAfterClose();
+              handOffAfterClose(button);
             }
           }}
           busy={pending}
@@ -1859,6 +1862,8 @@ function TrackAffectedness({
 }: TrackAffectednessProps) {
   const showMessage = useShowMessage();
   const mounted = useMounted();
+  const select = useRef<HTMLButtonElement>(null);
+  const button = () => select.current;
   const [open, setOpen] = useState(false);
   const [offeredAtOpen, setOfferedAtOpen] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -1921,7 +1926,7 @@ function TrackAffectedness({
         return;
       }
       setOpen(false);
-      handOffAfterClose();
+      handOffAfterClose(button);
       const presentation = presentChangeFailure(failure);
       if (presentation !== undefined) {
         showMessage({
@@ -1936,6 +1941,7 @@ function TrackAffectedness({
   return (
     <FocusHandOff>
       <ChoiceMenu
+        ref={select}
         label={`Affectedness of ${packageName}, ${track.reference}: ${affectednessName(track.status)}`}
         value={value}
         choices={choices.map((status) => ({
@@ -1952,7 +1958,7 @@ function TrackAffectedness({
           if (next) {
             setOfferedAtOpen(edits.settable);
           } else if (!offers(edits.settable)) {
-            handOffAfterClose();
+            handOffAfterClose(button);
           }
         }}
         onChoose={(choice) => {

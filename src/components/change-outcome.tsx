@@ -135,6 +135,28 @@ export function useOutcomeAfterRead(
   const readAt = read.dataUpdatedAt;
   const failedAt = read.errorUpdatedAt;
   // Each outcome waits for the first read after its change.
+  const release = useCallback(
+    (done: readonly WaitingOutcome[]) => {
+      waiting.current = waiting.current.filter(
+        (outcome) => !done.includes(outcome),
+      );
+      for (const outcome of done) {
+        if (outcome.message) {
+          showMessage({ tone: "success", text: outcome.text });
+        }
+      }
+      const announced = done
+        .filter((outcome) => !outcome.message)
+        .map((outcome) => outcome.text);
+      if (announced.length > 0) {
+        setAnnouncement((current) => ({
+          key: (current?.key ?? 0) + 1,
+          text: announced.join(" "),
+        }));
+      }
+    },
+    [showMessage],
+  );
   useLayoutEffect(() => {
     const done = waiting.current.filter(
       (outcome) => readAt >= outcome.at || failedAt >= outcome.at,
@@ -142,24 +164,19 @@ export function useOutcomeAfterRead(
     if (done.length === 0) {
       return;
     }
-    waiting.current = waiting.current.filter(
-      (outcome) => !done.includes(outcome),
-    );
-    for (const outcome of done) {
-      if (outcome.message) {
-        showMessage({ tone: "success", text: outcome.text });
-      }
+    // A read that fails can replace the component in the next render, as a
+    // 404 of the record of a screen does, which would take its announcement
+    // away: the outcomes that only a failure releases wait for the next
+    // frame, by which the cleanup above has shown them in the message area
+    // if the component has left the page.
+    const failed = done.filter((outcome) => readAt < outcome.at);
+    release(done.filter((outcome) => readAt >= outcome.at));
+    if (failed.length > 0) {
+      requestAnimationFrame(() => {
+        release(failed.filter((outcome) => waiting.current.includes(outcome)));
+      });
     }
-    const announced = done
-      .filter((outcome) => !outcome.message)
-      .map((outcome) => outcome.text);
-    if (announced.length > 0) {
-      setAnnouncement((current) => ({
-        key: (current?.key ?? 0) + 1,
-        text: announced.join(" "),
-      }));
-    }
-  }, [readAt, failedAt, showMessage]);
+  }, [readAt, failedAt, release]);
 
   const after = useCallback((text: string, inMessageArea = false) => {
     waiting.current = [

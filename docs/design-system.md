@@ -1561,8 +1561,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   is quiet, so that a long list of records stays light: a quiet button
   (Buttons and Links) 28 px high, with 8 px of space before the value and
   6 px after `chevron-down`, in `text-14`, which keeps its colors in a
-  hidden record (Detail Screens); the value shows as its choice does, such as with its mark, then
-  `chevron-down` at 14 px in `fg-muted`, 6 px later. Its name states what it
+  hidden record (Detail Screens); the value shows at weight 400 as its
+  choice does, such as with its mark, then `chevron-down` at 14 px in
+  `fg-muted`, 6 px later. Its name states what it
   chooses, its record, and the value, such as "Affectedness of
   fictional-openssl, SUSE:FLES-15-SP7:Update: Affected". It opens its
   choices as a menu of single selection below its start, at least as wide

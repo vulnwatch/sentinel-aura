@@ -34,6 +34,7 @@ import type {
   ProductDetail,
   SubmissionRequestItem,
   TicketDetail,
+  TicketStatusValue,
   TrackDetail,
   TrackExclusionResponse,
   TrackStatusTrack,
@@ -13802,6 +13803,15 @@ describe("the edits of the package tree", () => {
     await expect
       .poll(() => itemsOf(menu, "menuitemradio"))
       .toEqual(["Analysis", "Affected", "Not affected", "Won't fix"]);
+
+    await userEvent.keyboard("{Escape}");
+
+    // The menu closes with its select, which the screen no longer offers:
+    // the focus moves to the screen's heading.
+    await expect
+      .element(affectednessOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(screenHeading(screen));
   });
 
   test("show the outcome of an edit that ends after the user left the screen in the message area, naming the Ticket", async () => {
@@ -13869,16 +13879,13 @@ describe("the edits of the package tree", () => {
   });
 
   test("move the focus to the screen's heading when a read removes the menu of the actions of a record that holds it", async () => {
-    let status = "analyzed";
+    let status: TicketStatusValue = "analyzed";
     stubTicket({
       user: PACKAGE_MANAGER,
       ticket: () =>
-        jsonResponse(200, {
-          data: {
-            ...fictionalTicketDetail({ packages: editableTree() }),
-            status,
-          },
-        }),
+        ticketResponse(
+          fictionalTicketDetail({ packages: editableTree(), status }),
+        ),
     });
     const { screen } = await renderTree();
     actionsOf(screen, OPENSSL_SP7).element().focus();
