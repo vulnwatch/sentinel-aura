@@ -117,7 +117,8 @@ test.describe("the sidebar", () => {
   });
 
   test("shows no Administration to a user without a role", async ({ page }) => {
-    await signIn(page, "dbrown");
+    // hgray, the reader, holds no role (Users).
+    await signIn(page, "hgray");
 
     await expect(sidebar(page).getByRole("list").getByRole("link")).toHaveText(
       ENTRIES.map(([name]) => name),
