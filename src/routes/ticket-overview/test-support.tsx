@@ -5,6 +5,7 @@ import { commands, page, userEvent, type Locator } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { App } from "../../app";
 import type {
+  CNAResponse,
   CVSS20Assessment,
   CVSS40Assessment,
   CVSSAssessmentItem,
@@ -84,6 +85,7 @@ export const SUBMISSION_REQUESTS =
 export const RELEASE_REQUESTS = "/api/v1/tickets/SNTL-12/release-requests";
 export const USERS = "/api/v1/users";
 export const ASSIGNEE = "/api/v1/tickets/SNTL-12/assignee";
+export const CNAS = "/api/v1/cnas/";
 export const DAY = 24 * 60 * 60 * 1000;
 export const HOUR = 60 * 60 * 1000;
 
@@ -169,6 +171,8 @@ export interface Stub {
   user: UserBody | (() => UserBody);
   // The response to Get Ticket.
   ticket: () => Response | Promise<Response>;
+  // The response to the read of the duplicates, given its query.
+  duplicates: (query: URLSearchParams) => Response | Promise<Response>;
   // The response to the read of the work of the signed-in user on the
   // Ticket.
   yourWork: () => Response | Promise<Response>;
@@ -178,6 +182,8 @@ export interface Stub {
   sources: () => Response | Promise<Response>;
   // The response to a refetch of the CVE, given its query.
   refetch: (query: URLSearchParams) => Response | Promise<Response>;
+  // The response to Get CNA, given its path.
+  cna: (path: string) => Response | Promise<Response>;
   // The response to the read of the users who acted on the Ticket.
   actors: () => Response | Promise<Response>;
   // The response to the read of the access grants of the Ticket.
@@ -211,9 +217,10 @@ export interface Stub {
 
 // Answers the read of the signed-in user, an analyst who maintains no
 // package unless the test says otherwise, Get Ticket, the read of the
-// duplicates, the read of the work of the user, the read of the CVSS
-// assessments and the changes of the SUSE assessment, the read of the
-// sources of the CVE, and its refetch, the reads of the participants, by
+// duplicates, by default without any, the read of the work of the user, the
+// read of the CVSS assessments and the changes of the SUSE assessment, the
+// read of the sources of the CVE, and its refetch, Get CNA, by default the
+// CNA of the tests (fictionalCna), the reads of the participants, by
 // default without any, the reads of the requests of a track, by default
 // without any, the search of the directory, Grant and Revoke Access, Assign
 // Ticket, and the reads of Audit log, and returns the spy, whose calls name
@@ -222,10 +229,12 @@ export function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: OTHER_USER,
     ticket: () => ticketResponse(fictionalTicketDetail()),
+    duplicates: () => ticketPage([]),
     yourWork: () => ticketWorkResponse(),
     cvss: () => cvssResponse(),
     sources: () => sourcesResponse(),
     refetch: () => refetchResponse({ sources_enqueued: ["nvd"] }),
+    cna: () => cnaResponse(),
     actors: () => actorsResponse([]),
     grants: () => grantsResponse([]),
     submissionRequests: () => submissionRequestsResponse([]),
@@ -248,7 +257,7 @@ export function stubTicket(fields: Partial<Stub> = {}) {
       );
     }
     if (request.path === TICKETS) {
-      return ticketPage([]);
+      return stub.duplicates(request.query);
     }
     if (request.path === YOUR_WORK) {
       return stub.yourWork();
@@ -314,6 +323,9 @@ export function stubTicket(fields: Partial<Stub> = {}) {
     if (request.path === REFETCH && request.method === "POST") {
       return stub.refetch(request.query);
     }
+    if (request.path.startsWith(CNAS)) {
+      return stub.cna(request.path);
+    }
     return errorResponse(404, "RESOURCE_NOT_FOUND");
   });
 }
@@ -331,6 +343,42 @@ export function showing(
   });
 }
 
+// Answers Get Ticket with the Ticket.
+export function showingTicket(ticket: TicketDetail) {
+  return stubTicket({ ticket: () => ticketResponse(ticket) });
+}
+
+// Answers Get Ticket with a Ticket whose fields hold values that the pinned
+// contract does not list, which a later Sentinel release can return.
+export function showingUnlistedTicket(ticket: Record<string, unknown>) {
+  return stubTicket({ ticket: () => jsonResponse(200, { data: ticket }) });
+}
+
+// The CNA of the CVE in the tests, under the auto-ignore policy, as Get
+// CNA returns it, with the fields that a test sets.
+export const ORG_ID = "00000000-0000-4000-8000-0000000000a2";
+export const CNA_NAME = "Fictional Plugin Foundation";
+
+function fictionalCna(fields: Partial<CNAResponse> = {}): CNAResponse {
+  return {
+    org_id: ORG_ID,
+    name: CNA_NAME,
+    short_name: "fictional-plugins",
+    organization_name: CNA_NAME,
+    types: ["Open Source", "Researcher"],
+    scope:
+      "Plugins of the fictional plugin directory.\nPlugin list: https://plugins.example.com",
+    auto_ignore: true,
+    created_at: "2099-10-01T08:00:00Z",
+    updated_at: "2099-10-01T08:05:00Z",
+    ...fields,
+  };
+}
+
+export function cnaResponse(fields: Partial<CNAResponse> = {}): Response {
+  return jsonResponse(200, { data: fictionalCna(fields) });
+}
+
 export async function renderApp(path: string) {
   const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -340,6 +388,53 @@ export async function renderApp(path: string) {
 }
 
 export type Screen = Awaited<ReturnType<typeof renderApp>>["screen"];
+
+// Renders the screen of the Ticket and waits until it shows the Ticket.
+export async function renderTicket(
+  path = "/tickets/SNTL-12",
+  name = "SNTL-12",
+) {
+  const rendered = await renderApp(path);
+  await expect.element(heading(rendered.screen, name)).toBeVisible();
+  return rendered;
+}
+
+export function heading(screen: Screen, name: string) {
+  return screen.getByRole("heading", { level: 1, name, exact: true });
+}
+
+export function region(screen: Screen, name: string) {
+  return screen.getByRole("region", { name, exact: true });
+}
+
+// The value of a field of the details, by its term: the definition of the
+// same rank as the term, as each term has one.
+export function valueOf(screen: Screen, term: string): HTMLElement {
+  const details = region(screen, "Details");
+  const index = details
+    .getByRole("term")
+    .elements()
+    .findIndex((candidate) => candidate.textContent === term);
+  const element = details.getByRole("definition").elements()[index];
+  if (index === -1 || !(element instanceof HTMLElement)) {
+    throw new Error(`The details have no field ${term}`);
+  }
+  return element;
+}
+
+// The terms of a list, in their order.
+export function textsOf(locator: Locator): (string | null)[] {
+  return locator.elements().map((element) => element.textContent);
+}
+
+// The paths and queries of the requests to the API, other than the read of
+// the signed-in user.
+export function requestsOf(spy: ReturnType<typeof stubApi>): string[] {
+  return spy.mock.calls
+    .map(([input]) => urlOf(input))
+    .filter((url) => url.pathname !== ME)
+    .map((url) => `${url.pathname}${url.search}`);
+}
 
 // Renders the screen of SNTL-12 and waits until it shows its package tree.
 export async function renderTree(path = "/tickets/SNTL-12") {
@@ -695,8 +790,8 @@ export function announcements(screen: Screen): string {
   return screen
     .getByRole("status")
     .elements()
-    .filter((region) => region.closest('[role="dialog"]') === null)
-    .map((region) => region.textContent ?? "")
+    .filter((status) => status.closest('[role="dialog"]') === null)
+    .map((status) => status.textContent ?? "")
     .join("");
 }
 
