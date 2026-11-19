@@ -1,9 +1,9 @@
 import { page, type Locator } from "vitest/browser";
 
 // Moves the pointer to a corner of the window that the element does not
-// cover. Vitest runs several test files one after another in one page, so
+// cover. Vitest runs several test files one after another in each page, so
 // the pointer rests where an earlier test left it, and where it rests on the
-// element, the element shows its colors under the pointer
+// element, the element shows its look under the pointer
 // (docs/conventions.md, Tests). userEvent.unhover is no substitute: it moves
 // the pointer to the center of the body, which the element can cover. React
 // renders the end of React Aria's hover before the move returns, so the test
