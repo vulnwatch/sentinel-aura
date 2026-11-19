@@ -3214,7 +3214,9 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
   // shows none, as after the restore of the last one, the screen removes
   // hidden=shown from its URL, in place of the URL in the browser history,
   // and the switch is off and disabled; the tree shows the same records
-  // either way (docs/screen-map.md, Browser History).
+  // either way (docs/screen-map.md, Browser History). The removal asks
+  // nothing of a dialog that holds input, which stays open with it
+  // (docs/behaviors.md, Confirmation).
   const noneHidden = showHidden && count === 0;
   useEffect(() => {
     if (noneHidden) {
@@ -3226,6 +3228,7 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
         replace: true,
         resetScroll: false,
         hashScrollIntoView: false,
+        ignoreBlocker: true,
       });
     }
   }, [noneHidden, navigate, ticketId]);

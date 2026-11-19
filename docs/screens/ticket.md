@@ -479,8 +479,9 @@ edits of its packages, tracks, and Products (Actions; Sentinel
   hidden records, it is off and disabled: when a read of the Ticket shows
   none while it is on, as after the restore of the last one, the screen
   removes `hidden=shown` from its URL, in place of the URL in the browser
-  history, keeping the anchor, the scroll position, and the focus; the tree
-  shows the same records either way. While it is off and every package is
+  history, keeping the anchor, the scroll position, and the focus, and an
+  open dialog with its input, without asking (`docs/behaviors.md`,
+  Confirmation); the tree shows the same records either way. While it is off and every package is
   hidden, the part says "All packages are hidden.".
 - **The tracks that wait for the signed-in user.** For a user whom
   `maintainers` lists for a package that is not excluded, the screen reads

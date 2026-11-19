@@ -3290,6 +3290,70 @@ describe("the hidden records", () => {
     expect(window.scrollY).toBe(elsewhere);
   });
 
+  test("keeps the scroll position, the anchor, and the focus when a read shows no hidden record while Show hidden is on, which turns it off", async () => {
+    await page.viewport(1280, 400);
+    let restored = false;
+    // More packages after them, so that the page goes on below the package
+    // tree, which the anchor can then scroll to the top of the window.
+    stubTicket({
+      ticket: () =>
+        ticketResponse(
+          fictionalTicketDetail({
+            packages: [
+              fictionalPackage({
+                tracks: [
+                  fictionalTrack({
+                    products: [
+                      fictionalProduct(),
+                      restored
+                        ? excludedProduct({
+                            deleted_at: null,
+                            actionable: true,
+                            non_actionable_reason: null,
+                          })
+                        : excludedProduct(),
+                    ],
+                  }),
+                ],
+              }),
+              ...["fictional-curl", "fictional-zlib", "fictional-libxml2"].map(
+                (name, index) =>
+                  fictionalPackage({
+                    id: `00000000-0000-0000-0000-0000000000b${index}`,
+                    package_name: name,
+                  }),
+              ),
+            ],
+          }),
+        ),
+    });
+    const { router, screen } = await renderTree(
+      "/tickets/SNTL-12?hidden=shown#packages",
+    );
+    await expect
+      .element(screen.getByText("None", { exact: true }))
+      .toBeVisible();
+    await expect.poll(() => window.scrollY).toBeGreaterThan(100);
+    const elsewhere = window.scrollY - 60;
+    window.scrollTo(0, elsewhere);
+    await expect.poll(() => window.scrollY).toBe(elsewhere);
+    const name = screen.getByRole("button", {
+      name: "Fictional Linux Enterprise Desktop 15 SP7",
+    });
+    name.element().focus();
+    restored = true;
+
+    await returnToForeground();
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets/SNTL-12#packages");
+    await expect.element(showHidden(screen)).not.toBeChecked();
+    await nextFrames();
+    expect(window.scrollY).toBe(elsewhere);
+    await expect.element(name).toHaveFocus();
+  });
+
   test.each([
     [
       "the name of a hidden Product",
@@ -12279,6 +12343,36 @@ describe("the SUSE assessment", () => {
       expect(requestsWith(spy, "POST")).toHaveLength(0);
     });
 
+    test("is not asked when the screen removes hidden=shown from its URL, after a read that shows no hidden record, and the dialog keeps its input and the focus", async () => {
+      let hidden = true;
+      stubSuse(() => fictionalCvssAssessments(), {
+        ticket: () =>
+          ticketResponse(
+            fictionalTicketDetail({
+              packages: hidden ? [excludedPackage()] : [fictionalPackage()],
+            }),
+          ),
+      });
+      const { router, screen } = await renderSuse(
+        "/tickets/SNTL-12?hidden=shown",
+      );
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      hidden = false;
+
+      await returnToForeground();
+
+      await expect
+        .poll(() => router.state.location.href)
+        .toBe("/tickets/SNTL-12");
+      await nextFrames();
+      expect(
+        screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+      ).toBeNull();
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+      await expect.element(vectorOf(dialog)).toHaveFocus();
+    });
+
     // Add with input in the tab that it sends alone is "shows the outcome of
     // Add in the message area" of a change that ends after the user left.
     test("is not asked before a navigation while Add is in progress and another tab holds input, and its outcome shows in the message area", async () => {
@@ -13564,6 +13658,9 @@ describe("the edits of the package tree", () => {
       await expect
         .element(showHidden(screen))
         .toHaveAccessibleName(`Show hidden ${another ? 1 : 0}`);
+      // The effects of the read, which remove hidden=shown when no hidden
+      // record is left, have run.
+      await nextFrames();
       if (another) {
         await expect.element(showHidden(screen)).toBeChecked();
         await expect.element(showHidden(screen)).toBeEnabled();
