@@ -14,7 +14,9 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 The Ticket screen shows one Ticket: its heading row with its main values; in
 the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
 assessment an analyst who manages CVSS adds, edits, and deletes, its package
-tree, with the IBS requests of its tracks, its details, whose assignee an
+tree, with the IBS requests of its tracks, whose packages and tracks an
+analyst who manages packages excludes and restores and whose affectedness
+they set, its details, whose assignee an
 analyst changes, the sources of its CVE, which an analyst refetches, and who is
 involved in it, with the access grants of a confidential Ticket, which an
 analyst who manages confidentiality grants and revokes; in the tab References
@@ -41,10 +43,13 @@ package maintainership decide which confidential Tickets they are (Sentinel
 The screen is the same for every user, except that it offers Refetch and Edit
 assignee to a user who holds `triage_ticket`, Add SUSE assessment, and Edit and
 Delete on the SUSE assessments, to a user who holds `manage_cvss`, Grant access
-and Revoke access to a user who holds `manage_confidentiality`, and Add
+and Revoke access to a user who holds `manage_confidentiality`, Add
 reference, and Edit and Delete on the manual references, to a user who holds
-`manage_references` (Actions; Sentinel `docs/features/identity/rbac.md`,
-Endpoint Permission Map (CVEs; Tickets; Ticket References)), lists the
+`manage_references`, Exclude and Restore on the packages and tracks and the
+affectedness of the tracks to a user who holds `manage_packages`, and Fixed to
+a user who holds `admin_ticket_ops`, or `manage_packages` on a Ticket without a
+CVE (Actions; Sentinel `docs/features/identity/rbac.md`, Endpoint Permission
+Map (CVEs; Tickets; Ticket Packages; Ticket References)), lists the
 signed-in user first among the users who can be the assignee when their
 assignment eligibility admits the Ticket (`docs/screen-map.md`, Roles,
 Principles), and marks for a maintainer the tracks that wait for them
@@ -293,8 +298,9 @@ without the "v" (`docs/behaviors.md`, Unknown Values).
   its read is not sent.
 
 **Packages**, the third part of the main column, the package tree of the
-Ticket, from `packages` of Get Ticket, read-only, in the order of the API
-(Sentinel `docs/features/tickets/tickets.md`, Shared Sub-Schemas; Sentinel
+Ticket, from `packages` of Get Ticket, in the order of the API, with the
+edits of its packages and tracks (Actions; Sentinel
+`docs/features/tickets/tickets.md`, Shared Sub-Schemas; Sentinel
 `docs/features/packages/package-model.md`, List Ticket Packages):
 
 - Each package is a group under a band (`docs/design-system.md`, Detail
@@ -307,19 +313,26 @@ Ticket, from `packages` of Get Ticket, read-only, in the order of the API
   maintainer in the full form at the medium size with the username, or
   "Sentinel knows no maintainer of this package." (Sentinel
   `docs/features/packages/package-maintainership.md`, Maintainers in the
-  Package Tree). Users show without a link (Navigation).
-- Its tracks are a list below the band, 12 px apart, each with a border line
-  at its left, on one line that wraps where it is too narrow: its reference
-  at weight 500; "Needs your action" when it waits for the signed-in user
-  (below); and at the end, in `text-14`, its pipeline or its delivery, then,
-  12 px later, its affectedness, at the start of a place at least 104 px
-  wide, wider than Not affected, so that the pipelines and the affectedness
-  of the tracks line up. Where the line wraps, the pipeline or the delivery
-  and the affectedness each stay at the end of their line. IBS and Git tracks
-  show alike.
+  Package Tree). Users show without a link (Navigation). For a user who
+  holds `manage_packages`, the band ends with the menu of the actions of the
+  package (Actions).
+- Its tracks are a list below the band, 12 px apart, indented by 12 px on
+  both sides, so that the menu of the actions of a track ends where that of
+  its package does, each with a border line at its left, on one line that
+  wraps where it is too narrow: its reference at weight 500; "Needs your
+  action" when it waits for the signed-in user (below); and at the end, in
+  `text-14`, its pipeline or its delivery, then, 12 px later, its
+  affectedness, at the start of a place at least 104 px wide, wider than Not
+  affected, or 136 px, wider than the select of Not affected, for a user who
+  sets the affectedness, so that the pipelines and the affectedness of the
+  tracks line up; then, 4 px later, for a user who holds `manage_packages`,
+  the menu of the actions of the track (Actions). Where the line wraps, the
+  pipeline or the delivery and the affectedness each stay at the end of
+  their line. IBS and Git tracks show alike.
   - The affectedness is a value with the dot of its tone
     (`docs/design-system.md`, Other Values): Analysis `info`, Affected
-    `warning`, Not affected and Fixed `success`, Won't fix `neutral`.
+    `warning`, Not affected and Fixed `success`, Won't fix `neutral`; for a
+    user who can set another value on the track, a select of it (Actions).
   - The pipeline of its phases shows when the track has work and due dates
     (`docs/design-system.md`, Track Milestones), named such as "Phases of
     fictional-openssl, SUSE:FLES-15-SP7:Update: …". The track has no
@@ -1232,6 +1245,89 @@ Delete SUSE CVSS Assessment):
   change, the focus moves to the screen's heading (`docs/behaviors.md`,
   Accessibility, Focus after an action).
 
+**Exclude** and **Restore** of a package, Soft-Delete Package from Ticket,
+`POST /api/v1/tickets/{ticket_id}/packages/{package_id}/exclude`, and Restore
+Package, `POST .../packages/{package_id}/restore`; of a track, Soft-Delete
+Track, `POST .../packages/{package_id}/tracks/{track_id}/exclude`, and Restore
+Track, `POST .../tracks/{track_id}/restore`; and the **affectedness** of a
+track, Change Track Status, `PATCH .../packages/{package_id}/tracks/{track_id}`,
+in the package tree (Sentinel `docs/features/packages/package-model.md`,
+Status Behavior (User-Attributed Status Change; Manual Transitions);
+Exclusion and Actionability; API Endpoints):
+
+- The screen offers them on a Ticket in New, Analysis, Analyzed, or Resolved:
+  Sentinel refuses them on an Ignored or Duplicated Ticket with `409
+  TICKET_NOT_MUTABLE`, and a Ticket of a status that the pinned contract does
+  not list offers none (Sentinel `docs/api-spec.md`, Manual-Zone Mutability
+  Guard; `docs/behaviors.md`, Unknown Values).
+- For a user who holds `manage_packages`, each package and each track has
+  the menu of its actions (`docs/design-system.md`, Menus, Popovers, and
+  Tooltips), named such as "Actions of fictional-openssl" or "Actions of
+  fictional-openssl, SUSE:FLES-15-SP7:Update", with Exclude, with `ban`, or,
+  for a record that its own marker excludes, Restore, with `undo-2`. Sentinel
+  accepts Exclude also below an excluded record, which records its own
+  marker (same document, Manual Exclusion Markers).
+- The affectedness of a track is a select (`docs/design-system.md`, Forms),
+  named such as "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update:
+  Affected", for a user who can set a value other than the current one,
+  which it offers with the current one, in the order of the contract:
+  Analysis, Affected, Not affected, and Won't fix with `manage_packages`, and
+  Fixed with `admin_ticket_ops`, or with `manage_packages` on a Ticket without
+  a CVE (same document, Manual Transitions; `docs/screen-map.md`, Roles,
+  Principles). So a user who holds `admin_ticket_ops` alone sees the select
+  with Fixed, and no menu of actions, and a Fixed track shows them its
+  affectedness as text. An affectedness that the pinned contract does not
+  list shows as received, without a select. The request sends the value
+  chosen as `status`.
+- None asks for confirmation, except the exclusion of a package with
+  maintainers of a confidential Ticket, which ends their access to it unless
+  another path gives it to them (`docs/behaviors.md`, Confirmation; Sentinel
+  `docs/features/packages/package-maintainership.md`, Confidential Ticket
+  Visibility): its item is "Exclude…", and it asks "Exclude
+  fictional-openssh?", "The maintainers of fictional-openssh no longer see
+  this confidential Ticket, unless their roles, an access grant, or another
+  package that they maintain let them. Restore gives them this access
+  back.", with Cancel and Exclude package, a danger button. While it is in
+  progress, the confirmation cannot be closed; once Sentinel confirms it, it
+  closes.
+- An item or a value chosen starts its change at once: the item or the
+  value is busy, "Excluding.", "Restoring.", or "Changing the affectedness.",
+  and the menu cannot be closed (`docs/behaviors.md`, Loading); choosing the
+  current affectedness closes the menu without a request. Once Sentinel
+  answers, the menu closes and the focus returns to its button. The menus
+  and the selects stay as they were while they are open and while their
+  change is in progress, also when a read of the signed-in user takes their
+  capability away (`docs/behaviors.md`, The Signed-in User).
+- An edit can assign an unassigned Ticket to the user, move it from New to
+  Analysis, and change its status and its deadlines (same document, User-
+  Attributed Status Change; Sentinel `docs/features/tickets/tickets.md`,
+  Auto-Assignment on Unassigned Tickets; Automatic Status Evaluation).
+  Whatever the outcome, the screen then reads again the Ticket, the work of
+  a maintainer on it, the users who acted on it, its audit log, and the
+  reads of the Ticket list.
+- The outcome is announced once the read of the Ticket after it arrives,
+  whatever the outcome of that read: "Package fictional-openssl excluded.",
+  "Track SUSE:FLES-15-SP7:Update of fictional-openssl restored.", or
+  "Affectedness of SUSE:FLES-15-SP7:Update of fictional-openssl changed to
+  Not affected.", with the affectedness that Sentinel returns. When the
+  record no longer shows, as after an exclusion while "Show hidden" is off,
+  the outcome shows in the message area then instead (`docs/behaviors.md`,
+  Outcome of a Change). The outcome of an edit that ends after the user left
+  the tab shows in the message area, and so does its failure, starting with
+  the Ticket, as a link to its screen, such as "SNTL-12: Package
+  fictional-openssl excluded.", when the user is on another screen.
+- After an exclusion that hides its record, once the read of the Ticket
+  after it no longer shows the record, the focus moves to the menu of the
+  actions of the next track of its package that shows, otherwise to that of
+  its package; after an exclusion of a package, or of a track whose package
+  no longer shows, to the menu of the next package that shows, otherwise to
+  "Show hidden", which leads to Restore (`docs/behaviors.md`, Accessibility,
+  Focus after an action). When that read fails, the focus stays where it is,
+  and a later read that removes the record moves it to the screen's heading,
+  as when any read removes the element with the focus. While "Show hidden"
+  is on, the record stays, in gray with its label, and the focus stays on
+  its menu.
+
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,
 `DELETE /api/v1/tickets/{ticket_id}/access/{user}`, in the dialog of the
@@ -1508,6 +1604,23 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   change (`docs/behaviors.md`, Default Presentation by Status; Retries and
   Unconfirmed Changes), such as the `409 TICKET_NOT_MUTABLE` of a Ticket that
   became Ignored meanwhile.
+- **Errors of Exclude, Restore, and the affectedness.** A failure shows in
+  the message area, in the presentation of its status, as a warning when
+  Sentinel did not confirm the change (`docs/behaviors.md`, Where Errors
+  Appear; Default Presentation by Status; Retries and Unconfirmed Changes),
+  such as the `409 TICKET_NOT_MUTABLE` of a Ticket that became Ignored
+  meanwhile; a failure of the exclusion of a package that the user
+  confirmed shows at the top of its confirmation, which stays open. The
+  screen handles two codes specifically, which say that another user did
+  the same meanwhile: `409 PACKAGE_ALREADY_EXCLUDED` of Exclude, "Package
+  fictional-openssl is already excluded.", and `422 PACKAGE_NOT_EXCLUDED` of
+  Restore, "Track SUSE:FLES-15-SP7:Update of fictional-openssl is no longer
+  excluded.", each in the message area in the `info` tone, also after a
+  confirmation, which then closes (Sentinel
+  `docs/features/packages/package-model.md`, Soft-Delete Package from Ticket;
+  Restore Package; Soft-Delete Track; Restore Track). Either code of the
+  other operation, or of Change Track Status, has the presentation of its
+  status.
 - **References.** The toolbar shows at once with the tabs, and the
   references as they arrive, without waiting for the Ticket; a failure of
   the references shows once the Ticket has arrived, so that a Ticket that
@@ -1625,7 +1738,8 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Reference; Delete Reference)
 - Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status Transitions;
   Gate: Analysis → Analyzed; Gate: Analyzed → Resolved; Automatic Status
-  Evaluation; Reassignment; Self-Unassignment; Duplicate Handling; Confidential
+  Evaluation; Reassignment; Self-Unassignment; Auto-Assignment on Unassigned
+  Tickets; Duplicate Handling; Confidential
   Tickets (Identifier Disclosure Boundary; Coordinated Release Date); Ignore
   Reason; Response Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket; List
   Tickets (Duplicate filter); Assign Ticket; Set Confidentiality; Access Grant
@@ -1634,14 +1748,17 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Due Dates (Null Due Dates); Track Milestones (Observability of Later
   Phases; Completion Evidence); Ticket Current Phase
 - Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
-  Dimensions; Affectedness-Delivery Independence; Exclusion and
-  Actionability; Package Eligibility (Override Model); List Ticket Packages
+  Dimensions; Affectedness-Delivery Independence; Status Behavior
+  (User-Attributed Status Change; Manual Transitions); Exclusion and
+  Actionability; Package Eligibility (Override Model); API Endpoints
+  (Soft-Delete Package from Ticket; Restore Package; Soft-Delete Track;
+  Restore Track; Change Track Status; List Ticket Packages)
 - Sentinel `docs/features/packages/ibs-submission-tracking.md` — Scope;
   Request States; Upstream Evidence (Package and Codestream Identity;
   Action-Scoped CVE Evidence); Public API (Common Query Rules; List
   Submission Requests; List Release Requests)
-- Sentinel `docs/features/packages/package-maintainership.md` — Maintainers
-  in the Package Tree; Workbench Dependency
+- Sentinel `docs/features/packages/package-maintainership.md` — Confidential
+  Ticket Visibility; Maintainers in the Package Tree; Workbench Dependency
 - Sentinel `docs/features/packages/maintainer.md` — Classification; Package
   Details for Ticket
 - Sentinel `docs/features/packages/product-catalog.md` — Product Lifecycle
@@ -1677,7 +1794,8 @@ Ignored and Duplicated included, so the screen offers it whatever the status
 - Sentinel `docs/features/tickets/ticket-mutations.md` — CVSS Status Matrix
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility; Business Rules (10); Assignment Eligibility Wire Format;
-  Endpoint Permission Map (Users; CVEs; CVSS; Tickets; Ticket References)
+  Endpoint Permission Map (Users; CVEs; CVSS; Tickets; Ticket Packages;
+  Ticket References)
 - Sentinel `docs/features/identity/user-management.md` — Directory API
   endpoints (List Users)
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible

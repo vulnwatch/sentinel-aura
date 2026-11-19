@@ -1186,6 +1186,312 @@ test.describe("for an analyst", () => {
     await expect(ltss).toBeFocused();
   });
 
+  test("offers an analyst who manages packages the menu of the actions of each package and track, and the affectedness of each track as a select", async ({
+    page,
+  }) => {
+    // asmith holds manage_packages, and SNTL-12, with a CVE, is Analyzed
+    // (Users; Tickets): every affectedness but Fixed, which needs
+    // admin_ticket_ops on a Ticket with a CVE (Sentinel
+    // docs/features/packages/package-model.md, Manual Transitions).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12#packages");
+    const packages = part(page, "Packages");
+    await expect(
+      packages.getByRole("button", {
+        name: "Actions of fictional-openssl",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      packages.getByRole("button", {
+        name: "Actions of fictional-zlib, fles-16.0",
+        exact: true,
+      }),
+    ).toBeVisible();
+    const select = packages.getByRole("button", {
+      name: "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update: Affected",
+      exact: true,
+    });
+    const actions = packages.getByRole("button", {
+      name: "Actions of fictional-openssl, SUSE:FLES-15-SP7:Update",
+      exact: true,
+    });
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves the controls: the clicks wait for it.
+    await expectOverviewShown(page);
+
+    await select.click();
+
+    const values = page.getByRole("menu", {
+      name: "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update: Affected",
+    });
+    await expect(values.getByRole("menuitemradio")).toHaveText([
+      "Analysis",
+      "Affected",
+      "Not affected",
+      "Won't fix",
+    ]);
+    await expect(
+      values.getByRole("menuitemradio", { name: "Affected", exact: true }),
+    ).toBeChecked();
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(values).toHaveCount(0);
+    await expect(select).toBeFocused();
+
+    await actions.click();
+
+    const menu = page.getByRole("menu", {
+      name: "Actions of fictional-openssl, SUSE:FLES-15-SP7:Update",
+    });
+    await expect(menu.getByRole("menuitem")).toHaveText(["Exclude"]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-track-menu.png");
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+    await expect(actions).toBeFocused();
+  });
+
+  test("offers an administrator, who holds admin_ticket_ops alone, only Fixed, and no menu of actions", async ({
+    page,
+  }) => {
+    // jdoe holds the admin role, with admin_ticket_ops and without
+    // manage_packages (Users; Sentinel docs/features/identity/rbac.md,
+    // Predefined Roles).
+    await signIn(page, "jdoe");
+    await page.goto("/tickets/SNTL-12#packages");
+    const packages = part(page, "Packages");
+    const select = packages.getByRole("button", {
+      name: "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update: Affected",
+      exact: true,
+    });
+    await expect(select).toBeVisible();
+    await expect(
+      packages.getByRole("button", { name: /^Actions of/ }),
+    ).toHaveCount(0);
+    await expectOverviewShown(page);
+
+    await select.click();
+
+    await expect(page.getByRole("menuitemradio")).toHaveText([
+      "Affected",
+      "Fixed",
+    ]);
+    await expectAccessible(page);
+  });
+
+  test("asks for confirmation before excluding a package with maintainers of a confidential Ticket, and excludes nothing on Cancel", async ({
+    page,
+  }) => {
+    // fictional-openssh of the confidential SNTL-18, which dbrown maintains
+    // and sees through it (Packages, Tracks, and Maintainers).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-18#packages");
+    const actions = part(page, "Packages").getByRole("button", {
+      name: "Actions of fictional-openssh",
+      exact: true,
+    });
+    await expectOverviewShown(page);
+
+    await actions.click();
+    await page.getByRole("menuitem", { name: "Exclude…" }).click();
+
+    const confirmation = page.getByRole("dialog", {
+      name: "Exclude fictional-openssh?",
+    });
+    await expect(confirmation).toContainText(
+      "The maintainers of fictional-openssh no longer see this confidential Ticket, unless their roles, an access grant, or another package that they maintain let them. Restore gives them this access back.",
+    );
+    const cancel = confirmation.getByRole("button", { name: "Cancel" });
+    await expect(cancel).toBeFocused();
+    await expectAccessible(page);
+
+    await cancel.click();
+
+    await expect(confirmation).toHaveCount(0);
+    await expect(actions).toBeFocused();
+    await expect(
+      part(page, "Packages").getByText("Excluded", { exact: true }),
+    ).toHaveCount(0);
+  });
+
+  test(
+    "excludes and restores a track and a package, and changes the affectedness of a track",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-11, in Analysis, whose twelve packages no other test of this
+      // project relies on: every other test that opens SNTL-11, in this
+      // module or in ticket-list.spec.ts, is read-only, in the project that
+      // runs first. fictional-curl has its SUSE:FLES-15-SP7:Update track, in
+      // Analysis, then its fles-16.0 track; fictional-expat follows it
+      // (Packages, Tracks, and Maintainers).
+      await signIn(page, "asmith");
+      await page.goto("/tickets/SNTL-11#packages");
+      const packages = part(page, "Packages");
+      const button = (name: string) =>
+        packages.getByRole("button", { name, exact: true });
+      const announced = (text: string) =>
+        page.getByRole("status").filter({ hasText: text });
+      await expectOverviewShown(page);
+
+      // An exclusion while Show hidden is off hides the track: its outcome
+      // shows in the message area, and the focus moves to the menu of the
+      // next track of its package.
+      await button(
+        "Actions of fictional-curl, SUSE:FLES-15-SP7:Update",
+      ).click();
+      await page
+        .getByRole("menuitem", { name: "Exclude", exact: true })
+        .click();
+
+      await expect(
+        page.getByText(
+          "Track SUSE:FLES-15-SP7:Update of fictional-curl excluded.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(
+        button("Actions of fictional-curl, SUSE:FLES-15-SP7:Update"),
+      ).toHaveCount(0);
+      await expect(
+        button("Actions of fictional-curl, fles-16.0"),
+      ).toBeFocused();
+
+      // With Show hidden on, the track shows in gray with its label, and
+      // Restore includes it again.
+      await page.getByRole("switch", { name: "Show hidden 1" }).focus();
+      await page.keyboard.press("Space");
+      await expect(page).toHaveURL("/tickets/SNTL-11?hidden=shown#packages");
+      const sp7 = button("Actions of fictional-curl, SUSE:FLES-15-SP7:Update");
+      await sp7.click();
+      await page
+        .getByRole("menuitem", { name: "Restore", exact: true })
+        .click();
+
+      await expect(
+        announced("Track SUSE:FLES-15-SP7:Update of fictional-curl restored."),
+      ).toHaveCount(1);
+      await expect(sp7).toBeFocused();
+      await expect(
+        page.getByRole("switch", { name: "Show hidden 0" }),
+      ).toBeDisabled();
+
+      // An exclusion while Show hidden is on keeps the package, in gray with
+      // its label, and its menu keeps the focus.
+      const curl = button("Actions of fictional-curl");
+      await curl.click();
+      await page
+        .getByRole("menuitem", { name: "Exclude", exact: true })
+        .click();
+
+      await expect(announced("Package fictional-curl excluded.")).toHaveCount(
+        1,
+      );
+      await expect(curl).toBeFocused();
+      await expect(packages.getByText("Excluded", { exact: true })).toHaveCount(
+        1,
+      );
+      await curl.click();
+      await page
+        .getByRole("menuitem", { name: "Restore", exact: true })
+        .click();
+      await expect(announced("Package fictional-curl restored.")).toHaveCount(
+        1,
+      );
+      await expect(packages.getByText("Excluded", { exact: true })).toHaveCount(
+        0,
+      );
+
+      // The affectedness of a track changes at once.
+      const expat = button(
+        "Affectedness of fictional-expat, fles-16.0: Analysis",
+      );
+      await expat.click();
+      await page.getByRole("menuitemradio", { name: "Not affected" }).click();
+
+      await expect(
+        announced(
+          "Affectedness of fles-16.0 of fictional-expat changed to Not affected.",
+        ),
+      ).toHaveCount(1);
+      const changed = button(
+        "Affectedness of fictional-expat, fles-16.0: Not affected",
+      );
+      await expect(changed).toBeFocused();
+      await expectAccessible(page);
+    },
+  );
+
+  test(
+    "sets Fixed with manage_packages on a Ticket without a CVE",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-30, without a CVE, Analyzed through the Affected track of
+      // fictional-libarchive (Tickets; Packages, Tracks, and Maintainers),
+      // which no other test of this project relies on. A Fixed track of a
+      // Ticket without a CVE needs no release, so SNTL-30 becomes Resolved
+      // (Sentinel docs/features/tickets/tickets.md, Gate: Analyzed →
+      // Resolved).
+      await signIn(page, "asmith");
+      await page.goto("/tickets/SNTL-30");
+      await expectOverviewShown(page);
+      await part(page, "Packages")
+        .getByRole("button", {
+          name: "Affectedness of fictional-libarchive, SUSE:FLES-15-SP7:Update: Affected",
+          exact: true,
+        })
+        .click();
+      await expect(page.getByRole("menuitemradio")).toHaveText([
+        "Analysis",
+        "Affected",
+        "Not affected",
+        "Fixed",
+        "Won't fix",
+      ]);
+
+      await page.getByRole("menuitemradio", { name: "Fixed" }).click();
+
+      await expect(
+        part(page, "Packages").getByRole("button", {
+          name: "Affectedness of fictional-libarchive, SUSE:FLES-15-SP7:Update: Fixed",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(await headingValue(page, "Status")).toHaveText("Resolved");
+    },
+  );
+
+  test(
+    "sets Fixed with admin_ticket_ops on a Ticket with a CVE",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-26, with a CVE, whose fictional-glibc track is Affected and
+      // whose fictional-libidn track is Fixed (Packages, Tracks, and
+      // Maintainers), which no other test of this project relies on; jdoe
+      // holds admin_ticket_ops alone, so a Fixed track offers no other value.
+      await signIn(page, "jdoe");
+      await page.goto("/tickets/SNTL-26#packages");
+      await expectOverviewShown(page);
+      await part(page, "Packages")
+        .getByRole("button", {
+          name: "Affectedness of fictional-glibc, SUSE:FLES-15-SP7:Update: Affected",
+          exact: true,
+        })
+        .click();
+
+      await page.getByRole("menuitemradio", { name: "Fixed" }).click();
+
+      await expect(
+        part(page, "Packages").getByText("Fixed", { exact: true }),
+      ).toHaveCount(2);
+      await expect(
+        part(page, "Packages").getByRole("button", {
+          name: /^Affectedness of/,
+        }),
+      ).toHaveCount(0);
+    },
+  );
+
   test("shows the CVSS assessments of a CVE, whose SUSE assessment sets its severity and the eligibility score, with Add SUSE assessment and Edit and Delete on the row of the SUSE assessment", async ({
     page,
   }) => {
@@ -3283,6 +3589,11 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
       .last()
       .getByText("Needs your action"),
   ).toBeVisible();
+  // A maintainer without a role edits nothing (docs/screen-map.md, Roles,
+  // Principles).
+  await expect(
+    packages.getByRole("button", { name: /^(?:Actions|Affectedness) of/ }),
+  ).toHaveCount(0);
   await expectOverviewShown(page);
   await expectScreenshot(page, "ticket-maintainer.png");
 });

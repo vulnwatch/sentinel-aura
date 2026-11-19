@@ -8,6 +8,7 @@ import {
   isRequestFailure,
   presentChangeFailure,
   presentFailure,
+  presentMarkerConflict,
   presentRefetchFailure,
   presentSignInFailure,
   referenceAddressError,
@@ -501,6 +502,61 @@ describe("referenceAddressError", () => {
     ],
   ])("leaves %s to the form", (_, failure) => {
     expect(referenceAddressError(failure)).toBeUndefined();
+  });
+});
+
+describe("presentMarkerConflict", () => {
+  test("says that the record is already excluded after 409 PACKAGE_ALREADY_EXCLUDED of an exclusion", () => {
+    expect(
+      presentMarkerConflict(
+        errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"),
+        "exclude",
+        "Package fictional-openssl",
+      ),
+    ).toBe("Package fictional-openssl is already excluded.");
+  });
+
+  test("says that the record is no longer excluded after 422 PACKAGE_NOT_EXCLUDED of a restore", () => {
+    expect(
+      presentMarkerConflict(
+        errorResponse(422, "PACKAGE_NOT_EXCLUDED"),
+        "restore",
+        "Track fles-16.0 of fictional-zlib",
+      ),
+    ).toBe("Track fles-16.0 of fictional-zlib is no longer excluded.");
+  });
+
+  test.each<[string, RequestFailure, "exclude" | "restore"]>([
+    [
+      "409 PACKAGE_ALREADY_EXCLUDED of a restore",
+      errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"),
+      "restore",
+    ],
+    [
+      "422 PACKAGE_NOT_EXCLUDED of an exclusion",
+      errorResponse(422, "PACKAGE_NOT_EXCLUDED"),
+      "exclude",
+    ],
+    [
+      "the code with another status",
+      errorResponse(422, "PACKAGE_ALREADY_EXCLUDED"),
+      "exclude",
+    ],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+      "exclude",
+    ],
+    ["an error without a code", errorResponse(409), "exclude"],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+      "restore",
+    ],
+  ])("leaves %s to the presentation of a change", (_, failure, change) => {
+    expect(
+      presentMarkerConflict(failure, change, "Package fictional-openssl"),
+    ).toBeUndefined();
   });
 });
 
