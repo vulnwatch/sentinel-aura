@@ -3371,16 +3371,22 @@ describe("the hidden records", () => {
       .toHaveAccessibleName("Show hidden 1");
   });
 
-  test("disables the switch without hidden records, and keeps its state", async () => {
+  test("turns the switch off and disables it without hidden records, removing hidden=shown from the URL, in place of the URL, with the anchor", async () => {
     showing([fictionalPackage()]);
 
-    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    const { router, screen } = await renderTree(
+      "/tickets/SNTL-12?hidden=shown#packages",
+    );
 
     await expect.element(showHidden(screen)).toBeDisabled();
-    await expect.element(showHidden(screen)).toBeChecked();
+    await expect.element(showHidden(screen)).not.toBeChecked();
     await expect
       .element(showHidden(screen))
       .toHaveAccessibleName("Show hidden 0");
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets/SNTL-12#packages");
+    expect(router.history.length).toBe(1);
   });
 
   test("says that every package is hidden while the switch is off", async () => {
@@ -3607,6 +3613,7 @@ describe("the tracks that wait for the signed-in user", () => {
                     ],
                   })
                 : fictionalPackage(),
+              excludedPackage(),
             ],
           }),
         ),
@@ -12244,7 +12251,7 @@ describe("the SUSE assessment", () => {
       const dialog = await openSuseEdit(screen);
       await vectorOf(dialog).fill(VECTOR_V31);
 
-      router.history.push("/tickets/SNTL-12?hidden=shown");
+      router.history.push("/tickets/SNTL-12#packages");
 
       const discard = screen.getByRole("dialog", { name: "Discard changes?" });
       await expect
@@ -12260,7 +12267,7 @@ describe("the SUSE assessment", () => {
       expect(router.state.location.href).toBe("/tickets/SNTL-12");
       await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
 
-      router.history.push("/tickets/SNTL-12?hidden=shown");
+      router.history.push("/tickets/SNTL-12#packages");
       await discard
         .getByRole("button", { name: "Discard", exact: true })
         .click();
@@ -12268,7 +12275,7 @@ describe("the SUSE assessment", () => {
       await expect.element(dialog).not.toBeInTheDocument();
       await expect
         .poll(() => router.state.location.href)
-        .toBe("/tickets/SNTL-12?hidden=shown");
+        .toBe("/tickets/SNTL-12#packages");
       expect(requestsWith(spy, "POST")).toHaveLength(0);
     });
 
@@ -12971,6 +12978,41 @@ function treeWithoutSp7(): PackageDetail[] {
   });
 }
 
+// The tree with fictional-xz after its packages, an excluded package, so that
+// "Show hidden" stays on while a test changes the records before it.
+function withHiddenPackage(tree: PackageDetail[]): PackageDetail[] {
+  return [
+    ...tree,
+    fictionalPackage({
+      id: "00000000-0000-0000-0000-0000000000a9",
+      package_name: "fictional-xz",
+      deleted_at: "2099-10-09T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "package_excluded",
+      maintainers: [],
+      tracks: [
+        fictionalTrack({
+          id: "00000000-0000-0000-0000-0000000000b9",
+          reference: "SUSE:FLES-15-SP5:Update",
+          status: "analysis",
+          actionable: false,
+          non_actionable_reason: "package_excluded",
+          products: [
+            fictionalProduct({
+              id: "00000000-0000-0000-0000-0000000000c9",
+              product_cpe: "cpe:/o:example:fles:15:sp5",
+              product_name: "Fictional Linux Enterprise Server 15 SP5",
+              actionable: false,
+              non_actionable_reason: "package_excluded",
+            }),
+          ],
+          ...NOT_APPLICABLE,
+        }),
+      ],
+    }),
+  ];
+}
+
 // Answers Get Ticket with the package tree that the function returns at each
 // read, for a user who holds manage_packages unless the test says otherwise.
 function showingEditable(
@@ -13269,7 +13311,7 @@ describe("the edits of the package tree", () => {
   test("exclude a track at once, with its item busy and the menu open until Sentinel answers, then close the menu, return the focus to its button, and announce the outcome once the read of the Ticket after it arrives, while Show hidden is on", async () => {
     const response = later();
     let tree = editableTree();
-    const spy = showingEditable(() => tree, {
+    const spy = showingEditable(() => withHiddenPackage(tree), {
       packageChange: () => response.promise,
     });
     const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
@@ -13488,6 +13530,57 @@ describe("the edits of the package tree", () => {
       .not.toBeInTheDocument();
     await expectFocusSettledOn(screenHeading(screen));
   });
+
+  test.each([
+    ["the last hidden record", false],
+    ["a hidden record while another stays hidden", true],
+  ])(
+    "turn Show hidden off only once no hidden record is left, in place of the URL, the focus staying on the menu of the record: after the restore of %s",
+    async (_name, another) => {
+      const excluded = {
+        deleted_at: "2099-10-09T10:00:00Z",
+        actionable: false,
+        non_actionable_reason: "package_excluded",
+      } as const;
+      const withAnother = (tree: PackageDetail[]) =>
+        another ? withHiddenPackage(tree) : tree;
+      let tree = withAnother(editableTree({}, excluded));
+      showingEditable(() => tree, {
+        packageChange: () => {
+          tree = withAnother(editableTree());
+          return packageMarkerResponse(true);
+        },
+      });
+      const { router, screen } = await renderTree(
+        "/tickets/SNTL-12?hidden=shown#packages",
+      );
+      const entries = router.history.length;
+
+      await chooseAction(screen, "fictional-zlib", "Restore");
+
+      await expect
+        .poll(() => announcements(screen))
+        .toContain("Package fictional-zlib restored.");
+      await expect
+        .element(showHidden(screen))
+        .toHaveAccessibleName(`Show hidden ${another ? 1 : 0}`);
+      if (another) {
+        await expect.element(showHidden(screen)).toBeChecked();
+        await expect.element(showHidden(screen)).toBeEnabled();
+        expect(router.state.location.href).toBe(
+          "/tickets/SNTL-12?hidden=shown#packages",
+        );
+      } else {
+        await expect.element(showHidden(screen)).not.toBeChecked();
+        await expect.element(showHidden(screen)).toBeDisabled();
+        await expect
+          .poll(() => router.state.location.href)
+          .toBe("/tickets/SNTL-12#packages");
+      }
+      expect(router.history.length).toBe(entries);
+      await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
+    },
+  );
 
   test("restore a package that its own marker excludes, and announce it", async () => {
     let tree = editableTree({
@@ -14510,7 +14603,7 @@ describe("the actions of a Product", () => {
 
   test("follow the Product as a read shows it while the popover is open, the focus staying on the item whose action changes", async () => {
     let tree = productTree();
-    showingEditable(() => tree);
+    showingEditable(() => withHiddenPackage(tree));
     const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
     const popover = await openProduct(screen, SP7_PRODUCT);
     await userEvent.keyboard("{Tab}{ArrowDown}");
@@ -14753,7 +14846,7 @@ describe("the actions of a Product", () => {
 
   test("keep the Product after an exclusion while Show hidden is on, in gray with its label, with the focus on its name, and announce the outcome", async () => {
     let tree = productTree({}, [desktopProduct()]);
-    showingEditable(() => tree, {
+    showingEditable(() => withHiddenPackage(tree), {
       packageChange: () => {
         tree = productTree(
           {

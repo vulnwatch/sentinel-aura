@@ -3203,13 +3203,32 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
   const toggle = (shown: boolean) => {
     void navigate({
       to: "/tickets/$ticketId",
-      params: { ticketId: ticket.ticket_id },
+      params: { ticketId },
       search: { hidden: shown ? HIDDEN_SHOWN : undefined },
       hash: true,
       resetScroll: false,
       hashScrollIntoView: false,
     });
   };
+  // The switch is on only while the tree has hidden records: once a read
+  // shows none, as after the restore of the last one, the screen removes
+  // hidden=shown from its URL, in place of the URL in the browser history,
+  // and the switch is off and disabled; the tree shows the same records
+  // either way (docs/screen-map.md, Browser History).
+  const noneHidden = showHidden && count === 0;
+  useEffect(() => {
+    if (noneHidden) {
+      void navigate({
+        to: "/tickets/$ticketId",
+        params: { ticketId },
+        search: { hidden: undefined },
+        hash: true,
+        replace: true,
+        resetScroll: false,
+        hashScrollIntoView: false,
+      });
+    }
+  }, [noneHidden, navigate, ticketId]);
   // The announcements of the edits follow the part, apart from the warning
   // of the read of the work of a maintainer, which is its status region.
   const part = (

@@ -67,8 +67,9 @@ Access Grants).
   UUID, shows Not found without a request (`docs/behaviors.md`, Missing and
   Inaccessible Records).
 - Overview is at the path of the Ticket. Its one search parameter is
-  `hidden=shown`, while the package tree shows its hidden records (Packages);
-  the screen removes every other parameter and value from its URL, in place
+  `hidden=shown`, while the package tree shows its hidden records and has
+  some (Packages); the screen removes every other parameter and value from
+  its URL, and `hidden=shown` once the Ticket has no hidden records, in place
   of the URL in the browser history, and keeps its anchor
   (`docs/behaviors.md`, Invalid Search Parameters).
 - References is at `/tickets/{ticket_id}/references`, with these search
@@ -473,10 +474,14 @@ edits of its packages, tracks, and Products (Actions; Sentinel
   with what it holds, shows them in `fg-muted` (`docs/design-system.md`, Detail
   Screens): a record that its own marker excludes carries the label
   Excluded, and a Product at the end of its life the label EOL, also under a
-  hidden parent. The switch is disabled without hidden records, and keeps
-  its state; its state is `hidden=shown` in the URL, which it adds to the
-  browser history, keeping the anchor and the scroll position. While it is
-  off and every package is hidden, the part says "All packages are hidden.".
+  hidden parent. Its state is `hidden=shown` in the URL, which it adds to
+  the browser history, keeping the anchor and the scroll position. Without
+  hidden records, it is off and disabled: when a read of the Ticket shows
+  none while it is on, as after the restore of the last one, the screen
+  removes `hidden=shown` from its URL, in place of the URL in the browser
+  history, keeping the anchor, the scroll position, and the focus; the tree
+  shows the same records either way. While it is off and every package is
+  hidden, the part says "All packages are hidden.".
 - **The tracks that wait for the signed-in user.** For a user whom
   `maintainers` lists for a package that is not excluded, the screen reads
   their work on the Ticket, `GET /api/v1/my/packages/tickets/{ticket_id}`,

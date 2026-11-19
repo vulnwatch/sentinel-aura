@@ -1384,24 +1384,11 @@ test.describe("for an analyst", () => {
         button("Actions of fictional-curl, fles-16.0"),
       ).toBeFocused();
 
-      // With Show hidden on, the track shows in gray with its label, and
-      // Restore includes it again.
+      // With Show hidden on, the track shows in gray with its label.
       await page.getByRole("switch", { name: "Show hidden 1" }).focus();
       await page.keyboard.press("Space");
       await expect(page).toHaveURL("/tickets/SNTL-11?hidden=shown#packages");
       const sp7 = button("Actions of fictional-curl, SUSE:FLES-15-SP7:Update");
-      await sp7.click();
-      await page
-        .getByRole("menuitem", { name: "Restore", exact: true })
-        .click();
-
-      await expect(
-        announced("Track fictional-curl · SUSE:FLES-15-SP7:Update restored."),
-      ).toHaveCount(1);
-      await expect(sp7).toBeFocused();
-      await expect(
-        page.getByRole("switch", { name: "Show hidden 0" }),
-      ).toBeDisabled();
 
       // An exclusion while Show hidden is on keeps the package, in gray with
       // its label, and its menu keeps the focus.
@@ -1416,7 +1403,7 @@ test.describe("for an analyst", () => {
       );
       await expect(curl).toBeFocused();
       await expect(packages.getByText("Excluded", { exact: true })).toHaveCount(
-        1,
+        2,
       );
       await curl.click();
       await page
@@ -1426,8 +1413,29 @@ test.describe("for an analyst", () => {
         1,
       );
       await expect(packages.getByText("Excluded", { exact: true })).toHaveCount(
-        0,
+        1,
       );
+      // The excluded track keeps Show hidden on.
+      await expect(
+        page.getByRole("switch", { name: "Show hidden 1" }),
+      ).toBeChecked();
+
+      // Restore includes the track again, the last hidden record: Show
+      // hidden turns off and is disabled, in place of the URL, and the
+      // focus stays on the menu of the track.
+      await sp7.click();
+      await page
+        .getByRole("menuitem", { name: "Restore", exact: true })
+        .click();
+
+      await expect(
+        announced("Track fictional-curl · SUSE:FLES-15-SP7:Update restored."),
+      ).toHaveCount(1);
+      const switchHidden = page.getByRole("switch", { name: "Show hidden 0" });
+      await expect(switchHidden).toBeDisabled();
+      await expect(switchHidden).not.toBeChecked();
+      await expect(page).toHaveURL("/tickets/SNTL-11#packages");
+      await expect(sp7).toBeFocused();
 
       // The affectedness of a track changes at once.
       const expat = button(
