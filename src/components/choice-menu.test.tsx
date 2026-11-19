@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import { ChoiceMenu, type Choice } from "./choice-menu";
 
 // A select of a value of a record whose choice applies at once
@@ -117,6 +118,8 @@ test("is a quiet button 28 px high, without a boundary or a fill, in fg", async 
   );
   const button = screen.getByRole("button").element();
   await expect.element(screen.getByRole("button")).toBeVisible();
+  // The pointer away from the button, where an earlier test can leave it.
+  await pointerAwayFrom(screen.getByRole("button"));
   const style = getComputedStyle(button);
   expect(button.getBoundingClientRect().height).toBe(28);
   expect(style.borderTopWidth).toBe("0px");

@@ -23,6 +23,7 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import { pointerAwayFrom } from "../../test-pointer";
 import {
   ACTORS,
   announcements,
@@ -304,6 +305,8 @@ describe("the edits of the package tree", () => {
       .element(select)
       .toHaveAccessibleName(`Affectedness of ${OPENSSL_SP7}: Affected`);
     await expect.element(select).toHaveTextContent("Affected");
+    // The pointer away from the select, where an earlier test can leave it.
+    await pointerAwayFrom(select);
     // A quiet select, without a boundary or a fill, in fg.
     const style = getComputedStyle(select.element());
     expect(style.borderTopWidth).toBe("0px");
@@ -2068,12 +2071,15 @@ describe("the actions of a Product", () => {
   test("leave the focus on the screen's heading after an exclusion of the Product whose read after it still shows the Product, as after another user restored it meanwhile", async () => {
     const read = later();
     let excluded = false;
-    const tree = () => productTree({}, [desktopProduct()]);
     showingEditable(undefined, {
       ticket: () =>
         excluded
           ? read.promise
-          : ticketResponse(fictionalTicketDetail({ packages: tree() })),
+          : ticketResponse(
+              fictionalTicketDetail({
+                packages: productTree({}, [desktopProduct()]),
+              }),
+            ),
       packageChange: () => {
         excluded = true;
         return productMarkerResponse(false);
@@ -2089,7 +2095,13 @@ describe("the actions of a Product", () => {
     // The screen's heading, from which the focus moves after an exclusion
     // that hides its record.
     screenHeading(screen).element().focus();
-    read.resolve(ticketResponse(fictionalTicketDetail({ packages: tree() })));
+    read.resolve(
+      ticketResponse(
+        fictionalTicketDetail({
+          packages: productTree({}, [desktopProduct()]),
+        }),
+      ),
+    );
 
     await readEnded(TICKET);
     await expect.element(productName(screen, SP7_PRODUCT)).toBeVisible();

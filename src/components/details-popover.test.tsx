@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import { DescriptionItem, DescriptionList } from "./description-list";
 import { DetailsName, DetailsValue, ValueRecords } from "./details-popover";
 import { MenuAction } from "./menu";
@@ -357,6 +358,8 @@ function Value({ link = false }: ValueProps) {
 test("shows a value as a button in its type, with the dotted underline of a name, at least 24 px high", async () => {
   const screen = await render(<Value />);
   const value = screen.getByRole("button", { name: VECTOR });
+  // The pointer away from the value, where an earlier test can leave it.
+  await pointerAwayFrom(value);
 
   const style = getComputedStyle(value.element());
   expect(style.textDecorationStyle).toBe("dotted");

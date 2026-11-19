@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import { Button } from "./button";
 
 declare module "vitest/browser" {
@@ -124,8 +125,8 @@ test.each([
   async (variant, background, color, border) => {
     const screen = await render(<Button variant={variant}>Sign in</Button>);
     const locator = screen.getByRole("button", { name: "Sign in" });
-    // The pointer of an earlier test may rest where the button shows.
-    await userEvent.unhover(locator);
+    // The pointer away from the button, where an earlier test can leave it.
+    await pointerAwayFrom(locator);
     const button = locator.element();
 
     expect(getComputedStyle(button).backgroundColor).toBe(background);

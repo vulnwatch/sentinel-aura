@@ -21,6 +21,7 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import { pointerAwayFrom } from "../../test-pointer";
 import { screenshot } from "../../test-screenshot";
 import {
   ACCESS,
@@ -564,6 +565,8 @@ describe("the sources of the CVE", () => {
     const item = boxOf(sourceOf(screen, "NVD"));
     expect([refetch.width, refetch.height]).toEqual([24, 24]);
     expect([refetch.left, refetch.top]).toEqual([item.left, item.top]);
+    // The pointer away from Refetch all, where an earlier test can leave it.
+    await pointerAwayFrom(refetchAll(screen));
     const all = refetchAll(screen).element();
     expect(boxOf(refetchAll(screen)).height).toBe(32);
     expect([

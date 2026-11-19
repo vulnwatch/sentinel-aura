@@ -11,6 +11,7 @@ import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import { RouterLinks } from "./router-links";
 import { Link } from "./link";
 
@@ -80,8 +81,8 @@ test("is underlined only under the pointer and on keyboard focus in a table or a
   const decoration = () => getComputedStyle(link.element()).textDecorationLine;
 
   await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-42");
-  // Away from the pointer, which an earlier test can leave over it.
-  await userEvent.unhover(link);
+  // The pointer away from the link, where an earlier test can leave it.
+  await pointerAwayFrom(link);
   // link of the light theme.
   expect(getComputedStyle(link.element()).color).toBe("rgb(9, 105, 218)");
   await expect.poll(decoration).toBe("none");
@@ -89,7 +90,7 @@ test("is underlined only under the pointer and on keyboard focus in a table or a
   await link.hover();
   await expect.poll(decoration).toBe("underline");
 
-  await userEvent.unhover(link);
+  await pointerAwayFrom(link);
   await expect.poll(decoration).toBe("none");
   await userEvent.keyboard("{Tab}");
   await expect.element(link).toHaveFocus();

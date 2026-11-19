@@ -9,9 +9,9 @@ import {
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { expect, test } from "vitest";
-import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import { ButtonLink } from "./button-link";
 import { RouterLinks } from "./router-links";
 
@@ -53,8 +53,8 @@ test("looks like a secondary button, and leads through the router to the address
   const link = screen.getByRole("link", { name: "Next" });
 
   await expect.element(link).toHaveAttribute("href", "/tickets?page=2");
-  // Away from the pointer, which an earlier test can leave over it.
-  await userEvent.unhover(link);
+  // The pointer away from the link, where an earlier test can leave it.
+  await pointerAwayFrom(link);
   const style = getComputedStyle(link.element());
   expect([
     link.element().getBoundingClientRect().height,

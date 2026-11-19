@@ -11,6 +11,7 @@ import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { pointerAwayFrom } from "../test-pointer";
 import {
   DetailTabList,
   DetailTabPanel,
@@ -83,6 +84,8 @@ test("shows each tab as a link to its address, in text-14 and fg-muted, 40 px hi
   const auditLog = screen.getByRole("tab", { name: "Audit log" });
 
   await expect.element(auditLog).toHaveAttribute("href", "/tickets");
+  // The pointer away from the tab, where an earlier test can leave it.
+  await pointerAwayFrom(auditLog);
   const style = getComputedStyle(auditLog.element());
   expect([
     style.fontSize,

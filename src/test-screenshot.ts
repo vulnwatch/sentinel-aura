@@ -1,4 +1,5 @@
 import { page, type Locator } from "vitest/browser";
+import { pointerAwayFrom } from "./test-pointer";
 
 // A screenshot of an element, whose pixels a component test reads: the
 // colors and shapes of a mark that is hidden from assistive technologies, so
@@ -10,35 +11,6 @@ export interface Screenshot {
   // The color of the pixel at a point of the element, in CSS pixels from its
   // top left corner, as #rrggbb.
   at: (x: number, y: number) => string;
-}
-
-// Moves the pointer to a corner of the window that the element does not
-// cover. Vitest runs several test files one after another in one page, so
-// the pointer rests where an earlier test left it, and where it rests on the
-// element, the element shows its colors under the pointer.
-async function pointerAwayFrom(element: Locator) {
-  const box = element.element().getBoundingClientRect();
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const corners = [
-    { x: 0, y: 0 },
-    { x: width - 1, y: 0 },
-    { x: 0, y: height - 1 },
-    { x: width - 1, y: height - 1 },
-  ];
-  const corner =
-    corners.find(
-      ({ x, y }) =>
-        x < box.left || x >= box.right || y < box.top || y >= box.bottom,
-    ) ?? corners[0]!;
-  // The root element starts at the top left corner of the window unless the
-  // page scrolls; force skips the check that the pointer reaches the root
-  // element itself, since an element of the page lies over it.
-  const root = document.documentElement.getBoundingClientRect();
-  await page.elementLocator(document.documentElement).hover({
-    position: { x: corner.x - root.left, y: corner.y - root.top },
-    force: true,
-  });
 }
 
 // Waits until every picture that the element loads, such as a profile
@@ -53,7 +25,8 @@ export async function picturesLoaded(element: Locator): Promise<void> {
   );
 }
 
-// A screenshot of the element as it shows once its pictures have loaded.
+// A screenshot of the element as it shows once its pictures have loaded,
+// away from the pointer.
 export async function screenshot(element: Locator): Promise<Screenshot> {
   await picturesLoaded(element);
   await pointerAwayFrom(element);
