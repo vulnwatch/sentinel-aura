@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.10.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.9.0...v0.10.0) (2026-11-19)
+
+
+### Features
+
+* ask before leaving with input not yet submitted ([#285](https://github.com/vulnwatch/sentinel-aura/issues/285)) ([84258d7](https://github.com/vulnwatch/sentinel-aura/commit/84258d78567f3fc2ae078d0454584d2d450a1af9))
+* assign a Ticket from its details ([#286](https://github.com/vulnwatch/sentinel-aura/issues/286)) ([6a0db3c](https://github.com/vulnwatch/sentinel-aura/commit/6a0db3ceb2aaeddeab2bb845034b484841e9e7b6))
+* change the eligibility of a Product and exclude it from a track ([#293](https://github.com/vulnwatch/sentinel-aura/issues/293)) ([5a40faa](https://github.com/vulnwatch/sentinel-aura/commit/5a40faa8369c6ed635f97429c16cfc45064fef46))
+* **deps:** pin Sentinel 0.26.0 ([#281](https://github.com/vulnwatch/sentinel-aura/issues/281)) ([eea1d1e](https://github.com/vulnwatch/sentinel-aura/commit/eea1d1e79502237bdd974aae746152d7ced8e8ba))
+* **deps:** pin Sentinel 0.27.0 ([#295](https://github.com/vulnwatch/sentinel-aura/issues/295)) ([8a1ba45](https://github.com/vulnwatch/sentinel-aura/commit/8a1ba45525b678a11e3cfb4ea99ac4a9ce617a85))
+* exclude packages and tracks and change a track's affectedness ([#289](https://github.com/vulnwatch/sentinel-aura/issues/289)) ([a8b6823](https://github.com/vulnwatch/sentinel-aura/commit/a8b6823005b5de04dd7667f16f6fa4692f9067b2))
+* set and delete the SUSE CVSS assessment of a Ticket's CVE ([#283](https://github.com/vulnwatch/sentinel-aura/issues/283)) ([6fad571](https://github.com/vulnwatch/sentinel-aura/commit/6fad571c50619582e249c862e24c9ef2befa8466))
+
 ## [0.9.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.8.0...v0.9.0) (2026-11-16)
 
 
