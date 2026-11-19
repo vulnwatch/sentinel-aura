@@ -1,9 +1,12 @@
+import { Ban, UserPen } from "lucide-react";
+import { useState } from "react";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { DescriptionItem, DescriptionList } from "./description-list";
 import { DetailsName, DetailsValue, ValueRecords } from "./details-popover";
+import { MenuAction } from "./menu";
 import { ScreenHeading } from "./screen-heading";
 
 // A name that opens a popover with the details of its record
@@ -173,6 +176,125 @@ test("moves the focus to the screen's heading when the name leaves the page whil
   await screen.rerender(<Record shown={false} />);
 
   await expect.element(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+});
+
+interface ActionsRecordProps {
+  // Whether the change of an action is in progress.
+  busy?: boolean;
+}
+
+// The name of a fictional Product with its actions, whose popover the
+// record opens and closes as its name asks, unless a change is in progress.
+function ActionsRecord({ busy = false }: ActionsRecordProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <main className="p-4">
+      <ScreenHeading>Fictional record</ScreenHeading>
+      <p className="w-96 text-14">
+        <DetailsName
+          name={NAME}
+          isOpen={open}
+          onOpenChange={setOpen}
+          busy={busy}
+          actions={
+            <>
+              <MenuAction
+                id="eligibility"
+                icon={UserPen}
+                busy={busy ? "Marking as not eligible." : undefined}
+              >
+                Mark as not eligible
+              </MenuAction>
+              <MenuAction id="exclude" icon={Ban}>
+                Exclude from this track
+              </MenuAction>
+            </>
+          }
+        >
+          <DescriptionList>
+            <DescriptionItem term="Lifecycle">General support</DescriptionItem>
+          </DescriptionList>
+        </DetailsName>
+      </p>
+    </main>
+  );
+}
+
+test("ends its popover with the actions of its record, below another line, as the menu Actions, one stop of Tab, whose icons start where the details start", async () => {
+  const screen = await render(<ActionsRecord />);
+
+  await screen.getByRole("button", { name: NAME }).click();
+
+  const popover = screen.getByRole("dialog", { name: NAME });
+  await expect.element(popover).toHaveFocus();
+  const separators = popover.getByRole("separator").elements();
+  expect(separators).toHaveLength(2);
+  const menu = popover.getByRole("menu", { name: "Actions", exact: true });
+  expect(
+    popover
+      .getByRole("definition")
+      .element()
+      .compareDocumentPosition(separators[1]!) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    separators[1]!.compareDocumentPosition(menu.element()) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  const items = menu.getByRole("menuitem").elements();
+  expect(items.map((item) => item.textContent)).toEqual([
+    "Mark as not eligible",
+    "Exclude from this track",
+  ]);
+  const icon = items[0]!.querySelector("svg")!;
+  expect(icon.getBoundingClientRect().left).toBe(
+    popover.getByRole("term").element().getBoundingClientRect().left,
+  );
+
+  await userEvent.keyboard("{Tab}");
+
+  await expect
+    .element(menu.getByRole("menuitem", { name: "Mark as not eligible" }))
+    .toHaveFocus();
+
+  await userEvent.keyboard("{ArrowDown}");
+
+  await expect
+    .element(menu.getByRole("menuitem", { name: "Exclude from this track" }))
+    .toHaveFocus();
+
+  // The menu is one stop of Tab: its other items are not.
+  expect(items.map((element) => element.tabIndex)).toEqual([-1, 0]);
+});
+
+test("stays open while the change of one of its actions is in progress, on Escape and on a click outside", async () => {
+  const screen = await render(<ActionsRecord />);
+  await screen.getByRole("button", { name: NAME }).click();
+  const popover = screen.getByRole("dialog", { name: NAME });
+  await expect.element(popover).toHaveFocus();
+
+  await screen.rerender(<ActionsRecord busy />);
+  const item = popover.getByRole("menuitem", { name: "Mark as not eligible" });
+  await expect
+    .element(item)
+    .toHaveAccessibleDescription("Marking as not eligible.");
+  await userEvent.keyboard("{Escape}");
+  // A press of the pointer outside the popover, which React Aria closes it
+  // on.
+  for (const type of ["pointerdown", "pointerup", "click"]) {
+    document.body.dispatchEvent(
+      new PointerEvent(type, { bubbles: true, pointerId: 1, button: 0 }),
+    );
+  }
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+
+  await expect.element(popover).toBeVisible();
+
+  await screen.rerender(<ActionsRecord />);
+  await userEvent.keyboard("{Escape}");
+
+  await expect.element(popover).not.toBeInTheDocument();
 });
 
 test("stays within a narrow window", async () => {

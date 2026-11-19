@@ -1180,6 +1180,17 @@ test.describe("for an analyst", () => {
       ),
       "Extended support",
     ]);
+    // asmith holds manage_packages, and SNTL-16 is Resolved (Users;
+    // Tickets): the actions of the Product follow its details.
+    await expect(
+      product
+        .getByRole("menu", { name: "Actions", exact: true })
+        .getByRole("menuitem"),
+    ).toHaveText([
+      "Mark as eligible",
+      "Return to automatic eligibility",
+      "Exclude from this track",
+    ]);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-product-set-by-hand.png");
     await page.keyboard.press("Escape");
@@ -1279,6 +1290,23 @@ test.describe("for an analyst", () => {
       "Fixed",
     ]);
     await expectAccessible(page);
+    await page.keyboard.press("Escape");
+
+    // The popover of a Product shows its details without actions.
+    await packages
+      .getByRole("button", {
+        name: "Fictional Linux Enterprise Server 15 SP7",
+        exact: true,
+      })
+      .click();
+    const product = page.getByRole("dialog", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+    });
+    await expect(product).toBeFocused();
+    await expect(product.getByRole("definition").first()).toHaveText(
+      "Eligible",
+    );
+    await expect(product.getByRole("menu")).toHaveCount(0);
   });
 
   test("asks for confirmation before excluding a package with maintainers of a confidential Ticket", async ({
@@ -1356,24 +1384,11 @@ test.describe("for an analyst", () => {
         button("Actions of fictional-curl, fles-16.0"),
       ).toBeFocused();
 
-      // With Show hidden on, the track shows in gray with its label, and
-      // Restore includes it again.
+      // With Show hidden on, the track shows in gray with its label.
       await page.getByRole("switch", { name: "Show hidden 1" }).focus();
       await page.keyboard.press("Space");
       await expect(page).toHaveURL("/tickets/SNTL-11?hidden=shown#packages");
       const sp7 = button("Actions of fictional-curl, SUSE:FLES-15-SP7:Update");
-      await sp7.click();
-      await page
-        .getByRole("menuitem", { name: "Restore", exact: true })
-        .click();
-
-      await expect(
-        announced("Track fictional-curl · SUSE:FLES-15-SP7:Update restored."),
-      ).toHaveCount(1);
-      await expect(sp7).toBeFocused();
-      await expect(
-        page.getByRole("switch", { name: "Show hidden 0" }),
-      ).toBeDisabled();
 
       // An exclusion while Show hidden is on keeps the package, in gray with
       // its label, and its menu keeps the focus.
@@ -1388,7 +1403,7 @@ test.describe("for an analyst", () => {
       );
       await expect(curl).toBeFocused();
       await expect(packages.getByText("Excluded", { exact: true })).toHaveCount(
-        1,
+        2,
       );
       await curl.click();
       await page
@@ -1398,8 +1413,29 @@ test.describe("for an analyst", () => {
         1,
       );
       await expect(packages.getByText("Excluded", { exact: true })).toHaveCount(
-        0,
+        1,
       );
+      // The excluded track keeps Show hidden on.
+      await expect(
+        page.getByRole("switch", { name: "Show hidden 1" }),
+      ).toBeChecked();
+
+      // Restore includes the track again, the last hidden record: Show
+      // hidden turns off and is disabled, in place of the URL, and the
+      // focus stays on the menu of the track.
+      await sp7.click();
+      await page
+        .getByRole("menuitem", { name: "Restore", exact: true })
+        .click();
+
+      await expect(
+        announced("Track fictional-curl · SUSE:FLES-15-SP7:Update restored."),
+      ).toHaveCount(1);
+      const switchHidden = page.getByRole("switch", { name: "Show hidden 0" });
+      await expect(switchHidden).toBeDisabled();
+      await expect(switchHidden).not.toBeChecked();
+      await expect(page).toHaveURL("/tickets/SNTL-11#packages");
+      await expect(sp7).toBeFocused();
 
       // The affectedness of a track changes at once.
       const expat = button(
@@ -1492,6 +1528,94 @@ test.describe("for an analyst", () => {
       // screen's heading (docs/behaviors.md, Accessibility, Focus after an
       // action).
       await expect(heading(page, "SNTL-26")).toBeFocused();
+    },
+  );
+
+  test(
+    "sets the eligibility of a Product by hand, returns it to automatic, and excludes and restores it",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-16, Resolved, which no other test of this project relies on:
+      // asmith set Server LTSS 15 SP5 of its SUSE:FLES-15-SP5:Update track,
+      // Affected, as not eligible by hand, and its Server 15 SP7 is excluded,
+      // so that the track has no eligible Product. Every other track and
+      // package of the Ticket is hidden (Packages, Tracks, and Maintainers).
+      await signIn(page, "asmith");
+      await page.goto("/tickets/SNTL-16#packages");
+      const packages = part(page, "Packages");
+      const ltss = packages.getByRole("button", {
+        name: "Fictional Linux Enterprise Server LTSS 15 SP5",
+        exact: true,
+      });
+      const product = page.getByRole("dialog", {
+        name: "Fictional Linux Enterprise Server LTSS 15 SP5",
+      });
+      const subject =
+        "Product Fictional Linux Enterprise Server LTSS 15 SP5 of fictional-kernel · SUSE:FLES-15-SP5:Update";
+      const announced = (text: string) =>
+        page.getByRole("status").filter({ hasText: text });
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Resolved");
+
+      // Marked as eligible, the Product keeps the Ticket from Resolved.
+      await ltss.click();
+      await product.getByRole("menuitem", { name: "Mark as eligible" }).click();
+
+      await expect(product).toHaveCount(0);
+      await expect(ltss).toBeFocused();
+      await expect(announced(`${subject} marked as eligible.`)).toHaveCount(1);
+      await expect(status).toHaveText("Analyzed");
+
+      // Returned to its automatic eligibility, it is not eligible again: the
+      // SUSE score 5.5 of the CVE is below its threshold 7.0 (Product
+      // Catalog; CVEs).
+      await ltss.click();
+      await product
+        .getByRole("menuitem", { name: "Return to automatic eligibility" })
+        .click();
+
+      await expect(
+        announced(
+          `${subject} returned to automatic eligibility, not eligible.`,
+        ),
+      ).toHaveCount(1);
+      await expect(status).toHaveText("Resolved");
+      await expect(ltss).toBeFocused();
+
+      // Excluded while Show hidden is off, it hides its track and its
+      // package, the last that showed: the outcome shows in the message area,
+      // and the focus moves to Show hidden.
+      await ltss.click();
+      await product
+        .getByRole("menuitem", { name: "Exclude from this track" })
+        .click();
+
+      await expect(
+        page.getByText(`${subject} excluded.`, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        packages.getByText("All packages are hidden.", { exact: true }),
+      ).toBeVisible();
+      const switchHidden = page.getByRole("switch", { name: /^Show hidden/ });
+      await expect(switchHidden).toBeFocused();
+      await expectAccessible(page);
+
+      // With Show hidden on, it shows in gray with its label, and Restore
+      // includes it again.
+      await page.keyboard.press("Space");
+      await expect(page).toHaveURL("/tickets/SNTL-16?hidden=shown#packages");
+      await ltss.click();
+      await expect(product.getByRole("menu").getByRole("menuitem")).toHaveText([
+        "Mark as eligible",
+        "Restore",
+      ]);
+      await expectAccessible(page);
+      await product.getByRole("menuitem", { name: "Restore" }).click();
+
+      await expect(announced(`${subject} restored.`)).toHaveCount(1);
+      await expect(ltss).toBeFocused();
+      await expectAccessible(page);
     },
   );
 
@@ -3599,6 +3723,20 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
   ).toHaveCount(0);
   await expectOverviewShown(page);
   await expectScreenshot(page, "ticket-maintainer.png");
+
+  // The popover of a Product shows its details without actions.
+  await packages
+    .getByRole("button", {
+      name: "Fictional Linux Enterprise Server 15 SP7",
+      exact: true,
+    })
+    .click();
+  const product = page.getByRole("dialog", {
+    name: "Fictional Linux Enterprise Server 15 SP7",
+  });
+  await expect(product).toBeFocused();
+  await expect(product.getByRole("definition").first()).toHaveText("Eligible");
+  await expect(product.getByRole("menu")).toHaveCount(0);
 });
 
 test("shows a maintainer the access grants of a confidential Ticket, without Grant access and Revoke access", async ({

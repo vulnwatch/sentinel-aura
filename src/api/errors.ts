@@ -321,9 +321,10 @@ export function cvssVectorError(
 // of an exclusion, and 422 PACKAGE_NOT_EXCLUDED of a restore, which concern
 // the record's own marker (Sentinel docs/features/packages/package-model.md,
 // Soft-Delete Package from Ticket; Restore Package; Soft-Delete Track;
-// Restore Track). The subject names the record, such as "Package
-// fictional-openssl". Every other failure, such as one of these codes from
-// the other operation, has the presentation of a change.
+// Restore Track; Soft-Delete Product; Restore Product). The subject names the
+// record, such as "Package fictional-openssl". Every other failure, such as
+// one of these codes from the other operation, has the presentation of a
+// change.
 export function presentMarkerConflict(
   failure: RequestFailure,
   change: "exclude" | "restore",

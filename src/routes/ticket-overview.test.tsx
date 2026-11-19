@@ -32,6 +32,8 @@ import type {
   PackageDetail,
   PackageExclusionResponse,
   ProductDetail,
+  ProductEligibilityResponse,
+  ProductExclusionResponse,
   SubmissionRequestItem,
   TicketDetail,
   TicketStatusValue,
@@ -3288,6 +3290,70 @@ describe("the hidden records", () => {
     expect(window.scrollY).toBe(elsewhere);
   });
 
+  test("keeps the scroll position, the anchor, and the focus when a read shows no hidden record while Show hidden is on, which turns it off", async () => {
+    await page.viewport(1280, 400);
+    let restored = false;
+    // More packages after them, so that the page goes on below the package
+    // tree, which the anchor can then scroll to the top of the window.
+    stubTicket({
+      ticket: () =>
+        ticketResponse(
+          fictionalTicketDetail({
+            packages: [
+              fictionalPackage({
+                tracks: [
+                  fictionalTrack({
+                    products: [
+                      fictionalProduct(),
+                      restored
+                        ? excludedProduct({
+                            deleted_at: null,
+                            actionable: true,
+                            non_actionable_reason: null,
+                          })
+                        : excludedProduct(),
+                    ],
+                  }),
+                ],
+              }),
+              ...["fictional-curl", "fictional-zlib", "fictional-libxml2"].map(
+                (name, index) =>
+                  fictionalPackage({
+                    id: `00000000-0000-0000-0000-0000000000b${index}`,
+                    package_name: name,
+                  }),
+              ),
+            ],
+          }),
+        ),
+    });
+    const { router, screen } = await renderTree(
+      "/tickets/SNTL-12?hidden=shown#packages",
+    );
+    await expect
+      .element(screen.getByText("None", { exact: true }))
+      .toBeVisible();
+    await expect.poll(() => window.scrollY).toBeGreaterThan(100);
+    const elsewhere = window.scrollY - 60;
+    window.scrollTo(0, elsewhere);
+    await expect.poll(() => window.scrollY).toBe(elsewhere);
+    const name = screen.getByRole("button", {
+      name: "Fictional Linux Enterprise Desktop 15 SP7",
+    });
+    name.element().focus();
+    restored = true;
+
+    await returnToForeground();
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets/SNTL-12#packages");
+    await expect.element(showHidden(screen)).not.toBeChecked();
+    await nextFrames();
+    expect(window.scrollY).toBe(elsewhere);
+    await expect.element(name).toHaveFocus();
+  });
+
   test.each([
     [
       "the name of a hidden Product",
@@ -3369,16 +3435,22 @@ describe("the hidden records", () => {
       .toHaveAccessibleName("Show hidden 1");
   });
 
-  test("disables the switch without hidden records, and keeps its state", async () => {
+  test("turns the switch off and disables it without hidden records, removing hidden=shown from the URL, in place of the URL, with the anchor", async () => {
     showing([fictionalPackage()]);
 
-    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    const { router, screen } = await renderTree(
+      "/tickets/SNTL-12?hidden=shown#packages",
+    );
 
     await expect.element(showHidden(screen)).toBeDisabled();
-    await expect.element(showHidden(screen)).toBeChecked();
+    await expect.element(showHidden(screen)).not.toBeChecked();
     await expect
       .element(showHidden(screen))
       .toHaveAccessibleName("Show hidden 0");
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets/SNTL-12#packages");
+    expect(router.history.length).toBe(1);
   });
 
   test("says that every package is hidden while the switch is off", async () => {
@@ -3605,6 +3677,7 @@ describe("the tracks that wait for the signed-in user", () => {
                     ],
                   })
                 : fictionalPackage(),
+              excludedPackage(),
             ],
           }),
         ),
@@ -12242,7 +12315,7 @@ describe("the SUSE assessment", () => {
       const dialog = await openSuseEdit(screen);
       await vectorOf(dialog).fill(VECTOR_V31);
 
-      router.history.push("/tickets/SNTL-12?hidden=shown");
+      router.history.push("/tickets/SNTL-12#packages");
 
       const discard = screen.getByRole("dialog", { name: "Discard changes?" });
       await expect
@@ -12258,7 +12331,7 @@ describe("the SUSE assessment", () => {
       expect(router.state.location.href).toBe("/tickets/SNTL-12");
       await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
 
-      router.history.push("/tickets/SNTL-12?hidden=shown");
+      router.history.push("/tickets/SNTL-12#packages");
       await discard
         .getByRole("button", { name: "Discard", exact: true })
         .click();
@@ -12266,8 +12339,38 @@ describe("the SUSE assessment", () => {
       await expect.element(dialog).not.toBeInTheDocument();
       await expect
         .poll(() => router.state.location.href)
-        .toBe("/tickets/SNTL-12?hidden=shown");
+        .toBe("/tickets/SNTL-12#packages");
       expect(requestsWith(spy, "POST")).toHaveLength(0);
+    });
+
+    test("is not asked when the screen removes hidden=shown from its URL, after a read that shows no hidden record, and the dialog keeps its input and the focus", async () => {
+      let hidden = true;
+      stubSuse(() => fictionalCvssAssessments(), {
+        ticket: () =>
+          ticketResponse(
+            fictionalTicketDetail({
+              packages: hidden ? [excludedPackage()] : [fictionalPackage()],
+            }),
+          ),
+      });
+      const { router, screen } = await renderSuse(
+        "/tickets/SNTL-12?hidden=shown",
+      );
+      const dialog = await openSuseEdit(screen);
+      await vectorOf(dialog).fill(VECTOR_V31);
+      hidden = false;
+
+      await returnToForeground();
+
+      await expect
+        .poll(() => router.state.location.href)
+        .toBe("/tickets/SNTL-12");
+      await nextFrames();
+      expect(
+        screen.getByRole("dialog", { name: "Discard changes?" }).query(),
+      ).toBeNull();
+      await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
+      await expect.element(vectorOf(dialog)).toHaveFocus();
     });
 
     // Add with input in the tab that it sends alone is "shows the outcome of
@@ -12811,15 +12914,66 @@ function trackStatusResponse(status: string): Response {
   return jsonResponse(200, { data });
 }
 
+// The response of an exclusion or a restore of the Product of the SP7 track
+// of fictional-openssl, with its actionability after it.
+function productMarkerResponse(actionable: boolean): Response {
+  const body: ProductExclusionResponse = {
+    data: {
+      id: "00000000-0000-0000-0000-0000000000c1",
+      product_cpe: "cpe:/o:example:fles:15:sp7",
+      product_name: "Fictional Linux Enterprise Server 15 SP7",
+      actionable,
+      non_actionable_reason: actionable ? null : "product_excluded",
+    },
+  };
+  return jsonResponse(200, body);
+}
+
+// The response of Override Product Eligibility with the Product of the SP7
+// track of fictional-openssl: its eligibility set by hand to the value, or,
+// for null, automatic and eligible, as the 10.0 fallback makes it.
+function productEligibilityResponse(eligible: boolean | null): Response {
+  const body: ProductEligibilityResponse = {
+    data: {
+      ticket_id: "SNTL-12",
+      package_name: "fictional-openssl",
+      reference: "SUSE:FLES-15-SP7:Update",
+      id: "00000000-0000-0000-0000-0000000000c1",
+      product_cpe: "cpe:/o:example:fles:15:sp7",
+      product_name: "Fictional Linux Enterprise Server 15 SP7",
+      eligible: eligible ?? true,
+      is_eligible_override: eligible !== null,
+      eligibility_override_by: eligible === null ? null : SETTER,
+      eligibility_override_at: eligible === null ? null : SET_AT,
+      lifecycle_phase: "general_support",
+      actionable: true,
+      non_actionable_reason: null,
+    },
+  };
+  return jsonResponse(200, body);
+}
+
 // The response of an edit of the package tree by its method and its path
 // under the packages of the Ticket: the record after it, actionable after a
-// restore and not after an exclusion, or the track with the affectedness
-// that the body sends.
+// restore and not after an exclusion, the track with the affectedness that
+// the body sends, or the Product with the eligibility that the body sends.
 function packageChangeResponse(
   method: string,
   path: string,
   body: unknown,
 ): Response {
+  if (path.includes("/products/")) {
+    if (method === "PATCH") {
+      const eligible =
+        typeof body === "object" && body !== null && "eligible" in body
+          ? body.eligible
+          : undefined;
+      return productEligibilityResponse(
+        typeof eligible === "boolean" ? eligible : null,
+      );
+    }
+    return productMarkerResponse(path.endsWith("/restore"));
+  }
   if (method === "PATCH") {
     const status =
       typeof body === "object" && body !== null && "status" in body
@@ -12916,6 +13070,41 @@ function treeWithoutSp7(): PackageDetail[] {
       flesTrack(),
     ],
   });
+}
+
+// The tree with fictional-xz after its packages, an excluded package, so that
+// "Show hidden" stays on while a test changes the records before it.
+function withHiddenPackage(tree: PackageDetail[]): PackageDetail[] {
+  return [
+    ...tree,
+    fictionalPackage({
+      id: "00000000-0000-0000-0000-0000000000a9",
+      package_name: "fictional-xz",
+      deleted_at: "2099-10-09T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "package_excluded",
+      maintainers: [],
+      tracks: [
+        fictionalTrack({
+          id: "00000000-0000-0000-0000-0000000000b9",
+          reference: "SUSE:FLES-15-SP5:Update",
+          status: "analysis",
+          actionable: false,
+          non_actionable_reason: "package_excluded",
+          products: [
+            fictionalProduct({
+              id: "00000000-0000-0000-0000-0000000000c9",
+              product_cpe: "cpe:/o:example:fles:15:sp5",
+              product_name: "Fictional Linux Enterprise Server 15 SP5",
+              actionable: false,
+              non_actionable_reason: "package_excluded",
+            }),
+          ],
+          ...NOT_APPLICABLE,
+        }),
+      ],
+    }),
+  ];
 }
 
 // Answers Get Ticket with the package tree that the function returns at each
@@ -13216,7 +13405,7 @@ describe("the edits of the package tree", () => {
   test("exclude a track at once, with its item busy and the menu open until Sentinel answers, then close the menu, return the focus to its button, and announce the outcome once the read of the Ticket after it arrives, while Show hidden is on", async () => {
     const response = later();
     let tree = editableTree();
-    const spy = showingEditable(() => tree, {
+    const spy = showingEditable(() => withHiddenPackage(tree), {
       packageChange: () => response.promise,
     });
     const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
@@ -13435,6 +13624,60 @@ describe("the edits of the package tree", () => {
       .not.toBeInTheDocument();
     await expectFocusSettledOn(screenHeading(screen));
   });
+
+  test.each([
+    ["the last hidden record", false],
+    ["a hidden record while another stays hidden", true],
+  ])(
+    "turn Show hidden off only once no hidden record is left, in place of the URL, the focus staying on the menu of the record: after the restore of %s",
+    async (_name, another) => {
+      const excluded = {
+        deleted_at: "2099-10-09T10:00:00Z",
+        actionable: false,
+        non_actionable_reason: "package_excluded",
+      } as const;
+      const withAnother = (tree: PackageDetail[]) =>
+        another ? withHiddenPackage(tree) : tree;
+      let tree = withAnother(editableTree({}, excluded));
+      showingEditable(() => tree, {
+        packageChange: () => {
+          tree = withAnother(editableTree());
+          return packageMarkerResponse(true);
+        },
+      });
+      const { router, screen } = await renderTree(
+        "/tickets/SNTL-12?hidden=shown#packages",
+      );
+      const entries = router.history.length;
+
+      await chooseAction(screen, "fictional-zlib", "Restore");
+
+      await expect
+        .poll(() => announcements(screen))
+        .toContain("Package fictional-zlib restored.");
+      await expect
+        .element(showHidden(screen))
+        .toHaveAccessibleName(`Show hidden ${another ? 1 : 0}`);
+      // The effects of the read, which remove hidden=shown when no hidden
+      // record is left, have run.
+      await nextFrames();
+      if (another) {
+        await expect.element(showHidden(screen)).toBeChecked();
+        await expect.element(showHidden(screen)).toBeEnabled();
+        expect(router.state.location.href).toBe(
+          "/tickets/SNTL-12?hidden=shown#packages",
+        );
+      } else {
+        await expect.element(showHidden(screen)).not.toBeChecked();
+        await expect.element(showHidden(screen)).toBeDisabled();
+        await expect
+          .poll(() => router.state.location.href)
+          .toBe("/tickets/SNTL-12#packages");
+      }
+      expect(router.history.length).toBe(entries);
+      await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
+    },
+  );
 
   test("restore a package that its own marker excludes, and announce it", async () => {
     let tree = editableTree({
@@ -14108,6 +14351,754 @@ describe("the edits of the package tree", () => {
     await expect
       .element(
         screen.getByText("Package fictional-openssl excluded.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+  });
+});
+
+// ----------------------------------------------------------------------------
+// The actions of a Product
+
+const SP7_PRODUCT = "Fictional Linux Enterprise Server 15 SP7";
+const SP7_PRODUCT_ID = "00000000-0000-0000-0000-0000000000c1";
+const DESKTOP_PRODUCT = "Fictional Linux Enterprise Desktop 15 SP7";
+const DESKTOP_PRODUCT_ID = "00000000-0000-0000-0000-0000000000c6";
+const SP7_SUBJECT = `Product ${SP7_PRODUCT} of fictional-openssl · SUSE:FLES-15-SP7:Update`;
+const SP7_PRODUCT_PATH = `${OPENSSL_ID}/tracks/${SP7_ID}/products/${SP7_PRODUCT_ID}`;
+
+// A second Product of the SP7 track of fictional-openssl, after its Server
+// 15 SP7.
+function desktopProduct(fields: Partial<ProductDetail> = {}): ProductDetail {
+  return fictionalProduct({
+    id: DESKTOP_PRODUCT_ID,
+    product_cpe: "cpe:/o:example:fled:15:sp7",
+    product_name: DESKTOP_PRODUCT,
+    ...fields,
+  });
+}
+
+// The tree of the tests of the actions of a Product: fictional-openssl,
+// whose SP7 track holds the Products, Server 15 SP7 with the fields and
+// then those that follow it, and its fles-16.0 track, then fictional-zlib,
+// whose Product is Server 15 SP6, so that the name of each Product is its
+// own.
+function productTree(
+  product: Partial<ProductDetail> = {},
+  following: ProductDetail[] = [],
+  track: Partial<TrackDetail> = {},
+): PackageDetail[] {
+  return editableTree(
+    {
+      tracks: [
+        fictionalTrack({
+          products: [fictionalProduct(product), ...following],
+          ...track,
+        }),
+        flesTrack(),
+      ],
+    },
+    {
+      tracks: [
+        fictionalTrack({
+          id: ZLIB_TRACK_ID,
+          reference: "SUSE:FLES-15-SP6:Update",
+          products: [
+            fictionalProduct({
+              id: "00000000-0000-0000-0000-0000000000c3",
+              product_cpe: "cpe:/o:example:fles:15:sp6",
+              product_name: "Fictional Linux Enterprise Server 15 SP6",
+            }),
+          ],
+        }),
+      ],
+    },
+  );
+}
+
+// The tree after an exclusion of Server 15 SP7, the only Product of its
+// track, which hides the track.
+function treeWithoutSp7Product(): PackageDetail[] {
+  return productTree(
+    {
+      deleted_at: "2099-10-10T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "product_excluded",
+    },
+    [],
+    { actionable: false, non_actionable_reason: "no_actionable_products" },
+  );
+}
+
+function productName(screen: Screen, name: string) {
+  return packagesPart(screen).getByRole("button", { name, exact: true });
+}
+
+function productPopover(screen: Screen, name: string) {
+  return screen.getByRole("dialog", { name, exact: true });
+}
+
+// Opens the details of a Product, and returns its popover once it holds the
+// focus.
+async function openProduct(screen: Screen, name: string) {
+  await productName(screen, name).click();
+  const popover = productPopover(screen, name);
+  await expect.element(popover).toHaveFocus();
+  return popover;
+}
+
+// Opens the details of a Product, and chooses the action.
+async function chooseProductAction(
+  screen: Screen,
+  name: string,
+  action: string,
+) {
+  const popover = await openProduct(screen, name);
+  await popover.getByRole("menuitem", { name: action, exact: true }).click();
+  return popover;
+}
+
+describe("the actions of a Product", () => {
+  test("follow its details in its popover, for a user who holds manage_packages: Mark as not eligible and Exclude from this track for an eligible Product whose eligibility is automatic", async () => {
+    showingEditable(() => productTree());
+    const { screen } = await renderTree();
+
+    const popover = await openProduct(screen, SP7_PRODUCT);
+
+    const menu = popover.getByRole("menu", { name: "Actions", exact: true });
+    await expect.element(menu).toBeVisible();
+    await expect
+      .poll(() => itemsOf(menu, "menuitem"))
+      .toEqual(["Mark as not eligible", "Exclude from this track"]);
+  });
+
+  test("offer Mark as eligible, Return to automatic eligibility, and Restore for a Product set by hand to not eligible that its own marker excludes", async () => {
+    showingEditable(() =>
+      productTree({
+        ...SET_BY_HAND,
+        deleted_at: "2099-10-10T10:00:00Z",
+        actionable: false,
+        non_actionable_reason: "product_excluded",
+      }),
+    );
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    const popover = await openProduct(screen, SP7_PRODUCT);
+
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual([
+        "Mark as eligible",
+        "Return to automatic eligibility",
+        "Restore",
+      ]);
+  });
+
+  test("offer Exclude from this track on a Product that its track hides, which Sentinel accepts there", async () => {
+    showingEditable(() => treeWithoutSp7());
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    const popover = await openProduct(
+      screen,
+      "Fictional Linux Enterprise Server 15 SP6",
+    );
+
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual(["Mark as not eligible", "Exclude from this track"]);
+  });
+
+  test.each<[string, Partial<Stub>, Partial<TicketDetail>]>([
+    ["to a user without manage_packages", { user: OTHER_USER }, {}],
+    ["to a user who holds admin_ticket_ops alone", { user: TICKET_ADMIN }, {}],
+  ])("offer no action %s", async (_name, stub) => {
+    showingEditable(() => productTree(), stub);
+    const { screen } = await renderTree();
+
+    const popover = await openProduct(screen, SP7_PRODUCT);
+
+    await expect
+      .element(popover.getByRole("definition").first())
+      .toHaveTextContent("Eligible");
+    expect(popover.getByRole("menu").query()).toBeNull();
+    expect(popover.getByRole("separator").elements()).toHaveLength(1);
+  });
+
+  test.each(["ignored", "duplicated", "fictional_status"])(
+    "offer no action on a Ticket in %s",
+    async (status) => {
+      stubTicket({
+        user: PACKAGE_MANAGER,
+        ticket: () =>
+          jsonResponse(200, {
+            data: {
+              ...fictionalTicketDetail({ packages: productTree() }),
+              status,
+            },
+          }),
+      });
+      const { screen } = await renderTree();
+
+      const popover = await openProduct(screen, SP7_PRODUCT);
+
+      expect(popover.getByRole("menu").query()).toBeNull();
+    },
+  );
+
+  test.each<[string, Partial<ProductDetail>, string, boolean | null, string]>([
+    [
+      "Mark as not eligible",
+      {},
+      "Mark as not eligible",
+      false,
+      `${SP7_SUBJECT} marked as not eligible.`,
+    ],
+    [
+      "Mark as eligible",
+      { eligible: false },
+      "Mark as eligible",
+      true,
+      `${SP7_SUBJECT} marked as eligible.`,
+    ],
+    [
+      "Return to automatic eligibility",
+      SET_BY_HAND,
+      "Return to automatic eligibility",
+      null,
+      `${SP7_SUBJECT} returned to automatic eligibility, eligible.`,
+    ],
+  ])(
+    "send %s as the eligibility, and announce what Sentinel returns once the read of the Ticket after it arrives",
+    async (_name, product, action, eligible, text) => {
+      const spy = showingEditable(() => productTree(product));
+      const { screen } = await renderTree();
+      const reads = requestsTo(spy, TICKET);
+
+      await chooseProductAction(screen, SP7_PRODUCT, action);
+
+      await expect
+        .element(productPopover(screen, SP7_PRODUCT))
+        .not.toBeInTheDocument();
+      expect(packageChanges(spy)).toEqual([
+        ["PATCH", SP7_PRODUCT_PATH, { eligible }],
+      ]);
+      await expect.poll(() => announcements(screen)).toContain(text);
+      expect(requestsTo(spy, TICKET)).toBeGreaterThan(reads);
+      await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
+      // The Product shows where the user acted: the outcome is only
+      // announced.
+      expect(
+        screen
+          .getByText(text)
+          .elements()
+          .filter((element) => element.closest("output") === null),
+      ).toHaveLength(0);
+    },
+  );
+
+  test("keep the popover open, its item busy and the others inert, until Sentinel answers, and then close it with the focus on the name", async () => {
+    const response = later();
+    let tree = productTree();
+    const spy = showingEditable(() => tree, {
+      packageChange: () => response.promise,
+    });
+    const { screen } = await renderTree();
+
+    const popover = await chooseProductAction(
+      screen,
+      SP7_PRODUCT,
+      "Mark as not eligible",
+    );
+
+    const item = popover.getByRole("menuitem", {
+      name: "Mark as not eligible",
+      exact: true,
+    });
+    await expect
+      .element(item)
+      .toHaveAccessibleDescription("Marking as not eligible.");
+    await userEvent.keyboard("{Escape}");
+    interactOutside();
+    await nextFrames();
+    await expect.element(popover).toBeVisible();
+    await popover
+      .getByRole("menuitem", { name: "Exclude from this track" })
+      .click();
+    await item.click();
+    expect(packageChanges(spy)).toHaveLength(1);
+
+    // Meanwhile a read shows the Product not eligible, as another user set
+    // it: the busy item stays as it started.
+    tree = productTree(SET_BY_HAND);
+    await returnToForeground();
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    await expect
+      .element(productOf(screen, SP7_PRODUCT).getByText("Not eligible"))
+      .toBeVisible();
+    expect(
+      popover
+        .getByRole("menuitem", { name: "Mark as eligible", exact: true })
+        .query(),
+    ).toBeNull();
+    await expect
+      .element(item)
+      .toHaveAccessibleDescription("Marking as not eligible.");
+
+    response.resolve(productEligibilityResponse(false));
+
+    await expect.element(popover).not.toBeInTheDocument();
+    await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
+  });
+
+  test.each<[string, Partial<ProductDetail>, string]>([
+    ["Mark as eligible", { eligible: false }, "Marking as eligible."],
+    ["Mark as not eligible", {}, "Marking as not eligible."],
+    [
+      "Return to automatic eligibility",
+      SET_BY_HAND,
+      "Returning to automatic eligibility.",
+    ],
+    ["Exclude from this track", {}, "Excluding."],
+    [
+      "Restore",
+      {
+        deleted_at: "2099-10-10T10:00:00Z",
+        actionable: false,
+        non_actionable_reason: "product_excluded",
+      },
+      "Restoring.",
+    ],
+  ])(
+    "describe %s while it is in progress, on its item alone",
+    async (action, product, description) => {
+      const response = later();
+      showingEditable(() => productTree(product), {
+        packageChange: () => response.promise,
+      });
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+      const popover = await chooseProductAction(screen, SP7_PRODUCT, action);
+
+      await expect
+        .element(popover.getByRole("menuitem", { name: action, exact: true }))
+        .toHaveAccessibleDescription(description);
+      expect(
+        popover
+          .getByRole("menuitem")
+          .elements()
+          .filter((item) => item.textContent?.endsWith(".")),
+      ).toHaveLength(1);
+      response.resolve(
+        action === "Exclude from this track" || action === "Restore"
+          ? productMarkerResponse(action === "Restore")
+          : productEligibilityResponse(action === "Mark as eligible"),
+      );
+      await expect.element(popover).not.toBeInTheDocument();
+    },
+  );
+
+  test("follow the Product as a read shows it while the popover is open, the focus staying on the item whose action changes", async () => {
+    let tree = productTree();
+    showingEditable(() => withHiddenPackage(tree));
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    const popover = await openProduct(screen, SP7_PRODUCT);
+    await userEvent.keyboard("{Tab}{ArrowDown}");
+    const exclude = popover.getByRole("menuitem", {
+      name: "Exclude from this track",
+    });
+    await expect.element(exclude).toHaveFocus();
+    // Meanwhile another user excludes the Product.
+    tree = productTree({
+      deleted_at: "2099-10-10T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "product_excluded",
+    });
+
+    await returnToForeground();
+
+    const restore = popover.getByRole("menuitem", {
+      name: "Restore",
+      exact: true,
+    });
+    await expect.element(restore).toHaveFocus();
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual(["Mark as not eligible", "Restore"]);
+
+    await userEvent.keyboard("{ArrowUp}");
+    await expect
+      .element(popover.getByRole("menuitem", { name: "Mark as not eligible" }))
+      .toHaveFocus();
+    // Meanwhile another user sets the Product as not eligible.
+    tree = productTree({
+      ...SET_BY_HAND,
+      deleted_at: "2099-10-10T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "product_excluded",
+    });
+
+    await returnToForeground();
+
+    await expect
+      .element(
+        popover.getByRole("menuitem", {
+          name: "Mark as eligible",
+          exact: true,
+        }),
+      )
+      .toHaveFocus();
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual([
+        "Mark as eligible",
+        "Return to automatic eligibility",
+        "Restore",
+      ]);
+  });
+
+  test("leave the focus on the menu, the one stop of Tab of its items, when a read removes the item that holds it", async () => {
+    let tree = productTree(SET_BY_HAND);
+    showingEditable(() => tree);
+    const { screen } = await renderTree();
+    const popover = await openProduct(screen, SP7_PRODUCT);
+    await userEvent.keyboard("{Tab}{ArrowDown}");
+    await expect
+      .element(
+        popover.getByRole("menuitem", {
+          name: "Return to automatic eligibility",
+        }),
+      )
+      .toHaveFocus();
+    // Meanwhile another user returns the Product to automatic eligibility.
+    tree = productTree();
+
+    await returnToForeground();
+
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual(["Mark as not eligible", "Exclude from this track"]);
+    const menu = popover.getByRole("menu", { name: "Actions", exact: true });
+    await expectFocusSettledOn(menu);
+    await expect.element(popover).toBeVisible();
+    // The focus ring shows inside the menu.
+    const ring = getComputedStyle(menu.element());
+    expect([ring.outlineStyle, ring.outlineWidth]).toEqual(["solid", "2px"]);
+
+    await userEvent.keyboard("{ArrowDown}");
+
+    await expect
+      .poll(
+        () =>
+          menu.element().contains(document.activeElement) &&
+          document.activeElement?.getAttribute("role") === "menuitem",
+      )
+      .toBe(true);
+  });
+
+  test("keep the actions that the popover offered as it opened, after a read of the signed-in user takes manage_packages away", async () => {
+    let user = PACKAGE_MANAGER;
+    showingEditable(() => productTree(), { user: () => user });
+    const { screen } = await renderTree();
+    const popover = await openProduct(screen, SP7_PRODUCT);
+    user = OTHER_USER;
+
+    await returnToForeground();
+
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual(["Mark as not eligible", "Exclude from this track"]);
+
+    await userEvent.keyboard("{Escape}");
+    await productName(screen, SP7_PRODUCT).click();
+
+    await expect.element(productPopover(screen, SP7_PRODUCT)).toHaveFocus();
+    expect(productPopover(screen, SP7_PRODUCT).getByRole("menu").query()).toBe(
+      null,
+    );
+  });
+
+  test("show in the message area the outcome of an exclusion that hides the Product while Show hidden is off, and move the focus to the name of the next Product of its track", async () => {
+    let tree = productTree({}, [desktopProduct()]);
+    const spy = showingEditable(() => tree, {
+      packageChange: () => {
+        tree = productTree(
+          {
+            deleted_at: "2099-10-10T10:00:00Z",
+            actionable: false,
+            non_actionable_reason: "product_excluded",
+          },
+          [desktopProduct()],
+        );
+        return productMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseProductAction(screen, SP7_PRODUCT, "Exclude from this track");
+
+    expect(packageChanges(spy)).toEqual([
+      ["POST", `${SP7_PRODUCT_PATH}/exclude`, undefined],
+    ]);
+    const message = screen.getByText(`${SP7_SUBJECT} excluded.`, {
+      exact: true,
+    });
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+    await expect
+      .element(productName(screen, SP7_PRODUCT))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(productName(screen, DESKTOP_PRODUCT));
+  });
+
+  test("move the focus after an exclusion of the last Product of a track that still shows to the menu of the actions of its track", async () => {
+    let tree = productTree({}, [desktopProduct()]);
+    showingEditable(() => tree, {
+      packageChange: () => {
+        tree = productTree({}, [
+          desktopProduct({
+            deleted_at: "2099-10-10T10:00:00Z",
+            actionable: false,
+            non_actionable_reason: "product_excluded",
+          }),
+        ]);
+        return productMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseProductAction(
+      screen,
+      DESKTOP_PRODUCT,
+      "Exclude from this track",
+    );
+
+    await expect
+      .element(productName(screen, DESKTOP_PRODUCT))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, OPENSSL_SP7));
+  });
+
+  test("move the focus after an exclusion that hides the track of the Product as after the exclusion of the track: to the menu of the next track of its package", async () => {
+    let tree = productTree();
+    showingEditable(() => tree, {
+      packageChange: () => {
+        tree = treeWithoutSp7Product();
+        return productMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseProductAction(screen, SP7_PRODUCT, "Exclude from this track");
+
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, OPENSSL_FLES));
+  });
+
+  test("move the focus to Show hidden after an exclusion that hides the only package of the Product, as after the exclusion of the package", async () => {
+    const hiddenProduct = {
+      deleted_at: "2099-10-10T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "product_excluded",
+    } as const;
+    const hiddenTrack = {
+      actionable: false,
+      non_actionable_reason: "no_actionable_products",
+    } as const;
+    const onlyPackage = (product: Partial<ProductDetail>, hidden: boolean) => [
+      fictionalPackage({
+        ...(hidden
+          ? { actionable: false, non_actionable_reason: "no_actionable_tracks" }
+          : {}),
+        tracks: [
+          fictionalTrack({
+            products: [fictionalProduct(product)],
+            ...(hidden ? hiddenTrack : {}),
+          }),
+        ],
+      }),
+    ];
+    let tree = onlyPackage({}, false);
+    showingEditable(() => tree, {
+      packageChange: () => {
+        tree = onlyPackage(hiddenProduct, true);
+        return productMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseProductAction(screen, SP7_PRODUCT, "Exclude from this track");
+
+    await expect
+      .element(packagesPart(screen).getByText("All packages are hidden."))
+      .toBeVisible();
+    await expectFocusSettledOn(showHidden(screen));
+  });
+
+  test("keep the Product after an exclusion while Show hidden is on, in gray with its label, with the focus on its name, and announce the outcome", async () => {
+    let tree = productTree({}, [desktopProduct()]);
+    showingEditable(() => withHiddenPackage(tree), {
+      packageChange: () => {
+        tree = productTree(
+          {
+            deleted_at: "2099-10-10T10:00:00Z",
+            actionable: false,
+            non_actionable_reason: "product_excluded",
+          },
+          [desktopProduct()],
+        );
+        return productMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    await chooseProductAction(screen, SP7_PRODUCT, "Exclude from this track");
+
+    await expect
+      .poll(() => announcements(screen))
+      .toContain(`${SP7_SUBJECT} excluded.`);
+    await expect
+      .element(
+        productOf(screen, SP7_PRODUCT).getByText("Excluded", { exact: true }),
+      )
+      .toBeVisible();
+    expect(colorOf(productName(screen, SP7_PRODUCT).element())).toBe(FG_MUTED);
+    await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
+  });
+
+  test("restore a Product that its own marker excludes, and announce it", async () => {
+    let tree = productTree({
+      deleted_at: "2099-10-10T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "product_excluded",
+    });
+    const spy = showingEditable(() => tree, {
+      packageChange: () => {
+        tree = productTree();
+        return productMarkerResponse(true);
+      },
+    });
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    await chooseProductAction(screen, SP7_PRODUCT, "Restore");
+
+    expect(packageChanges(spy)).toEqual([
+      ["POST", `${SP7_PRODUCT_PATH}/restore`, undefined],
+    ]);
+    await expect
+      .poll(() => announcements(screen))
+      .toContain(`${SP7_SUBJECT} restored.`);
+    await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
+  });
+
+  test.each<
+    [
+      string,
+      Partial<ProductDetail>,
+      string,
+      () => Response,
+      string,
+      keyof typeof MESSAGE_TONES,
+    ]
+  >([
+    [
+      "409 TICKET_NOT_MUTABLE of Mark as not eligible",
+      {},
+      "Mark as not eligible",
+      () => errorResponse(409, "TICKET_NOT_MUTABLE"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+    ],
+    [
+      "a 503 of Return to automatic eligibility",
+      SET_BY_HAND,
+      "Return to automatic eligibility",
+      () => errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      "Sentinel didn't confirm this change. It may have taken effect: check before trying again.",
+      "warning",
+    ],
+    [
+      "409 PACKAGE_ALREADY_EXCLUDED of Mark as not eligible, which it does not handle",
+      {},
+      "Mark as not eligible",
+      () => errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+    ],
+    [
+      "409 PACKAGE_ALREADY_EXCLUDED of Exclude from this track",
+      {},
+      "Exclude from this track",
+      () => errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"),
+      `${SP7_SUBJECT} is already excluded.`,
+      "info",
+    ],
+    [
+      "422 PACKAGE_NOT_EXCLUDED of Restore",
+      {
+        deleted_at: "2099-10-10T10:00:00Z",
+        actionable: false,
+        non_actionable_reason: "product_excluded",
+      },
+      "Restore",
+      () => errorResponse(422, "PACKAGE_NOT_EXCLUDED"),
+      `${SP7_SUBJECT} is no longer excluded.`,
+      "info",
+    ],
+    [
+      "a code that the pinned contract does not list",
+      {},
+      "Exclude from this track",
+      () => errorResponse(409, "FICTIONAL_CONFLICT"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+    ],
+    [
+      "a network failure",
+      {},
+      "Exclude from this track",
+      () => {
+        throw new TypeError("Failed to fetch");
+      },
+      "Sentinel didn't confirm this change. It may have taken effect: check before trying again.",
+      "warning",
+    ],
+  ])(
+    "show a failure of an action of a Product in the message area, and close its popover with the focus on the name: %s",
+    async (_name, product, action, failure, text, tone) => {
+      showingEditable(() => productTree(product), { packageChange: failure });
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+      const popover = await chooseProductAction(screen, SP7_PRODUCT, action);
+
+      const message = screen.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
+      await expect.element(popover).not.toBeInTheDocument();
+      await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
+    },
+  );
+
+  test("show the outcome of an action that ends after the user left the screen in the message area, naming the Ticket", async () => {
+    const response = later();
+    showingEditable(() => productTree(), {
+      packageChange: () => response.promise,
+    });
+    const { router, screen } = await renderTree();
+    await chooseProductAction(screen, SP7_PRODUCT, "Mark as not eligible");
+
+    await leaveForTickets(router, screen);
+    response.resolve(productEligibilityResponse(false));
+
+    await expect
+      .element(
+        screen.getByText(`SNTL-12: ${SP7_SUBJECT} marked as not eligible.`, {
           exact: true,
         }),
       )
