@@ -30,10 +30,14 @@ import type {
   CurrentUserResponse,
   IBSRequestStateValue,
   PackageDetail,
+  PackageExclusionResponse,
   ProductDetail,
   SubmissionRequestItem,
   TicketDetail,
+  TicketStatusValue,
   TrackDetail,
+  TrackExclusionResponse,
+  TrackStatusTrack,
 } from "../api/generated/model";
 import { formatDateTime } from "../components/date-time";
 import { LOADING_DELAY_MS } from "../components/loading";
@@ -218,6 +222,13 @@ interface Stub {
   deleteSuse: (path: string) => Response | Promise<Response>;
   // The response to Calculate CVSS Base Score, given its query.
   baseScore: (query: URLSearchParams) => Response | Promise<Response>;
+  // The response to an edit of the package tree, given its method, its path
+  // under the packages of the Ticket, and its body.
+  packageChange: (
+    method: string,
+    path: string,
+    body: unknown,
+  ) => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst who maintains no
@@ -248,6 +259,7 @@ function stubTicket(fields: Partial<Stub> = {}) {
     upsertSuse: () => suseResponse(fictionalSuseAssessment()),
     deleteSuse: () => new Response(null, { status: 204 }),
     baseScore: (query) => baseScoreResponse(query.get("vector_string") ?? ""),
+    packageChange: packageChangeResponse,
     ...fields,
   };
   return stubApi((request) => {
@@ -289,6 +301,16 @@ function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path === ASSIGNEE && request.method === "PATCH") {
       return stub.assign(request.body);
+    }
+    if (
+      request.path.startsWith(`${TICKET}/packages/`) &&
+      request.method !== "GET"
+    ) {
+      return stub.packageChange(
+        request.method,
+        request.path.slice(`${TICKET}/packages/`.length),
+        request.body,
+      );
     }
     if (request.path.startsWith(`${TICKETS}/`)) {
       return stub.ticket();
@@ -366,10 +388,13 @@ function band(screen: Screen, name: string): HTMLElement {
   const title = packagesPart(screen)
     .getByRole("heading", { level: 3, name, exact: true })
     .element();
-  if (!(title.parentElement instanceof HTMLElement)) {
+  // The heading and its values are a line of their own, which the band holds
+  // with its actions.
+  const line = title.parentElement;
+  if (!(line?.parentElement instanceof HTMLElement)) {
     throw new Error(`The package ${name} has no band`);
   }
-  return title.parentElement;
+  return line.parentElement;
 }
 
 // The list item of a track, by its reference: the innermost of the items
@@ -12733,5 +12758,1359 @@ describe("the SUSE assessment", () => {
       await expect.element(addSuse(screen)).not.toBeInTheDocument();
       await expectFocusSettledOn(screenHeading(screen));
     });
+  });
+});
+
+// ----------------------------------------------------------------------------
+// The edits of the package tree
+
+// The response of an exclusion or a restore of fictional-openssl, with its
+// actionability after it.
+function packageMarkerResponse(actionable: boolean): Response {
+  const body: PackageExclusionResponse = {
+    data: {
+      package_name: "fictional-openssl",
+      actionable,
+      non_actionable_reason: actionable ? null : "package_excluded",
+    },
+  };
+  return jsonResponse(200, body);
+}
+
+// The response of an exclusion or a restore of the SP7 track of
+// fictional-openssl, with its actionability after it.
+function trackMarkerResponse(actionable: boolean): Response {
+  const body: TrackExclusionResponse = {
+    data: {
+      reference: "SUSE:FLES-15-SP7:Update",
+      actionable,
+      non_actionable_reason: actionable ? null : "track_excluded",
+    },
+  };
+  return jsonResponse(200, body);
+}
+
+// The response of Change Track Status with the SP7 track of
+// fictional-openssl and the affectedness, which can be a value that the
+// pinned contract does not list.
+function trackStatusResponse(status: string): Response {
+  const { products, ...track } = fictionalTrack();
+  const data: Omit<TrackStatusTrack, "status"> & { status: string } = {
+    ticket_id: "SNTL-12",
+    package_name: "fictional-openssl",
+    reference: track.reference,
+    status,
+    delivery_status: track.delivery_status,
+    delivery_relevant: track.delivery_relevant,
+    actionable: track.actionable,
+    non_actionable_reason: track.non_actionable_reason,
+    products: products.map(
+      ({ released_at: _released, deleted_at: _deleted, ...product }) => product,
+    ),
+  };
+  return jsonResponse(200, { data });
+}
+
+// The response of an edit of the package tree by its method and its path
+// under the packages of the Ticket: the record after it, actionable after a
+// restore and not after an exclusion, or the track with the affectedness
+// that the body sends.
+function packageChangeResponse(
+  method: string,
+  path: string,
+  body: unknown,
+): Response {
+  if (method === "PATCH") {
+    const status =
+      typeof body === "object" && body !== null && "status" in body
+        ? String(body.status)
+        : "";
+    return trackStatusResponse(status);
+  }
+  const actionable = path.endsWith("/restore");
+  return path.includes("/tracks/")
+    ? trackMarkerResponse(actionable)
+    : packageMarkerResponse(actionable);
+}
+
+// An analyst who holds manage_packages and maintains no package.
+const PACKAGE_MANAGER: CurrentUserResponse = {
+  data: {
+    ...OTHER_USER.data,
+    capabilities: ["manage_packages", "triage_ticket"],
+  },
+};
+
+// An administrator, who holds admin_ticket_ops alone of the capabilities of
+// the package tree.
+const TICKET_ADMIN: CurrentUserResponse = {
+  data: {
+    ...FICTIONAL_USER.data,
+    roles: ["admin"],
+    capabilities: ["admin_ticket_ops"],
+  },
+};
+
+const OPENSSL_ID = "00000000-0000-0000-0000-0000000000a1";
+const ZLIB_ID = "00000000-0000-0000-0000-0000000000a2";
+const SP7_ID = "00000000-0000-0000-0000-0000000000b1";
+const FLES_ID = "00000000-0000-0000-0000-0000000000b2";
+const ZLIB_TRACK_ID = "00000000-0000-0000-0000-0000000000b3";
+const OPENSSL_SP7 = "fictional-openssl, SUSE:FLES-15-SP7:Update";
+const OPENSSL_FLES = "fictional-openssl, fles-16.0";
+
+// A track of fictional-openssl after its SP7 track, fles-16.0, in Analysis.
+function flesTrack(fields: Partial<TrackDetail> = {}): TrackDetail {
+  return fictionalTrack({
+    id: FLES_ID,
+    workflow_type: "git",
+    reference: "fles-16.0",
+    status: "analysis",
+    products: [
+      fictionalProduct({
+        id: "00000000-0000-0000-0000-0000000000c2",
+        product_cpe: "cpe:/o:example:fles:16.0",
+        product_name: "Fictional Linux Enterprise Server 16.0",
+      }),
+    ],
+    ...fields,
+  });
+}
+
+// fictional-zlib, after fictional-openssl, without a maintainer.
+function zlibPackage(fields: Partial<PackageDetail> = {}): PackageDetail {
+  return fictionalPackage({
+    id: ZLIB_ID,
+    package_name: "fictional-zlib",
+    maintainers: [],
+    tracks: [
+      fictionalTrack({
+        id: ZLIB_TRACK_ID,
+        reference: "SUSE:FLES-15-SP6:Update",
+        products: [
+          fictionalProduct({ id: "00000000-0000-0000-0000-0000000000c3" }),
+        ],
+      }),
+    ],
+    ...fields,
+  });
+}
+
+// The tree of the tests: fictional-openssl with its SP7 and fles-16.0
+// tracks, then fictional-zlib.
+function editableTree(
+  openssl: Partial<PackageDetail> = {},
+  zlib: Partial<PackageDetail> = {},
+): PackageDetail[] {
+  return [
+    fictionalPackage({ tracks: [fictionalTrack(), flesTrack()], ...openssl }),
+    zlibPackage(zlib),
+  ];
+}
+
+// The tree after an exclusion of the SP7 track of fictional-openssl.
+function treeWithoutSp7(): PackageDetail[] {
+  return editableTree({
+    tracks: [
+      excludedTrack({ id: SP7_ID, reference: "SUSE:FLES-15-SP7:Update" }),
+      flesTrack(),
+    ],
+  });
+}
+
+// Answers Get Ticket with the package tree that the function returns at each
+// read, for a user who holds manage_packages unless the test says otherwise.
+function showingEditable(
+  tree: () => PackageDetail[] = () => editableTree(),
+  stub: Partial<Stub> = {},
+  ticket: Partial<TicketDetail> = {},
+) {
+  return stubTicket({
+    user: PACKAGE_MANAGER,
+    ticket: () =>
+      ticketResponse(fictionalTicketDetail({ packages: tree(), ...ticket })),
+    ...stub,
+  });
+}
+
+// The menu of the actions of a record, by the record that its name states.
+function actionsOf(screen: Screen, record: string) {
+  return packagesPart(screen).getByRole("button", {
+    name: `Actions of ${record}`,
+    exact: true,
+  });
+}
+
+// The select of the affectedness of a track, by the track that its name
+// states, whatever its value.
+function affectednessOf(screen: Screen, track: string) {
+  return packagesPart(screen).getByRole("button", {
+    name: new RegExp(
+      `^Affectedness of ${track.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}: `,
+    ),
+  });
+}
+
+function menuOf(screen: Screen, name: string) {
+  return screen.getByRole("menu", { name, exact: true });
+}
+
+// The requests of the edits of the package tree: their method and their path
+// under the packages of the Ticket, with their body.
+function packageChanges(
+  spy: ReturnType<typeof stubApi>,
+): [string, string, unknown][] {
+  return spy.mock.calls
+    .filter(
+      ([input, init]) =>
+        urlOf(input).pathname.startsWith(`${TICKET}/packages/`) &&
+        init?.method !== undefined &&
+        init.method !== "GET",
+    )
+    .map(([input, init]) => [
+      init?.method ?? "GET",
+      urlOf(input).pathname.slice(`${TICKET}/packages/`.length),
+      typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+    ]);
+}
+
+// Opens the menu of the actions of a record, and chooses the item.
+async function chooseAction(screen: Screen, record: string, item: string) {
+  await actionsOf(screen, record).click();
+  await screen.getByRole("menuitem", { name: item, exact: true }).click();
+}
+
+// Opens the select of the affectedness of a track, and chooses the value.
+async function chooseAffectedness(
+  screen: Screen,
+  track: string,
+  value: string,
+) {
+  await affectednessOf(screen, track).click();
+  await screen.getByRole("menuitemradio", { name: value, exact: true }).click();
+}
+
+// The names of the items of a menu, in their order, which a poll reads
+// once the menu has opened.
+function itemsOf(
+  menu: Pick<Locator, "getByRole">,
+  role: "menuitem" | "menuitemradio",
+): (string | null)[] {
+  return menu
+    .getByRole(role)
+    .elements()
+    .map((item) => item.textContent);
+}
+
+describe("the edits of the package tree", () => {
+  test("offer the menu of the actions of each package and track, an icon button of 24 px named by its record, whose tooltip says Actions, and the affectedness of each track as a select, to a user who holds manage_packages", async () => {
+    showingEditable();
+    const { screen } = await renderTree();
+
+    const openssl = actionsOf(screen, "fictional-openssl");
+    await expect.element(openssl).toBeVisible();
+    expect(boxOf(openssl).width).toBe(24);
+    expect(boxOf(openssl).height).toBe(24);
+    expect(band(screen, "fictional-openssl").contains(openssl.element())).toBe(
+      true,
+    );
+    // The menu of a track ends where the menu of its package ends: the
+    // tracks keep the padding of the band on both sides.
+    expect(boxOf(actionsOf(screen, OPENSSL_SP7)).right).toBe(
+      boxOf(openssl).right,
+    );
+    await expect.element(actionsOf(screen, OPENSSL_FLES)).toBeVisible();
+    await expect.element(actionsOf(screen, "fictional-zlib")).toBeVisible();
+    const select = affectednessOf(screen, OPENSSL_SP7);
+    await expect
+      .element(select)
+      .toHaveAccessibleName(`Affectedness of ${OPENSSL_SP7}: Affected`);
+    await expect.element(select).toHaveTextContent("Affected");
+    // A quiet select, without a boundary or a fill, in fg.
+    const style = getComputedStyle(select.element());
+    expect(style.borderTopWidth).toBe("0px");
+    expect(style.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    expect(style.color).toBe(FG);
+    expect(boxOf(select).height).toBe(28);
+
+    // React Aria shows a tooltip on hover only once the user works with a
+    // pointer, as a click shows.
+    await screenHeading(screen).click();
+    await userEvent.hover(openssl);
+
+    await expect
+      .element(screen.getByRole("tooltip"))
+      .toHaveTextContent("Actions");
+  });
+
+  test("open the actions of a record as a menu named by its record, with Exclude, and with Restore for a record that its own marker excludes", async () => {
+    showingEditable(() =>
+      editableTree(
+        {},
+        {
+          deleted_at: "2099-10-09T10:00:00Z",
+          actionable: false,
+          non_actionable_reason: "package_excluded",
+        },
+      ),
+    );
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    await actionsOf(screen, OPENSSL_SP7).click();
+
+    const menu = menuOf(screen, `Actions of ${OPENSSL_SP7}`);
+    await expect.element(menu).toBeVisible();
+    await expect.poll(() => itemsOf(menu, "menuitem")).toEqual(["Exclude"]);
+
+    await userEvent.keyboard("{Escape}");
+    await expect.element(menu).not.toBeInTheDocument();
+    await expect.element(actionsOf(screen, OPENSSL_SP7)).toHaveFocus();
+
+    await actionsOf(screen, "fictional-zlib").click();
+
+    const zlib = menuOf(screen, "Actions of fictional-zlib");
+    await expect.poll(() => itemsOf(zlib, "menuitem")).toEqual(["Restore"]);
+    // A track below an excluded package keeps Exclude, which Sentinel
+    // accepts there (Soft-Delete Track).
+    await userEvent.keyboard("{Escape}");
+    await actionsOf(screen, "fictional-zlib, SUSE:FLES-15-SP6:Update").click();
+    await expect
+      .element(screen.getByRole("menuitem", { name: "Exclude", exact: true }))
+      .toBeVisible();
+  });
+
+  test("offer, with manage_packages on a Ticket with a CVE, every affectedness but Fixed, the current one chosen, in the order of the contract", async () => {
+    showingEditable();
+    const { screen } = await renderTree();
+
+    await affectednessOf(screen, OPENSSL_SP7).click();
+
+    const menu = menuOf(screen, `Affectedness of ${OPENSSL_SP7}: Affected`);
+    await expect.element(menu).toBeVisible();
+    await expect
+      .poll(() => itemsOf(menu, "menuitemradio"))
+      .toEqual(["Analysis", "Affected", "Not affected", "Won't fix"]);
+    await expect
+      .element(
+        menu.getByRole("menuitemradio", { name: "Affected", exact: true }),
+      )
+      .toBeChecked();
+    await expect
+      .element(menu.getByRole("menuitemradio", { name: "Analysis" }))
+      .not.toBeChecked();
+  });
+
+  test("offer Fixed with manage_packages on a Ticket without a CVE", async () => {
+    showingEditable(undefined, {}, { cve: null });
+    const { screen } = await renderTree();
+
+    await affectednessOf(screen, OPENSSL_SP7).click();
+
+    await expect
+      .poll(() => itemsOf(screen, "menuitemradio"))
+      .toEqual(["Analysis", "Affected", "Not affected", "Fixed", "Won't fix"]);
+  });
+
+  test("offer a user who holds admin_ticket_ops alone the select with Fixed, and no menu of actions", async () => {
+    showingEditable(undefined, { user: TICKET_ADMIN });
+    const { screen } = await renderTree();
+
+    await affectednessOf(screen, OPENSSL_SP7).click();
+
+    await expect
+      .poll(() => itemsOf(screen, "menuitemradio"))
+      .toEqual(["Affected", "Fixed"]);
+    expect(
+      packagesPart(screen)
+        .getByRole("button", { name: /^Actions of/ })
+        .elements(),
+    ).toHaveLength(0);
+  });
+
+  test("show the affectedness as text, without a select, of a Fixed track to a user who holds admin_ticket_ops alone, who could set no other value", async () => {
+    showingEditable(
+      () => editableTree({ tracks: [fictionalTrack({ status: "fixed" })] }),
+      { user: TICKET_ADMIN },
+    );
+    const { screen } = await renderTree();
+
+    await expect
+      .element(trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("Fixed"))
+      .toBeVisible();
+    await expect
+      .element(affectednessOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+  });
+
+  test("offer none of these controls to a user without manage_packages and admin_ticket_ops", async () => {
+    showingEditable(undefined, { user: OTHER_USER });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("Affected"))
+      .toBeVisible();
+    expect(
+      packagesPart(screen)
+        .getByRole("button", { name: /^(Actions|Affectedness) of/ })
+        .elements(),
+    ).toHaveLength(0);
+  });
+
+  test.each(["ignored", "duplicated", "fictional_status"])(
+    "offer none of these controls on a Ticket in %s",
+    async (status) => {
+      stubTicket({
+        user: PACKAGE_MANAGER,
+        ticket: () =>
+          jsonResponse(200, {
+            data: {
+              ...fictionalTicketDetail({ packages: editableTree() }),
+              status,
+            },
+          }),
+      });
+      const { screen } = await renderTree();
+
+      await expect
+        .element(
+          trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("Affected"),
+        )
+        .toBeVisible();
+      expect(
+        packagesPart(screen)
+          .getByRole("button", { name: /^(Actions|Affectedness) of/ })
+          .elements(),
+      ).toHaveLength(0);
+    },
+  );
+
+  test("show an affectedness that the pinned contract does not list as received, without a select", async () => {
+    stubTicket({
+      user: PACKAGE_MANAGER,
+      ticket: () =>
+        jsonResponse(200, {
+          data: {
+            ...fictionalTicketDetail(),
+            packages: [
+              {
+                ...fictionalPackage(),
+                tracks: [
+                  { ...fictionalTrack(), status: "fictional_affectedness" },
+                ],
+              },
+            ],
+          },
+        }),
+    });
+    const { screen } = await renderTree();
+
+    await expect
+      .element(packagesPart(screen).getByText("fictional_affectedness"))
+      .toBeVisible();
+    await expect
+      .element(affectednessOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expect.element(actionsOf(screen, OPENSSL_SP7)).toBeVisible();
+  });
+
+  test("exclude a track at once, with its item busy and the menu open until Sentinel answers, then close the menu, return the focus to its button, and announce the outcome once the read of the Ticket after it arrives, while Show hidden is on", async () => {
+    const response = later();
+    let tree = editableTree();
+    const spy = showingEditable(() => tree, {
+      packageChange: () => response.promise,
+    });
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    const reads = requestsTo(spy, TICKET);
+
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+
+    const menu = menuOf(screen, `Actions of ${OPENSSL_SP7}`);
+    const item = menu.getByRole("menuitem", { name: "Exclude", exact: true });
+    await expect.element(item).toHaveAccessibleDescription("Excluding.");
+    expect(packageChanges(spy)).toEqual([
+      ["POST", `${OPENSSL_ID}/tracks/${SP7_ID}/exclude`, undefined],
+    ]);
+    await userEvent.keyboard("{Escape}");
+    interactOutside();
+    await nextFrames();
+    await expect.element(menu).toBeVisible();
+    await item.click();
+    expect(packageChanges(spy)).toHaveLength(1);
+
+    tree = treeWithoutSp7();
+    response.resolve(trackMarkerResponse(false));
+
+    await expect.element(menu).not.toBeInTheDocument();
+    await expect.element(actionsOf(screen, OPENSSL_SP7)).toHaveFocus();
+    await expect
+      .poll(() => announcements(screen))
+      .toContain("Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.");
+    expect(requestsTo(spy, TICKET)).toBeGreaterThan(reads);
+    // The track stays, in gray, with its label.
+    await expect
+      .element(
+        trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("Excluded", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+    expect(
+      screen
+        .getByText(
+          "Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.",
+        )
+        .elements()
+        .filter((element) => element.closest("output") === null),
+    ).toHaveLength(0);
+  });
+
+  test("read again after an edit the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, but not its duplicates", async () => {
+    const spy = showingEditable(undefined, {
+      user: { data: { ...MAINTAINER.data, capabilities: ["manage_packages"] } },
+    });
+    const { screen } = await renderTree();
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(1);
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    const reads = {
+      ticket: requestsTo(spy, TICKET),
+      actors: requestsTo(spy, ACTORS),
+      work: requestsTo(spy, YOUR_WORK),
+      duplicates: readsOf(spy, TICKETS),
+    };
+    // The user saw the Ticket list and Audit log before, which wait in the
+    // cache.
+    client.setQueryData([EVENTS], {});
+    client.setQueryData([TICKETS, { page: 1 }], {});
+
+    await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
+
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
+    await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(reads.work + 1);
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    expect(readsOf(spy, TICKETS)).toBe(reads.duplicates);
+    expect(leftInvalidated(EVENTS)).toBe(true);
+    expect(leftInvalidated(TICKETS)).toBe(true);
+  });
+
+  test("show in the message area the outcome of an exclusion that hides its record while Show hidden is off, and move the focus to the menu of the next track of its package", async () => {
+    let tree = editableTree();
+    showingEditable(() => tree, {
+      packageChange: () => {
+        tree = treeWithoutSp7();
+        return trackMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+
+    const message = screen.getByText(
+      "Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.",
+      { exact: true },
+    );
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, OPENSSL_FLES));
+  });
+
+  test("leave the focus where the user moved it before the read after an exclusion that hides its record arrives", async () => {
+    let tree = editableTree();
+    const read = later();
+    let excluded = false;
+    showingEditable(undefined, {
+      ticket: () =>
+        excluded
+          ? read.promise
+          : ticketResponse(fictionalTicketDetail({ packages: tree })),
+      packageChange: () => {
+        excluded = true;
+        return trackMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+    await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+    await expect.element(actionsOf(screen, OPENSSL_SP7)).toHaveFocus();
+
+    // Meanwhile the user moves the focus to the menu of fictional-zlib.
+    actionsOf(screen, "fictional-zlib").element().focus();
+    tree = treeWithoutSp7();
+    read.resolve(ticketResponse(fictionalTicketDetail({ packages: tree })));
+
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
+  });
+
+  test("move the focus after an exclusion of the last track of a package that shows to the menu of its package", async () => {
+    let tree = editableTree();
+    showingEditable(() => tree, {
+      packageChange: () => {
+        tree = editableTree({
+          tracks: [
+            fictionalTrack(),
+            excludedTrack({ id: FLES_ID, reference: "fles-16.0" }),
+          ],
+        });
+        return trackMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAction(screen, OPENSSL_FLES, "Exclude");
+
+    await expect
+      .element(actionsOf(screen, OPENSSL_FLES))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, "fictional-openssl"));
+  });
+
+  test("move the focus after an exclusion that hides a package to the menu of the next package that shows, and otherwise to Show hidden", async () => {
+    let tree = editableTree();
+    const hidden = {
+      deleted_at: "2099-10-09T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "package_excluded",
+    } as const;
+    showingEditable(() => tree, {
+      packageChange: (_method, path) => {
+        tree = path.startsWith(OPENSSL_ID)
+          ? editableTree(hidden)
+          : editableTree(hidden, hidden);
+        return packageMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAction(screen, "fictional-openssl", "Exclude");
+
+    await expect
+      .element(actionsOf(screen, "fictional-openssl"))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
+
+    await chooseAction(screen, "fictional-zlib", "Exclude");
+
+    await expect
+      .element(packagesPart(screen).getByText("All packages are hidden."))
+      .toBeVisible();
+    await expectFocusSettledOn(showHidden(screen));
+  });
+
+  test("leave the focus where it is when the read of the Ticket after an exclusion fails, and let no later read move it as after the exclusion", async () => {
+    let fail = false;
+    let tree = editableTree();
+    showingEditable(undefined, {
+      ticket: () =>
+        fail
+          ? errorResponse(503, "FICTIONAL_UNAVAILABLE")
+          : ticketResponse(fictionalTicketDetail({ packages: tree })),
+      packageChange: () => {
+        fail = true;
+        tree = treeWithoutSp7();
+        return trackMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+
+    await expect
+      .element(screen.getByText("This couldn't be updated.", { exact: false }))
+      .toBeVisible();
+    await expectFocusSettledOn(actionsOf(screen, OPENSSL_SP7));
+
+    // A later read shows the track hidden: the focus leaves its menu for the
+    // screen's heading, as when any read removes it.
+    fail = false;
+    await returnToForeground();
+
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(screenHeading(screen));
+  });
+
+  test("restore a package that its own marker excludes, and announce it", async () => {
+    let tree = editableTree({
+      deleted_at: "2099-10-09T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "package_excluded",
+    });
+    const spy = showingEditable(() => tree, {
+      packageChange: () => {
+        tree = editableTree();
+        return packageMarkerResponse(true);
+      },
+    });
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    await chooseAction(screen, "fictional-openssl", "Restore");
+
+    expect(packageChanges(spy)).toEqual([
+      ["POST", `${OPENSSL_ID}/restore`, undefined],
+    ]);
+    await expect
+      .poll(() => announcements(screen))
+      .toContain("Package fictional-openssl restored.");
+    await expect.element(actionsOf(screen, "fictional-openssl")).toHaveFocus();
+  });
+
+  test("change the affectedness of a track at once, with its choice busy and the menu open until Sentinel answers, then announce the value that Sentinel returns", async () => {
+    const response = later();
+    const spy = showingEditable(undefined, {
+      packageChange: () => response.promise,
+    });
+    const { screen } = await renderTree();
+
+    await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
+
+    const menu = menuOf(screen, `Affectedness of ${OPENSSL_SP7}: Affected`);
+    await expect
+      .element(menu.getByRole("menuitemradio", { name: "Not affected" }))
+      .toHaveAccessibleDescription("Changing the affectedness.");
+    expect(packageChanges(spy)).toEqual([
+      ["PATCH", `${OPENSSL_ID}/tracks/${SP7_ID}`, { status: "not_affected" }],
+    ]);
+    await userEvent.keyboard("{Escape}");
+    await nextFrames();
+    await expect.element(menu).toBeVisible();
+    await menu.getByRole("menuitemradio", { name: "Won't fix" }).click();
+    expect(packageChanges(spy)).toHaveLength(1);
+
+    response.resolve(trackStatusResponse("not_affected"));
+
+    await expect.element(menu).not.toBeInTheDocument();
+    await expect.element(affectednessOf(screen, OPENSSL_SP7)).toHaveFocus();
+    await expect
+      .poll(() => announcements(screen))
+      .toContain(
+        "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to Not affected.",
+      );
+  });
+
+  test("announce the outcome of each of two edits whose reads overlap, together, in their order", async () => {
+    const reads: ReturnType<typeof later>[] = [];
+    let first = true;
+    showingEditable(undefined, {
+      ticket: () => {
+        if (first) {
+          first = false;
+          return ticketResponse(
+            fictionalTicketDetail({ packages: editableTree() }),
+          );
+        }
+        const read = later();
+        reads.push(read);
+        return read.promise;
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
+    await expect.poll(() => reads.length).toBe(1);
+    await chooseAffectedness(screen, OPENSSL_FLES, "Affected");
+    await expect.poll(() => reads.length).toBe(2);
+    for (const read of reads) {
+      read.resolve(
+        ticketResponse(fictionalTicketDetail({ packages: editableTree() })),
+      );
+    }
+
+    await expect
+      .poll(() => announcements(screen))
+      .toContain(
+        "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to Not affected. Affectedness of fictional-openssl · fles-16.0 changed to Affected.",
+      );
+  });
+
+  test("send nothing when the user chooses the affectedness that the track has, and close the menu", async () => {
+    const spy = showingEditable();
+    const { screen } = await renderTree();
+
+    await chooseAffectedness(screen, OPENSSL_SP7, "Affected");
+
+    await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+    expect(packageChanges(spy)).toEqual([]);
+  });
+
+  test.each<[string, () => Response, string, keyof typeof MESSAGE_TONES]>([
+    [
+      "409 TICKET_NOT_MUTABLE",
+      () => errorResponse(409, "TICKET_NOT_MUTABLE"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+    ],
+    [
+      "a 503",
+      () => errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      "Sentinel didn't confirm this change. It may have taken effect: check before trying again.",
+      "warning",
+    ],
+    [
+      "409 PACKAGE_ALREADY_EXCLUDED, which the change of the affectedness does not handle",
+      () => errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+    ],
+  ])(
+    "show a failure of the change of the affectedness in the message area: %s",
+    async (_name, failure, text, tone) => {
+      showingEditable(undefined, { packageChange: failure });
+      const { screen } = await renderTree();
+
+      await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
+
+      const message = screen.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
+      await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+      await expect.element(affectednessOf(screen, OPENSSL_SP7)).toHaveFocus();
+    },
+  );
+
+  test.each<
+    [string, string, string, () => Response, string, keyof typeof MESSAGE_TONES]
+  >([
+    [
+      "409 PACKAGE_ALREADY_EXCLUDED of Exclude",
+      "fictional-openssl",
+      "Exclude",
+      () => errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"),
+      "Package fictional-openssl is already excluded.",
+      "info",
+    ],
+    [
+      "422 PACKAGE_NOT_EXCLUDED of Restore",
+      "fictional-zlib",
+      "Restore",
+      () => errorResponse(422, "PACKAGE_NOT_EXCLUDED"),
+      "Package fictional-zlib is no longer excluded.",
+      "info",
+    ],
+    [
+      "409 PACKAGE_ALREADY_EXCLUDED of Restore, which Restore does not handle",
+      "fictional-zlib",
+      "Restore",
+      () => errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+    ],
+    [
+      "422 PACKAGE_NOT_EXCLUDED of Exclude, which Exclude does not handle",
+      "fictional-openssl",
+      "Exclude",
+      () => errorResponse(422, "PACKAGE_NOT_EXCLUDED"),
+      "Sentinel didn't accept this request.",
+      "danger",
+    ],
+    [
+      "a code that the pinned contract does not list",
+      "fictional-openssl",
+      "Exclude",
+      () => errorResponse(409, "FICTIONAL_CONFLICT"),
+      "This can't be done in the current state, which may have changed. Check it and try again.",
+      "danger",
+    ],
+    [
+      "a 404",
+      "fictional-openssl",
+      "Exclude",
+      () => errorResponse(404, "RESOURCE_NOT_FOUND"),
+      "This no longer exists, or you no longer have access to it.",
+      "danger",
+    ],
+    [
+      "a network failure",
+      "fictional-openssl",
+      "Exclude",
+      () => {
+        throw new TypeError("Failed to fetch");
+      },
+      "Sentinel didn't confirm this change. It may have taken effect: check before trying again.",
+      "warning",
+    ],
+  ])(
+    "show a failure of an exclusion or a restore in the message area: %s",
+    async (_name, record, action, failure, text, tone) => {
+      showingEditable(
+        () =>
+          editableTree(
+            {},
+            {
+              deleted_at: "2099-10-09T10:00:00Z",
+              actionable: false,
+              non_actionable_reason: "package_excluded",
+            },
+          ),
+        { packageChange: failure },
+      );
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+      await chooseAction(screen, record, action);
+
+      const message = screen.getByText(text, { exact: true });
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
+      await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+      await expect.element(actionsOf(screen, record)).toHaveFocus();
+    },
+  );
+
+  test("ask for confirmation before excluding a package with maintainers of a confidential Ticket, which ends their access, and send nothing on Cancel", async () => {
+    const spy = showingEditable(undefined, {}, { is_confidential: true });
+    const { screen } = await renderTree();
+
+    await chooseAction(screen, "fictional-openssl", "Exclude…");
+
+    const confirmation = screen.getByRole("dialog", {
+      name: "Exclude fictional-openssl?",
+    });
+    await expect.element(confirmation).toBeVisible();
+    await expect
+      .element(
+        confirmation.getByText(
+          "The maintainers of fictional-openssl no longer see this confidential Ticket, unless their roles, an access grant, or another package that they maintain let them. Restore gives them this access back.",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+    await expect
+      .element(confirmation.getByRole("button", { name: "Cancel" }))
+      .toHaveFocus();
+
+    await confirmation.getByRole("button", { name: "Cancel" }).click();
+
+    await expect.element(confirmation).not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, "fictional-openssl"));
+    expect(packageChanges(spy)).toEqual([]);
+    // A package without maintainers, and every track, exclude at once.
+    await actionsOf(screen, "fictional-zlib").click();
+    await expect
+      .element(screen.getByRole("menuitem", { name: "Exclude", exact: true }))
+      .toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await actionsOf(screen, OPENSSL_SP7).click();
+    await expect
+      .element(screen.getByRole("menuitem", { name: "Exclude", exact: true }))
+      .toBeVisible();
+  });
+
+  test("exclude a package of a confidential Ticket once confirmed, with the confirmation busy until Sentinel answers, and show a failure at its top, which stays open", async () => {
+    const response = later();
+    let pending = false;
+    const spy = showingEditable(
+      undefined,
+      {
+        packageChange: () =>
+          pending
+            ? response.promise
+            : errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      },
+      { is_confidential: true },
+    );
+    const { screen } = await renderTree();
+    await chooseAction(screen, "fictional-openssl", "Exclude…");
+    const confirmation = screen.getByRole("dialog", {
+      name: "Exclude fictional-openssl?",
+    });
+
+    await confirmation.getByRole("button", { name: "Exclude package" }).click();
+
+    const error = confirmation.getByText(
+      "Sentinel didn't confirm this change. It may have taken effect: check before trying again.",
+    );
+    await expect.element(error).toBeVisible();
+    await expectFocusOnError(error);
+
+    pending = true;
+    await confirmation.getByRole("button", { name: "Exclude package" }).click();
+
+    await expect
+      .element(confirmation.getByRole("button", { name: "Cancel" }))
+      .toBeDisabled();
+    await userEvent.keyboard("{Escape}");
+    await nextFrames();
+    await expect.element(confirmation).toBeVisible();
+    response.resolve(packageMarkerResponse(false));
+    await expect.element(confirmation).not.toBeInTheDocument();
+    expect(packageChanges(spy)).toEqual([
+      ["POST", `${OPENSSL_ID}/exclude`, undefined],
+      ["POST", `${OPENSSL_ID}/exclude`, undefined],
+    ]);
+    await expect
+      .element(
+        screen.getByText("Package fictional-openssl excluded.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+  });
+
+  test("keep the menu of the actions and the select as they were while their menu is open, after a read of the signed-in user takes manage_packages away", async () => {
+    let user = PACKAGE_MANAGER;
+    showingEditable(undefined, { user: () => user });
+    const { screen } = await renderTree();
+    await actionsOf(screen, OPENSSL_SP7).click();
+    const menu = menuOf(screen, `Actions of ${OPENSSL_SP7}`);
+    await expect.element(menu).toBeVisible();
+    user = OTHER_USER;
+
+    await returnToForeground();
+
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    await expect
+      .element(affectednessOf(screen, OPENSSL_FLES))
+      .not.toBeInTheDocument();
+    await expect
+      .element(menu.getByRole("menuitem", { name: "Exclude" }))
+      .toBeVisible();
+
+    await userEvent.keyboard("{Escape}");
+
+    // The menu closes with its button, which the screen no longer offers:
+    // the focus moves to the screen's heading.
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(screenHeading(screen));
+  });
+
+  test.each(["the menu of the actions", "the select of the affectedness"])(
+    "move the focus to the screen's heading when Sentinel refuses the change of %s that the screen no longer offers, after a read of the signed-in user took manage_packages away",
+    async (control) => {
+      let user = PACKAGE_MANAGER;
+      showingEditable(undefined, {
+        user: () => user,
+        packageChange: () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
+      });
+      const { screen } = await renderTree();
+      const actions = control === "the menu of the actions";
+      await (
+        actions
+          ? actionsOf(screen, OPENSSL_SP7)
+          : affectednessOf(screen, OPENSSL_SP7)
+      ).click();
+      await expect.element(screen.getByRole("menu")).toBeVisible();
+      user = OTHER_USER;
+      await returnToForeground();
+      await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+
+      await (
+        actions
+          ? screen.getByRole("menuitem", { name: "Exclude", exact: true })
+          : screen.getByRole("menuitemradio", { name: "Not affected" })
+      ).click();
+
+      await expect
+        .element(screen.getByText("You don't have permission to do this."))
+        .toBeVisible();
+      await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+      await expectFocusSettledOn(screenHeading(screen));
+    },
+  );
+
+  test("keep the values that the select of the affectedness offered as it opened, after a read of the signed-in user takes manage_packages away", async () => {
+    let user = PACKAGE_MANAGER;
+    showingEditable(undefined, { user: () => user });
+    const { screen } = await renderTree();
+    await affectednessOf(screen, OPENSSL_SP7).click();
+    const menu = menuOf(screen, `Affectedness of ${OPENSSL_SP7}: Affected`);
+    await expect.element(menu).toBeVisible();
+    user = OTHER_USER;
+
+    await returnToForeground();
+
+    await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+    await expect
+      .element(affectednessOf(screen, OPENSSL_FLES))
+      .not.toBeInTheDocument();
+    await expect
+      .poll(() => itemsOf(menu, "menuitemradio"))
+      .toEqual(["Analysis", "Affected", "Not affected", "Won't fix"]);
+
+    await userEvent.keyboard("{Escape}");
+
+    // The menu closes with its select, which the screen no longer offers:
+    // the focus moves to the screen's heading.
+    await expect
+      .element(affectednessOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(screenHeading(screen));
+  });
+
+  test("show the outcome of an edit that ends after the user left the screen in the message area, naming the Ticket", async () => {
+    const response = later();
+    showingEditable(undefined, { packageChange: () => response.promise });
+    const { router, screen } = await renderTree();
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+
+    await leaveForTickets(router, screen);
+    response.resolve(trackMarkerResponse(false));
+
+    await expect
+      .element(
+        screen.getByText(
+          "SNTL-12: Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("link", { name: "SNTL-12", exact: true }))
+      .toHaveAttribute("href", "/tickets/SNTL-12");
+  });
+
+  test("keep the select of a hidden track in its own colors", async () => {
+    showingEditable(() => treeWithoutSp7());
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+    const select = affectednessOf(screen, OPENSSL_SP7);
+    await expect.element(select).toBeVisible();
+    expect(
+      colorOf(
+        trackOf(screen, "SUSE:FLES-15-SP7:Update")
+          .getByText("SUSE:FLES-15-SP7:Update")
+          .element(),
+      ),
+    ).toBe(FG_MUTED);
+    expect(colorOf(select.element())).toBe(FG);
+    // The menu of its actions keeps its color too.
+    expect(colorOf(actionsOf(screen, OPENSSL_SP7).element())).toBe(FG);
+  });
+
+  test("move the focus to the screen's heading when the select leaves the page after a change that leaves the user no other value, as Fixed for a user who holds admin_ticket_ops alone", async () => {
+    let tree = editableTree();
+    showingEditable(() => tree, {
+      user: TICKET_ADMIN,
+      packageChange: () => {
+        tree = editableTree({
+          tracks: [fictionalTrack({ status: "fixed" }), flesTrack()],
+        });
+        return trackStatusResponse("fixed");
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAffectedness(screen, OPENSSL_SP7, "Fixed");
+
+    await expect
+      .element(affectednessOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expect
+      .element(trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("Fixed"))
+      .toBeVisible();
+    await expectFocusSettledOn(screenHeading(screen));
+  });
+
+  test("move the focus to the screen's heading when a read removes the menu of the actions of a record that holds it", async () => {
+    let status: TicketStatusValue = "analyzed";
+    stubTicket({
+      user: PACKAGE_MANAGER,
+      ticket: () =>
+        ticketResponse(
+          fictionalTicketDetail({ packages: editableTree(), status }),
+        ),
+    });
+    const { screen } = await renderTree();
+    actionsOf(screen, OPENSSL_SP7).element().focus();
+    await expect.element(actionsOf(screen, OPENSSL_SP7)).toHaveFocus();
+    // Meanwhile another analyst ignored the Ticket.
+    status = "ignored";
+
+    await returnToForeground();
+
+    await expect
+      .element(actionsOf(screen, OPENSSL_SP7))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(screenHeading(screen));
+  });
+
+  test("move the focus after an exclusion of a track that hides its package to the menu of the next package that shows", async () => {
+    const hiddenPackage = {
+      actionable: false,
+      non_actionable_reason: "no_actionable_tracks",
+    } as const;
+    let tree = editableTree({ tracks: [fictionalTrack()] });
+    showingEditable(() => tree, {
+      packageChange: () => {
+        tree = editableTree({
+          ...hiddenPackage,
+          tracks: [
+            excludedTrack({ id: SP7_ID, reference: "SUSE:FLES-15-SP7:Update" }),
+          ],
+        });
+        return trackMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+
+    await expect
+      .element(actionsOf(screen, "fictional-openssl"))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
+  });
+
+  test("move the focus after a confirmed exclusion that hides a package to the menu of the next package that shows", async () => {
+    let tree = editableTree();
+    showingEditable(
+      () => tree,
+      {
+        packageChange: () => {
+          tree = editableTree({
+            deleted_at: "2099-10-09T10:00:00Z",
+            actionable: false,
+            non_actionable_reason: "package_excluded",
+          });
+          return packageMarkerResponse(false);
+        },
+      },
+      { is_confidential: true },
+    );
+    const { screen } = await renderTree();
+    await chooseAction(screen, "fictional-openssl", "Exclude…");
+
+    await screen
+      .getByRole("dialog", { name: "Exclude fictional-openssl?" })
+      .getByRole("button", { name: "Exclude package" })
+      .click();
+
+    await expect
+      .element(actionsOf(screen, "fictional-openssl"))
+      .not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsOf(screen, "fictional-zlib"));
+  });
+
+  test("close the confirmation and say in the message area that the package is already excluded after 409 PACKAGE_ALREADY_EXCLUDED", async () => {
+    showingEditable(
+      undefined,
+      { packageChange: () => errorResponse(409, "PACKAGE_ALREADY_EXCLUDED") },
+      { is_confidential: true },
+    );
+    const { screen } = await renderTree();
+    await chooseAction(screen, "fictional-openssl", "Exclude…");
+    const confirmation = screen.getByRole("dialog", {
+      name: "Exclude fictional-openssl?",
+    });
+
+    await confirmation.getByRole("button", { name: "Exclude package" }).click();
+
+    await expect.element(confirmation).not.toBeInTheDocument();
+    const message = screen.getByText(
+      "Package fictional-openssl is already excluded.",
+      { exact: true },
+    );
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.info);
+  });
+
+  test.each(["ignored", "duplicated", "fictional_status"])(
+    "offer a user who holds admin_ticket_ops alone no select on a Ticket in %s",
+    async (status) => {
+      stubTicket({
+        user: TICKET_ADMIN,
+        ticket: () =>
+          jsonResponse(200, {
+            data: {
+              ...fictionalTicketDetail({ packages: editableTree() }),
+              status,
+            },
+          }),
+      });
+      const { screen } = await renderTree();
+
+      await expect
+        .element(
+          trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("Affected"),
+        )
+        .toBeVisible();
+      await expect
+        .element(affectednessOf(screen, OPENSSL_SP7))
+        .not.toBeInTheDocument();
+    },
+  );
+
+  test("announce an affectedness that Sentinel returns and that the pinned contract does not list as received", async () => {
+    showingEditable(undefined, {
+      packageChange: () => trackStatusResponse("fictional_affectedness"),
+    });
+    const { screen } = await renderTree();
+
+    await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
+
+    await expect
+      .poll(() => announcements(screen))
+      .toContain(
+        "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to fictional_affectedness.",
+      );
+  });
+
+  test("line up the selects of the affectedness and the pipelines of the tracks for a user who sets the affectedness, whatever the width of each value", async () => {
+    showingEditable(() =>
+      editableTree({
+        tracks: [fictionalTrack({ status: "fixed" }), flesTrack()],
+      }),
+    );
+    const { screen } = await renderTree();
+
+    const fixed = affectednessOf(screen, OPENSSL_SP7);
+    const analysis = affectednessOf(screen, OPENSSL_FLES);
+    await expect.element(fixed).toBeVisible();
+    expect(boxOf(fixed).width).toBeLessThan(boxOf(analysis).width);
+    expect(boxOf(fixed).left).toBe(boxOf(analysis).left);
+    const pipelines = packagesPart(screen)
+      .getByRole("button", { name: /^Phases of fictional-openssl/ })
+      .elements();
+    expect(pipelines).toHaveLength(2);
+    expect(boxOf(pipelines[0]!).right).toBe(boxOf(pipelines[1]!).right);
+    // The place of the select is at least as wide as the select of Not
+    // affected: 136 px.
+    expect(
+      boxOf(actionsOf(screen, OPENSSL_SP7)).left - boxOf(fixed).left,
+    ).toBeGreaterThanOrEqual(136);
+  });
+
+  test("show in the message area the outcome of an exclusion whose read after it replaces the screen, as the 404 of a Ticket that the exclusion hid from the user", async () => {
+    let hidden = false;
+    showingEditable(undefined, {
+      ticket: () =>
+        hidden
+          ? errorResponse(404, "TICKET_NOT_FOUND")
+          : ticketResponse(
+              fictionalTicketDetail({
+                packages: editableTree(),
+                is_confidential: true,
+              }),
+            ),
+      packageChange: () => {
+        hidden = true;
+        return packageMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    await chooseAction(screen, "fictional-openssl", "Exclude…");
+
+    await screen
+      .getByRole("dialog", { name: "Exclude fictional-openssl?" })
+      .getByRole("button", { name: "Exclude package" })
+      .click();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
+      .toBeVisible();
+    await expect
+      .element(
+        screen.getByText("Package fictional-openssl excluded.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
   });
 });

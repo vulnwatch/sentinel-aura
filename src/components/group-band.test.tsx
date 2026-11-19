@@ -37,8 +37,8 @@ test.each([2, 3] as const)(
       name: "fictional-openssl",
     });
     await expect.element(heading).toBeVisible();
-    const band = heading.element().parentElement;
-    if (band === null) {
+    const band = heading.element().parentElement?.parentElement;
+    if (band === null || band === undefined) {
       throw new Error("The heading has no band");
     }
     const style = getComputedStyle(band);
@@ -58,6 +58,41 @@ test.each([2, 3] as const)(
     ).toBe(6);
   },
 );
+
+test("ends with its actions, which stay at the end of the first line where the heading and its values wrap", async () => {
+  await page.viewport(320, 800);
+  const screen = await render(
+    <div className="w-60 text-fg">
+      <GroupBand
+        heading="fictional-openssl-with-a-long-name"
+        level={3}
+        actions={<button type="button">Actions</button>}
+      >
+        <span>2 maintainers</span>
+      </GroupBand>
+    </div>,
+  );
+
+  const heading = screen.getByRole("heading", { level: 3 });
+  await expect.element(heading).toBeVisible();
+  const band = heading.element().parentElement?.parentElement;
+  if (band === null || band === undefined) {
+    throw new Error("The heading has no band");
+  }
+  const actions = screen.getByRole("button", { name: "Actions" }).element();
+  const value = screen.getByText("2 maintainers").element();
+  // The values wrap below the heading, and the actions stay on the line of
+  // the heading, at the end of the band, inside its padding of 12 px.
+  expect(value.getBoundingClientRect().top).toBeGreaterThan(
+    heading.element().getBoundingClientRect().top,
+  );
+  expect(actions.getBoundingClientRect().top).toBeLessThan(
+    value.getBoundingClientRect().top,
+  );
+  expect(
+    band.getBoundingClientRect().right - actions.getBoundingClientRect().right,
+  ).toBe(12);
+});
 
 test("shows a hidden record that shows in fg-muted", async () => {
   const screen = await render(

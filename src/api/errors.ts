@@ -315,6 +315,40 @@ export function cvssVectorError(
     : undefined;
 }
 
+// The message of an exclusion or a restore of a record of the package tree of
+// a Ticket that another user made meanwhile, which says the state that the
+// record now has (docs/screens/ticket.md, States): 409 PACKAGE_ALREADY_EXCLUDED
+// of an exclusion, and 422 PACKAGE_NOT_EXCLUDED of a restore, which concern
+// the record's own marker (Sentinel docs/features/packages/package-model.md,
+// Soft-Delete Package from Ticket; Restore Package; Soft-Delete Track;
+// Restore Track). The subject names the record, such as "Package
+// fictional-openssl". Every other failure, such as one of these codes from
+// the other operation, has the presentation of a change.
+export function presentMarkerConflict(
+  failure: RequestFailure,
+  change: "exclude" | "restore",
+  subject: string,
+): string | undefined {
+  if (!(failure instanceof ApiError)) {
+    return undefined;
+  }
+  if (
+    change === "exclude" &&
+    failure.status === 409 &&
+    failure.code === "PACKAGE_ALREADY_EXCLUDED"
+  ) {
+    return `${subject} is already excluded.`;
+  }
+  if (
+    change === "restore" &&
+    failure.status === 422 &&
+    failure.code === "PACKAGE_NOT_EXCLUDED"
+  ) {
+    return `${subject} is no longer excluded.`;
+  }
+  return undefined;
+}
+
 // Whether a read of the access grants of a Ticket failed because the Ticket
 // is no longer confidential, 409 TICKET_NOT_CONFIDENTIAL, after which it has
 // no grants (Sentinel docs/features/tickets/tickets.md, List Access Grants;

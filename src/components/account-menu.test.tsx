@@ -518,6 +518,11 @@ describe("Sign out", () => {
     expect(dialogs).toHaveLength(1);
     expect(dialogs[0]?.element().contains(menu.element())).toBe(true);
     expect(requestsTo(fetch, LOGOUT)).toBe(1);
+    // The menu cannot be closed while Sign out is in progress.
+    await userEvent.keyboard("{Escape}");
+    await new Promise((done) => requestAnimationFrame(done));
+    await new Promise((done) => requestAnimationFrame(done));
+    await expect.element(menu).toBeVisible();
     answer(new Response(null, { status: 204 }));
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Sign in" }))

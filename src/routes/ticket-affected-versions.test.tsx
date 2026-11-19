@@ -468,10 +468,12 @@ describe("the tab", () => {
     // The search field, 32 px high, is the tallest item of the toolbar on
     // its one row, so its bottom is the bottom of the toolbar.
     const search = searchOf(screen).element().getBoundingClientRect();
+    // The heading and its values are a line of their own, which the band
+    // holds with its actions.
     const band = panelOf(screen)
       .getByRole("heading", { level: 2 })
       .first()
-      .element().parentElement;
+      .element().parentElement?.parentElement;
     expect((band?.getBoundingClientRect().top ?? 0) - search.bottom).toBe(16);
   });
 

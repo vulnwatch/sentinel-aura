@@ -1,8 +1,6 @@
 import {
-  Check,
   ChevronsUpDown,
   KeyRound,
-  LoaderCircle,
   LogOut,
   Monitor,
   Moon,
@@ -15,13 +13,10 @@ import {
   Button as AriaButton,
   Header,
   Menu,
-  MenuItem,
   MenuSection,
   MenuTrigger,
   Popover,
   Separator,
-  Text,
-  type MenuItemProps,
   type Selection,
 } from "react-aria-components";
 import { isRequestFailure, presentFailure } from "../api/errors";
@@ -30,7 +25,8 @@ import { usePreference } from "../preferences";
 import { useSignOut } from "../session-gate";
 import { themePreference, type ThemePreference } from "../theme";
 import { Avatar } from "./avatar";
-import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING } from "./focus-ring";
+import { MENU_SEPARATOR, MenuAction as Item } from "./menu";
 import { useShowMessage } from "./message-area";
 import { Tooltip } from "./tooltip";
 import { compactName, StackedUser, User } from "./user";
@@ -56,11 +52,9 @@ function isThemePreference(key: unknown): key is ThemePreference {
   return THEMES.some(({ id }) => id === key);
 }
 
-// The classes of the parts of the menu (docs/design-system.md, Menus,
-// Popovers, and Tooltips). A menu item shows the focus with surface-hover and,
-// on keyboard focus, the focus ring inside it.
-const ITEM = `flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 text-15 data-focused:bg-surface-hover data-hovered:bg-surface-hover ${INSIDE_FOCUS_RING}`;
-const SEPARATOR = "-mx-1 my-1 border-t border-border";
+// The line that separates the groups of the menu (docs/design-system.md,
+// Menus, Popovers, and Tooltips).
+const SEPARATOR = MENU_SEPARATOR;
 
 // Applies the theme that the user selects, in every open tab.
 function selectTheme(keys: Selection) {
@@ -71,51 +65,6 @@ function selectTheme(keys: Selection) {
   if (isThemePreference(key)) {
     themePreference.set(key);
   }
-}
-
-interface ItemProps extends Omit<
-  MenuItemProps,
-  "className" | "children" | "isDisabled"
-> {
-  icon: LucideIcon;
-  // The description of the change that the item started, while it is in
-  // progress: its icon gives way to loader-circle, and assistive technologies
-  // read the description with the item, which keeps the focus, as a busy
-  // button does (docs/behaviors.md, Loading). The item's action guards
-  // against a second start.
-  busy?: string | undefined;
-  children: string;
-}
-
-// An item of the account menu: its icon at 16 px in fg-muted before its
-// label, and check at its end when it is the selected item of a single
-// selection.
-function Item({ icon: Icon, busy, children, ...props }: ItemProps) {
-  return (
-    <MenuItem {...props} textValue={children} className={ITEM}>
-      {({ isSelected }) => (
-        <>
-          {busy !== undefined ? (
-            <LoaderCircle
-              aria-hidden
-              className="size-4 shrink-0 animate-spin text-fg-muted motion-reduce:animate-none"
-            />
-          ) : (
-            <Icon aria-hidden className="size-4 shrink-0 text-fg-muted" />
-          )}
-          <Text slot="label" className="min-w-0 flex-1">
-            {children}
-          </Text>
-          {/* Always there, so that React Aria links it to the item, and
-              empty unless the item is busy. */}
-          <Text slot="description" className="sr-only">
-            {busy}
-          </Text>
-          {isSelected && <Check aria-hidden className="size-4 shrink-0" />}
-        </>
-      )}
-    </MenuItem>
-  );
 }
 
 interface AccountTriggerProps {
@@ -201,7 +150,16 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
   }
 
   return (
-    <MenuTrigger isOpen={isOpen} onOpenChange={setOpen}>
+    <MenuTrigger
+      isOpen={isOpen}
+      onOpenChange={(open) => {
+        // The menu cannot be closed while Sign out is in progress
+        // (docs/behaviors.md, Loading).
+        if (!signOut.busy) {
+          setOpen(open);
+        }
+      }}
+    >
       <AccountTrigger user={user} compact={compact} />
       <Popover
         placement="top start"

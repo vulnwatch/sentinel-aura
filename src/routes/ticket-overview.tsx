@@ -7,6 +7,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import {
+  Ban,
   CircleQuestionMark,
   ClockAlert,
   GitMerge,
@@ -18,6 +19,7 @@ import {
   Star,
   Trash,
   TriangleAlert,
+  Undo2,
   UserPen,
   UserRoundKey,
   type LucideIcon,
@@ -47,6 +49,7 @@ import {
   MESSAGE_INVALID_VALUE,
   presentChangeFailure,
   presentFailure,
+  presentMarkerConflict,
   presentRefetchFailure,
   validationErrorFields,
 } from "../api/errors";
@@ -85,6 +88,7 @@ import {
   CVSSPrivilegesRequired,
   CVSSVersionValue,
   EligibilitySource,
+  PackageStatusValue,
   TicketStatusValue,
   type IBSRequestStateValue,
   type SubmissionRequestItem,
@@ -103,7 +107,6 @@ import type {
   CurrentPhaseValue,
   LifecyclePhaseValue,
   PackageDetail,
-  PackageStatusValue,
   ProductDetail,
   ProductReasonValue,
   SSVCAutomatable,
@@ -115,6 +118,7 @@ import type {
   TicketDetail,
   TicketDetailResponse,
   TrackDetail,
+  TrackStatusResponse,
   UserDirectoryData,
 } from "../api/generated/model";
 import {
@@ -122,6 +126,13 @@ import {
   getListTicketEventsQueryKey,
   useListTicketActors,
 } from "../api/generated/ticket-audit-log";
+import {
+  useChangeTrackStatus,
+  useExcludePackage,
+  useExcludeTrack,
+  useRestorePackage,
+  useRestoreTrack,
+} from "../api/generated/ticket-packages";
 import {
   getGetTicketQueryKey,
   getListTicketAccessGrantsQueryKey,
@@ -137,12 +148,14 @@ import {
 import { ApiError } from "../api/request";
 import { getListUsersQueryKey } from "../api/generated/users";
 import { AbsentValue } from "../components/absent-value";
+import { ActionsMenu } from "../components/actions-menu";
 import { Button } from "../components/button";
 import {
   useChangeOutcome,
   useMounted,
   useOutcomeAfterRead,
 } from "../components/change-outcome";
+import { ChoiceMenu } from "../components/choice-menu";
 import { ClampedText } from "../components/clamped-text";
 import { ConfidentialMark } from "../components/confidential-mark";
 import { FramedTable, type TableColumn } from "../components/data-table";
@@ -179,6 +192,7 @@ import {
   type MarkedName,
 } from "../components/marked-value";
 import { Loading, UpdatingBar } from "../components/loading";
+import { MenuAction } from "../components/menu";
 import { useShowMessage, type MessageRecord } from "../components/message-area";
 import { Message, type MessageTone } from "../components/message";
 import {
@@ -545,12 +559,13 @@ function choiceOf(userId: string | null): string {
 type AssigneeError =
   { kind: "changed"; at: number } | { kind: "failure"; error: DialogError };
 
-// Reads again what an assignment affects: the Ticket, whose status it can
-// change, the work of a maintainer on it, the users who acted on it, its
-// audit log, and the reads of the Ticket list, but for the duplicates of the
-// Ticket, whose identifiers, confidentiality, and number an assignment of
-// their original does not change (docs/behaviors.md, Outcome of a Change).
-function useReadAfterAssignment(ticketId: string) {
+// Reads again what an assignment or an edit of the package tree affects: the
+// Ticket, whose status, assignee, and package tree it can change, the work of
+// a maintainer on it, the users who acted on it, its audit log, and the reads
+// of the Ticket list, but for the duplicates of the Ticket, whose
+// identifiers, confidentiality, and number a change of their original does
+// not change (docs/behaviors.md, Outcome of a Change).
+function useReadAfterTicketChange(ticketId: string) {
   const client = useQueryClient();
   return useCallback(() => {
     for (const queryKey of [
@@ -602,7 +617,7 @@ function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
   const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
   const ticketRead = useGetTicket(ticketId, { query: { enabled: false } });
   const outcome = useOutcomeAfterRead(ticketRead, record);
-  const readAgain = useReadAfterAssignment(ticketId);
+  const readAgain = useReadAfterTicketChange(ticketId);
   const assign = useAssignTicket({
     mutation: useChangeOutcome(
       record,
@@ -1477,6 +1492,553 @@ function mutedIf(hidden: boolean): string {
   return hidden ? "text-fg-muted" : "";
 }
 
+// The statuses of a Ticket in which Sentinel accepts an edit of its package
+// tree: Ignored and Duplicated refuse it with 409 TICKET_NOT_MUTABLE, and a
+// status that the pinned contract does not list offers no action (Sentinel
+// docs/features/tickets/tickets.md, Mutability Guard; Sentinel
+// docs/api-spec.md, Manual-Zone Mutability Guard; docs/behaviors.md, Unknown
+// Values).
+const PACKAGE_EDITABLE_STATUSES = new Set<string>([
+  TicketStatusValue.new,
+  TicketStatusValue.analysis,
+  TicketStatusValue.analyzed,
+  TicketStatusValue.resolved,
+]);
+
+// The affectedness of a track that manage_packages sets on every Ticket.
+// Fixed needs admin_ticket_ops, or manage_packages on a Ticket without a CVE
+// (Sentinel docs/features/packages/package-model.md, Manual Transitions).
+const MANAGED_AFFECTEDNESS: readonly PackageStatusValue[] = [
+  PackageStatusValue.analysis,
+  PackageStatusValue.affected,
+  PackageStatusValue.not_affected,
+  PackageStatusValue.wont_fix,
+];
+
+// The affectedness of a track in the order of the contract, which the select
+// of the affectedness follows (Sentinel docs/features/packages/package-model.md,
+// Axis 1: Affectedness).
+const AFFECTEDNESS_ORDER = Object.values(PackageStatusValue);
+
+// The name of an affectedness, or the value as received.
+function affectednessName(status: string): string {
+  return AFFECTEDNESS.get(status)?.name ?? status;
+}
+
+// A record of the package tree that an exclusion that Sentinel confirmed
+// hides, while "Show hidden" is off: a package, or a track of it, with the
+// instant at which Sentinel confirmed it, after which the first read of the
+// Ticket decides where the focus moves (useFocusAfterExclusion).
+interface HiddenRecord {
+  packageId: string;
+  trackId?: string;
+  at: number;
+}
+
+// The menus of the actions of the records, by the id of their record, which
+// take the focus after an exclusion hides the record before them.
+interface RecordTriggers {
+  ref: (id: string) => (element: HTMLButtonElement | null) => void;
+  get: (id: string) => HTMLButtonElement | undefined;
+}
+
+function createRecordTriggers(): RecordTriggers {
+  const elements = new Map<string, HTMLButtonElement>();
+  const refs = new Map<string, (element: HTMLButtonElement | null) => void>();
+  return {
+    ref: (id) => {
+      let ref = refs.get(id);
+      if (ref === undefined) {
+        ref = (element) => {
+          if (element === null) {
+            elements.delete(id);
+          } else {
+            elements.set(id, element);
+          }
+        };
+        refs.set(id, ref);
+      }
+      return ref;
+    },
+    get: (id) => elements.get(id),
+  };
+}
+
+// Moves the focus to the screen's heading once a menu has closed whose
+// button the screen no longer offers, as after a read of the signed-in user
+// took its capability away while it was open: React Aria cannot return the
+// focus to the button, which leaves the page with the menu
+// (docs/behaviors.md, Accessibility, Focus after an action). Where the button
+// stays, React Aria returns the focus to it, in a later frame in some
+// browsers, and the focus is left to it.
+function handOffAfterClose(button: () => HTMLElement | null | undefined) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const element = button();
+      if (
+        (document.activeElement === null ||
+          document.activeElement === document.body) &&
+        (element === null || element === undefined || !element.isConnected)
+      ) {
+        focusScreenHeading();
+      }
+    });
+  });
+}
+
+// What the records of the package tree need for their edits (PackagesPart).
+interface TreeEdits {
+  ticketId: string;
+  // Whether the user excludes and restores the records: with
+  // manage_packages, on a Ticket whose status accepts the edit.
+  manages: boolean;
+  // The affectedness that the user sets on the tracks, as the capabilities
+  // and the Ticket allow (docs/screen-map.md, Roles, Principles).
+  settable: ReadonlySet<string>;
+  confidential: boolean;
+  record: MessageRecord;
+  // Reads again what an edit affects, whatever its outcome.
+  readAgain: () => void;
+  // Announces the outcome of an edit once the read of the Ticket after it
+  // arrives, or shows it in the message area then (useOutcomeAfterRead).
+  after: (text: string, inMessageArea?: boolean) => void;
+  // Whether the tree shows its hidden records as an edit ends.
+  showsHidden: () => boolean;
+  // Tells that an exclusion hid its record (HiddenRecord).
+  hid: (record: Omit<HiddenRecord, "at">) => void;
+  triggers: RecordTriggers;
+}
+
+// An exclusion or a restore of a record, which sends the change.
+interface MarkerChange {
+  run: () => Promise<unknown>;
+  pending: boolean;
+}
+
+// The callbacks of an exclusion or a restore of a record (useChangeOutcome),
+// which says so in its outcome, such as "Package fictional-openssl
+// excluded.": once Sentinel confirms it, the outcome waits for the read of
+// the Ticket after it, announced, or shown in the message area when the
+// record no longer shows, as after an exclusion while "Show hidden" is off,
+// and then the focus moves on (useFocusAfterExclusion).
+function useMarkerOutcome(
+  edits: TreeEdits,
+  record: Omit<HiddenRecord, "at">,
+  text: string,
+) {
+  return useChangeOutcome(
+    edits.record,
+    () => text,
+    edits.readAgain,
+    ({ data }: { data: { actionable: boolean } }) => {
+      const shows = edits.showsHidden() || data.actionable;
+      if (!shows) {
+        edits.hid(record);
+      }
+      edits.after(text, !shows);
+    },
+  );
+}
+
+// The confirmation of an exclusion that ends the access of other users to a
+// confidential Ticket (docs/behaviors.md, Confirmation).
+interface MarkerConfirmation {
+  title: string;
+  consequence: string;
+  action: string;
+}
+
+interface MarkerActionsProps {
+  // The record, as the name of the menu states it, such as
+  // "fictional-openssl" or "fictional-openssl, SUSE:FLES-15-SP7:Update".
+  name: string;
+  // The record, as the messages name it, such as "Package fictional-openssl".
+  subject: string;
+  // Whether its own marker excludes it.
+  excluded: boolean;
+  confirmation?: MarkerConfirmation | undefined;
+  exclude: MarkerChange;
+  restore: MarkerChange;
+  edits: TreeEdits;
+  // The record that an exclusion hides.
+  record: Omit<HiddenRecord, "at">;
+}
+
+// The menu of the actions of a package or of a track (ActionsMenu), for a
+// user who excludes and restores them, and while it is open or its change is
+// in progress, which keep it as it started (docs/behaviors.md, The Signed-in
+// User): Exclude, or Restore for a record that its own marker excludes,
+// which Sentinel accepts also below an excluded record (Sentinel
+// docs/features/packages/package-model.md, Exclusion and Actionability).
+// Exclude asks for confirmation where confirmation states it, and is then
+// "Exclude…". While the change is in progress, its item is busy and the menu
+// cannot be closed; once Sentinel answers, the menu closes and the focus
+// returns to its button. The outcome is announced once the read of the
+// Ticket after it arrives, or shows in the message area then when the record
+// no longer shows, as after an exclusion while "Show hidden" is off. A
+// failure shows in the message area, or at the top of the confirmation,
+// which stays open; one that says that another user did the same meanwhile
+// says the state that the record now has (docs/behaviors.md, Where Errors
+// Appear; Outcome of a Change).
+function MarkerActions({
+  name,
+  subject,
+  excluded,
+  confirmation,
+  exclude,
+  restore,
+  edits,
+  record,
+}: MarkerActionsProps) {
+  const showMessage = useShowMessage();
+  const mounted = useMounted();
+  const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<DialogError>();
+  // A failure of the UI itself, which the router shows (src/router.ts).
+  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
+  if (uiFailure !== undefined) {
+    throw uiFailure.error;
+  }
+  const button = () => edits.triggers.get(record.trackId ?? record.packageId);
+  const pending = exclude.pending || restore.pending;
+  if (!edits.manages && !open && !pending && !confirming) {
+    return null;
+  }
+
+  const run = async (which: "exclude" | "restore", fromDialog: boolean) => {
+    if (pending) {
+      return;
+    }
+    setError(undefined);
+    try {
+      await (which === "exclude" ? exclude : restore).run();
+      if (!mounted.current) {
+        return;
+      }
+      setOpen(false);
+      setConfirming(false);
+    } catch (failure) {
+      if (!mounted.current) {
+        return;
+      }
+      if (!isRequestFailure(failure)) {
+        setUiFailure({ error: failure });
+        return;
+      }
+      const conflict = presentMarkerConflict(failure, which, subject);
+      if (conflict !== undefined) {
+        setOpen(false);
+        setConfirming(false);
+        handOffAfterClose(button);
+        showMessage({ tone: "info", text: conflict });
+        return;
+      }
+      const presentation = presentChangeFailure(failure);
+      if (presentation === undefined) {
+        return;
+      }
+      if (fromDialog) {
+        setError(presentation);
+        return;
+      }
+      setOpen(false);
+      handOffAfterClose(button);
+      showMessage({
+        tone: presentation.unconfirmed ? "warning" : "danger",
+        text: presentation.message,
+        reference: presentation.reference,
+      });
+    }
+  };
+
+  let item: ReactNode;
+  if (excluded) {
+    item = (
+      <MenuAction
+        id="restore"
+        icon={Undo2}
+        busy={restore.pending ? "Restoring." : undefined}
+        shouldCloseOnSelect={false}
+        onAction={() => {
+          void run("restore", false);
+        }}
+      >
+        Restore
+      </MenuAction>
+    );
+  } else if (confirmation === undefined) {
+    item = (
+      <MenuAction
+        id="exclude"
+        icon={Ban}
+        busy={exclude.pending ? "Excluding." : undefined}
+        shouldCloseOnSelect={false}
+        onAction={() => {
+          void run("exclude", false);
+        }}
+      >
+        Exclude
+      </MenuAction>
+    );
+  } else {
+    item = (
+      <MenuAction
+        id="exclude"
+        icon={Ban}
+        onAction={() => {
+          setError(undefined);
+          setConfirming(true);
+        }}
+      >
+        Exclude…
+      </MenuAction>
+    );
+  }
+  return (
+    <>
+      <FocusHandOff>
+        <ActionsMenu
+          label={`Actions of ${name}`}
+          isOpen={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (!next && !edits.manages) {
+              handOffAfterClose(button);
+            }
+          }}
+          busy={pending}
+          ref={edits.triggers.ref(record.trackId ?? record.packageId)}
+        >
+          {item}
+        </ActionsMenu>
+      </FocusHandOff>
+      {confirmation !== undefined && (
+        <ConfirmationDialog
+          isOpen={confirming}
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          title={confirmation.title}
+          action={confirmation.action}
+          onConfirm={() => {
+            void run("exclude", true);
+          }}
+          isBusy={exclude.pending}
+          error={error}
+        >
+          {confirmation.consequence}
+        </ConfirmationDialog>
+      )}
+    </>
+  );
+}
+
+interface TrackAffectednessProps {
+  track: TrackDetail;
+  packageId: string;
+  packageName: string;
+  edits: TreeEdits;
+}
+
+// The affectedness of a track: for a user who sets another value on it
+// (TreeEdits), and while its menu is open or its change is in progress,
+// which keep the values that it offered as it opened (docs/behaviors.md,
+// The Signed-in User), a select whose choice applies at once (ChoiceMenu),
+// named such as "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update:
+// Affected", which offers those values and the current one in the order of
+// the contract (Sentinel docs/features/packages/package-model.md, Change
+// Track Status); otherwise, and for a value that the pinned contract does
+// not list, the value with its mark. It asks for no confirmation
+// (docs/behaviors.md, Confirmation). The outcome is announced once the read
+// of the Ticket after it arrives, such as "Affectedness of
+// fictional-openssl · SUSE:FLES-15-SP7:Update changed to Affected."; a
+// failure shows in the message area.
+function TrackAffectedness({
+  track,
+  packageId,
+  packageName,
+  edits,
+}: TrackAffectednessProps) {
+  const showMessage = useShowMessage();
+  const mounted = useMounted();
+  const select = useRef<HTMLButtonElement>(null);
+  const button = () => select.current;
+  const [open, setOpen] = useState(false);
+  const [offeredAtOpen, setOfferedAtOpen] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  // A failure of the UI itself, which the router shows (src/router.ts).
+  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
+  const subject = `${packageName} · ${track.reference}`;
+  const changedText = ({ data }: TrackStatusResponse) =>
+    `Affectedness of ${subject} changed to ${affectednessName(data.status)}.`;
+  const change = useChangeTrackStatus({
+    mutation: useChangeOutcome(
+      edits.record,
+      changedText,
+      edits.readAgain,
+      (response: TrackStatusResponse) => {
+        edits.after(changedText(response));
+      },
+    ),
+  });
+  if (uiFailure !== undefined) {
+    throw uiFailure.error;
+  }
+  const pending = change.isPending;
+  const choicesOf = (settable: ReadonlySet<string>) =>
+    AFFECTEDNESS_ORDER.filter(
+      (status) => settable.has(status) || status === track.status,
+    );
+  // Whether the values settable offer another value than the current one,
+  // which the pinned contract lists.
+  const offers = (settable: ReadonlySet<string>) =>
+    AFFECTEDNESS.has(track.status) &&
+    choicesOf(settable).some((status) => status !== track.status);
+  const choices = choicesOf(open || pending ? offeredAtOpen : edits.settable);
+  const value = <MarkedValue value={track.status} known={AFFECTEDNESS} />;
+  if (!open && !pending && !offers(edits.settable)) {
+    return value;
+  }
+
+  const choose = async (choice: string) => {
+    const status = AFFECTEDNESS_ORDER.find((known) => known === choice);
+    if (pending || status === undefined) {
+      return;
+    }
+    try {
+      await change.mutateAsync({
+        ticketId: edits.ticketId,
+        packageId,
+        trackId: track.id,
+        data: { status },
+      });
+      if (mounted.current) {
+        setOpen(false);
+      }
+    } catch (failure) {
+      if (!mounted.current) {
+        return;
+      }
+      if (!isRequestFailure(failure)) {
+        setUiFailure({ error: failure });
+        return;
+      }
+      setOpen(false);
+      handOffAfterClose(button);
+      const presentation = presentChangeFailure(failure);
+      if (presentation !== undefined) {
+        showMessage({
+          tone: presentation.unconfirmed ? "warning" : "danger",
+          text: presentation.message,
+          reference: presentation.reference,
+        });
+      }
+    }
+  };
+
+  return (
+    <FocusHandOff>
+      <ChoiceMenu
+        ref={select}
+        label={`Affectedness of ${packageName}, ${track.reference}: ${affectednessName(track.status)}`}
+        value={value}
+        choices={choices.map((status) => ({
+          id: status,
+          textValue: affectednessName(status),
+          content: <MarkedValue value={status} known={AFFECTEDNESS} />,
+        }))}
+        chosen={track.status}
+        busy={pending ? (change.variables?.data.status ?? null) : null}
+        busyText="Changing the affectedness."
+        isOpen={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (next) {
+            setOfferedAtOpen(edits.settable);
+          } else if (!offers(edits.settable)) {
+            handOffAfterClose(button);
+          }
+        }}
+        onChoose={(choice) => {
+          void choose(choice);
+        }}
+      />
+    </FocusHandOff>
+  );
+}
+
+// Where the focus moves after an exclusion hides its record while "Show
+// hidden" is off, once the read of the Ticket after it shows the record no
+// longer (docs/behaviors.md, Accessibility, Focus after an action): after a
+// track, to the menu of the actions of the next track of its package that
+// shows, otherwise to that of its package, and, when the package no longer
+// shows either, as after an exclusion of the package: to the menu of the
+// next package that shows, otherwise to "Show hidden", which leads to
+// Restore. When that read fails, the focus stays where it is, and it moves
+// only from the record that left the page, or from the screen's heading,
+// so that a user who moved it meanwhile keeps it.
+function useFocusAfterExclusion(
+  packages: readonly PackageDetail[],
+  read: { dataUpdatedAt: number; errorUpdatedAt: number },
+  triggers: RecordTriggers,
+  showHidden: RefObject<HTMLElement | null>,
+) {
+  const hidden = useRef<HiddenRecord>(undefined);
+  const readAt = read.dataUpdatedAt;
+  const failedAt = read.errorUpdatedAt;
+  // In the render that removes the record, before the record that left
+  // hands the focus to the screen's heading (useFocusHeadingOnRemoval), so
+  // that the page does not scroll to the heading on its way.
+  useLayoutEffect(() => {
+    const gone = hidden.current;
+    if (gone === undefined) {
+      return;
+    }
+    if (failedAt >= gone.at && readAt < gone.at) {
+      hidden.current = undefined;
+      return;
+    }
+    if (readAt < gone.at) {
+      return;
+    }
+    hidden.current = undefined;
+    const index = packages.findIndex((item) => item.id === gone.packageId);
+    const ticketPackage = packages[index];
+    let target: HTMLElement | null | undefined;
+    if (gone.trackId !== undefined && ticketPackage?.actionable === true) {
+      const tracks = ticketPackage.tracks;
+      const at = tracks.findIndex((track) => track.id === gone.trackId);
+      if (tracks[at]?.actionable === true) {
+        return;
+      }
+      const next = tracks.slice(at + 1).find((track) => track.actionable);
+      target = triggers.get(next?.id ?? ticketPackage.id);
+    } else {
+      if (gone.trackId === undefined && ticketPackage?.actionable === true) {
+        return;
+      }
+      const next = packages.slice(index + 1).find((item) => item.actionable);
+      target =
+        next === undefined
+          ? showHidden.current?.querySelector("input")
+          : triggers.get(next.id);
+    }
+    const active = document.activeElement;
+    if (
+      (active === null || active === document.body || active.matches("h1")) &&
+      target !== null &&
+      target !== undefined
+    ) {
+      target.focus();
+    }
+  }, [packages, readAt, failedAt, triggers, showHidden]);
+  return useCallback((record: Omit<HiddenRecord, "at">) => {
+    hidden.current = { ...record, at: Date.now() };
+  }, []);
+}
+
 interface ProductDetailsProps {
   product: ProductDetail;
   release: Release | undefined;
@@ -1866,8 +2428,65 @@ function ReleaseRequests({
   return <RequestCell read={read} kind={RELEASE_REQUEST} empty={empty} />;
 }
 
+interface TrackActionsProps {
+  track: TrackDetail;
+  packageId: string;
+  packageName: string;
+  edits: TreeEdits;
+}
+
+// The menu of the actions of a track (MarkerActions), with Exclude, Soft-Delete
+// Track, POST .../packages/{package_id}/tracks/{track_id}/exclude, or
+// Restore, Restore Track, POST .../tracks/{track_id}/restore (Sentinel
+// docs/features/packages/package-model.md, Soft-Delete Track; Restore
+// Track), neither with confirmation: the exclusion of a track ends no access,
+// since maintainership concerns the package (Sentinel
+// docs/features/packages/package-maintainership.md, Confidential Ticket
+// Visibility).
+function TrackActions({
+  track,
+  packageId,
+  packageName,
+  edits,
+}: TrackActionsProps) {
+  const subject = `Track ${packageName} · ${track.reference}`;
+  const ids = { ticketId: edits.ticketId, packageId, trackId: track.id };
+  const exclude = useExcludeTrack({
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId, trackId: track.id },
+      `${subject} excluded.`,
+    ),
+  });
+  const restore = useRestoreTrack({
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId, trackId: track.id },
+      `${subject} restored.`,
+    ),
+  });
+  return (
+    <MarkerActions
+      name={`${packageName}, ${track.reference}`}
+      subject={subject}
+      excluded={track.deleted_at !== null}
+      exclude={{
+        run: () => exclude.mutateAsync(ids),
+        pending: exclude.isPending,
+      }}
+      restore={{
+        run: () => restore.mutateAsync(ids),
+        pending: restore.isPending,
+      }}
+      edits={edits}
+      record={{ packageId, trackId: track.id }}
+    />
+  );
+}
+
 interface TrackItemProps {
   ticketId: string;
+  packageId: string;
   packageName: string;
   track: TrackDetail;
   // Whether the package that holds the track is hidden.
@@ -1878,6 +2497,7 @@ interface TrackItemProps {
   hasCve: boolean;
   showHidden: boolean;
   now: number;
+  edits: TreeEdits;
 }
 
 // A track of a package, on one line that wraps, with a border line at its
@@ -1896,10 +2516,14 @@ interface TrackItemProps {
 // shows the latest submission request at the end of the line of Submission
 // and the latest release request at the end of the line of QA, and the
 // delivery on the line of a track without a pipeline opens the same requests.
-// Then its Products, as a list with a border line at its left. A hidden track
-// shows its hidden Products; another track only while "Show hidden" is on.
+// For a user who can edit them, the affectedness is a select, in a place at
+// least as wide as the select of Not affected, and the menu of the actions
+// of the track ends the line. Then its Products, as a list with a border
+// line at its left. A hidden track shows its hidden Products; another track
+// only while "Show hidden" is on.
 function TrackItem({
   ticketId,
+  packageId,
   packageName,
   track,
   packageHidden,
@@ -1907,6 +2531,7 @@ function TrackItem({
   hasCve,
   showHidden,
   now,
+  edits,
 }: TrackItemProps) {
   const ref = useRef<HTMLLIElement>(null);
   useFocusHeadingOnRemoval(ref);
@@ -1982,8 +2607,21 @@ function TrackItem({
               />
             )
           )}
-          <span className="min-w-26">
-            <MarkedValue value={track.status} known={AFFECTEDNESS} />
+          <span className="flex items-center gap-1">
+            <span className={edits.settable.size > 0 ? "min-w-34" : "min-w-26"}>
+              <TrackAffectedness
+                track={track}
+                packageId={packageId}
+                packageName={packageName}
+                edits={edits}
+              />
+            </span>
+            <TrackActions
+              track={track}
+              packageId={packageId}
+              packageName={packageName}
+              edits={edits}
+            />
           </span>
         </span>
       </div>
@@ -2018,6 +2656,67 @@ function NeedsYourAction() {
   );
 }
 
+interface PackageActionsProps {
+  ticketPackage: PackageDetail;
+  edits: TreeEdits;
+}
+
+// The menu of the actions of a package (MarkerActions), with Exclude,
+// Soft-Delete Package from Ticket, POST .../packages/{package_id}/exclude,
+// or Restore, Restore Package, POST .../packages/{package_id}/restore
+// (Sentinel docs/features/packages/package-model.md, Soft-Delete Package
+// from Ticket; Restore Package). On a confidential Ticket, the exclusion of
+// a package with maintainers asks for confirmation, since it ends their
+// access to the Ticket unless another path gives it to them, which Restore
+// gives back (docs/behaviors.md, Confirmation; Sentinel
+// docs/features/packages/package-maintainership.md, Confidential Ticket
+// Visibility).
+function PackageActions({ ticketPackage, edits }: PackageActionsProps) {
+  const name = ticketPackage.package_name;
+  const subject = `Package ${name}`;
+  const ids = { ticketId: edits.ticketId, packageId: ticketPackage.id };
+  const exclude = useExcludePackage({
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId: ticketPackage.id },
+      `${subject} excluded.`,
+    ),
+  });
+  const restore = useRestorePackage({
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId: ticketPackage.id },
+      `${subject} restored.`,
+    ),
+  });
+  return (
+    <MarkerActions
+      name={name}
+      subject={subject}
+      excluded={ticketPackage.deleted_at !== null}
+      confirmation={
+        edits.confidential && ticketPackage.maintainers.length > 0
+          ? {
+              title: `Exclude ${name}?`,
+              consequence: `The maintainers of ${name} no longer see this confidential Ticket, unless their roles, an access grant, or another package that they maintain let them. Restore gives them this access back.`,
+              action: "Exclude package",
+            }
+          : undefined
+      }
+      exclude={{
+        run: () => exclude.mutateAsync(ids),
+        pending: exclude.isPending,
+      }}
+      restore={{
+        run: () => restore.mutateAsync(ids),
+        pending: restore.isPending,
+      }}
+      edits={edits}
+      record={{ packageId: ticketPackage.id }}
+    />
+  );
+}
+
 interface PackageGroupProps {
   ticketId: string;
   ticketPackage: PackageDetail;
@@ -2027,13 +2726,14 @@ interface PackageGroupProps {
   hasCve: boolean;
   showHidden: boolean;
   now: number;
+  edits: TreeEdits;
 }
 
 // A package as a group under a band (GroupBand): its name as a level-three
-// heading, its maintainers, and the label of its own hidden state; its
-// tracks follow 12 px below the band, indented by 12 px, 12 px apart. A
-// hidden package shows its hidden tracks; another package only while "Show
-// hidden" is on.
+// heading, its maintainers, and the label of its own hidden state, and at
+// its end the menu of its actions; its tracks follow 12 px below the band,
+// indented by 12 px, 12 px apart. A hidden package shows its hidden tracks;
+// another package only while "Show hidden" is on.
 function PackageGroup({
   ticketId,
   ticketPackage,
@@ -2041,6 +2741,7 @@ function PackageGroup({
   hasCve,
   showHidden,
   now,
+  edits,
 }: PackageGroupProps) {
   const ref = useRef<HTMLLIElement>(null);
   useFocusHeadingOnRemoval(ref);
@@ -2050,7 +2751,12 @@ function PackageGroup({
   );
   return (
     <li ref={ref}>
-      <GroupBand heading={ticketPackage.package_name} level={3} muted={hidden}>
+      <GroupBand
+        heading={ticketPackage.package_name}
+        level={3}
+        muted={hidden}
+        actions={<PackageActions ticketPackage={ticketPackage} edits={edits} />}
+      >
         <Maintainers
           users={ticketPackage.maintainers}
           packageName={ticketPackage.package_name}
@@ -2058,11 +2764,12 @@ function PackageGroup({
         <HiddenLabels excluded={ticketPackage.deleted_at !== null} />
       </GroupBand>
       {tracks.length > 0 && (
-        <ul className="ms-3 mt-3 flex flex-col gap-3 text-15">
+        <ul className="mx-3 mt-3 flex flex-col gap-3 text-15">
           {tracks.map((track) => (
             <TrackItem
               key={track.id}
               ticketId={ticketId}
+              packageId={ticketPackage.id}
               packageName={ticketPackage.package_name}
               track={track}
               packageHidden={hidden}
@@ -2072,6 +2779,7 @@ function PackageGroup({
               hasCve={hasCve}
               showHidden={showHidden}
               now={now}
+              edits={edits}
             />
           ))}
         </ul>
@@ -2122,7 +2830,7 @@ interface PackagesPartProps {
 // The package tree of the Ticket, from Get Ticket (Sentinel
 // docs/features/tickets/tickets.md, TicketDetail; Sentinel
 // docs/features/packages/package-model.md, List Ticket Packages), in the
-// order of the API, read-only: each package as a group under a band, 32 px
+// order of the API: each package as a group under a band, 32 px
 // apart, its tracks and their Products as nested lists. The excluded and EOL
 // records are hidden until "Show hidden", a switch at the end of the line of
 // the heading followed by the number of hidden records, shows them, in
@@ -2137,11 +2845,61 @@ interface PackagesPartProps {
 // while they stay shown, marked as being updated while they are read again
 // (docs/behaviors.md, Where Errors Appear; Loading). A Ticket without packages shows
 // "No packages.", and a tree whose packages are all hidden, "All packages
-// are hidden.".
+// are hidden.". A user who holds manage_packages, on a Ticket whose status
+// accepts the edit, excludes and restores its packages and tracks and sets
+// their affectedness, and a user who holds admin_ticket_ops sets Fixed, as
+// does manage_packages on a Ticket without a CVE (TreeEdits; Sentinel
+// docs/features/identity/rbac.md, Endpoint Permission Map, Ticket Packages);
+// after an edit, the screen reads again what it affects.
 function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
   const { hidden } = ticketOverviewRoute.useSearch();
   const navigate = useNavigate();
   const showHidden = hidden === HIDDEN_SHOWN;
+  const ticketId = ticket.ticket_id;
+  const user = useSignedInUser();
+  const ticketRead = useGetTicket(ticketId, { query: { enabled: false } });
+  const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
+  const outcome = useOutcomeAfterRead(ticketRead, record);
+  const readAgain = useReadAfterTicketChange(ticketId);
+  const [triggers] = useState(createRecordTriggers);
+  const switchPlace = useRef<HTMLSpanElement>(null);
+  const hid = useFocusAfterExclusion(
+    ticket.packages,
+    ticketRead,
+    triggers,
+    switchPlace,
+  );
+  const showsHidden = useRef(showHidden);
+  useLayoutEffect(() => {
+    showsHidden.current = showHidden;
+  }, [showHidden]);
+  const capabilities = user?.capabilities ?? [];
+  const editable = PACKAGE_EDITABLE_STATUSES.has(ticket.status);
+  const manages = editable && capabilities.includes("manage_packages");
+  const fixes =
+    editable &&
+    (capabilities.includes("admin_ticket_ops") ||
+      (manages && ticket.cve === null));
+  const settable = useMemo(
+    () =>
+      new Set<string>([
+        ...(manages ? MANAGED_AFFECTEDNESS : []),
+        ...(fixes ? [PackageStatusValue.fixed] : []),
+      ]),
+    [manages, fixes],
+  );
+  const edits: TreeEdits = {
+    ticketId,
+    manages,
+    settable,
+    confidential: ticket.is_confidential,
+    record,
+    readAgain,
+    after: outcome.after,
+    showsHidden: () => showsHidden.current,
+    hid,
+    triggers,
+  };
   const { marks, warning, updating } = yourWork.sent
     ? marksPlace(yourWork.read, {
         notShown: "The tracks that wait for you couldn't be shown.",
@@ -2167,20 +2925,24 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
       hashScrollIntoView: false,
     });
   };
-  return (
+  // The announcements of the edits follow the part, apart from the warning
+  // of the read of the work of a maintainer, which is its status region.
+  const part = (
     <Part
       id={PACKAGES_ANCHOR}
       heading="Packages"
       actions={
         ticket.packages.length > 0 ? (
-          <Switch
-            isSelected={showHidden}
-            onChange={toggle}
-            isDisabled={count === 0}
-          >
-            Show hidden{" "}
-            <span className="tabular-nums">{COUNT.format(count)}</span>
-          </Switch>
+          <span ref={switchPlace} className="contents">
+            <Switch
+              isSelected={showHidden}
+              onChange={toggle}
+              isDisabled={count === 0}
+            >
+              Show hidden{" "}
+              <span className="tabular-nums">{COUNT.format(count)}</span>
+            </Switch>
+          </span>
         ) : undefined
       }
     >
@@ -2204,12 +2966,19 @@ function PackagesPart({ ticket, now, yourWork }: PackagesPartProps) {
                 hasCve={ticket.cve !== null}
                 showHidden={showHidden}
                 now={now}
+                edits={edits}
               />
             ))}
           </ul>
         )}
       </div>
     </Part>
+  );
+  return (
+    <>
+      {part}
+      {outcome.region}
+    </>
   );
 }
 

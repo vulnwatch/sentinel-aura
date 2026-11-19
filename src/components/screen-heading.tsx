@@ -110,7 +110,9 @@ export function FocusAfterNavigation({ children }: FocusAfterNavigationProps) {
 // action), with or without an action of the user. Inside an open dialog,
 // which keeps the rest of the page out of reach, it moves to the dialog
 // itself instead; when the dialog leaves the page with the element, as it
-// closes, the dialog decides where the focus returns.
+// closes, the dialog decides where the focus returns. When the screen has
+// already moved the focus to the element that takes the place of the one
+// that left, in the same render, the focus stays there.
 export function useFocusHeadingOnRemoval(ref: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const element = ref.current;
@@ -118,6 +120,12 @@ export function useFocusHeadingOnRemoval(ref: RefObject<HTMLElement | null>) {
     return () => {
       if (element?.contains(document.activeElement)) {
         queueMicrotask(() => {
+          if (
+            document.activeElement !== null &&
+            document.activeElement !== document.body
+          ) {
+            return;
+          }
           if (dialog === null) {
             focusScreenHeading();
           } else if (dialog.isConnected) {
