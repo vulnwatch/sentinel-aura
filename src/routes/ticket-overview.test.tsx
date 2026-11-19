@@ -13463,6 +13463,41 @@ describe("the edits of the package tree", () => {
       );
   });
 
+  test("announce the outcome of each of two edits whose reads overlap, together, in their order", async () => {
+    const reads: ReturnType<typeof later>[] = [];
+    let first = true;
+    showingEditable(undefined, {
+      ticket: () => {
+        if (first) {
+          first = false;
+          return ticketResponse(
+            fictionalTicketDetail({ packages: editableTree() }),
+          );
+        }
+        const read = later();
+        reads.push(read);
+        return read.promise;
+      },
+    });
+    const { screen } = await renderTree();
+
+    await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
+    await expect.poll(() => reads.length).toBe(1);
+    await chooseAffectedness(screen, OPENSSL_FLES, "Affected");
+    await expect.poll(() => reads.length).toBe(2);
+    for (const read of reads) {
+      read.resolve(
+        ticketResponse(fictionalTicketDetail({ packages: editableTree() })),
+      );
+    }
+
+    await expect
+      .poll(() => announcements(screen))
+      .toContain(
+        "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to Not affected. Affectedness of fictional-openssl · fles-16.0 changed to Affected.",
+      );
+  });
+
   test("send nothing when the user chooses the affectedness that the track has, and close the menu", async () => {
     const spy = showingEditable();
     const { screen } = await renderTree();

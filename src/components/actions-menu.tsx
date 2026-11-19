@@ -10,8 +10,8 @@ interface ActionsMenuProps {
   label: string;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  // Whether the change of one of its items is in progress: the button is
-  // busy, and the menu cannot be closed until the change ends
+  // Whether the change of one of its items is in progress, which its item
+  // shows: the menu cannot be closed until the change ends
   // (docs/behaviors.md, Loading).
   busy: boolean;
   ref?: Ref<HTMLButtonElement> | undefined;
@@ -50,7 +50,6 @@ export function ActionsMenu({
           tooltip="Actions"
           icon={Ellipsis}
           size="small"
-          isBusy={busy}
           onPress={() => undefined}
         />
       </span>

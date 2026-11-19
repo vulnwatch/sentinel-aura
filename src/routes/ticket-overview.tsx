@@ -1605,11 +1605,35 @@ interface TreeEdits {
   triggers: RecordTriggers;
 }
 
-// An exclusion or a restore of a record: it sends the change, and resolves
-// with the actionability of the record after it.
+// An exclusion or a restore of a record, which sends the change.
 interface MarkerChange {
-  run: () => Promise<{ data: { actionable: boolean } }>;
+  run: () => Promise<unknown>;
   pending: boolean;
+}
+
+// The callbacks of an exclusion or a restore of a record (useChangeOutcome),
+// which says so in its outcome, such as "Package fictional-openssl
+// excluded.": once Sentinel confirms it, the outcome waits for the read of
+// the Ticket after it, announced, or shown in the message area when the
+// record no longer shows, as after an exclusion while "Show hidden" is off,
+// and then the focus moves on (useFocusAfterExclusion).
+function useMarkerOutcome(
+  edits: TreeEdits,
+  record: Omit<HiddenRecord, "at">,
+  text: string,
+) {
+  return useChangeOutcome(
+    edits.record,
+    () => text,
+    edits.readAgain,
+    ({ data }: { data: { actionable: boolean } }) => {
+      const shows = edits.showsHidden() || data.actionable;
+      if (!shows) {
+        edits.hid(record);
+      }
+      edits.after(text, !shows);
+    },
+  );
 }
 
 // The confirmation of an exclusion that ends the access of other users to a
@@ -1683,20 +1707,12 @@ function MarkerActions({
     }
     setError(undefined);
     try {
-      const { data } = await (which === "exclude" ? exclude : restore).run();
+      await (which === "exclude" ? exclude : restore).run();
       if (!mounted.current) {
         return;
       }
       setOpen(false);
       setConfirming(false);
-      const shows = edits.showsHidden() || data.actionable;
-      if (!shows) {
-        edits.hid(record);
-      }
-      edits.after(
-        `${subject} ${which === "exclude" ? "excluded" : "restored"}.`,
-        !shows,
-      );
     } catch (failure) {
       if (!mounted.current) {
         return;
@@ -1849,7 +1865,14 @@ function TrackAffectedness({
   const changedText = ({ data }: TrackStatusResponse) =>
     `Affectedness of ${subject} changed to ${affectednessName(data.status)}.`;
   const change = useChangeTrackStatus({
-    mutation: useChangeOutcome(edits.record, changedText, edits.readAgain),
+    mutation: useChangeOutcome(
+      edits.record,
+      changedText,
+      edits.readAgain,
+      (response: TrackStatusResponse) => {
+        edits.after(changedText(response));
+      },
+    ),
   });
   if (uiFailure !== undefined) {
     throw uiFailure.error;
@@ -1876,7 +1899,7 @@ function TrackAffectedness({
       return;
     }
     try {
-      const response = await change.mutateAsync({
+      await change.mutateAsync({
         ticketId: edits.ticketId,
         packageId,
         trackId: track.id,
@@ -1884,7 +1907,6 @@ function TrackAffectedness({
       });
       if (mounted.current) {
         setOpen(false);
-        edits.after(changedText(response));
       }
     } catch (failure) {
       if (!mounted.current) {
@@ -1944,8 +1966,8 @@ function TrackAffectedness({
 // shows either, as after an exclusion of the package: to the menu of the
 // next package that shows, otherwise to "Show hidden", which leads to
 // Restore. When that read fails, the focus stays where it is, and it moves
-// only from where the record that left the page handed it off, the screen's
-// heading, or the body, so that a user who moved it meanwhile keeps it.
+// only from the record that left the page, so that a user who moved it
+// meanwhile keeps it.
 function useFocusAfterExclusion(
   packages: readonly PackageDetail[],
   read: { dataUpdatedAt: number; errorUpdatedAt: number },
@@ -1955,7 +1977,10 @@ function useFocusAfterExclusion(
   const hidden = useRef<HiddenRecord>(undefined);
   const readAt = read.dataUpdatedAt;
   const failedAt = read.errorUpdatedAt;
-  useEffect(() => {
+  // In the render that removes the record, before the record that left
+  // hands the focus to the screen's heading (useFocusHeadingOnRemoval), so
+  // that the page does not scroll to the heading on its way.
+  useLayoutEffect(() => {
     const gone = hidden.current;
     if (gone === undefined) {
       return;
@@ -1970,7 +1995,7 @@ function useFocusAfterExclusion(
     hidden.current = undefined;
     const index = packages.findIndex((item) => item.id === gone.packageId);
     const ticketPackage = packages[index];
-    let target: () => HTMLElement | null | undefined;
+    let target: HTMLElement | null | undefined;
     if (gone.trackId !== undefined && ticketPackage?.actionable === true) {
       const tracks = ticketPackage.tracks;
       const at = tracks.findIndex((track) => track.id === gone.trackId);
@@ -1978,45 +2003,30 @@ function useFocusAfterExclusion(
         return;
       }
       const next = tracks.slice(at + 1).find((track) => track.actionable);
-      target = () => triggers.get(next?.id ?? ticketPackage.id);
+      target = triggers.get(next?.id ?? ticketPackage.id);
     } else {
       if (gone.trackId === undefined && ticketPackage?.actionable === true) {
         return;
       }
       const next = packages.slice(index + 1).find((item) => item.actionable);
-      target = () =>
+      target =
         next === undefined
           ? showHidden.current?.querySelector("input")
           : triggers.get(next.id);
     }
-    let frames = 0;
-    const move = () => {
-      const active = document.activeElement;
-      const handedOff =
-        active === null || active === document.body || active.matches("h1");
-      if (!handedOff) {
-        return;
-      }
-      const element = target();
-      if (element === null || element === undefined) {
-        if (frames < FOCUS_FRAMES) {
-          frames += 1;
-          requestAnimationFrame(move);
-        }
-        return;
-      }
-      element.focus();
-    };
-    requestAnimationFrame(move);
+    const active = document.activeElement;
+    if (
+      (active === null || active === document.body || active.matches("h1")) &&
+      target !== null &&
+      target !== undefined
+    ) {
+      target.focus();
+    }
   }, [packages, readAt, failedAt, triggers, showHidden]);
   return useCallback((record: Omit<HiddenRecord, "at">) => {
     hidden.current = { ...record, at: Date.now() };
   }, []);
 }
-
-// How many frames the focus waits at most for the element that takes it to
-// show after an exclusion.
-const FOCUS_FRAMES = 10;
 
 interface ProductDetailsProps {
   product: ProductDetail;
@@ -2431,17 +2441,17 @@ function TrackActions({
   const subject = `Track ${packageName} · ${track.reference}`;
   const ids = { ticketId: edits.ticketId, packageId, trackId: track.id };
   const exclude = useExcludeTrack({
-    mutation: useChangeOutcome(
-      edits.record,
-      () => `${subject} excluded.`,
-      edits.readAgain,
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId, trackId: track.id },
+      `${subject} excluded.`,
     ),
   });
   const restore = useRestoreTrack({
-    mutation: useChangeOutcome(
-      edits.record,
-      () => `${subject} restored.`,
-      edits.readAgain,
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId, trackId: track.id },
+      `${subject} restored.`,
     ),
   });
   return (
@@ -2655,17 +2665,17 @@ function PackageActions({ ticketPackage, edits }: PackageActionsProps) {
   const subject = `Package ${name}`;
   const ids = { ticketId: edits.ticketId, packageId: ticketPackage.id };
   const exclude = useExcludePackage({
-    mutation: useChangeOutcome(
-      edits.record,
-      () => `${subject} excluded.`,
-      edits.readAgain,
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId: ticketPackage.id },
+      `${subject} excluded.`,
     ),
   });
   const restore = useRestorePackage({
-    mutation: useChangeOutcome(
-      edits.record,
-      () => `${subject} restored.`,
-      edits.readAgain,
+    mutation: useMarkerOutcome(
+      edits,
+      { packageId: ticketPackage.id },
+      `${subject} restored.`,
     ),
   });
   return (

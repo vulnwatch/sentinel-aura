@@ -1270,11 +1270,11 @@ Exclusion and Actionability; API Endpoints):
 - The affectedness of a track is a select (`docs/design-system.md`, Forms),
   named such as "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update:
   Affected", for a user who can set a value other than the current one,
-  which it offers with the current one, in the order of the contract:
-  Analysis, Affected, Not affected, and Won't fix with `manage_packages`, and
-  Fixed with `admin_ticket_ops`, or with `manage_packages` on a Ticket without
-  a CVE (same document, Manual Transitions; `docs/screen-map.md`, Roles,
-  Principles). So a user who holds `admin_ticket_ops` alone sees the select
+  which it offers with the current one, in the order of the contract,
+  Analysis, Affected, Not affected, Fixed, and Won't fix: Fixed with
+  `admin_ticket_ops`, or with `manage_packages` on a Ticket without a CVE,
+  and the others with `manage_packages` (same document, Manual Transitions;
+  `docs/screen-map.md`, Roles, Principles). So a user who holds `admin_ticket_ops` alone sees the select
   with Fixed, and no menu of actions, and a Fixed track shows them its
   affectedness as text. An affectedness that the pinned contract does not
   list shows as received, without a select. The request sends the value
@@ -1289,18 +1289,19 @@ Exclusion and Actionability; API Endpoints):
   package that they maintain let them. Restore gives them this access
   back.", with Cancel and Exclude package, a danger button. While it is in
   progress, the confirmation cannot be closed; once Sentinel confirms it, it
-  closes.
-- An item or a value chosen starts its change at once: the item or the
-  value is busy, "Excluding.", "Restoring.", or "Changing the affectedness.",
-  and the menu cannot be closed (`docs/behaviors.md`, Loading); choosing the
-  current affectedness closes the menu without a request. Once Sentinel
-  answers, the menu closes and the focus returns to its button. The menus
-  and the selects stay as they were while they are open and while their
-  change is in progress, also when a read of the signed-in user takes their
-  capability away (`docs/behaviors.md`, The Signed-in User).
+  closes. A change of the affectedness asks for none either, also one that
+  the user cannot reverse, such as Fixed for a user who holds
+  `admin_ticket_ops` alone, or another value for a user who sets Fixed only on
+  a Ticket without a CVE: another user can reverse it in the UI
+  (`docs/behaviors.md`, Confirmation).
+- An item or a value chosen starts its change at once, as a menu does
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips; Forms;
+  `docs/behaviors.md`, Loading; The Signed-in User): while it is busy,
+  assistive technologies read with it, as its description, "Excluding.",
+  "Restoring.", or "Changing the affectedness.".
 - An edit can assign an unassigned Ticket to the user, move it from New to
-  Analysis, and change its status and its deadlines (same document, User-
-  Attributed Status Change; Sentinel `docs/features/tickets/tickets.md`,
+  Analysis, and change its status and its deadlines (Sentinel
+  `docs/features/packages/package-model.md`, User-Attributed Status Change; Sentinel `docs/features/tickets/tickets.md`,
   Auto-Assignment on Unassigned Tickets; Automatic Status Evaluation).
   Whatever the outcome, the screen then reads again the Ticket, the work of
   a maintainer on it, the users who acted on it, its audit log, and the
@@ -1322,9 +1323,12 @@ Exclusion and Actionability; API Endpoints):
   its package; after an exclusion of a package, or of a track whose package
   no longer shows, to the menu of the next package that shows, otherwise to
   "Show hidden", which leads to Restore (`docs/behaviors.md`, Accessibility,
-  Focus after an action). When that read fails, the focus stays where it is,
-  and a later read that removes the record moves it to the screen's heading,
-  as when any read removes the element with the focus. While "Show hidden"
+  Focus after an action). When that read fails other than with a `403` or a
+  `404`, which replace the screen (States), the focus stays where it is, and
+  a later read that removes the record moves it to the screen's heading, as
+  when any read removes the element with the focus; so does a read that
+  removes the record after an exclusion that failed, such as one that
+  another user made meanwhile. While "Show hidden"
   is on, the record stays, in gray with its label, and the focus stays on
   its menu. When a read removes a select or a menu of actions while it, or
   its open menu, holds the focus, as after Fixed for a user who can set no
@@ -1619,8 +1623,8 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   the same meanwhile: `409 PACKAGE_ALREADY_EXCLUDED` of Exclude, "Package
   fictional-openssl is already excluded.", and `422 PACKAGE_NOT_EXCLUDED` of
   Restore, "Track fictional-openssl · SUSE:FLES-15-SP7:Update is no longer
-  excluded.", each in the message area in the `info` tone, also after a
-  confirmation, which then closes (Sentinel
+  excluded.", each in the message area in the `info` tone as Sentinel
+  answers, also after a confirmation, which then closes (Sentinel
   `docs/features/packages/package-model.md`, Soft-Delete Package from Ticket;
   Restore Package; Soft-Delete Track; Restore Track). Either code of the
   other operation, or of Change Track Status, has the presentation of its

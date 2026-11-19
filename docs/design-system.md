@@ -1558,11 +1558,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   vector, shows its value in monospace (Font).
 - A select of a value of a record within the line of the record, whose
   choice applies at once, such as the affectedness of a track of a Ticket,
-  is quiet, so that a long list of records stays light: a button 28 px high,
-  without a boundary or a fill, with a 6 px radius, 8 px of space before the
-  value and 6 px after `chevron-down`, `surface-hover` under the pointer,
-  in `text-14` and `fg`, which keeps its colors in a hidden record (Detail
-  Screens); the value shows as its choice does, such as with its mark, then
+  is quiet, so that a long list of records stays light: a quiet button
+  (Buttons and Links) 28 px high, with 8 px of space before the value and
+  6 px after `chevron-down`, in `text-14`, which keeps its colors in a
+  hidden record (Detail Screens); the value shows as its choice does, such as with its mark, then
   `chevron-down` at 14 px in `fg-muted`, 6 px later. Its name states what it
   chooses, its record, and the value, such as "Affectedness of
   fictional-openssl, SUSE:FLES-15-SP7:Update: Affected". It opens its
@@ -1688,8 +1687,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   in `fg`, which keeps its color in a hidden record (Detail Screens), named
   "Actions of" and its record, such as "Actions of fictional-openssl",
   whose tooltip says "Actions", at the end of the line or the band of the
-  record, which opens the actions below its end, at least as wide as their
-  longest item (Detail Screens). The menu takes the name of its button.
+  record, which opens the actions below its end, at least 176 px wide and as
+  wide as their longest item (Detail Screens). The menu takes the name of
+  its button.
 - A tooltip inverts the colors of text: `surface` on an `fg` background, in
   `text-13`, weight 500, with a 6 px radius and 6 px by 10 px of padding; how
   many more values a "+N" has than its tooltip lists is in `muted-on-fg`
