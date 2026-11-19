@@ -14594,8 +14594,13 @@ describe("the actions of a Product", () => {
 
     await userEvent.keyboard("{ArrowDown}");
 
-    expect(menu.element().contains(document.activeElement)).toBe(true);
-    expect(document.activeElement?.getAttribute("role")).toBe("menuitem");
+    await expect
+      .poll(
+        () =>
+          menu.element().contains(document.activeElement) &&
+          document.activeElement?.getAttribute("role") === "menuitem",
+      )
+      .toBe(true);
   });
 
   test("keep the actions that the popover offered as it opened, after a read of the signed-in user takes manage_packages away", async () => {
