@@ -470,19 +470,19 @@ edits of its packages, tracks, and Products (Actions; Sentinel
 - **Hidden records.** A package, a track, or a Product that is not actionable,
   excluded, EOL, or holding nothing actionable, is hidden. "Show hidden", a
   switch at the end of the line of the heading of the part, followed by the
-  number of the hidden records whose parent is not hidden, each counting
-  with what it holds, shows them in `fg-muted` (`docs/design-system.md`, Detail
-  Screens): a record that its own marker excludes carries the label
-  Excluded, and a Product at the end of its life the label EOL, also under a
-  hidden parent. Its state is `hidden=shown` in the URL, which it adds to
-  the browser history, keeping the anchor and the scroll position. Without
-  hidden records, it is off and disabled: when a read of the Ticket shows
-  none while it is on, as after the restore of the last one, the screen
-  removes `hidden=shown` from its URL, in place of the URL in the browser
-  history, keeping the anchor, the scroll position, and the focus, and an
-  open dialog with its input, without asking (`docs/behaviors.md`,
-  Confirmation); the tree shows the same records either way. While it is off and every package is
-  hidden, the part says "All packages are hidden.".
+  number of the hidden records whose parent is not hidden, each counting with
+  what it holds, shows them in `fg-muted` (`docs/design-system.md`, Detail
+  Screens): a record that its own marker excludes carries the label Excluded,
+  and a Product at the end of its life the label EOL, also under a hidden
+  parent. Its state is `hidden=shown` in the URL, which it adds to the browser
+  history, keeping the anchor and the scroll position. Without hidden records,
+  it is off and disabled: when a read of the Ticket shows none while it is on,
+  as after the restore of the last one, the screen removes `hidden=shown` from
+  its URL, in place of the URL in the browser history, keeping the anchor, the
+  scroll position, and the focus, and an open dialog with its input, without
+  asking (`docs/behaviors.md`, Confirmation); the tree shows the same records
+  either way. While it is off and every package is hidden, the part says "All
+  packages are hidden.".
 - **The tracks that wait for the signed-in user.** For a user whom
   `maintainers` lists for a package that is not excluded, the screen reads
   their work on the Ticket, `GET /api/v1/my/packages/tickets/{ticket_id}`,

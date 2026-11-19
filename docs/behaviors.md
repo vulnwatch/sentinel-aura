@@ -690,8 +690,9 @@ Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
 it. The navigations that the session forces ask nothing (Session State), and
 neither does a screen that removes from its URL, in place of the URL, a
-search parameter that no longer applies, which keeps the screen, its dialog,
-and the input (Invalid Search Parameters). In a
+search parameter that it does not accept, also one that it stops accepting
+while it is open, as after a read, which keeps the screen, its dialog, and
+the input (Invalid Search Parameters). In a
 form, the confirmation comes when the form sends its request, such as when
 Save removes a role. The screen document states which of its actions ask for
 confirmation (`docs/conventions.md`, Screen Documents).
