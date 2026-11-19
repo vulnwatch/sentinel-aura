@@ -1275,8 +1275,9 @@ Package Eligibility (Override Model); API Endpoints):
   for a record that its own marker excludes, Restore, with `undo-2`. Sentinel
   accepts Exclude also below an excluded record, which records its own
   marker (same document, Manual Exclusion Markers).
-- For a user who held `manage_packages` as it opened (`docs/behaviors.md`,
-  The Signed-in User), the popover of a Product ends with its actions, a
+- For a user who held `manage_packages` as the popover of a Product
+  opened, on a Ticket whose status accepted them then (`docs/behaviors.md`,
+  The Signed-in User), the popover ends with the actions of the Product, a
   menu named "Actions" below a `border` line (`docs/design-system.md`,
   Menus, Popovers, and Tooltips): Mark as eligible, for a Product that is
   not eligible, or Mark as not eligible, for one that is, each with
@@ -1293,8 +1294,9 @@ Package Eligibility (Override Model); API Endpoints):
   screen shows it, except while an action is in progress: when a read turns
   Exclude from this track into Restore, or one Mark into the other, the item
   keeps the focus, and when it removes the item with the focus, such as
-  Return to automatic eligibility after another user did it, the focus
-  stays on the menu.
+  Return to automatic eligibility after another user did it, the menu, the
+  one stop of the Tab key of its items, takes the focus in its place
+  (`docs/behaviors.md`, Accessibility, Focus after an action).
 - The affectedness of a track is a select (`docs/design-system.md`, Forms),
   named such as "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update:
   Affected", for a user who can set a value other than the current one,

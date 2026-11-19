@@ -1681,13 +1681,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
   icon, as on a busy button (Buttons and Links), or, in an item of a single
   selection, of its `check` at its end (`docs/behaviors.md`, Loading). An
-  item that holds the focus keeps it, and assistive technologies read with
-  it, as its description, the change in progress, in the words of the
-  document that specifies its menu, such as "Excluding." in a screen
-  document or "Signing out" in Account Menu. An item whose change applies
-  at once keeps its menu open, busy, until Sentinel answers; the menu cannot
-  be closed meanwhile, and then closes, with the focus on its button
-  (`docs/behaviors.md`, Loading).
+  item that holds the focus keeps it while it is busy, and assistive
+  technologies read with it, as its description, the change in progress, in
+  the words of the document that specifies its menu, such as "Excluding." in
+  a screen document or "Signing out" in Account Menu. An item whose change
+  applies at once keeps its menu open, busy, until Sentinel answers; the
+  menu cannot be closed meanwhile, and then closes, with the focus on its
+  button (`docs/behaviors.md`, Loading).
 - The other actions of a record within a part, such as a package or a track
   of a Ticket, are a menu: an icon button of 24 px with `ellipsis` at 16 px
   in `fg`, which keeps its color in a hidden record (Detail Screens), named

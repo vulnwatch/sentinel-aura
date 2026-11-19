@@ -14535,6 +14535,67 @@ describe("the actions of a Product", () => {
     await expect
       .poll(() => itemsOf(popover, "menuitem"))
       .toEqual(["Mark as not eligible", "Restore"]);
+
+    await userEvent.keyboard("{ArrowUp}");
+    await expect
+      .element(popover.getByRole("menuitem", { name: "Mark as not eligible" }))
+      .toHaveFocus();
+    // Meanwhile another user sets the Product as not eligible.
+    tree = productTree({
+      ...SET_BY_HAND,
+      deleted_at: "2099-10-10T10:00:00Z",
+      actionable: false,
+      non_actionable_reason: "product_excluded",
+    });
+
+    await returnToForeground();
+
+    await expect
+      .element(
+        popover.getByRole("menuitem", {
+          name: "Mark as eligible",
+          exact: true,
+        }),
+      )
+      .toHaveFocus();
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual([
+        "Mark as eligible",
+        "Return to automatic eligibility",
+        "Restore",
+      ]);
+  });
+
+  test("leave the focus on the menu, the one stop of Tab of its items, when a read removes the item that holds it", async () => {
+    let tree = productTree(SET_BY_HAND);
+    showingEditable(() => tree);
+    const { screen } = await renderTree();
+    const popover = await openProduct(screen, SP7_PRODUCT);
+    await userEvent.keyboard("{Tab}{ArrowDown}");
+    await expect
+      .element(
+        popover.getByRole("menuitem", {
+          name: "Return to automatic eligibility",
+        }),
+      )
+      .toHaveFocus();
+    // Meanwhile another user returns the Product to automatic eligibility.
+    tree = productTree();
+
+    await returnToForeground();
+
+    await expect
+      .poll(() => itemsOf(popover, "menuitem"))
+      .toEqual(["Mark as not eligible", "Exclude from this track"]);
+    const menu = popover.getByRole("menu", { name: "Actions", exact: true });
+    await expectFocusSettledOn(menu);
+    await expect.element(popover).toBeVisible();
+
+    await userEvent.keyboard("{ArrowDown}");
+
+    expect(menu.element().contains(document.activeElement)).toBe(true);
+    expect(document.activeElement?.getAttribute("role")).toBe("menuitem");
   });
 
   test("keep the actions that the popover offered as it opened, after a read of the signed-in user takes manage_packages away", async () => {

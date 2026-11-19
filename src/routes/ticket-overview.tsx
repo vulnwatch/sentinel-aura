@@ -2320,8 +2320,9 @@ function ProductName({
   };
 
   // Each item keeps its id while a read changes its action, as from Exclude
-  // to Restore, so that it keeps the focus; an item that a read removes
-  // leaves the focus on the menu.
+  // to Restore, so that it keeps the focus; when a read removes the item
+  // with the focus, React Aria gives it to the menu, the one stop of Tab of
+  // its items.
   const item = (
     action: ProductAction,
     icon: LucideIcon,
