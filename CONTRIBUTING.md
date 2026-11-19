@@ -128,8 +128,9 @@ backend's API
 
 - Sign in with local authentication as a user of the dataset, for example
   `jdoe` (`admin`), `asmith` (`vulnerability_analyst`), `cwhite`
-  (`restricted_analyst`), or `dbrown` (no role), with the dataset's published
-  password `example-dataset-password` (Sentinel
+  (`restricted_analyst`), `dbrown` (no role, the maintainer of packages), or
+  `hgray` (no role, a reader who maintains no package), with the dataset's
+  published password `example-dataset-password` (Sentinel
   `docs/features/platform/example-dataset.md`, Credentials; Users, which lists
   every user).
 - Use Chrome or Firefox: Safari does not accept the session cookie from

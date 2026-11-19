@@ -2986,8 +2986,8 @@ test.describe("the references", () => {
   test("shows a user who does not manage references neither Add reference nor the actions", async ({
     page,
   }) => {
-    // dbrown holds no role (Users).
-    await signIn(page, "dbrown");
+    // hgray, the reader, holds no role (Users).
+    await signIn(page, "hgray");
 
     await openReferences(page, "SNTL-12");
 
@@ -3765,10 +3765,10 @@ test("shows a maintainer the access grants of a confidential Ticket, without Gra
 test("shows Not found for a Ticket that the user cannot see", async ({
   page,
 }) => {
-  // dbrown, without a role, sees no confidential Ticket but those of the
-  // packages that they maintain; SNTL-27 has no maintainer and no access
-  // grant (Embargoes).
-  await signIn(page, "dbrown");
+  // hgray, the reader, sees no confidential Ticket: hgray holds no role,
+  // maintains no package, and holds no access grant (Users). SNTL-27 is
+  // confidential (Embargoes).
+  await signIn(page, "hgray");
 
   await page.goto("/tickets/SNTL-27");
 

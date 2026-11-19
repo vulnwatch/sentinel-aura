@@ -863,10 +863,10 @@ test("lands a bot account on the New view, without Assigned to me", async ({
 test("lands a user without a role on the All view, which the Tickets entry opens, with the views of every user and the attention summary", async ({
   page,
 }) => {
-  // dbrown holds no role, and sees the non-confidential Tickets and the
-  // confidential SNTL-18 of a package that dbrown maintains (Packages,
-  // Tracks, and Maintainers).
-  await signIn(page, "dbrown");
+  // hgray, the reader, holds no role, maintains no package, and holds no
+  // access grant, so sees the 29 non-confidential Tickets and no
+  // confidential one (Users).
+  await signIn(page, "hgray");
 
   await expect(page).toHaveURL("/tickets");
   await expect(
@@ -877,13 +877,13 @@ test("lands a user without a role on the All view, which the Tickets entry opens
   await expect(views(page)).toHaveText([
     "New 10",
     "Unassigned 1",
-    "Analysis 7",
+    "Analysis 6",
     "Analyzed 4",
-    "All 30",
+    "All 29",
   ]);
   await expect(views(page).last()).toHaveAttribute("aria-selected", "true");
   // The attention summary is for every user, with the counts of the Tickets
-  // that the user sees: dbrown sees every aged Ticket but the confidential
+  // that the user sees: hgray sees every aged Ticket but the confidential
   // SNTL-27, so one past due in each phase (Aged Tickets; Embargoes).
   const active = await ticketsOf(
     page,
