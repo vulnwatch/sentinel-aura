@@ -1,12 +1,13 @@
 import { page, type Locator } from "vitest/browser";
 
 // Moves the pointer to a corner of the window that the element does not
-// cover, and waits until the page has rendered what the move changed. Vitest
-// runs several test files one after another in one page, so the pointer rests
-// where an earlier test left it, and where it rests on the element, the
-// element shows its colors under the pointer (docs/conventions.md, Tests).
-// userEvent.unhover is no substitute: it moves the pointer to the center of
-// the body, which the element can cover.
+// cover. Vitest runs several test files one after another in one page, so
+// the pointer rests where an earlier test left it, and where it rests on the
+// element, the element shows its colors under the pointer
+// (docs/conventions.md, Tests). userEvent.unhover is no substitute: it moves
+// the pointer to the center of the body, which the element can cover. React
+// renders the end of React Aria's hover before the move returns, so the test
+// reads the look at rest at once.
 export async function pointerAwayFrom(element: Locator): Promise<void> {
   const box = element.element().getBoundingClientRect();
   const width = window.innerWidth;
@@ -30,8 +31,4 @@ export async function pointerAwayFrom(element: Locator): Promise<void> {
     position: { x: corner.x - root.left, y: corner.y - root.top },
     force: true,
   });
-  // Two frames, in which React renders the state that the pointer leaving
-  // the element sets, such as React Aria's hover.
-  await new Promise((done) => requestAnimationFrame(done));
-  await new Promise((done) => requestAnimationFrame(done));
 }

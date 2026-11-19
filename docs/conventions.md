@@ -468,8 +468,8 @@ that needs it; content of another kind needs a new row first.
   measures the delay itself measures it on the clock of the page.
 - A test that checks how an element looks at rest, such as a color or an
   underline that changes under the pointer, first moves the pointer to a
-  point that the element does not cover, with `pointerAwayFrom` of
-  `src/test-pointer.ts`, or to another element that it names: Vitest runs
+  point that the element does not cover, such as with `pointerAwayFrom` of
+  `src/test-pointer.ts`, or onto another element that it names: Vitest runs
   the test files one after another in one page, the pointer rests where an
   earlier test of the same file or of another one left it, and an element
   that renders under it shows its look under the pointer. `userEvent.unhover`
