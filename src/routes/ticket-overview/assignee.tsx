@@ -111,7 +111,8 @@ type AssigneeError =
 // While it is in progress, the pencil and the choice are busy, and the popover
 // cannot be closed; once Sentinel confirms it, the popover closes, the focus
 // returns to the pencil, and the outcome is announced once the read of the
-// Ticket after it arrives. A failure shows in the popover: the errors of the
+// Ticket after it arrives, or shows in the message area when that read fails
+// (useOutcomeAfterRead). A failure shows in the popover: the errors of the
 // user field at the field, which keeps the focus as the choice leaves it
 // there, after which the users are read again; an assignee that changed
 // meanwhile, at the top of the popover, with the assignee that the Ticket has

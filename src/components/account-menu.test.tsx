@@ -518,6 +518,21 @@ describe("Sign out", () => {
     expect(dialogs).toHaveLength(1);
     expect(dialogs[0]?.element().contains(menu.element())).toBe(true);
     expect(requestsTo(fetch, LOGOUT)).toBe(1);
+    // The other items are unavailable meanwhile, and the arrow keys pass
+    // over them.
+    for (const name of ["Account", "API keys", "System", "Light", "Dark"]) {
+      const other = menu.getByRole(
+        name === "Account" || name === "API keys"
+          ? "menuitem"
+          : "menuitemradio",
+        { name, exact: true },
+      );
+      await expect.element(other).toHaveAttribute("aria-disabled", "true");
+      expect(getComputedStyle(other.element()).opacity).toBe("0.6");
+    }
+    await expect.element(item).not.toHaveAttribute("aria-disabled");
+    await userEvent.keyboard("{ArrowUp}");
+    await expect.element(item).toHaveFocus();
     // The menu cannot be closed while Sign out is in progress.
     await userEvent.keyboard("{Escape}");
     await new Promise((done) => requestAnimationFrame(done));

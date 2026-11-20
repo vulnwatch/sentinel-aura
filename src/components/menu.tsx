@@ -14,8 +14,13 @@ import { INSIDE_FOCUS_RING } from "./focus-ring";
 
 // A menu item, 36 px high with a 6 px radius and 10 px of side padding, in
 // text-15, on surface-hover under the pointer and on focus, with the focus
-// ring inside it on keyboard focus.
-const ITEM = `flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 text-15 text-fg data-focused:bg-surface-hover data-hovered:bg-surface-hover ${INSIDE_FOCUS_RING}`;
+// ring inside it on keyboard focus; unavailable, at 60 % opacity, as a
+// disabled button.
+const ITEM = `flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 text-15 text-fg data-disabled:opacity-60 data-focused:bg-surface-hover data-hovered:bg-surface-hover ${INSIDE_FOCUS_RING}`;
+
+// The focus ring of a menu, inside it, which shows when the menu holds the
+// focus itself, as when a read removed the item that held it.
+export const MENU_FOCUS_RING = `rounded-md ${INSIDE_FOCUS_RING}`;
 
 // The line that separates the groups of a menu.
 export const MENU_SEPARATOR = "-mx-1 my-1 border-t border-border";
@@ -66,6 +71,11 @@ interface MenuActionProps extends Omit<
   // button does (docs/behaviors.md, Loading). The item's action guards
   // against a second start.
   busy?: string | undefined;
+  // Whether the item is unavailable, as while the change of another item of
+  // its menu is in progress (docs/design-system.md, Menus, Popovers, and
+  // Tooltips): the arrow keys pass over it, and assistive technologies read
+  // it as unavailable.
+  unavailable?: boolean | undefined;
   children: string;
 }
 
@@ -74,11 +84,17 @@ interface MenuActionProps extends Omit<
 export function MenuAction({
   icon: Icon,
   busy,
+  unavailable = false,
   children,
   ...props
 }: MenuActionProps) {
   return (
-    <MenuItem {...props} textValue={children} className={ITEM}>
+    <MenuItem
+      {...props}
+      isDisabled={unavailable}
+      textValue={children}
+      className={ITEM}
+    >
       {({ isSelected }) => (
         <>
           {busy !== undefined ? (
@@ -110,6 +126,8 @@ interface MenuChoiceProps extends Omit<
   // The description of the change that choosing it started, while it is in
   // progress (MenuAction).
   busy?: string | undefined;
+  // Whether the choice is unavailable (MenuAction).
+  unavailable?: boolean | undefined;
   // Its label, such as a value with its mark.
   children: ReactNode;
 }
@@ -121,11 +139,17 @@ interface MenuChoiceProps extends Omit<
 export function MenuChoice({
   textValue,
   busy,
+  unavailable = false,
   children,
   ...props
 }: MenuChoiceProps) {
   return (
-    <MenuItem {...props} textValue={textValue} className={ITEM}>
+    <MenuItem
+      {...props}
+      isDisabled={unavailable}
+      textValue={textValue}
+      className={ITEM}
+    >
       {({ isSelected }) => (
         <>
           <Text slot="label" className="flex min-w-0 flex-1 items-center">

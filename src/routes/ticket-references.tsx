@@ -924,7 +924,8 @@ const NO_REFERENCES = "No references.";
 // tabs, and its failure once the Ticket has arrived, so that a Ticket that
 // the user cannot see shows Not found (docs/behaviors.md, Loading; Where
 // Errors Appear). The outcome of a change is announced once a read of the
-// references after it arrives, whatever its outcome. The focus follows
+// references after it arrives, or shows in the message area when that read
+// fails (useOutcomeAfterRead). The focus follows
 // docs/behaviors.md (Accessibility, Focus after an action): after Delete, it
 // moves to the Delete of the row that takes its place, or to that row when
 // it has none, or to Add reference when no row follows; and when a read

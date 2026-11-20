@@ -80,7 +80,7 @@ interface UserPickerProps {
   // The user who holds the field, whom the picker marks as chosen, by id.
   chosen: string | null;
   // The choice whose change is in progress, a user's id or "action", during
-  // which the picker takes no other choice.
+  // which the other choices are unavailable.
   busy: string | null;
   // An action that the picker offers before its users while no term is
   // typed, such as Unassign yourself, or undefined.
@@ -106,7 +106,8 @@ interface UserPickerProps {
 // action, without a term, and the first user stand before the others, apart
 // by a border line. Each user shows in the full form at the small size with
 // the username and the labels, the chosen one with check, and the busy
-// choice with loader-circle in its place. Below them, how many more there
+// choice with loader-circle in its place, the others unavailable meanwhile.
+// Below them, how many more there
 // are, or "No users match.", the loading indicator or the message of the
 // failure of their read, and that a choice is in progress, which a status
 // region announces. The error of the field follows the field, after
@@ -242,6 +243,15 @@ export function UserPicker({
         selectionMode="single"
         disallowEmptySelection
         selectedKeys={chosen === null ? [] : [chosen]}
+        // While a choice is in progress, the others are unavailable
+        // (docs/design-system.md, Menus, Popovers, and Tooltips).
+        disabledKeys={
+          busy === null
+            ? undefined
+            : [ACTION_KEY, ...users.map((user) => user.id)].filter(
+                (key) => key !== busy,
+              )
+        }
         onSelectionChange={(keys) => {
           if (keys !== "all") {
             const [key] = keys;

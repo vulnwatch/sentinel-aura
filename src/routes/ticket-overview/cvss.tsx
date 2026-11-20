@@ -632,7 +632,8 @@ function useReadAfterSuseChange(ticketId: string, cveId: string) {
 // while SUSE lacks one of the versions that the screen changes, and Edit and
 // Delete on the rows of the SUSE assessments of these versions
 // (docs/screen-map.md, Roles, Principles). The outcome of a change is
-// announced once a read of the assessments after it arrives. After Delete,
+// announced once a read of the assessments after it arrives, or shows in the
+// message area when that read fails (useOutcomeAfterRead). After Delete,
 // the focus moves to the Delete of the row that takes its place, or to that
 // row without one, or to Add SUSE assessment when no row follows; when a
 // read removes the row that holds it, to the screen's heading

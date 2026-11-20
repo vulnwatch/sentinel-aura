@@ -21,9 +21,15 @@ afterEach(async () => {
 interface MenuProps {
   busy?: boolean;
   onExclude?: () => void;
+  // The id of the item.
+  itemId?: string;
 }
 
-function Menu({ busy = false, onExclude = () => undefined }: MenuProps) {
+function Menu({
+  busy = false,
+  onExclude = () => undefined,
+  itemId = "exclude",
+}: MenuProps) {
   const [open, setOpen] = useState(false);
   return (
     <ActionsMenu
@@ -33,7 +39,8 @@ function Menu({ busy = false, onExclude = () => undefined }: MenuProps) {
       busy={busy}
     >
       <MenuAction
-        id="exclude"
+        key={itemId}
+        id={itemId}
         icon={Ban}
         busy={busy ? "Excluding." : undefined}
         shouldCloseOnSelect={false}
@@ -69,6 +76,27 @@ test("is an icon button of 24 px named by its record, whose tooltip says Actions
   await expect.element(menu).toBeVisible();
   await menu.getByRole("menuitem", { name: "Exclude" }).click();
   expect(onExclude).toHaveBeenCalledOnce();
+});
+
+test("shows the focus ring inside the menu when the menu holds the focus itself, as when its item that held it leaves", async () => {
+  const { rerender, ...screen } = await render(<Menu />);
+  screen.getByRole("button").element().focus();
+  await userEvent.keyboard("{Enter}");
+  await expect
+    .element(screen.getByRole("menuitem", { name: "Exclude" }))
+    .toHaveFocus();
+
+  await rerender(<Menu itemId="another" />);
+
+  const menu = screen.getByRole("menu");
+  await expect.element(menu).toHaveFocus();
+  const ring = getComputedStyle(menu.element());
+  expect([ring.outlineStyle, ring.outlineWidth, ring.outlineOffset]).toEqual([
+    "solid",
+    "2px",
+    "-2px",
+  ]);
+  expect(ring.outlineColor).toBe("rgb(9, 105, 218)");
 });
 
 test("cannot be closed while the change of an item is in progress, whose item is busy", async () => {

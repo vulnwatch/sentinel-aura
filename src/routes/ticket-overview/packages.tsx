@@ -412,11 +412,12 @@ interface ProductNameProps {
 // of a Product ends no access, since maintainership concerns the package
 // (Sentinel docs/features/packages/package-maintainership.md, Confidential
 // Ticket Visibility), and another action reverses each. While an action is
-// in progress, its item is busy and the popover cannot be closed; once
-// Sentinel answers, the popover closes and the focus returns to the name.
-// The outcome is announced once the read of the Ticket after it arrives, or
-// shows in the message area then when the Product no longer shows, as after
-// an exclusion while "Show hidden" is off; a failure shows in the message
+// in progress, its item is busy, the others are unavailable, and the popover
+// cannot be closed; once Sentinel answers, the popover closes and the focus
+// returns to the name. The outcome is announced once the read of the Ticket
+// after it arrives, or shows in the message area then when Sentinel answers
+// that the Product is not actionable while "Show hidden" is off, as after an
+// exclusion, or when that read fails; a failure shows in the message
 // area, and one that says that another user did the same meanwhile says the
 // state that the Product now has (docs/behaviors.md, Where Errors Appear;
 // Outcome of a Change). The hooks of the changes live here, with the name,
@@ -536,6 +537,7 @@ function ProductName({
       id={action === "restore" ? "exclude" : action}
       icon={icon}
       busy={running?.action === action ? busyText : undefined}
+      unavailable={busy && running.action !== action}
       shouldCloseOnSelect={false}
       onAction={() => {
         void run(action);
@@ -964,7 +966,7 @@ export function useYourWork(ticket: TicketDetail) {
 type YourWorkRead = ReturnType<typeof useYourWork>;
 
 // The outcome of Add package, which shows in the message area once the read
-// of the Ticket after it arrives, whatever the outcome of that read, since
+// of the Ticket after it arrives, also when that read fails, since
 // the counts that Sentinel returns say what it created, which the tree does
 // not show (docs/behaviors.md, Outcome of a Change): followed, while "Show
 // hidden" is off and that read shows the package hidden, by where it is.

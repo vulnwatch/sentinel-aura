@@ -48,6 +48,7 @@ import {
   excludedPackage,
   expectFocusOnError,
   expectFocusSettledOn,
+  expectSuccessMessage,
   FG,
   FG_MUTED,
   frames,
@@ -453,6 +454,19 @@ function cvssAnnouncements(screen: Screen): string[] {
     .elements()
     .map((region) => region.textContent ?? "")
     .filter((text) => text !== "");
+}
+
+// The outcome of a change once the read of the assessments after it has
+// ended: announced in the part when that read arrives, and, when it fails, a
+// success message of the message area, which the part does not announce
+// (docs/behaviors.md, Outcome of a Change).
+async function expectOutcome(screen: Screen, place: string, text: string) {
+  if (place === "in the part") {
+    await expect.poll(() => cvssAnnouncements(screen)).toContain(text);
+    return;
+  }
+  await expectSuccessMessage(screen, text);
+  expect(cvssAnnouncements(screen)).not.toContain(text);
 }
 
 // The requests of the CVSS assessments and of the changes of the SUSE
@@ -3874,16 +3888,21 @@ describe("the SUSE assessment", () => {
     );
   });
 
-  describe("the announcement of a change", () => {
+  describe("the outcome of a change", () => {
     test.each([
       [
+        "in the part",
         "arrives",
         () => cvssResponse(assessmentsWith([NVD_V40, NVD_V31, SAVED_V31])),
       ],
-      ["fails", () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION")],
+      [
+        "in the message area",
+        "fails",
+        () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
+      ],
     ])(
-      "comes in the part once the next read of the assessments after Add %s, not before",
-      async (_, response) => {
+      "comes %s once the next read of the assessments after Add %s, not before",
+      async (place, _, response) => {
         const reread = later();
         let added = false;
         stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]), {
@@ -3905,21 +3924,28 @@ describe("the SUSE assessment", () => {
         await expect.element(dialog).not.toBeInTheDocument();
         await frames();
         expect(cvssAnnouncements(screen)).toEqual([]);
+        expect(screen.getByText(/added\.$/).elements()).toHaveLength(0);
         reread.resolve(response());
 
-        await expect
-          .poll(() => cvssAnnouncements(screen))
-          .toContain("SUSE assessment v3.1 added.");
+        await expectOutcome(screen, place, "SUSE assessment v3.1 added.");
         expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
       },
     );
 
     test.each([
-      ["arrives", () => cvssResponse(assessmentsWith([NVD_V31, SAVED_V31]))],
-      ["fails", () => errorResponse(404, "CVE_NOT_FOUND")],
+      [
+        "in the part",
+        "arrives",
+        () => cvssResponse(assessmentsWith([NVD_V31, SAVED_V31])),
+      ],
+      [
+        "in the message area",
+        "fails",
+        () => errorResponse(404, "CVE_NOT_FOUND"),
+      ],
     ])(
-      "comes in the part once the next read of the assessments after Edit %s, not before",
-      async (_, response) => {
+      "comes %s once the next read of the assessments after Edit %s, not before",
+      async (place, _, response) => {
         const reread = later();
         let saved = false;
         stubSuse(() => fictionalCvssAssessments(), {
@@ -3938,20 +3964,27 @@ describe("the SUSE assessment", () => {
           .not.toBeInTheDocument();
         await frames();
         expect(cvssAnnouncements(screen)).toEqual([]);
+        expect(screen.getByText(/changed\.$/).elements()).toHaveLength(0);
         reread.resolve(response());
 
-        await expect
-          .poll(() => cvssAnnouncements(screen))
-          .toContain("SUSE assessment v3.1 changed.");
+        await expectOutcome(screen, place, "SUSE assessment v3.1 changed.");
       },
     );
 
     test.each([
-      ["arrives", () => cvssResponse(assessmentsWith([NVD_V31]))],
-      ["fails", () => errorResponse(503, "DATABASE_UNAVAILABLE")],
+      [
+        "in the part",
+        "arrives",
+        () => cvssResponse(assessmentsWith([NVD_V31])),
+      ],
+      [
+        "in the message area",
+        "fails",
+        () => errorResponse(503, "DATABASE_UNAVAILABLE"),
+      ],
     ])(
-      "comes in the part once the next read of the assessments after Delete %s, not before",
-      async (_, response) => {
+      "comes %s once the next read of the assessments after Delete %s, not before",
+      async (place, _, response) => {
         const reread = later();
         let removed = false;
         stubSuse(() => fictionalCvssAssessments(), {
@@ -3968,11 +4001,10 @@ describe("the SUSE assessment", () => {
         await expect.element(confirmation).not.toBeInTheDocument();
         await frames();
         expect(cvssAnnouncements(screen)).toEqual([]);
+        expect(screen.getByText(/deleted\.$/).elements()).toHaveLength(0);
         reread.resolve(response());
 
-        await expect
-          .poll(() => cvssAnnouncements(screen))
-          .toContain("SUSE assessment v3.1 deleted.");
+        await expectOutcome(screen, place, "SUSE assessment v3.1 deleted.");
       },
     );
   });

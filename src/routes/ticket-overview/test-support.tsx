@@ -761,6 +761,15 @@ export function backgroundBehind(element: Element): string {
   return "transparent";
 }
 
+// The outcome of a change as a success message, such as in the message area
+// after the read after the change failed (docs/behaviors.md, Outcome of a
+// Change): the one element with its text.
+export async function expectSuccessMessage(screen: Screen, text: string) {
+  const message = screen.getByText(text, { exact: true });
+  await expect.element(message).toBeVisible();
+  expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+}
+
 // The names of the animations that run in an element and its descendants.
 export function animationsIn(element: Element): string[] {
   return element
