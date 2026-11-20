@@ -26,11 +26,11 @@ import type { UserFields } from "./user";
 import {
   characters,
   COUNT,
-  LISTED_USERS,
   SEARCH_MAX_LENGTH,
   SEARCH_MIN_LENGTH,
   useSettledTerm,
-} from "./user-combobox";
+} from "./search-combobox";
+import { LISTED_USERS } from "./user-combobox";
 
 // A combobox of users that lists its users at once (docs/design-system.md,
 // Forms), as the control of a field that a pencil opens in a popover, whose

@@ -1278,8 +1278,10 @@ test.describe("for an analyst", () => {
       exact: true,
     });
     await expect(select).toBeVisible();
+    // Neither the menus of actions nor Add package, which need
+    // manage_packages.
     await expect(
-      packages.getByRole("button", { name: /^Actions of/ }),
+      packages.getByRole("button", { name: /^(?:Actions of|Add package$)/ }),
     ).toHaveCount(0);
     await expectOverviewShown(page);
 
@@ -1307,6 +1309,255 @@ test.describe("for an analyst", () => {
       "Eligible",
     );
     await expect(product.getByRole("menu")).toHaveCount(0);
+  });
+
+  test("offers Add package on a Ticket without packages, suggests the maintained names that contain the term, and says that Sentinel added nothing while SMELT is unreachable, keeping the name", async ({
+    page,
+  }) => {
+    // Adding a package queries SMELT, which the backend of the tests cannot
+    // reach (compose.yaml): Add Package to Ticket answers 503
+    // SMELT_UNAVAILABLE once the retries of its transport end, after about
+    // 7 s, and before any write, so the test changes no data (Operating a
+    // Dataset Backend; Sentinel docs/features/packages/package-model.md,
+    // Adding Packages to a Ticket).
+    test.slow();
+    // asmith holds manage_packages, and SNTL-20, in Analysis, has no
+    // package (Users; Tickets). At the anchor of the package tree, the page
+    // scrolls the dates of the CVE above the window, so that their masks
+    // show over neither the dialog nor the compact heading.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-20#packages");
+    const packages = part(page, "Packages");
+    await expect(
+      packages.getByText("No packages.", { exact: true }),
+    ).toBeVisible();
+    await expect(packages.getByRole("switch")).toHaveCount(0);
+    const add = packages.getByRole("button", {
+      name: "Add package",
+      exact: true,
+    });
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves Add package: the click waits for it.
+    await expectOverviewShown(page);
+    await expect(
+      part(page, "CVE-2099-0020").getByRole("term").first(),
+    ).not.toBeInViewport();
+
+    await add.click();
+
+    const dialog = page.getByRole("dialog", { name: "Add package" });
+    const field = dialog.getByRole("combobox", { name: "Package name" });
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue("");
+    await expectAccessible(page);
+
+    // A term in another letter case than the maintained name, which the
+    // field suggests as SMELT writes it (Maintained Package Names).
+    await field.fill("imagetool");
+
+    const names = page
+      .getByRole("listbox", { name: "Package name" })
+      .getByRole("option");
+    await expect(names).toHaveText(["Fictional-ImageTool"]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-suggestions.png");
+
+    await names.first().click();
+
+    await expect(field).toHaveValue("Fictional-ImageTool");
+    await expect(names).toHaveCount(0);
+    // The reads of Overview that the addition affects, which the screen
+    // sends again whatever its outcome.
+    const readsAgain = Promise.all(
+      ["", "/actors"].map((path) =>
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "GET" &&
+            new URL(response.url()).pathname ===
+              `/api/v1/tickets/SNTL-20${path}`,
+        ),
+      ),
+    );
+
+    const submit = dialog.getByRole("button", {
+      name: "Add package",
+      exact: true,
+    });
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+
+    await submit.click();
+
+    // While Sentinel tries SMELT, Add package is busy, and the dialog cannot
+    // be closed.
+    await expect(submit).toHaveAttribute("aria-disabled", "true");
+    await expect(cancel).toBeDisabled();
+    await expect(
+      dialog.getByText(
+        "Sentinel couldn't get the tracks and Products of this package from SMELT, so it added nothing. Try again later.",
+        { exact: true },
+      ),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(dialog.getByText(/^Reference: \S+$/)).toBeVisible();
+    await expect(submit).not.toHaveAttribute("aria-disabled");
+    await expect(cancel).toBeEnabled();
+    await expect(field).toHaveValue("Fictional-ImageTool");
+    for (const response of await readsAgain) {
+      expect(response.ok()).toBe(true);
+    }
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-error.png");
+  });
+
+  test("lists in Add package the maintained names that start with the term before those that only contain it, and asks before discarding the name", async ({
+    page,
+  }) => {
+    // asmith holds manage_packages, and SNTL-12, Analyzed, has packages
+    // (Users; Tickets), so Add package follows Show hidden.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12#packages");
+    const packages = part(page, "Packages");
+    const add = packages.getByRole("button", {
+      name: "Add package",
+      exact: true,
+    });
+    await expect(
+      page.getByRole("switch", { name: /^Show hidden/ }),
+    ).toBeVisible();
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves Add package: the click waits for it.
+    await expectOverviewShown(page);
+
+    await add.click();
+
+    const dialog = page.getByRole("dialog", { name: "Add package" });
+    const field = dialog.getByRole("combobox", { name: "Package name" });
+    await field.fill("fictional-openssl");
+
+    // fictional-openssl and fictional-openssl-3 start with the term, and
+    // libfictional-openssl only contains it (Maintained Package Names).
+    const names = page
+      .getByRole("listbox", { name: "Package name" })
+      .getByRole("option");
+    await expect(names).toHaveText([
+      "fictional-openssl",
+      "fictional-openssl-3",
+      "libfictional-openssl",
+    ]);
+    await expectAccessible(page);
+    // The field closes its menu as the focus leaves it.
+    await field.press("Tab");
+    await expect(names).toHaveCount(0);
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText(
+      "The package that you entered isn't added.",
+    );
+    await expect(
+      discard.getByRole("button", { name: "Keep editing" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-discard.png");
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(add).toBeFocused();
+  });
+
+  test("says in Add package how many maintained names match when it lists only some, and when none does, and checks a name before sending it", async ({
+    page,
+  }) => {
+    // asmith holds manage_packages, and SNTL-20, in Analysis, has no
+    // package (Users; Tickets). At the anchor of the package tree, the page
+    // scrolls the dates of the CVE above the window, so that their masks
+    // show over neither the dialog nor its menu.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-20#packages");
+    const add = part(page, "Packages").getByRole("button", {
+      name: "Add package",
+      exact: true,
+    });
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves Add package: the click waits for it.
+    await expectOverviewShown(page);
+    // The additions that the page sends.
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/v1/tickets/SNTL-20/packages"
+      ) {
+        sent.push(request.url());
+      }
+    });
+
+    await add.click();
+
+    const dialog = page.getByRole("dialog", { name: "Add package" });
+    const field = dialog.getByRole("combobox", { name: "Package name" });
+    const names = page
+      .getByRole("listbox", { name: "Package name" })
+      .getByRole("option");
+
+    // Each of the 29 maintained names contains the term: the field lists the
+    // first 20, those that start with it first, each group in the order of
+    // the code points, so Fictional-ImageTool before the names in lower case
+    // and libfictional-openssl last (Maintained Package Names; Sentinel
+    // docs/features/packages/maintained-package-names.md, Search Maintained
+    // Packages).
+    await field.fill("fictional");
+
+    const count = page.getByText(
+      "The first 20 of 29 packages that match. Type more to narrow them.",
+      { exact: true },
+    );
+    await expect(count).toBeVisible();
+    await expect(names).toHaveCount(20);
+    await expect(names.first()).toHaveText("Fictional-ImageTool");
+    await expect(names.last()).toHaveText("fictional-openssh");
+    await expectAccessible(page);
+    // The line follows the names, at the end of the menu.
+    await count.scrollIntoViewIfNeeded();
+    await expectScreenshot(page, "ticket-add-package-count.png");
+
+    await field.fill("fictional-none");
+
+    await expect(
+      page.getByText("Sentinel knows no maintained package that matches.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(names).toHaveCount(0);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-no-match.png");
+
+    // A name whose first character is neither a letter nor a digit, which
+    // the maintained names that contain it do not change.
+    await field.fill("-openssl");
+    await expect(names).toHaveText([
+      "fictional-openssl",
+      "fictional-openssl-3",
+      "libfictional-openssl",
+    ]);
+    // Enter without a current name closes the menu, keeping the text, and
+    // then submits the form.
+    await field.press("Enter");
+    await expect(names).toHaveCount(0);
+    await expect(field).toHaveValue("-openssl");
+
+    await field.press("Enter");
+
+    await expect(
+      dialog.getByText(
+        "Enter only letters, digits, and . _ + -, starting with a letter or a digit.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue("-openssl");
+    expect(sent).toEqual([]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-check.png");
   });
 
   test("asks for confirmation before excluding a package with maintainers of a confidential Ticket", async ({
@@ -3716,10 +3967,12 @@ test("shows a maintainer the tracks of a Ticket that wait for them", async ({
       .last()
       .getByText("Needs your action"),
   ).toBeVisible();
-  // A maintainer without a role edits nothing (docs/screen-map.md, Roles,
-  // Principles).
+  // A maintainer without a role edits nothing and adds no package
+  // (docs/screen-map.md, Roles, Principles).
   await expect(
-    packages.getByRole("button", { name: /^(?:Actions|Affectedness) of/ }),
+    packages.getByRole("button", {
+      name: /^(?:(?:Actions|Affectedness) of|Add package$)/,
+    }),
   ).toHaveCount(0);
   await expectOverviewShown(page);
   await expectScreenshot(page, "ticket-maintainer.png");

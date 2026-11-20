@@ -13,7 +13,7 @@ import {
   usersPage,
 } from "../test-api";
 import type { UserFields } from "./user";
-import { SEARCH_DELAY_MS } from "./user-combobox";
+import { SEARCH_DELAY_MS } from "./search-combobox";
 import { UserPicker } from "./user-picker";
 
 declare module "vitest/browser" {

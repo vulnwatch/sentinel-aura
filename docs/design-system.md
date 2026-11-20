@@ -1518,6 +1518,19 @@ states it, such as that of a Ticket; the other audit logs are tables
   term when they match. Its field keeps the term, and the user who holds the
   field shows as the chosen item of a single selection, with `check` (Menus,
   Popovers, and Tooltips).
+- A combobox that searches other records as the user types, such as the
+  names of the packages that SMELT maintains, follows the combobox of users:
+  from 2 characters without their surrounding whitespace, after a pause of
+  250 ms, it reads the first 20 that match, in the order that its screen
+  document states, and opens them below the field, each as its text, with the
+  line of none that matches, the line of how many more match, the loading
+  indicator, and the message of a failure as there, in the words of its
+  screen document. Where its value is the text that the user types, which
+  the options only help to find, such as the name of a package, the field
+  takes a text that no option holds, choosing an option writes its text in
+  the field, and below 2 characters the menu stays closed without a line,
+  since a shorter value can be valid; its text, other than whitespace, is
+  input not yet submitted (`docs/behaviors.md`, Confirmation).
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would

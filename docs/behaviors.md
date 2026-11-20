@@ -684,7 +684,10 @@ it:
   and not yet submitted; a term typed in the search or a filter of a list and
   not applied, or in a combobox without a choice, is not such input, and is
   dropped without a question, and neither are the username and the password
-  of Sign in.
+  of Sign in. A combobox whose value is the text typed, which it only helps to
+  find, such as the name of a package (`docs/design-system.md`, Forms), holds
+  such input while its field holds text other than whitespace that the user
+  typed or chose.
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses

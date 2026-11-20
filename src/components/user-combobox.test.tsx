@@ -15,7 +15,8 @@ import {
   urlOf,
   usersPage,
 } from "../test-api";
-import { SEARCH_DELAY_MS, UserComboBox } from "./user-combobox";
+import { SEARCH_DELAY_MS } from "./search-combobox";
+import { UserComboBox } from "./user-combobox";
 
 // A combobox of users (docs/design-system.md, Forms), which searches the
 // directory (Sentinel docs/features/identity/user-management.md, List Users).
@@ -222,6 +223,32 @@ test("says that no user matches", async () => {
   await field.fill("zz");
 
   await expect.element(screen.getByText("No users match.")).toBeVisible();
+});
+
+test("leaves no option in the menu while it shows only its line, Enter at least 2 characters. or No users match.", async () => {
+  stubApi(() => usersPage([]));
+  const { screen, field } = await renderField();
+  const listbox = screen.getByRole("listbox");
+
+  await field.fill("a");
+
+  await expect
+    .element(screen.getByText("Enter at least 2 characters."))
+    .toBeVisible();
+  await nextFrames();
+  await expect.element(listbox).toBeInTheDocument();
+  expect(
+    listbox.getByRole("option", { includeHidden: true }).elements(),
+  ).toHaveLength(0);
+
+  await field.fill("zz");
+
+  await expect.element(screen.getByText("No users match.")).toBeVisible();
+  await nextFrames();
+  await expect.element(listbox).toBeInTheDocument();
+  expect(
+    listbox.getByRole("option", { includeHidden: true }).elements(),
+  ).toHaveLength(0);
 });
 
 test("says why the users couldn't be read", async () => {

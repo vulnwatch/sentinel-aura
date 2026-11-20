@@ -7,7 +7,12 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { isRequestFailure, presentChangeFailure } from "../api/errors";
+import {
+  isRequestFailure,
+  presentChangeFailure,
+  type ChangeFailurePresentation,
+  type RequestFailure,
+} from "../api/errors";
 import { useShowMessage, type MessageRecord } from "./message-area";
 
 // The outcome of a change that a screen makes (docs/behaviors.md, Outcome of
@@ -38,12 +43,17 @@ export function useMounted(): RefObject<boolean> {
 // that ends while the component is on the page, before the reads after it
 // are sent, so that what waits for those reads, such as the announcement of
 // the outcome (useOutcomeAfterRead), waits also for a read that ends at
-// once.
+// once. present, when given, presents a failure that ends after the user
+// left the screen, for a change whose screen document handles codes of it
+// specifically; otherwise it has the presentation of a change.
 export function useChangeOutcome<TData>(
   record: MessageRecord,
   success: (data: TData) => string,
   readAgain: () => void,
   confirmed?: (data: TData) => void,
+  present: (
+    failure: RequestFailure,
+  ) => ChangeFailurePresentation | undefined = presentChangeFailure,
 ) {
   const mounted = useMounted();
   const showMessage = useShowMessage();
@@ -60,7 +70,7 @@ export function useChangeOutcome<TData>(
       if (mounted.current || !isRequestFailure(failure)) {
         return;
       }
-      const presentation = presentChangeFailure(failure);
+      const presentation = present(failure);
       if (presentation !== undefined) {
         showMessage({
           tone: presentation.unconfirmed ? "warning" : "danger",
@@ -87,9 +97,16 @@ interface Announcement {
 // instant at which Sentinel confirmed the change, and whether it shows in the
 // message area.
 interface WaitingOutcome {
-  text: string;
+  // The text, or what gives it once the read has arrived, such as a text
+  // that depends on the data of that read.
+  text: string | (() => string);
   at: number;
   message: boolean;
+}
+
+// The text of an outcome that waits.
+function textOf(outcome: WaitingOutcome): string {
+  return typeof outcome.text === "function" ? outcome.text() : outcome.text;
 }
 
 // The outcome of a change that ends while the user is on the screen, which
@@ -99,7 +116,8 @@ interface WaitingOutcome {
 // confirmed the change, and region, a status region hidden from view,
 // announces it once that read has arrived; with inMessageArea, for an
 // outcome that shows nowhere where the user acted, the message area shows it
-// then instead. The outcomes of several changes that wait at once, as when
+// then instead. A text given as a function is taken as the outcome shows, so
+// that it can state what that read shows. The outcomes of several changes that wait at once, as when
 // the user starts a change before the read after the one before it has
 // arrived, each wait for their read, and those that one read releases are
 // announced together, in their order. The record keeps its identity while it
@@ -109,7 +127,7 @@ export function useOutcomeAfterRead(
   read: { dataUpdatedAt: number; errorUpdatedAt: number },
   record: MessageRecord,
 ): {
-  after: (text: string, inMessageArea?: boolean) => void;
+  after: (text: string | (() => string), inMessageArea?: boolean) => void;
   region: ReactNode;
 } {
   const showMessage = useShowMessage();
@@ -126,7 +144,7 @@ export function useOutcomeAfterRead(
       const done = waiting.current;
       waiting.current = [];
       for (const outcome of done) {
-        showMessage({ tone: "success", text: outcome.text, record });
+        showMessage({ tone: "success", text: textOf(outcome), record });
       }
     },
     [showMessage, record],
@@ -142,12 +160,10 @@ export function useOutcomeAfterRead(
       );
       for (const outcome of done) {
         if (outcome.message) {
-          showMessage({ tone: "success", text: outcome.text });
+          showMessage({ tone: "success", text: textOf(outcome) });
         }
       }
-      const announced = done
-        .filter((outcome) => !outcome.message)
-        .map((outcome) => outcome.text);
+      const announced = done.filter((outcome) => !outcome.message).map(textOf);
       if (announced.length > 0) {
         setAnnouncement((current) => ({
           key: (current?.key ?? 0) + 1,
@@ -178,12 +194,15 @@ export function useOutcomeAfterRead(
     }
   }, [readAt, failedAt, release]);
 
-  const after = useCallback((text: string, inMessageArea = false) => {
-    waiting.current = [
-      ...waiting.current,
-      { text, at: Date.now(), message: inMessageArea },
-    ];
-  }, []);
+  const after = useCallback(
+    (text: string | (() => string), inMessageArea = false) => {
+      waiting.current = [
+        ...waiting.current,
+        { text, at: Date.now(), message: inMessageArea },
+      ];
+    },
+    [],
+  );
   return {
     after,
     region: (

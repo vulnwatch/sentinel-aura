@@ -350,6 +350,95 @@ export function presentMarkerConflict(
   return undefined;
 }
 
+// The messages of the name field of Add package, at the field
+// (docs/screens/ticket.md, States): SMELT maintains no package of the name,
+// whose letter case counts; no Product that SMELT lists for it, in a
+// codestream that Sentinel supports, is in Sentinel's current catalog; or the
+// package is on the Ticket, directly excluded, which
+// Restore includes again (Sentinel docs/features/packages/package-model.md,
+// Add Package to Ticket; SMELT Query for Package Resolution).
+const MESSAGE_PACKAGE_NOT_IN_SMELT =
+  "SMELT doesn't maintain a package of this name. Check the name, whose letter case counts.";
+const MESSAGE_PACKAGE_TARGETS_UNRESOLVED =
+  "Sentinel can't add any of the Products that SMELT lists for this package, so it added nothing.";
+const MESSAGE_PACKAGE_EXCLUDED =
+  "This package is excluded from this Ticket: Show hidden shows it, and Restore in the menu of its actions includes it again.";
+
+// The error of the name field of Add package that a failure of Add Package
+// to Ticket states, or undefined for a failure of the form: 422
+// PACKAGE_NOT_FOUND_IN_SMELT, 422 PACKAGE_TARGETS_UNRESOLVED, and 409
+// PACKAGE_ALREADY_EXCLUDED.
+export function packageNameError(failure: RequestFailure): string | undefined {
+  if (!(failure instanceof ApiError)) {
+    return undefined;
+  }
+  if (failure.status === 422 && failure.code === "PACKAGE_NOT_FOUND_IN_SMELT") {
+    return MESSAGE_PACKAGE_NOT_IN_SMELT;
+  }
+  if (failure.status === 422 && failure.code === "PACKAGE_TARGETS_UNRESOLVED") {
+    return MESSAGE_PACKAGE_TARGETS_UNRESOLVED;
+  }
+  if (failure.status === 409 && failure.code === "PACKAGE_ALREADY_EXCLUDED") {
+    return MESSAGE_PACKAGE_EXCLUDED;
+  }
+  return undefined;
+}
+
+// The messages of Add package that Sentinel returns before any change, since
+// SMELT and the Product catalog come before every write (Sentinel
+// docs/features/packages/package-model.md, Adding Packages to a Ticket):
+// SMELT gave no valid answer, or no complete Product catalog is published
+// yet.
+const MESSAGE_SMELT_UNAVAILABLE =
+  "Sentinel couldn't get the tracks and Products of this package from SMELT, so it added nothing. Try again later.";
+const MESSAGE_CATALOG_NOT_READY =
+  "Sentinel hasn't loaded the Products from SMELT yet, so it added nothing. Try again later.";
+
+// The presentation of a failure of Add package at the top of its form
+// (docs/screens/ticket.md, States): 503 SMELT_UNAVAILABLE and 503
+// PRODUCT_CATALOG_NOT_READY as errors with the reference of a 5xx, rather
+// than as a change that Sentinel did not confirm, and every other failure as
+// a change.
+export function presentAddPackageFailure(
+  failure: RequestFailure,
+): ChangeFailurePresentation | undefined {
+  if (failure instanceof ApiError && failure.status === 503) {
+    const message =
+      failure.code === "SMELT_UNAVAILABLE"
+        ? MESSAGE_SMELT_UNAVAILABLE
+        : failure.code === "PRODUCT_CATALOG_NOT_READY"
+          ? MESSAGE_CATALOG_NOT_READY
+          : undefined;
+    if (message !== undefined) {
+      return { message, reference: failure.requestId, unconfirmed: false };
+    }
+  }
+  return presentChangeFailure(failure);
+}
+
+// The presentation of a failure of Add package that ends after the user left
+// the screen, in the message area of the screen that the user is on
+// (docs/screens/ticket.md, Actions): the errors of its field and those that
+// Sentinel returns before any change as errors, the others as a change, each
+// after the package that it concerns, such as "Package fictional-openssl: ",
+// since the dialog that held the name is gone.
+export function presentLeftAddPackageFailure(
+  failure: RequestFailure,
+  packageName: string,
+): ChangeFailurePresentation | undefined {
+  const atField = packageNameError(failure);
+  const presentation =
+    atField === undefined
+      ? presentAddPackageFailure(failure)
+      : { message: atField, reference: undefined, unconfirmed: false };
+  return presentation === undefined
+    ? undefined
+    : {
+        ...presentation,
+        message: `Package ${packageName}: ${presentation.message}`,
+      };
+}
+
 // Whether a read of the access grants of a Ticket failed because the Ticket
 // is no longer confidential, 409 TICKET_NOT_CONFIDENTIAL, after which it has
 // no grants (Sentinel docs/features/tickets/tickets.md, List Access Grants;
