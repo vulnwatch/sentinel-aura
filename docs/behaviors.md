@@ -691,7 +691,11 @@ it:
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses
-it. The navigations that the session forces ask nothing (Session State), and
+it. A change can be undone in the UI when any user can undo it there: one
+that the acting user cannot reverse, because reversing it needs a capability
+that they lack, asks for no confirmation when another user can reverse it,
+and neither does one that takes more than one action to reverse. The
+navigations that the session forces ask nothing (Session State), and
 neither does a screen that removes from its URL, in place of the URL, a
 search parameter that it does not accept, also one that it stops accepting
 while it is open, as after a read, which keeps the screen, its dialog, and
@@ -735,6 +739,12 @@ change, in the state that the screen then shows, such as its new filters.
   (`docs/conventions.md`, Data Read from the API).
 - A result that shows where the user acted, such as an edited value, needs no
   message; it is announced, such as "Priority changed to P2." (Accessibility).
+  A screen that shows the result once the read after the change arrives
+  announces it then. When that read fails, the screen keeps the data that it
+  showed before (Where Errors Appear), so the outcome shows as a message
+  instead, as for any other successful change, in the message area, or at
+  the top of an open dialog that holds the data, as a dialog that stays open
+  after its change shows it (below).
 - A change that creates a record with a screen of its own opens that screen,
   which shows the result.
 - Any other successful change shows a short message that says what happened,
@@ -799,8 +809,15 @@ also meets these requirements, which they cannot check:
   leaves the focus where it was and announces the number of results.
 - **Focus after an action.** When the element that has the focus disappears
   after an action, the focus moves to the element that takes its place, such
-  as the action that reverses it, or otherwise to the screen's heading. When
-  it disappears without an action, because a read replaced what the screen
+  as the action that reverses it, or otherwise to the screen's heading. An
+  element that a change removes, such as a deleted row, leaves once the read
+  after the change no longer shows it, and the focus moves then only while it
+  is still where the screen document of the action states, such as within
+  the part or on the screen's heading, so that a user who moved it meanwhile
+  keeps it; when that read fails, the focus stays where it is, unless the
+  failure replaces what holds the focus, as a `403` or a `404` can (Where
+  Errors Appear), and a later read that removes the element moves the focus
+  as below. When it disappears without an action, because a read replaced what the screen
   shows, such as a `403` after the tab returns to the foreground (Where Errors
   Appear), or because a change of layout moved the section that held it
   (`docs/design-system.md`, Detail Screens), the focus moves to the screen's
