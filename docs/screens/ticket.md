@@ -1410,11 +1410,12 @@ Maintained Packages):
   (`docs/design-system.md`, Dialogs; Forms), titled "Add package", with one
   field, "Package name", which takes the focus as the dialog opens, described
   "The source package as SMELT names it, such as fictional-openssl. Type part
-  of it to find it."; then Cancel and Add package, a primary button. While its
-  dialog is open, Add package stays, also when a read of the signed-in user
-  takes `manage_packages` away (`docs/behaviors.md`, The Signed-in User);
-  once the dialog closes without it, the focus moves to the screen's heading
-  (`docs/behaviors.md`, Accessibility, Focus after an action).
+  of it to find it."; then Cancel and Add package, a primary button. When a
+  read of the signed-in user takes `manage_packages` away while the dialog is
+  open, the dialog stays open with its form (`docs/behaviors.md`, The
+  Signed-in User), Add package goes, and the focus moves to the screen's
+  heading as the dialog closes (`docs/behaviors.md`, Accessibility, Focus
+  after an action).
 - Package name is a combobox that searches the names of the source packages
   that SMELT maintains as the user types (`docs/design-system.md`, Forms):
   from 2 characters, the first 20 names that contain the term without regard
@@ -1422,11 +1423,14 @@ Maintained Packages):
   "Sentinel knows no maintained package that matches." without one, and "The
   first 20 of 63 packages that match. Type more to narrow them." when more
   match. Choosing a name writes it in the field with its letter case, which
-  Add Package to Ticket resolves in SMELT exactly. The names only help to
-  find one: Sentinel reads them from a copy that it takes from SMELT once a
-  day, which holds none before its first copy, so the field takes a name
-  that it does not suggest, and a failure of their read, which shows in the
-  menu, leaves the addition possible.
+  Add Package to Ticket resolves in SMELT exactly. Typing makes no name
+  current: while the menu is open, Enter chooses only a name that the arrow
+  keys made current, and otherwise closes the menu, keeping the text; while
+  it is closed, Enter submits the form. The names only help to find one:
+  Sentinel reads them from a snapshot that it takes from SMELT once a day,
+  which holds none before its first snapshot, so the field takes a name that
+  it does not suggest, and a failure of their read, which shows in the menu,
+  leaves the addition possible.
 - The form checks the name without its surrounding whitespace before sending
   it so, as the pinned OpenAPI document publishes it (Sentinel
   `docs/api-spec.md`, Published Input Constraints): empty, "Enter the package
@@ -1436,32 +1440,41 @@ Maintained Packages):
   . _ + -, starting with a letter or a digit.", so a name such as `libxml++`
   passes. The error shows at the field when the user submits the form, the
   field takes the focus, and the error goes once the name changes.
-- Add package asks for no confirmation: Exclude reverses it. With a name
-  typed, Cancel, Escape, and a navigation of the UI, such as back, ask
-  "Discard changes?", "The package that you entered isn't added.", with Keep
-  editing and Discard (`docs/behaviors.md`, Confirmation). While the request
-  is in progress, Add package is busy, the field cannot change, the dialog
-  cannot be closed, and a navigation asks nothing. Once Sentinel confirms
-  it, the dialog closes, and the focus returns to Add package.
-- An addition creates the tracks and Products that SMELT lists and the
-  package lacks, also on a package of the Ticket, and can add its
-  maintainers; when it creates a record, it can assign an unassigned Ticket
-  to the user and change its status and its deadlines, as an edit of the
-  package tree does (above). Whatever the outcome, the screen then reads
-  again what an edit of the package tree affects (above).
+- Add package asks for no confirmation, also on a confidential Ticket, whose
+  maintainers that it adds to the package then see the Ticket: it ends no
+  one's access, and Exclude reverses it (`docs/behaviors.md`, Confirmation;
+  Sentinel `docs/features/packages/package-maintainership.md`, Confidential
+  Ticket Visibility). With a name typed, other than whitespace, Cancel,
+  Escape, and a navigation of the UI, such as back, ask "Discard changes?",
+  "The package that you entered isn't added.", with Keep editing and Discard
+  (`docs/behaviors.md`, Confirmation). While the request is in progress, Add
+  package is busy, the dialog cannot be closed, and a navigation asks nothing
+  (`docs/behaviors.md`, Loading). Once Sentinel confirms it, the dialog
+  closes, and the focus returns to Add package (`docs/behaviors.md`,
+  Accessibility, Dialogs).
+- An addition creates the tracks and Products that Sentinel finds for the
+  package in SMELT and that the package lacks, also on a package of the
+  Ticket, and can add its maintainers; when it creates a track or a Product,
+  it can assign an unassigned Ticket to the user and change its status and
+  its deadlines, as an edit of the package tree does (above). Whatever the
+  outcome, the screen then reads again what an edit of the package tree
+  affects (above).
 - Its outcome shows in the message area once the read of the Ticket after it
   arrives, whatever the outcome of that read, since the tree does not show
   what Sentinel created (`docs/behaviors.md`, Outcome of a Change): "Package
   fictional-openssl: 3 tracks and 7 Products added.", "Package
   fictional-openssl: 2 Products added.", or, when Sentinel created none,
-  "Package fictional-openssl already has every track and Product that SMELT
-  lists, so none was added."; while "Show hidden" is off and that read shows
-  the package hidden, followed by "Show hidden shows it, since none of its
-  Products takes part.". The outcome of an addition that ends after the user
-  left the tab shows in the message area, and so does its failure, in the
-  presentation of the dialog (States), starting with the Ticket, as a link to
-  its screen, such as "SNTL-20: Package fictional-openssl: 3 tracks and 7
-  Products added.", when the user is on another screen.
+  "Package fictional-openssl already has every track and Product that
+  Sentinel finds for it in SMELT, so none was added."; while "Show hidden" is
+  off and that read shows the package hidden, followed by "Show hidden shows
+  it, since none of its Products is actionable.". The outcome of an addition
+  that ends after the user left the tab shows in the message area, and so
+  does its failure, in the presentation of the dialog (States) after the
+  package, starting with the Ticket, as a link to its screen, such as
+  "SNTL-20: Package fictional-openssl: 3 tracks and 7 Products added." or
+  "SNTL-20: Package fictional-openssl: SMELT doesn't maintain a package of
+  this name. Check the name, whose letter case counts.", when the user is on
+  another screen.
 
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,
@@ -1764,8 +1777,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   codes specifically, at the field, which takes the focus: `422
   PACKAGE_NOT_FOUND_IN_SMELT`, "SMELT doesn't maintain a package of this
   name. Check the name, whose letter case counts."; `422
-  PACKAGE_TARGETS_UNRESOLVED`, "SMELT maintains this package for no Product
-  that Sentinel knows, so Sentinel added nothing."; and `409
+  PACKAGE_TARGETS_UNRESOLVED`, "Sentinel found no Product that it tracks
+  among those that SMELT lists for this package, so it added nothing."; and
+  `409
   PACKAGE_ALREADY_EXCLUDED`, for a package of the Ticket that its own marker
   excludes, "This package is excluded from this Ticket: Show hidden shows it,
   and Restore in the menu of its actions includes it again." (Sentinel
@@ -1919,10 +1933,11 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   Dimensions; Affectedness-Delivery Independence; Status Behavior
   (User-Attributed Status Change; Authorized-User Overrides Product
   Eligibility; Manual Transitions); Exclusion and Actionability; Package
-  Eligibility (Override Model); Adding Packages to a Ticket; API Endpoints
-  (Add Package to Ticket; Soft-Delete Package from Ticket; Restore Package; Soft-Delete Track; Restore Track; Soft-Delete
-  Product; Restore Product; Change Track Status; Override Product
-  Eligibility (Reset behavior); List Ticket Packages)
+  Eligibility (Override Model); Adding Packages to a Ticket (SMELT Query
+  for Package Resolution); API Endpoints (Add Package to Ticket; Soft-Delete
+  Package from Ticket; Restore Package; Soft-Delete Track; Restore Track;
+  Soft-Delete Product; Restore Product; Change Track Status; Override
+  Product Eligibility (Reset behavior); List Ticket Packages)
 - Sentinel `docs/features/packages/maintained-package-names.md` — Purpose;
   Domain Concepts (Snapshot); API Endpoints (Search Maintained Packages)
 - Sentinel `docs/features/packages/ibs-submission-tracking.md` — Scope;
@@ -1967,12 +1982,13 @@ Ignored and Duplicated included, so the screen offers it whatever the status
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility; Business Rules (10); Assignment Eligibility Wire Format;
   Endpoint Permission Map (Users; CVEs; CVSS; Tickets; Ticket Packages;
-  Ticket References)
+  Maintained Packages; Ticket References)
 - Sentinel `docs/features/identity/user-management.md` — Directory API
   endpoints (List Users)
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
-  Characters in Request Input; Ticket Identifier Resolution; User Identifier
-  Resolution; CVE Identifier Resolution; CNA Identifier Resolution; CVE
-  Accessibility Check; Pagination; Enum Filter Validation; Date Range
-  Interpretation; Infrastructure Dependency Errors (HTTP 503); Manual-Zone
-  Mutability Guard; Partial Update Semantics; User References in Responses
+  Characters in Request Input; Published Input Constraints; Ticket
+  Identifier Resolution; User Identifier Resolution; CVE Identifier
+  Resolution; CNA Identifier Resolution; CVE Accessibility Check; Pagination;
+  Enum Filter Validation; Date Range Interpretation; Infrastructure Dependency
+  Errors (HTTP 503); Manual-Zone Mutability Guard; Partial Update Semantics;
+  User References in Responses

@@ -136,37 +136,48 @@ export function SearchComboBox<TItem extends object>({
       isDisabled={isDisabled}
       allowsCustomValue={allowsCustomValue}
       allowsEmptyCollection={opensEmpty}
-      className="flex flex-col gap-1.5"
+      className="flex flex-col"
     >
       <Label className="text-15 font-medium">{label}</Label>
       <Input
         ref={inputRef}
         maxLength={SEARCH_MAX_LENGTH}
-        className={`h-10 rounded-md border border-border-strong bg-surface px-4 text-15 text-fg data-disabled:opacity-60 data-invalid:border-2 data-invalid:border-danger-icon data-invalid:px-3.75 ${FOCUS_RING}`}
+        className={`mt-1.5 h-10 rounded-md border border-border-strong bg-surface px-4 text-15 text-fg data-disabled:opacity-60 data-invalid:border-2 data-invalid:border-danger-icon data-invalid:px-3.75 ${FOCUS_RING}`}
       />
       {description !== undefined && (
-        <Text slot="description" className="text-13 text-fg-muted">
+        <Text slot="description" className="mt-1.5 text-13 text-fg-muted">
           {description}
         </Text>
       )}
-      <FieldError className="flex gap-1.5 text-13 font-medium text-danger-on-soft">
-        {({ validationErrors }) => (
-          <>
-            <CircleAlert aria-hidden className="mt-0.75 size-3.5 shrink-0" />
-            <span>{validationErrors.join(" ")}</span>
-          </>
-        )}
-      </FieldError>
+      {/* A status region that is there before the error, so that assistive
+          technologies announce it also while the field keeps the focus, as
+          after a submission with Enter in the field; it takes no room
+          without one, the space before each part of the field being its
+          own. */}
+      <output className="block">
+        <FieldError className="mt-1.5 flex gap-1.5 text-13 font-medium text-danger-on-soft">
+          {({ validationErrors }) => (
+            <>
+              <CircleAlert aria-hidden className="mt-0.75 size-3.5 shrink-0" />
+              <span>{validationErrors.join(" ")}</span>
+            </>
+          )}
+        </FieldError>
+      </output>
       <Popover offset={4} className={OPTIONS_POPOVER}>
         <ListBox
           aria-describedby={statusId}
           className="outline-none"
-          renderEmptyState={() =>
-            waiting ? (
-              <OptionsStatus>
-                <Loading inValue />
-              </OptionsStatus>
-            ) : null
+          // Only while the options load: React Aria holds the empty state in
+          // an option, which would otherwise be an option without a name.
+          renderEmptyState={
+            waiting
+              ? () => (
+                  <OptionsStatus>
+                    <Loading inValue />
+                  </OptionsStatus>
+                )
+              : undefined
           }
         >
           {(item: TItem) => (

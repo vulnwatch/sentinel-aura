@@ -43,13 +43,13 @@ x-sentinel-image: &sentinel-image
     # and does not run, so the API reports it as disabled (Sentinel
     # docs/configuration.md, IBS RabbitMQ Consumer).
     IBS_RABBITMQ_ENABLED: "false"
-    # SMELT, which adding a package queries, is not reachable from a dataset
+    # Adding a package queries SMELT and does not complete on a dataset
     # backend (Sentinel docs/features/platform/example-dataset.md, Operating a
-    # Dataset Backend). Its default address resolves inside SUSE's network and
-    # nowhere else, so a port of the loopback interface of the container where
-    # nothing listens makes it fail alike on every host: Add Package to Ticket
-    # answers 503 SMELT_UNAVAILABLE once the transport retries end (Sentinel
-    # docs/features/platform/networking.md, Transport-Level Retry).
+    # Dataset Backend). SMELT's default address resolves inside SUSE's network
+    # and nowhere else, so a port of the loopback interface of the container
+    # where nothing listens makes it fail alike on every host: Add Package to
+    # Ticket answers 503 SMELT_UNAVAILABLE once the transport retries end
+    # (Sentinel docs/features/platform/networking.md, Transport-Level Retry).
     SMELT_API_URL: https://127.0.0.1:9/api
 
 # nginx answers on port 8080 of every image that runs it.

@@ -2,6 +2,7 @@ import {
   createRef,
   useEffect,
   useId,
+  useRef,
   useState,
   type FormEvent,
   type RefObject,
@@ -81,7 +82,10 @@ function counted(count: number, one: string, several: string): string {
 // The outcome of an addition, from the counts that Sentinel returns, which
 // say what it created and not whether the package is new: "Package
 // fictional-openssl: 3 tracks and 7 Products added.", or, when it created
-// nothing, that the package already has what SMELT lists. Sentinel can add
+// nothing, that the package already has what Sentinel finds for it in SMELT,
+// which skips the codestreams that it does not support and the Products that
+// its catalog lacks (Sentinel docs/features/packages/package-model.md, SMELT
+// Query for Package Resolution). Sentinel can add
 // maintainers also then (Sentinel docs/features/packages/package-model.md,
 // Adding Packages to a Ticket), so the outcome does not say that nothing
 // changed.
@@ -95,14 +99,13 @@ export function addedText({ data }: PackageAdditionResponse): string {
       : []),
   ];
   return created.length === 0
-    ? `Package ${data.package_name} already has every track and Product that SMELT lists, so none was added.`
+    ? `Package ${data.package_name} already has every track and Product that Sentinel finds for it in SMELT, so none was added.`
     : `Package ${data.package_name}: ${created.join(" and ")} added.`;
 }
 
 interface PackageNameFieldProps {
   value: string;
   onChange: (value: string) => void;
-  isDisabled: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
 }
 
@@ -122,7 +125,6 @@ interface PackageNameFieldProps {
 function PackageNameField({
   value,
   onChange,
-  isDisabled,
   inputRef,
 }: PackageNameFieldProps) {
   // The name of the option that the user chose, while the field holds it.
@@ -181,7 +183,6 @@ function PackageNameField({
       waiting={waiting}
       opensEmpty={long}
       allowsCustomValue
-      isDisabled={isDisabled}
       inputRef={inputRef}
     />
   );
@@ -231,13 +232,16 @@ export function AddPackageDialog({
   onDone,
 }: AddPackageDialogProps) {
   const readAgain = useReadAfterTicketChange(ticketId);
+  // The name that the addition in progress sends, which its failure after the
+  // user left the screen names.
+  const sent = useRef("");
   const add = useAddTicketPackage({
     mutation: useChangeOutcome(
       ticketRecord(ticketId),
       addedText,
       readAgain,
       onDone,
-      presentLeftAddPackageFailure,
+      (failure) => presentLeftAddPackageFailure(failure, sent.current),
     ),
   });
   const formId = useId();
@@ -258,7 +262,7 @@ export function AddPackageDialog({
     }
   }, [failure, inputRef]);
   const { close, question } = useDiscardQuestion({
-    held: name !== "" && !busy,
+    held: name.trim() !== "" && !busy,
     consequence: "The package that you entered isn't added.",
     onDiscard: onClose,
   });
@@ -299,6 +303,7 @@ export function AddPackageDialog({
       return;
     }
     setBusy(true);
+    sent.current = packageName;
     try {
       await add.mutateAsync({ ticketId, data: { package_name: packageName } });
     } catch (failed) {
@@ -357,7 +362,6 @@ export function AddPackageDialog({
               }
               setName(value);
             }}
-            isDisabled={busy}
             inputRef={inputRef}
           />
         </Form>

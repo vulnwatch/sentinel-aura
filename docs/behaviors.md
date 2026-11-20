@@ -686,7 +686,8 @@ it:
   dropped without a question, and neither are the username and the password
   of Sign in. A combobox whose value is the text typed, which it only helps to
   find, such as the name of a package (`docs/design-system.md`, Forms), holds
-  such input once the user has typed in it.
+  such input while its field holds text other than whitespace that the user
+  typed.
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses

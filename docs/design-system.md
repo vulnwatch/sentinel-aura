@@ -1529,8 +1529,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   the options only help to find, such as the name of a package, the field
   takes a text that no option holds, choosing an option writes its text in
   the field, and below 2 characters the menu stays closed without a line,
-  since a shorter value can be valid; its text is input not yet submitted
-  (`docs/behaviors.md`, Confirmation).
+  since a shorter value can be valid; its text, other than whitespace, is
+  input not yet submitted (`docs/behaviors.md`, Confirmation).
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would

@@ -980,7 +980,7 @@ function addedOutcome(
         ticketPackage.package_name === response.data.package_name,
     );
     return added !== undefined && !added.actionable && !showsHidden()
-      ? `${text} Show hidden shows it, since none of its Products takes part.`
+      ? `${text} Show hidden shows it, since none of its Products is actionable.`
       : text;
   };
 }
@@ -1049,9 +1049,10 @@ export function PackagesPart({
   const capabilities = user?.capabilities ?? [];
   const editable = PACKAGE_EDITABLE_STATUSES.has(ticket.status);
   const manages = editable && capabilities.includes("manage_packages");
-  // Add package, for a user who adds packages, and while its dialog is open,
-  // which keeps it as it opened (docs/behaviors.md, The Signed-in User).
-  const offersAdd = manages || adding;
+  // Add package, for a user who adds packages; its dialog stays open, with
+  // what it offered as it opened, also once a read of the signed-in user
+  // takes the capability away (docs/behaviors.md, The Signed-in User).
+  const offersAdd = manages;
   const fixes =
     editable &&
     (capabilities.includes("admin_ticket_ops") ||

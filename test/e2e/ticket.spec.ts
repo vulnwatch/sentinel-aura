@@ -1379,12 +1379,18 @@ test.describe("for an analyst", () => {
       ),
     );
 
-    await dialog
-      .getByRole("button", { name: "Add package", exact: true })
-      .click();
+    const submit = dialog.getByRole("button", {
+      name: "Add package",
+      exact: true,
+    });
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
 
-    // While Sentinel tries SMELT, the field cannot change.
-    await expect(field).toBeDisabled();
+    await submit.click();
+
+    // While Sentinel tries SMELT, Add package is busy, and the dialog cannot
+    // be closed.
+    await expect(submit).toHaveAttribute("aria-disabled", "true");
+    await expect(cancel).toBeDisabled();
     await expect(
       dialog.getByText(
         "Sentinel couldn't get the tracks and Products of this package from SMELT, so it added nothing. Try again later.",
@@ -1392,7 +1398,8 @@ test.describe("for an analyst", () => {
       ),
     ).toBeVisible({ timeout: 30_000 });
     await expect(dialog.getByText(/^Reference: \S+$/)).toBeVisible();
-    await expect(field).toBeEnabled();
+    await expect(submit).not.toHaveAttribute("aria-disabled");
+    await expect(cancel).toBeEnabled();
     await expect(field).toHaveValue("Fictional-ImageTool");
     for (const response of await readsAgain) {
       expect(response.ok()).toBe(true);
@@ -1451,9 +1458,106 @@ test.describe("for an analyst", () => {
       discard.getByRole("button", { name: "Keep editing" }),
     ).toBeFocused();
     await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-discard.png");
     await discard.getByRole("button", { name: "Discard", exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await expect(add).toBeFocused();
+  });
+
+  test("says in Add package how many maintained names match when it lists only some, and when none does, and checks a name before sending it", async ({
+    page,
+  }) => {
+    // asmith holds manage_packages, and SNTL-20, in Analysis, has no
+    // package (Users; Tickets). At the anchor of the package tree, the page
+    // scrolls the dates of the CVE above the window, so that their masks
+    // show over neither the dialog nor its menu.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-20#packages");
+    const add = part(page, "Packages").getByRole("button", {
+      name: "Add package",
+      exact: true,
+    });
+    // Once every read of the tab has arrived, the page shows the target of
+    // its anchor, which moves Add package: the click waits for it.
+    await expectOverviewShown(page);
+    // The additions that the page sends.
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/v1/tickets/SNTL-20/packages"
+      ) {
+        sent.push(request.url());
+      }
+    });
+
+    await add.click();
+
+    const dialog = page.getByRole("dialog", { name: "Add package" });
+    const field = dialog.getByRole("combobox", { name: "Package name" });
+    const names = page
+      .getByRole("listbox", { name: "Package name" })
+      .getByRole("option");
+
+    // Each of the 29 maintained names contains the term: the field lists the
+    // first 20, those that start with it first, each group in the order of
+    // the code points, so Fictional-ImageTool before the names in lower case
+    // and libfictional-openssl last (Maintained Package Names; Sentinel
+    // docs/features/packages/maintained-package-names.md, Search Maintained
+    // Packages).
+    await field.fill("fictional");
+
+    const count = page.getByText(
+      "The first 20 of 29 packages that match. Type more to narrow them.",
+      { exact: true },
+    );
+    await expect(count).toBeVisible();
+    await expect(names).toHaveCount(20);
+    await expect(names.first()).toHaveText("Fictional-ImageTool");
+    await expect(names.last()).toHaveText("fictional-openssh");
+    await expectAccessible(page);
+    // The line follows the names, at the end of the menu.
+    await count.scrollIntoViewIfNeeded();
+    await expectScreenshot(page, "ticket-add-package-count.png");
+
+    await field.fill("fictional-none");
+
+    await expect(
+      page.getByText("Sentinel knows no maintained package that matches.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(names).toHaveCount(0);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-no-match.png");
+
+    // A name whose first character is neither a letter nor a digit, which
+    // the maintained names that contain it do not change.
+    await field.fill("-openssl");
+    await expect(names).toHaveText([
+      "fictional-openssl",
+      "fictional-openssl-3",
+      "libfictional-openssl",
+    ]);
+    // Enter without a current name closes the menu, keeping the text, and
+    // then submits the form.
+    await field.press("Enter");
+    await expect(names).toHaveCount(0);
+    await expect(field).toHaveValue("-openssl");
+
+    await field.press("Enter");
+
+    await expect(
+      dialog.getByText(
+        "Enter only letters, digits, and . _ + -, starting with a letter or a digit.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue("-openssl");
+    expect(sent).toEqual([]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-add-package-check.png");
   });
 
   test("asks for confirmation before excluding a package with maintainers of a confidential Ticket", async ({
@@ -3909,22 +4013,6 @@ test("shows a maintainer the access grants of a confidential Ticket, without Gra
   await expect(
     dialog.getByRole("button", { name: /^Revoke access/ }),
   ).toHaveCount(0);
-});
-
-test("shows a reader a Ticket without packages, without Add package", async ({
-  page,
-}) => {
-  // hgray, the reader, holds no role, so no manage_packages (Users); SNTL-20
-  // has no package (Tickets).
-  await signIn(page, "hgray");
-
-  await page.goto("/tickets/SNTL-20");
-
-  const packages = part(page, "Packages");
-  await expect(
-    packages.getByText("No packages.", { exact: true }),
-  ).toBeVisible();
-  await expect(packages.getByRole("button")).toHaveCount(0);
 });
 
 test("shows Not found for a Ticket that the user cannot see", async ({

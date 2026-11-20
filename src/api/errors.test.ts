@@ -573,7 +573,7 @@ describe("packageNameError", () => {
     [
       422,
       "PACKAGE_TARGETS_UNRESOLVED",
-      "SMELT maintains this package for no Product that Sentinel knows, so Sentinel added nothing.",
+      "Sentinel found no Product that it tracks among those that SMELT lists for this package, so it added nothing.",
     ],
     [
       409,
@@ -677,6 +677,12 @@ describe("presentAddPackageFailure", () => {
   });
 });
 
+// The message of a failure of Add package that ends after the user left the
+// screen, after the package that it concerns.
+function named(message: string): string {
+  return `Package fictional-openssl: ${message}`;
+}
+
 describe("presentLeftAddPackageFailure", () => {
   test.each([
     [
@@ -687,7 +693,7 @@ describe("presentLeftAddPackageFailure", () => {
     [
       422,
       "PACKAGE_TARGETS_UNRESOLVED",
-      "SMELT maintains this package for no Product that Sentinel knows, so Sentinel added nothing.",
+      "Sentinel found no Product that it tracks among those that SMELT lists for this package, so it added nothing.",
     ],
     [
       409,
@@ -695,11 +701,18 @@ describe("presentLeftAddPackageFailure", () => {
       "This package is excluded from this Ticket: Show hidden shows it, and Restore in the menu of its actions includes it again.",
     ],
   ])(
-    "presents %i %s with the message of the name field, as an error without a reference",
+    "presents %i %s with the message of the name field after the package, as an error without a reference",
     (status, code, message) => {
-      expect(presentLeftAddPackageFailure(errorResponse(status, code))).toEqual(
-        { message, reference: undefined, unconfirmed: false },
-      );
+      expect(
+        presentLeftAddPackageFailure(
+          errorResponse(status, code),
+          "fictional-openssl",
+        ),
+      ).toEqual({
+        message: named(message),
+        reference: undefined,
+        unconfirmed: false,
+      });
     },
   );
 
@@ -713,10 +726,15 @@ describe("presentLeftAddPackageFailure", () => {
       "Sentinel hasn't loaded the Products from SMELT yet, so it added nothing. Try again later.",
     ],
   ])(
-    "presents 503 %s as the form does, as an error with its reference",
+    "presents 503 %s as the form does, after the package, as an error with its reference",
     (code, message) => {
-      expect(presentLeftAddPackageFailure(errorResponse(503, code))).toEqual({
-        message,
+      expect(
+        presentLeftAddPackageFailure(
+          errorResponse(503, code),
+          "fictional-openssl",
+        ),
+      ).toEqual({
+        message: named(message),
         reference: REQUEST_ID,
         unconfirmed: false,
       });
@@ -727,51 +745,82 @@ describe("presentLeftAddPackageFailure", () => {
     [
       "a network failure",
       new NetworkError({ cause: new TypeError("Failed to fetch") }),
-      { message: UNCONFIRMED, reference: undefined, unconfirmed: true },
+      { message: named(UNCONFIRMED), reference: undefined, unconfirmed: true },
     ],
     [
       "a 5xx that the pinned contract does not list",
       errorResponse(507, "FICTIONAL_UNAVAILABLE"),
-      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+      { message: named(UNCONFIRMED), reference: REQUEST_ID, unconfirmed: true },
     ],
     [
       "a 503 with a code that the pinned contract does not list",
       errorResponse(503, "FICTIONAL_UNAVAILABLE"),
-      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+      { message: named(UNCONFIRMED), reference: REQUEST_ID, unconfirmed: true },
     ],
     [
       "409 TICKET_NOT_MUTABLE",
       errorResponse(409, "TICKET_NOT_MUTABLE"),
-      { message: CONFLICT, reference: undefined, unconfirmed: false },
+      { message: named(CONFLICT), reference: undefined, unconfirmed: false },
     ],
     [
       "a code that the pinned contract does not list",
       errorResponse(422, "FICTIONAL_CODE"),
-      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+      {
+        message: named(NOT_ACCEPTED),
+        reference: undefined,
+        unconfirmed: false,
+      },
     ],
     [
       "a status that the pinned contract does not list",
       errorResponse(418, "FICTIONAL_CODE"),
-      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+      {
+        message: named(NOT_ACCEPTED),
+        reference: undefined,
+        unconfirmed: false,
+      },
     ],
     [
       "a code of the name field with another status",
       errorResponse(400, "PACKAGE_NOT_FOUND_IN_SMELT"),
-      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+      {
+        message: named(NOT_ACCEPTED),
+        reference: undefined,
+        unconfirmed: false,
+      },
     ],
     [
       "a field error of the name, whose field is no longer shown",
       validationError([entry(["body", "package_name"])]),
-      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+      {
+        message: named(NOT_ACCEPTED),
+        reference: undefined,
+        unconfirmed: false,
+      },
     ],
-  ])("presents %s by its status", (_, failure, presentation) => {
-    expect(presentLeftAddPackageFailure(failure)).toEqual(presentation);
+  ])(
+    "presents %s by its status, after the package",
+    (_, failure, presentation) => {
+      expect(
+        presentLeftAddPackageFailure(failure, "fictional-openssl"),
+      ).toEqual(presentation);
+    },
+  );
+
+  test("names the package that it is given", () => {
+    expect(
+      presentLeftAddPackageFailure(
+        errorResponse(409, "TICKET_NOT_MUTABLE"),
+        "libxml++",
+      )?.message,
+    ).toBe(`Package libxml++: ${CONFLICT}`);
   });
 
   test("presents no message for a 401", () => {
     expect(
       presentLeftAddPackageFailure(
         errorResponse(401, "AUTH_NOT_AUTHENTICATED"),
+        "fictional-openssl",
       ),
     ).toBeUndefined();
   });

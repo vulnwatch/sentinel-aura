@@ -352,14 +352,15 @@ export function presentMarkerConflict(
 
 // The messages of the name field of Add package, at the field
 // (docs/screens/ticket.md, States): SMELT maintains no package of the name,
-// whose letter case counts; SMELT maintains it for no Product of Sentinel's
-// current catalog; or the package is on the Ticket, directly excluded, which
+// whose letter case counts; no Product that SMELT lists for it, in a
+// codestream that Sentinel supports, is in Sentinel's current catalog; or the
+// package is on the Ticket, directly excluded, which
 // Restore includes again (Sentinel docs/features/packages/package-model.md,
 // Add Package to Ticket; SMELT Query for Package Resolution).
 const MESSAGE_PACKAGE_NOT_IN_SMELT =
   "SMELT doesn't maintain a package of this name. Check the name, whose letter case counts.";
 const MESSAGE_PACKAGE_TARGETS_UNRESOLVED =
-  "SMELT maintains this package for no Product that Sentinel knows, so Sentinel added nothing.";
+  "Sentinel found no Product that it tracks among those that SMELT lists for this package, so it added nothing.";
 const MESSAGE_PACKAGE_EXCLUDED =
   "This package is excluded from this Ticket: Show hidden shows it, and Restore in the menu of its actions includes it again.";
 
@@ -418,14 +419,24 @@ export function presentAddPackageFailure(
 // The presentation of a failure of Add package that ends after the user left
 // the screen, in the message area of the screen that the user is on
 // (docs/screens/ticket.md, Actions): the errors of its field and those that
-// Sentinel returns before any change as errors, the others as a change.
+// Sentinel returns before any change as errors, the others as a change, each
+// after the package that it concerns, such as "Package fictional-openssl: ",
+// since the dialog that held the name is gone.
 export function presentLeftAddPackageFailure(
   failure: RequestFailure,
+  packageName: string,
 ): ChangeFailurePresentation | undefined {
-  const message = packageNameError(failure);
-  return message === undefined
-    ? presentAddPackageFailure(failure)
-    : { message, reference: undefined, unconfirmed: false };
+  const atField = packageNameError(failure);
+  const presentation =
+    atField === undefined
+      ? presentAddPackageFailure(failure)
+      : { message: atField, reference: undefined, unconfirmed: false };
+  return presentation === undefined
+    ? undefined
+    : {
+        ...presentation,
+        message: `Package ${packageName}: ${presentation.message}`,
+      };
 }
 
 // Whether a read of the access grants of a Ticket failed because the Ticket

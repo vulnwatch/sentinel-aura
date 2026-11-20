@@ -118,7 +118,7 @@ const SURFACE = "rgb(255, 255, 255)";
 const ADDED = "Package fictional-openssl: 3 tracks and 7 Products added.";
 
 // fictional-openssl as a Ticket read after its addition shows it while none
-// of its Products takes part, as at the end of its life: hidden.
+// of its Products is actionable, as at the end of its life: hidden.
 function hiddenOpenssl(): PackageDetail {
   return fictionalPackage({
     actionable: false,
@@ -371,11 +371,12 @@ describe("Add package", () => {
     },
   );
 
-  test("stays while its dialog is open after a read of the signed-in user takes manage_packages away, and is gone once it closes, the focus on the screen's heading", async () => {
+  test("goes after a read of the signed-in user takes manage_packages away while its dialog stays open with its form, and the focus moves to the screen's heading once the dialog closes", async () => {
     let user = PACKAGE_MANAGER;
     showingAddable({ user: () => user });
     const { screen } = await renderTree();
     const dialog = await openAdd(screen);
+    await nameField(dialog).fill("fictional-openssl");
     user = OTHER_USER;
 
     await returnToForeground();
@@ -395,13 +396,20 @@ describe("Add package", () => {
           }),
       )
       .not.toBeInTheDocument();
-    await expect.element(addButtonBehindDialog(screen)).toBeInTheDocument();
+    expect(addButtonBehindDialog(screen).query()).toBeNull();
     await expect.element(dialog).toBeVisible();
+    await expect.element(nameField(dialog)).toHaveValue("fictional-openssl");
 
+    // Tab closes the menu of the field, which keeps the buttons from
+    // assistive technologies while it is open.
+    await userEvent.keyboard("{Tab}");
+    await expect.element(submitButton(dialog)).toBeVisible();
     await cancelButton(dialog).click();
+    await discardDialog(screen)
+      .getByRole("button", { name: "Discard", exact: true })
+      .click();
 
     await expect.element(dialog).not.toBeInTheDocument();
-    await expect.element(addButton(screen)).not.toBeInTheDocument();
     await expectFocusSettledOn(screenHeading(screen));
   });
 });
@@ -487,6 +495,78 @@ describe("the dialog of Add package", () => {
       expect(additions(spy)).toEqual([{ package_name: sent }]);
     },
   );
+
+  test("announces the error of a check after Enter in the field in a status region that was there before it, while the field keeps the focus", async () => {
+    showingAddable();
+    const { screen } = await renderTree();
+    const dialog = await openAdd(screen);
+    const statuses = dialog.getByRole("status").elements();
+
+    await userEvent.keyboard("{Enter}");
+
+    const field = nameField(dialog);
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription(`${DESCRIPTION} Enter the package name.`);
+    await expect.element(field).toHaveFocus();
+    const error = dialog
+      .getByText("Enter the package name.", { exact: true })
+      .element();
+    expect(statuses.some((status) => status.contains(error))).toBe(true);
+  });
+
+  test("submits the form with Enter in the field once its menu is closed, the field keeping the focus while the addition is in progress, and sends one request", async () => {
+    const response = later();
+    const spy = showingAddable({
+      maintainedPackages: () =>
+        maintainedPackagesPage(["fictional-openssl", "fictional-openssl-3"]),
+      addPackage: () => response.promise,
+    });
+    const { screen } = await renderTree();
+    const dialog = await openAdd(screen);
+    const field = nameField(dialog);
+    await field.fill("fictional-openssl");
+    await expect.element(option(screen, "fictional-openssl")).toBeVisible();
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await expect.element(field).toHaveAttribute("aria-expanded", "false");
+    expect(additions(spy)).toHaveLength(0);
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(submitButton(dialog))
+      .toHaveAttribute("aria-disabled", "true");
+    expect(additions(spy)).toEqual([{ package_name: "fictional-openssl" }]);
+    await nextFrames();
+    expect(document.activeElement).toBe(field.element());
+    // Enter in the field again while the addition is in progress.
+    await userEvent.keyboard("{Enter}");
+    await nextFrames();
+    expect(additions(spy)).toHaveLength(1);
+
+    response.resolve(packageAdditionResponse());
+
+    await expect.element(dialog).not.toBeInTheDocument();
+  });
+
+  test("closes the menu with Enter in the field while the arrow keys made no option current, keeping the text and sending nothing", async () => {
+    const spy = showingAddable({ maintainedPackages: imageToolNames });
+    const { screen } = await renderTree();
+    const dialog = await openAdd(screen);
+    const field = nameField(dialog);
+    await field.fill("imagetool");
+    await expect.element(option(screen, "Fictional-ImageTool")).toBeVisible();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect.element(field).toHaveAttribute("aria-expanded", "false");
+    await expect.element(screen.getByRole("listbox")).not.toBeInTheDocument();
+    await nextFrames();
+    await expect.element(field).toHaveValue("imagetool");
+    await expect.element(field).not.toBeInvalid();
+    await expect.element(dialog).toBeVisible();
+    expect(additions(spy)).toHaveLength(0);
+  });
 
   test("takes the error of a check away once the name changes", async () => {
     showingAddable();
@@ -696,6 +776,38 @@ describe("the suggestions of Package name", () => {
     expect(screen.getByRole("option").elements()).toHaveLength(0);
   });
 
+  test.each([
+    [
+      "none matches",
+      () => maintainedPackagesPage([]),
+      "Sentinel knows no maintained package that matches.",
+    ],
+    [
+      "their read fails",
+      () => errorResponse(500, "INTERNAL_ERROR"),
+      MESSAGE_INTERNAL,
+    ],
+  ])(
+    "leave no option in the menu while it shows only its line, when %s",
+    async (_, response, line) => {
+      showingAddable({ maintainedPackages: response });
+      const { screen } = await renderTree();
+      const dialog = await openAdd(screen);
+
+      await nameField(dialog).fill("fictional-none");
+
+      await expect
+        .element(screen.getByText(line, { exact: true }))
+        .toBeVisible();
+      await nextFrames();
+      const listbox = screen.getByRole("listbox");
+      await expect.element(listbox).toBeInTheDocument();
+      expect(
+        listbox.getByRole("option", { includeHidden: true }).elements(),
+      ).toHaveLength(0);
+    },
+  );
+
   test("say how many packages match when more match than they list", async () => {
     const names = Array.from(
       { length: 20 },
@@ -808,7 +920,7 @@ describe("a failure of Add package", () => {
     [
       "422 PACKAGE_TARGETS_UNRESOLVED",
       () => errorResponse(422, "PACKAGE_TARGETS_UNRESOLVED"),
-      "SMELT maintains this package for no Product that Sentinel knows, so Sentinel added nothing.",
+      "Sentinel found no Product that it tracks among those that SMELT lists for this package, so it added nothing.",
     ],
     [
       "409 PACKAGE_ALREADY_EXCLUDED",
@@ -976,7 +1088,7 @@ describe("a failure of Add package", () => {
     await expectFocusOnError(error);
   });
 
-  test("is busy while the addition is in progress, sends one request, and cannot be closed", async () => {
+  test("is busy while the addition is in progress, with the field still enabled, sends one request, and cannot be closed", async () => {
     const response = later();
     const spy = showingAddable({ addPackage: () => response.promise });
     const { screen } = await renderTree();
@@ -986,7 +1098,7 @@ describe("a failure of Add package", () => {
     await expect
       .element(submitButton(dialog))
       .toHaveAttribute("aria-disabled", "true");
-    await expect.element(nameField(dialog)).toBeDisabled();
+    await expect.element(nameField(dialog)).toBeEnabled();
     await expect.element(cancelButton(dialog)).toBeDisabled();
     await userEvent.keyboard("{Enter}");
     await userEvent.keyboard("{Escape}");
@@ -1008,6 +1120,26 @@ describe("leaving Add package", () => {
       showingAddable();
       const { screen } = await renderTree();
       const dialog = await openAdd(screen);
+
+      if (way === "Escape") {
+        await userEvent.keyboard("{Escape}");
+      } else {
+        await cancelButton(dialog).click();
+      }
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(discardDialog(screen).query()).toBeNull();
+      await expect.element(addButton(screen)).toHaveFocus();
+    },
+  );
+
+  test.each(["Cancel", "Escape"])(
+    "on %s with a name of whitespace alone closes at once, and returns the focus to Add package",
+    async (way) => {
+      showingAddable();
+      const { screen } = await renderTree();
+      const dialog = await openAdd(screen);
+      await nameField(dialog).fill("   ");
 
       if (way === "Escape") {
         await userEvent.keyboard("{Escape}");
@@ -1195,7 +1327,7 @@ describe("the outcome of Add package", () => {
         products_created: 0,
         products_skipped: 7,
       },
-      "Package fictional-openssl already has every track and Product that SMELT lists, so none was added.",
+      "Package fictional-openssl already has every track and Product that Sentinel finds for it in SMELT, so none was added.",
     ],
   ])("says what an addition that created %s added", async (_, counts, text) => {
     showingAddable({ addPackage: () => packageAdditionResponse(counts) });
@@ -1221,7 +1353,7 @@ describe("the outcome of Add package", () => {
 
     await expectSuccessMessage(
       screen,
-      `${ADDED} Show hidden shows it, since none of its Products takes part.`,
+      `${ADDED} Show hidden shows it, since none of its Products is actionable.`,
     );
     await expect
       .element(
@@ -1248,6 +1380,32 @@ describe("the outcome of Add package", () => {
 
     await expectSuccessMessage(screen, ADDED);
     expect(screen.getByText(/Show hidden shows it/).query()).toBeNull();
+  });
+
+  test("does not say where the package is when another package of the tree is hidden while the package added shows", async () => {
+    let tree: PackageDetail[] = [];
+    showingTree(
+      () => tree,
+      () => {
+        tree = [excludedPackage(), fictionalPackage()];
+        return packageAdditionResponse();
+      },
+    );
+    const { screen } = await renderTree();
+
+    await addName(screen, "fictional-openssl");
+
+    await expectSuccessMessage(screen, ADDED);
+    expect(screen.getByText(/Show hidden shows it/).query()).toBeNull();
+    await expect.element(showHidden(screen)).not.toBeChecked();
+    await expect
+      .element(
+        packagesPart(screen).getByRole("heading", {
+          level: 3,
+          name: "fictional-openssl",
+        }),
+      )
+      .toBeVisible();
   });
 
   test("reads again the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, but not its duplicates", async () => {
@@ -1314,12 +1472,13 @@ describe("the outcome of Add package", () => {
       false,
     ],
   ])(
-    "shows a failure of an addition that ends after the user left the screen, %s, in the message area as an error, naming the Ticket",
+    "shows a failure of an addition that ends after the user left the screen, %s, in the message area as an error, naming the Ticket and the package sent",
     async (_, failure, message, referenced) => {
       const response = later();
       showingAddable({ addPackage: () => response.promise });
       const { router, screen } = await renderTree();
-      const dialog = await addName(screen, "fictional-openssl");
+      // The name is sent without its surrounding whitespace.
+      const dialog = await addName(screen, "  fictional-openssl  ");
       await expect
         .element(submitButton(dialog))
         .toHaveAttribute("aria-disabled", "true");
@@ -1327,7 +1486,10 @@ describe("the outcome of Add package", () => {
       await leaveForTickets(router, screen);
       response.resolve(failure());
 
-      const error = screen.getByText(`SNTL-12: ${message}`, { exact: true });
+      const error = screen.getByText(
+        `SNTL-12: Package fictional-openssl: ${message}`,
+        { exact: true },
+      );
       await expect.element(error).toBeVisible();
       expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES.danger);
       await expect

@@ -212,6 +212,21 @@ describe("the part", () => {
     expect(showHidden(screen).elements()).toHaveLength(0);
   });
 
+  test("offers no Add package on a Ticket without packages to a user without manage_packages", async () => {
+    showing([]);
+
+    const { screen } = await renderTree();
+
+    await expect
+      .element(packagesPart(screen).getByText("No packages.", { exact: true }))
+      .toBeVisible();
+    expect(
+      packagesPart(screen)
+        .getByRole("button", { name: "Add package", exact: true })
+        .query(),
+    ).toBeNull();
+  });
+
   test("shows each package as a group under a band, 32 px apart, its tracks 12 px below the band and indented by 12 px, in the order of the API", async () => {
     showing([
       fictionalPackage(),
