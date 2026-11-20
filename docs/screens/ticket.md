@@ -969,17 +969,55 @@ timeline (`docs/design-system.md`, Timelines), from List Ticket Events,
 
 ## Actions
 
+The actions share these rules, which the entries below state only where they
+depart from them:
+
+- **Statuses.** Sentinel refuses a change on an Ignored or Duplicated Ticket
+  with `409 TICKET_NOT_MUTABLE`, so the screen offers an action that this
+  guard covers on a Ticket in New, Analysis, Analyzed, or Resolved, and none
+  on a Ticket of a status that the pinned contract does not list (Sentinel
+  `docs/api-spec.md`, Manual-Zone Mutability Guard; `docs/behaviors.md`,
+  Unknown Values). Refetch, Grant access and Revoke access, and the actions
+  of the references are outside the guard, and the screen offers them in
+  every status.
+- **Dialogs and confirmations of a change.** With input that the user
+  changed, Cancel, Escape, and a navigation of the UI, such as back, ask
+  "Discard changes?", with the consequence that the entry states, Keep
+  editing, and Discard (`docs/behaviors.md`, Confirmation). While the
+  request is in progress, its action is busy, the dialog or the confirmation
+  cannot be closed, and a navigation asks nothing (`docs/behaviors.md`,
+  Loading). Once Sentinel confirms the change, it closes, and the focus
+  returns to the button that opened it (`docs/behaviors.md`, Accessibility,
+  Dialogs), or moves as the entry states when the change removes that
+  button.
+- **Outcome.** An outcome that the screen announces, it announces once the
+  read after the change that the entry names arrives. When that read fails,
+  the screen keeps showing the data as before, so the outcome shows in the
+  message area instead, as a `success` message, or at the top of the dialog
+  that holds the change (`docs/behaviors.md`, Outcome of a Change). The
+  outcome of a change that ends after the user left the tab shows in the
+  message area, and so does its failure, in the presentation of its status
+  unless the entry states another (`docs/behaviors.md`, Default
+  Presentation by Status; Retries and Unconfirmed Changes), starting with
+  the Ticket, as a link to its screen, such as "SNTL-42: Assigned to Bob
+  Wilson.", when the user is on another screen.
+- **Reads.** Whatever the outcome of a change, the screen then reads again
+  what the change affects, which the entry lists (`docs/behaviors.md`,
+  Outcome of a Change).
+- **Focus.** After a change that removes the element with the focus, the
+  focus moves once the read after the change no longer shows the element,
+  and only while it is still where the entry states; when that read fails,
+  it stays where it is (`docs/behaviors.md`, Accessibility, Focus after an
+  action).
+
 **Edit assignee**, Assign Ticket, `PATCH /api/v1/tickets/{ticket_id}/assignee`,
 in the details, for a user who holds `triage_ticket` (Sentinel
 `docs/features/tickets/tickets.md`, Assign Ticket; Reassignment;
 Self-Unassignment):
 
 - The pencil of the assignee (`docs/design-system.md`, Detail Screens), named
-  "Edit assignee", which its tooltip shows. Sentinel refuses an assignment on
-  an Ignored or Duplicated Ticket with `409 TICKET_NOT_MUTABLE`, so the screen
-  offers none there, nor on a Ticket of a status that the pinned contract does
-  not list (Sentinel `docs/api-spec.md`, Manual-Zone Mutability Guard;
-  `docs/behaviors.md`, Unknown Values). While its popover is open or its
+  "Edit assignee", which its tooltip shows, on the statuses that accept a
+  change (above). While its popover is open or its
   assignment is in progress, it stays as it was when the popover opened, also
   when a read of the signed-in user takes `triage_ticket` away
   (`docs/behaviors.md`, The Signed-in User).
@@ -1014,28 +1052,24 @@ Self-Unassignment):
   assignee that the screen shows, or `null` for a Ticket that it shows
   unassigned (Sentinel `docs/features/tickets/tickets.md`, Reassignment,
   Expected assignee).
-- While the assignment is in progress, the choice is busy
-  (`docs/design-system.md`, Menus, Popovers, and Tooltips), the popover says
-  "Changing the assignee." in its status region, takes no other choice, and
-  cannot be closed, and Edit assignee is busy (`docs/behaviors.md`, Loading).
-  Once Sentinel confirms it, the popover closes, the focus returns to Edit
-  assignee, and once the read of the Ticket after it arrives, whatever the
-  outcome of that read, the screen announces it, naming the assignee that
-  Sentinel returns: "Assigned to Bob Wilson.", "Assigned to you.", or "You're
-  no longer the assignee." (`docs/behaviors.md`, Outcome of a Change).
+- While the assignment is in progress, the choice is busy and the other
+  choices are unavailable (`docs/design-system.md`, Menus, Popovers, and
+  Tooltips), the popover says "Changing the assignee." in its status region
+  and cannot be closed, and Edit assignee is busy (`docs/behaviors.md`,
+  Loading). Once Sentinel confirms it, the popover closes, the focus returns
+  to Edit assignee, and once the read of the Ticket after it arrives, the
+  screen announces it, naming the assignee that Sentinel returns: "Assigned
+  to Bob Wilson.", "Assigned to you.", or "You're no longer the assignee."
+  (above).
 - An assignment can move a New Ticket to Analysis and change its status
   (Sentinel `docs/features/tickets/tickets.md`, Status Transitions; Automatic
-  Status Evaluation). Whatever the outcome, the screen then reads again the
-  Ticket, the work of a maintainer on it, the users who acted on it, its audit
-  log, and the reads of the Ticket list.
+  Status Evaluation). The screen then reads again the Ticket, the work of a
+  maintainer on it, the users who acted on it, its audit log, and the reads
+  of the Ticket list.
 - When a change of layout closes the popover while the assignment is in
   progress, its failure shows in the message area in the presentation of its
   status (`docs/behaviors.md`, Default Presentation by Status), and its success
-  is announced as above (`docs/design-system.md`, Detail Screens). The outcome
-  of an assignment that ends after the user left the tab shows in the message
-  area, and so does its failure, starting with the Ticket, as a link to its
-  screen, such as "SNTL-42: Assigned to Bob Wilson.", when the user is on
-  another screen.
+  is announced as above (`docs/design-system.md`, Detail Screens).
 
 **Refetch**, Re-fetch CVE Data, `POST /api/v1/cves/{cve_id}/refetch`, for a
 user who holds `triage_ticket` (Sentinel
@@ -1075,11 +1109,9 @@ user who holds `triage_ticket` (Sentinel
   as "Sentinel didn't confirm the refetch of MITRE: it may still start."
   (Sentinel `docs/features/tickets/cve-service.md`, `FetchDispatchResult`).
   The message is in the `warning` tone when it names such a source, and in
-  the `info` tone otherwise. A message that shows after the user left the
-  screen starts with the Ticket, as a link to its screen, such as "SNTL-42:
-  Refetch of NVD started.".
-- Whatever its outcome, the screen then reads its data again, the sources
-  included.
+  the `info` tone otherwise; after the user left the screen, it starts with
+  the Ticket (above), such as "SNTL-42: Refetch of NVD started.".
+- The screen then reads its data again, the sources included.
 
 **Add SUSE assessment** and **Edit**, Set or Update SUSE CVSS Assessment,
 `POST /api/v1/cves/{cve_id}/cvss/suse`, and **Delete**, Delete SUSE CVSS
@@ -1091,12 +1123,9 @@ Delete SUSE CVSS Assessment):
 - The screen changes the SUSE assessments of v3.1 and v4.0, the versions that
   can be the default CVSS version (same document, Core Distinctions). Sentinel
   accepts one of every version that it lists, and the screen shows one of
-  another version without actions. Sentinel refuses a change on an Ignored
-  or Duplicated Ticket with `409 TICKET_NOT_MUTABLE`, so the screen offers
-  none there, nor on a Ticket of a status that the pinned contract does not
-  list (Sentinel `docs/features/tickets/ticket-mutations.md`, CVSS Status
-  Matrix; Sentinel `docs/api-spec.md`, Manual-Zone Mutability Guard;
-  `docs/behaviors.md`, Unknown Values).
+  another version without actions. It offers them on the statuses that
+  accept a change (above; Sentinel `docs/features/tickets/ticket-mutations.md`,
+  CVSS Status Matrix).
 - Add SUSE assessment, a secondary button 32 px high with `plus` at the end of
   the line of the heading of the part, shows once the read of the assessments
   has arrived, until SUSE has assessments of both v3.1 and v4.0. Edit and
@@ -1197,17 +1226,12 @@ Delete SUSE CVSS Assessment):
   the same instant can still replace one another. Edit sends only a vector
   of its version, and closes without a request when the vector is the saved
   one.
-- Add SUSE assessment and Edit ask for no confirmation. With input that the
-  user changed, Cancel, Escape, and a navigation of the UI, such as back, ask
-  "Discard changes?", "The SUSE assessment that you entered isn't added." in
-  Add or "Your changes to this SUSE assessment aren't saved." in Edit, with
-  Keep editing and Discard (`docs/behaviors.md`, Confirmation). While the
-  request is in progress, the action is busy and the dialog cannot be closed
-  (`docs/behaviors.md`, Loading), and a navigation asks nothing, also while
-  the other tab of Add holds input. Once Sentinel confirms the change, the
-  dialog closes, and the focus returns to the button that opened it
-  (`docs/behaviors.md`, Accessibility, Dialogs). After Add, when the other
-  tab holds input and SUSE lacks its version by the read before Add, the
+- Add SUSE assessment and Edit ask for no confirmation. Before discarding
+  input, the question says "The SUSE assessment that you entered isn't
+  added." in Add or "Your changes to this SUSE assessment aren't saved." in
+  Edit (above). While the request is in progress, a navigation asks
+  nothing, also while the other tab of Add holds input. After Add, when the
+  other tab holds input and SUSE lacks its version by the read before Add, the
   dialog stays open on that tab instead (`docs/design-system.md`, Dialogs):
   "SUSE assessment v3.1 added." shows above the tabs as a `success` message,
   which is announced, the tab of the version added drops its input and says
@@ -1228,35 +1252,31 @@ Delete SUSE CVSS Assessment):
   Analysis." for the last SUSE assessment of the CVE of an Analyzed or
   Resolved Ticket (Sentinel `docs/features/tickets/tickets.md`, Gate: Analysis
   → Analyzed; Automatic Status Evaluation); Cancel, and Delete SUSE
-  assessment, a danger button. While it is in progress, the confirmation
-  cannot be closed; once Sentinel confirms it, the confirmation closes.
+  assessment, a danger button.
 - An effective change can assign an unassigned Ticket to the user, move it
   from New to Analysis, and change its severity, its priority, its
   deadlines, the eligibility of its Products, and its status (Sentinel
   `docs/features/tickets/cvss-scoring.md`, Assessment Persistence and Ticket
-  Status). Whatever the outcome, the screen then reads again the Ticket, its
-  duplicates, the work of a maintainer on it, the CVSS assessments, the
-  users who acted on it, its access grants, its audit log, and the reads of
-  the Ticket list.
+  Status). The screen then reads again the Ticket, its duplicates, the work
+  of a maintainer on it, the CVSS assessments, the users who acted on it,
+  its access grants, its audit log, and the reads of the Ticket list.
 - The outcome of each, except an Add after which the dialog stays open, is
-  announced once a read of the assessments after it arrives, whatever the
-  outcome of that read: "SUSE assessment v3.1 added.", "SUSE assessment v3.1
-  changed.", or "SUSE assessment v3.1 deleted." (`docs/behaviors.md`, Outcome
-  of a Change). The outcome of a change that ends after the user left the tab
-  shows in the message area, and so does its failure, starting with the
-  Ticket, as a link to its screen, such as "SNTL-24: SUSE assessment v3.1
-  added.", when the user is on another screen.
+  announced once a read of the assessments after it arrives (above): "SUSE
+  assessment v3.1 added.", "SUSE assessment v3.1 changed.", or "SUSE
+  assessment v3.1 deleted.".
 - After Delete, once the read of the assessments after it no longer returns
   the assessment, the focus moves to the Delete of the row that takes its
   place, or to that row when it has no Delete, or to Add SUSE assessment
-  when no row follows; when that read fails, the focus stays where it is.
-  After Add, when the read of the assessments after it shows the new
-  assessment and no longer Add SUSE assessment, as SUSE then has both
-  versions, the focus moves from Add SUSE assessment to the Delete of the new
-  row, which reverses the change. When a read removes the row whose control
-  holds the focus, or Add SUSE assessment while it holds the focus without a
-  change, the focus moves to the screen's heading (`docs/behaviors.md`,
-  Accessibility, Focus after an action).
+  when no row follows. After Add, when the read of the assessments after it
+  shows the new assessment and no longer Add SUSE assessment, as SUSE then
+  has both versions, the focus moves from Add SUSE assessment to the Delete
+  of the new row, which reverses the change. When a read removes the row
+  whose control holds the focus, or Add SUSE assessment while it holds the
+  focus without a change, the focus moves to the screen's heading
+  (`docs/behaviors.md`, Accessibility, Focus after an action). The move
+  after Delete, and the one when a read removes a row, take place only while
+  the focus is in the table or on the screen's heading, so that a user who
+  moved it out of the table meanwhile keeps it (above).
 
 **Exclude** and **Restore** of a package, Soft-Delete Package from Ticket,
 `POST /api/v1/tickets/{ticket_id}/packages/{package_id}/exclude`, and Restore
@@ -1274,11 +1294,7 @@ Status Behavior (User-Attributed Status Change; Authorized-User Overrides
 Product Eligibility; Manual Transitions); Exclusion and Actionability;
 Package Eligibility (Override Model); API Endpoints):
 
-- The screen offers them on a Ticket in New, Analysis, Analyzed, or Resolved:
-  Sentinel refuses them on an Ignored or Duplicated Ticket with `409
-  TICKET_NOT_MUTABLE`, and a Ticket of a status that the pinned contract does
-  not list offers none (Sentinel `docs/api-spec.md`, Manual-Zone Mutability
-  Guard; `docs/behaviors.md`, Unknown Values).
+- The screen offers them on the statuses that accept a change (above).
 - For a user who holds `manage_packages`, each package and each track has
   the menu of its actions (`docs/design-system.md`, Menus, Popovers, and
   Tooltips), named such as "Actions of fictional-openssl" or "Actions of
@@ -1301,13 +1317,7 @@ Package Eligibility (Override Model); API Endpoints):
   hidden track or package, offers them too, as Sentinel accepts them there
   (same document, Soft-Delete Product; Restore Product; Override Product
   Eligibility). The screen offers no action that sets by hand the
-  eligibility that the Product has. The items follow the Product as the
-  screen shows it, except while an action is in progress: when a read turns
-  Exclude from this track into Restore, or one Mark into the other, the item
-  keeps the focus, and when it removes the item with the focus, such as
-  Return to automatic eligibility after another user did it, the menu, the
-  one stop of the Tab key of its items, takes the focus in its place
-  (`docs/behaviors.md`, Accessibility, Focus after an action).
+  eligibility that the Product has.
 - The affectedness of a track is a select (`docs/design-system.md`, Forms),
   named such as "Affectedness of fictional-openssl, SUSE:FLES-15-SP7:Update:
   Affected", for a user who can set a value other than the current one,
@@ -1320,6 +1330,17 @@ Package Eligibility (Override Model); API Endpoints):
   actions, and a Fixed track shows them its affectedness as text. An
   affectedness that the pinned contract does not list shows as received,
   without a select. The request sends the value chosen as `status`.
+- The items of the menu of a package or a track and of the popover of a
+  Product, and the current value of the select, follow the record as the
+  screen shows it, except while a change of one of them is in progress,
+  which keeps its menu as it started: when a read turns Exclude, Exclude…,
+  or Exclude from this track into Restore, or one Mark into the other, the
+  item keeps the focus; when it removes the item or the value that holds the
+  focus, such as Return to automatic eligibility after another user did it,
+  or Fixed for a user who cannot set it, after another user changed the
+  track from Fixed to another value, the menu, the one stop of the Tab key of its items, takes the focus in its
+  place, with the focus ring inside it (`docs/behaviors.md`, Accessibility,
+  Focus after an action; `docs/design-system.md`, Focus and Motion).
 - None asks for confirmation, except the exclusion of a package with
   maintainers of a confidential Ticket, which ends their access to it unless
   another path gives it to them (`docs/behaviors.md`, Confirmation; Sentinel
@@ -1328,12 +1349,9 @@ Package Eligibility (Override Model); API Endpoints):
   fictional-openssh?", "The maintainers of fictional-openssh no longer see
   this confidential Ticket, unless their roles, an access grant, or another
   package that they maintain let them. Restore gives them this access
-  back.", with Cancel and Exclude package, a danger button. While it is in
-  progress, the confirmation cannot be closed; once Sentinel confirms it, it
-  closes. A change of the affectedness asks for none either, also one that
-  the user cannot reverse, such as Fixed for a user who holds
-  `admin_ticket_ops` alone, or another value for a user who sets Fixed only on
-  a Ticket without a CVE: another user can reverse it in the UI
+  back.", with Cancel and Exclude package, a danger button. Nor does a change
+  of the affectedness that the user cannot reverse, such as Fixed for a user
+  who holds `admin_ticket_ops` alone, since another user can
   (`docs/behaviors.md`, Confirmation). Neither do the actions of a Product:
   its exclusion ends no access, since maintainership concerns the package
   (Sentinel `docs/features/packages/package-maintainership.md`, Confidential
@@ -1346,18 +1364,17 @@ Package Eligibility (Override Model); API Endpoints):
   assistive technologies read with it, as its description, "Excluding.",
   "Restoring.", "Changing the affectedness.", "Marking as eligible.",
   "Marking as not eligible.", or "Returning to automatic eligibility.";
-  meanwhile the other items of the popover of a Product do nothing.
+  meanwhile the other items of its menu are unavailable.
 - An edit can assign an unassigned Ticket to the user, move it from New to
   Analysis, and change its status and its deadlines (Sentinel
   `docs/features/packages/package-model.md`, User-Attributed Status Change;
   Authorized-User Overrides Product Eligibility; Sentinel
   `docs/features/tickets/tickets.md`, Auto-Assignment on Unassigned
-  Tickets; Automatic Status Evaluation).
-  Whatever the outcome, the screen then reads again the Ticket, the work of
-  a maintainer on it, the users who acted on it, its audit log, and the
-  reads of the Ticket list.
-- The outcome is announced once the read of the Ticket after it arrives,
-  whatever the outcome of that read: "Package fictional-openssl excluded.",
+  Tickets; Automatic Status Evaluation). The screen then reads again the
+  Ticket, the work of a maintainer on it, the users who acted on it, its
+  audit log, and the reads of the Ticket list.
+- The outcome is announced once the read of the Ticket after it arrives
+  (above): "Package fictional-openssl excluded.",
   "Track fictional-openssl · SUSE:FLES-15-SP7:Update restored.", "Affectedness
   of fictional-openssl · SUSE:FLES-15-SP7:Update changed to Not affected.",
   with the affectedness that Sentinel returns, "Product Fictional Linux
@@ -1365,13 +1382,11 @@ Package Eligibility (Override Model); API Endpoints):
   excluded.", or, with the eligibility that Sentinel returns, "Product …
   marked as not eligible." after a change by hand and "Product … returned to
   automatic eligibility, eligible." after Return to automatic eligibility.
-  When the record no longer shows, as after an exclusion while "Show hidden"
-  is off, the outcome shows in the message area then instead
-  (`docs/behaviors.md`, Outcome of a Change). The outcome of an edit that ends
-  after the user left the tab shows in the message area, and so does its
-  failure, starting with the Ticket, as a link to its screen, such as
-  "SNTL-12: Package fictional-openssl excluded.", when the user is on another
-  screen.
+  When Sentinel answers that the record is not actionable while "Show
+  hidden" is off, as after an exclusion, the tree no longer shows it, so the
+  outcome shows in the message area then instead (`docs/behaviors.md`,
+  Outcome of a Change); Sentinel's answer decides, also when that read shows
+  the record again, as after another user restored it meanwhile.
 - After an exclusion that hides its record, once the read of the Ticket after
   it no longer shows the record, while the focus is still on its menu, on the
   name of its Product, or on the screen's heading, the focus moves: after an
@@ -1381,13 +1396,12 @@ Package Eligibility (Override Model); API Endpoints):
   next track of its package that shows, otherwise to that of its package;
   after an exclusion of a package, or of a record whose package no longer
   shows, to the menu of the next package that shows, otherwise to "Show
-  hidden", which leads to Restore (`docs/behaviors.md`, Accessibility, Focus
-  after an action). When that read fails other than with a `403` or a `404`,
-  which replace the screen (States), the focus stays where it is, and a later
-  read that removes the record moves it to the screen's heading, as when any
-  read removes the element with the focus; so does a read that removes the
-  record after an exclusion that failed, such as one that another user made
-  meanwhile. While "Show hidden" is on, the record stays, in gray with its
+  hidden", which leads to Restore (above). A read that removes the record
+  otherwise, such as a later read after one that failed, or one after an
+  exclusion that failed because another user made it meanwhile, moves the
+  focus to the screen's heading, as when any read removes the element with
+  the focus (`docs/behaviors.md`, Accessibility, Focus after an action).
+  While "Show hidden" is on, the record stays, in gray with its
   label, and the focus stays on its menu, or on the name of its Product. When
   a read removes a select or a menu of actions while it, or its open menu,
   holds the focus, as after Fixed for a user who can set no other value on the
@@ -1397,8 +1411,8 @@ Package Eligibility (Override Model); API Endpoints):
 
 **Add package**, Add Package to Ticket,
 `POST /api/v1/tickets/{ticket_id}/packages`, in the package tree, for a user
-who holds `manage_packages`, on a Ticket of the statuses that accept the
-edits of the package tree (above), with the names of Search Maintained
+who holds `manage_packages`, on a Ticket of the statuses that accept a
+change (above), with the names of Search Maintained
 Packages, `GET /api/v1/maintained-packages` (Sentinel
 `docs/features/packages/package-model.md`, Adding Packages to a Ticket; Add
 Package to Ticket; Sentinel
@@ -1444,39 +1458,30 @@ Maintained Packages):
   maintainers that it adds to the package then see the Ticket: it ends no
   one's access, and Exclude reverses it (`docs/behaviors.md`, Confirmation;
   Sentinel `docs/features/packages/package-maintainership.md`, Confidential
-  Ticket Visibility). With a name typed or chosen, other than whitespace,
-  Cancel, Escape, and a navigation of the UI, such as back, ask "Discard
-  changes?", "The package that you entered isn't added.", with Keep editing
-  and Discard (`docs/behaviors.md`, Confirmation). While the request is in
-  progress, Add package is busy, the dialog cannot be closed, and a
-  navigation asks nothing (`docs/behaviors.md`, Loading); the field keeps the
-  name sent, read-only, and its focus, so that an error at the field
-  concerns the name that it shows. Once Sentinel confirms it, the dialog
-  closes, and the focus returns to Add package (`docs/behaviors.md`,
-  Accessibility, Dialogs).
+  Ticket Visibility). Its input is a name typed or chosen, other than
+  whitespace, and before discarding it the question says "The package that
+  you entered isn't added." (above). While the request is in progress, the
+  field keeps the name sent, read-only, and its focus, so that an error at
+  the field concerns the name that it shows.
 - An addition creates the tracks and Products that Sentinel finds for the
   package in SMELT and that the package lacks, also on a package of the
   Ticket, and can add its maintainers; when it creates a track or a Product,
   it can assign an unassigned Ticket to the user and change its status and
-  its deadlines, as an edit of the package tree does (above). Whatever the
-  outcome, the screen then reads again what an edit of the package tree
-  affects (above).
+  its deadlines, as an edit of the package tree does (above). The screen then
+  reads again what an edit of the package tree affects (above).
 - Its outcome shows in the message area once the read of the Ticket after it
-  arrives, whatever the outcome of that read, since the tree does not show
-  what Sentinel created (`docs/behaviors.md`, Outcome of a Change): "Package
+  arrives, also when that read fails, since the tree does not show what
+  Sentinel created (`docs/behaviors.md`, Outcome of a Change): "Package
   fictional-openssl: 3 tracks and 7 Products added.", "Package
   fictional-openssl: 2 Products added.", or, when Sentinel created none,
   "Package fictional-openssl already has every track and Product that
   Sentinel finds for it in SMELT, so none was added."; while "Show hidden" is
   off and that read shows the package hidden, followed by "Show hidden shows
-  it, since none of its Products is actionable.". The outcome of an addition
-  that ends after the user left the tab shows in the message area, and so
-  does its failure, in the presentation of the dialog (States) after the
-  package, starting with the Ticket, as a link to its screen, such as
-  "SNTL-20: Package fictional-openssl: 3 tracks and 7 Products added." or
-  "SNTL-20: Package fictional-openssl: SMELT doesn't maintain a package of
-  this name. Check the name, whose letter case counts.", when the user is on
-  another screen.
+  it, since none of its Products is actionable.". A failure after the user
+  left the tab shows in the presentation of the dialog (States) after the
+  package, such as "SNTL-20: Package fictional-openssl: SMELT doesn't
+  maintain a package of this name. Check the name, whose letter case
+  counts." (above).
 
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,
@@ -1500,40 +1505,35 @@ Access; Revoke Access):
   its request is in progress, during which the dialog cannot be closed. Once
   Sentinel confirms it, also for a grant that existed already, the field
   empties, the focus stays where it was, on Grant access or in the field, and
-  the dialog announces it, such as "Access granted to Carol White."
-  (`docs/behaviors.md`, Outcome of a Change).
-- While the field holds a user chosen and not yet granted, Close, Escape, and
-  a navigation of the UI, such as back, ask "Discard changes?", "The user that
-  you chose isn't granted access.", with Keep editing and Discard
-  (`docs/behaviors.md`, Confirmation); a term typed without a choice is
-  dropped without a question. While a grant or a revocation is in progress,
-  the user chosen counts as submitted, and a navigation asks nothing.
+  once a read of the grants after it arrives, the dialog announces it, such
+  as "Access granted to Carol White.".
+- The input of the dialog is a user chosen in the field and not yet
+  granted, before whose discarding Close asks too, and the question says
+  "The user that you chose isn't granted access." (above); a term typed
+  without a choice is dropped without a question. While a grant or a
+  revocation is in progress, the user chosen counts as submitted.
 - Revoke access, a secondary button at the end of each grant, named after its
   user with the username, such as "Revoke access of Carol White @cwhite",
   asks for confirmation, since it ends another person's access
   (`docs/behaviors.md`, Confirmation): "Revoke access of Carol White?", "Carol
   White loses the access grant to this confidential Ticket, and no longer sees
   it unless their roles or the packages that they maintain let them.", Cancel,
-  and Revoke access, a danger button. It sends the `id` of the user. While it
-  is in progress, the confirmation cannot be closed. Once Sentinel confirms
-  it, the confirmation closes, and once a read of the grants after it
-  arrives, whatever its outcome, the dialog announces it, such as "Access of
-  Carol White revoked.".
+  and Revoke access, a danger button. It sends the `id` of the user. Once
+  Sentinel confirms it, the confirmation closes, and once a read of the
+  grants after it arrives, the dialog announces it, such as "Access of Carol
+  White revoked.".
 - When the grant whose Revoke access has the focus leaves the list, after its
   Revoke access or because a read no longer returns it, the focus moves to
   the Revoke access of the grant that followed it, or to the user field when
   none follows, in the dialog that holds it (`docs/behaviors.md`,
   Accessibility, Focus after an action).
 - The outcome of each is announced in a status region of the dialog, which the
-  rest of the page cannot hold while the dialog is open. The outcome of a
-  change that ends after the user left the tab shows in the message area,
-  and so does its failure, with the message of its status
-  (`docs/behaviors.md`, Default Presentation by Status; Retries and
-  Unconfirmed Changes), starting with the Ticket, as a link to its screen,
-  such as "SNTL-24: Access granted to Carol White.", when the user is on
-  another screen (`docs/behaviors.md`, Outcome of a Change). Whatever the
-  outcome, the screen then reads again the Ticket, its access grants, the
-  users who acted on it, and its audit log.
+  rest of the page cannot hold while the dialog is open. When the read of the
+  grants after it fails, the outcome shows at the top of the dialog instead,
+  as a `success` message that the next such outcome replaces, until the
+  dialog closes, or in the message area once the dialog has closed (above).
+  The screen then reads again the Ticket, its access grants, the users who
+  acted on it, and its audit log.
 
 **Add reference**, Add Reference,
 `POST /api/v1/tickets/{ticket_id}/references`; **Edit**, Update Reference,
@@ -1597,44 +1597,31 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   description that is empty or holds only whitespace as `null`; it closes
   without a request when the user changed none (Sentinel `docs/api-spec.md`,
   Partial Update Semantics).
-- Add reference and Edit ask for no confirmation. With input that the user
-  changed, Cancel, Escape, and a navigation of the UI, such as back or another
-  filter of the tab, ask "Discard changes?", "The reference that you entered
-  isn't added." in Add reference or "Your changes to this reference aren't
-  saved." in Edit, with Keep editing and Discard (`docs/behaviors.md`,
-  Confirmation). While the request is in progress, the action is busy and
-  the dialog cannot be closed (`docs/behaviors.md`, Loading), and a
-  navigation asks nothing. Once Sentinel confirms the change, the dialog
-  closes, and the focus returns to the button that opened it
-  (`docs/behaviors.md`, Accessibility, Dialogs).
+- Add reference and Edit ask for no confirmation. A navigation that asks
+  before discarding input includes another filter of the tab, and the
+  question says "The reference that you entered isn't added." in Add
+  reference or "Your changes to this reference aren't saved." in Edit
+  (above).
 - Delete asks for confirmation, since it cannot be undone in the UI
   (`docs/behaviors.md`, Confirmation): "Delete reference “Fictional
   advisory”?", "The reference is removed from this Ticket. This can't be
-  undone.", Cancel, and Delete reference, a danger button. While it is in
-  progress, the confirmation cannot be closed; once Sentinel confirms it, the
-  confirmation closes.
+  undone.", Cancel, and Delete reference, a danger button.
 - The outcome of each is announced once a read of the references after it
-  arrives, whatever the outcome of that read, naming the reference, after
-  Add reference and Edit as Sentinel returns it: "Reference “Fictional
-  advisory” added.", "Reference “Fictional advisory” changed.", or
-  "Reference “Fictional advisory” deleted." (`docs/behaviors.md`, Outcome of
-  a Change). When the reference that Sentinel returns after Add reference or
+  arrives (above), naming the reference, after Add reference and Edit as
+  Sentinel returns it: "Reference “Fictional advisory” added.", "Reference
+  “Fictional advisory” changed.", or "Reference “Fictional advisory”
+  deleted.". When the reference that Sentinel returns after Add reference or
   Edit does not match the filters that apply, the table does not show it, so
   its outcome shows in the message area instead, once the same read has
   arrived, such as "Reference “Fictional advisory” added." (same section);
   the filters that apply as the change ends decide, also those that the user
-  chose while it was in progress.
-  The outcome of a change that ends after the user left the tab shows in the
-  message area too, and so does its failure, starting with the Ticket, as a
-  link to its screen, such as "SNTL-42: Reference “Fictional advisory”
-  added.", when the user is on another screen. Whatever the
-  outcome, the screen then reads again the references, the audit log, the
-  users who acted on the Ticket, and the Ticket.
+  chose while it was in progress. The screen then reads again the
+  references, the audit log, the users who acted on the Ticket, and the
+  Ticket.
 - After Delete, once the read of the references after it no longer returns
   the reference, the focus moves to the Delete of the row that takes its
   place, or to that row when it has no Delete, or to Add reference when no
-  row follows (`docs/behaviors.md`, Accessibility, Focus after an action);
-  when that read fails, the focus stays where it is. A row that a read
+  row follows (above). A row that a read
   moves, such as after an Edit that changes the type, which orders the rows,
   keeps the focus on its control; when a read removes the row while one of
   its controls holds the focus, such as a later read after Delete, or after
