@@ -169,6 +169,19 @@ function avatars(page: Page): Locator {
   return page.locator('svg[viewBox="0 0 6 6"]');
 }
 
+// The identifier of a request as Sentinel generates it, a UUIDv7 (Sentinel
+// docs/api-spec.md, Request Tracing).
+const REQUEST_ID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The identifiers of the requests that the page shows, each in the reference
+// of an error (src/components/reference.tsx), which the reference
+// screenshots mask: Sentinel generates one for each request. Each takes the
+// same width in every run, in the monospace font of a reference.
+function requestIds(page: Page): Locator {
+  return page.getByText(REQUEST_ID);
+}
+
 // The dates and times that the page shows, which the reference screenshots
 // mask: the dataset computes them from the instant of its load (same
 // document, Time Base). A date and time shows in a time element
@@ -238,7 +251,8 @@ export async function withFixedDates<T>(
 // unless it matches (docs/conventions.md, End-to-End Tests). Every reference
 // is taken with it, so that each masks the avatars and the dates, which change
 // from one load of the dataset to the next, with the dates at their fixed
-// widths.
+// widths, and the identifiers of the requests, which change with each
+// request.
 export async function expectScreenshot(page: Page, name: string) {
   await withFixedDates(page, async () => {
     // A date that a popover open above it covers whole, such as one of the
@@ -264,7 +278,11 @@ export async function expectScreenshot(page: Page, name: string) {
       });
     });
     await expect(page).toHaveScreenshot(name, {
-      mask: [avatars(page), ...shown.map((index) => dates.nth(index))],
+      mask: [
+        avatars(page),
+        requestIds(page),
+        ...shown.map((index) => dates.nth(index)),
+      ],
     });
   });
 }

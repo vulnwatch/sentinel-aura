@@ -15,7 +15,8 @@ import {
   urlOf,
   usersPage,
 } from "../test-api";
-import { SEARCH_DELAY_MS, UserComboBox } from "./user-combobox";
+import { SEARCH_DELAY_MS } from "./search-combobox";
+import { UserComboBox } from "./user-combobox";
 
 // A combobox of users (docs/design-system.md, Forms), which searches the
 // directory (Sentinel docs/features/identity/user-management.md, List Users).

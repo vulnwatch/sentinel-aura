@@ -14,6 +14,9 @@ import type {
   CVSSBaseScore,
   CVSSBaseScoreResponse,
   CurrentUserResponse,
+  MaintainedPackageListResponse,
+  PackageAdditionResponse,
+  PackageAdditionResult,
   PackageDetail,
   PackageExclusionResponse,
   ProductDetail,
@@ -86,6 +89,8 @@ export const RELEASE_REQUESTS = "/api/v1/tickets/SNTL-12/release-requests";
 export const USERS = "/api/v1/users";
 export const ASSIGNEE = "/api/v1/tickets/SNTL-12/assignee";
 export const CNAS = "/api/v1/cnas/";
+export const ADD_PACKAGE = "/api/v1/tickets/SNTL-12/packages";
+export const MAINTAINED_PACKAGES = "/api/v1/maintained-packages";
 export const DAY = 24 * 60 * 60 * 1000;
 export const HOUR = 60 * 60 * 1000;
 
@@ -213,6 +218,10 @@ export interface Stub {
     path: string,
     body: unknown,
   ) => Response | Promise<Response>;
+  // The response to Add Package to Ticket, given its body.
+  addPackage: (body: unknown) => Response | Promise<Response>;
+  // The response to a search of the maintained packages, given its query.
+  maintainedPackages: (query: URLSearchParams) => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst who maintains no
@@ -223,8 +232,10 @@ export interface Stub {
 // CNA of the tests (fictionalCna), the reads of the participants, by
 // default without any, the reads of the requests of a track, by default
 // without any, the search of the directory, Grant and Revoke Access, Assign
-// Ticket, and the reads of Audit log, and returns the spy, whose calls name
-// the requests.
+// Ticket, Add Package to Ticket, by default an addition of
+// fictional-openssl, the search of the maintained packages, by default
+// without any, and the reads of Audit log, and returns the spy, whose calls
+// name the requests.
 export function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: OTHER_USER,
@@ -247,6 +258,8 @@ export function stubTicket(fields: Partial<Stub> = {}) {
     deleteSuse: () => new Response(null, { status: 204 }),
     baseScore: (query) => baseScoreResponse(query.get("vector_string") ?? ""),
     packageChange: packageChangeResponse,
+    addPackage: () => packageAdditionResponse(),
+    maintainedPackages: () => maintainedPackagesPage([]),
     ...fields,
   };
   return stubApi((request) => {
@@ -288,6 +301,12 @@ export function stubTicket(fields: Partial<Stub> = {}) {
     }
     if (request.path === ASSIGNEE && request.method === "PATCH") {
       return stub.assign(request.body);
+    }
+    if (request.path === ADD_PACKAGE && request.method === "POST") {
+      return stub.addPackage(request.body);
+    }
+    if (request.path === MAINTAINED_PACKAGES) {
+      return stub.maintainedPackages(request.query);
     }
     if (
       request.path.startsWith(`${TICKET}/packages/`) &&
@@ -1060,4 +1079,35 @@ function packageChangeResponse(
   return path.includes("/tracks/")
     ? trackMarkerResponse(actionable)
     : packageMarkerResponse(actionable);
+}
+
+// The 201 response of Add Package to Ticket: fictional-openssl, with 3 tracks
+// and 7 Products created and none skipped, with the fields that a test sets.
+export function packageAdditionResponse(
+  fields: Partial<PackageAdditionResult> = {},
+): Response {
+  const body: PackageAdditionResponse = {
+    data: {
+      package_name: "fictional-openssl",
+      tracks_created: 3,
+      tracks_skipped: 0,
+      products_created: 7,
+      products_skipped: 0,
+      ...fields,
+    },
+  };
+  return jsonResponse(201, body);
+}
+
+// A page of Search Maintained Packages, of 20 names: the names, in their
+// order, of a list of total names.
+export function maintainedPackagesPage(
+  names: readonly string[],
+  { total = names.length } = {},
+): Response {
+  const body: MaintainedPackageListResponse = {
+    data: names.map((name) => ({ name })),
+    meta: { total, page: 1, per_page: 20 },
+  };
+  return jsonResponse(200, body);
 }

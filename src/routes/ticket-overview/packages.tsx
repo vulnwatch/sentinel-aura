@@ -1,6 +1,8 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Ban,
+  Plus,
   RotateCcw,
   TriangleAlert,
   Undo2,
@@ -17,11 +19,13 @@ import { useGetTicketPackageWork } from "../../api/generated/maintainer-operatio
 import { PackageStatusValue } from "../../api/generated/model";
 import type {
   LifecyclePhaseValue,
+  PackageAdditionResponse,
   PackageDetail,
   ProductDetail,
   ProductEligibilityResponse,
   ProductReasonValue,
   TicketDetail,
+  TicketDetailResponse,
   TrackDetail,
 } from "../../api/generated/model";
 import {
@@ -29,8 +33,12 @@ import {
   useOverrideProductEligibility,
   useRestoreProduct,
 } from "../../api/generated/ticket-packages";
-import { useGetTicket } from "../../api/generated/tickets";
+import {
+  getGetTicketQueryKey,
+  useGetTicket,
+} from "../../api/generated/tickets";
 import { AbsentValue } from "../../components/absent-value";
+import { Button } from "../../components/button";
 import {
   useChangeOutcome,
   useMounted,
@@ -50,7 +58,10 @@ import { UpdatingBar } from "../../components/loading";
 import { MenuAction } from "../../components/menu";
 import { useShowMessage } from "../../components/message-area";
 import { marksPlace } from "../../components/read-view";
-import { useFocusHeadingOnRemoval } from "../../components/screen-heading";
+import {
+  FocusHandOff,
+  useFocusHeadingOnRemoval,
+} from "../../components/screen-heading";
 import { Switch } from "../../components/switch";
 import {
   TrackDelivery,
@@ -60,6 +71,7 @@ import {
 import { User } from "../../components/user";
 import { useSignedInUser } from "../../session-gate";
 import { ticketRecord } from "../ticket";
+import { AddPackageDialog, addedText } from "./add-package";
 import { ReleaseRequests, SubmissionRequests } from "./ibs-requests";
 import {
   createRecordTriggers,
@@ -951,6 +963,28 @@ export function useYourWork(ticket: TicketDetail) {
 
 type YourWorkRead = ReturnType<typeof useYourWork>;
 
+// The outcome of Add package, which shows in the message area once the read
+// of the Ticket after it arrives, whatever the outcome of that read, since
+// the counts that Sentinel returns say what it created, which the tree does
+// not show (docs/behaviors.md, Outcome of a Change): followed, while "Show
+// hidden" is off and that read shows the package hidden, by where it is.
+function addedOutcome(
+  response: PackageAdditionResponse,
+  ticket: () => TicketDetail | undefined,
+  showsHidden: () => boolean,
+): () => string {
+  return () => {
+    const text = addedText(response);
+    const added = ticket()?.packages.find(
+      (ticketPackage) =>
+        ticketPackage.package_name === response.data.package_name,
+    );
+    return added !== undefined && !added.actionable && !showsHidden()
+      ? `${text} Show hidden shows it, since none of its Products takes part.`
+      : text;
+  };
+}
+
 interface PackagesPartProps {
   ticket: TicketDetail;
   now: number;
@@ -992,7 +1026,9 @@ export function PackagesPart({
   showHidden,
 }: PackagesPartProps) {
   const navigate = useNavigate();
+  const client = useQueryClient();
   const ticketId = ticket.ticket_id;
+  const [adding, setAdding] = useState(false);
   const user = useSignedInUser();
   const ticketRead = useGetTicket(ticketId, { query: { enabled: false } });
   const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
@@ -1013,6 +1049,9 @@ export function PackagesPart({
   const capabilities = user?.capabilities ?? [];
   const editable = PACKAGE_EDITABLE_STATUSES.has(ticket.status);
   const manages = editable && capabilities.includes("manage_packages");
+  // Add package, for a user who adds packages, and while its dialog is open,
+  // which keeps it as it opened (docs/behaviors.md, The Signed-in User).
+  const offersAdd = manages || adding;
   const fixes =
     editable &&
     (capabilities.includes("admin_ticket_ops") ||
@@ -1091,17 +1130,34 @@ export function PackagesPart({
       id={PACKAGES_ANCHOR}
       heading="Packages"
       actions={
-        ticket.packages.length > 0 ? (
-          <span ref={switchPlace} className="contents">
-            <Switch
-              isSelected={showHidden}
-              onChange={toggle}
-              isDisabled={count === 0}
-            >
-              Show hidden{" "}
-              <span className="tabular-nums">{COUNT.format(count)}</span>
-            </Switch>
-          </span>
+        ticket.packages.length > 0 || offersAdd ? (
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+            {ticket.packages.length > 0 && (
+              <span ref={switchPlace} className="contents">
+                <Switch
+                  isSelected={showHidden}
+                  onChange={toggle}
+                  isDisabled={count === 0}
+                >
+                  Show hidden{" "}
+                  <span className="tabular-nums">{COUNT.format(count)}</span>
+                </Switch>
+              </span>
+            )}
+            {offersAdd && (
+              <FocusHandOff>
+                <Button
+                  size="small"
+                  icon={Plus}
+                  onPress={() => {
+                    setAdding(true);
+                  }}
+                >
+                  Add package
+                </Button>
+              </FocusHandOff>
+            )}
+          </div>
         ) : undefined
       }
     >
@@ -1137,6 +1193,28 @@ export function PackagesPart({
     <>
       {part}
       {outcome.region}
+      {adding && (
+        <AddPackageDialog
+          ticketId={ticketId}
+          onClose={() => {
+            setAdding(false);
+          }}
+          onDone={(response) => {
+            setAdding(false);
+            outcome.after(
+              addedOutcome(
+                response,
+                () =>
+                  client.getQueryData<TicketDetailResponse>(
+                    getGetTicketQueryKey(ticketId),
+                  )?.data,
+                () => showsHidden.current,
+              ),
+              true,
+            );
+          }}
+        />
+      )}
     </>
   );
 }

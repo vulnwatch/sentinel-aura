@@ -499,6 +499,12 @@ dataset, which the image of the pinned version provides (Sentinel
   backend, and an operation that needs an external source, such as adding a
   package through the API, does not complete there (Sentinel
   `docs/features/platform/example-dataset.md`, Operating a Dataset Backend).
+  `compose.yaml` points Sentinel's SMELT address at a port of the loopback
+  interface of its container where nothing listens, so that such an addition
+  fails in the same way on every host, also on one whose network reaches
+  SMELT, with `503 SMELT_UNAVAILABLE` (Sentinel
+  `docs/configuration.md`, SMELT / AIMAAS; Sentinel
+  `docs/features/packages/package-model.md`, Add Package to Ticket).
 - A capability that the UI needs and the dataset lacks is requested as a
   change of Sentinel's dataset specification (Sentinel
   `docs/features/platform/example-dataset.md`, Drift Protection; `AGENTS.md`,

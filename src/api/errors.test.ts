@@ -6,7 +6,10 @@ import {
   isAssigneeChanged,
   isNotConfidential,
   isRequestFailure,
+  packageNameError,
+  presentAddPackageFailure,
   presentChangeFailure,
+  presentLeftAddPackageFailure,
   presentFailure,
   presentMarkerConflict,
   presentRefetchFailure,
@@ -556,6 +559,220 @@ describe("presentMarkerConflict", () => {
   ])("leaves %s to the presentation of a change", (_, failure, change) => {
     expect(
       presentMarkerConflict(failure, change, "Package fictional-openssl"),
+    ).toBeUndefined();
+  });
+});
+
+describe("packageNameError", () => {
+  test.each([
+    [
+      422,
+      "PACKAGE_NOT_FOUND_IN_SMELT",
+      "SMELT doesn't maintain a package of this name. Check the name, whose letter case counts.",
+    ],
+    [
+      422,
+      "PACKAGE_TARGETS_UNRESOLVED",
+      "SMELT maintains this package for no Product that Sentinel knows, so Sentinel added nothing.",
+    ],
+    [
+      409,
+      "PACKAGE_ALREADY_EXCLUDED",
+      "This package is excluded from this Ticket: Show hidden shows it, and Restore in the menu of its actions includes it again.",
+    ],
+  ])("states the error of the name field of %i %s", (status, code, message) => {
+    expect(packageNameError(errorResponse(status, code))).toBe(message);
+  });
+
+  test.each([
+    [
+      "PACKAGE_NOT_FOUND_IN_SMELT with another status",
+      errorResponse(409, "PACKAGE_NOT_FOUND_IN_SMELT"),
+    ],
+    [
+      "PACKAGE_TARGETS_UNRESOLVED with another status",
+      errorResponse(400, "PACKAGE_TARGETS_UNRESOLVED"),
+    ],
+    [
+      "PACKAGE_ALREADY_EXCLUDED with another status",
+      errorResponse(422, "PACKAGE_ALREADY_EXCLUDED"),
+    ],
+    ["another 409 code", errorResponse(409, "TICKET_NOT_MUTABLE")],
+    ["a VALIDATION_ERROR", errorResponse(422, "VALIDATION_ERROR")],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(422, "FICTIONAL_CODE"),
+    ],
+    [
+      "a status that the pinned contract does not list",
+      errorResponse(418, "FICTIONAL_CODE"),
+    ],
+    ["an error without a code", errorResponse(422)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("leaves %s to the form", (_, failure) => {
+    expect(packageNameError(failure)).toBeUndefined();
+  });
+});
+
+describe("presentAddPackageFailure", () => {
+  test.each([
+    [
+      "SMELT_UNAVAILABLE",
+      "Sentinel couldn't get the tracks and Products of this package from SMELT, so it added nothing. Try again later.",
+    ],
+    [
+      "PRODUCT_CATALOG_NOT_READY",
+      "Sentinel hasn't loaded the Products from SMELT yet, so it added nothing. Try again later.",
+    ],
+  ])(
+    "says after 503 %s that Sentinel added nothing, with its reference, as a failure whose outcome is known",
+    (code, message) => {
+      expect(presentAddPackageFailure(errorResponse(503, code))).toEqual({
+        message,
+        reference: REQUEST_ID,
+        unconfirmed: false,
+      });
+    },
+  );
+
+  test.each(CHANGE_FAILURES)(
+    "presents %s as any other change",
+    (_, failure, presentation) => {
+      expect(presentAddPackageFailure(failure)).toEqual(presentation);
+    },
+  );
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "SMELT_UNAVAILABLE with another status",
+      errorResponse(500, "SMELT_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "PRODUCT_CATALOG_NOT_READY with another status",
+      errorResponse(409, "PRODUCT_CATALOG_NOT_READY"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a 503 with a code that the pinned contract does not list",
+      errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "a 503 without a code",
+      errorResponse(503),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+  ])("presents %s by its status", (_, failure, presentation) => {
+    expect(presentAddPackageFailure(failure)).toEqual(presentation);
+  });
+
+  test("presents no message for a 401", () => {
+    expect(
+      presentAddPackageFailure(errorResponse(401, "AUTH_NOT_AUTHENTICATED")),
+    ).toBeUndefined();
+  });
+});
+
+describe("presentLeftAddPackageFailure", () => {
+  test.each([
+    [
+      422,
+      "PACKAGE_NOT_FOUND_IN_SMELT",
+      "SMELT doesn't maintain a package of this name. Check the name, whose letter case counts.",
+    ],
+    [
+      422,
+      "PACKAGE_TARGETS_UNRESOLVED",
+      "SMELT maintains this package for no Product that Sentinel knows, so Sentinel added nothing.",
+    ],
+    [
+      409,
+      "PACKAGE_ALREADY_EXCLUDED",
+      "This package is excluded from this Ticket: Show hidden shows it, and Restore in the menu of its actions includes it again.",
+    ],
+  ])(
+    "presents %i %s with the message of the name field, as an error without a reference",
+    (status, code, message) => {
+      expect(presentLeftAddPackageFailure(errorResponse(status, code))).toEqual(
+        { message, reference: undefined, unconfirmed: false },
+      );
+    },
+  );
+
+  test.each([
+    [
+      "SMELT_UNAVAILABLE",
+      "Sentinel couldn't get the tracks and Products of this package from SMELT, so it added nothing. Try again later.",
+    ],
+    [
+      "PRODUCT_CATALOG_NOT_READY",
+      "Sentinel hasn't loaded the Products from SMELT yet, so it added nothing. Try again later.",
+    ],
+  ])(
+    "presents 503 %s as the form does, as an error with its reference",
+    (code, message) => {
+      expect(presentLeftAddPackageFailure(errorResponse(503, code))).toEqual({
+        message,
+        reference: REQUEST_ID,
+        unconfirmed: false,
+      });
+    },
+  );
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+      { message: UNCONFIRMED, reference: undefined, unconfirmed: true },
+    ],
+    [
+      "a 5xx that the pinned contract does not list",
+      errorResponse(507, "FICTIONAL_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "a 503 with a code that the pinned contract does not list",
+      errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "409 TICKET_NOT_MUTABLE",
+      errorResponse(409, "TICKET_NOT_MUTABLE"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(422, "FICTIONAL_CODE"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a status that the pinned contract does not list",
+      errorResponse(418, "FICTIONAL_CODE"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a code of the name field with another status",
+      errorResponse(400, "PACKAGE_NOT_FOUND_IN_SMELT"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a field error of the name, whose field is no longer shown",
+      validationError([entry(["body", "package_name"])]),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+  ])("presents %s by its status", (_, failure, presentation) => {
+    expect(presentLeftAddPackageFailure(failure)).toEqual(presentation);
+  });
+
+  test("presents no message for a 401", () => {
+    expect(
+      presentLeftAddPackageFailure(
+        errorResponse(401, "AUTH_NOT_AUTHENTICATED"),
+      ),
     ).toBeUndefined();
   });
 });
