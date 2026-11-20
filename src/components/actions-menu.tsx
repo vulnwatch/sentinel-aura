@@ -2,7 +2,7 @@ import { Ellipsis } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import { Menu, MenuTrigger } from "react-aria-components";
 import { IconButton } from "./icon-button";
-import { MenuPopover } from "./menu";
+import { MENU_FOCUS_RING, MenuPopover } from "./menu";
 
 interface ActionsMenuProps {
   // The accessible name of the button, which names its record, such as
@@ -23,9 +23,10 @@ interface ActionsMenuProps {
 // package of a Ticket (docs/design-system.md, Menus, Popovers, and Tooltips):
 // an icon button of 24 px with ellipsis at 16 px in fg, which keeps its color
 // in a hidden record (Detail Screens), named by the actions and their record,
-// whose tooltip says "Actions", which opens them as a menu below its end. An
-// item whose change applies at once keeps the menu open, busy, until
-// Sentinel answers.
+// whose tooltip says "Actions", which opens them as a menu below its end,
+// with the focus ring inside it when it holds the focus itself. An item
+// whose change applies at once keeps the menu open, busy, until Sentinel
+// answers.
 export function ActionsMenu({
   label,
   isOpen,
@@ -54,7 +55,7 @@ export function ActionsMenu({
         />
       </span>
       <MenuPopover placement="bottom end">
-        <Menu className="min-w-44 outline-none">{children}</Menu>
+        <Menu className={`min-w-44 ${MENU_FOCUS_RING}`}>{children}</Menu>
       </MenuPopover>
     </MenuTrigger>
   );

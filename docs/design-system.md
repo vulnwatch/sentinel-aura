@@ -519,10 +519,11 @@ that it sits with the icons around it.
 - **Focus ring:** a 2 px line in `focus`, 2 px outside the element and
   following its radius, or inside it for an element whose edges would cut
   it: a row or a cell of a table (Tables), a menu item (Menus, Popovers, and
-  Tooltips), a segment of a segmented control, in `on-accent` on the chosen
-  one (Forms), the main content after the link that skips to it (Main
-  Content), and the sidebar opened over the content (Sidebar). It shows on
-  keyboard focus, and no element removes it (`docs/behaviors.md`,
+  Tooltips), a menu that holds the focus itself, as when a read removed the
+  item that held it, a segment of a segmented control, in `on-accent` on
+  the chosen one (Forms), the main content after the link that skips to it
+  (Main Content), and the sidebar opened over the content (Sidebar). It
+  shows on keyboard focus, and no element removes it (`docs/behaviors.md`,
   Accessibility).
 - **Motion:** only loading indicators and the mark of an operation in
   progress move: the spinner turns and the progress bar runs (Loading), and
@@ -615,10 +616,8 @@ groups: Account and API keys (`docs/screen-map.md`, Sidebar); the section
 Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
 weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
 selected one ends with `check`; and Sign out, an ordinary item. While Sign
-out is in progress, the menu stays open, and the item keeps the focus, shows
-`loader-circle` in place of its icon, has the description "Signing out" for
-assistive technologies, and cannot start the sign-out again
-(`docs/behaviors.md`, Loading); when it fails, the menu closes, and the
+out is in progress, its item is busy, with the description "Signing out"
+(Menus, Popovers, and Tooltips); when it fails, the menu closes, and the
 message area shows its error (`docs/behaviors.md`, Where Errors Appear), which
 also closes the sidebar opened over the content (`docs/screen-map.md`,
 Sidebar).
@@ -1697,7 +1696,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   item that holds the focus keeps it while it is busy, and assistive
   technologies read with it, as its description, the change in progress, in
   the words of the document that specifies its menu, such as "Excluding." in
-  a screen document or "Signing out" in Account Menu. An item whose change
+  a screen document or "Signing out" in Account Menu. Meanwhile the other
+  items of its menu, or of the list of a combobox whose choice applies at
+  once, such as the assignee picker of a Ticket (Forms), start nothing, so
+  they are unavailable: they show at 60 % opacity, as a disabled button does
+  (Buttons and Links), the arrow keys pass over them, and assistive
+  technologies read them as unavailable. An item whose change
   applies at once keeps its menu open, busy, until Sentinel answers; the
   menu cannot be closed meanwhile, and then closes, with the focus on its
   button (`docs/behaviors.md`, Loading).

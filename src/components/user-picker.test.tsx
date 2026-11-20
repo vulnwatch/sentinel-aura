@@ -436,20 +436,38 @@ test("offers its action before the users while no term is typed", async () => {
   await expect.element(action).not.toBeInTheDocument();
 });
 
-test("marks the choice in progress busy, says so, and takes no other choice meanwhile", async () => {
+test("marks the choice in progress busy, says so, and the other choices unavailable, which take no choice meanwhile", async () => {
   stubApi(() => usersPage([ANA, BOB]));
   const onChoose = vi.fn();
-  const { screen } = await renderPicker({ busy: BOB.id, onChoose });
+  const { screen, field } = await renderPicker({
+    action: "Unassign yourself",
+    busy: BOB.id,
+    onChoose,
+  });
   const bob = screen.getByRole("option", { name: "Bob Wilson @bwilson" });
   await expect.element(bob).toBeVisible();
 
   expect(animationsIn(bob.element())).toEqual(["spin"]);
+  await expect.element(bob).not.toHaveAttribute("aria-disabled");
   const ana = screen.getByRole("option", { name: "Ana Garcia @agarcia" });
   expect(animationsIn(ana.element())).toEqual([]);
+  for (const other of [
+    ana,
+    screen.getByRole("option", { name: "Unassign yourself" }),
+  ]) {
+    await expect.element(other).toHaveAttribute("aria-disabled", "true");
+    expect(getComputedStyle(other.element()).opacity).toBe("0.6");
+  }
   await expect
     .element(screen.getByRole("status").getByText("Changing the assignee."))
     .toBeVisible();
-  await ana.click();
+  // The arrow keys pass over the other choices.
+  field.element().focus();
+  await userEvent.keyboard("{ArrowDown}");
+  await expect
+    .element(field)
+    .toHaveAttribute("aria-activedescendant", bob.element().id);
+  await ana.click({ force: true });
   expect(onChoose).not.toHaveBeenCalled();
 });
 

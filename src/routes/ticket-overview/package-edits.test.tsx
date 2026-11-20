@@ -36,6 +36,7 @@ import {
   excludedTrack,
   expectFocusOnError,
   expectFocusSettledOn,
+  expectSuccessMessage,
   FG,
   FG_MUTED,
   interactOutside,
@@ -545,6 +546,94 @@ describe("the edits of the package tree", () => {
     ).toHaveLength(0);
   });
 
+  test("keep the focus on the item of the menu of the actions of a track when a read turns Exclude into Restore, and back, while the menu is open", async () => {
+    let tree = editableTree();
+    showingEditable(() => withHiddenPackage(tree));
+    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+    actionsOf(screen, OPENSSL_SP7).element().focus();
+    await userEvent.keyboard("{Enter}");
+    const menu = menuOf(screen, `Actions of ${OPENSSL_SP7}`);
+    await expect
+      .element(menu.getByRole("menuitem", { name: "Exclude", exact: true }))
+      .toHaveFocus();
+    // Meanwhile another user excludes the track.
+    tree = treeWithoutSp7();
+
+    await returnToForeground();
+
+    await expect
+      .element(menu.getByRole("menuitem", { name: "Restore", exact: true }))
+      .toHaveFocus();
+
+    // And then restores it.
+    tree = editableTree();
+    await returnToForeground();
+
+    await expect
+      .element(menu.getByRole("menuitem", { name: "Exclude", exact: true }))
+      .toHaveFocus();
+    await expect.element(menu).toBeVisible();
+  });
+
+  test.each<
+    [string, string, () => PackageDetail[], () => PackageDetail[], boolean]
+  >([
+    [
+      "Exclude",
+      "Excluding.",
+      () => editableTree(),
+      () => treeWithoutSp7(),
+      false,
+    ],
+    [
+      "Restore",
+      "Restoring.",
+      () => treeWithoutSp7(),
+      () => editableTree(),
+      true,
+    ],
+  ])(
+    "keep the busy %s of the menu of the actions of a track as it started while a read that shows the track as the change leaves it arrives before Sentinel answers",
+    async (action, busyText, before, after, actionable) => {
+      const response = later();
+      let tree = before();
+      showingEditable(() => withHiddenPackage(tree), {
+        packageChange: () => response.promise,
+      });
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+
+      await chooseAction(screen, OPENSSL_SP7, action);
+      const menu = menuOf(screen, `Actions of ${OPENSSL_SP7}`);
+      const item = menu.getByRole("menuitem", { name: action, exact: true });
+      await expect.element(item).toHaveAccessibleDescription(busyText);
+      // Meanwhile a read shows the track as the change leaves it.
+      const excluded = trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText(
+        "Excluded",
+        { exact: true },
+      );
+      tree = after();
+      await returnToForeground();
+      if (actionable) {
+        await expect.element(excluded).not.toBeInTheDocument();
+      } else {
+        await expect.element(excluded).toBeVisible();
+      }
+
+      await expect.element(item).toHaveAccessibleDescription(busyText);
+      expect(menu.getByRole("menuitem").elements()).toHaveLength(1);
+
+      response.resolve(trackMarkerResponse(actionable));
+
+      await expect.element(menu).not.toBeInTheDocument();
+      await actionsOf(screen, OPENSSL_SP7).click();
+      await expect
+        .poll(() =>
+          itemsOf(menuOf(screen, `Actions of ${OPENSSL_SP7}`), "menuitem"),
+        )
+        .toEqual([actionable ? "Exclude" : "Restore"]);
+    },
+  );
+
   test("read again after an edit the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, but not its duplicates", async () => {
     const spy = showingEditable(undefined, {
       user: { data: { ...MAINTAINER.data, capabilities: ["manage_packages"] } },
@@ -853,7 +942,9 @@ describe("the edits of the package tree", () => {
     await userEvent.keyboard("{Escape}");
     await nextFrames();
     await expect.element(menu).toBeVisible();
-    await menu.getByRole("menuitemradio", { name: "Won't fix" }).click();
+    const other = menu.getByRole("menuitemradio", { name: "Won't fix" });
+    await expect.element(other).toHaveAttribute("aria-disabled", "true");
+    await other.click({ force: true });
     expect(packageChanges(spy)).toHaveLength(1);
 
     response.resolve(trackStatusResponse("not_affected"));
@@ -1724,7 +1815,7 @@ describe("the actions of a Product", () => {
     },
   );
 
-  test("keep the popover open, its item busy and the others inert, until Sentinel answers, and then close it with the focus on the name", async () => {
+  test("keep the popover open, its item busy and the others unavailable, until Sentinel answers, and then close it with the focus on the name", async () => {
     const response = later();
     let tree = productTree();
     const spy = showingEditable(() => tree, {
@@ -1749,9 +1840,17 @@ describe("the actions of a Product", () => {
     interactOutside();
     await nextFrames();
     await expect.element(popover).toBeVisible();
-    await popover
-      .getByRole("menuitem", { name: "Exclude from this track" })
-      .click();
+    await expect.element(item).not.toHaveAttribute("aria-disabled");
+    const other = popover.getByRole("menuitem", {
+      name: "Exclude from this track",
+    });
+    await expect.element(other).toHaveAttribute("aria-disabled", "true");
+    expect(getComputedStyle(other.element()).opacity).toBe("0.6");
+    // The arrow keys pass over it, and a press on it does nothing.
+    item.element().focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect.element(item).toHaveFocus();
+    await other.click({ force: true });
     await item.click();
     expect(packageChanges(spy)).toHaveLength(1);
 
@@ -2270,5 +2369,101 @@ describe("the actions of a Product", () => {
         }),
       )
       .toBeVisible();
+  });
+});
+
+describe("the outcome of an edit", () => {
+  test.each<
+    [string, (screen: Screen) => Promise<unknown>, () => Response, string]
+  >([
+    [
+      "an exclusion of a track while Show hidden is on",
+      (screen) => chooseAction(screen, OPENSSL_SP7, "Exclude"),
+      () => trackMarkerResponse(false),
+      "Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.",
+    ],
+    [
+      "a restore of a package",
+      (screen) => chooseAction(screen, "fictional-xz", "Restore"),
+      () => packageMarkerResponse(true),
+      "Package fictional-xz restored.",
+    ],
+    [
+      "a change of the affectedness",
+      (screen) => chooseAffectedness(screen, OPENSSL_SP7, "Not affected"),
+      () => trackStatusResponse("not_affected"),
+      "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to Not affected.",
+    ],
+    [
+      "a change of the eligibility of a Product",
+      (screen) =>
+        chooseProductAction(screen, SP7_PRODUCT, "Mark as not eligible"),
+      () => productEligibilityResponse(false),
+      `${SP7_SUBJECT} marked as not eligible.`,
+    ],
+  ])(
+    "shows in the message area, as a success without the Ticket, once the read of the Ticket after it fails, and is not announced: %s",
+    async (_name, act, response, text) => {
+      const reread = later();
+      let changed = false;
+      showingEditable(undefined, {
+        ticket: () =>
+          changed
+            ? reread.promise
+            : ticketResponse(
+                fictionalTicketDetail({
+                  packages: withHiddenPackage(productTree()),
+                }),
+              ),
+        packageChange: () => {
+          changed = true;
+          return response();
+        },
+      });
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+      const message = screen.getByText(text, { exact: true });
+
+      await act(screen);
+
+      await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+      await nextFrames();
+      expect(message.query()).toBeNull();
+      reread.resolve(errorResponse(503, "FICTIONAL_UNAVAILABLE"));
+
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+      expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
+      await nextFrames();
+      expect(announcements(screen)).not.toContain(text);
+    },
+  );
+
+  test("shows in the message area the outcome of an exclusion that Sentinel answers as not actionable while Show hidden is off, also when the read after it still shows the record, as after another user restored it meanwhile", async () => {
+    const read = later();
+    let excluded = false;
+    showingEditable(undefined, {
+      ticket: () =>
+        excluded
+          ? read.promise
+          : ticketResponse(fictionalTicketDetail({ packages: editableTree() })),
+      packageChange: () => {
+        excluded = true;
+        return trackMarkerResponse(false);
+      },
+    });
+    const { screen } = await renderTree();
+    const text = "Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.";
+
+    await chooseAction(screen, OPENSSL_SP7, "Exclude");
+    await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+    read.resolve(
+      ticketResponse(fictionalTicketDetail({ packages: editableTree() })),
+    );
+
+    await readEnded(TICKET);
+    await expect.element(actionsOf(screen, OPENSSL_SP7)).toBeVisible();
+    await expectSuccessMessage(screen, text);
+    await nextFrames();
+    expect(announcements(screen)).not.toContain(text);
   });
 });

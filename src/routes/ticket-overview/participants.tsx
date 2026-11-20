@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -38,7 +39,10 @@ import {
   useRevokeTicketAccess,
 } from "../../api/generated/tickets";
 import { Button } from "../../components/button";
-import { useChangeOutcome } from "../../components/change-outcome";
+import {
+  useChangeOutcome,
+  useOutcomeAfterRead,
+} from "../../components/change-outcome";
 import { DateTime } from "../../components/date-time";
 import { sectionHeadingId, SideSection } from "../../components/detail-screen";
 import { useDiscardQuestion } from "../../components/discard-question";
@@ -49,6 +53,7 @@ import {
   ModalDialog,
   type DialogError,
 } from "../../components/modal-dialog";
+import { Message } from "../../components/message";
 import { userOptionText } from "../../components/options";
 import { dataShown, PartRead, type Read } from "../../components/read-view";
 import {
@@ -199,10 +204,10 @@ function useReadAfterAccessChange(ticketId: string) {
   }, [client, ticketId]);
 }
 
-// The announcement of the outcome of a change in the dialog of the access
-// grants, with a key that changes with each, so that the same text is
-// announced again.
-interface Announcement {
+// The outcome of a change that the dialog of the access grants shows at its
+// top after a failed read, with a key that changes with each, so that the
+// same text is announced again.
+interface ShownOutcome {
   key: number;
   text: string;
 }
@@ -238,7 +243,10 @@ interface GrantAccessFormProps {
   // closing the dialog would discard.
   onInputChange: (chosen: boolean) => void;
   readAgain: () => void;
-  announce: (text: string) => void;
+  // Records the outcome of a grant that Sentinel confirmed, which the dialog
+  // shows once the read of the grants after it arrives
+  // (useOutcomeAfterRead).
+  after: (text: string) => void;
   inputRef: RefObject<HTMLInputElement | null>;
 }
 
@@ -251,8 +259,9 @@ interface GrantAccessFormProps {
 // a user." at the field. The grant asks for no confirmation: it ends no
 // one's access. It is busy while its request is in progress. Once Sentinel
 // confirms it, the field empties, the focus stays where it was, on Grant
-// access or in the field, and the dialog announces it, such as "Access
-// granted to Carol White.". The errors of the user field, 404
+// access or in the field, and the dialog announces it once the read of the
+// grants after it arrives, such as "Access granted to Carol White.". The
+// errors of the user field, 404
 // USER_NOT_FOUND, 409 USER_INACTIVE, and a field error of a
 // VALIDATION_ERROR, show at the field, which takes the focus; every other
 // error at the top of the form, which takes it, as a warning when Sentinel
@@ -266,7 +275,7 @@ function GrantAccessForm({
   onBusyChange,
   onInputChange,
   readAgain,
-  announce,
+  after,
   inputRef,
 }: GrantAccessFormProps) {
   const grant = useGrantTicketAccess({
@@ -275,6 +284,9 @@ function GrantAccessForm({
       (response: TicketAccessGrantDataResponse) =>
         grantedText(response.data.user),
       readAgain,
+      (response: TicketAccessGrantDataResponse) => {
+        after(grantedText(response.data.user));
+      },
     ),
   });
   const [user, setUser] = useState<UserDirectoryData | null>(null);
@@ -347,14 +359,13 @@ function GrantAccessForm({
     setBusy(true);
     onBusyChange(true);
     try {
-      const response = await grant.mutateAsync({
+      await grant.mutateAsync({
         ticketId,
         data: { user: user.id },
       });
       choose(null);
       refocus.current = document.activeElement === inputRef.current;
       setFieldKey((key) => key + 1);
-      announce(grantedText(response.data.user));
     } catch (error) {
       fail(error);
     }
@@ -407,9 +418,10 @@ interface GrantItemProps {
         readAgain: () => void;
         // Tells that Revoke access takes the focus.
         onFocus: () => void;
-        // Tells that Sentinel revoked the grant, with the announcement of
-        // the revocation.
-        onRevoked: (text: string) => void;
+        // Records the outcome of a revocation that Sentinel confirmed, which
+        // the dialog shows once the read of the grants after it arrives
+        // (useOutcomeAfterRead).
+        after: (text: string) => void;
       }
     | undefined;
 }
@@ -425,18 +437,23 @@ interface GrantItemProps {
 // confirmation, as it ends another person's access (docs/behaviors.md,
 // Confirmation; Sentinel docs/features/tickets/tickets.md, Revoke Access).
 // Its error shows at the top of the confirmation, which stays open; once
-// Sentinel confirms it, the confirmation closes. Whatever its outcome, the
+// Sentinel confirms it, the confirmation closes, and the dialog announces it
+// once the read of the grants after it arrives. Whatever its outcome, the
 // screen then reads again what it affects, and the outcome of a revocation
 // that ends after the user left the tab shows in the message area
 // (useChangeOutcome).
 function GrantItem({ ticketId, grant, revoke }: GrantItemProps) {
   const name = displayName(grant.user);
+  const revokedText = `Access of ${name} revoked.`;
   const mutation = useRevokeTicketAccess({
     mutation: useChangeOutcome(
       ticketRecord(ticketId),
-      () => `Access of ${name} revoked.`,
+      () => revokedText,
       () => {
         revoke?.readAgain();
+      },
+      () => {
+        revoke?.after(revokedText);
       },
     ),
   });
@@ -455,7 +472,6 @@ function GrantItem({ ticketId, grant, revoke }: GrantItemProps) {
     try {
       await mutation.mutateAsync({ ticketId, user: grant.user.id });
       setConfirming(false);
-      revoke.onRevoked(`Access of ${name} revoked.`);
     } catch (failure) {
       if (!isRequestFailure(failure)) {
         setUiFailure({ error: failure });
@@ -548,7 +564,10 @@ interface AccessGrantsDialogProps {
 // browser's own prompt (docs/behaviors.md, Confirmation); while a grant or
 // a revocation is in progress, the user chosen counts as submitted. The
 // outcome of a grant or a revocation is announced in a status region of the
-// dialog, which the rest of the page cannot hold while the dialog is open.
+// dialog, which the rest of the page cannot hold while the dialog is open,
+// once the read of the grants after it arrives; when that read fails, it
+// shows at the top of the dialog instead, until the dialog closes, and once
+// the dialog has closed, in the message area.
 // When a grant whose line holds the focus leaves the list, as after its
 // Revoke access, the focus moves to the Revoke access of the grant that
 // followed it, or to the user field when none follows (docs/behaviors.md,
@@ -577,31 +596,35 @@ function AccessGrantsDialog({
         "ticketId" in variables &&
         variables.ticketId === ticketId,
     }) > 0;
-  const [announcement, setAnnouncement] = useState<Announcement>();
-  const announce = useCallback((text: string) => {
-    setAnnouncement((current) => ({ key: (current?.key ?? 0) + 1, text }));
+  // The outcome that the dialog shows at its top after a failed read, until
+  // it closes.
+  const [shown, setShown] = useState<ShownOutcome>();
+  // The outcome of a grant or a revocation is announced once the read of the
+  // grants after it arrives, when the confirmation of a revocation has
+  // closed, so that the confirmation, which hides the rest of the page, does
+  // not hide it. When that read fails, the grants show as before, so the
+  // outcomes that it releases show together at the top of the dialog, which
+  // keeps the rest of the page out of reach, in place of the earlier ones.
+  // Once the dialog has closed, they show in the message area instead,
+  // whatever the outcome of that read (docs/behaviors.md, Outcome of a
+  // Change).
+  const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
+  const showAtTop = useCallback((text: string) => {
+    setShown((current) => ({ key: (current?.key ?? 0) + 1, text }));
   }, []);
+  const outcome = useOutcomeAfterRead(
+    read,
+    record,
+    isOpen ? showAtTop : undefined,
+  );
   const content = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const focused = useRef<FocusedGrant>(undefined);
-  // The announcement of a revocation, which the dialog makes once a read of
-  // the grants after it arrives, when the confirmation has closed, so that
-  // the confirmation, which hides the rest of the page, does not hide it.
-  const revoked = useRef<{ text: string; at: number }>(undefined);
   const grants = dataShown(read)?.data;
-  const readAt = read.dataUpdatedAt;
-  const failedAt = read.errorUpdatedAt;
-  // The announcement of a revocation waits for the first read of the grants
-  // after it, whatever its outcome. The focus moves in the same commit in
-  // which the grant leaves the list, so that it does not fall to the page
-  // meanwhile.
+  // The focus moves in the same commit in which the grant leaves the list,
+  // so that it does not fall to the page meanwhile.
   useLayoutEffect(() => {
-    const done = revoked.current;
-    if (done !== undefined && (readAt >= done.at || failedAt >= done.at)) {
-      revoked.current = undefined;
-      announce(done.text);
-    }
     if (grants === undefined) {
       return;
     }
@@ -622,7 +645,7 @@ function AccessGrantsDialog({
       .item(line.index)
       ?.querySelector("button");
     (next ?? field.current)?.focus();
-  }, [grants, readAt, failedAt, announce]);
+  }, [grants]);
   // A Ticket found no longer confidential while the dialog is open: the
   // dialog takes the focus, which its form or its grants may have held, and
   // its status region announces the line that says so.
@@ -646,6 +669,7 @@ function AccessGrantsDialog({
   // Closes the dialog, whose form leaves with what it holds.
   const finish = () => {
     setChosen(false);
+    setShown(undefined);
     onClose();
   };
   const { close, question } = useDiscardQuestion({
@@ -669,6 +693,15 @@ function AccessGrantsDialog({
         </>
       }
     >
+      {/* The outcome after a failed read, in a status region that is there
+          before it, so that it is announced. */}
+      <output className="block">
+        {shown !== undefined && (
+          <div key={shown.key} className="mb-3">
+            <Message tone="success">{shown.text}</Message>
+          </div>
+        )}
+      </output>
       <div ref={content}>
         {confidential ? (
           <>
@@ -682,7 +715,7 @@ function AccessGrantsDialog({
                     onBusyChange={setBusy}
                     onInputChange={setChosen}
                     readAgain={readAgain}
-                    announce={announce}
+                    after={outcome.after}
                     inputRef={field}
                   />
                 </FirstFieldFocus>
@@ -714,12 +747,7 @@ function AccessGrantsDialog({
                                       index,
                                     };
                                   },
-                                  onRevoked: (text) => {
-                                    revoked.current = {
-                                      text,
-                                      at: Date.now(),
-                                    };
-                                  },
+                                  after: outcome.after,
                                 }
                               : undefined
                           }
@@ -738,9 +766,7 @@ function AccessGrantsDialog({
           )}
         </output>
       </div>
-      <output className="sr-only">
-        <span key={announcement?.key}>{announcement?.text}</span>
-      </output>
+      {outcome.region}
     </ModalDialog>
   );
 }

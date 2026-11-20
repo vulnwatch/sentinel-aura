@@ -198,8 +198,10 @@ interface MarkerChange {
 // which says so in its outcome, such as "Package fictional-openssl
 // excluded.": once Sentinel confirms it, the outcome waits for the read of
 // the Ticket after it, announced, or shown in the message area when the
-// record no longer shows, as after an exclusion while "Show hidden" is off,
-// and then the focus moves on (useFocusAfterExclusion).
+// response says that the record is not actionable while "Show hidden" is
+// off, as after an exclusion, also when that read shows the record again,
+// as after another user restored it meanwhile; and then the focus moves on
+// (useFocusAfterExclusion).
 export function useMarkerOutcome(
   edits: TreeEdits,
   record: Omit<HiddenRecord, "at">,
@@ -218,6 +220,10 @@ export function useMarkerOutcome(
     },
   );
 }
+
+// The id of the one item of the menu of the actions of a package or a track,
+// Exclude, Exclude…, or Restore.
+const MARKER_ITEM = "marker";
 
 // The confirmation of an exclusion that ends the access of other users to a
 // confidential Ticket (docs/behaviors.md, Confirmation).
@@ -250,11 +256,13 @@ interface MarkerActionsProps {
 // which Sentinel accepts also below an excluded record (Sentinel
 // docs/features/packages/package-model.md, Exclusion and Actionability).
 // Exclude asks for confirmation where confirmation states it, and is then
-// "Exclude…". While the change is in progress, its item is busy and the menu
-// cannot be closed; once Sentinel answers, the menu closes and the focus
-// returns to its button. The outcome is announced once the read of the
-// Ticket after it arrives, or shows in the message area then when the record
-// no longer shows, as after an exclusion while "Show hidden" is off. A
+// "Exclude…". The item follows the record as a read shows it, keeping the
+// focus. While the change is in progress, its item is busy, stays as it
+// started, and the menu cannot be closed; once Sentinel answers, the menu
+// closes and the focus returns to its button. The outcome is announced once
+// the read of the Ticket after it arrives, or shows in the message area then
+// when Sentinel answers that the record is not actionable while "Show
+// hidden" is off, as after an exclusion, or when that read fails. A
 // failure shows in the message area, or at the top of the confirmation,
 // which stays open; one that says that another user did the same meanwhile
 // says the state that the record now has (docs/behaviors.md, Where Errors
@@ -331,11 +339,20 @@ function MarkerActions({
     }
   };
 
+  // The item follows the record as the screen shows it, except while its
+  // change is in progress, which keeps the item that started it; Exclude,
+  // Exclude…, and Restore have one id, so that a read that turns one into
+  // another keeps the focus on the item.
+  const shown = exclude.pending
+    ? "exclude"
+    : restore.pending || excluded
+      ? "restore"
+      : "exclude";
   let item: ReactNode;
-  if (excluded) {
+  if (shown === "restore") {
     item = (
       <MenuAction
-        id="restore"
+        id={MARKER_ITEM}
         icon={Undo2}
         busy={restore.pending ? "Restoring." : undefined}
         shouldCloseOnSelect={false}
@@ -346,10 +363,10 @@ function MarkerActions({
         Restore
       </MenuAction>
     );
-  } else if (confirmation === undefined) {
+  } else if (confirmation === undefined || exclude.pending) {
     item = (
       <MenuAction
-        id="exclude"
+        id={MARKER_ITEM}
         icon={Ban}
         busy={exclude.pending ? "Excluding." : undefined}
         shouldCloseOnSelect={false}
@@ -363,7 +380,7 @@ function MarkerActions({
   } else {
     item = (
       <MenuAction
-        id="exclude"
+        id={MARKER_ITEM}
         icon={Ban}
         onAction={() => {
           setError(undefined);
@@ -429,10 +446,11 @@ interface TrackAffectednessProps {
 // the contract (Sentinel docs/features/packages/package-model.md, Change
 // Track Status); otherwise, and for a value that the pinned contract does
 // not list, the value with its mark. It asks for no confirmation
-// (docs/behaviors.md, Confirmation). The outcome is announced once the read
-// of the Ticket after it arrives, such as "Affectedness of
-// fictional-openssl · SUSE:FLES-15-SP7:Update changed to Affected."; a
-// failure shows in the message area.
+// (docs/behaviors.md, Confirmation). While its change is in progress, its
+// other choices are unavailable. The outcome is announced once the read of
+// the Ticket after it arrives, such as "Affectedness of fictional-openssl ·
+// SUSE:FLES-15-SP7:Update changed to Affected.", or shows in the message
+// area when that read fails; a failure shows in the message area.
 export function TrackAffectedness({
   track,
   packageId,

@@ -407,6 +407,37 @@ describe("the assignee", () => {
     ]);
   });
 
+  test("shows the assignment in the message area, as a success without the Ticket, once the read of the Ticket after it fails, and announces nothing", async () => {
+    const reread = later();
+    let assigned = false;
+    stubTicket({
+      ticket: () => (assigned ? reread.promise : assignedTo(null)),
+      users: () => usersPage([ANA_ENTRY, BOB_ENTRY]),
+      assign: () => {
+        assigned = true;
+        return assignedTo(BOB);
+      },
+    });
+    const { screen } = await renderDetails();
+    await openAssignee(screen, "Bob Wilson @bwilson");
+    const message = screen.getByText("Assigned to Bob Wilson.", {
+      exact: true,
+    });
+
+    await userOption(screen, "Bob Wilson @bwilson").click();
+
+    await expect.element(assigneePopover(screen)).not.toBeInTheDocument();
+    await nextFrames();
+    expect(message.query()).toBeNull();
+    reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+    expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
+    await nextFrames();
+    expect(announcements(screen)).not.toContain("Assigned to Bob Wilson.");
+  });
+
   test("offers Unassign yourself first to the signed-in user who is the assignee, which returns the Ticket to the queue", async () => {
     let assignee: TicketDetail["assignee"] = ALICE;
     const spy = stubTicket({

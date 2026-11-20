@@ -110,22 +110,29 @@ function textOf(outcome: WaitingOutcome): string {
 }
 
 // The outcome of a change that ends while the user is on the screen, which
-// waits for the first read after it of what the component shows, whatever
-// the outcome of that read (docs/behaviors.md, Outcome of a Change;
-// Accessibility, Announcements): after records it once Sentinel has
-// confirmed the change, and region, a status region hidden from view,
-// announces it once that read has arrived; with inMessageArea, for an
-// outcome that shows nowhere where the user acted, the message area shows it
-// then instead. A text given as a function is taken as the outcome shows, so
-// that it can state what that read shows. The outcomes of several changes that wait at once, as when
-// the user starts a change before the read after the one before it has
-// arrived, each wait for their read, and those that one read releases are
-// announced together, in their order. The record keeps its identity while it
-// names the same record, as from useMemo: another record shows at once in
-// the message area what waits.
+// waits for the first read after it of what the component shows
+// (docs/behaviors.md, Outcome of a Change; Accessibility, Announcements):
+// after records it once Sentinel has confirmed the change, and region, a
+// status region hidden from view, announces it once that read has arrived;
+// with inMessageArea, for an outcome that shows nowhere where the user
+// acted, the message area shows it then instead. When that read fails, the
+// result does not show where the user acted, so the outcome shows as a
+// message: in the message area, or where elsewhere shows it, such as at the
+// top of an open dialog, which keeps the rest of the page out of reach. An
+// outcome whose region is not on the page as its read arrives, as in a
+// dialog that has closed meanwhile, shows in the message area too, since
+// nothing would announce it. A text given as a function is taken as the
+// outcome shows, so that it can state what that read shows. The outcomes of
+// several changes that wait at once, as when the user starts a change before
+// the read after the one before it has arrived, each wait for their read,
+// and those that one read releases are announced together, in their order,
+// or shown together where elsewhere shows them. The record keeps its
+// identity while it names the same record, as from useMemo: another record
+// shows at once in the message area what waits.
 export function useOutcomeAfterRead(
   read: { dataUpdatedAt: number; errorUpdatedAt: number },
   record: MessageRecord,
+  elsewhere?: (text: string) => void,
 ): {
   after: (text: string | (() => string), inMessageArea?: boolean) => void;
   region: ReactNode;
@@ -133,6 +140,12 @@ export function useOutcomeAfterRead(
   const showMessage = useShowMessage();
   const [announcement, setAnnouncement] = useState<Announcement>();
   const waiting = useRef<WaitingOutcome[]>([]);
+  const regionRef = useRef<HTMLOutputElement>(null);
+  // Where an outcome shows after a failed read, as the caller last gave it.
+  const failedPlace = useRef(elsewhere);
+  useLayoutEffect(() => {
+    failedPlace.current = elsewhere;
+  }, [elsewhere]);
 
   // The outcomes that still wait for their read as the component leaves the
   // page, as when the user leaves it or when that read replaces it, such as
@@ -152,9 +165,11 @@ export function useOutcomeAfterRead(
 
   const readAt = read.dataUpdatedAt;
   const failedAt = read.errorUpdatedAt;
-  // Each outcome waits for the first read after its change.
+  // Each outcome waits for the first read after its change; failed tells
+  // that the read failed, so that the outcome shows nowhere where the user
+  // acted.
   const release = useCallback(
-    (done: readonly WaitingOutcome[]) => {
+    (done: readonly WaitingOutcome[], failed: boolean) => {
       waiting.current = waiting.current.filter(
         (outcome) => !done.includes(outcome),
       );
@@ -163,11 +178,21 @@ export function useOutcomeAfterRead(
           showMessage({ tone: "success", text: textOf(outcome) });
         }
       }
-      const announced = done.filter((outcome) => !outcome.message).map(textOf);
-      if (announced.length > 0) {
+      const texts = done.filter((outcome) => !outcome.message).map(textOf);
+      if (texts.length === 0) {
+        return;
+      }
+      const place = failedPlace.current;
+      if (failed && place !== undefined) {
+        place(texts.join(" "));
+      } else if (failed || regionRef.current?.isConnected !== true) {
+        for (const text of texts) {
+          showMessage({ tone: "success", text });
+        }
+      } else {
         setAnnouncement((current) => ({
           key: (current?.key ?? 0) + 1,
-          text: announced.join(" "),
+          text: texts.join(" "),
         }));
       }
     },
@@ -181,15 +206,21 @@ export function useOutcomeAfterRead(
       return;
     }
     // A read that fails can replace the component in the next render, as a
-    // 404 of the record of a screen does, which would take its announcement
-    // away: the outcomes that only a failure releases wait for the next
-    // frame, by which the cleanup above has shown them in the message area
-    // if the component has left the page.
+    // 404 of the record of a screen does: the outcomes that only a failure
+    // releases wait for the next frame, by which the cleanup above has shown
+    // them in the message area, naming the record, if the component has left
+    // the page.
     const failed = done.filter((outcome) => readAt < outcome.at);
-    release(done.filter((outcome) => readAt >= outcome.at));
+    release(
+      done.filter((outcome) => readAt >= outcome.at),
+      false,
+    );
     if (failed.length > 0) {
       requestAnimationFrame(() => {
-        release(failed.filter((outcome) => waiting.current.includes(outcome)));
+        release(
+          failed.filter((outcome) => waiting.current.includes(outcome)),
+          true,
+        );
       });
     }
   }, [readAt, failedAt, release]);
@@ -206,7 +237,7 @@ export function useOutcomeAfterRead(
   return {
     after,
     region: (
-      <output className="sr-only">
+      <output ref={regionRef} className="sr-only">
         <span key={announcement?.key}>{announcement?.text}</span>
       </output>
     ),

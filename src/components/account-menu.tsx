@@ -119,7 +119,8 @@ interface AccountMenuProps {
 // that the button cuts. Its items follow in three groups: Account and its API
 // keys, the screens of the user's own account; the theme, which applies at
 // once in every open tab; and Sign out, which asks for no confirmation and
-// stays in the open menu, busy, until it ends. When it fails, the menu closes
+// stays in the open menu, busy, until it ends, the other items unavailable
+// meanwhile. When it fails, the menu closes
 // and the message area shows the message of its status, which also closes the
 // sidebar opened over the content (docs/behaviors.md, Sign-out; Default
 // Presentation by Status).
@@ -172,10 +173,20 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
         <div className={SEPARATOR} />
         <Menu className="outline-none">
           <MenuSection>
-            <Item id="account" icon={UserIcon} href="/account">
+            <Item
+              id="account"
+              icon={UserIcon}
+              href="/account"
+              unavailable={signOut.busy}
+            >
               Account
             </Item>
-            <Item id="api-keys" icon={KeyRound} href="/account/api-keys">
+            <Item
+              id="api-keys"
+              icon={KeyRound}
+              href="/account/api-keys"
+              unavailable={signOut.busy}
+            >
               API keys
             </Item>
           </MenuSection>
@@ -190,7 +201,7 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
               Theme
             </Header>
             {THEMES.map(({ id, name, icon }) => (
-              <Item key={id} id={id} icon={icon}>
+              <Item key={id} id={id} icon={icon} unavailable={signOut.busy}>
                 {name}
               </Item>
             ))}

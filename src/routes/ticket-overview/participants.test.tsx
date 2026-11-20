@@ -1283,7 +1283,256 @@ describe("the access grants", () => {
     await expect.element(dialog).toHaveFocus();
   });
 
-  test("announce Revoke access once a read of the grants after it arrives, also one that fails", async () => {
+  test.each([
+    [
+      "Grant access",
+      "Access granted to Ana Garcia.",
+      async (screen: Screen) => {
+        await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+        await grantButton(screen).click();
+        await expect.element(userField(screen)).toHaveValue("");
+      },
+    ],
+    [
+      "Revoke access",
+      "Access of Carol White revoked.",
+      async (screen: Screen) => {
+        await revokeCarol(screen);
+        await expect
+          .element(confirmationOf(screen, "Carol White"))
+          .not.toBeInTheDocument();
+      },
+    ],
+  ])(
+    "announce %s once the read of the grants after it arrives, not before",
+    async (_, text, change) => {
+      const reread = later();
+      let changed = false;
+      stubTicket({
+        user: MANAGER,
+        ticket: () => confidentialTicket(),
+        grants: () =>
+          changed ? reread.promise : grantsResponse([CAROL, EMMA]),
+        users: () => usersPage([fictionalDirectoryUser()]),
+        grant: () => {
+          changed = true;
+          return grantResponse(fictionalGrant({ user: FICTIONAL_ACTORS[0]! }));
+        },
+        revoke: () => {
+          changed = true;
+          return new Response(null, { status: 204 });
+        },
+      });
+      const { screen } = await renderParticipants();
+      await openAccessGrants(screen);
+
+      await change(screen);
+
+      await nextFrames();
+      expect(dialogStatus(screen)).toBe("");
+      reread.resolve(grantsResponse([CAROL, EMMA]));
+
+      await expect.poll(() => dialogStatus(screen)).toBe(text);
+      expect(
+        accessGrantsDialog(screen).getByText(text, { exact: true }).elements(),
+      ).toHaveLength(1);
+    },
+  );
+
+  test.each([
+    [
+      "Grant access",
+      "Access granted to Ana Garcia.",
+      async (screen: Screen) => {
+        await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+        await grantButton(screen).click();
+        await expect.element(userField(screen)).toHaveValue("");
+      },
+    ],
+    [
+      "Revoke access",
+      "Access of Carol White revoked.",
+      async (screen: Screen) => {
+        await revokeCarol(screen);
+        await expect
+          .element(confirmationOf(screen, "Carol White"))
+          .not.toBeInTheDocument();
+      },
+    ],
+  ])(
+    "show %s at the top of the dialog, as a success message, once the read of the grants after it fails, until the dialog closes",
+    async (_, text, change) => {
+      const reread = later();
+      let changed = false;
+      stubTicket({
+        user: MANAGER,
+        ticket: () => confidentialTicket(),
+        grants: () =>
+          changed ? reread.promise : grantsResponse([CAROL, EMMA]),
+        users: () => usersPage([fictionalDirectoryUser()]),
+        grant: () => {
+          changed = true;
+          return grantResponse(fictionalGrant({ user: FICTIONAL_ACTORS[0]! }));
+        },
+        revoke: () => {
+          changed = true;
+          return new Response(null, { status: 204 });
+        },
+      });
+      const { screen } = await renderParticipants();
+      await openAccessGrants(screen);
+      const message = accessGrantsDialog(screen).getByText(text, {
+        exact: true,
+      });
+
+      await change(screen);
+
+      await nextFrames();
+      expect(message.query()).toBeNull();
+      reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+      // The one element with the text, the message, which its status region
+      // announces, before the explanation of the dialog.
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+      const explanation = accessGrantsDialog(screen).getByText(
+        /^An access grant lets a user see/,
+      );
+      expect(
+        message.element().compareDocumentPosition(explanation.element()) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(message.element().closest("output")?.textContent).toBe(text);
+      // It stays until the dialog closes, and the next opening shows none.
+      await accessGrantsDialog(screen)
+        .getByRole("button", { name: "Close" })
+        .click();
+      await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
+      await accessGrantsButton(screen).click();
+      await expect.element(accessGrantsDialog(screen)).toBeVisible();
+      expect(message.query()).toBeNull();
+    },
+  );
+
+  test("show together at the top of the dialog the outcomes that one failed read releases, in place of those of an earlier failed read", async () => {
+    let reread = later();
+    let changes = 0;
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () =>
+        changes > 0 ? reread.promise : grantsResponse([CAROL, EMMA]),
+      users: () => usersPage([fictionalDirectoryUser()]),
+      grant: () => {
+        changes += 1;
+        return grantResponse(fictionalGrant({ user: FICTIONAL_ACTORS[0]! }));
+      },
+      revoke: () => {
+        changes += 1;
+        return new Response(null, { status: 204 });
+      },
+    });
+    const { screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    const dialog = accessGrantsDialog(screen);
+
+    // Two revocations before the read after the first one has ended.
+    await revokeCarol(screen);
+    await expect
+      .element(confirmationOf(screen, "Carol White"))
+      .not.toBeInTheDocument();
+    await revokeOf(screen, "Emma Green @egreen").click();
+    await confirmationOf(screen, "Emma Green")
+      .getByRole("button", { name: "Revoke access", exact: true })
+      .click();
+    await expect
+      .element(confirmationOf(screen, "Emma Green"))
+      .not.toBeInTheDocument();
+    await expect.poll(() => changes).toBe(2);
+    reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    const both = dialog.getByText(
+      "Access of Carol White revoked. Access of Emma Green revoked.",
+      { exact: true },
+    );
+    await expect.element(both).toBeVisible();
+    expect(backgroundBehind(both.element())).toBe(MESSAGE_TONES.success);
+
+    // A later grant whose read fails too takes their place.
+    reread = later();
+    await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+    await grantButton(screen).click();
+    await expect.element(userField(screen)).toHaveValue("");
+    reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    await expect
+      .element(
+        dialog.getByText("Access granted to Ana Garcia.", { exact: true }),
+      )
+      .toBeVisible();
+    expect(both.query()).toBeNull();
+  });
+
+  test.each([
+    [
+      "Grant access",
+      "Access granted to Ana Garcia.",
+      async (screen: Screen) => {
+        await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+        await grantButton(screen).click();
+        await expect.element(userField(screen)).toHaveValue("");
+      },
+    ],
+    [
+      "Revoke access",
+      "Access of Carol White revoked.",
+      async (screen: Screen) => {
+        await revokeCarol(screen);
+        await expect
+          .element(confirmationOf(screen, "Carol White"))
+          .not.toBeInTheDocument();
+      },
+    ],
+  ])(
+    "show %s in the message area, as a success, when the dialog closed before the read of the grants after it arrives",
+    async (_, text, change) => {
+      const reread = later();
+      let changed = false;
+      stubTicket({
+        user: MANAGER,
+        ticket: () => confidentialTicket(),
+        grants: () =>
+          changed ? reread.promise : grantsResponse([CAROL, EMMA]),
+        users: () => usersPage([fictionalDirectoryUser()]),
+        grant: () => {
+          changed = true;
+          return grantResponse(fictionalGrant({ user: FICTIONAL_ACTORS[0]! }));
+        },
+        revoke: () => {
+          changed = true;
+          return new Response(null, { status: 204 });
+        },
+      });
+      const { screen } = await renderParticipants();
+      await openAccessGrants(screen);
+      await change(screen);
+
+      await accessGrantsDialog(screen)
+        .getByRole("button", { name: "Close" })
+        .click();
+      await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
+      const message = screen.getByText(text, { exact: true });
+      await nextFrames();
+      expect(message.query()).toBeNull();
+      reread.resolve(grantsResponse([EMMA]));
+
+      await expect.element(message).toBeVisible();
+      expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+      expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
+    },
+  );
+
+  test("show Revoke access in the message area, as a success, when the dialog closed before the read of the grants after it fails", async () => {
     const reread = later();
     let revoked = false;
     stubTicket({
@@ -1297,18 +1546,23 @@ describe("the access grants", () => {
     });
     const { screen } = await renderParticipants();
     await openAccessGrants(screen);
-
     await revokeCarol(screen);
-
     await expect
       .element(confirmationOf(screen, "Carol White"))
       .not.toBeInTheDocument();
-    expect(dialogStatus(screen)).toBe("");
-    reread.resolve(errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"));
 
-    await expect
-      .poll(() => dialogStatus(screen))
-      .toContain("Access of Carol White revoked.");
+    await accessGrantsDialog(screen)
+      .getByRole("button", { name: "Close" })
+      .click();
+    await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
+    reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    const message = screen.getByText("Access of Carol White revoked.", {
+      exact: true,
+    });
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+    expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
   });
 });
 

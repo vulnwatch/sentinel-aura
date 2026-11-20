@@ -2025,7 +2025,7 @@ describe("Add reference", () => {
     expect(invalidated(ACTORS)).toBe(true);
   });
 
-  test("announces the change once the next read of the references arrives, also one that fails", async () => {
+  test("shows the change in the message area, as a success without the Ticket, once the next read of the references fails, and announces nothing in the tab", async () => {
     const reread = later();
     let added = false;
     stubReferences({
@@ -2038,6 +2038,8 @@ describe("Add reference", () => {
     const { router, screen } = await renderTab();
     const dialog = await openAdd(screen);
     await fieldOf(dialog, "Address").fill(ADDED.url);
+    const text = "Reference “Fictional packaging issue” added.";
+    const message = screen.getByText(text, { exact: true });
 
     await submit(dialog, "Add reference");
 
@@ -2048,11 +2050,16 @@ describe("Add reference", () => {
       .poll(() => namesOf(screen))
       .toEqual([NVD.title, ADVISORY.title]);
     await expect.poll(() => announcementsOf(screen)).toEqual(["2 references"]);
+    expect(message.query()).toBeNull();
     reread.resolve(errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"));
 
-    await expect
-      .poll(() => announcementsOf(screen))
-      .toContain("Reference “Fictional packaging issue” added.");
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+    expect(panelOf(screen).element().contains(message.element())).toBe(false);
+    expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
+    await frames();
+    expect(announcementsOf(screen)).not.toContain(text);
+    expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
   });
 
   test("announces each change again in a node of its own, also with the same words", async () => {
@@ -3397,7 +3404,7 @@ describe("Delete", () => {
     },
   );
 
-  test("announces Delete once a read of the references after it arrives, also one that fails", async () => {
+  test("shows Delete in the message area, as a success, once the read of the references after it fails, and announces nothing in the tab", async () => {
     const reread = later();
     let removed = false;
     stubReferences({
@@ -3408,16 +3415,20 @@ describe("Delete", () => {
       },
     });
     const { screen } = await renderTab();
+    const text = "Reference “Fictional advisory” deleted.";
+    const message = screen.getByText(text, { exact: true });
 
     const confirmation = await deleteReference(screen, ADVISORY);
 
     await expect.element(confirmation).not.toBeInTheDocument();
     expect(announcementsOf(screen)).toEqual([]);
+    expect(message.query()).toBeNull();
     reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
 
-    await expect
-      .poll(() => announcementsOf(screen))
-      .toContain("Reference “Fictional advisory” deleted.");
+    await expect.element(message).toBeVisible();
+    expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
+    await frames();
+    expect(announcementsOf(screen)).not.toContain(text);
   });
 });
 
