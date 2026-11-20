@@ -520,10 +520,10 @@ that it sits with the icons around it.
   following its radius, or inside it for an element whose edges would cut
   it: a row or a cell of a table (Tables), a menu item (Menus, Popovers, and
   Tooltips), a menu that holds the focus itself, as when a read removed the
-  item that held it, a segment of a segmented control, in `on-accent` on the chosen
-  one (Forms), the main content after the link that skips to it (Main
-  Content), and the sidebar opened over the content (Sidebar). It shows on
-  keyboard focus, and no element removes it (`docs/behaviors.md`,
+  item that held it, a segment of a segmented control, in `on-accent` on
+  the chosen one (Forms), the main content after the link that skips to it
+  (Main Content), and the sidebar opened over the content (Sidebar). It
+  shows on keyboard focus, and no element removes it (`docs/behaviors.md`,
   Accessibility).
 - **Motion:** only loading indicators and the mark of an operation in
   progress move: the spinner turns and the progress bar runs (Loading), and

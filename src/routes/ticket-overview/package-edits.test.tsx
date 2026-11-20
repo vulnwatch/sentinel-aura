@@ -575,42 +575,64 @@ describe("the edits of the package tree", () => {
     await expect.element(menu).toBeVisible();
   });
 
-  test("keep the busy item of the menu of the actions of a track as it started while a read that shows the track excluded arrives before Sentinel answers", async () => {
-    const response = later();
-    let tree = editableTree();
-    showingEditable(() => withHiddenPackage(tree), {
-      packageChange: () => response.promise,
-    });
-    const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+  test.each<
+    [string, string, () => PackageDetail[], () => PackageDetail[], boolean]
+  >([
+    [
+      "Exclude",
+      "Excluding.",
+      () => editableTree(),
+      () => treeWithoutSp7(),
+      false,
+    ],
+    [
+      "Restore",
+      "Restoring.",
+      () => treeWithoutSp7(),
+      () => editableTree(),
+      true,
+    ],
+  ])(
+    "keep the busy %s of the menu of the actions of a track as it started while a read that shows the track as the change leaves it arrives before Sentinel answers",
+    async (action, busyText, before, after, actionable) => {
+      const response = later();
+      let tree = before();
+      showingEditable(() => withHiddenPackage(tree), {
+        packageChange: () => response.promise,
+      });
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
 
-    await chooseAction(screen, OPENSSL_SP7, "Exclude");
-    const menu = menuOf(screen, `Actions of ${OPENSSL_SP7}`);
-    const item = menu.getByRole("menuitem", { name: "Exclude", exact: true });
-    await expect.element(item).toHaveAccessibleDescription("Excluding.");
-    // Meanwhile a read shows the track excluded, as by the change itself.
-    tree = treeWithoutSp7();
-    await returnToForeground();
-    await expect
-      .element(
-        trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText("Excluded", {
-          exact: true,
-        }),
-      )
-      .toBeVisible();
+      await chooseAction(screen, OPENSSL_SP7, action);
+      const menu = menuOf(screen, `Actions of ${OPENSSL_SP7}`);
+      const item = menu.getByRole("menuitem", { name: action, exact: true });
+      await expect.element(item).toHaveAccessibleDescription(busyText);
+      // Meanwhile a read shows the track as the change leaves it.
+      const excluded = trackOf(screen, "SUSE:FLES-15-SP7:Update").getByText(
+        "Excluded",
+        { exact: true },
+      );
+      tree = after();
+      await returnToForeground();
+      if (actionable) {
+        await expect.element(excluded).not.toBeInTheDocument();
+      } else {
+        await expect.element(excluded).toBeVisible();
+      }
 
-    await expect.element(item).toHaveAccessibleDescription("Excluding.");
-    expect(menu.getByRole("menuitem").elements()).toHaveLength(1);
+      await expect.element(item).toHaveAccessibleDescription(busyText);
+      expect(menu.getByRole("menuitem").elements()).toHaveLength(1);
 
-    response.resolve(trackMarkerResponse(false));
+      response.resolve(trackMarkerResponse(actionable));
 
-    await expect.element(menu).not.toBeInTheDocument();
-    await actionsOf(screen, OPENSSL_SP7).click();
-    await expect
-      .poll(() =>
-        itemsOf(menuOf(screen, `Actions of ${OPENSSL_SP7}`), "menuitem"),
-      )
-      .toEqual(["Restore"]);
-  });
+      await expect.element(menu).not.toBeInTheDocument();
+      await actionsOf(screen, OPENSSL_SP7).click();
+      await expect
+        .poll(() =>
+          itemsOf(menuOf(screen, `Actions of ${OPENSSL_SP7}`), "menuitem"),
+        )
+        .toEqual([actionable ? "Exclude" : "Restore"]);
+    },
+  );
 
   test("read again after an edit the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, but not its duplicates", async () => {
     const spy = showingEditable(undefined, {

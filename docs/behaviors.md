@@ -740,11 +740,12 @@ change, in the state that the screen then shows, such as its new filters.
 - A result that shows where the user acted, such as an edited value, needs no
   message; it is announced, such as "Priority changed to P2." (Accessibility).
   A screen that shows the result once the read after the change arrives
-  announces it then. When that read fails, the screen keeps the data that it
-  showed before (Where Errors Appear), so the outcome shows as a message
-  instead, as for any other successful change, in the message area, or at
-  the top of an open dialog that holds the data, as a dialog that stays open
-  after its change shows it (below).
+  announces it then. When that read fails, the result does not show where
+  the user acted, since the screen keeps the data that it showed before or
+  the failure replaces it (Where Errors Appear), so the outcome shows as a
+  message instead, as for any other successful change, in the message area,
+  or at the top of an open dialog that holds the data, as a dialog that
+  stays open after its change shows it (below).
 - A change that creates a record with a screen of its own opens that screen,
   which shows the result.
 - Any other successful change shows a short message that says what happened,
@@ -817,15 +818,15 @@ also meets these requirements, which they cannot check:
   keeps it; when that read fails, the focus stays where it is, unless the
   failure replaces what holds the focus, as a `403` or a `404` can (Where
   Errors Appear), and a later read that removes the element moves the focus
-  as below. When it disappears without an action, because a read replaced what the screen
-  shows, such as a `403` after the tab returns to the foreground (Where Errors
-  Appear), or because a change of layout moved the section that held it
-  (`docs/design-system.md`, Detail Screens), the focus moves to the screen's
-  heading. Inside an open dialog, which keeps the rest of the page out of
-  reach, it moves instead to the element that takes the place of the one that
-  disappeared, such as the same action of the next item of a list, or the
-  field that adds such items when no item follows, and otherwise to the
-  dialog itself.
+  as below. When it disappears without an action, because a read replaced
+  what the screen shows, such as a `403` after the tab returns to the
+  foreground (Where Errors Appear), or because a change of layout moved the
+  section that held it (`docs/design-system.md`, Detail Screens), the focus
+  moves to the screen's heading. Inside an open dialog, which keeps the rest
+  of the page out of reach, it moves instead to the element that takes the
+  place of the one that disappeared, such as the same action of the next
+  item of a list, or the field that adds such items when no item follows,
+  and otherwise to the dialog itself.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing; a dialog without a field or a button, such as the explanation of a

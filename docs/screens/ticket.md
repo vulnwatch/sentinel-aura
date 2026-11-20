@@ -990,25 +990,24 @@ depart from them:
   returns to the button that opened it (`docs/behaviors.md`, Accessibility,
   Dialogs), or moves as the entry states when the change removes that
   button.
-- **Outcome.** An outcome that the screen announces, it announces once the
-  read after the change that the entry names arrives. When that read fails,
-  the screen keeps showing the data as before, so the outcome shows in the
-  message area instead, as a `success` message, or at the top of the dialog
-  that holds the change (`docs/behaviors.md`, Outcome of a Change). The
-  outcome of a change that ends after the user left the tab shows in the
-  message area, and so does its failure, in the presentation of its status
-  unless the entry states another (`docs/behaviors.md`, Default
-  Presentation by Status; Retries and Unconfirmed Changes), starting with
-  the Ticket, as a link to its screen, such as "SNTL-42: Assigned to Bob
-  Wilson.", when the user is on another screen.
+- **Outcome.** The screen announces an outcome once the read after the
+  change that the entry names arrives, and shows it in the message area
+  when that read fails, also when the failure replaces the screen, as a
+  `403` or a `404` of the Ticket does (States; `docs/behaviors.md`, Outcome
+  of a Change). The outcome of a change that ends after the user left the
+  tab shows in the message area, and so does its failure, in the
+  presentation of its status unless the entry or States states another
+  (`docs/behaviors.md`, Default Presentation by Status; Retries and
+  Unconfirmed Changes), starting with the Ticket, as a link to its screen,
+  such as "SNTL-42: Assigned to Bob Wilson.", when the user is on another
+  screen.
 - **Reads.** Whatever the outcome of a change, the screen then reads again
   what the change affects, which the entry lists (`docs/behaviors.md`,
   Outcome of a Change).
 - **Focus.** After a change that removes the element with the focus, the
-  focus moves once the read after the change no longer shows the element,
-  and only while it is still where the entry states; when that read fails,
-  it stays where it is (`docs/behaviors.md`, Accessibility, Focus after an
-  action).
+  focus waits for the read after the change and moves only while it is
+  still where the entry states, as `docs/behaviors.md` (Accessibility,
+  Focus after an action) states, also when that read fails.
 
 **Edit assignee**, Assign Ticket, `PATCH /api/v1/tickets/{ticket_id}/assignee`,
 in the details, for a user who holds `triage_ticket` (Sentinel
@@ -1229,9 +1228,8 @@ Delete SUSE CVSS Assessment):
 - Add SUSE assessment and Edit ask for no confirmation. Before discarding
   input, the question says "The SUSE assessment that you entered isn't
   added." in Add or "Your changes to this SUSE assessment aren't saved." in
-  Edit (above). While the request is in progress, a navigation asks
-  nothing, also while the other tab of Add holds input. After Add, when the
-  other tab holds input and SUSE lacks its version by the read before Add, the
+  Edit (above). After Add, when the other tab holds input and SUSE lacks
+  its version by the read before Add, the
   dialog stays open on that tab instead (`docs/design-system.md`, Dialogs):
   "SUSE assessment v3.1 added." shows above the tabs as a `success` message,
   which is announced, the tab of the version added drops its input and says
@@ -1273,10 +1271,9 @@ Delete SUSE CVSS Assessment):
   of the new row, which reverses the change. When a read removes the row
   whose control holds the focus, or Add SUSE assessment while it holds the
   focus without a change, the focus moves to the screen's heading
-  (`docs/behaviors.md`, Accessibility, Focus after an action). The move
-  after Delete, and the one when a read removes a row, take place only while
-  the focus is in the table or on the screen's heading, so that a user who
-  moved it out of the table meanwhile keeps it (above).
+  (`docs/behaviors.md`, Accessibility, Focus after an action). Neither the
+  move after Delete nor the one when a read removes a row takes place once
+  the user has moved the focus out of the table meanwhile (above).
 
 **Exclude** and **Restore** of a package, Soft-Delete Package from Ticket,
 `POST /api/v1/tickets/{ticket_id}/packages/{package_id}/exclude`, and Restore
@@ -1331,16 +1328,18 @@ Package Eligibility (Override Model); API Endpoints):
   affectedness that the pinned contract does not list shows as received,
   without a select. The request sends the value chosen as `status`.
 - The items of the menu of a package or a track and of the popover of a
-  Product, and the current value of the select, follow the record as the
-  screen shows it, except while a change of one of them is in progress,
-  which keeps its menu as it started: when a read turns Exclude, Exclude…,
-  or Exclude from this track into Restore, or one Mark into the other, the
-  item keeps the focus; when it removes the item or the value that holds the
-  focus, such as Return to automatic eligibility after another user did it,
-  or Fixed for a user who cannot set it, after another user changed the
-  track from Fixed to another value, the menu, the one stop of the Tab key of its items, takes the focus in its
-  place, with the focus ring inside it (`docs/behaviors.md`, Accessibility,
-  Focus after an action; `docs/design-system.md`, Focus and Motion).
+  Product follow the record as the screen shows it, except while the change
+  of one of them is in progress, which keeps its menu as it started; the
+  select keeps the values that it offered as it opened, and its current
+  value follows the track as the screen shows it. When a read turns
+  Exclude, Exclude…, or Exclude from this track into Restore, or one Mark
+  into the other, the item keeps the focus; when it removes the item or the
+  value that holds the focus, such as Return to automatic eligibility after
+  another user did it, or Fixed for a user who cannot set it, after another
+  user changed the track from Fixed to another value, the menu, the one stop
+  of the Tab key of its items, takes the focus in its place, with the focus
+  ring inside it (`docs/behaviors.md`, Accessibility, Focus after an action;
+  `docs/design-system.md`, Focus and Motion).
 - None asks for confirmation, except the exclusion of a package with
   maintainers of a confidential Ticket, which ends their access to it unless
   another path gives it to them (`docs/behaviors.md`, Confirmation; Sentinel
@@ -1349,10 +1348,10 @@ Package Eligibility (Override Model); API Endpoints):
   fictional-openssh?", "The maintainers of fictional-openssh no longer see
   this confidential Ticket, unless their roles, an access grant, or another
   package that they maintain let them. Restore gives them this access
-  back.", with Cancel and Exclude package, a danger button. Nor does a change
-  of the affectedness that the user cannot reverse, such as Fixed for a user
-  who holds `admin_ticket_ops` alone, since another user can
-  (`docs/behaviors.md`, Confirmation). Neither do the actions of a Product:
+  back.", with Cancel and Exclude package, a danger button. A change of the
+  affectedness asks for none, also one that the user cannot reverse, such as
+  Fixed for a user who holds `admin_ticket_ops` alone, since another user
+  can (`docs/behaviors.md`, Confirmation). Neither do the actions of a Product:
   its exclusion ends no access, since maintainership concerns the package
   (Sentinel `docs/features/packages/package-maintainership.md`, Confidential
   Ticket Visibility), and each can be undone in the UI, a return to
@@ -1396,7 +1395,8 @@ Package Eligibility (Override Model); API Endpoints):
   next track of its package that shows, otherwise to that of its package;
   after an exclusion of a package, or of a record whose package no longer
   shows, to the menu of the next package that shows, otherwise to "Show
-  hidden", which leads to Restore (above). A read that removes the record
+  hidden", which leads to Restore (`docs/behaviors.md`, Accessibility, Focus
+  after an action). A read that removes the record
   otherwise, such as a later read after one that failed, or one after an
   exclusion that failed because another user made it meanwhile, moves the
   focus to the screen's heading, as when any read removes the element with
@@ -1529,9 +1529,12 @@ Access; Revoke Access):
   Accessibility, Focus after an action).
 - The outcome of each is announced in a status region of the dialog, which the
   rest of the page cannot hold while the dialog is open. When the read of the
-  grants after it fails, the outcome shows at the top of the dialog instead,
-  as a `success` message that the next such outcome replaces, until the
-  dialog closes, or in the message area once the dialog has closed (above).
+  grants after it fails, the outcomes that this read releases show together
+  at the top of the dialog instead, as a `success` message, which those of a
+  later failed read replace, until the dialog closes. Once the dialog has
+  closed, an outcome shows in the message area when its read arrives,
+  whatever the outcome of that read, since nothing in the dialog announces
+  it then (`docs/behaviors.md`, Outcome of a Change).
   The screen then reads again the Ticket, its access grants, the users who
   acted on it, and its audit log.
 
@@ -1542,9 +1545,8 @@ Access; Revoke Access):
 `DELETE /api/v1/tickets/{ticket_id}/references/{reference_id}`, in the tab
 References, for a user who holds `manage_references` (Sentinel
 `docs/features/tickets/ticket-references.md`, Add Reference; Update
-Reference; Delete Reference). Each is valid in every status of the Ticket,
-Ignored and Duplicated included, so the screen offers it whatever the status
-(same document, Manual-Zone Exception):
+Reference; Delete Reference), in every status of the Ticket (above; same
+document, Manual-Zone Exception):
 
 - Edit and Delete are offered only on a manual reference, since Sentinel
   refuses to change an automatic one with `409 RESOURCE_NOT_EDITABLE` (same
@@ -1626,8 +1628,9 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   keeps the focus on its control; when a read removes the row while one of
   its controls holds the focus, such as a later read after Delete, or after
   an Edit that the filters no longer match, the focus moves to the screen's
-  heading. Neither move takes place once the user has moved the focus out
-  of the table meanwhile.
+  heading. Neither the move after Delete nor the one when a read removes a
+  row takes place once the user has moved the focus out of the table
+  meanwhile (above).
 
 ## States
 

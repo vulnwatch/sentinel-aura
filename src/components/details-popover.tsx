@@ -4,8 +4,9 @@ import {
   DialogTrigger,
   Menu,
 } from "react-aria-components";
-import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
+import { FOCUS_RING } from "./focus-ring";
 import { InfoPopover, PopoverLine, PopoverTitle } from "./info-popover";
+import { MENU_FOCUS_RING } from "./menu";
 
 // The button of a name or a value that opens a popover: in the style of the
 // text around it, its color included, with a dotted underline in
@@ -89,10 +90,7 @@ export function DetailsName({
         {actions !== undefined && (
           <>
             <PopoverLine />
-            <Menu
-              aria-label="Actions"
-              className={`-mx-2.5 rounded-md ${INSIDE_FOCUS_RING}`}
-            >
+            <Menu aria-label="Actions" className={`-mx-2.5 ${MENU_FOCUS_RING}`}>
               {actions}
             </Menu>
           </>

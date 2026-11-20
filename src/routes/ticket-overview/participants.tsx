@@ -54,7 +54,6 @@ import {
   type DialogError,
 } from "../../components/modal-dialog";
 import { Message } from "../../components/message";
-import { useShowMessage } from "../../components/message-area";
 import { userOptionText } from "../../components/options";
 import { dataShown, PartRead, type Read } from "../../components/read-view";
 import {
@@ -567,7 +566,8 @@ interface AccessGrantsDialogProps {
 // outcome of a grant or a revocation is announced in a status region of the
 // dialog, which the rest of the page cannot hold while the dialog is open,
 // once the read of the grants after it arrives; when that read fails, it
-// shows at the top of the dialog instead, until the dialog closes.
+// shows at the top of the dialog instead, until the dialog closes, and once
+// the dialog has closed, in the message area.
 // When a grant whose line holds the focus leaves the list, as after its
 // Revoke access, the focus moves to the Revoke access of the grant that
 // followed it, or to the user field when none follows (docs/behaviors.md,
@@ -596,33 +596,27 @@ function AccessGrantsDialog({
         "ticketId" in variables &&
         variables.ticketId === ticketId,
     }) > 0;
-  const showMessage = useShowMessage();
   // The outcome that the dialog shows at its top after a failed read, until
   // it closes.
   const [shown, setShown] = useState<ShownOutcome>();
-  const opened = useRef(isOpen);
-  useLayoutEffect(() => {
-    opened.current = isOpen;
-  }, [isOpen]);
   // The outcome of a grant or a revocation is announced once the read of the
   // grants after it arrives, when the confirmation of a revocation has
   // closed, so that the confirmation, which hides the rest of the page, does
   // not hide it. When that read fails, the grants show as before, so the
-  // outcome shows at the top of the dialog, which keeps the rest of the page
-  // out of reach, or in the message area while the dialog is closed
-  // (docs/behaviors.md, Outcome of a Change).
+  // outcomes that it releases show together at the top of the dialog, which
+  // keeps the rest of the page out of reach, in place of the earlier ones.
+  // Once the dialog has closed, they show in the message area instead,
+  // whatever the outcome of that read (docs/behaviors.md, Outcome of a
+  // Change).
   const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
-  const elsewhere = useCallback(
-    (text: string) => {
-      if (opened.current) {
-        setShown((current) => ({ key: (current?.key ?? 0) + 1, text }));
-      } else {
-        showMessage({ tone: "success", text });
-      }
-    },
-    [showMessage],
+  const showAtTop = useCallback((text: string) => {
+    setShown((current) => ({ key: (current?.key ?? 0) + 1, text }));
+  }, []);
+  const outcome = useOutcomeAfterRead(
+    read,
+    record,
+    isOpen ? showAtTop : undefined,
   );
-  const outcome = useOutcomeAfterRead(read, record, elsewhere);
   const content = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const field = useRef<HTMLInputElement>(null);

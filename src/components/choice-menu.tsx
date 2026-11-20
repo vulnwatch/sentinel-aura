@@ -46,16 +46,15 @@ interface ChoiceMenuProps {
 // button 28 px high, without a boundary or a fill, with a 6 px radius and
 // surface-hover under the pointer, in text-14 and fg, which keeps its colors
 // in a hidden record, the value as its choice shows it, then chevron-down at
-// 14 px in fg-muted. It
-// opens its choices as a menu of single selection below its start, at least
-// as wide as it, the chosen one with check, rather than as the options of a
-// select, which change the value while the user types on the button closed,
-// with the focus ring inside the menu when it holds the focus itself, as when
-// a read removed the choice that held it. Choosing another value starts its
-// change: the choice is busy, the others are unavailable, and the menu
-// cannot be closed until the change ends (docs/behaviors.md, Loading;
-// docs/design-system.md, Menus, Popovers, and Tooltips); choosing the value
-// chosen closes the menu.
+// 14 px in fg-muted. It opens its choices as a menu of single selection
+// below its start, at least as wide as it, the chosen one with check, with
+// the focus ring inside the menu when it holds the focus itself, as when a
+// read removed the choice that held it, rather than as the options of a
+// select, which change the value while the user types on the button closed.
+// Choosing another value starts its change: the choice is busy, the others
+// are unavailable, and the menu cannot be closed until the change ends
+// (docs/behaviors.md, Loading; docs/design-system.md, Menus, Popovers, and
+// Tooltips); choosing the value chosen closes the menu.
 export function ChoiceMenu({
   label,
   value,
