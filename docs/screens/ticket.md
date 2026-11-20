@@ -996,7 +996,7 @@ depart from them:
   `403` or a `404` of the Ticket does (States; `docs/behaviors.md`, Outcome
   of a Change). The outcome of a change that ends after the user left the
   tab shows in the message area, and so does its failure, in the
-  presentation of its status unless the entry or States states another
+  presentation of its status unless the entry or States gives another
   (`docs/behaviors.md`, Default Presentation by Status; Retries and
   Unconfirmed Changes), starting with the Ticket, as a link to its screen,
   such as "SNTL-42: Assigned to Bob Wilson.", when the user is on another
@@ -1006,8 +1006,8 @@ depart from them:
   Outcome of a Change).
 - **Focus.** After a change that removes the element with the focus, the
   focus waits for the read after the change and moves only while it is
-  still where the entry states, as `docs/behaviors.md` (Accessibility,
-  Focus after an action) states, also when that read fails.
+  still where the entry states; `docs/behaviors.md` (Accessibility, Focus
+  after an action) states where it is when that read fails.
 
 **Edit assignee**, Assign Ticket, `PATCH /api/v1/tickets/{ticket_id}/assignee`,
 in the details, for a user who holds `triage_ticket` (Sentinel
@@ -1229,11 +1229,11 @@ Delete SUSE CVSS Assessment):
   input, the question says "The SUSE assessment that you entered isn't
   added." in Add or "Your changes to this SUSE assessment aren't saved." in
   Edit (above). After Add, when the other tab holds input and SUSE lacks
-  its version by the read before Add, the
-  dialog stays open on that tab instead (`docs/design-system.md`, Dialogs):
-  "SUSE assessment v3.1 added." shows above the tabs as a `success` message,
-  which is announced, the tab of the version added drops its input and says
-  that SUSE has it once the read after the change arrives, and the action of
+  its version by the read before Add, the dialog stays open on that tab
+  instead (`docs/design-system.md`, Dialogs): "SUSE assessment v3.1 added."
+  shows above the tabs as a `success` message, which is announced, the tab
+  of the version added drops its input and says that SUSE has it once the
+  read after the change arrives, and the action of
   the dialog, Add SUSE assessment, holds the focus, also after Enter in
   Vector, whose form leaves with its tab.
 - Delete asks for confirmation, since it cannot be undone in the UI and
@@ -1330,8 +1330,9 @@ Package Eligibility (Override Model); API Endpoints):
 - The items of the menu of a package or a track and of the popover of a
   Product follow the record as the screen shows it, except while the change
   of one of them is in progress, which keeps its menu as it started; the
-  select keeps the values that it offered as it opened, and its current
-  value follows the track as the screen shows it. When a read turns
+  select keeps the values that the user could set as it opened, and its
+  current value, which it also offers, follows the track as the screen
+  shows it. When a read turns
   Exclude, Exclude…, or Exclude from this track into Restore, or one Mark
   into the other, the item keeps the focus; when it removes the item or the
   value that holds the focus, such as Return to automatic eligibility after
@@ -1623,12 +1624,11 @@ document, Manual-Zone Exception):
 - After Delete, once the read of the references after it no longer returns
   the reference, the focus moves to the Delete of the row that takes its
   place, or to that row when it has no Delete, or to Add reference when no
-  row follows (above). A row that a read
-  moves, such as after an Edit that changes the type, which orders the rows,
-  keeps the focus on its control; when a read removes the row while one of
-  its controls holds the focus, such as a later read after Delete, or after
-  an Edit that the filters no longer match, the focus moves to the screen's
-  heading. Neither the move after Delete nor the one when a read removes a
+  row follows (above). A row that a read moves, such as after an Edit that
+  changes the type, which orders the rows, keeps the focus on its control;
+  when a read removes the row while one of its controls holds the focus,
+  such as a later read after Delete, or after an Edit that the filters no
+  longer match, the focus moves to the screen's heading. Neither the move after Delete nor the one when a read removes a
   row takes place once the user has moved the focus out of the table
   meanwhile (above).
 
@@ -1763,7 +1763,8 @@ document, Manual-Zone Exception):
   `docs/features/packages/package-model.md`, Soft-Delete Package from Ticket;
   Restore Package; Soft-Delete Track; Restore Track; Soft-Delete Product;
   Restore Product). Either code of the other operation, or of Change Track
-  Status or Override Product Eligibility, has the presentation of its status.
+  Status or Override Product Eligibility, has the presentation of its status,
+  and so does either code after the user left the tab (Actions).
 - **Errors of Add package.** A failure shows in its form, which keeps the
   name (`docs/behaviors.md`, Where Errors Appear). The screen handles three
   codes specifically, at the field, which takes the focus: `422
