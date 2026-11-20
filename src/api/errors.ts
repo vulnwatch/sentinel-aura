@@ -360,7 +360,7 @@ export function presentMarkerConflict(
 const MESSAGE_PACKAGE_NOT_IN_SMELT =
   "SMELT doesn't maintain a package of this name. Check the name, whose letter case counts.";
 const MESSAGE_PACKAGE_TARGETS_UNRESOLVED =
-  "Sentinel found no Product that it tracks among those that SMELT lists for this package, so it added nothing.";
+  "Sentinel found no Product of its catalog among those that SMELT lists for this package, so it added nothing.";
 const MESSAGE_PACKAGE_EXCLUDED =
   "This package is excluded from this Ticket: Show hidden shows it, and Restore in the menu of its actions includes it again.";
 

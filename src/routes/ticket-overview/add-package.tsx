@@ -106,6 +106,10 @@ export function addedText({ data }: PackageAdditionResponse): string {
 interface PackageNameFieldProps {
   value: string;
   onChange: (value: string) => void;
+  // Whether the name is the one that the addition in progress sends, which
+  // the field keeps, without taking input, so that an error of the addition
+  // at the field concerns the name that it shows.
+  isReadOnly: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
 }
 
@@ -125,6 +129,7 @@ interface PackageNameFieldProps {
 function PackageNameField({
   value,
   onChange,
+  isReadOnly,
   inputRef,
 }: PackageNameFieldProps) {
   // The name of the option that the user chose, while the field holds it.
@@ -183,6 +188,7 @@ function PackageNameField({
       waiting={waiting}
       opensEmpty={long}
       allowsCustomValue
+      isReadOnly={isReadOnly}
       inputRef={inputRef}
     />
   );
@@ -222,7 +228,8 @@ interface AddPackageDialogProps {
 // With a name typed, Cancel, Escape, and every navigation of the UI ask
 // "Discard changes?" first (docs/behaviors.md, Confirmation). While the
 // addition is in progress, the dialog cannot be closed, and its input counts
-// as submitted. Whatever the outcome, the screen reads again what the
+// as submitted; the field keeps the name sent, read-only, and its focus.
+// Whatever the outcome, the screen reads again what the
 // addition affects; one that ends after the user left the screen shows its
 // outcome in the message area there, naming the Ticket, and its failure in
 // the presentation of the dialog (useChangeOutcome).
@@ -362,6 +369,7 @@ export function AddPackageDialog({
               }
               setName(value);
             }}
+            isReadOnly={busy}
             inputRef={inputRef}
           />
         </Form>

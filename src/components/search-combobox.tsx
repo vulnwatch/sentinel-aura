@@ -91,6 +91,9 @@ interface SearchComboBoxProps<TItem extends object> {
   disabledKeys?: Iterable<Key>;
   // Whether the field cannot change, as while its form is submitted.
   isDisabled?: boolean;
+  // Whether the field keeps its text and its focus but takes no input, as
+  // while the change of a value that it holds is in progress.
+  isReadOnly?: boolean;
   // The input element, which takes the focus.
   inputRef?: Ref<HTMLInputElement>;
 }
@@ -121,6 +124,7 @@ export function SearchComboBox<TItem extends object>({
   allowsCustomValue = false,
   disabledKeys,
   isDisabled = false,
+  isReadOnly = false,
   inputRef,
 }: SearchComboBoxProps<TItem>) {
   const statusId = useId();
@@ -134,6 +138,7 @@ export function SearchComboBox<TItem extends object>({
       onInputChange={onInputChange}
       disabledKeys={disabledKeys}
       isDisabled={isDisabled}
+      isReadOnly={isReadOnly}
       allowsCustomValue={allowsCustomValue}
       allowsEmptyCollection={opensEmpty}
       className="flex flex-col"

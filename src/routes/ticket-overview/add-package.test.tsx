@@ -920,7 +920,7 @@ describe("a failure of Add package", () => {
     [
       "422 PACKAGE_TARGETS_UNRESOLVED",
       () => errorResponse(422, "PACKAGE_TARGETS_UNRESOLVED"),
-      "Sentinel found no Product that it tracks among those that SMELT lists for this package, so it added nothing.",
+      "Sentinel found no Product of its catalog among those that SMELT lists for this package, so it added nothing.",
     ],
     [
       "409 PACKAGE_ALREADY_EXCLUDED",
@@ -1088,7 +1088,7 @@ describe("a failure of Add package", () => {
     await expectFocusOnError(error);
   });
 
-  test("is busy while the addition is in progress, with the field still enabled, sends one request, and cannot be closed", async () => {
+  test("is busy while the addition is in progress, its field read-only with the name sent, sends one request, and cannot be closed", async () => {
     const response = later();
     const spy = showingAddable({ addPackage: () => response.promise });
     const { screen } = await renderTree();
@@ -1098,7 +1098,9 @@ describe("a failure of Add package", () => {
     await expect
       .element(submitButton(dialog))
       .toHaveAttribute("aria-disabled", "true");
-    await expect.element(nameField(dialog)).toBeEnabled();
+    const field = nameField(dialog);
+    await expect.element(field).toHaveAttribute("readonly");
+    await expect.element(field).toBeEnabled();
     await expect.element(cancelButton(dialog)).toBeDisabled();
     await userEvent.keyboard("{Enter}");
     await userEvent.keyboard("{Escape}");
@@ -1107,9 +1109,45 @@ describe("a failure of Add package", () => {
     expect(discardDialog(screen).query()).toBeNull();
     expect(additions(spy)).toHaveLength(1);
 
+    // Typing in the field changes nothing, and opens no menu.
+    await field.click();
+    await userEvent.keyboard("x");
+    await nextFrames();
+    expect(field.element()).toHaveValue("fictional-openssl");
+    expect(field.element().getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByRole("listbox").query()).toBeNull();
+    expect(additions(spy)).toHaveLength(1);
+
     response.resolve(packageAdditionResponse());
 
     await expect.element(dialog).not.toBeInTheDocument();
+  });
+
+  test("keeps the name sent in its field while the addition is in progress, so that an error at the field concerns the name that it shows, and takes input again after it", async () => {
+    const response = later();
+    showingAddable({ addPackage: () => response.promise });
+    const { screen } = await renderTree();
+    const dialog = await addName(screen, "fictional-opensll");
+    await expect
+      .element(submitButton(dialog))
+      .toHaveAttribute("aria-disabled", "true");
+    const field = nameField(dialog);
+    // The user tries to correct the name meanwhile.
+    await field.click();
+    await userEvent.keyboard("{Backspace}{Backspace}sl");
+    await nextFrames();
+
+    response.resolve(errorResponse(422, "PACKAGE_NOT_FOUND_IN_SMELT"));
+
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription(`${DESCRIPTION} ${MESSAGE_NOT_IN_SMELT}`);
+    expect(field.element()).toHaveValue("fictional-opensll");
+    await expect.element(field).not.toHaveAttribute("readonly");
+    await expect.element(field).toHaveFocus();
+    await userEvent.keyboard("{Backspace}{Backspace}sl");
+    await expect.element(field).toHaveValue("fictional-openssl");
+    await expect.element(field).not.toBeInvalid();
   });
 });
 

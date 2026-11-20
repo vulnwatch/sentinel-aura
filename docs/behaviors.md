@@ -687,7 +687,7 @@ it:
   of Sign in. A combobox whose value is the text typed, which it only helps to
   find, such as the name of a package (`docs/design-system.md`, Forms), holds
   such input while its field holds text other than whitespace that the user
-  typed.
+  typed or chose.
 
 Every other action asks for no confirmation, routine Ticket work included,
 such as assigning a Ticket or changing its priority: another action reverses

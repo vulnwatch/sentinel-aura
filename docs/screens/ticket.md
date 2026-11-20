@@ -1428,8 +1428,8 @@ Maintained Packages):
   keys made current, and otherwise closes the menu, keeping the text; while
   it is closed, Enter submits the form. The names only help to find one:
   Sentinel reads them from a snapshot that it takes from SMELT once a day,
-  which holds none before its first snapshot, so the field takes a name that
-  it does not suggest, and a failure of their read, which shows in the menu,
+  and returns none before its first one, so the field takes a name that it
+  does not suggest, and a failure of their read, which shows in the menu,
   leaves the addition possible.
 - The form checks the name without its surrounding whitespace before sending
   it so, as the pinned OpenAPI document publishes it (Sentinel
@@ -1444,12 +1444,14 @@ Maintained Packages):
   maintainers that it adds to the package then see the Ticket: it ends no
   one's access, and Exclude reverses it (`docs/behaviors.md`, Confirmation;
   Sentinel `docs/features/packages/package-maintainership.md`, Confidential
-  Ticket Visibility). With a name typed, other than whitespace, Cancel,
-  Escape, and a navigation of the UI, such as back, ask "Discard changes?",
-  "The package that you entered isn't added.", with Keep editing and Discard
-  (`docs/behaviors.md`, Confirmation). While the request is in progress, Add
-  package is busy, the dialog cannot be closed, and a navigation asks nothing
-  (`docs/behaviors.md`, Loading). Once Sentinel confirms it, the dialog
+  Ticket Visibility). With a name typed or chosen, other than whitespace,
+  Cancel, Escape, and a navigation of the UI, such as back, ask "Discard
+  changes?", "The package that you entered isn't added.", with Keep editing
+  and Discard (`docs/behaviors.md`, Confirmation). While the request is in
+  progress, Add package is busy, the dialog cannot be closed, and a
+  navigation asks nothing (`docs/behaviors.md`, Loading); the field keeps the
+  name sent, read-only, and its focus, so that an error at the field
+  concerns the name that it shows. Once Sentinel confirms it, the dialog
   closes, and the focus returns to Add package (`docs/behaviors.md`,
   Accessibility, Dialogs).
 - An addition creates the tracks and Products that Sentinel finds for the
@@ -1777,12 +1779,12 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   codes specifically, at the field, which takes the focus: `422
   PACKAGE_NOT_FOUND_IN_SMELT`, "SMELT doesn't maintain a package of this
   name. Check the name, whose letter case counts."; `422
-  PACKAGE_TARGETS_UNRESOLVED`, "Sentinel found no Product that it tracks
+  PACKAGE_TARGETS_UNRESOLVED`, "Sentinel found no Product of its catalog
   among those that SMELT lists for this package, so it added nothing."; and
-  `409
-  PACKAGE_ALREADY_EXCLUDED`, for a package of the Ticket that its own marker
-  excludes, "This package is excluded from this Ticket: Show hidden shows it,
-  and Restore in the menu of its actions includes it again." (Sentinel
+  `409 PACKAGE_ALREADY_EXCLUDED`, for a package of the Ticket that its own
+  marker excludes, "This package is excluded from this Ticket: Show hidden
+  shows it, and Restore in the menu of its actions includes it again."
+  (Sentinel
   `docs/features/packages/package-model.md`, Add Package to Ticket;
   Interaction with add_package_to_ticket). A field error of a
   `VALIDATION_ERROR` for `package_name` also shows there. It handles two more
