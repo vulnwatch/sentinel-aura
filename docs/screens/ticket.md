@@ -1233,9 +1233,9 @@ Delete SUSE CVSS Assessment):
   instead (`docs/design-system.md`, Dialogs): "SUSE assessment v3.1 added."
   shows above the tabs as a `success` message, which is announced, the tab
   of the version added drops its input and says that SUSE has it once the
-  read after the change arrives, and the action of
-  the dialog, Add SUSE assessment, holds the focus, also after Enter in
-  Vector, whose form leaves with its tab.
+  read after the change arrives, and the action of the dialog, Add SUSE
+  assessment, holds the focus, also after Enter in Vector, whose form leaves
+  with its tab.
 - Delete asks for confirmation, since it cannot be undone in the UI and
   Sentinel calculates the severity and the eligibility again
   (`docs/behaviors.md`, Confirmation): "Delete SUSE assessment v3.1?",
@@ -1332,15 +1332,15 @@ Package Eligibility (Override Model); API Endpoints):
   of one of them is in progress, which keeps its menu as it started; the
   select keeps the values that the user could set as it opened, and its
   current value, which it also offers, follows the track as the screen
-  shows it. When a read turns
-  Exclude, Exclude…, or Exclude from this track into Restore, or one Mark
-  into the other, the item keeps the focus; when it removes the item or the
-  value that holds the focus, such as Return to automatic eligibility after
-  another user did it, or Fixed for a user who cannot set it, after another
-  user changed the track from Fixed to another value, the menu, the one stop
-  of the Tab key of its items, takes the focus in its place, with the focus
-  ring inside it (`docs/behaviors.md`, Accessibility, Focus after an action;
-  `docs/design-system.md`, Focus and Motion).
+  shows it. When a read turns Exclude, Exclude…, or Exclude from this track
+  into Restore, or one Mark into the other, the item keeps the focus; when
+  it removes the item or the value that holds the focus, such as Return to
+  automatic eligibility after another user did it, or Fixed for a user who
+  cannot set it, after another user changed the track from Fixed to another
+  value, the menu, the one stop of the Tab key of its items, takes the focus
+  in its place, with the focus ring inside it (`docs/behaviors.md`,
+  Accessibility, Focus after an action; `docs/design-system.md`, Focus and
+  Motion).
 - None asks for confirmation, except the exclusion of a package with
   maintainers of a confidential Ticket, which ends their access to it unless
   another path gives it to them (`docs/behaviors.md`, Confirmation; Sentinel
@@ -1628,9 +1628,9 @@ document, Manual-Zone Exception):
   changes the type, which orders the rows, keeps the focus on its control;
   when a read removes the row while one of its controls holds the focus,
   such as a later read after Delete, or after an Edit that the filters no
-  longer match, the focus moves to the screen's heading. Neither the move after Delete nor the one when a read removes a
-  row takes place once the user has moved the focus out of the table
-  meanwhile (above).
+  longer match, the focus moves to the screen's heading. Neither the move
+  after Delete nor the one when a read removes a row takes place once the
+  user has moved the focus out of the table meanwhile (above).
 
 ## States
 
