@@ -1779,8 +1779,8 @@ Ignored and Duplicated included, so the screen offers it whatever the status
   codes specifically, at the field, which takes the focus: `422
   PACKAGE_NOT_FOUND_IN_SMELT`, "SMELT doesn't maintain a package of this
   name. Check the name, whose letter case counts."; `422
-  PACKAGE_TARGETS_UNRESOLVED`, "Sentinel found no Product of its catalog
-  among those that SMELT lists for this package, so it added nothing."; and
+  PACKAGE_TARGETS_UNRESOLVED`, "Sentinel can't add any of the Products that
+  SMELT lists for this package, so it added nothing."; and
   `409 PACKAGE_ALREADY_EXCLUDED`, for a package of the Ticket that its own
   marker excludes, "This package is excluded from this Ticket: Show hidden
   shows it, and Restore in the menu of its actions includes it again."

@@ -920,7 +920,7 @@ describe("a failure of Add package", () => {
     [
       "422 PACKAGE_TARGETS_UNRESOLVED",
       () => errorResponse(422, "PACKAGE_TARGETS_UNRESOLVED"),
-      "Sentinel found no Product of its catalog among those that SMELT lists for this package, so it added nothing.",
+      "Sentinel can't add any of the Products that SMELT lists for this package, so it added nothing.",
     ],
     [
       "409 PACKAGE_ALREADY_EXCLUDED",
