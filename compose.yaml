@@ -167,7 +167,7 @@ services:
   proxy:
     <<: *proxy
     profiles: [e2e]
-    image: docker.io/nginx/nginx-unprivileged:1.31.8-alpine-slim@sha256:27da685f577f3c225952d974c9bace07204ac16c9cc9ceb7cedc3663c324bc7f
+    image: docker.io/nginx/nginx-unprivileged:1.31.9-alpine-slim@sha256:75e85a09b0f25bd46d49a9fd85589ffa70b0459c8ed5ee0dc6596fd642e1f829
 
   # The proxy of the local preview, on http://localhost:4173, published on the
   # loopback interface only (Sentinel
@@ -175,6 +175,6 @@ services:
   preview:
     <<: *proxy
     profiles: [preview]
-    image: docker.io/nginx/nginx-unprivileged:1.31.8-alpine-slim@sha256:27da685f577f3c225952d974c9bace07204ac16c9cc9ceb7cedc3663c324bc7f
+    image: docker.io/nginx/nginx-unprivileged:1.31.9-alpine-slim@sha256:75e85a09b0f25bd46d49a9fd85589ffa70b0459c8ed5ee0dc6596fd642e1f829
     ports:
       - 127.0.0.1:4173:8080
