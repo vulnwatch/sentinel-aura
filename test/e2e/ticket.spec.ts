@@ -4417,6 +4417,8 @@ test.describe("the actions of a Ticket", () => {
       "Rerun convergence",
     ]);
     await expect(menu.getByRole("separator")).toHaveCount(1);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-actions-analysis.png");
     const ignore = menu.getByRole("menuitem", { name: "Ignore…", exact: true });
 
     await pressWhereShown(page, ignore);
