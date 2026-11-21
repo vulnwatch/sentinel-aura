@@ -36,6 +36,7 @@ import { ButtonLink } from "../components/button-link";
 import { EmptyState } from "../components/data-table";
 import { DateRangeFilter } from "../components/date-range-filter";
 import { dayOf, formatDateTime } from "../components/date-time";
+import { ignoreReasonName } from "../components/ignore-reason";
 import {
   FilterGroup,
   Filters,
@@ -330,13 +331,6 @@ const TRACK_STATUSES: Record<string, string> = {
   WONT_FIX: "Won't fix",
 };
 
-const IGNORE_REASONS: Record<string, string> = {
-  not_shipped: "Not shipped",
-  cve_rejected: "CVE rejected",
-  cna_policy: "CNA policy",
-  other: "Other",
-};
-
 const REFERENCE_TYPES: Record<string, string> = {
   advisory: "Advisory",
   patch: "Patch",
@@ -483,7 +477,7 @@ function statusChange({
   if (after === "Ignored" && reason !== undefined) {
     return says(
       <>
-        ignored the Ticket as {named(IGNORE_REASONS, reason)}, from{" "}
+        ignored the Ticket as {ignoreReasonName(reason)}, from{" "}
         {valueOrNotSet(before)}
       </>,
       comment === "CVE rejected" || comment === "CNA auto-ignore policy",

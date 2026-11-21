@@ -4,6 +4,7 @@ import {
   cvssVectorError,
   duplicateOriginalError,
   grantAccessFieldError,
+  ignoreReasonError,
   isAssigneeChanged,
   isNotConfidential,
   isRequestFailure,
@@ -13,6 +14,7 @@ import {
   presentChangeFailure,
   presentExitConflict,
   presentLeftAddPackageFailure,
+  presentLeftIgnoreFailure,
   presentLeftMarkDuplicateFailure,
   presentFailure,
   presentMarkDuplicateFailure,
@@ -1208,6 +1210,125 @@ describe("presentExitConflict", () => {
     ],
   ])("leaves %s to the presentation of a change", (_, failure) => {
     expect(presentExitConflict(failure, "SNTL-17", "Ignored")).toBeUndefined();
+  });
+});
+
+const NOT_REJECTED =
+  "CVE-2099-0027 is no longer rejected. Choose another reason.";
+
+// The failures of Ignore… that are no error of its reason.
+const NOT_OF_THE_REASON: [string, RequestFailure][] = [
+  [
+    "the code with another status",
+    errorResponse(400, "TICKET_CVE_NOT_REJECTED"),
+  ],
+  ["another 409 code", errorResponse(409, "TICKET_INVALID_TRANSITION")],
+  [
+    "a code that the pinned contract does not list",
+    errorResponse(409, "FICTIONAL_CODE"),
+  ],
+  [
+    "a status that the pinned contract does not list",
+    errorResponse(418, "TICKET_CVE_NOT_REJECTED"),
+  ],
+  ["an error without a code", errorResponse(409)],
+  ["a field error of the reason", validationError([entry(["body", "reason"])])],
+  [
+    "a network failure",
+    new NetworkError({ cause: new TypeError("Failed to fetch") }),
+  ],
+  [
+    "a successful response that the UI cannot read",
+    new UnreadableResponseError(200, REQUEST_ID, {
+      cause: new SyntaxError("Unexpected token"),
+    }),
+  ],
+];
+
+describe("ignoreReasonError", () => {
+  test("says after 409 TICKET_CVE_NOT_REJECTED that the CVE is no longer rejected, and to choose another reason", () => {
+    expect(
+      ignoreReasonError(
+        errorResponse(409, "TICKET_CVE_NOT_REJECTED"),
+        "CVE-2099-0027",
+      ),
+    ).toBe(NOT_REJECTED);
+  });
+
+  test("names the CVE that it is given", () => {
+    expect(
+      ignoreReasonError(
+        errorResponse(409, "TICKET_CVE_NOT_REJECTED"),
+        "CVE-2099-10031",
+      ),
+    ).toBe("CVE-2099-10031 is no longer rejected. Choose another reason.");
+  });
+
+  test.each(NOT_OF_THE_REASON)(
+    "leaves %s to the rest of the form",
+    (_, failure) => {
+      expect(ignoreReasonError(failure, "CVE-2099-0027")).toBeUndefined();
+    },
+  );
+});
+
+describe("presentLeftIgnoreFailure", () => {
+  test("presents 409 TICKET_CVE_NOT_REJECTED with the message of the reason, which names the CVE, as an error without a reference", () => {
+    expect(
+      presentLeftIgnoreFailure(
+        errorResponse(409, "TICKET_CVE_NOT_REJECTED"),
+        "CVE-2099-0027",
+      ),
+    ).toEqual({
+      message: NOT_REJECTED,
+      reference: undefined,
+      unconfirmed: false,
+    });
+  });
+
+  test.each(CHANGE_FAILURES)(
+    "presents %s as any other change",
+    (_, failure, presentation) => {
+      expect(presentLeftIgnoreFailure(failure, "CVE-2099-0027")).toEqual(
+        presentation,
+      );
+    },
+  );
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "TICKET_CVE_NOT_REJECTED with another status",
+      errorResponse(503, "TICKET_CVE_NOT_REJECTED"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "409 TICKET_INVALID_TRANSITION",
+      errorResponse(409, "TICKET_INVALID_TRANSITION"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a field error of the reason, whose field is no longer shown",
+      validationError([entry(["body", "reason"])]),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+  ])("presents %s by its status", (_, failure, presentation) => {
+    expect(presentLeftIgnoreFailure(failure, "CVE-2099-0027")).toEqual(
+      presentation,
+    );
+  });
+
+  test("presents no message for a 401", () => {
+    expect(
+      presentLeftIgnoreFailure(
+        errorResponse(401, "AUTH_NOT_AUTHENTICATED"),
+        "CVE-2099-0027",
+      ),
+    ).toBeUndefined();
   });
 });
 

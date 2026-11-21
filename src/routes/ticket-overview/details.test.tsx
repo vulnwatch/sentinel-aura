@@ -106,6 +106,76 @@ describe("the details", () => {
     expect(valueOf(screen, "Assignee").textContent).toBe("Unassigned");
   });
 
+  describe("the ignore reason", () => {
+    test.each([
+      ["not_shipped", "Not shipped"],
+      ["cve_rejected", "CVE rejected"],
+      ["cna_policy", "CNA policy"],
+      ["other", "Other"],
+    ] as const)(
+      "shows the reason %s of an Ignored Ticket as %s, right after the assignee",
+      async (reason, name) => {
+        showingTicket(
+          fictionalTicketDetail({ status: "ignored", ignore_reason: reason }),
+        );
+        const { screen } = await renderTicket();
+
+        expect(valueOf(screen, "Ignore reason").textContent).toBe(name);
+        expect(
+          textsOf(region(screen, "Details").getByRole("term")).slice(0, 3),
+        ).toEqual(["Assignee", "Ignore reason", "Deadlines"]);
+      },
+    );
+
+    test("shows a reason that the pinned contract does not list as received", async () => {
+      showingUnlistedTicket({
+        ...fictionalTicketDetail({ status: "ignored" }),
+        ignore_reason: "fictional_reason",
+      });
+      const { screen } = await renderTicket();
+
+      expect(valueOf(screen, "Ignore reason").textContent).toBe(
+        "fictional_reason",
+      );
+    });
+
+    test("shows an absent value for an Ignored Ticket without a reason", async () => {
+      showingTicket(
+        fictionalTicketDetail({ status: "ignored", ignore_reason: null }),
+      );
+      const { screen } = await renderTicket();
+
+      expect(valueOf(screen, "Ignore reason").textContent).toBe("–Not set");
+    });
+
+    test.each([
+      "new",
+      "analysis",
+      "analyzed",
+      "resolved",
+      "duplicated",
+      "fictional_status",
+    ])(
+      "does not show on a Ticket in %s, which is not Ignored",
+      async (status) => {
+        showingUnlistedTicket({
+          ...fictionalTicketDetail({ ignore_reason: null }),
+          status,
+        });
+        const { screen } = await renderTicket();
+
+        await expect
+          .element(
+            region(screen, "Details").getByText("Assignee", { exact: true }),
+          )
+          .toBeVisible();
+        expect(
+          region(screen, "Details").getByText("Ignore reason").elements(),
+        ).toHaveLength(0);
+      },
+    );
+  });
+
   test("show the fields in their order, the term on the line of its value", async () => {
     showingTicket(fictionalTicketDetail());
     const { screen } = await renderTicket();

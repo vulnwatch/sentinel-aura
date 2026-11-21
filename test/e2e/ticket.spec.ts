@@ -3970,10 +3970,68 @@ async function openActions(page: Page, ticketId: string) {
   return menu;
 }
 
+// Presses an element with the pointer where it shows, as a user does, once
+// it has arrived. Playwright's click first scrolls the element into view,
+// which for Actions in the compact heading, which sticks at the top of the
+// window, and for the items of its menu, scrolls the page back to its top,
+// as a press of a user does not.
+async function pressWhereShown(page: Page, element: Locator) {
+  await expect(element).toBeVisible();
+  const box = await element.boundingBox();
+  if (box === null) {
+    throw new Error("the element is not shown");
+  }
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+}
+
 // The status regions that hold a text, such as the announcement of the
 // outcome of a change of the status.
 function announcement(page: Page, text: string) {
   return page.getByRole("status").filter({ hasText: text });
+}
+
+// The dialog of Ignore…, by the Ticket that it ignores.
+function ignoreDialog(page: Page, ticketId: string) {
+  return page.getByRole("dialog", { name: `Ignore ${ticketId}`, exact: true });
+}
+
+// The reasons of the dialog of Ignore…, the radio buttons of Reason, in
+// their order.
+function reasons(dialog: Locator) {
+  return dialog
+    .getByRole("radiogroup", { name: "Reason", exact: true })
+    .getByRole("radio");
+}
+
+// A reason of the dialog of Ignore…, by its name.
+function reason(dialog: Locator, name: string) {
+  return dialog
+    .getByRole("radiogroup", { name: "Reason", exact: true })
+    .getByRole("radio", { name, exact: true });
+}
+
+// Chooses a reason of the dialog of Ignore… by its label, which a user
+// presses: its radio button is visually hidden beneath it.
+async function chooseReason(dialog: Locator, name: string) {
+  await dialog.getByText(name, { exact: true }).click();
+  await expect(reason(dialog, name)).toBeChecked();
+}
+
+// Expects the dialog of Ignore… to offer the reasons of the names, in this
+// order, none chosen.
+async function expectReasons(dialog: Locator, names: readonly string[]) {
+  const offered = reasons(dialog);
+  await expect(offered).toHaveCount(names.length);
+  for (const [index, name] of names.entries()) {
+    await expect(offered.nth(index)).toHaveAccessibleName(name);
+    await expect(offered.nth(index)).not.toBeChecked();
+  }
+}
+
+// The text of the element that has the focus, such as the error at the top
+// of a form, which takes the focus without a role or a name of its own.
+function focusedText(page: Page): Promise<string> {
+  return page.evaluate(() => document.activeElement?.textContent ?? "");
 }
 
 // The dialog of Mark as duplicate…, by the Ticket that it marks.
@@ -4139,18 +4197,17 @@ test.describe("the actions of a Ticket", () => {
     await expect(actions).toBeVisible();
   });
 
-  test("offers in Actions only the actions that the status of the Ticket allows: Reopen on an Ignored Ticket, Revert duplicate on a Duplicated one, and Mark as duplicate… alone on a New one", async ({
+  test("offers in Actions only the actions that the status of the Ticket allows: Reopen on an Ignored Ticket, and Revert duplicate on a Duplicated one", async ({
     page,
   }) => {
-    // SNTL-17 is Ignored, SNTL-22 a duplicate of SNTL-21, and SNTL-1 New, on
-    // which Sentinel refuses a rerun (Tickets; Sentinel
-    // docs/features/tickets/tickets.md, Rerun Ticket Convergence). Each menu
-    // closes without a change.
+    // SNTL-17 is Ignored, and SNTL-22 a duplicate of SNTL-21 (Tickets),
+    // which Sentinel neither ignores, marks as a duplicate, nor reruns
+    // (Sentinel docs/features/tickets/tickets.md, Status Transitions; Rerun
+    // Ticket Convergence). Each menu closes without a change.
     await signIn(page, "asmith");
     for (const [ticketId, offered] of [
       ["SNTL-17", "Reopen"],
       ["SNTL-22", "Revert duplicate"],
-      ["SNTL-1", "Mark as duplicate…"],
     ] as const) {
       await page.goto(`/tickets/${ticketId}`);
       await expect(heading(page, ticketId)).toBeVisible();
@@ -4166,22 +4223,91 @@ test.describe("the actions of a Ticket", () => {
     }
   });
 
-  test("offers a user who holds manage_fetchers alone only Rerun convergence, and no Actions on a Ticket whose status allows no rerun", async ({
+  test("offers on a New Ticket Ignore… first, on which the keyboard opens the menu and from which it opens a dialog, then Ignore as not shipped by SUSE and Mark as duplicate…, without Rerun convergence; the dialog offers no CVE rejected while the CVE is published", async ({
     page,
   }) => {
-    // jdoe, the administrator, holds manage_fetchers without triage_ticket
-    // (Users; Sentinel docs/features/identity/rbac.md, Predefined Roles).
-    await signIn(page);
-    await page.goto("/tickets/SNTL-12");
-    await expect(heading(page, "SNTL-12")).toBeVisible();
+    // SNTL-1 is New, and its CVE-2099-0001 published (Tickets; CVEs), on
+    // which Sentinel refuses a rerun and the reason cve_rejected (Sentinel
+    // docs/features/tickets/tickets.md, Rerun Ticket Convergence; Ignore
+    // Ticket). The menu and the dialog close without a change.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-1");
+    await expectOverviewShown(page);
+    const actions = actionsButton(page, "SNTL-1");
 
-    const menu = await openActions(page, "SNTL-12");
+    const menu = await openActions(page, "SNTL-1");
 
-    await expect(menu.getByRole("menuitem")).toHaveText(["Rerun convergence"]);
+    await expect(menu.getByRole("menuitem")).toHaveText([
+      "Ignore…",
+      "Ignore as not shipped by SUSE",
+      "Mark as duplicate…",
+    ]);
     await expect(menu.getByRole("separator")).toHaveCount(0);
     await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(menu).toHaveCount(0);
+    await expect(actions).toBeFocused();
+
+    // From the keyboard, the menu opens on Ignore…, whose Enter opens its
+    // dialog rather than ignoring the Ticket at once.
+    await page.keyboard.press("Enter");
+
+    const ignore = menu.getByRole("menuitem", { name: "Ignore…", exact: true });
+    await expect(ignore).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      menu.getByRole("menuitem", {
+        name: "Ignore as not shipped by SUSE",
+        exact: true,
+      }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    await expect(ignore).toBeFocused();
+
+    await page.keyboard.press("Enter");
+
+    const dialog = ignoreDialog(page, "SNTL-1");
+    await expect(menu).toHaveCount(0);
+    await expectReasons(dialog, ["Not shipped", "Other"]);
+    await expect(reason(dialog, "Not shipped")).toBeFocused();
+    await expect(reason(dialog, "Other")).toHaveAccessibleDescription(
+      "Another reason. SNTL-1 stays ignored until someone reopens it.",
+    );
+    await expectAccessible(page);
+
+    // Without a reason chosen, Escape closes the dialog at once.
+    await page.keyboard.press("Escape");
+
+    await expect(dialog).toHaveCount(0);
+    await expect(
+      page.getByRole("dialog", { name: "Discard changes?" }),
+    ).toHaveCount(0);
+    await expect(actions).toBeFocused();
+    await expect(await headingValue(page, "Status")).toHaveText("New");
+  });
+
+  test("offers a user who holds manage_fetchers alone only Rerun convergence, also on a Ticket in Analysis, and no Actions on a Ticket whose status allows no rerun", async ({
+    page,
+  }) => {
+    // jdoe, the administrator, holds manage_fetchers without triage_ticket
+    // (Users; Sentinel docs/features/identity/rbac.md, Predefined Roles).
+    // SNTL-12 is Analyzed, and SNTL-21 in Analysis, from which an analyst
+    // ignores it (Tickets).
+    await signIn(page);
+    for (const ticketId of ["SNTL-12", "SNTL-21"]) {
+      await page.goto(`/tickets/${ticketId}`);
+      await expect(heading(page, ticketId)).toBeVisible();
+
+      const menu = await openActions(page, ticketId);
+
+      await expect(menu.getByRole("menuitem")).toHaveText([
+        "Rerun convergence",
+      ]);
+      await expect(menu.getByRole("separator")).toHaveCount(0);
+      await expectAccessible(page);
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
+    }
 
     // SNTL-1 is New and SNTL-17 Ignored (Tickets): the heading row, which
     // arrives with the Ticket, shows no Actions.
@@ -4192,7 +4318,9 @@ test.describe("the actions of a Ticket", () => {
     }
   });
 
-  test("shows a reader no Actions", async ({ page }) => {
+  test("shows a reader no Actions, also on an Ignored Ticket, whose reason the details show", async ({
+    page,
+  }) => {
     // hgray, the reader, holds no role (Users).
     await signIn(page, "hgray");
 
@@ -4202,6 +4330,176 @@ test.describe("the actions of a Ticket", () => {
     await expect(heading(page, "SNTL-12")).toBeVisible();
     await expect(await headingValue(page, "Status")).toHaveText("Analyzed");
     await expect(actionsButton(page, "SNTL-12")).toHaveCount(0);
+
+    // SNTL-17, which bwilson ignored as not shipped (Tickets).
+    await page.goto("/tickets/SNTL-17");
+
+    await expect(heading(page, "SNTL-17")).toBeVisible();
+    await expect(await headingValue(page, "Status")).toHaveText("Ignored");
+    await expect(actionsButton(page, "SNTL-17")).toHaveCount(0);
+    await expect(detailTerms(page).nth(1)).toHaveText("Ignore reason");
+    await expect(await detail(page, "Ignore reason")).toHaveText("Not shipped");
+  });
+
+  test("shows the reason of an Ignored Ticket in its details, right after the assignee", async ({
+    page,
+  }) => {
+    // The Ignored Tickets of the dataset, one for each reason (Tickets). A
+    // Ticket of another status shows no reason: the details of SNTL-12,
+    // Analyzed, which the test of the heading row and the details lists in
+    // full, have none.
+    await signIn(page, "asmith");
+    for (const [ticketId, ignoredAs] of [
+      ["SNTL-8", "CVE rejected"],
+      ["SNTL-25", "Other"],
+      ["SNTL-28", "CNA policy"],
+      ["SNTL-17", "Not shipped"],
+    ] as const) {
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+
+      await expect(await headingValue(page, "Status")).toHaveText("Ignored");
+      await expect(detailTerms(page).nth(0)).toHaveText("Assignee");
+      await expect(detailTerms(page).nth(1)).toHaveText("Ignore reason");
+      await expect(await detail(page, "Ignore reason")).toHaveText(ignoredAs);
+    }
+
+    // SNTL-17, the last, assigned to bwilson.
+    await expect(await detail(page, "Assignee")).toHaveText("Bob Wilson");
+    await expectScreenshot(page, "ticket-ignored.png");
+  });
+
+  test("opens Ignore… with the reasons that a user can choose, each with its meaning, checks that one is chosen, and asks before discarding it", async ({
+    page,
+  }) => {
+    // SNTL-31, in Analysis, whose CVE-2099-0027 is rejected (Tickets), so
+    // the dialog also offers CVE rejected. The test sends no ignore, so it
+    // changes no data. At the anchor of the package tree, the page scrolls
+    // the line of the dates of the CVE under the compact heading, which
+    // covers them, so that their masks do not show over the dialog.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-31#packages");
+    await expectOverviewShown(page);
+    const datesBox = await part(page, "CVE-2099-0027 Rejected")
+      .getByText("Published", { exact: true })
+      .boundingBox();
+    const tabsBox = await page
+      .getByRole("tablist", { name: "Ticket" })
+      .boundingBox();
+    if (datesBox === null || tabsBox === null) {
+      throw new Error("the dates of the CVE or the tabs are not shown");
+    }
+    expect(datesBox.y + datesBox.height).toBeLessThanOrEqual(
+      tabsBox.y + tabsBox.height,
+    );
+    const actions = actionsButton(page, "SNTL-31");
+    // The requests of Ignore Ticket that the page sends.
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/v1/tickets/SNTL-31/ignore"
+      ) {
+        sent.push(request.url());
+      }
+    });
+
+    // The menu and the dialog open where the page is, which stays there.
+    const scrollY = await page.evaluate(() => window.scrollY);
+    await pressWhereShown(page, actions);
+
+    // In Analysis, Rerun convergence follows, below a line.
+    const menu = actionsMenu(page, "SNTL-31");
+    await expect(menu.getByRole("menuitem")).toHaveText([
+      "Ignore…",
+      "Ignore as not shipped by SUSE",
+      "Mark as duplicate…",
+      "Rerun convergence",
+    ]);
+    await expect(menu.getByRole("separator")).toHaveCount(1);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-actions-analysis.png");
+    const ignore = menu.getByRole("menuitem", { name: "Ignore…", exact: true });
+
+    await pressWhereShown(page, ignore);
+
+    const dialog = ignoreDialog(page, "SNTL-31");
+    await expect(
+      dialog.getByText(
+        "SNTL-31 stops being worked, and accepts no change to its analysis until Reopen.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expectReasons(dialog, ["Not shipped", "CVE rejected", "Other"]);
+    await expect(reason(dialog, "Not shipped")).toHaveAccessibleDescription(
+      "SUSE ships none of the affected software. If SUSE ships it but the issue doesn't affect it, set its tracks to Not affected instead.",
+    );
+    await expect(reason(dialog, "CVE rejected")).toHaveAccessibleDescription(
+      "CVE-2099-0027 is rejected. If the rejection is reverted, SNTL-31 reopens by itself.",
+    );
+    await expect(reason(dialog, "Other")).toHaveAccessibleDescription(
+      "Another reason. SNTL-31 stays ignored until someone reopens it.",
+    );
+    await expect(reason(dialog, "Not shipped")).toBeFocused();
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+    const submit = dialog.getByRole("button", { name: "Ignore", exact: true });
+    await expect(cancel).toBeVisible();
+    await expect(submit).toBeVisible();
+    await expectAccessible(page);
+
+    await chooseReason(dialog, "CVE rejected");
+
+    await expectAccessible(page);
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+    await expectScreenshot(page, "ticket-ignore.png");
+
+    // A reason chosen is input: Escape asks before discarding it, and Keep
+    // editing keeps it.
+    await page.keyboard.press("Escape");
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText("SNTL-31 isn't ignored.");
+    const keep = discard.getByRole("button", { name: "Keep editing" });
+    await expect(keep).toBeFocused();
+    await expectAccessible(page);
+    await keep.click();
+    await expect(discard).toHaveCount(0);
+    await expect(reason(dialog, "CVE rejected")).toBeChecked();
+
+    // So does Cancel, and Discard closes the dialog.
+    await cancel.click();
+    await expect(discard).toContainText("SNTL-31 isn't ignored.");
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(actions).toBeFocused();
+
+    // Submitted without a reason, the form sends nothing, says so at Reason,
+    // and gives the first reason the focus.
+    await pressWhereShown(page, actions);
+    await pressWhereShown(page, ignore);
+    await expectReasons(dialog, ["Not shipped", "CVE rejected", "Other"]);
+
+    await submit.click();
+
+    const check = dialog.getByText("Choose a reason.", { exact: true });
+    await expect(check).toBeVisible();
+    await expect(reason(dialog, "Not shipped")).toBeFocused();
+    expect(sent).toEqual([]);
+    await expectAccessible(page);
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+    await expectScreenshot(page, "ticket-ignore-check.png");
+
+    // The error goes once a reason is chosen.
+    await chooseReason(dialog, "Other");
+
+    await expect(check).toHaveCount(0);
+    await cancel.click();
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(actions).toBeFocused();
+    await expect(await headingValue(page, "Status")).toHaveText("Analysis");
+    expect(sent).toEqual([]);
   });
 
   test("opens Mark as duplicate… with what it does to the duplicates of the Ticket, lists the Tickets that match with the Ticket itself and a duplicate disabled, checks the original, shows Sentinel's refusal of a duplicate at the field, and asks before discarding it", async ({
@@ -4489,6 +4787,194 @@ test.describe("the actions of a Ticket", () => {
   });
 
   test(
+    "ignores a Ticket with the reason chosen in Ignore…, announced with the focus on Actions, which then offers Reopen",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, in Analysis and assigned to asmith, who
+      // creates it, and who stays its assignee (Sentinel
+      // docs/features/tickets/tickets.md, Auto-Assignment on Unassigned
+      // Tickets).
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Analysis");
+      const actions = actionsButton(page, ticketId);
+
+      await (
+        await openActions(page, ticketId)
+      )
+        .getByRole("menuitem", { name: "Ignore…", exact: true })
+        .click();
+
+      // Without a CVE, the dialog offers no CVE rejected.
+      const dialog = ignoreDialog(page, ticketId);
+      await expectReasons(dialog, ["Not shipped", "Other"]);
+      await chooseReason(dialog, "Other");
+      await dialog.getByRole("button", { name: "Ignore", exact: true }).click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(status).toHaveText("Ignored");
+      await expect(
+        announcement(page, "Ignored as Other, assigned to you."),
+      ).toHaveCount(1);
+      await expect(actions).toBeFocused();
+      await expect(detailTerms(page).nth(1)).toHaveText("Ignore reason");
+      await expect(await detail(page, "Ignore reason")).toHaveText("Other");
+      await expect(await detail(page, "Assignee")).toHaveText("Alice Smith");
+
+      const menu = await openActions(page, ticketId);
+      await expect(menu.getByRole("menuitem")).toHaveText(["Reopen"]);
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
+    },
+  );
+
+  test(
+    "ignores a Ticket whose CVE is rejected as CVE rejected, which keeps its assignee",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // SNTL-31, in Analysis, assigned to bwilson, whose CVE-2099-0027 is
+      // rejected (Tickets), which no other test of this project relies on:
+      // every other test that opens it is read-only, in the project that
+      // runs first. An ignore keeps the assignee of an assigned Ticket
+      // (Sentinel docs/features/tickets/tickets.md, Auto-Assignment on
+      // Unassigned Tickets).
+      await signIn(page, "asmith");
+      await page.goto("/tickets/SNTL-31");
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Analysis");
+      const actions = actionsButton(page, "SNTL-31");
+
+      await (
+        await openActions(page, "SNTL-31")
+      )
+        .getByRole("menuitem", { name: "Ignore…", exact: true })
+        .click();
+
+      const dialog = ignoreDialog(page, "SNTL-31");
+      await chooseReason(dialog, "CVE rejected");
+      await dialog.getByRole("button", { name: "Ignore", exact: true }).click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(status).toHaveText("Ignored");
+      await expect(
+        announcement(page, "Ignored as CVE rejected, assigned to Bob Wilson."),
+      ).toHaveCount(1);
+      await expect(actions).toBeFocused();
+      await expect(detailTerms(page).nth(1)).toHaveText("Ignore reason");
+      await expect(await detail(page, "Ignore reason")).toHaveText(
+        "CVE rejected",
+      );
+      await expect(await detail(page, "Assignee")).toHaveText("Bob Wilson");
+    },
+  );
+
+  test(
+    "ignores a Ticket as not shipped by SUSE at once, announced with the focus on Actions",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, in Analysis and assigned to asmith, who
+      // creates it.
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Analysis");
+      const actions = actionsButton(page, ticketId);
+
+      const menu = await openActions(page, ticketId);
+      await menu
+        .getByRole("menuitem", {
+          name: "Ignore as not shipped by SUSE",
+          exact: true,
+        })
+        .click();
+
+      await expect(
+        announcement(page, "Ignored as Not shipped, assigned to you."),
+      ).toHaveCount(1);
+      await expect(menu).toHaveCount(0);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(status).toHaveText("Ignored");
+      await expect(actions).toBeFocused();
+      await expect(detailTerms(page).nth(1)).toHaveText("Ignore reason");
+      await expect(await detail(page, "Ignore reason")).toHaveText(
+        "Not shipped",
+      );
+    },
+  );
+
+  test(
+    "shows in Ignore… a failure of the ignore at the top of the form, with the focus, keeping the reason",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, which asmith creates, then ignores
+      // through the API once the dialog is open: the screen does not read it
+      // again, so the dialog sends the ignore, which Sentinel refuses with
+      // 409, changing nothing (Sentinel docs/features/tickets/tickets.md,
+      // Ignore Ticket).
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Analysis");
+      const actions = actionsButton(page, ticketId);
+      await (
+        await openActions(page, ticketId)
+      )
+        .getByRole("menuitem", { name: "Ignore…", exact: true })
+        .click();
+      const dialog = ignoreDialog(page, ticketId);
+      await expect(reason(dialog, "Not shipped")).toBeFocused();
+      await ignoreTicket(page, ticketId);
+      await chooseReason(dialog, "Other");
+      const refused = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname ===
+            `/api/v1/tickets/${ticketId}/ignore`,
+      );
+      // The read of the Ticket after the change, which the screen sends
+      // whatever its outcome.
+      const readAgain = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === `/api/v1/tickets/${ticketId}`,
+      );
+
+      await dialog.getByRole("button", { name: "Ignore", exact: true }).click();
+
+      expect((await refused).status()).toBe(409);
+      const failure =
+        "This can't be done in the current state, which may have changed. Check it and try again.";
+      await expect(dialog.getByText(failure, { exact: true })).toBeVisible();
+      await expect.poll(() => focusedText(page)).toBe(failure);
+      await expect(reason(dialog, "Other")).toBeChecked();
+      await readAgain;
+      await expectAccessible(page);
+
+      // The screen behind the dialog shows the Ticket as Sentinel has it.
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      const discard = page.getByRole("dialog", { name: "Discard changes?" });
+      await discard
+        .getByRole("button", { name: "Discard", exact: true })
+        .click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(actions).toBeFocused();
+      await expect(status).toHaveText("Ignored");
+      await expect(announcement(page, "Ignored as")).toHaveCount(0);
+      const menu = await openActions(page, ticketId);
+      await expect(menu.getByRole("menuitem")).toHaveText(["Reopen"]);
+    },
+  );
+
+  test(
     "marks a Ticket as a duplicate of an original chosen in Original, then reverts the duplicate, each announced with the focus on Actions",
     { tag: "@changes-data" },
     async ({ page }) => {
@@ -4615,9 +5101,12 @@ test.describe("the actions of a Ticket", () => {
 
       const menu = await openActions(page, ticketId);
       await expect(menu.getByRole("menuitem")).toHaveText([
+        "Ignore…",
+        "Ignore as not shipped by SUSE",
         "Mark as duplicate…",
         "Rerun convergence",
       ]);
+      await expect(menu.getByRole("separator")).toHaveCount(1);
       await menu
         .getByRole("menuitem", { name: "Rerun convergence", exact: true })
         .click();
