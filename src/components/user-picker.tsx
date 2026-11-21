@@ -1,5 +1,5 @@
 import { CircleAlert, Search, X } from "lucide-react";
-import { useId, useState, type Key } from "react";
+import { useEffect, useId, useRef, useState, type Key } from "react";
 import {
   Autocomplete,
   Button as AriaButton,
@@ -11,6 +11,7 @@ import {
 } from "react-aria-components";
 import type { ListUsersAssignmentEligibilityItem } from "../api/generated/model";
 import { useListUsers } from "../api/generated/users";
+import { useFieldErrorFocus } from "./field-error-focus";
 import { FOCUS_RING } from "./focus-ring";
 import { Label as UserLabel } from "./label";
 import { Loading } from "./loading";
@@ -89,7 +90,7 @@ interface UserPickerProps {
   onChoose: (choice: UserFields | "action") => void;
   // What the status region says while a choice is in progress.
   busyText: string;
-  // The error of the field, or undefined.
+  // The error of the field, or undefined: a new error for each failure.
   error: string | undefined;
   // Tells that the user changed the term, after which the error of the field
   // no longer applies.
@@ -111,8 +112,10 @@ interface UserPickerProps {
 // are, or "No users match.", the loading indicator or the message of the
 // failure of their read, and that a choice is in progress, which a status
 // region announces. The error of the field follows the field, after
-// circle-alert, in a status region, so that it is announced while the field
-// keeps the focus, and assistive technologies read it with the field. What
+// circle-alert, and assistive technologies read it with the field; as it
+// shows, the field takes the focus, or the error is announced when the field
+// holds the focus already, as it does while the user chooses (docs/behaviors.md,
+// Accessibility, Announcements). What
 // the picker reads is read once as it opens, and again for each term, and
 // not when the tab returns to the foreground (docs/behaviors.md, Loading).
 export function UserPicker({
@@ -128,6 +131,13 @@ export function UserPicker({
   onInput,
 }: UserPickerProps) {
   const statusId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { focusField, region } = useFieldErrorFocus();
+  useEffect(() => {
+    if (error !== undefined) {
+      focusField(inputRef.current, error);
+    }
+  }, [error, focusField]);
   const [input, setInput] = useState("");
   const typed = input.trim();
   const term = useSettledTerm(typed);
@@ -215,6 +225,7 @@ export function UserPicker({
             className="pointer-events-none absolute start-3 size-4 text-fg-muted"
           />
           <Input
+            ref={inputRef}
             placeholder={label}
             maxLength={SEARCH_MAX_LENGTH}
             className={`h-10 w-full rounded-md border border-border-strong bg-surface ps-9 pe-9 text-15 text-fg placeholder:text-fg-muted data-invalid:border-2 data-invalid:border-danger-icon [&::-webkit-search-cancel-button]:hidden ${FOCUS_RING}`}
@@ -227,15 +238,15 @@ export function UserPicker({
             </AriaButton>
           </Tooltip>
         </div>
-        {/* A status region that is there before the error, so that
-            assistive technologies announce it while the field keeps the
-            focus. */}
-        <output className="block">
+        {/* The place of the error, which keeps the space below the field
+            also without one, with the status region that announces it. */}
+        <div>
           <FieldError className="flex gap-1.5 text-13 font-medium text-danger-on-soft">
             <CircleAlert aria-hidden className="mt-0.75 size-3.5 shrink-0" />
             <span>{error}</span>
           </FieldError>
-        </output>
+          {region}
+        </div>
       </SearchField>
       <ListBox
         aria-label="Users"

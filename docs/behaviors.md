@@ -846,7 +846,12 @@ also meets these requirements, which they cannot check:
   (`docs/design-system.md`, Detail Screens), the focus moves to the message at
   the top of the form or of the popover, or, when only fields have errors, to
   the first of them, which in the popover is the field that holds the focus
-  already (3.3.1 Error Identification).
+  already (3.3.1 Error Identification). A field that takes the focus is read
+  with its error. A field that holds the focus already, as after Enter in it
+  or on a radio button, does not take it again, so its error is announced
+  without moving the focus, after every submission that shows it, also with
+  the same error; an error at a field that takes the focus is not announced
+  as well (4.1.3 Status Messages).
 - **Reflow and text size.** Screens work at a width of 320 CSS pixels without
   scrolling in two directions, except data tables, which scroll within
   themselves, and text enlarged to 200 % loses no content or function (1.4.4

@@ -31,6 +31,7 @@ import {
 } from "../../api/generated/tickets";
 import { Button } from "../../components/button";
 import { ConfidentialMark } from "../../components/confidential-mark";
+import { useFieldErrorFocus } from "../../components/field-error-focus";
 import { useChangeOutcome, useMounted } from "../../components/change-outcome";
 import { useDiscardQuestion } from "../../components/discard-question";
 import { Label } from "../../components/label";
@@ -41,13 +42,10 @@ import {
   ModalDialog,
   type DialogError,
 } from "../../components/modal-dialog";
-import { placeMessage } from "../../components/read-view";
 import {
-  characters,
   COUNT,
-  SearchComboBox,
-  SEARCH_MIN_LENGTH,
-  useSettledTerm,
+  FreeTextComboBox,
+  useSearchTerm,
 } from "../../components/search-combobox";
 import { TicketStatus } from "../../components/ticket-status";
 import { duplicatesOf } from "../ticket-overview/shared";
@@ -164,6 +162,7 @@ interface OriginalFieldProps {
   onChange: (value: string) => void;
   isReadOnly: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
+  error: string | undefined;
 }
 
 // The original, a combobox that searches the Tickets that the user can see
@@ -184,68 +183,34 @@ function OriginalField({
   onChange,
   isReadOnly,
   inputRef,
+  error,
 }: OriginalFieldProps) {
-  // The identifier of the option that the user chose, while the field holds
-  // it: the value of the field is the text typed, which the options only help
-  // to find, and React Aria closes the menu when the option chosen changes,
-  // which would otherwise close it as the Tickets of a term that equals an
-  // identifier arrive (src/routes/ticket-overview/add-package.tsx).
-  const [chosen, setChosen] = useState<string | null>(null);
-  const typed = value.trim();
-  const term = useSettledTerm(typed);
-  const searching = characters(term) >= SEARCH_MIN_LENGTH;
-  const read = useListTickets(suggestionsOf(term), {
-    query: { enabled: searching },
+  const search = useSearchTerm(value);
+  const read = useListTickets(suggestionsOf(search.term), {
+    query: { enabled: search.searching },
   });
-  const tickets = searching ? (read.data?.data ?? []) : [];
-  const total = read.data?.meta.total ?? 0;
-  const long = characters(typed) >= SEARCH_MIN_LENGTH;
-  let status: string | null = null;
-  if (long && searching && read.status === "error") {
-    status = placeMessage(read);
-  } else if (long && searching && read.status === "success") {
-    if (tickets.length === 0) {
-      status = "No Tickets match.";
-    } else if (total > tickets.length) {
-      status = `The first ${COUNT.format(tickets.length)} of ${COUNT.format(total)} Tickets that match. Type more to narrow them.`;
-    }
-  }
-  const waiting =
-    long && (term !== typed || (searching && read.status === "pending"));
+  const tickets = search.searching ? (read.data?.data ?? []) : [];
   return (
-    <SearchComboBox<TicketSummary>
+    <FreeTextComboBox<TicketSummary>
       label="Original"
       name="duplicate_of_ticket_id"
       description="Type its identifier, its CVE ID, or the name of one of its packages to find it."
-      items={tickets}
-      itemKey={({ ticket_id: id }) => id}
+      value={value}
+      onChange={onChange}
+      search={search}
+      read={read}
       itemText={({ ticket_id: id }) => id}
       renderItem={(ticket) => (
         <TicketOption ticket={ticket} label={notOffered(ticket, ticketId)} />
       )}
-      value={chosen !== null && chosen === value ? chosen : null}
-      onChange={(key) => {
-        if (typeof key === "string") {
-          setChosen(key);
-          onChange(key);
-        }
-      }}
-      inputValue={value}
-      onInputChange={(text) => {
-        if (text !== chosen) {
-          setChosen(null);
-        }
-        onChange(text);
-      }}
-      status={status}
-      waiting={waiting}
-      opensEmpty={long}
-      allowsCustomValue
+      noneText="No Tickets match."
+      plural="Tickets"
       disabledKeys={tickets
         .filter((ticket) => notOffered(ticket, ticketId) !== null)
         .map((ticket) => ticket.ticket_id)}
       isReadOnly={isReadOnly}
       inputRef={inputRef}
+      error={error}
     />
   );
 }
@@ -399,11 +364,16 @@ export function MarkDuplicateDialog({
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const [inputRef] = useState(() => createRef<HTMLInputElement>());
   const submitting = useRef(false);
+  // After a failure with an error of the field alone, the field takes the
+  // focus, or its error is announced when it holds the focus already; the
+  // error of the form takes it itself (docs/behaviors.md, Accessibility,
+  // Announcements).
+  const { focusField, region } = useFieldErrorFocus();
   useEffect(() => {
     if (failure.form === undefined && failure.field !== undefined) {
-      inputRef.current?.focus();
+      focusField(inputRef.current, failure.field);
     }
-  }, [failure, inputRef]);
+  }, [failure, inputRef, focusField]);
   const { close, question } = useDiscardQuestion({
     held: text.trim() !== "" && !busy,
     consequence: `${ticketId} isn't marked as a duplicate.`,
@@ -506,11 +476,6 @@ export function MarkDuplicateDialog({
             event.preventDefault();
             void submit();
           }}
-          validationErrors={
-            failure.field === undefined
-              ? undefined
-              : { duplicate_of_ticket_id: failure.field }
-          }
           className="mt-4 flex max-w-112 flex-col gap-3"
         >
           {failure.form !== undefined && (
@@ -527,7 +492,9 @@ export function MarkDuplicateDialog({
             }}
             isReadOnly={busy}
             inputRef={inputRef}
+            error={failure.field}
           />
+          {region}
         </Form>
       </FirstFieldFocus>
     </ModalDialog>

@@ -17,6 +17,7 @@ import {
 import { useLogin } from "../api/generated/authentication";
 import { getGetCurrentUserProfileQueryOptions } from "../api/generated/users";
 import { Button } from "../components/button";
+import { useFieldErrorFocus } from "../components/field-error-focus";
 import { FOCUS_RING } from "../components/focus-ring";
 import { Message } from "../components/message";
 import { ScreenHeading } from "../components/screen-heading";
@@ -88,16 +89,22 @@ function SignInForm() {
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // After a submission that failed, the focus moves to the message at the
-  // top of the form, or to the first field of the form with an error
-  // (docs/behaviors.md, Accessibility, Announcements).
+  // top of the form, or to the first field of the form with an error, whose
+  // error is announced when it holds the focus already, as after Enter in
+  // it, also when the checks of the form stop it (docs/behaviors.md,
+  // Accessibility, Announcements).
+  const { focusField, formRef, region } = useFieldErrorFocus();
   useEffect(() => {
     const [field] = failure.fields;
     if (failure.top !== undefined) {
       messageRef.current?.focus();
     } else if (field !== undefined) {
-      (field === "username" ? usernameRef : passwordRef).current?.focus();
+      focusField(
+        (field === "username" ? usernameRef : passwordRef).current,
+        MESSAGE_INVALID_VALUE,
+      );
     }
-  }, [failure]);
+  }, [failure, focusField]);
 
   // The field errors of the failure, which the form shows until the user
   // changes the value of their field. The form shows them again only for
@@ -160,6 +167,7 @@ function SignInForm() {
     <Form
       onSubmit={onSubmit}
       validationErrors={validationErrors}
+      ref={formRef}
       className="flex flex-col gap-3"
     >
       {failure.top !== undefined && (
@@ -194,6 +202,7 @@ function SignInForm() {
         validate={validatePassword}
         inputRef={passwordRef}
       />
+      {region}
       <div className="mt-1 flex justify-end">
         <Button type="submit" variant="primary" size="large" isBusy={busy}>
           Sign in

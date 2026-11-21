@@ -1547,13 +1547,11 @@ test.describe("for an analyst", () => {
 
     await field.press("Enter");
 
-    await expect(
-      dialog.getByText(
-        "Enter only letters, digits, and . _ + -, starting with a letter or a digit.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await expect(field).toBeFocused();
+    await expectAnnouncedFieldError(
+      dialog,
+      field,
+      "Enter only letters, digits, and . _ + -, starting with a letter or a digit.",
+    );
     await expect(field).toHaveValue("-openssl");
     expect(sent).toEqual([]);
     await expectAccessible(page);
@@ -3383,10 +3381,7 @@ test.describe("the references", () => {
     // Without an address, from the keyboard, which sends nothing.
     await address.press("Enter");
 
-    await expect(
-      dialog.getByText("Enter the address.", { exact: true }),
-    ).toBeVisible();
-    await expect(address).toBeFocused();
+    await expectAnnouncedFieldError(dialog, address, "Enter the address.");
     await expectAccessible(page);
 
     // The address of “Fictional advisory” of SNTL-12 with http, which
@@ -3988,6 +3983,23 @@ async function pressWhereShown(page: Page, element: Locator) {
 // outcome of a change of the status.
 function announcement(page: Page, text: string) {
   return page.getByRole("status").filter({ hasText: text });
+}
+
+// Checks the error that a submission from a field shows at it while the
+// field keeps the focus: the field ends its description with the error, and
+// a status region of its form, or of its dialog, announces it
+// (docs/behaviors.md, Accessibility, Announcements).
+async function expectAnnouncedFieldError(
+  container: Locator,
+  field: Locator,
+  text: string,
+) {
+  const escaped = text.replaceAll(/[.*+?^$()|[\]\\{}]/g, String.raw`\$&`);
+  await expect(field).toHaveAccessibleDescription(new RegExp(`${escaped}$`));
+  await expect(field).toBeFocused();
+  await expect(
+    container.getByRole("status").getByText(text, { exact: true }),
+  ).toBeAttached();
 }
 
 // The dialog of Ignore…, by the Ticket that it ignores.
@@ -4603,13 +4615,11 @@ test.describe("the actions of a Ticket", () => {
 
     await field.press("Enter");
 
-    await expect(
-      dialog.getByText(
-        "Choose a Ticket, or enter its identifier, such as SNTL-42.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await expect(field).toBeFocused();
+    await expectAnnouncedFieldError(
+      dialog,
+      field,
+      "Choose a Ticket, or enter its identifier, such as SNTL-42.",
+    );
     expect(sent).toEqual([]);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-mark-duplicate-check.png");
@@ -4651,27 +4661,19 @@ test.describe("the actions of a Ticket", () => {
     await field.press("Enter");
 
     expect((await refused).status()).toBe(409);
-    await expect(
-      dialog.getByText(
-        "SNTL-32 is a duplicate of this Ticket: to make it the original, use Revert duplicate on SNTL-32 first.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await expect(field).toBeFocused();
+    await expectAnnouncedFieldError(
+      dialog,
+      field,
+      "SNTL-32 is a duplicate of this Ticket: to make it the original, use Revert duplicate on SNTL-32 first.",
+    );
     await expect(field).toHaveValue("SNTL-32");
     await readAgain;
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-mark-duplicate-error.png");
 
-    // Cancel with input asks before discarding it. Cancel is reached from
-    // the field with Tab rather than pressed with the pointer: the dialog
-    // currently hides the error of the field once the field loses the
-    // focus, which moves Cancel up during a press of the pointer and so
-    // cancels the press.
+    // Cancel with input asks before discarding it.
     const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
-    await field.press("Tab");
-    await expect(cancel).toBeFocused();
-    await cancel.press("Enter");
+    await cancel.click();
 
     const discard = page.getByRole("dialog", { name: "Discard changes?" });
     await expect(discard).toContainText("SNTL-21 isn't marked as a duplicate.");
@@ -4729,21 +4731,16 @@ test.describe("the actions of a Ticket", () => {
     await field.press("Enter");
 
     expect((await refused).status()).toBe(409);
-    await expect(
-      dialog.getByText(
-        "SNTL-22 is a duplicate of SNTL-21: choose SNTL-21 instead.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await expect(field).toBeFocused();
+    await expectAnnouncedFieldError(
+      dialog,
+      field,
+      "SNTL-22 is a duplicate of SNTL-21: choose SNTL-21 instead.",
+    );
     await expect(field).toHaveValue("SNTL-22");
     await expectAccessible(page);
 
-    // Cancel, reached from the field with Tab, as above.
     const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
-    await field.press("Tab");
-    await expect(cancel).toBeFocused();
-    await cancel.press("Enter");
+    await cancel.click();
     const discard = page.getByRole("dialog", { name: "Discard changes?" });
     await expect(discard).toContainText("SNTL-12 isn't marked as a duplicate.");
     await discard.getByRole("button", { name: "Discard", exact: true }).click();

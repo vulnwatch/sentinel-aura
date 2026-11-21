@@ -13,6 +13,7 @@ import {
 import { FOCUS_RING } from "./focus-ring";
 import { Loading } from "./loading";
 import { Option, OPTIONS_POPOVER, OptionsStatus } from "./options";
+import { placeMessage, type Read } from "./read-view";
 
 // A combobox that searches as the user types (docs/design-system.md, Forms):
 // a field whose term, once the user has stopped typing, reads the matching
@@ -53,10 +54,25 @@ export function useSettledTerm(input: string): string {
   return term;
 }
 
+// The term of a field: the text typed without its surrounding whitespace,
+// the term once the user has stopped typing, which the field searches, and
+// whether that term is long enough to search.
+export interface SearchTerm {
+  typed: string;
+  term: string;
+  searching: boolean;
+}
+
+export function useSearchTerm(input: string): SearchTerm {
+  const typed = input.trim();
+  const term = useSettledTerm(typed);
+  return { typed, term, searching: characters(term) >= SEARCH_MIN_LENGTH };
+}
+
 interface SearchComboBoxProps<TItem extends object> {
   // The label above the field.
   label: string;
-  // The name of the field in its form, by which the form shows its errors.
+  // The name of the field in its form.
   name: string;
   // What the field takes, which follows the control.
   description?: string;
@@ -96,13 +112,21 @@ interface SearchComboBoxProps<TItem extends object> {
   isReadOnly?: boolean;
   // The input element, which takes the focus.
   inputRef?: Ref<HTMLInputElement>;
+  // The error of the field, or undefined. The form holds it, and it shows
+  // until the form takes it away, as once the input changes, whatever the
+  // focus does: React Aria clears an error that a form gives a field by its
+  // name as soon as the field commits its value, which a combobox does as it
+  // loses the focus after its text changed.
+  error?: string | undefined;
 }
 
 // The field: its label above it in text-15, weight 500, and the control,
 // 40 px high, on surface with a border-strong boundary, a 6 px radius, and
 // 16 px of side padding, which takes at most 500 characters; its description
 // and its error after it, as the error of every field of a form follows it,
-// after circle-alert, and assistive technologies read them with the field.
+// after circle-alert, and assistive technologies read them with the field
+// (src/components/field-error-focus.tsx announces an error that shows while
+// the field holds the focus).
 // Its options open below it, or above it where they do not fit below it and
 // the window has more room above (OPTIONS_POPOVER); while they load, the
 // loading indicator shows in their place, and the status below them, which a
@@ -127,11 +151,16 @@ export function SearchComboBox<TItem extends object>({
   isDisabled = false,
   isReadOnly = false,
   inputRef,
+  error,
 }: SearchComboBoxProps<TItem>) {
   const statusId = useId();
   return (
     <ComboBox
       name={name}
+      isInvalid={error !== undefined}
+      // The error is the form's alone, and leaves the browser's own checks
+      // of the form untouched (error).
+      validationBehavior="aria"
       items={items}
       value={value}
       onChange={onChange}
@@ -155,21 +184,10 @@ export function SearchComboBox<TItem extends object>({
           {description}
         </Text>
       )}
-      {/* A status region that is there before the error, so that assistive
-          technologies announce it also while the field keeps the focus, as
-          after a submission with Enter in the field; it takes no room
-          without one, the space before each part of the field being its
-          own. */}
-      <output className="block">
-        <FieldError className="mt-1.5 flex gap-1.5 text-13 font-medium text-danger-on-soft">
-          {({ validationErrors }) => (
-            <>
-              <CircleAlert aria-hidden className="mt-0.75 size-3.5 shrink-0" />
-              <span>{validationErrors.join(" ")}</span>
-            </>
-          )}
-        </FieldError>
-      </output>
+      <FieldError className="mt-1.5 flex gap-1.5 text-13 font-medium text-danger-on-soft">
+        <CircleAlert aria-hidden className="mt-0.75 size-3.5 shrink-0" />
+        <span>{error}</span>
+      </FieldError>
       <Popover offset={4} className={OPTIONS_POPOVER}>
         <ListBox
           aria-describedby={statusId}
@@ -202,5 +220,122 @@ export function SearchComboBox<TItem extends object>({
         </output>
       </Popover>
     </ComboBox>
+  );
+}
+
+// A page of the records that a field whose value is the text typed suggests
+// for a term, as List Tickets or Search Maintained Packages return it.
+interface SuggestionsPage<TItem> {
+  data: readonly TItem[];
+  meta: { total: number };
+}
+
+interface FreeTextComboBoxProps<TItem extends object> {
+  label: string;
+  name: string;
+  description: string;
+  // The text of the field, its value.
+  value: string;
+  onChange: (text: string) => void;
+  // The term of the value (useSearchTerm), and the read of the records that
+  // match it, which the caller sends only while the term searches.
+  search: SearchTerm;
+  read: Read<SuggestionsPage<TItem>>;
+  // The text of a record, which choosing it writes in the field, and which
+  // is also its key.
+  itemText: (item: TItem) => string;
+  renderItem: (item: TItem) => ReactNode;
+  // What the menu says when no record matches, such as "No Tickets match.".
+  noneText: string;
+  // The records in the plural, as the line of how many match names them,
+  // such as "Tickets".
+  plural: string;
+  disabledKeys?: Iterable<Key>;
+  isReadOnly: boolean;
+  inputRef: Ref<HTMLInputElement>;
+  error: string | undefined;
+}
+
+// A combobox whose value is the text that the user types, which its options
+// only help to find, such as the name of a package or the identifier of a
+// Ticket (docs/design-system.md, Forms): from 2 characters without their
+// surrounding whitespace, once the user has stopped typing, it lists the
+// records of the read of the term, the loading indicator while they wait for
+// it, and, below them, the message of the failure of the read, the line of
+// none that matches, or how many match when more do, such as "The first 20
+// of 63 Tickets that match. Type more to narrow them.". Below 2 characters
+// the menu stays closed without a line, since a shorter value can be valid.
+// The field takes a text that no option holds, and choosing an option writes
+// its text in the field.
+export function FreeTextComboBox<TItem extends object>({
+  label,
+  name,
+  description,
+  value,
+  onChange,
+  search: { typed, term, searching },
+  read,
+  itemText,
+  renderItem,
+  noneText,
+  plural,
+  disabledKeys,
+  isReadOnly,
+  inputRef,
+  error,
+}: FreeTextComboBoxProps<TItem>) {
+  // The text of the option that the user chose, while the field holds it:
+  // React Aria closes the menu when the option chosen changes, so an option
+  // is held as chosen only once the user chose it, and until the text
+  // changes, which would otherwise close the menu as the records of a term
+  // that equals the text of one of them arrive.
+  const [chosen, setChosen] = useState<string | null>(null);
+  const items = searching ? (read.data?.data ?? []) : [];
+  const total = read.data?.meta.total ?? 0;
+  const long = characters(typed) >= SEARCH_MIN_LENGTH;
+  let status: string | null = null;
+  if (long && searching && read.status === "error") {
+    status = placeMessage(read);
+  } else if (long && searching && read.status === "success") {
+    if (items.length === 0) {
+      status = noneText;
+    } else if (total > items.length) {
+      status = `The first ${COUNT.format(items.length)} of ${COUNT.format(total)} ${plural} that match. Type more to narrow them.`;
+    }
+  }
+  const waiting =
+    long && (term !== typed || (searching && read.status === "pending"));
+  return (
+    <SearchComboBox<TItem>
+      label={label}
+      name={name}
+      description={description}
+      items={items}
+      itemKey={itemText}
+      itemText={itemText}
+      renderItem={renderItem}
+      value={chosen !== null && chosen === value ? chosen : null}
+      onChange={(key) => {
+        if (typeof key === "string") {
+          setChosen(key);
+          onChange(key);
+        }
+      }}
+      inputValue={value}
+      onInputChange={(text) => {
+        if (text !== chosen) {
+          setChosen(null);
+        }
+        onChange(text);
+      }}
+      status={status}
+      waiting={waiting}
+      opensEmpty={long}
+      allowsCustomValue
+      disabledKeys={disabledKeys}
+      isReadOnly={isReadOnly}
+      inputRef={inputRef}
+      error={error}
+    />
   );
 }

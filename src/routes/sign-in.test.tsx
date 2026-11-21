@@ -488,8 +488,8 @@ describe("Sign in, after a failure", () => {
     await userEvent.keyboard("{Enter}");
 
     await expect
-      .element(screen.getByText("Enter your password."))
-      .toBeVisible();
+      .element(screen.getByLabelText("Password"))
+      .toHaveAccessibleDescription("Enter your password.");
     await expect.element(screen.getByLabelText("Password")).toHaveFocus();
     await expect.element(screen.getByText(REJECTED)).toBeVisible();
     expect(requestsTo(fetch, LOGIN)).toBe(1);

@@ -12,10 +12,7 @@ import {
   presentChangeFailure,
   presentMarkerConflict,
 } from "../../api/errors";
-import {
-  PackageStatusValue,
-  TicketStatusValue,
-} from "../../api/generated/model";
+import { PackageStatusValue } from "../../api/generated/model";
 import type {
   PackageDetail,
   TrackDetail,
@@ -65,19 +62,6 @@ const AFFECTEDNESS = new Map<string, MarkedName>(
     wont_fix: { name: "Won't fix", tone: "neutral" },
   } satisfies Record<PackageStatusValue, MarkedName>),
 );
-
-// The statuses of a Ticket in which Sentinel accepts an edit of its package
-// tree: Ignored and Duplicated refuse it with 409 TICKET_NOT_MUTABLE, and a
-// status that the pinned contract does not list offers no action (Sentinel
-// docs/features/tickets/tickets.md, Mutability Guard; Sentinel
-// docs/api-spec.md, Manual-Zone Mutability Guard; docs/behaviors.md, Unknown
-// Values).
-export const PACKAGE_EDITABLE_STATUSES = new Set<string>([
-  TicketStatusValue.new,
-  TicketStatusValue.analysis,
-  TicketStatusValue.analyzed,
-  TicketStatusValue.resolved,
-]);
 
 // The affectedness of a track that manage_packages sets on every Ticket.
 // Fixed needs admin_ticket_ops, or manage_packages on a Ticket without a CVE

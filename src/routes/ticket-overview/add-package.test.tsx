@@ -509,10 +509,13 @@ describe("the dialog of Add package", () => {
       .element(field)
       .toHaveAccessibleDescription(`${DESCRIPTION} Enter the package name.`);
     await expect.element(field).toHaveFocus();
-    const error = dialog
-      .getByText("Enter the package name.", { exact: true })
-      .element();
-    expect(statuses.some((status) => status.contains(error))).toBe(true);
+    const announced = dialog
+      .getByRole("status")
+      .getByText("Enter the package name.", { exact: true });
+    await expect.element(announced).toBeInTheDocument();
+    expect(
+      statuses.some((status) => status.contains(announced.element())),
+    ).toBe(true);
   });
 
   test("submits the form with Enter in the field once its menu is closed, the field keeping the focus while the addition is in progress, and sends one request", async () => {

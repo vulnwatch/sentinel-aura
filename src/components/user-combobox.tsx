@@ -24,7 +24,7 @@ export const LISTED_USERS = 20;
 interface UserComboBoxProps {
   // The label above the field.
   label: string;
-  // The name of the field in its form, by which the form shows its errors.
+  // The name of the field in its form.
   name: string;
   // The user that the field holds, or null.
   value: UserDirectoryData | null;
@@ -41,6 +41,9 @@ interface UserComboBoxProps {
   isDisabled?: boolean;
   // The input element, which takes the focus.
   inputRef?: Ref<HTMLInputElement>;
+  // The error of the field, which the form holds, or undefined
+  // (SearchComboBox).
+  error?: string | undefined;
 }
 
 // The field (SearchComboBox): once the user has typed at least 2 characters
@@ -63,6 +66,7 @@ export function UserComboBox({
   unavailable,
   isDisabled = false,
   inputRef,
+  error,
 }: UserComboBoxProps) {
   const [input, setInput] = useState(
     value === null ? "" : userOptionText(value),
@@ -146,6 +150,7 @@ export function UserComboBox({
       disabledKeys={unavailable === undefined ? undefined : unavailable.ids}
       isDisabled={isDisabled}
       inputRef={inputRef}
+      error={error}
     />
   );
 }

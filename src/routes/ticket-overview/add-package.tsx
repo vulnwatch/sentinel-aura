@@ -31,13 +31,12 @@ import {
   ModalDialog,
   type DialogError,
 } from "../../components/modal-dialog";
-import { placeMessage } from "../../components/read-view";
+import { useFieldErrorFocus } from "../../components/field-error-focus";
 import {
   characters,
   COUNT,
-  SearchComboBox,
-  SEARCH_MIN_LENGTH,
-  useSettledTerm,
+  FreeTextComboBox,
+  useSearchTerm,
 } from "../../components/search-combobox";
 import { ticketRecord } from "../ticket";
 import { useReadAfterTicketChange } from "./shared";
@@ -111,19 +110,17 @@ interface PackageNameFieldProps {
   // at the field concerns the name that it shows.
   isReadOnly: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
+  error: string | undefined;
 }
 
-// The name of the package, a combobox that searches as the user types
-// (docs/design-system.md, Forms): once the user has typed at least 2
-// characters without their surrounding whitespace and has stopped typing,
-// it reads the first 20 maintained names that contain them, without regard
-// to letter case, those that start with them first, and opens them below it;
-// "Sentinel knows no maintained package that matches." when none does, or,
-// below them, how many match when more do; the loading indicator while they
-// load, and the message of the failure of their read in their place.
-// Choosing one writes it in the field, with its letter case. Below 2
-// characters it reads nothing and stays closed, since a name of 1 character
-// is valid. The field takes a name that it does not suggest, since the
+// The name of the package, a combobox whose value is the text typed
+// (FreeTextComboBox): once the user has typed at least 2 characters without
+// their surrounding whitespace and has stopped typing, it reads the first 20
+// maintained names that contain them, without regard to letter case, those
+// that start with them first, and opens them below it; "Sentinel knows no
+// maintained package that matches." when none does, or, below them, how
+// many match when more do. Choosing one writes it in the field, with its
+// letter case. The field takes a name that it does not suggest, since the
 // names only help to find one (Sentinel
 // docs/features/packages/maintained-package-names.md, Purpose).
 function PackageNameField({
@@ -131,65 +128,29 @@ function PackageNameField({
   onChange,
   isReadOnly,
   inputRef,
+  error,
 }: PackageNameFieldProps) {
-  // The name of the option that the user chose, while the field holds it.
-  const [chosen, setChosen] = useState<string | null>(null);
-  const typed = value.trim();
-  const term = useSettledTerm(typed);
-  const searching = characters(term) >= SEARCH_MIN_LENGTH;
+  const search = useSearchTerm(value);
   const read = useSearchMaintainedPackageNames(
-    { search: term, per_page: SUGGESTED_NAMES },
-    { query: { enabled: searching } },
+    { search: search.term, per_page: SUGGESTED_NAMES },
+    { query: { enabled: search.searching } },
   );
-  const names = searching ? (read.data?.data ?? []) : [];
-  const total = read.data?.meta.total ?? 0;
-  const long = characters(typed) >= SEARCH_MIN_LENGTH;
-  let status: string | null = null;
-  if (long && searching && read.status === "error") {
-    status = placeMessage(read);
-  } else if (long && searching && read.status === "success") {
-    if (names.length === 0) {
-      status = "Sentinel knows no maintained package that matches.";
-    } else if (total > names.length) {
-      status = `The first ${COUNT.format(names.length)} of ${COUNT.format(total)} packages that match. Type more to narrow them.`;
-    }
-  }
-  const waiting =
-    long && (term !== typed || (searching && read.status === "pending"));
   return (
-    <SearchComboBox<MaintainedPackageItem>
+    <FreeTextComboBox<MaintainedPackageItem>
       label="Package name"
       name="package_name"
       description="The source package as SMELT names it, such as fictional-openssl. Type part of it to find it."
-      items={names}
-      itemKey={({ name }) => name}
+      value={value}
+      onChange={onChange}
+      search={search}
+      read={read}
       itemText={({ name }) => name}
       renderItem={({ name }) => name}
-      // The value of the field is the text typed, which the options only help
-      // to find: an option is held as chosen only once the user chose it, and
-      // until the text changes, since React Aria closes the menu when the
-      // option chosen changes, which would otherwise close it as the names
-      // of a term that equals one of them arrive.
-      value={chosen !== null && chosen === value ? chosen : null}
-      onChange={(key) => {
-        if (typeof key === "string") {
-          setChosen(key);
-          onChange(key);
-        }
-      }}
-      inputValue={value}
-      onInputChange={(text) => {
-        if (text !== chosen) {
-          setChosen(null);
-        }
-        onChange(text);
-      }}
-      status={status}
-      waiting={waiting}
-      opensEmpty={long}
-      allowsCustomValue
+      noneText="Sentinel knows no maintained package that matches."
+      plural="packages"
       isReadOnly={isReadOnly}
       inputRef={inputRef}
+      error={error}
     />
   );
 }
@@ -261,13 +222,15 @@ export function AddPackageDialog({
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const [inputRef] = useState(() => createRef<HTMLInputElement>());
   // After a failure with an error of the field alone, the field takes the
-  // focus; the error of the form takes it itself (docs/behaviors.md,
-  // Accessibility, Announcements).
+  // focus, or its error is announced when it holds the focus already; the
+  // error of the form takes it itself (docs/behaviors.md, Accessibility,
+  // Announcements).
+  const { focusField, region } = useFieldErrorFocus();
   useEffect(() => {
     if (failure.form === undefined && failure.field !== undefined) {
-      inputRef.current?.focus();
+      focusField(inputRef.current, failure.field);
     }
-  }, [failure, inputRef]);
+  }, [failure, inputRef, focusField]);
   const { close, question } = useDiscardQuestion({
     held: name.trim() !== "" && !busy,
     consequence: "The package that you entered isn't added.",
@@ -351,11 +314,6 @@ export function AddPackageDialog({
             event.preventDefault();
             void submit();
           }}
-          validationErrors={
-            failure.field === undefined
-              ? undefined
-              : { package_name: failure.field }
-          }
           className="flex flex-col gap-3"
         >
           {failure.form !== undefined && (
@@ -371,7 +329,9 @@ export function AddPackageDialog({
             }}
             isReadOnly={busy}
             inputRef={inputRef}
+            error={failure.field}
           />
+          {region}
         </Form>
       </FirstFieldFocus>
     </ModalDialog>

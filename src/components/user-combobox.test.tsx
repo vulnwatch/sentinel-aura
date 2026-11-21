@@ -60,7 +60,7 @@ interface FieldProps {
 function Field({ onChange = () => undefined, error }: FieldProps) {
   const [user, setUser] = useState<UserDirectoryData | null>(null);
   return (
-    <Form validationErrors={error === undefined ? undefined : { user: error }}>
+    <Form>
       <UserComboBox
         label="User"
         name="user"
@@ -70,6 +70,7 @@ function Field({ onChange = () => undefined, error }: FieldProps) {
           onChange(chosen);
         }}
         unavailable={{ ids: new Set([CAROL.id]), label: "Has access" }}
+        error={error}
       />
     </Form>
   );
@@ -278,10 +279,11 @@ test("shows the user chosen as its text, and holds no user once the input change
   expect(onChange).toHaveBeenLastCalledWith(null);
 });
 
-test("shows the error of its form at the field", async () => {
+test("shows the error that its form holds at the field", async () => {
   stubApi(() => usersPage([]));
   const { screen, field } = await renderField({ error: "Choose a user." });
 
   await expect.element(screen.getByText("Choose a user.")).toBeVisible();
   await expect.element(field).toHaveAttribute("aria-invalid", "true");
+  await expect.element(field).toHaveAccessibleDescription("Choose a user.");
 });
