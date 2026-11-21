@@ -221,9 +221,10 @@ interface DetailsProps {
 
 // The details of the Ticket, as a description list (docs/design-system.md,
 // Detail Screens): the assignee in the full form, or "Unassigned", with its
-// pencil for a user who can change it (AssigneeField); the Coordinated Release
-// Date while the Ticket is confidential, as an absent value without a date,
-// and while it has one, also after it became non-confidential (Sentinel
+// pencil for a user who can change it (AssigneeField); the reason of an
+// Ignored Ticket; the Coordinated Release Date while the Ticket is
+// confidential, as an absent value without a date, and while it has one,
+// also after it became non-confidential (Sentinel
 // docs/features/tickets/tickets.md, Coordinated Release Date); the deadlines;
 // the original of a duplicate, which is only an identifier, or the duplicates
 // of any other Ticket; the creation; and the last change, as "Last modified",

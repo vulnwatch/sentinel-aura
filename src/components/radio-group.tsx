@@ -76,7 +76,7 @@ export function RadioGroupField<T extends string>({
           >
             <span
               aria-hidden
-              className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface group-data-focus-visible:outline-2 group-data-focus-visible:outline-offset-2 group-data-focus-visible:outline-focus group-data-invalid:border-2 group-data-invalid:border-danger-icon group-data-selected:border-accent group-data-selected:bg-accent"
+              className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface group-data-focus-visible:outline-2 group-data-focus-visible:outline-offset-2 group-data-focus-visible:outline-focus group-data-invalid:border-2 group-data-invalid:border-danger-icon group-data-selected:border-accent group-data-selected:bg-accent group-data-invalid:group-data-selected:border-danger-icon"
             >
               <span className="hidden size-1.5 rounded-full bg-on-accent group-data-selected:block" />
             </span>

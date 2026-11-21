@@ -40,11 +40,11 @@ import {
   focusHeadingAfterClose,
 } from "../../components/screen-heading";
 import { ticketStatusName } from "../../components/ticket-status";
-import { displayName } from "../../components/user";
 import { useSignedInUser } from "../../session-gate";
 import { useReadAfterTicketChange } from "../ticket-overview/shared";
 import { IgnoreDialog, ignoredText } from "./ignore";
 import { MarkDuplicateDialog } from "./mark-duplicate";
+import { assigneeOutcome } from "./shared";
 
 // Actions, the menu at the end of the heading row of the Ticket screen
 // (src/routes/ticket.tsx; docs/design-system.md, Detail Screens), with the
@@ -130,14 +130,7 @@ function statusOutcome(
   { data }: TicketDetailResponse,
   signedInUser: string | undefined,
 ): string {
-  let assignee = "unassigned";
-  if (data.assignee !== null) {
-    assignee =
-      data.assignee.id === signedInUser
-        ? "assigned to you"
-        : `assigned to ${displayName(data.assignee)}`;
-  }
-  return `${done}: ${ticketStatusName(data.status)}, ${assignee}.`;
+  return `${done}: ${ticketStatusName(data.status)}, ${assigneeOutcome(data.assignee, signedInUser)}.`;
 }
 
 interface TicketActionsProps {

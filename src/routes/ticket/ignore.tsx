@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Form } from "react-aria-components";
 import {
   ignoreReasonError,
@@ -29,7 +29,7 @@ import {
   type DialogError,
 } from "../../components/modal-dialog";
 import { RadioGroupField } from "../../components/radio-group";
-import { displayName } from "../../components/user";
+import { assigneeOutcome } from "./shared";
 
 // Ignore…, Ignore Ticket, POST /api/v1/tickets/{ticket_id}/ignore, from
 // Actions (src/routes/ticket/actions.tsx): a dialog with the reason why the
@@ -60,16 +60,14 @@ function reasonsOf(ticket: TicketDetail): readonly UserReason[] {
 // cve_rejected, the one reason after which the Ticket reopens by itself, as
 // the rejection is reverted (Sentinel docs/features/tickets/tickets.md,
 // Ignore Reason).
-function descriptionOf(reason: UserReason, ticket: TicketDetail): string {
-  switch (reason) {
-    case UserTicketIgnoreReasonValue.not_shipped:
-      return "SUSE ships none of the affected software. If SUSE ships it but the issue doesn't affect it, set its tracks to Not affected instead.";
-    case UserTicketIgnoreReasonValue.cve_rejected:
-      return `${ticket.cve?.cve_id ?? "Its CVE"} is rejected. If the rejection is reverted, ${ticket.ticket_id} reopens by itself.`;
-    default:
-      return `Another reason. ${ticket.ticket_id} stays ignored until someone reopens it.`;
-  }
-}
+const DESCRIPTIONS: Record<UserReason, (ticket: TicketDetail) => string> = {
+  not_shipped: () =>
+    "SUSE ships none of the affected software. If SUSE ships it but the issue doesn't affect it, set its tracks to Not affected instead.",
+  cve_rejected: ({ cve, ticket_id: id }) =>
+    `${cve?.cve_id ?? "Its CVE"} is rejected. If the rejection is reverted, ${id} reopens by itself.`,
+  other: ({ ticket_id: id }) =>
+    `Another reason. ${id} stays ignored until someone reopens it.`,
+};
 
 // The outcome of an ignore, as Sentinel returns the Ticket after it, with the
 // assignee that it now has, since an unassigned Ticket is assigned to its
@@ -79,18 +77,11 @@ export function ignoredText(
   { data }: TicketDetailResponse,
   signedInUser: string | undefined,
 ): string {
-  let assignee = "unassigned";
-  if (data.assignee !== null) {
-    assignee =
-      data.assignee.id === signedInUser
-        ? "assigned to you"
-        : `assigned to ${displayName(data.assignee)}`;
-  }
   const done =
     data.ignore_reason === null
       ? "Ignored"
       : `Ignored as ${ignoreReasonName(data.ignore_reason)}`;
-  return `${done}, ${assignee}.`;
+  return `${done}, ${assigneeOutcome(data.assignee, signedInUser)}.`;
 }
 
 // What a submission that failed shows: the error of the reason, and the
@@ -142,8 +133,9 @@ export function IgnoreDialog({
   onDone,
 }: IgnoreDialogProps) {
   const ticketId = ticket.ticket_id;
-  // The Ticket as the dialog opened, whose reasons it offers until it closes
-  // (docs/behaviors.md, The Signed-in User).
+  // The Ticket as the dialog opened, whose reasons it offers until it closes,
+  // so that a read does not change the choices under the user; Sentinel
+  // decides the reason sent (409 TICKET_CVE_NOT_REJECTED).
   const [opened] = useState(ticket);
   const cveId = opened.cve?.cve_id ?? "Its CVE";
   const text = (response: TicketDetailResponse) =>
@@ -168,6 +160,19 @@ export function IgnoreDialog({
   // A failure of the UI itself, which the router shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const submitting = useRef(false);
+  // With an error at Reason alone, the reason chosen takes the focus, or the
+  // first one without a choice, once the error is on the page, so that it is
+  // read with it (docs/behaviors.md, Accessibility, Announcements).
+  useEffect(() => {
+    if (failure.form !== undefined || failure.field === undefined) {
+      return;
+    }
+    const inputs = group.current;
+    (
+      inputs?.querySelector<HTMLInputElement>("input:checked") ??
+      inputs?.querySelector<HTMLInputElement>("input")
+    )?.focus();
+  }, [failure]);
   const { close, question } = useDiscardQuestion({
     held: reason !== undefined && !busy,
     consequence: `${ticketId} isn't ignored.`,
@@ -177,18 +182,6 @@ export function IgnoreDialog({
     throw uiFailure.error;
   }
 
-  // The reason takes the focus with its error: the chosen one, or the first,
-  // once React has rendered the error that it reads with it.
-  const focusReason = () => {
-    requestAnimationFrame(() => {
-      const inputs = group.current;
-      (
-        inputs?.querySelector<HTMLInputElement>("input:checked") ??
-        inputs?.querySelector<HTMLInputElement>("input")
-      )?.focus();
-    });
-  };
-
   const fail = (error: unknown) => {
     if (!isRequestFailure(error)) {
       setUiFailure({ error });
@@ -197,7 +190,6 @@ export function IgnoreDialog({
     const atField = ignoreReasonError(error, cveId);
     if (atField !== undefined) {
       setFailure({ field: atField, form: undefined });
-      focusReason();
       return;
     }
     const { fields, unmatched } = validationErrorFields(error, ["reason"]);
@@ -205,9 +197,6 @@ export function IgnoreDialog({
       field: fields.length > 0 ? MESSAGE_INVALID_VALUE : undefined,
       form: unmatched ? presentChangeFailure(error) : undefined,
     });
-    if (!unmatched) {
-      focusReason();
-    }
   };
 
   const submit = async () => {
@@ -216,7 +205,6 @@ export function IgnoreDialog({
     }
     if (reason === undefined) {
       setFailure({ field: MESSAGE_NO_REASON, form: undefined });
-      focusReason();
       return;
     }
     setFailure(NO_FAILURE);
@@ -259,7 +247,8 @@ export function IgnoreDialog({
       }
     >
       <p className="text-fg-muted">
-        {ticketId} stops being worked, and accepts no other change until Reopen.
+        {ticketId} stops being worked, and accepts no change to its analysis
+        until Reopen.
       </p>
       <FirstFieldFocus>
         <Form
@@ -282,7 +271,7 @@ export function IgnoreDialog({
             options={reasonsOf(opened).map((item) => ({
               value: item,
               label: ignoreReasonName(item),
-              description: descriptionOf(item, opened),
+              description: DESCRIPTIONS[item](opened),
             }))}
             value={reason}
             onChange={(next) => {

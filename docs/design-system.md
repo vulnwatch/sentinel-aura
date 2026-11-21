@@ -139,7 +139,7 @@ sidebar is the one exception (Spacing and Sizes).
 | `fg-muted` | `#59636E` | `#9198A1` | Secondary text and icons: terms of a description list, column headers, counts, captions, placeholders, and the icons beside a text |
 | `muted-on-fg` | `#9198A1` | `#59636E` | How many more values a "+N" has than its tooltip lists (Tables): `fg-muted` of the other theme, as a tooltip inverts the colors |
 | `border` | `#D8DEE4` | `#2F3742` | Lines that separate: between rows, around cards and tables, between the parts of a detail screen, in menus, and at the edge of the sidebar |
-| `border-strong` | `#818B98` | `#6E7681` | Boundaries that identify a control: fields, secondary buttons, checkboxes, and the selected view |
+| `border-strong` | `#818B98` | `#6E7681` | Boundaries that identify a control: fields, secondary buttons, checkboxes, radio buttons, and the selected view |
 | `accent` | `#0969DA` | `#1F6FEB` | The fill of a primary button and of a selected checkbox or radio button |
 | `accent-hover` | `#0757BA` | `#1A5FCC` | A primary button under the pointer |
 | `on-accent` | `#FFFFFF` | `#FFFFFF` | Text and marks on `accent` |
@@ -1488,8 +1488,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   match." when none matches; a select keeps the options that do not depend
   on the read. A
   checkbox or a radio button is 16 px, with a `border-strong` boundary, a
-  4 px radius or round, and when selected an `accent` fill with its mark in
-  `on-accent`; a date field shows its parts as `docs/behaviors.md` (Input)
+  4 px radius or round, and when selected an `accent` fill with its mark,
+  `check` or a dot of 6 px, in `on-accent`; a date field shows its parts as
+  `docs/behaviors.md` (Input)
   orders them and ends with a quiet icon button 24 px square with `calendar`
   at 16 px in `fg-muted`, named "Calendar" followed by the name of its
   field, such as "Calendar From", which its tooltip shows; and a
@@ -1587,15 +1588,17 @@ states it, such as that of a Ticket; the other audit logs are tables
 - A group of radio buttons chooses one value among a few whose meanings the
   user reads before choosing, such as the reason of an ignored Ticket: its
   label above it, as a field's, then its options 12 px apart, each its radio
-  button, a dot of 6 px in `on-accent` when selected, then, 8 px later, its
-  label in `text-15` and below the label its meaning in `text-13`,
-  `fg-muted`. The button, its label, and its meaning are one target, with
-  the focus ring around the button on keyboard focus; assistive technologies
-  read the label as the name of the option and its meaning as its
-  description. Its error follows the options, as a field's does, and gives
-  each button a 2 px boundary in `danger-icon`. A choice among a few short
-  values that need no meaning, such as the values of a metric of a CVSS
-  vector, is a segmented control instead (above).
+  button, then, 8 px later, its label in `text-15` and below the label its
+  meaning in `text-13`, `fg-muted`. The button, its label, and its meaning
+  are one target, with the focus ring around the button on keyboard focus;
+  assistive technologies read the label as the name of the option and its
+  meaning as its description. Its error follows the options, as a field's
+  does, gives each button a 2 px boundary in `danger-icon`, also the one
+  selected, and is read with each option after its meaning, so that the
+  option that holds the focus states it. Read-only, as while the change that
+  sends it is in progress, it keeps its look and the focus. A choice among a
+  few short values that need no meaning, such as the values of a metric of a
+  CVSS vector, is a segmented control instead (above).
 - A field whose value users copy character by character, such as a CVSS
   vector, shows its value in monospace (Font).
 - A select of a value of a record within the line of the record, whose

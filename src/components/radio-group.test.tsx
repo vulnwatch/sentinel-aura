@@ -14,6 +14,12 @@ import { RadioGroupField, type RadioOption } from "./radio-group";
 const FG = "rgb(31, 35, 40)";
 const FG_MUTED = "rgb(89, 99, 110)";
 const DANGER_ON_SOFT = "rgb(164, 14, 38)";
+const SURFACE = "rgb(255, 255, 255)";
+const BORDER_STRONG = "rgb(129, 139, 152)";
+const ACCENT = "rgb(9, 105, 218)";
+const ON_ACCENT = "rgb(255, 255, 255)";
+const DANGER_ICON = "rgb(207, 34, 46)";
+const FOCUS = "rgb(9, 105, 218)";
 
 type Delivery = "pickup" | "courier" | "post";
 
@@ -84,6 +90,21 @@ function boxOf(screen: Screen, text: string): DOMRect {
     .getByText(text, { exact: true })
     .element()
     .getBoundingClientRect();
+}
+
+// The radio button of an option, which is hidden from assistive technologies:
+// what shows near the start of the group, beside the dot of a chosen button,
+// at the height of the middle of the button, which starts 4 px below the top
+// of the label of the option.
+function buttonOf(screen: Screen, label: string): Element {
+  const { left } = groupOf(screen).element().getBoundingClientRect();
+  return document.elementFromPoint(left + 3, boxOf(screen, label).top + 12)!;
+}
+
+// What shows at the center of a radio button, where its dot shows.
+function centerOf(button: Element): Element {
+  const { left, top, width, height } = button.getBoundingClientRect();
+  return document.elementFromPoint(left + width / 2, top + height / 2)!;
 }
 
 // Waits until the browser has rendered two more frames, after which what a
@@ -267,4 +288,78 @@ test("gives the form its group, in which the form finds the buttons that take th
 
   await expect.element(groupOf(screen)).toBeVisible();
   expect(group.current).toBe(groupOf(screen).element());
+});
+
+test("shows each radio button round, 16 px, with a border-strong boundary on surface, and the one chosen with an accent fill and a dot of 6 px in on-accent, 8 px before its label", async () => {
+  const screen = await render(<DeliveryForm initial="courier" />);
+  await expect.element(radioOf(screen, "Courier")).toBeChecked();
+
+  const pickup = buttonOf(screen, "Pickup");
+  const rest = getComputedStyle(pickup);
+  const box = pickup.getBoundingClientRect();
+  expect([box.width, box.height]).toEqual([16, 16]);
+  expect([
+    rest.borderTopWidth,
+    rest.borderTopColor,
+    rest.backgroundColor,
+  ]).toEqual(["1px", BORDER_STRONG, SURFACE]);
+  // Round: a radius of at least half its side.
+  expect(Number.parseFloat(rest.borderTopLeftRadius)).toBeGreaterThanOrEqual(8);
+  expect(centerOf(pickup)).toBe(pickup);
+  expect(pickup.getAttribute("aria-hidden")).toBe("true");
+  expect(boxOf(screen, "Pickup").left - box.right).toBe(8);
+
+  const courier = buttonOf(screen, "Courier");
+  const chosen = getComputedStyle(courier);
+  expect([chosen.borderTopColor, chosen.backgroundColor]).toEqual([
+    ACCENT,
+    ACCENT,
+  ]);
+  const dot = centerOf(courier);
+  expect(dot).not.toBe(courier);
+  expect(courier.contains(dot)).toBe(true);
+  const { width, height } = dot.getBoundingClientRect();
+  expect([width, height]).toEqual([6, 6]);
+  expect(getComputedStyle(dot).backgroundColor).toBe(ON_ACCENT);
+});
+
+test("shows the focus ring around the radio button on keyboard focus, and none after a press", async () => {
+  const screen = await render(<DeliveryForm />);
+  await expect.element(groupOf(screen)).toBeVisible();
+  expect(getComputedStyle(buttonOf(screen, "Pickup")).outlineStyle).toBe(
+    "none",
+  );
+
+  await userEvent.keyboard("{Tab}");
+
+  await expect.element(radioOf(screen, "Pickup")).toHaveFocus();
+  const style = getComputedStyle(buttonOf(screen, "Pickup"));
+  expect([
+    style.outlineStyle,
+    style.outlineWidth,
+    style.outlineColor,
+    style.outlineOffset,
+  ]).toEqual(["solid", "2px", FOCUS, "2px"]);
+
+  await screen.getByText("Post", { exact: true }).click();
+
+  await expect.element(radioOf(screen, "Post")).toHaveFocus();
+  expect(getComputedStyle(buttonOf(screen, "Post")).outlineStyle).toBe("none");
+});
+
+test("gives each radio button a 2 px boundary in danger-icon with an error, also the one chosen", async () => {
+  const screen = await render(
+    <DeliveryForm initial="post" errors={{ delivery: "Choose a delivery." }} />,
+  );
+  await expect
+    .element(screen.getByText("Choose a delivery.", { exact: true }))
+    .toBeVisible();
+
+  for (const option of DELIVERIES) {
+    const style = getComputedStyle(buttonOf(screen, option.label));
+    expect([style.borderTopWidth, style.borderTopColor]).toEqual([
+      "2px",
+      DANGER_ICON,
+    ]);
+  }
 });

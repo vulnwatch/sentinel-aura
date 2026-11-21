@@ -4424,7 +4424,7 @@ test.describe("the actions of a Ticket", () => {
     const dialog = ignoreDialog(page, "SNTL-31");
     await expect(
       dialog.getByText(
-        "SNTL-31 stops being worked, and accepts no other change until Reopen.",
+        "SNTL-31 stops being worked, and accepts no change to its analysis until Reopen.",
         { exact: true },
       ),
     ).toBeVisible();

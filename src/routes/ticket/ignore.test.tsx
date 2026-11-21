@@ -63,7 +63,7 @@ prepareEachTest();
 
 // What the dialog says that the change does, and what each reason means.
 const EXPLANATION =
-  "SNTL-12 stops being worked, and accepts no other change until Reopen.";
+  "SNTL-12 stops being worked, and accepts no change to its analysis until Reopen.";
 const NOT_SHIPPED =
   "SUSE ships none of the affected software. If SUSE ships it but the issue doesn't affect it, set its tracks to Not affected instead.";
 const CVE_REJECTED =
