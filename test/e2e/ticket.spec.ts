@@ -4535,7 +4535,7 @@ test.describe("the actions of a Ticket", () => {
     await expect(field).toHaveValue("");
     await expect(
       dialog.getByText(
-        "SNTL-21 becomes a duplicate of the Ticket that you choose, and accepts no other change until Revert duplicate.",
+        "SNTL-21 becomes a duplicate of the Ticket that you choose, and accepts no change to its analysis until Revert duplicate.",
         { exact: true },
       ),
     ).toBeVisible();

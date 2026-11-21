@@ -1097,8 +1097,8 @@ Revert Duplicate Status; Rerun Ticket Convergence; Sentinel
   (`docs/design-system.md`, Dialogs), titled such as "Mark SNTL-30 as a
   duplicate", once its menu has closed, so that the focus returns to Actions
   as the dialog closes. It says, in `fg-muted`, "SNTL-30 becomes a duplicate
-  of the Ticket that you choose, and accepts no other change until Revert
-  duplicate.", and below it what the change does to the duplicates of the
+  of the Ticket that you choose, and accepts no change to its analysis until
+  Revert duplicate.", and below it what the change does to the duplicates of the
   Ticket, which Sentinel moves to the original (Sentinel
   `docs/features/tickets/tickets.md`, Mark-as-Duplicate Operation): their
   identifiers, from the read of the duplicates that the details show (Content,
