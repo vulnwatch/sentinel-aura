@@ -43,8 +43,15 @@ function firstInvalid(form: HTMLFormElement): Element | undefined {
   );
 }
 
-export function useFieldErrorFocus(): FieldErrorFocus {
+// shown tells whether the form still shows an error at a field, as it holds
+// it: once it shows none, the region empties too, also when the error goes
+// without an event of the field, as when a radio button is chosen by its
+// label.
+export function useFieldErrorFocus(shown = true): FieldErrorFocus {
   const [announcement, setAnnouncement] = useState<Announcement>();
+  if (!shown && announcement !== undefined) {
+    setAnnouncement(undefined);
+  }
   // The region holds the error until the user changes the input of the field
   // or the field loses the focus, so that it does not repeat later an error
   // that may have gone. It follows these events on the document, once React

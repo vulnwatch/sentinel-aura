@@ -225,7 +225,9 @@ export function AddPackageDialog({
   // focus, or its error is announced when it holds the focus already; the
   // error of the form takes it itself (docs/behaviors.md, Accessibility,
   // Announcements).
-  const { focusField, region } = useFieldErrorFocus();
+  const { focusField, region } = useFieldErrorFocus(
+    failure.field !== undefined,
+  );
   useEffect(() => {
     if (failure.form === undefined && failure.field !== undefined) {
       focusField(inputRef.current, failure.field);

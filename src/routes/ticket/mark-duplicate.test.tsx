@@ -287,6 +287,31 @@ async function markAs(screen: Screen, original: string) {
   return dialog;
 }
 
+// Opens Mark as duplicate…, types the original, and submits it with Enter in
+// the field, which keeps the focus, as the user does once the menu of the
+// field shows the Tickets that the text matches, SNTL-21 among them: the
+// first Enter closes the menu, keeping the text, and the second submits the
+// form.
+async function markWithEnter(screen: Screen, original: string) {
+  const dialog = await openMark(screen);
+  const field = originalField(dialog);
+  await field.fill(original);
+  await expect.element(optionOf(screen, "SNTL-21")).toBeVisible();
+  await userEvent.keyboard("{Enter}");
+  await expect.element(field).toHaveAttribute("aria-expanded", "false");
+  await expect.element(field).toHaveValue(original);
+  await userEvent.keyboard("{Enter}");
+  return dialog;
+}
+
+// The texts of the status regions of the dialog.
+function statusTexts(dialog: Locator): string[] {
+  return dialog
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent ?? "");
+}
+
 // The bodies of the requests of Mark Ticket as Duplicate.
 function marks(spy: ReturnType<typeof stubApi>): unknown[] {
   return spy.mock.calls
@@ -1779,7 +1804,116 @@ describe("a failure of Mark as duplicate…", () => {
   });
 });
 
+describe("an error of Original after Enter in the field", () => {
+  // An error of the check of the form, and one of Sentinel, which the form
+  // shows at the field.
+  const ERRORS: [string, Partial<Stub>, string, string][] = [
+    [
+      "of a check of a text that is not an identifier",
+      {},
+      "fictional-openssl",
+      MESSAGE_NOT_AN_ID,
+    ],
+    [
+      "of 404 TICKET_NOT_FOUND",
+      { ticketChange: () => errorResponse(404, "TICKET_NOT_FOUND") },
+      "SNTL-21",
+      "SNTL-21 doesn't exist, or you don't have access to it.",
+    ],
+  ];
+
+  test.each(ERRORS)(
+    "announces the error %s in a status region of the dialog, while the field keeps the focus",
+    async (_, stub, text, message) => {
+      showingMarkable({}, stub);
+      const { screen } = await renderTicket();
+
+      const dialog = await markWithEnter(screen, text);
+
+      const field = originalField(dialog);
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(`${DESCRIPTION} ${message}`);
+      await expect.poll(() => statusTexts(dialog)).toContain(message);
+      await expect.element(field).toHaveFocus();
+      await expect.element(field).toHaveValue(text);
+    },
+  );
+
+  test.each(ERRORS)(
+    "keeps the error %s at the field once the field loses the focus, until the original changes",
+    async (_, stub, text, message) => {
+      showingMarkable({}, stub);
+      const { screen } = await renderTicket();
+      const dialog = await markWithEnter(screen, text);
+      const field = originalField(dialog);
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(`${DESCRIPTION} ${message}`);
+      await expect.element(field).toHaveFocus();
+
+      await userEvent.keyboard("{Tab}");
+
+      await expect.element(cancelButton(dialog)).toHaveFocus();
+      await nextFrames();
+      expect(field.element()).toBeInvalid();
+      expect(field.element()).toHaveAccessibleDescription(
+        `${DESCRIPTION} ${message}`,
+      );
+      // The field takes the focus again with its error, which goes once the
+      // original changes.
+      await field.click();
+      await expect.element(field).toHaveFocus();
+      expect(field.element()).toBeInvalid();
+      await userEvent.keyboard("2");
+      await expect.element(field).not.toBeInvalid();
+      await expect.element(field).toHaveAccessibleDescription(DESCRIPTION);
+    },
+  );
+
+  test("does not announce the error of a check as well when the field takes the focus from Mark as duplicate", async () => {
+    showingMarkable();
+    const { screen } = await renderTicket();
+    const dialog = await openMark(screen);
+    await originalField(dialog).fill("fictional-openssl");
+
+    await submitFromField(dialog);
+
+    const field = originalField(dialog);
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription(`${DESCRIPTION} ${MESSAGE_NOT_AN_ID}`);
+    await expect.element(field).toHaveFocus();
+    await nextFrames();
+    expect(statusTexts(dialog)).not.toContain(MESSAGE_NOT_AN_ID);
+  });
+});
+
 describe("leaving Mark as duplicate…", () => {
+  test("asks before a press of the pointer on Cancel discards the original while its error shows after Enter in the field, as the field loses the focus to Cancel", async () => {
+    showingMarkable();
+    const { screen } = await renderTicket();
+    const dialog = await markWithEnter(screen, "fictional-openssl");
+    await expect
+      .element(originalField(dialog))
+      .toHaveAccessibleDescription(`${DESCRIPTION} ${MESSAGE_NOT_AN_ID}`);
+    await expect.element(originalField(dialog)).toHaveFocus();
+
+    await cancelButton(dialog).click();
+
+    const discard = discardDialog(screen);
+    await expect
+      .element(
+        discard.getByText("SNTL-12 isn't marked as a duplicate.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+    await expect
+      .element(discard.getByRole("button", { name: "Keep editing" }))
+      .toHaveFocus();
+  });
+
   test.each([
     ["Cancel", ""],
     ["Escape", ""],

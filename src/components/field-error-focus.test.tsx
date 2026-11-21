@@ -19,13 +19,20 @@ afterEach(async () => {
 const MESSAGE_NAME = "Enter the name.";
 const MESSAGE_CODE = "Enter the code.";
 
+interface CheckedFormProps {
+  // Whether the form drops the error of its field, as it can without an
+  // event of the field.
+  drops?: boolean;
+}
+
 // A form that checks its fields itself as it is submitted, and gives the
 // first field with an error its error, a new object for each submission.
-function CheckedForm() {
+function CheckedForm({ drops = false }: CheckedFormProps) {
   const [name, setName] = useState("");
-  const [failure, setFailure] = useState<{ text: string }>();
+  const [checked, setFailure] = useState<{ text: string }>();
+  const failure = drops ? undefined : checked;
   const nameRef = useRef<HTMLInputElement>(null);
-  const { focusField, region } = useFieldErrorFocus();
+  const { focusField, region } = useFieldErrorFocus(failure !== undefined);
   useEffect(() => {
     if (failure !== undefined) {
       focusField(nameRef.current, failure.text);
@@ -174,6 +181,20 @@ test.each<[string, () => Promise<void>]>([
     await expect.poll(() => statusTexts(screen)).toEqual([""]);
   },
 );
+
+test("empties the region once the form no longer shows the error, also without an event of the field", async () => {
+  const screen = await render(<CheckedForm />);
+  const name = field(screen, "Name");
+  await name.click();
+  await userEvent.keyboard("{Enter}");
+  await expect.poll(() => statusTexts(screen)).toEqual([MESSAGE_NAME]);
+
+  await screen.rerender(<CheckedForm drops />);
+
+  await expect.element(name).toHaveAccessibleDescription("");
+  await expect.poll(() => statusTexts(screen)).toEqual([""]);
+  await expect.element(name).toHaveFocus();
+});
 
 test("keeps every key that the user types as the region empties", async () => {
   const screen = await render(<CheckedForm />);

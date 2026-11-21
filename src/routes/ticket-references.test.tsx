@@ -1695,6 +1695,21 @@ function fieldOf(dialog: Locator, label: string) {
   return dialog.getByRole("textbox", { name: label, exact: true });
 }
 
+// The texts of the status regions of a dialog.
+function statusTexts(dialog: Locator): string[] {
+  return dialog
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent ?? "");
+}
+
+// Waits until the browser has rendered two more frames, after which the
+// effects of the commits before have run, and what they set has rendered.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 // The select of the type of a dialog, named by the option that it shows and
 // its label.
 function typeSelectOf(dialog: Locator) {
@@ -2129,6 +2144,59 @@ describe("Add reference", () => {
       expect(requestsWith(spy, "POST")).toHaveLength(0);
     },
   );
+
+  test("announces the error of the check of an empty address after Enter in it in a status region of the dialog, while the address keeps the focus, without a request", async () => {
+    const { spy } = stubReferences();
+    const { screen } = await renderTab();
+    const dialog = await openAdd(screen);
+
+    await userEvent.keyboard("{Enter}");
+
+    const field = fieldOf(dialog, "Address");
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription("Enter the address.");
+    await expect
+      .poll(() => statusTexts(dialog))
+      .toContain("Enter the address.");
+    await expect.element(field).toHaveFocus();
+    expect(requestsWith(spy, "POST")).toHaveLength(0);
+  });
+
+  test("does not announce the error of the check of an empty address as well when the address takes the focus from Add reference", async () => {
+    stubReferences();
+    const { screen } = await renderTab();
+    const dialog = await openAdd(screen);
+
+    await submitFromKeyboard(dialog, "Add reference");
+
+    const field = fieldOf(dialog, "Address");
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription("Enter the address.");
+    await expect.element(field).toHaveFocus();
+    await nextFrames();
+    expect(statusTexts(dialog)).not.toContain("Enter the address.");
+  });
+
+  test("announces 409 RESOURCE_CONFLICT after Enter in the address in a status region of the dialog, while the address keeps the focus", async () => {
+    stubReferences({ add: () => errorResponse(409, "RESOURCE_CONFLICT") });
+    const { screen } = await renderTab();
+    const dialog = await openAdd(screen);
+    const field = fieldOf(dialog, "Address");
+    await field.fill(ADDED.url);
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription(MESSAGE_ADDRESS_TAKEN);
+    await expect
+      .poll(() => statusTexts(dialog))
+      .toContain(MESSAGE_ADDRESS_TAKEN);
+    await expect.element(field).toHaveFocus();
+    await expect.element(field).toHaveValue(ADDED.url);
+  });
 
   test.each([
     ["Title (optional)", 500, "Enter at most 500 characters."],

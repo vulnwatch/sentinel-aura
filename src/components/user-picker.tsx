@@ -132,7 +132,7 @@ export function UserPicker({
 }: UserPickerProps) {
   const statusId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const { focusField, region } = useFieldErrorFocus();
+  const { focusField, region } = useFieldErrorFocus(error !== undefined);
   useEffect(() => {
     if (error !== undefined) {
       focusField(inputRef.current, error);

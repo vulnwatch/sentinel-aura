@@ -924,7 +924,9 @@ export function SuseAssessmentDialog({
   // error is announced when it holds the focus already, as after Enter in
   // it; the error of the form takes it itself (docs/behaviors.md,
   // Accessibility, Announcements).
-  const { focusField, region } = useFieldErrorFocus();
+  const { focusField, region } = useFieldErrorFocus(
+    failure.field !== undefined,
+  );
   useEffect(() => {
     if (failure.field !== undefined && failure.form === undefined) {
       focusField(vectorRef.current, failure.field);

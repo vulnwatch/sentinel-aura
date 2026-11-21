@@ -305,7 +305,7 @@ function GrantAccessForm({
   // After a failure at the field, the field takes the focus, or its error is
   // announced when it holds the focus already (docs/behaviors.md,
   // Accessibility, Announcements).
-  const { focusField, region } = useFieldErrorFocus();
+  const { focusField, region } = useFieldErrorFocus(fieldError !== undefined);
   useEffect(() => {
     if (fieldError !== undefined) {
       focusField(inputRef.current, fieldError.text);

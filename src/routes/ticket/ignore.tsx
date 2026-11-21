@@ -166,7 +166,9 @@ export function IgnoreDialog({
   // read with it, or the error is announced when that reason holds the focus
   // already, as after Enter on it (docs/behaviors.md, Accessibility,
   // Announcements).
-  const { focusField, region } = useFieldErrorFocus();
+  const { focusField, region } = useFieldErrorFocus(
+    failure.field !== undefined,
+  );
   useEffect(() => {
     if (failure.form !== undefined || failure.field === undefined) {
       return;

@@ -102,6 +102,22 @@ async function fillIn(screen: Screen, username: string, password: string) {
   }
 }
 
+// The texts of the status regions of the page, those of the form among them.
+function statusTexts(screen: Screen): string[] {
+  return screen
+    .getByRole("main")
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent ?? "");
+}
+
+// Waits until the browser has rendered two more frames, after which the
+// effects of the commits before have run, and what they set has rendered.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 // Expects the focus on the message at the top of the form that holds the
 // text.
 async function expectFocusOnMessage(text: string) {
@@ -293,6 +309,42 @@ describe("Sign in, before sending", () => {
       .element(screen.getByRole("textbox", { name: "Username" }))
       .toBeInvalid();
   });
+
+  test("announces the error of an empty password after Enter in it in a status region of the form, while the password keeps the focus, and sends nothing", async () => {
+    const fetch = stubSignIn(signedIn);
+    const { screen } = await renderSignIn();
+    await fillIn(screen, "jdoe", "");
+    const password = screen.getByLabelText("Password");
+    await password.click();
+    await expect.element(password).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(password)
+      .toHaveAccessibleDescription("Enter your password.");
+    await expect
+      .poll(() => statusTexts(screen))
+      .toContain("Enter your password.");
+    await expect.element(password).toHaveFocus();
+    expect(requestsTo(fetch, LOGIN)).toBe(0);
+  });
+
+  test("does not announce the error of an empty password as well when the password takes the focus from Sign in", async () => {
+    stubSignIn(signedIn);
+    const { screen } = await renderSignIn();
+    await fillIn(screen, "jdoe", "");
+
+    await screen.getByRole("button", { name: "Sign in" }).click();
+
+    const password = screen.getByLabelText("Password");
+    await expect
+      .element(password)
+      .toHaveAccessibleDescription("Enter your password.");
+    await expect.element(password).toHaveFocus();
+    await nextFrames();
+    expect(statusTexts(screen)).not.toContain("Enter your password.");
+  });
 });
 
 // A 429 of Sentinel, with the time that remains until the lockout expires.
@@ -382,6 +434,24 @@ describe("Sign in, after a failure", () => {
     await expect
       .element(screen.getByRole("textbox", { name: "Username" }))
       .toHaveFocus();
+  });
+
+  test("announces a field error of a VALIDATION_ERROR of the password after Enter in it in a status region of the form, while the password keeps the focus", async () => {
+    stubSignIn(() => validationError([["body", "password"]]));
+    const { screen } = await renderSignIn();
+    await fillIn(screen, "jdoe", "fictional password");
+    const password = screen.getByLabelText("Password");
+    await expect.element(password).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(password)
+      .toHaveAccessibleDescription("This value isn't valid.");
+    await expect
+      .poll(() => statusTexts(screen))
+      .toContain("This value isn't valid.");
+    await expect.element(password).toHaveFocus();
   });
 
   test("clears a field error of a VALIDATION_ERROR once its value changes, and only that one", async () => {

@@ -655,6 +655,74 @@ describe("the access grants", () => {
       .not.toHaveAttribute("aria-invalid", "true");
   });
 
+  test("announce Choose a user. after Enter in the user field in a status region of the dialog, while the field keeps the focus", async () => {
+    const spy = stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse(),
+    });
+    const { screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    await expect.element(userField(screen)).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(userField(screen))
+      .toHaveAccessibleDescription("Choose a user.");
+    await expect.poll(() => dialogStatus(screen)).toBe("Choose a user.");
+    await expect.element(userField(screen)).toHaveFocus();
+    expect(requestsWith(spy, "POST")).toHaveLength(0);
+  });
+
+  test("do not announce Choose a user. as well when the user field takes the focus from Grant access", async () => {
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse(),
+    });
+    const { screen } = await renderParticipants();
+    await openAccessGrants(screen);
+
+    await grantButton(screen).click();
+
+    await expect
+      .element(userField(screen))
+      .toHaveAccessibleDescription("Choose a user.");
+    await expect.element(userField(screen)).toHaveFocus();
+    await nextFrames();
+    expect(dialogStatus(screen)).toBe("");
+  });
+
+  test("keep Choose a user. after Enter in the user field once the field loses the focus, until the input changes", async () => {
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse(),
+      users: () => usersPage([fictionalDirectoryUser()]),
+    });
+    const { screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    await expect.element(userField(screen)).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .element(userField(screen))
+      .toHaveAccessibleDescription("Choose a user.");
+    await expect.element(userField(screen)).toHaveFocus();
+
+    await userEvent.keyboard("{Tab}");
+
+    await expect.element(grantButton(screen)).toHaveFocus();
+    await nextFrames();
+    expect(userField(screen).element()).toBeInvalid();
+    expect(userField(screen).element()).toHaveAccessibleDescription(
+      "Choose a user.",
+    );
+    await userField(screen).fill("an");
+    await expect.element(userField(screen)).not.toBeInvalid();
+    await expect.element(userField(screen)).toHaveAccessibleDescription("");
+  });
+
   test.each([
     [
       "an inactive user",
@@ -696,6 +764,63 @@ describe("the access grants", () => {
         .toHaveAttribute("aria-invalid", "true");
     },
   );
+
+  test("announce the error of 404 USER_NOT_FOUND after Enter in the user field in a status region of the dialog, while the field keeps the focus", async () => {
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse(),
+      users: () => usersPage([fictionalDirectoryUser()]),
+      grant: () => errorResponse(404, "USER_NOT_FOUND"),
+    });
+    const { screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+    await expect.element(userField(screen)).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(userField(screen))
+      .toHaveAccessibleDescription("Sentinel doesn't know this user.");
+    await expect
+      .poll(() => dialogStatus(screen))
+      .toBe("Sentinel doesn't know this user.");
+    await expect.element(userField(screen)).toHaveFocus();
+    await expect.element(userField(screen)).toHaveValue("Ana Garcia @agarcia");
+  });
+
+  test("keep the error of 404 USER_NOT_FOUND after Enter in the user field once the field loses the focus, until the input changes", async () => {
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => grantsResponse(),
+      users: () => usersPage([fictionalDirectoryUser()]),
+      grant: () => errorResponse(404, "USER_NOT_FOUND"),
+    });
+    const { screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    await chooseUser(screen, "ana", "Ana Garcia @agarcia");
+    await expect.element(userField(screen)).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .element(userField(screen))
+      .toHaveAccessibleDescription("Sentinel doesn't know this user.");
+    await expect.element(userField(screen)).toHaveFocus();
+
+    await userEvent.keyboard("{Tab}");
+
+    await expect.element(grantButton(screen)).toHaveFocus();
+    await nextFrames();
+    expect(userField(screen).element()).toBeInvalid();
+    expect(userField(screen).element()).toHaveAccessibleDescription(
+      "Sentinel doesn't know this user.",
+    );
+    expect(userField(screen).element()).toHaveValue("Ana Garcia @agarcia");
+    await userField(screen).fill("an");
+    await expect.element(userField(screen)).not.toBeInvalid();
+    await expect.element(userField(screen)).toHaveAccessibleDescription("");
+  });
 
   test.each([
     [
