@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.10.0...v0.11.0) (2026-11-21)
+
+
+### Features
+
+* add a package to a Ticket from its package tree ([#305](https://github.com/vulnwatch/sentinel-aura/issues/305)) ([20fc080](https://github.com/vulnwatch/sentinel-aura/commit/20fc080b688df401cce7239ccfb8eed0e8cbc51f))
+* add the Actions menu of a Ticket with its status actions ([#309](https://github.com/vulnwatch/sentinel-aura/issues/309)) ([21042ec](https://github.com/vulnwatch/sentinel-aura/commit/21042ecf7915d15eedf4332d6f18f2cccd79a9a8))
+* **deps:** pin Sentinel 0.28.0 ([#303](https://github.com/vulnwatch/sentinel-aura/issues/303)) ([c10ea01](https://github.com/vulnwatch/sentinel-aura/commit/c10ea01b40924ede1c795a27a49fdfacf07efd7a))
+
+
+### Bug Fixes
+
+* show outcomes after a failed read and keep menu focus visible ([#306](https://github.com/vulnwatch/sentinel-aura/issues/306)) ([46a4bf9](https://github.com/vulnwatch/sentinel-aura/commit/46a4bf9001112a3e73089d38a6f20949208d8e7a))
+
 ## [0.10.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.9.0...v0.10.0) (2026-11-19)
 
 
