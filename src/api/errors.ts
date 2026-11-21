@@ -480,6 +480,34 @@ export function presentExitConflict(
     : undefined;
 }
 
+// The error of the reason of Ignore… that a failure of Ignore Ticket states,
+// or undefined for a failure of the form: 409 TICKET_CVE_NOT_REJECTED, for
+// the reason cve_rejected of a Ticket whose CVE is no longer rejected, which
+// names the CVE (Sentinel docs/features/tickets/tickets.md, Ignore Ticket).
+export function ignoreReasonError(
+  failure: RequestFailure,
+  cveId: string,
+): string | undefined {
+  return failure instanceof ApiError &&
+    failure.status === 409 &&
+    failure.code === "TICKET_CVE_NOT_REJECTED"
+    ? `${cveId} is no longer rejected. Choose another reason.`
+    : undefined;
+}
+
+// The presentation of a failure of Ignore… that ends after the user left the
+// screen, in the message area of the screen that the user is on: the error
+// of its reason as an error, and every other failure as a change.
+export function presentLeftIgnoreFailure(
+  failure: RequestFailure,
+  cveId: string,
+): ChangeFailurePresentation | undefined {
+  const atField = ignoreReasonError(failure, cveId);
+  return atField === undefined
+    ? presentChangeFailure(failure)
+    : { message: atField, reference: undefined, unconfirmed: false };
+}
+
 // The messages of the name field of Add package, at the field
 // (docs/screens/ticket.md, States): SMELT maintains no package of the name,
 // whose letter case counts; no Product that SMELT lists for it, in a

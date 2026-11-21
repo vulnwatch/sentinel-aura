@@ -66,7 +66,7 @@ prepareEachTest();
 const DESCRIPTION =
   "Type its identifier, its CVE ID, or the name of one of its packages to find it.";
 const EXPLANATION =
-  "SNTL-12 becomes a duplicate of the Ticket that you choose, and accepts no other change until Revert duplicate.";
+  "SNTL-12 becomes a duplicate of the Ticket that you choose, and accepts no change to its analysis until Revert duplicate.";
 const DUPLICATES_UNKNOWN =
   "Its duplicates, if it has any, become duplicates of that Ticket too.";
 

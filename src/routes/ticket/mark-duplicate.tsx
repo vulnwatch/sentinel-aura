@@ -495,7 +495,7 @@ export function MarkDuplicateDialog({
       <div className="flex flex-col gap-3 text-fg-muted">
         <p>
           {ticketId} becomes a duplicate of the Ticket that you choose, and
-          accepts no other change until Revert duplicate.
+          accepts no change to its analysis until Revert duplicate.
         </p>
         <DuplicatesMoved ticketId={ticketId} />
       </div>
