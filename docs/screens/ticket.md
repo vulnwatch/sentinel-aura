@@ -12,8 +12,9 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 ## Purpose
 
 The Ticket screen shows one Ticket: its heading row with its main values and
-the menu of its actions, with which an analyst marks it as a duplicate,
-reopens it, and reverts its duplicate status, and an analyst or a user who
+the menu of its actions, with which an analyst ignores it with a reason,
+marks it as a duplicate, reopens it, and reverts its duplicate status, and an
+analyst or a user who
 manages fetchers reruns its convergence; in
 the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
 assessment an analyst who manages CVSS adds, edits, and deletes, its package
@@ -45,8 +46,8 @@ package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
 The screen is the same for every user, except that it offers Refetch, Edit
-assignee, Mark as duplicate…, Reopen, and Revert duplicate to a user who
-holds `triage_ticket`; Rerun convergence to a user who holds `triage_ticket`
+assignee, Ignore… and Ignore as not shipped by SUSE, Mark as duplicate…,
+Reopen, and Revert duplicate to a user who holds `triage_ticket`; Rerun convergence to a user who holds `triage_ticket`
 or `manage_fetchers`; Add SUSE assessment, and Edit and
 Delete on the SUSE assessments, to a user who holds `manage_cvss`, Grant access
 and Revoke access to a user who holds `manage_confidentiality`, Add
@@ -518,6 +519,7 @@ edits of its packages, tracks, and Products (Actions; Sentinel
 | Term | Value |
 |---|---|
 | Assignee | The assignee in the full form at the small size, or "Unassigned", and, for a user who can change it, Edit assignee at the end of the line (Actions) |
+| Ignore reason | While the Ticket is Ignored, `ignore_reason`: Not shipped, CVE rejected, CNA policy, or Other, also a reason that only Sentinel sets, or as received when the pinned contract does not list it (Sentinel `docs/features/tickets/tickets.md`, Ignore Reason; `docs/behaviors.md`, Unknown Values) |
 | Coordinated Release Date | While the Ticket is confidential, or while it has a Coordinated Release Date, also after it became non-confidential: the date and time, or an absent value (Sentinel `docs/features/tickets/tickets.md`, Coordinated Release Date) |
 | Deadlines | A line per phase, Triage, Submission, UM, and QA, with its due date and time; the QA line reads "QA, release" while the QA due date is the final release deadline, and a line Release follows it otherwise. The phases before the current phase are in `fg-muted`; the current phase is at weight 600, with the state of its milestone below its date, as `docs/behaviors.md` (Deadlines) words it; the later phases are plain. When the current phase is done, every phase is in `fg-muted`; when it is `null` with due dates, Triage is in `fg-muted` and the other phases are plain; a current phase that the pinned contract does not list marks no phase. Without due dates, an absent value (Sentinel `docs/features/tickets/ticket-deadlines.md`, Null Due Dates; Ticket Current Phase) |
 | Original | For a duplicate, `duplicate_of_ticket_id`, a link to its screen, without the lock, which the identifier does not carry (Sentinel `docs/features/tickets/tickets.md`, Identifier Disclosure Boundary) |
@@ -1025,8 +1027,10 @@ depart from them:
   still where the entry states; `docs/behaviors.md` (Accessibility, Focus
   after an action) states where it is when that read fails.
 
-**Mark as duplicate…**, Mark Ticket as Duplicate, `POST
-/api/v1/tickets/{ticket_id}/duplicate`; **Reopen**, Reopen Ticket, `POST
+**Ignore…** and **Ignore as not shipped by SUSE**, Ignore Ticket, `POST
+/api/v1/tickets/{ticket_id}/ignore`; **Mark as duplicate…**, Mark Ticket as
+Duplicate, `POST /api/v1/tickets/{ticket_id}/duplicate`; **Reopen**, Reopen
+Ticket, `POST
 /api/v1/tickets/{ticket_id}/reopen`; and **Revert duplicate**, Revert
 Duplicate Status, `POST /api/v1/tickets/{ticket_id}/revert-duplicate`, for a
 user who holds `triage_ticket`; and **Rerun convergence**, Rerun Ticket
@@ -1034,12 +1038,18 @@ Convergence, `POST /api/v1/tickets/{ticket_id}/rerun-reactivation`, for a user
 who holds `triage_ticket` or `manage_fetchers`, in Actions, the menu at the
 end of the heading row (`docs/design-system.md`, Detail Screens; Sentinel
 `docs/features/tickets/tickets.md`, Status Transitions; Duplicate Handling;
-Ignored; Mark Ticket as Duplicate; Reopen Ticket; Revert Duplicate Status;
+Ignored; Ignore Reason; Ignore Ticket; Mark Ticket as Duplicate; Reopen
+Ticket; Revert Duplicate Status;
 Rerun Ticket Convergence; Sentinel `docs/features/identity/rbac.md`, Endpoint
 Permission Map (Tickets)):
 
 - Actions offers the actions that the user can take on the Ticket in its
-  status (above): Mark as duplicate…, with `merge`, on a Ticket in New,
+  status (above): Ignore… and Ignore as not shipped by SUSE, each with
+  `circle-pause`, on a Ticket in New or Analysis, since Sentinel refuses an
+  ignore on an Analyzed or Resolved Ticket with `409
+  TICKET_INVALID_TRANSITION`, first, so that the keyboard, which opens the
+  menu on its first item, opens a dialog rather than ignoring at once; Mark
+  as duplicate…, with `merge`, on a Ticket in New,
   Analysis, Analyzed, or Resolved; Reopen, with `circle-play`, on an Ignored
   Ticket; Revert duplicate, with `split`, on a Duplicated Ticket; and, below a
   `border` line when one of them precedes it, Rerun convergence, with
@@ -1048,9 +1058,44 @@ Permission Map (Tickets)):
   TICKET_INVALID_TRANSITION`. So Actions does not show to a user who holds
   neither capability, nor to a user who holds `manage_fetchers` alone on a
   New, Ignored, or Duplicated Ticket. While its menu is open, the change of
-  one of its items is in progress, or the dialog of Mark as duplicate… is
-  open, Actions stays, with the items that it offered as its menu opened
+  one of its items is in progress, or the dialog of Ignore… or of Mark as
+  duplicate… is open, Actions stays, with the items that it offered as its menu opened
   (`docs/behaviors.md`, The Signed-in User).
+- Ignore… opens a dialog at most 560 px wide (`docs/design-system.md`,
+  Dialogs), titled such as "Ignore SNTL-31", once its menu has closed, so
+  that the focus returns to Actions as the dialog closes. It says, in
+  `fg-muted`, "SNTL-31 stops being worked, and accepts no other change until
+  Reopen."; then Reason, in a form (`docs/design-system.md`, Forms), a group
+  of radio buttons that offers the reasons that a user can choose, none
+  chosen, each with its meaning below it, and whose first reason takes the
+  focus as the dialog opens:
+  - Not shipped, `not_shipped`: "SUSE ships none of the affected software. If
+    SUSE ships it but the issue doesn't affect it, set its tracks to Not
+    affected instead.";
+  - CVE rejected, `cve_rejected`, only while the CVE of the Ticket is
+    rejected, since Sentinel refuses it otherwise: "CVE-2099-0027 is
+    rejected. If the rejection is reverted, SNTL-31 reopens by itself.";
+  - Other, `other`: "Another reason. SNTL-31 stays ignored until someone
+    reopens it."
+
+  Then Cancel and Ignore, a primary button. The dialog offers the reasons of
+  the Ticket as it opened, until it closes (`docs/behaviors.md`, The
+  Signed-in User). No user chooses `cna_policy`, which only Sentinel sets
+  (Sentinel `docs/features/tickets/tickets.md`, Ignore Reason). Like the
+  dialog of Mark as duplicate…, it belongs to the heading row, so a
+  navigation between the tabs of the Ticket leaves it open.
+- The form checks that a reason is chosen before sending it: without one,
+  "Choose a reason." at Reason when the user submits the form, and the first
+  reason takes the focus; the error goes once a reason is chosen. Ignore…
+  asks for no confirmation: Reopen reverses it (`docs/behaviors.md`,
+  Confirmation). Its input is the reason chosen, and before discarding it the
+  question says "SNTL-31 isn't ignored." (above). While the request is in
+  progress, the reason is read-only.
+- Ignore as not shipped by SUSE ignores the Ticket with `not_shipped` at
+  once, the quick action of the most common reason; its label says that SUSE
+  ships none of the affected software, so that it is not used for software
+  that SUSE ships but that the issue does not affect, whose tracks are Not
+  affected instead.
 - Mark as duplicate… opens a dialog at most 560 px wide
   (`docs/design-system.md`, Dialogs), titled such as "Mark SNTL-30 as a
   duplicate", once its menu has closed, so that the focus returns to Actions
@@ -1120,15 +1165,18 @@ Permission Map (Tickets)):
   the question says "SNTL-30 isn't marked as a duplicate." (above). While the
   request is in progress, the field keeps the original sent, read-only, and
   its focus.
-- Reopen, Revert duplicate, and Rerun convergence apply at once, as the items
-  of a menu do, without confirmation (`docs/design-system.md`, Menus,
-  Popovers, and Tooltips; `docs/behaviors.md`, Confirmation): Reopen and
-  Revert duplicate make the user the assignee, when they can be, in place of
-  the one that the screen shows, as an assignment does, and a rerun changes
-  nothing by itself (Sentinel `docs/features/tickets/tickets.md`,
-  Reassignment, Expected assignee; Rerun Ticket Convergence). While one is in
-  progress, assistive technologies read with its item, as its description,
-  "Reopening.", "Reverting the duplicate.", or "Starting the convergence.";
+- Ignore as not shipped by SUSE, Reopen, Revert duplicate, and Rerun
+  convergence apply at once, as the items of a menu do, without confirmation
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips;
+  `docs/behaviors.md`, Confirmation): Reopen and Revert duplicate make the
+  user the assignee, when they can be, in place of the one that the screen
+  shows, as an assignment does, an ignore makes them the assignee of an
+  unassigned Ticket only, and a rerun changes nothing by itself (Sentinel
+  `docs/features/tickets/tickets.md`, Reassignment, Expected assignee;
+  Auto-Assignment on Unassigned Tickets; Rerun Ticket Convergence). While one
+  is in progress, assistive technologies read with its item, as its
+  description, "Ignoring.", "Reopening.", "Reverting the duplicate.", or
+  "Starting the convergence.";
   meanwhile the other items of the menu are unavailable. Once Sentinel
   answers, the menu closes, and the focus returns to Actions.
 - A change of the status can change the assignee, the status, which Sentinel
@@ -1137,16 +1185,18 @@ Permission Map (Tickets)):
   original (Sentinel `docs/features/tickets/tickets.md`, Auto-Assignment on
   Unassigned Tickets; Ignored; Duplicate Handling; Sentinel
   `docs/features/tickets/ticket-service.md`, `mark_as_duplicate`;
-  `reopen_from_ignored()`; `revert_duplicate()`). After each of the four, the
-  screen reads again the Ticket, the work of a maintainer on it, the users who
-  acted on it, its audit log, and the reads of the Ticket list, its duplicates
-  included.
-- The outcome of Mark as duplicate…, Reopen, and Revert duplicate is announced
-  once the read of the Ticket after it arrives (above), as Sentinel returns
-  the Ticket: "Marked as a duplicate of SNTL-21."; and, with the status and
-  the assignee that the Ticket now has, "Reopened: Analysis, assigned to
-  you.", "Duplicate reverted: Analyzed, assigned to Bob Wilson.", or
-  "Reopened: Resolved, unassigned.". Actions shows on every tab, so a change
+  `reopen_from_ignored()`; `revert_duplicate()`). After each action of
+  Actions, the screen reads again the Ticket, the work of a maintainer on it,
+  the users who acted on it, its audit log, and the reads of the Ticket list,
+  its duplicates included.
+- The outcome of a change of the status is announced once the read of the
+  Ticket after it arrives (above), as Sentinel returns the Ticket: "Marked as
+  a duplicate of SNTL-21."; with the reason and the assignee that the Ticket
+  now has, "Ignored as Not shipped, assigned to you.", "Ignored as CVE
+  rejected, assigned to Bob Wilson.", or "Ignored as Other, unassigned."; and,
+  with the status and the assignee that the Ticket now has, "Reopened:
+  Analysis, assigned to you.", "Duplicate reverted: Analyzed, assigned to Bob
+  Wilson.", or "Reopened: Resolved, unassigned.". Actions shows on every tab, so a change
   of its menu ends elsewhere only once the user has left the screen, not the
   tab: its outcome, or its failure, then shows in the message area, starting
   with the Ticket (above). Until the read of the Ticket after a change
@@ -1925,6 +1975,26 @@ document, Manual-Zone Exception):
   Revert Duplicate Status); after the user left the screen, it has the
   presentation of its status. The screen handles no code of Rerun convergence
   specifically.
+- **Errors of Ignore… and Ignore as not shipped by SUSE.** A failure of
+  Ignore… shows in its form, which keeps the reason (`docs/behaviors.md`,
+  Where Errors Appear). The screen handles one code specifically, at Reason,
+  whose chosen reason takes the focus: `409 TICKET_CVE_NOT_REJECTED`, for
+  `cve_rejected` on a Ticket whose CVE is no longer rejected, as after a
+  revert of the rejection since the dialog opened, "CVE-2099-0027 is no
+  longer rejected. Choose another reason." (Sentinel
+  `docs/features/tickets/tickets.md`, Ignore Ticket); the read of the Ticket
+  after it shows the CVE published. A field error of a `VALIDATION_ERROR` for
+  `reason` also shows there. Every other failure shows at the top of the
+  form, which takes the focus, in the presentation of its status, as a
+  warning when Sentinel did not confirm the change (`docs/behaviors.md`,
+  Default Presentation by Status; Retries and Unconfirmed Changes), such as
+  the `409 TICKET_INVALID_TRANSITION` of a Ticket that became Analyzed
+  meanwhile or the `409 TICKET_NOT_MUTABLE` of one that became Ignored or
+  Duplicated. A failure that ends after the user left the screen shows in the
+  message area in the presentation of the dialog, starting with the Ticket
+  (Actions). A failure of Ignore as not shipped by SUSE shows in the message
+  area in the presentation of its status; the screen handles no code of it
+  specifically.
 - **Errors of Edit assignee.** A failure shows in the popover, which stays open
   (`docs/behaviors.md`, Where Errors Appear; Accessibility, Announcements). The
   screen handles three codes specifically, at the search field: `404
@@ -2124,7 +2194,8 @@ document, Manual-Zone Exception):
   (Identifier Disclosure Boundary; Coordinated Release Date); Ignore Reason;
   Response Schemas (Shared Sub-Schemas; TicketDetail;
   TicketConvergenceDispatchResponse); Get Ticket; List Tickets (Duplicate
-  filter); Assign Ticket; Mark Ticket as Duplicate; Reopen Ticket; Revert
+  filter); Assign Ticket; Ignore Ticket; Mark Ticket as Duplicate; Reopen
+  Ticket; Revert
   Duplicate Status; Rerun Ticket Convergence; Set Confidentiality; Access
   Grant Management (List Access Grants; Grant Access; Revoke Access)
 - Sentinel `docs/features/tickets/ticket-service.md` — `mark_as_duplicate`;

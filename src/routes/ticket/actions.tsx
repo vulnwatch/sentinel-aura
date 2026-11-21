@@ -1,4 +1,10 @@
-import { CirclePlay, ListRestart, Merge, Split } from "lucide-react";
+import {
+  CirclePause,
+  CirclePlay,
+  ListRestart,
+  Merge,
+  Split,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { Separator } from "react-aria-components";
 import {
@@ -13,6 +19,7 @@ import type {
 } from "../../api/generated/model";
 import {
   useGetTicket,
+  useIgnoreTicket,
   useReopenTicket,
   useRerunTicketConvergence,
   useRevertTicketDuplicate,
@@ -36,15 +43,34 @@ import { ticketStatusName } from "../../components/ticket-status";
 import { displayName } from "../../components/user";
 import { useSignedInUser } from "../../session-gate";
 import { useReadAfterTicketChange } from "../ticket-overview/shared";
+import { IgnoreDialog, ignoredText } from "./ignore";
 import { MarkDuplicateDialog } from "./mark-duplicate";
 
 // Actions, the menu at the end of the heading row of the Ticket screen
 // (src/routes/ticket.tsx; docs/design-system.md, Detail Screens), with the
 // changes of the status of the Ticket and Rerun convergence.
 
-// The actions of the menu, in its order: those of the status, then, apart,
-// Rerun convergence, a recovery of Sentinel's own work.
-type ActionId = "mark-duplicate" | "reopen" | "revert-duplicate" | "rerun";
+// The actions of the menu, in its order: those of the status, Ignore…
+// first, so that the keyboard, which opens the menu on its first item, opens
+// a dialog rather than ignoring at once; then, apart, Rerun convergence, a
+// recovery of Sentinel's own work.
+type ActionId =
+  | "ignore"
+  | "ignore-not-shipped"
+  | "mark-duplicate"
+  | "reopen"
+  | "revert-duplicate"
+  | "rerun";
+
+// The dialogs that an action opens.
+type DialogId = "ignore" | "mark-duplicate";
+
+// The statuses from which Sentinel ignores a Ticket (Sentinel
+// docs/features/tickets/tickets.md, Status Transitions; Ignore Ticket).
+const IGNORABLE_STATUSES = new Set<string>([
+  TicketStatusValue.new,
+  TicketStatusValue.analysis,
+]);
 
 // The statuses from which Sentinel marks a Ticket as a duplicate, its
 // operable statuses, and those in which it reruns its convergence: New is
@@ -75,6 +101,9 @@ function actionsOf(
 ): readonly ActionId[] {
   const triages = capabilities.includes("triage_ticket");
   const actions: ActionId[] = [];
+  if (triages && IGNORABLE_STATUSES.has(status)) {
+    actions.push("ignore", "ignore-not-shipped");
+  }
   if (triages && MARKABLE_STATUSES.has(status)) {
     actions.push("mark-duplicate");
   }
@@ -120,19 +149,21 @@ interface TicketActionsProps {
 }
 
 // Actions, for a user who can take at least one of its actions on the
-// Ticket, and while it is open, its change is in progress, or the dialog of
-// Mark as duplicate is open, which keep it as it started (docs/behaviors.md,
-// The Signed-in User). Mark as duplicate… opens its dialog; Reopen, Revert
+// Ticket, and while it is open, its change is in progress, or a dialog of
+// one of its items is open, which keep it as it started (docs/behaviors.md,
+// The Signed-in User). Ignore… and Mark as duplicate… open their dialogs;
+// the quick action that ignores the Ticket as not shipped, Reopen, Revert
 // duplicate, and Rerun convergence apply at once, without confirmation
 // (docs/behaviors.md, Confirmation): while one is in progress, its item is
 // busy, the other items are unavailable, and the menu cannot be closed; once
 // Sentinel answers, the menu closes and the focus returns to Actions. The
-// outcome of Reopen and Revert duplicate is announced once the read of the
+// outcome of a change of the status is announced once the read of the
 // Ticket after it arrives, or shows in the message area when that read
 // fails; Rerun convergence, which Sentinel accepts with 202, says in the
 // message area that it started. A failure shows in the message area; one
-// that says that the Ticket already left its status says so in the info
-// tone (docs/behaviors.md, Where Errors Appear; Outcome of a Change).
+// that says that the Ticket already left Ignored or Duplicated says so in
+// the info tone (docs/behaviors.md, Where Errors Appear; Outcome of a
+// Change).
 export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
   const ticketId = ticket.ticket_id;
   const user = useSignedInUser();
@@ -145,9 +176,11 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
   const readAgain = useReadAfterTicketChange(ticketId, true);
   const button = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  // Whether the dialog of Mark as duplicate is open, or opens once the menu
-  // has closed.
-  const [marking, setMarking] = useState<"opening" | "open">();
+  // The dialog that is open, or opens once the menu has closed.
+  const [dialog, setDialog] = useState<{
+    id: DialogId;
+    open: boolean;
+  }>();
   const [offeredAtOpen, setOfferedAtOpen] = useState<readonly ActionId[]>([]);
   // A failure of the UI itself, which the router shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
@@ -175,6 +208,20 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
       readAgain,
       (response: TicketDetailResponse) => {
         outcome.after(revertedText(response));
+      },
+    ),
+  });
+  // The quick action, which ignores the Ticket with the reason not_shipped
+  // (Sentinel docs/features/tickets/tickets.md, Ignore Ticket).
+  const ignoredOutcome = (response: TicketDetailResponse) =>
+    ignoredText(response, user?.id);
+  const ignore = useIgnoreTicket({
+    mutation: useChangeOutcome(
+      record,
+      ignoredOutcome,
+      readAgain,
+      (response: TicketDetailResponse) => {
+        outcome.after(ignoredOutcome(response));
       },
     ),
   });
@@ -214,11 +261,12 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
   if (uiFailure !== undefined) {
     throw uiFailure.error;
   }
-  const pending = reopen.isPending || revert.isPending || rerun.isPending;
+  const pending =
+    ignore.isPending || reopen.isPending || revert.isPending || rerun.isPending;
   // The menu cannot be closed while a change is in progress, and the dialog
   // opens from an item of the menu, so the items that the menu offered as
   // it opened are never empty then.
-  const shown = open || marking !== undefined ? offeredAtOpen : offered;
+  const shown = open || dialog !== undefined ? offeredAtOpen : offered;
   if (shown.length === 0) {
     return outcome.region;
   }
@@ -231,13 +279,31 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
     focusHeadingAfterClose(() => button.current);
   };
 
-  const run = async (action: Exclude<ActionId, "mark-duplicate">) => {
+  // The dialog returns the focus, as it closes, to the element that has it
+  // as it opens, so it opens once the menu has closed and React Aria has
+  // returned the focus to Actions, in a later frame in some browsers, rather
+  // than on the item, which leaves the page with the menu.
+  const openDialog = (id: DialogId) => {
+    setDialog({ id, open: false });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setDialog({ id, open: true });
+      });
+    });
+  };
+
+  const run = async (action: Exclude<ActionId, DialogId>) => {
     if (pending) {
       return;
     }
     try {
       if (action === "rerun") {
         await rerun.mutateAsync({ ticketId });
+      } else if (action === "ignore-not-shipped") {
+        await ignore.mutateAsync({
+          ticketId,
+          data: { reason: "not_shipped" },
+        });
       } else if (action === "reopen") {
         await reopen.mutateAsync({ ticketId });
       } else {
@@ -261,11 +327,14 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
         setUiFailure({ error: failure });
         return;
       }
-      const left = presentExitConflict(
-        failure,
-        ticketId,
-        action === "reopen" ? "Ignored" : "Duplicated",
-      );
+      const left =
+        action === "ignore-not-shipped"
+          ? undefined
+          : presentExitConflict(
+              failure,
+              ticketId,
+              action === "reopen" ? "Ignored" : "Duplicated",
+            );
       if (left !== undefined) {
         showMessage({ tone: "info", text: left });
         return;
@@ -300,23 +369,39 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
           compact={compact}
           ref={button}
         >
+          {shown.includes("ignore") && (
+            <MenuAction
+              id="ignore"
+              icon={CirclePause}
+              unavailable={pending}
+              onAction={() => {
+                openDialog("ignore");
+              }}
+            >
+              Ignore…
+            </MenuAction>
+          )}
+          {shown.includes("ignore-not-shipped") && (
+            <MenuAction
+              id="ignore-not-shipped"
+              icon={CirclePause}
+              busy={ignore.isPending ? "Ignoring." : undefined}
+              unavailable={pending && !ignore.isPending}
+              shouldCloseOnSelect={false}
+              onAction={() => {
+                void run("ignore-not-shipped");
+              }}
+            >
+              Ignore as not shipped by SUSE
+            </MenuAction>
+          )}
           {shown.includes("mark-duplicate") && (
             <MenuAction
               id="mark-duplicate"
               icon={Merge}
               unavailable={pending}
               onAction={() => {
-                // The dialog returns the focus, as it closes, to the element
-                // that has it as it opens, so it opens once the menu has
-                // closed and React Aria has returned the focus to Actions,
-                // in a later frame in some browsers, rather than on the
-                // item, which leaves the page with the menu.
-                setMarking("opening");
-                requestAnimationFrame(() => {
-                  requestAnimationFrame(() => {
-                    setMarking("open");
-                  });
-                });
+                openDialog("mark-duplicate");
               }}
             >
               Mark as duplicate…
@@ -356,6 +441,7 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
               id="rerun"
               icon={ListRestart}
               busy={rerun.isPending ? "Starting the convergence." : undefined}
+              unavailable={pending && !rerun.isPending}
               shouldCloseOnSelect={false}
               onAction={() => {
                 void run("rerun");
@@ -367,16 +453,31 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
         </ScreenActionsMenu>
       </FocusHandOff>
       {outcome.region}
-      {marking === "open" && (
+      {dialog?.open === true && dialog.id === "mark-duplicate" && (
         <MarkDuplicateDialog
           ticketId={ticketId}
           record={record}
           readAgain={readAgain}
           onClose={() => {
-            setMarking(undefined);
+            setDialog(undefined);
           }}
           onDone={(text) => {
-            setMarking(undefined);
+            setDialog(undefined);
+            outcome.after(text);
+          }}
+        />
+      )}
+      {dialog?.open === true && dialog.id === "ignore" && (
+        <IgnoreDialog
+          ticket={ticket}
+          record={record}
+          signedInUser={user?.id}
+          readAgain={readAgain}
+          onClose={() => {
+            setDialog(undefined);
+          }}
+          onDone={(text) => {
+            setDialog(undefined);
             outcome.after(text);
           }}
         />

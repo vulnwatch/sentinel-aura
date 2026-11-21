@@ -476,7 +476,7 @@ that the code imports ship.
 | Restore an excluded record | `undo-2` |
 | Refetch | `refresh-cw` |
 | Mark a record as a duplicate of another, and revert it | `merge`, `split` |
-| Reopen a record that is not worked, such as an ignored Ticket | `circle-play` |
+| Ignore a record, such as a Ticket, and reopen a record that is not worked, such as an ignored Ticket | `circle-pause`, `circle-play` |
 | Rerun a workflow of Sentinel from its beginning, such as the convergence of a Ticket | `list-restart` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy, an operation in progress (Other Values) | `loader-circle` |
@@ -1584,6 +1584,18 @@ states it, such as that of a Ticket; the other audit logs are tables
   inside the segment, in `on-accent` on the chosen one. The controls are
   8 px apart; groups of such controls take a heading in `text-14`, weight
   600, 8 px above their first control and 20 px below the group before.
+- A group of radio buttons chooses one value among a few whose meanings the
+  user reads before choosing, such as the reason of an ignored Ticket: its
+  label above it, as a field's, then its options 12 px apart, each its radio
+  button, a dot of 6 px in `on-accent` when selected, then, 8 px later, its
+  label in `text-15` and below the label its meaning in `text-13`,
+  `fg-muted`. The button, its label, and its meaning are one target, with
+  the focus ring around the button on keyboard focus; assistive technologies
+  read the label as the name of the option and its meaning as its
+  description. Its error follows the options, as a field's does, and gives
+  each button a 2 px boundary in `danger-icon`. A choice among a few short
+  values that need no meaning, such as the values of a metric of a CVSS
+  vector, is a segmented control instead (above).
 - A field whose value users copy character by character, such as a CVSS
   vector, shows its value in monospace (Font).
 - A select of a value of a record within the line of the record, whose

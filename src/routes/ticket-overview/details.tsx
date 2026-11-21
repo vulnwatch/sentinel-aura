@@ -1,5 +1,6 @@
 import { linkOptions } from "@tanstack/react-router";
 import { ClockAlert } from "lucide-react";
+import { TicketStatusValue } from "../../api/generated/model";
 import type { TicketDetail } from "../../api/generated/model";
 import { useListTickets } from "../../api/generated/tickets";
 import { AbsentValue } from "../../components/absent-value";
@@ -13,6 +14,7 @@ import {
   GroupedItem,
 } from "../../components/description-list";
 import { SideSection } from "../../components/detail-screen";
+import { ignoreReasonName } from "../../components/ignore-reason";
 import { Link } from "../../components/link";
 import { PartRead } from "../../components/read-view";
 import { type Assignee, AssigneeField } from "./assignee";
@@ -234,6 +236,15 @@ export function Details({ ticket, now, duplicates, assignee }: DetailsProps) {
         <DescriptionItem term="Assignee">
           <AssigneeField ticket={ticket} assignee={assignee} />
         </DescriptionItem>
+        {ticket.status === TicketStatusValue.ignored && (
+          <DescriptionItem term="Ignore reason">
+            {ticket.ignore_reason === null ? (
+              <AbsentValue />
+            ) : (
+              ignoreReasonName(ticket.ignore_reason)
+            )}
+          </DescriptionItem>
+        )}
         {(ticket.is_confidential || ticket.coordinated_release_at !== null) && (
           <DescriptionItem term="Coordinated Release Date">
             {ticket.coordinated_release_at === null ? (
