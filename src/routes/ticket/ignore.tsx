@@ -181,9 +181,11 @@ export function IgnoreDialog({
   // once React has rendered the error that it reads with it.
   const focusReason = () => {
     requestAnimationFrame(() => {
-      group.current
-        ?.querySelector<HTMLInputElement>("input:checked, input")
-        ?.focus();
+      const inputs = group.current;
+      (
+        inputs?.querySelector<HTMLInputElement>("input:checked") ??
+        inputs?.querySelector<HTMLInputElement>("input")
+      )?.focus();
     });
   };
 

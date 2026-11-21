@@ -1,4 +1,5 @@
 import {
+  CirclePause,
   CirclePlay,
   ListRestart,
   Merge,
@@ -69,8 +70,9 @@ import {
 // Actions, the menu of the actions of a Ticket at the end of the heading row
 // of the Ticket screen (src/routes/ticket/actions.tsx; docs/screens/ticket.md,
 // Actions), shown over Overview, at the browser's default text size, in the
-// light theme. The dialog of Mark as duplicate… has its own tests
-// (src/routes/ticket/mark-duplicate.test.tsx).
+// light theme. The dialogs of Ignore… and of Mark as duplicate… have their own
+// tests (src/routes/ticket/ignore.test.tsx;
+// src/routes/ticket/mark-duplicate.test.tsx).
 
 prepareEachTest();
 
@@ -132,6 +134,17 @@ function ticketIn(
   }
   return jsonResponse(200, {
     data: { ...fictionalTicketDetail({ ...extra, ...fields }), status },
+  });
+}
+
+// SNTL-12 Ignored, unassigned, with a reason that the pinned contract does
+// not list, as a later Sentinel release can return it.
+function ignoredForUnlistedReason(): Response {
+  return jsonResponse(200, {
+    data: {
+      ...fictionalTicketDetail({ status: "ignored", assignee: null }),
+      ignore_reason: "fictional_reason",
+    },
   });
 }
 
@@ -226,17 +239,32 @@ function editAssignee(screen: Screen) {
 }
 
 const ICONS: Record<string, LucideIcon> = {
+  "Ignore…": CirclePause,
+  "Ignore as not shipped by SUSE": CirclePause,
   "Mark as duplicate…": Merge,
   Reopen: CirclePlay,
   "Revert duplicate": Split,
   "Rerun convergence": ListRestart,
 };
 
+// The actions of a user who holds triage_ticket on a Ticket in New and in
+// Analysis, the ignores first.
+const IN_NEW = [
+  "Ignore…",
+  "Ignore as not shipped by SUSE",
+  "Mark as duplicate…",
+];
+const IN_ANALYSIS = [...IN_NEW, "Rerun convergence"];
+
+// The outcome of the quick action as Sentinel returns the Ticket after it,
+// assigned to the signed-in user.
+const IGNORED = "Ignored as Not shipped, assigned to you.";
+
 // The actions of a user who holds triage_ticket on a Ticket in each status
 // that the pinned contract lists.
 const OFFERED: [string, string[]][] = [
-  ["new", ["Mark as duplicate…"]],
-  ["analysis", ["Mark as duplicate…", "Rerun convergence"]],
+  ["new", IN_NEW],
+  ["analysis", IN_ANALYSIS],
   ["analyzed", ["Mark as duplicate…", "Rerun convergence"]],
   ["resolved", ["Mark as duplicate…", "Rerun convergence"]],
   ["ignored", ["Reopen"]],
@@ -311,15 +339,19 @@ describe("Actions", () => {
     },
   );
 
-  test.each(["new", "ignored", "duplicated"])(
-    "has no line on a Ticket in %s, with one action",
-    async (status) => {
+  test.each(
+    OFFERED.filter(([status]) =>
+      ["new", "ignored", "duplicated"].includes(status),
+    ),
+  )(
+    "has no line on a Ticket in %s, without Rerun convergence: %j",
+    async (status, items) => {
       showingStatus(status);
       const { screen } = await renderTicket();
 
       const menu = await openActions(screen);
 
-      await expect.poll(() => itemsOf(menu)).toHaveLength(1);
+      await expect.poll(() => itemsOf(menu)).toEqual(items);
       expect(menu.getByRole("separator").elements()).toHaveLength(0);
     },
   );
@@ -665,9 +697,7 @@ describe("Reopen and Revert duplicate", () => {
         .poll(() => announcements(screen))
         .toContain(`${done}: Analysis, assigned to you.`);
       const after = await openActions(screen);
-      await expect
-        .poll(() => itemsOf(after))
-        .toEqual(["Mark as duplicate…", "Rerun convergence"]);
+      await expect.poll(() => itemsOf(after)).toEqual(IN_ANALYSIS);
     },
   );
 
@@ -821,6 +851,174 @@ describe("Reopen and Revert duplicate", () => {
   );
 });
 
+describe("Ignore as not shipped by SUSE", () => {
+  test("applies at once with the reason not_shipped, with its item busy, the other items unavailable, and the menu open until Sentinel answers, then closes the menu, returns the focus to Actions, and announces the outcome as Sentinel returns the Ticket once the read of the Ticket after it arrives", async () => {
+    const response = later();
+    const reread = later();
+    let changed = false;
+    const spy = showingStatus("analysis", {
+      ticket: () => (changed ? reread.promise : ticketIn("analysis")),
+      ticketChange: () => {
+        changed = true;
+        return response.promise;
+      },
+    });
+    const { screen } = await renderTicket();
+    const reads = requestsTo(spy, TICKET);
+
+    const menu = await choose(screen, "Ignore as not shipped by SUSE");
+
+    const item = itemOf(menu, "Ignore as not shipped by SUSE");
+    await expect.element(item).toHaveAccessibleDescription("Ignoring.");
+    expect(animationsIn(item.element())).toEqual(["spin"]);
+    expect(changesOf(spy)).toEqual([["ignore", { reason: "not_shipped" }]]);
+    const others = ["Ignore…", "Mark as duplicate…", "Rerun convergence"];
+    for (const name of others) {
+      await expect
+        .element(itemOf(menu, name))
+        .toHaveAttribute("aria-disabled", "true");
+    }
+    await userEvent.keyboard("{Escape}");
+    interactOutside();
+    await nextFrames();
+    await expect.element(menu).toBeVisible();
+    await item.click();
+    for (const name of others) {
+      await itemOf(menu, name).click({ force: true });
+    }
+    await frames();
+    await expect.element(menu).toBeVisible();
+    for (const name of ["Ignore SNTL-12", "Mark SNTL-12 as a duplicate"]) {
+      expect(screen.getByRole("dialog", { name }).query()).toBeNull();
+    }
+    expect(changesOf(spy)).toHaveLength(1);
+
+    response.resolve(ticketIn("ignored", { assignee: YOU }));
+
+    await expect.element(menu).not.toBeInTheDocument();
+    await expect.element(actionsButton(screen)).toHaveFocus();
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
+    await frames();
+    expect(announcements(screen)).not.toContain("Ignored");
+    // The read shows the Ticket as a later change left it: the outcome
+    // states the Ticket as Sentinel returned it after this one.
+    reread.resolve(
+      ticketIn("ignored", { ignore_reason: "other", assignee: BOB }),
+    );
+
+    await expect.poll(() => announcements(screen)).toContain(IGNORED);
+    expect(shownOutsideStatus(screen, IGNORED)).toHaveLength(0);
+    // Actions stays, with the focus, and offers the actions of the status
+    // that the read shows.
+    expect(document.activeElement).toBe(actionsButton(screen).element());
+    const again = await openActions(screen);
+    await expect.poll(() => itemsOf(again)).toEqual(["Reopen"]);
+  });
+
+  test.each<[string, string, TicketDetail["assignee"], string]>([
+    ["new", "you, an unassigned Ticket's new assignee", YOU, IGNORED],
+    [
+      "analysis",
+      "another user",
+      BOB,
+      "Ignored as Not shipped, assigned to Bob Wilson.",
+    ],
+    ["analysis", "no one", null, "Ignored as Not shipped, unassigned."],
+  ])(
+    "on a Ticket in %s announces the reason and the assignee that Sentinel returns, %s",
+    async (status, _, assignee, text) => {
+      let changed = false;
+      showingStatus(status, {
+        ticket: () =>
+          changed ? ticketIn("ignored", { assignee }) : ticketIn(status),
+        ticketChange: () => {
+          changed = true;
+          return ticketIn("ignored", { assignee });
+        },
+      });
+      const { screen } = await renderTicket();
+
+      await choose(screen, "Ignore as not shipped by SUSE");
+
+      await expect.poll(() => announcements(screen)).toContain(text);
+    },
+  );
+
+  test("announces a reason that the pinned contract does not list as received", async () => {
+    let changed = false;
+    showingStatus("analysis", {
+      ticket: () =>
+        changed ? ignoredForUnlistedReason() : ticketIn("analysis"),
+      ticketChange: () => {
+        changed = true;
+        return ignoredForUnlistedReason();
+      },
+    });
+    const { screen } = await renderTicket();
+
+    await choose(screen, "Ignore as not shipped by SUSE");
+
+    await expect
+      .poll(() => announcements(screen))
+      .toContain("Ignored as fictional_reason, unassigned.");
+  });
+
+  test("shows the outcome in the message area when the read of the Ticket after it fails", async () => {
+    let changed = false;
+    showingStatus("analysis", {
+      ticket: () =>
+        changed
+          ? errorResponse(503, "SERVICE_UNAVAILABLE")
+          : ticketIn("analysis"),
+      ticketChange: () => {
+        changed = true;
+        return ticketIn("ignored", { assignee: YOU });
+      },
+    });
+    const { screen } = await renderTicket();
+
+    await choose(screen, "Ignore as not shipped by SUSE");
+
+    await expectSuccessMessage(screen, IGNORED);
+    expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
+  });
+
+  test("leaves an answer that the UI cannot show to the page of a failure of the UI", async () => {
+    // The answer of a later release that lacks the Ticket, whose reason and
+    // assignee the outcome cannot state.
+    showingStatus("analysis", { ticketChange: () => jsonResponse(200, {}) });
+    const { screen } = await renderTicket();
+
+    await choose(screen, "Ignore as not shipped by SUSE");
+
+    await expect
+      .element(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "Something went wrong",
+        }),
+      )
+      .toBeVisible();
+  });
+
+  test("handles no code specifically: 409 TICKET_INVALID_TRANSITION, of a Ticket that became Analyzed meanwhile, shows in the message area in the presentation of its status", async () => {
+    const spy = showingStatus("analysis", {
+      ticketChange: () => errorResponse(409, "TICKET_INVALID_TRANSITION"),
+    });
+    const { screen } = await renderTicket();
+    const reads = requestsTo(spy, TICKET);
+
+    await choose(screen, "Ignore as not shipped by SUSE");
+
+    const error = screen.getByText(MESSAGE_CONFLICT, { exact: true });
+    await expect.element(error).toBeVisible();
+    expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES.danger);
+    expect(screen.getByText(/is no longer/).query()).toBeNull();
+    await expect.element(actionsButton(screen)).toHaveFocus();
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
+  });
+});
+
 // The failures of a change of Actions that show in the message area in the
 // presentation of their status (docs/behaviors.md, Default Presentation by
 // Status; Retries and Unconfirmed Changes): the failure, its message, its
@@ -900,6 +1098,7 @@ const FAILURES: [
 // The actions that apply at once, with the status of the Ticket that offers
 // each.
 const AT_ONCE: [string, string][] = [
+  ["Ignore as not shipped by SUSE", "new"],
   ["Reopen", "ignored"],
   ["Revert duplicate", "duplicated"],
   ["Rerun convergence", "analysis"],
@@ -956,20 +1155,23 @@ describe("Rerun convergence", () => {
       .element(rerun)
       .toHaveAccessibleDescription("Starting the convergence.");
     expect(animationsIn(rerun.element())).toEqual(["spin"]);
-    const mark = itemOf(menu, "Mark as duplicate…");
-    await expect.element(mark).toHaveAttribute("aria-disabled", "true");
+    for (const name of IN_NEW) {
+      await expect
+        .element(itemOf(menu, name))
+        .toHaveAttribute("aria-disabled", "true");
+    }
     expect(changesOf(spy)).toEqual([["rerun-reactivation", undefined]]);
     await userEvent.keyboard("{Escape}");
     interactOutside();
     await rerun.click();
-    await mark.click({ force: true });
+    for (const name of IN_NEW) {
+      await itemOf(menu, name).click({ force: true });
+    }
     await frames();
     await expect.element(menu).toBeVisible();
-    expect(
-      screen
-        .getByRole("dialog", { name: "Mark SNTL-12 as a duplicate" })
-        .query(),
-    ).toBeNull();
+    for (const name of ["Ignore SNTL-12", "Mark SNTL-12 as a duplicate"]) {
+      expect(screen.getByRole("dialog", { name }).query()).toBeNull();
+    }
     expect(changesOf(spy)).toHaveLength(1);
 
     response.resolve(convergenceResponse());
@@ -983,10 +1185,12 @@ describe("Rerun convergence", () => {
     expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
     // Actions stays, with the same items, available again.
     const again = await openActions(screen);
-    await expect
-      .element(itemOf(again, "Mark as duplicate…"))
-      .not.toHaveAttribute("aria-disabled");
-    expect(itemsOf(again)).toEqual(["Mark as duplicate…", "Rerun convergence"]);
+    for (const name of IN_NEW) {
+      await expect
+        .element(itemOf(again, name))
+        .not.toHaveAttribute("aria-disabled");
+    }
+    expect(itemsOf(again)).toEqual(IN_ANALYSIS);
   });
 
   test("starts the convergence for a user who holds manage_fetchers alone", async () => {
@@ -1063,6 +1267,13 @@ describe("an action that ends after the user left the screen", () => {
     [string, string, () => Response, keyof typeof MESSAGE_TONES, string]
   >([
     [
+      "Ignore as not shipped by SUSE",
+      "analysis",
+      () => ticketIn("ignored", { assignee: YOU }),
+      "success",
+      IGNORED,
+    ],
+    [
       "Reopen",
       "ignored",
       () =>
@@ -1121,6 +1332,24 @@ describe("an action that ends after the user left the screen", () => {
     ]
   >([
     [
+      "Ignore as not shipped by SUSE",
+      "409 TICKET_INVALID_TRANSITION, in the presentation of its status",
+      "analysis",
+      () => errorResponse(409, "TICKET_INVALID_TRANSITION"),
+      MESSAGE_CONFLICT,
+      "danger",
+      false,
+    ],
+    [
+      "Ignore as not shipped by SUSE",
+      "a 503, as a warning with its reference",
+      "new",
+      () => errorResponse(503, "SERVICE_UNAVAILABLE"),
+      MESSAGE_UNCONFIRMED,
+      "warning",
+      true,
+    ],
+    [
       "Reopen",
       "409 TICKET_INVALID_TRANSITION, in the presentation of its status",
       "ignored",
@@ -1176,6 +1405,59 @@ describe("an action that ends after the user left the screen", () => {
   );
 });
 
+describe("Ignore…", () => {
+  test("opens its dialog once the menu has closed, its first reason taking the focus, without a request, and the focus returns to Actions as the dialog closes on Cancel", async () => {
+    const spy = showingStatus("analysis");
+    const { screen } = await renderTicket();
+
+    const menu = await choose(screen, "Ignore…");
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Ignore SNTL-12",
+      exact: true,
+    });
+    await expect
+      .element(dialog.getByRole("radio", { name: "Not shipped", exact: true }))
+      .toHaveFocus();
+    expect(menu.query()).toBeNull();
+    expect(changesOf(spy)).toEqual([]);
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsButton(screen));
+    expect(changesOf(spy)).toEqual([]);
+  });
+
+  test.each(["new", "analysis"])(
+    "opens its dialog from the keyboard on a Ticket in %s, the menu opening on Ignore…, its first item, so that Enter opens a dialog rather than ignoring at once, and the focus returns to Actions as Escape closes it",
+    async (status) => {
+      const spy = showingStatus(status);
+      const { screen } = await renderTicket();
+      actionsButton(screen).element().focus();
+      await userEvent.keyboard("{Enter}");
+      const menu = actionsMenu(screen);
+      await expect.element(itemOf(menu, "Ignore…")).toHaveFocus();
+
+      await userEvent.keyboard("{Enter}");
+
+      const dialog = screen.getByRole("dialog", {
+        name: "Ignore SNTL-12",
+        exact: true,
+      });
+      await expect
+        .element(
+          dialog.getByRole("radio", { name: "Not shipped", exact: true }),
+        )
+        .toHaveFocus();
+      expect(changesOf(spy)).toEqual([]);
+      await userEvent.keyboard("{Escape}");
+      await expect.element(dialog).not.toBeInTheDocument();
+      await expectFocusSettledOn(actionsButton(screen));
+      expect(changesOf(spy)).toEqual([]);
+    },
+  );
+});
+
 describe("Mark as duplicate…", () => {
   test("opens its dialog once the menu has closed, its field taking the focus, and the focus returns to Actions as the dialog closes on Cancel", async () => {
     showingStatus("analyzed");
@@ -1203,6 +1485,9 @@ describe("Mark as duplicate…", () => {
     actionsButton(screen).element().focus();
     await userEvent.keyboard("{Enter}");
     const menu = actionsMenu(screen);
+    // The menu opens on its first item, Ignore…, before it.
+    await expect.element(itemOf(menu, "Ignore…")).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
     await expect.element(itemOf(menu, "Mark as duplicate…")).toHaveFocus();
 
     await userEvent.keyboard("{Enter}");
