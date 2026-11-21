@@ -475,6 +475,9 @@ that the code imports ship.
 | Exclude a record | `ban` |
 | Restore an excluded record | `undo-2` |
 | Refetch | `refresh-cw` |
+| Mark a record as a duplicate of another, and revert it | `merge`, `split` |
+| Reopen a record that is not worked, such as an ignored Ticket | `circle-play` |
+| Rerun a workflow of Sentinel from its beginning, such as the convergence of a Ticket | `list-restart` |
 | A recorded action without an actor | The Sentinel mark, which is not a Lucide icon (Representation of a User) |
 | Loading, busy, an operation in progress (Other Values) | `loader-circle` |
 | A Ticket status, a milestone status, a status of a source of a CVE, a state of a request, or an event type that the pinned contract does not list | `circle-question-mark` |
@@ -1307,8 +1310,14 @@ states it, such as that of a Ticket; the other audit logs are tables
   (`docs/behaviors.md`, Absent Values). Several actions are one menu, Actions,
   a secondary button that opens them as a menu (Buttons and Links; Menus,
   Popovers, and Tooltips), shown to a user who can take at least one of them
-  (`docs/screen-map.md`, Roles); an action that changes one field of the
-  record's description list is the pencil of that field instead (below).
+  (`docs/screen-map.md`, Roles), and named with its record for assistive
+  technologies, such as "Actions of SNTL-42"; its menu opens below its end,
+  as that of the actions of a record within a part does; an action that
+  changes one field of the record's description list is the pencil of that
+  field instead (below). The row is at least as high as its actions, 36 px,
+  or 32 px in the compact heading (below), also for a user to whom they do
+  not show and before the record arrives, so that what follows it, such as
+  the tabs, keeps its place.
 - A screen document can show the parts of a long record one at a time, as
   tabs at paths under the path of the screen (`docs/screen-map.md`, Areas and
   Screens). The tabs follow the heading row, 12 px below it, in a row with a
@@ -1471,11 +1480,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   `chevron-down` and opens its options as a menu below it, at least as wide
   as it, its groups of options separated by `border` lines, and shows the
   chosen option as the option shows; a combobox is a field that opens its
-  options below it. Their options that are users show in the full form at
-  the small size, and while options that they read load, or when their read
-  fails, the loading indicator or the message of the failure shows in their
-  place, as does, in a combobox, a line such as "No users match." when none
-  matches; a select keeps the options that do not depend on the read. A
+  options below it, or above it where they do not fit below it and the
+  window has more room above. Their options that are users show in the full
+  form at the small size, and while options that they read load, or when
+  their read fails, the loading indicator or the message of the failure
+  shows in their place, as does, in a combobox, a line such as "No users
+  match." when none matches; a select keeps the options that do not depend
+  on the read. A
   checkbox or a radio button is 16 px, with a `border-strong` boundary, a
   4 px radius or round, and when selected an `accent` fill with its mark in
   `on-accent`; a date field shows its parts as `docs/behaviors.md` (Input)
@@ -1490,8 +1501,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   `docs/features/identity/user-management.md`, List Users). Once the user has
   typed at least 2 characters, without their surrounding whitespace, the
   shortest term that List Users searches, and has paused for 250 ms, it reads
-  the first 20 users that match, by username, and opens them below the field,
-  each in the full form at the small size with the username and the labels
+  the first 20 users that match, by username, and opens them, each in the
+  full form at the small size with the username and the labels
   (`docs/behaviors.md`, Representation of a User). With fewer characters, the
   menu says "Enter at least 2 characters.", without users that match "No
   users match.", and, below the users, when more match, how many, such as
@@ -1521,15 +1532,21 @@ states it, such as that of a Ticket; the other audit logs are tables
   names of the packages that SMELT maintains, follows the combobox of users:
   from 2 characters without their surrounding whitespace, after a pause of
   250 ms, it reads the first 20 that match, in the order that its screen
-  document states, and opens them below the field, each as its text, with the
+  document states, and opens them, each as its text, with the
   line of none that matches, the line of how many more match, the loading
   indicator, and the message of a failure as there, in the words of its
-  screen document. Where its value is the text that the user types, which
-  the options only help to find, such as the name of a package, the field
-  takes a text that no option holds, choosing an option writes its text in
-  the field, and below 2 characters the menu stays closed without a line,
-  since a shorter value can be valid; its text, other than whitespace, is
-  input not yet submitted (`docs/behaviors.md`, Confirmation).
+  screen document. An option can hold two lines where its screen document
+  states them, such as a Ticket with its status above its CVE ID: the second
+  in `text-13`, `fg-muted`, cut with an ellipsis, 6 px from the edges of the
+  option, which is as high as they need. A record that the field does not
+  offer, which its screen document names, shows the label that says why and
+  is disabled, as a user is. Where its value is the text that the user
+  types, which the options only help to find, such as the name of a package
+  or the identifier of a Ticket, the field takes a text that no option
+  holds, choosing an option writes its text in the field, and below 2
+  characters the menu stays closed without a line, since a shorter value can
+  be valid; its text, other than whitespace, is input not yet submitted
+  (`docs/behaviors.md`, Confirmation).
 - The calendar of a date field opens in a popover (Menus, Popovers, and
   Tooltips), below the field and aligned to its start, or above it where
   the window has no room below, and moved toward the start where it would

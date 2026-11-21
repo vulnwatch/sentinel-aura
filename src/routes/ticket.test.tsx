@@ -9,7 +9,11 @@ import { page, userEvent, type Locator } from "vitest/browser";
 import { cleanup, render, renderHook } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
-import type { CVEDetail, TicketDetail } from "../api/generated/model";
+import type {
+  CVEDetail,
+  CurrentUserResponse,
+  TicketDetail,
+} from "../api/generated/model";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { useShownTicket } from "./ticket";
@@ -69,6 +73,8 @@ afterEach(async () => {
 });
 
 interface Stub {
+  // The signed-in user, or the user at each read of it.
+  user: CurrentUserResponse | (() => CurrentUserResponse);
   // The response to Get Ticket of the path.
   ticket: (path: string) => Response | Promise<Response>;
   // The response to the read of the CVSS assessments of the CVE.
@@ -79,13 +85,14 @@ interface Stub {
   actors: () => Response | Promise<Response>;
 }
 
-// Answers the read of the signed-in user, an analyst, Get Ticket, the read
-// of the CVSS assessments, and the read of the sources of the CVE, as the
-// test sets them, the duplicates, the users who acted on a Ticket, and its
-// access grants with none, and returns the spy, whose calls name the
+// Answers the read of the signed-in user, by default an analyst, Get Ticket,
+// the read of the CVSS assessments, and the read of the sources of the CVE,
+// as the test sets them, the duplicates, the users who acted on a Ticket, and
+// its access grants with none, and returns the spy, whose calls name the
 // requests.
 function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
+    user: OTHER_USER,
     ticket: () => ticketResponse(fictionalTicketDetail()),
     cvss: () => cvssResponse(),
     sources: () => sourcesResponse(),
@@ -94,7 +101,10 @@ function stubTicket(fields: Partial<Stub> = {}) {
   };
   return stubApi((request) => {
     if (request.path === ME) {
-      return jsonResponse(200, OTHER_USER);
+      return jsonResponse(
+        200,
+        typeof stub.user === "function" ? stub.user() : stub.user,
+      );
     }
     if (request.path === TICKETS) {
       return ticketPage([]);
@@ -146,6 +156,14 @@ function heading(screen: Screen, name: string) {
 
 function region(screen: Screen, name: string) {
   return screen.getByRole("region", { name, exact: true });
+}
+
+// Actions, the menu of the actions of SNTL-12 at the end of the heading row.
+function actionsOf(screen: Screen) {
+  return screen.getByRole("button", {
+    name: "Actions of SNTL-12",
+    exact: true,
+  });
 }
 
 // The value of a field of the details, by its term: the definition of the
@@ -225,6 +243,25 @@ function fromNow(duration: number): string {
 // The rectangle of an element on the screen.
 function boxOf(locator: Locator): DOMRect {
   return locator.element().getBoundingClientRect();
+}
+
+// The vertical middle of a rectangle.
+function middle(box: DOMRect): number {
+  return (box.top + box.bottom) / 2;
+}
+
+// The analyst of OTHER_USER after a read of the signed-in user took their
+// capabilities away: a user who can take none of the actions of Actions.
+const WITHOUT_CAPABILITIES: CurrentUserResponse = {
+  data: { ...OTHER_USER.data, roles: [], capabilities: [] },
+};
+
+// Returns the tab to the foreground once no read is in progress, after which
+// the screen reads the signed-in user and the Ticket again.
+async function returnToForeground() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
 }
 
 // The scroll padding of the page, in CSS pixels. It follows the height of the
@@ -473,6 +510,113 @@ describe("the heading row", () => {
     ]);
     expect(textsOf(screen.getByRole("term"))).not.toContain("Deadline");
   });
+
+  test("ends with Actions, named by the Ticket, on the line of the heading, for an analyst once the Ticket has arrived, not before", async () => {
+    const response = later();
+    stubTicket({ ticket: () => response.promise });
+    const { screen } = await renderApp("/tickets/SNTL-12");
+    await expect.element(heading(screen, "Ticket")).toBeVisible();
+    await expect
+      .element(screen.getByRole("tab", { name: "Overview" }))
+      .toBeVisible();
+    expect(screen.getByRole("button", { name: /^Actions/ }).query()).toBeNull();
+
+    response.resolve(ticketResponse(fictionalTicketDetail()));
+
+    const actions = actionsOf(screen);
+    await expect.element(actions).toBeVisible();
+    expect(actions.element().textContent).toBe("Actions");
+    // After the main values, at the end of the row, which the line of the
+    // tabs spans.
+    const priority = screen.getByRole("button", { name: "P2", exact: true });
+    expect(
+      priority.element().compareDocumentPosition(actions.element()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(boxOf(actions).left).toBeGreaterThan(boxOf(priority).right);
+    expect(boxOf(actions).right).toBe(
+      boxOf(screen.getByRole("tablist", { name: "Ticket" })).right,
+    );
+    expect(
+      Math.abs(
+        middle(boxOf(actions)) - middle(boxOf(heading(screen, "SNTL-12"))),
+      ),
+    ).toBeLessThanOrEqual(1);
+  });
+
+  test.each([
+    ["References", "/tickets/SNTL-12/references"],
+    ["Affected versions", "/tickets/SNTL-12/affected-versions"],
+    ["Audit log", "/tickets/SNTL-12/audit-log"],
+  ])("ends with Actions on %s", async (tab, path) => {
+    // The lists that the tab reads under the path of the Ticket are empty.
+    stubTicket({
+      ticket: (requested) =>
+        requested === `${TICKETS}/SNTL-12`
+          ? ticketResponse(fictionalTicketDetail())
+          : jsonResponse(200, {
+              data: [],
+              meta: { total: 0, page: 1, per_page: 50 },
+            }),
+    });
+
+    const { screen } = await renderTicket(path);
+
+    await expect
+      .element(screen.getByRole("tab", { name: tab }))
+      .toHaveAttribute("aria-selected", "true");
+    await expect.element(actionsOf(screen)).toBeVisible();
+    expect(boxOf(actionsOf(screen)).right).toBe(
+      boxOf(screen.getByRole("tablist", { name: "Ticket" })).right,
+    );
+  });
+
+  test("keeps Actions at the end of its line where the row wraps", async () => {
+    await page.viewport(414, 896);
+    showing(fictionalTicketDetail({ is_confidential: true }));
+
+    const { screen } = await renderTicket();
+
+    const actions = actionsOf(screen);
+    await expect.element(actions).toBeVisible();
+    // The row wraps: Actions is on a line below the heading.
+    expect(boxOf(actions).top).toBeGreaterThan(
+      boxOf(heading(screen, "SNTL-12")).bottom,
+    );
+    expect(boxOf(actions).right).toBe(
+      boxOf(screen.getByRole("tablist", { name: "Ticket" })).right,
+    );
+  });
+
+  test("keeps the tabs in their place as the Ticket arrives, with Actions at the end of the row", async () => {
+    const response = later();
+    stubTicket({ ticket: () => response.promise });
+    const { screen } = await renderApp("/tickets/SNTL-12");
+    await expect.element(heading(screen, "Ticket")).toBeVisible();
+    const tabs = screen.getByRole("tablist", { name: "Ticket" });
+    await expect.element(tabs).toBeVisible();
+    const top = boxOf(tabs).top;
+
+    response.resolve(ticketResponse(fictionalTicketDetail()));
+
+    await expect.element(actionsOf(screen)).toBeVisible();
+    expect(boxOf(tabs).top).toBe(top);
+  });
+
+  test("keeps the tabs in their place whether Actions shows or not, as a read of the signed-in user leaves an analyst none of its actions and Actions goes", async () => {
+    let user = OTHER_USER;
+    stubTicket({ user: () => user });
+    const { screen } = await renderTicket();
+    await expect.element(actionsOf(screen)).toBeVisible();
+    const tabs = screen.getByRole("tablist", { name: "Ticket" });
+    const top = boxOf(tabs).top;
+    user = WITHOUT_CAPABILITIES;
+
+    await returnToForeground();
+
+    await expect.element(actionsOf(screen)).not.toBeInTheDocument();
+    expect(boxOf(tabs).top).toBe(top);
+  });
 });
 
 describe("the layout", () => {
@@ -599,13 +743,18 @@ describe("the layout", () => {
     const cve = region(screen, "CVE-2099-0012");
     const cveTop = boxOf(cve).top + window.scrollY;
     expect(getComputedStyle(title.element()).fontSize).toBe("20px");
+    // Actions, 36 px high, the tallest element of the heading row, whose top
+    // it sets.
+    const actions = actionsOf(screen);
+    expect(boxOf(actions).height).toBe(36);
+    expect(boxOf(actions).top).toBeLessThanOrEqual(boxOf(title).top);
     // The window scrolls an element into view below the heading row, which
     // can stay at the top of the window.
     await expect
       .poll(scrollPaddingTop)
       .toBe(
         boxOf(screen.getByRole("tab", { name: "Overview" })).bottom -
-          boxOf(title).top,
+          boxOf(actions).top,
       );
 
     window.scrollTo(0, 120);
@@ -613,8 +762,11 @@ describe("the layout", () => {
     await expect
       .poll(() => getComputedStyle(title.element()).fontSize)
       .toBe("16px");
-    // 10 px of space above the heading row, at the top of the window.
-    expect(boxOf(title).top).toBe(10);
+    // 10 px of space above the heading row, at the top of the window, which
+    // Actions, 32 px high in the compact heading, starts.
+    expect(boxOf(actions).height).toBe(32);
+    expect(boxOf(actions).top).toBe(10);
+    expect(boxOf(actions).top).toBeLessThanOrEqual(boxOf(title).top);
     // The content does not move when the heading becomes compact.
     expect(boxOf(cve).top + window.scrollY).toBe(cveTop);
     // The window scrolls an element into view below the compact heading,
@@ -634,6 +786,31 @@ describe("the layout", () => {
     await expect
       .poll(() => getComputedStyle(title.element()).fontSize)
       .toBe("20px");
+  });
+
+  test("keeps the tabs of the compact heading in their place whether Actions shows or not", async () => {
+    await page.viewport(1280, 300);
+    let user = OTHER_USER;
+    stubTicket({
+      user: () => user,
+      ticket: () => ticketResponse(fictionalTicketDetail({ cve: longCve() })),
+    });
+    const { screen } = await renderTicket();
+    const title = heading(screen, "SNTL-12");
+    window.scrollTo(0, 120);
+    await expect
+      .poll(() => getComputedStyle(title.element()).fontSize)
+      .toBe("16px");
+    await expect.element(actionsOf(screen)).toBeVisible();
+    const tabs = screen.getByRole("tablist", { name: "Ticket" });
+    const top = boxOf(tabs).top;
+    user = WITHOUT_CAPABILITIES;
+
+    await returnToForeground();
+
+    await expect.element(actionsOf(screen)).not.toBeInTheDocument();
+    expect(getComputedStyle(title.element()).fontSize).toBe("16px");
+    expect(boxOf(tabs).top).toBe(top);
   });
 
   test("scrolls the page until an element of a side column taller than the window shows when it takes the focus from the keyboard, at the end of the page and back above it, below the compact heading", async () => {

@@ -72,13 +72,18 @@ export function duplicatesOf(ticketId: string) {
   } as const;
 }
 
-// Reads again what an assignment or an edit of the package tree affects: the
-// Ticket, whose status, assignee, and package tree it can change, the work of
-// a maintainer on it, the users who acted on it, its audit log, and the reads
-// of the Ticket list, but for the duplicates of the Ticket, whose
-// identifiers, confidentiality, and number a change of their original does
-// not change (docs/behaviors.md, Outcome of a Change).
-export function useReadAfterTicketChange(ticketId: string) {
+// Reads again what a change of the Ticket affects: the Ticket, whose status,
+// assignee, and package tree it can change, the work of a maintainer on it,
+// the users who acted on it, its audit log, and the reads of the Ticket
+// list; but for the duplicates of the Ticket after an assignment or an edit
+// of the package tree, which changes neither their identifiers, their
+// confidentiality, nor their number, and with them after a change of the
+// status of the Ticket, which can move them to another original
+// (docs/behaviors.md, Outcome of a Change).
+export function useReadAfterTicketChange(
+  ticketId: string,
+  withDuplicates = false,
+) {
   const client = useQueryClient();
   return useCallback(() => {
     for (const queryKey of [
@@ -94,9 +99,10 @@ export function useReadAfterTicketChange(ticketId: string) {
     );
     void client.invalidateQueries({
       queryKey: getListTicketsQueryKey(),
-      predicate: (query) => JSON.stringify(query.queryKey) !== duplicates,
+      predicate: (query) =>
+        withDuplicates || JSON.stringify(query.queryKey) !== duplicates,
     });
-  }, [client, ticketId]);
+  }, [client, ticketId, withDuplicates]);
 }
 
 interface InlineFieldProps {

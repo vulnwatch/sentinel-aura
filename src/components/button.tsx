@@ -1,5 +1,5 @@
 import { LoaderCircle, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   Button as AriaButton,
   type ButtonProps as AriaButtonProps,
@@ -15,6 +15,9 @@ export type ButtonProps = Omit<
   // The icon before the label, at 16 px, hidden from assistive technologies,
   // since the label names the action.
   icon?: LucideIcon | undefined;
+  // The icon after the label, at 16 px, hidden from assistive technologies,
+  // such as the chevron-down of a button that opens a menu.
+  endIcon?: LucideIcon | undefined;
   // Primary for the main action of a screen, a form, or a dialog, one per
   // screen part; secondary for every other action, such as Try again; quiet,
   // without a fill or a boundary, for Cancel in a form, Clear filters, and
@@ -27,6 +30,7 @@ export type ButtonProps = Omit<
   size?: "small" | "medium" | "large";
   // Whether the change that the button started is in progress.
   isBusy?: boolean;
+  ref?: Ref<HTMLButtonElement> | undefined;
 };
 
 const VARIANTS = {
@@ -57,6 +61,7 @@ const SIZES = {
 export function Button({
   children,
   icon: Icon,
+  endIcon: EndIcon,
   variant = "secondary",
   size = "medium",
   isBusy = false,
@@ -81,6 +86,7 @@ export function Button({
         Icon !== undefined && <Icon aria-hidden className="size-4" />
       )}
       {children}
+      {EndIcon !== undefined && <EndIcon aria-hidden className="size-4" />}
     </AriaButton>
   );
 }

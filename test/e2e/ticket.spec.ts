@@ -3589,12 +3589,12 @@ test.describe("the references", () => {
     "adds a reference that the filters hide, with its outcome in the message area, then edits it and deletes it, after which the focus moves to Add reference",
     { tag: "@changes-data" },
     async ({ page }) => {
-      // SNTL-17, Ignored, has no reference, and no other test opens it, so
-      // its references, its audit log, and its participants are this test's
-      // own (Tickets; References). A change of a reference is valid in every
-      // status (Sentinel docs/features/tickets/ticket-references.md,
-      // Manual-Zone Exception). The tab opens with the filter of the
-      // advisories.
+      // SNTL-17, Ignored, has no reference, and no other test of this
+      // project opens it, so its references, its audit log, and its
+      // participants are this test's own (Tickets; References). A change of
+      // a reference is valid in every status (Sentinel
+      // docs/features/tickets/ticket-references.md, Manual-Zone Exception).
+      // The tab opens with the filter of the advisories.
       await signIn(page, "asmith");
       await openReferences(page, "SNTL-17", "?type=advisory");
       await expect(noReferences(page)).toBeVisible();
@@ -3942,6 +3942,733 @@ test.describe("the affected versions", () => {
     await expect(affectedPackages(page)).toHaveCount(0);
     await expectScreenshot(page, "ticket-affected-versions-empty.png");
   });
+});
+
+// Actions, the menu at the end of the heading row, named after the Ticket.
+function actionsButton(page: Page, ticketId: string) {
+  return page.getByRole("button", {
+    name: `Actions of ${ticketId}`,
+    exact: true,
+  });
+}
+
+// The menu of Actions, which takes the name of its button.
+function actionsMenu(page: Page, ticketId: string) {
+  return page.getByRole("menu", {
+    name: `Actions of ${ticketId}`,
+    exact: true,
+  });
+}
+
+// Opens the menu of Actions with a click, and returns it once it shows. The
+// heading row arrives with the Ticket, so the test calls this once the
+// Ticket has arrived.
+async function openActions(page: Page, ticketId: string) {
+  await actionsButton(page, ticketId).click();
+  const menu = actionsMenu(page, ticketId);
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+// The status regions that hold a text, such as the announcement of the
+// outcome of a change of the status.
+function announcement(page: Page, text: string) {
+  return page.getByRole("status").filter({ hasText: text });
+}
+
+// The dialog of Mark as duplicate…, by the Ticket that it marks.
+function markDialog(page: Page, ticketId: string) {
+  return page.getByRole("dialog", {
+    name: `Mark ${ticketId} as a duplicate`,
+    exact: true,
+  });
+}
+
+// The field Original of the dialog of Mark as duplicate….
+function originalField(dialog: Locator) {
+  return dialog.getByRole("combobox", { name: "Original", exact: true });
+}
+
+// The Tickets that the field Original lists, in their order.
+function originalOptions(page: Page) {
+  return page.getByRole("listbox", { name: "Original" }).getByRole("option");
+}
+
+// The option of a Ticket in the field Original, which starts with its
+// identifier.
+function originalOption(page: Page, ticketId: string) {
+  return originalOptions(page).filter({
+    hasText: new RegExp(String.raw`^${ticketId}(?!\d)`),
+  });
+}
+
+// Sends a change to the API as the UI sends one: by the page, from the UI's
+// origin, with the session cookie of the signed-in user, which the
+// cross-origin request protection accepts (Sentinel
+// docs/features/identity/authentication.md, Cross-Origin Request
+// Protection). Returns the status and the body of the response. The screen
+// learns nothing of it: its query client does not see the request.
+async function sendFromPage(
+  page: Page,
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<{ status: number; body: unknown }> {
+  return page.evaluate(
+    async ({ path: target, body: sent }) => {
+      const response = await fetch(target, {
+        method: "POST",
+        ...(sent === undefined
+          ? {}
+          : {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(sent),
+            }),
+      });
+      const text = await response.text();
+      const parsed: unknown = text === "" ? null : JSON.parse(text);
+      return { status: response.status, body: parsed };
+    },
+    { path, body },
+  );
+}
+
+// Creates a Ticket without a CVE through Create Ticket, as the signed-in
+// user of the page, and returns its identifier, by which the test finds it.
+// An analyst who creates it becomes its assignee, and it starts in Analysis;
+// without packages, it stays there (Sentinel
+// docs/features/tickets/tickets.md, Manual Creation; Gate: Analysis →
+// Analyzed).
+async function createTicket(page: Page): Promise<string> {
+  const { status, body } = await sendFromPage(page, "/api/v1/tickets", {});
+  expect(status, "the status of Create Ticket").toBe(201);
+  const ticketId =
+    isObject(body) && isObject(body.data) ? body.data.ticket_id : undefined;
+  if (typeof ticketId !== "string") {
+    throw new Error("Create Ticket returned no identifier");
+  }
+  return ticketId;
+}
+
+// Ignores a Ticket through Ignore Ticket, as the signed-in user of the page,
+// with the reason other (Sentinel docs/features/tickets/tickets.md, Ignore
+// Ticket).
+async function ignoreTicket(page: Page, ticketId: string) {
+  const { status } = await sendFromPage(
+    page,
+    `/api/v1/tickets/${ticketId}/ignore`,
+    { reason: "other" },
+  );
+  expect(status, "the status of Ignore Ticket").toBe(200);
+}
+
+test.describe("the actions of a Ticket", () => {
+  test("offers an analyst Actions at the end of the heading row on every tab, whose menu opens with a click and with the keyboard and closes with Escape", async ({
+    page,
+  }) => {
+    // asmith holds triage_ticket, and SNTL-12 is Analyzed (Users; Tickets):
+    // Mark as duplicate…, then, below a line, Rerun convergence.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12");
+    await expectOverviewShown(page);
+    const actions = actionsButton(page, "SNTL-12");
+    await expect(actions).toHaveText("Actions");
+
+    // At the end of the row, on the line of the heading, after the main
+    // values, and at the end of the line of the tabs below it.
+    const actionsBox = await actions.boundingBox();
+    const headingBox = await heading(page, "SNTL-12").boundingBox();
+    const deadlineBox = await (
+      await headingValue(page, "Deadline")
+    ).boundingBox();
+    const tabsBox = await page
+      .getByRole("tablist", { name: "Ticket" })
+      .boundingBox();
+    if (
+      actionsBox === null ||
+      headingBox === null ||
+      deadlineBox === null ||
+      tabsBox === null
+    ) {
+      throw new Error("the heading row is not shown");
+    }
+    const middle = actionsBox.y + actionsBox.height / 2;
+    expect(middle).toBeGreaterThan(headingBox.y);
+    expect(middle).toBeLessThan(headingBox.y + headingBox.height);
+    expect(actionsBox.x).toBeGreaterThan(deadlineBox.x + deadlineBox.width);
+    expect(
+      Math.abs(actionsBox.x + actionsBox.width - (tabsBox.x + tabsBox.width)),
+    ).toBeLessThanOrEqual(1);
+
+    await actions.click();
+
+    const menu = actionsMenu(page, "SNTL-12");
+    await expect(menu.getByRole("menuitem")).toHaveText([
+      "Mark as duplicate…",
+      "Rerun convergence",
+    ]);
+    await expect(menu.getByRole("separator")).toHaveCount(1);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-actions.png");
+
+    await page.keyboard.press("Escape");
+
+    await expect(menu).toHaveCount(0);
+    await expect(actions).toBeFocused();
+
+    // From the keyboard, the menu opens on its first item, and the arrow
+    // keys pass over the line.
+    await page.keyboard.press("Enter");
+
+    await expect(
+      menu.getByRole("menuitem", { name: "Mark as duplicate…" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      menu.getByRole("menuitem", { name: "Rerun convergence" }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+    await expect(actions).toBeFocused();
+
+    // On the other tabs too.
+    await page.getByRole("tab", { name: "References" }).click();
+    await expect(page).toHaveURL("/tickets/SNTL-12/references");
+    await expect(actions).toBeVisible();
+    await page.getByRole("tab", { name: "Audit log" }).click();
+    await expect(page).toHaveURL("/tickets/SNTL-12/audit-log");
+    await expect(actions).toBeVisible();
+  });
+
+  test("offers in Actions only the actions that the status of the Ticket allows: Reopen on an Ignored Ticket, Revert duplicate on a Duplicated one, and Mark as duplicate… alone on a New one", async ({
+    page,
+  }) => {
+    // SNTL-17 is Ignored, SNTL-22 a duplicate of SNTL-21, and SNTL-1 New, on
+    // which Sentinel refuses a rerun (Tickets; Sentinel
+    // docs/features/tickets/tickets.md, Rerun Ticket Convergence). Each menu
+    // closes without a change.
+    await signIn(page, "asmith");
+    for (const [ticketId, offered] of [
+      ["SNTL-17", "Reopen"],
+      ["SNTL-22", "Revert duplicate"],
+      ["SNTL-1", "Mark as duplicate…"],
+    ] as const) {
+      await page.goto(`/tickets/${ticketId}`);
+      await expect(heading(page, ticketId)).toBeVisible();
+
+      const menu = await openActions(page, ticketId);
+
+      await expect(menu.getByRole("menuitem")).toHaveText([offered]);
+      await expect(menu.getByRole("separator")).toHaveCount(0);
+      await expectAccessible(page);
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
+      await expect(actionsButton(page, ticketId)).toBeFocused();
+    }
+  });
+
+  test("offers a user who holds manage_fetchers alone only Rerun convergence, and no Actions on a Ticket whose status allows no rerun", async ({
+    page,
+  }) => {
+    // jdoe, the administrator, holds manage_fetchers without triage_ticket
+    // (Users; Sentinel docs/features/identity/rbac.md, Predefined Roles).
+    await signIn(page);
+    await page.goto("/tickets/SNTL-12");
+    await expect(heading(page, "SNTL-12")).toBeVisible();
+
+    const menu = await openActions(page, "SNTL-12");
+
+    await expect(menu.getByRole("menuitem")).toHaveText(["Rerun convergence"]);
+    await expect(menu.getByRole("separator")).toHaveCount(0);
+    await expectAccessible(page);
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+
+    // SNTL-1 is New and SNTL-17 Ignored (Tickets): the heading row, which
+    // arrives with the Ticket, shows no Actions.
+    for (const ticketId of ["SNTL-1", "SNTL-17"]) {
+      await page.goto(`/tickets/${ticketId}`);
+      await expect(heading(page, ticketId)).toBeVisible();
+      await expect(actionsButton(page, ticketId)).toHaveCount(0);
+    }
+  });
+
+  test("shows a reader no Actions", async ({ page }) => {
+    // hgray, the reader, holds no role (Users).
+    await signIn(page, "hgray");
+
+    await page.goto("/tickets/SNTL-12");
+
+    // The heading row, which arrives with the Ticket, shows its values.
+    await expect(heading(page, "SNTL-12")).toBeVisible();
+    await expect(await headingValue(page, "Status")).toHaveText("Analyzed");
+    await expect(actionsButton(page, "SNTL-12")).toHaveCount(0);
+  });
+
+  test("opens Mark as duplicate… with what it does to the duplicates of the Ticket, lists the Tickets that match with the Ticket itself and a duplicate disabled, checks the original, shows Sentinel's refusal of a duplicate at the field, and asks before discarding it", async ({
+    page,
+  }) => {
+    // SNTL-21, in Analysis without a CVE, is the original of SNTL-22, which
+    // has the package fictional-lz4, and of SNTL-32 (Tickets; Packages,
+    // Tracks, and Maintainers).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-21");
+    await expectOverviewShown(page);
+    const actions = actionsButton(page, "SNTL-21");
+    // The requests of Mark as duplicate that the page sends.
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/v1/tickets/SNTL-21/duplicate"
+      ) {
+        sent.push(request.url());
+      }
+    });
+
+    await (
+      await openActions(page, "SNTL-21")
+    )
+      .getByRole("menuitem", { name: "Mark as duplicate…", exact: true })
+      .click();
+
+    const dialog = markDialog(page, "SNTL-21");
+    const field = originalField(dialog);
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue("");
+    await expect(
+      dialog.getByText(
+        "SNTL-21 becomes a duplicate of the Ticket that you choose, and accepts no other change until Revert duplicate.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText(
+        "SNTL-22 and SNTL-32, its duplicates, become duplicates of that Ticket too.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(field).toHaveAccessibleDescription(
+      "Type its identifier, its CVE ID, or the name of one of its packages to find it.",
+    );
+    await expect(
+      dialog.getByRole("button", { name: "Mark as duplicate", exact: true }),
+    ).toBeVisible();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-mark-duplicate.png");
+
+    // SNTL-2 and SNTL-20 to SNTL-29 match the number 2, by identifier
+    // (Sentinel docs/features/tickets/tickets.md, Search): the Ticket itself
+    // and its duplicate SNTL-22 are disabled, each with its label.
+    await field.fill("SNTL-2");
+
+    const options = originalOptions(page);
+    await expect(options).toHaveText(
+      [2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29].map(
+        (number) => new RegExp(String.raw`^SNTL-${number}(?!\d)`),
+      ),
+    );
+    const itself = originalOption(page, "SNTL-21");
+    await expect(itself).toHaveAttribute("aria-disabled", "true");
+    await expect(itself).toContainText("This Ticket");
+    await expect(itself).toContainText("No CVE");
+    const duplicate = originalOption(page, "SNTL-22");
+    await expect(duplicate).toHaveAttribute("aria-disabled", "true");
+    await expect(duplicate).toContainText("Duplicate of this Ticket");
+    await expect(duplicate).toContainText("No CVE · fictional-lz4");
+    await expect(originalOption(page, "SNTL-20")).not.toHaveAttribute(
+      "aria-disabled",
+    );
+    // The confidential SNTL-27 with its lock, and the CVE of SNTL-28, first
+    // ingested from MITRE, with its title (Embargoes; CVEs).
+    await expect(
+      originalOption(page, "SNTL-27").getByRole("img", {
+        name: "Confidential",
+      }),
+    ).toBeAttached();
+    await expect(originalOption(page, "SNTL-28")).toContainText(
+      "CVE-2099-0026 · Fictional flaw CVE-2099-0026",
+    );
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-mark-duplicate-options.png");
+
+    // A text that is not an identifier, which no Ticket matches: Enter
+    // closes the menu, keeping the text, and then submits the form, which
+    // sends nothing.
+    await field.fill("SNTL-");
+    const noMatch = page.getByText("No Tickets match.", { exact: true });
+    await expect(noMatch).toBeVisible();
+    await expect(options).toHaveCount(0);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-mark-duplicate-no-match.png");
+    await field.press("Enter");
+    await expect(noMatch).toHaveCount(0);
+
+    await field.press("Enter");
+
+    await expect(
+      dialog.getByText(
+        "Choose a Ticket, or enter its identifier, such as SNTL-42.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(field).toBeFocused();
+    expect(sent).toEqual([]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-mark-duplicate-check.png");
+
+    // SNTL-32 is a duplicate of SNTL-21 itself, which Sentinel refuses with
+    // 409 TICKET_DUPLICATE_TARGET_DUPLICATED, changing nothing (Sentinel
+    // docs/features/tickets/tickets.md, Mark-as-Duplicate Operation): the
+    // error says so, as the option of SNTL-32 and the duplicates of the
+    // dialog show it.
+    await field.fill("SNTL-32");
+    await expect(originalOption(page, "SNTL-32")).toContainText(
+      "Duplicate of this Ticket",
+    );
+    await field.press("Enter");
+    await expect(options).toHaveCount(0);
+    const refused = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname ===
+          "/api/v1/tickets/SNTL-21/duplicate",
+    );
+    // The reads of the Ticket and of its duplicates after the change, which
+    // the screen sends whatever its outcome, and whose data the dialog and
+    // the page behind it show.
+    const readAgain = Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === "/api/v1/tickets/SNTL-21",
+      ),
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).searchParams.get("duplicate_of_ticket_id") ===
+            "SNTL-21",
+      ),
+    ]);
+
+    await field.press("Enter");
+
+    expect((await refused).status()).toBe(409);
+    await expect(
+      dialog.getByText(
+        "SNTL-32 is a duplicate of this Ticket: to make it the original, use Revert duplicate on SNTL-32 first.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue("SNTL-32");
+    await readAgain;
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-mark-duplicate-error.png");
+
+    // Cancel with input asks before discarding it. Cancel is reached from
+    // the field with Tab rather than pressed with the pointer: the dialog
+    // currently hides the error of the field once the field loses the
+    // focus, which moves Cancel up during a press of the pointer and so
+    // cancels the press.
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+    await field.press("Tab");
+    await expect(cancel).toBeFocused();
+    await cancel.press("Enter");
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText("SNTL-21 isn't marked as a duplicate.");
+    await expect(
+      discard.getByRole("button", { name: "Keep editing" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-mark-duplicate-discard.png");
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(actions).toBeFocused();
+    await expect(await headingValue(page, "Status")).toHaveText("Analysis");
+    await expect(
+      (await detail(page, "Duplicates")).getByRole("link"),
+    ).toHaveText(["SNTL-22", "SNTL-32"]);
+  });
+
+  test("lists in Mark as duplicate… a duplicate of another Ticket disabled with the label of its original, which Sentinel's refusal of it at the field names too", async ({
+    page,
+  }) => {
+    // SNTL-22 is a duplicate of SNTL-21, and SNTL-12 is Analyzed (Tickets).
+    // Sentinel refuses SNTL-22 as the original of SNTL-12 with 409
+    // TICKET_DUPLICATE_TARGET_DUPLICATED, changing nothing (Sentinel
+    // docs/features/tickets/tickets.md, Mark-as-Duplicate Operation).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12");
+    await expectOverviewShown(page);
+    const actions = actionsButton(page, "SNTL-12");
+    await (
+      await openActions(page, "SNTL-12")
+    )
+      .getByRole("menuitem", { name: "Mark as duplicate…", exact: true })
+      .click();
+    const dialog = markDialog(page, "SNTL-12");
+    const field = originalField(dialog);
+    await expect(field).toBeFocused();
+
+    await field.fill("SNTL-22");
+
+    const duplicate = originalOption(page, "SNTL-22");
+    await expect(duplicate).toHaveAttribute("aria-disabled", "true");
+    await expect(duplicate).toContainText("Duplicate of SNTL-21");
+    // Enter closes the menu, keeping the identifier typed, and then submits
+    // the form.
+    await field.press("Enter");
+    await expect(originalOptions(page)).toHaveCount(0);
+    const refused = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname ===
+          "/api/v1/tickets/SNTL-12/duplicate",
+    );
+
+    await field.press("Enter");
+
+    expect((await refused).status()).toBe(409);
+    await expect(
+      dialog.getByText(
+        "SNTL-22 is a duplicate of SNTL-21: choose SNTL-21 instead.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue("SNTL-22");
+    await expectAccessible(page);
+
+    // Cancel, reached from the field with Tab, as above.
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+    await field.press("Tab");
+    await expect(cancel).toBeFocused();
+    await cancel.press("Enter");
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText("SNTL-12 isn't marked as a duplicate.");
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(actions).toBeFocused();
+    await expect(await headingValue(page, "Status")).toHaveText("Analyzed");
+  });
+
+  test("keeps Actions at the end of the heading row at 320 CSS pixels, and its menu inside the window", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12");
+    await expectOverviewShown(page);
+    const actions = actionsButton(page, "SNTL-12");
+    await expect(actions).toBeInViewport();
+    expect(await scrollsHorizontally(page)).toBe(false);
+    // The row wraps, and Actions stays at the end of its line, at the end
+    // of the details below it, in one column.
+    const actionsBox = await actions.boundingBox();
+    const detailsBox = await part(page, "Details").boundingBox();
+    if (actionsBox === null || detailsBox === null) {
+      throw new Error("the heading row or the details are not shown");
+    }
+    expect(
+      Math.abs(
+        actionsBox.x + actionsBox.width - (detailsBox.x + detailsBox.width),
+      ),
+    ).toBeLessThanOrEqual(1);
+
+    const menu = await openActions(page, "SNTL-12");
+
+    await expect(menu.getByRole("menuitem")).toHaveCount(2);
+    const menuBox = await menu.boundingBox();
+    expect(menuBox?.x).toBeGreaterThanOrEqual(0);
+    expect((menuBox?.x ?? 0) + (menuBox?.width ?? 0)).toBeLessThanOrEqual(320);
+    expect(await scrollsHorizontally(page)).toBe(false);
+    await expectAccessible(page);
+  });
+
+  test(
+    "marks a Ticket as a duplicate of an original chosen in Original, then reverts the duplicate, each announced with the focus on Actions",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // Two Tickets of this test's own, in Analysis and assigned to asmith,
+      // who creates them.
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      const original = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Analysis");
+      await expect(await detail(page, "Duplicates")).toHaveText("None");
+      const actions = actionsButton(page, ticketId);
+
+      await (
+        await openActions(page, ticketId)
+      )
+        .getByRole("menuitem", { name: "Mark as duplicate…", exact: true })
+        .click();
+
+      // Without duplicates, the dialog says nothing of them once their
+      // read has arrived.
+      const dialog = markDialog(page, ticketId);
+      const field = originalField(dialog);
+      await expect(field).toBeFocused();
+      await expect(dialog.getByText(/duplicates/)).toHaveCount(0);
+      await field.fill(original);
+      const option = originalOption(page, original);
+      await expect(option).toContainText("Analysis");
+      await expect(option).not.toHaveAttribute("aria-disabled");
+      await option.click();
+      await expect(field).toHaveValue(original);
+      await dialog
+        .getByRole("button", { name: "Mark as duplicate", exact: true })
+        .click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(status).toHaveText("Duplicated");
+      await expect(
+        announcement(page, `Marked as a duplicate of ${original}.`),
+      ).toHaveCount(1);
+      await expect(actions).toBeFocused();
+      await expect(
+        (await detail(page, "Original")).getByRole("link", {
+          name: original,
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        detailTerms(page).filter({ hasText: /^Duplicates$/ }),
+      ).toHaveCount(0);
+
+      const menu = await openActions(page, ticketId);
+      await expect(menu.getByRole("menuitem")).toHaveText(["Revert duplicate"]);
+      await menu
+        .getByRole("menuitem", { name: "Revert duplicate", exact: true })
+        .click();
+
+      // Without packages, the Ticket returns to Analysis, and asmith stays
+      // its assignee (Sentinel docs/features/tickets/tickets.md,
+      // Revert-Duplicate Operation).
+      await expect(
+        announcement(page, "Duplicate reverted: Analysis, assigned to you."),
+      ).toHaveCount(1);
+      await expect(menu).toHaveCount(0);
+      await expect(status).toHaveText("Analysis");
+      await expect(actions).toBeFocused();
+      await expect(await detail(page, "Duplicates")).toHaveText("None");
+      await expect(
+        detailTerms(page).filter({ hasText: /^Original$/ }),
+      ).toHaveCount(0);
+      await expect(await detail(page, "Assignee")).toHaveText("Alice Smith");
+    },
+  );
+
+  test(
+    "reopens an Ignored Ticket, which makes the user its assignee, announced with the focus on Actions",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, which asmith creates and ignores.
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await ignoreTicket(page, ticketId);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Ignored");
+      const actions = actionsButton(page, ticketId);
+
+      const menu = await openActions(page, ticketId);
+      await expect(menu.getByRole("menuitem")).toHaveText(["Reopen"]);
+      await menu.getByRole("menuitem", { name: "Reopen", exact: true }).click();
+
+      // Without packages, the Ticket returns to Analysis (Sentinel
+      // docs/features/tickets/tickets.md, Ignored).
+      await expect(
+        announcement(page, "Reopened: Analysis, assigned to you."),
+      ).toHaveCount(1);
+      await expect(menu).toHaveCount(0);
+      await expect(status).toHaveText("Analysis");
+      await expect(actions).toBeFocused();
+      await expect(await detail(page, "Assignee")).toHaveText("Alice Smith");
+    },
+  );
+
+  test(
+    "reruns the convergence of a Ticket, which says in the message area that it started, with the focus on Actions",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, in Analysis. Sentinel publishes the
+      // workflow to the broker of the backend, where no worker runs it, so
+      // the rerun changes nothing (Sentinel docs/features/tickets/tickets.md,
+      // Rerun Ticket Convergence; Sentinel
+      // docs/features/platform/example-dataset.md, Operating a Dataset
+      // Backend).
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Analysis");
+      const actions = actionsButton(page, ticketId);
+
+      const menu = await openActions(page, ticketId);
+      await expect(menu.getByRole("menuitem")).toHaveText([
+        "Mark as duplicate…",
+        "Rerun convergence",
+      ]);
+      await menu
+        .getByRole("menuitem", { name: "Rerun convergence", exact: true })
+        .click();
+
+      await expect(
+        page.getByText("Convergence started.", { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Dismiss" })).toBeVisible();
+      await expect(menu).toHaveCount(0);
+      await expect(actions).toBeFocused();
+      await expect(status).toHaveText("Analysis");
+    },
+  );
+
+  test(
+    "says that a Ticket is no longer Ignored when it was reopened behind the screen, and then shows its current status",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, which asmith creates and ignores, then
+      // reopens through the API once the screen shows it Ignored: the screen
+      // does not read it again, so it still offers Reopen, which Sentinel
+      // refuses with 409 TICKET_INVALID_TRANSITION (Sentinel
+      // docs/features/tickets/tickets.md, Reopen Ticket).
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await ignoreTicket(page, ticketId);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Ignored");
+      const actions = actionsButton(page, ticketId);
+      const reopened = await sendFromPage(
+        page,
+        `/api/v1/tickets/${ticketId}/reopen`,
+      );
+      expect(reopened.status, "the status of Reopen Ticket").toBe(200);
+
+      const menu = await openActions(page, ticketId);
+      await expect(menu.getByRole("menuitem")).toHaveText(["Reopen"]);
+      await menu.getByRole("menuitem", { name: "Reopen", exact: true }).click();
+
+      await expect(
+        page.getByText(`${ticketId} is no longer Ignored.`, { exact: true }),
+      ).toBeVisible();
+      await expect(menu).toHaveCount(0);
+      await expect(actions).toBeFocused();
+      // The screen reads the Ticket again, which shows its current status.
+      await expect(status).toHaveText("Analysis");
+      await expect(announcement(page, "Reopened")).toHaveCount(0);
+    },
+  );
 });
 
 test("shows a maintainer the tracks of a Ticket that wait for them", async ({

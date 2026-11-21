@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -73,6 +73,58 @@ test("shows its icon at 16 px before its label, 8 px apart, hidden from assistiv
       without!.getBoundingClientRect().width,
   ).toBe(24);
   expect(screen.getByRole("img").query()).toBeNull();
+});
+
+test("shows its end icon at 16 px after its label, 8 px apart, hidden from assistive technologies, without changing its name", async () => {
+  const screen = await render(
+    <>
+      <Button endIcon={ChevronDown}>Actions</Button>
+      <Button>Actions</Button>
+    </>,
+  );
+  const [withIcon, without] = screen
+    .getByRole("button", { name: "Actions", exact: true })
+    .elements();
+  const chevron = await render(<ChevronDown />);
+
+  // The space of 8 px before the icon and the icon of 16 px.
+  expect(
+    withIcon!.getBoundingClientRect().width -
+      without!.getBoundingClientRect().width,
+  ).toBe(24);
+  const icon = withIcon!.querySelector("svg");
+  expect(icon?.innerHTML).toBe(
+    chevron.container.querySelector("svg")?.innerHTML,
+  );
+  // At the end of the button, within its side padding of 12 px and its
+  // line, after the label.
+  expect(icon!.getBoundingClientRect().width).toBe(16);
+  expect(icon!.getBoundingClientRect().right).toBe(
+    withIcon!.getBoundingClientRect().right - 12 - 1,
+  );
+  expect(icon!.previousSibling?.textContent).toBe("Actions");
+  expect(icon!.getAttribute("aria-hidden")).toBe("true");
+  expect(screen.getByRole("img").query()).toBeNull();
+});
+
+test("shows its icon before its label and its end icon after it", async () => {
+  const screen = await render(
+    <Button icon={RefreshCw} endIcon={ChevronDown}>
+      Refetch all
+    </Button>,
+  );
+  const button = screen.getByRole("button", {
+    name: "Refetch all",
+    exact: true,
+  });
+
+  await expect.element(button).toBeVisible();
+  const [first, last] = button.element().querySelectorAll("svg");
+  // Within the side padding of 12 px and the line of 1 px of the button.
+  const box = button.element().getBoundingClientRect();
+  expect(first!.getBoundingClientRect().left).toBe(box.left + 12 + 1);
+  expect(last!.getBoundingClientRect().right).toBe(box.right - 12 - 1);
+  expect(button.element().textContent).toBe("Refetch all");
 });
 
 test("is 36 px high, in text-15, with 12 px of side padding", async () => {

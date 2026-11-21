@@ -4,7 +4,7 @@ import type { Locator } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { screenshot } from "../test-screenshot";
-import { TicketStatus } from "./ticket-status";
+import { TicketStatus, ticketStatusName } from "./ticket-status";
 
 // A Ticket status (docs/design-system.md, Ticket Status), in the light theme.
 // Each test shows it in a cell of a table, whose accessible name assistive
@@ -256,6 +256,20 @@ test.each([
       figure.element().getBoundingClientRect().left,
   ).toBe(22);
 });
+
+test.each(MARKS.map(([value, name]) => [value, name]))(
+  "names %s %s in text",
+  (value, name) => {
+    expect(ticketStatusName(value)).toBe(name);
+  },
+);
+
+test.each(["review", "constructor", "New"])(
+  "names %s, which the pinned contract does not list, as received in text",
+  (value) => {
+    expect(ticketStatusName(value)).toBe(value);
+  },
+);
 
 test.each(["review", "constructor"])(
   "shows %s, which the pinned contract does not list, as received, after circle-question-mark in neutral-icon",

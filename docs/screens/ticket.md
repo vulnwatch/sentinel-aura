@@ -11,7 +11,10 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 
 ## Purpose
 
-The Ticket screen shows one Ticket: its heading row with its main values; in
+The Ticket screen shows one Ticket: its heading row with its main values and
+the menu of its actions, with which an analyst marks it as a duplicate,
+reopens it, and reverts its duplicate status, and an analyst or a user who
+manages fetchers reruns its convergence; in
 the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
 assessment an analyst who manages CVSS adds, edits, and deletes, its package
 tree, with the IBS requests of its tracks, to which an analyst who manages
@@ -41,8 +44,10 @@ Ticket that Get Ticket returns to the user, whose scope, access grants, and
 package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/tickets/tickets.md`, Get Ticket; Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
-The screen is the same for every user, except that it offers Refetch and Edit
-assignee to a user who holds `triage_ticket`, Add SUSE assessment, and Edit and
+The screen is the same for every user, except that it offers Refetch, Edit
+assignee, Mark as duplicate…, Reopen, and Revert duplicate to a user who
+holds `triage_ticket`; Rerun convergence to a user who holds `triage_ticket`
+or `manage_fetchers`; Add SUSE assessment, and Edit and
 Delete on the SUSE assessments, to a user who holds `manage_cvss`, Grant access
 and Revoke access to a user who holds `manage_confidentiality`, Add
 reference, and Edit and Delete on the manual references, to a user who holds
@@ -150,7 +155,12 @@ focus (`docs/behaviors.md`, Accessibility, Focus after a navigation).
   prioritizable" without one, which also names the button; and the deadline
   badge, when the Ticket has one (`docs/behaviors.md`, Deadlines), which
   compares the dates with the instant at which the Ticket arrived.
-- The row wraps when the width runs short.
+- At the end of the row, on every tab, for a user who can take at least one of
+  its actions on the Ticket, Actions, the menu of the actions of the Ticket
+  (Actions; `docs/design-system.md`, Detail Screens), named such as "Actions
+  of SNTL-42" for assistive technologies.
+- The row wraps when the width runs short, and Actions then stays at the end
+  of its line.
 
 **Tabs**, named "Ticket" for assistive technologies: Overview, References,
 Affected versions, and Audit log.
@@ -979,7 +989,13 @@ depart from them:
   `docs/api-spec.md`, Manual-Zone Mutability Guard; `docs/behaviors.md`,
   Unknown Values). Refetch, Grant access and Revoke access, and the actions
   of the references are outside the guard, and the screen offers them in
-  every status.
+  every status. Reopen, Revert duplicate, and Rerun convergence are outside
+  the guard too, each with the statuses that its entry states. An action
+  that the status of the Ticket does not allow is not offered, in a menu
+  too, rather than shown disabled: the arrow keys of a menu pass over a
+  disabled item, so its reason would not be read, and a control whose
+  actions are all left out does not show (`docs/screen-map.md`, Roles,
+  Principles).
 - **Dialogs and confirmations of a change.** With input that the user
   changed, Cancel, Escape, and a navigation of the UI, such as back, ask
   "Discard changes?", with the consequence that the entry states, Keep
@@ -1008,6 +1024,145 @@ depart from them:
   focus waits for the read after the change and moves only while it is
   still where the entry states; `docs/behaviors.md` (Accessibility, Focus
   after an action) states where it is when that read fails.
+
+**Mark as duplicate…**, Mark Ticket as Duplicate, `POST
+/api/v1/tickets/{ticket_id}/duplicate`; **Reopen**, Reopen Ticket, `POST
+/api/v1/tickets/{ticket_id}/reopen`; and **Revert duplicate**, Revert
+Duplicate Status, `POST /api/v1/tickets/{ticket_id}/revert-duplicate`, for a
+user who holds `triage_ticket`; and **Rerun convergence**, Rerun Ticket
+Convergence, `POST /api/v1/tickets/{ticket_id}/rerun-reactivation`, for a user
+who holds `triage_ticket` or `manage_fetchers`, in Actions, the menu at the
+end of the heading row (`docs/design-system.md`, Detail Screens; Sentinel
+`docs/features/tickets/tickets.md`, Status Transitions; Duplicate Handling;
+Ignored; Mark Ticket as Duplicate; Reopen Ticket; Revert Duplicate Status;
+Rerun Ticket Convergence; Sentinel `docs/features/identity/rbac.md`, Endpoint
+Permission Map (Tickets)):
+
+- Actions offers the actions that the user can take on the Ticket in its
+  status (above): Mark as duplicate…, with `merge`, on a Ticket in New,
+  Analysis, Analyzed, or Resolved; Reopen, with `circle-play`, on an Ignored
+  Ticket; Revert duplicate, with `split`, on a Duplicated Ticket; and, below a
+  `border` line when one of them precedes it, Rerun convergence, with
+  `list-restart`, on a Ticket in Analysis, Analyzed, or Resolved, since
+  Sentinel refuses it on a New, Ignored, or Duplicated Ticket with `409
+  TICKET_INVALID_TRANSITION`. So Actions does not show to a user who holds
+  neither capability, nor to a user who holds `manage_fetchers` alone on a
+  New, Ignored, or Duplicated Ticket. While its menu is open, the change of
+  one of its items is in progress, or the dialog of Mark as duplicate… is
+  open, Actions stays, with the items that it offered as its menu opened
+  (`docs/behaviors.md`, The Signed-in User).
+- Mark as duplicate… opens a dialog at most 560 px wide
+  (`docs/design-system.md`, Dialogs), titled such as "Mark SNTL-30 as a
+  duplicate", once its menu has closed, so that the focus returns to Actions
+  as the dialog closes. It says, in `fg-muted`, "SNTL-30 becomes a duplicate
+  of the Ticket that you choose, and accepts no other change until Revert
+  duplicate.", and below it what the change does to the duplicates of the
+  Ticket, which Sentinel moves to the original (Sentinel
+  `docs/features/tickets/tickets.md`, Mark-as-Duplicate Operation): their
+  identifiers, from the read of the duplicates that the details show (Content,
+  Details), which the dialog sends on every tab, the visible ones only, since
+  Sentinel also moves those that the user cannot see (same document, List
+  Tickets, Duplicate filter), such as "SNTL-31 and SNTL-32, its duplicates,
+  become duplicates of that Ticket too.", "SNTL-31, its duplicate, becomes a
+  duplicate of that Ticket too.", or, after the identifiers of the page of
+  that read, ", and 3 more, its duplicates, become duplicates of that Ticket
+  too."; nothing for a Ticket without visible duplicates; and, until that read
+  arrives and when it fails, "Its duplicates, if it has any, become duplicates
+  of that Ticket too.". Then the field Original, in a form
+  (`docs/design-system.md`, Forms), which takes the focus as the dialog opens;
+  then Cancel and Mark as duplicate, a primary button. The dialog belongs to
+  the heading row, which every tab shares, so a navigation between the tabs of
+  the Ticket leaves it open, as it leaves a menu whose change is in progress.
+- Original is a combobox that searches the Tickets that the user can see as
+  the user types (`docs/design-system.md`, Forms), described "Type its
+  identifier, its CVE ID, or the name of one of its packages to find it.":
+  from 2 characters, the first 20 Tickets that List Tickets, `GET
+  /api/v1/tickets`, returns for the term as `search`, by identifier, with
+  `sort_by=ticket_id` and `sort_order=asc`, which matches the identifier, the
+  CVE ID, the names of the packages, and the external identifiers of a Ticket
+  (Sentinel `docs/features/tickets/tickets.md`, Search; List Tickets); "No
+  Tickets match." without one, and "The first 20 of 63 Tickets that match.
+  Type more to narrow them." when more match. Each option has two lines: the
+  identifier at weight 500, followed by the lock of a confidential Ticket
+  (`docs/design-system.md`, Confidential Tickets), its status (same document,
+  Ticket Status), and, for a Ticket that the field does not offer, the label
+  that says why (same document, Labels); below them, in `text-13`, `fg-muted`,
+  on one line that ends with an ellipsis, the CVE ID, followed by the title of
+  the CVE when it has one, such as "CVE-2099-0013 · Fictional flaw
+  CVE-2099-0013", or, for a Ticket without a CVE, "No CVE", followed by its
+  packages when it has any, such as "No CVE · fictional-lz4". The field lists,
+  disabled, the Ticket itself, with the label "This Ticket", and a Duplicated
+  Ticket, since an original is never a duplicate (Sentinel
+  `docs/features/tickets/tickets.md`, Duplicate Handling, Invariant): with the
+  label of its original, such as "Duplicate of SNTL-40", which the user
+  chooses instead, or with "Duplicate of this Ticket" when the Ticket itself
+  is its original, which becomes the original only once its own duplicate
+  status is reverted. It offers a Ticket of every other status, also one that
+  the pinned contract does not list: an option only helps to find the
+  original, and the field takes any identifier typed, so leaving the Ticket
+  out would prevent nothing. Choosing a Ticket writes its identifier in the
+  field. The Tickets only help to find the original: the field also takes an
+  identifier that the user types, with or without `SNTL-`, in any letter case,
+  such as "sntl-42" or "42", which the form sends in its canonical form,
+  `SNTL-42` (Sentinel `docs/api-spec.md`, Ticket Identifier Resolution), and a
+  failure of their read, which shows in the menu, leaves the change possible.
+- The form checks the original, without its surrounding whitespace, before
+  sending it: empty, "Choose the original Ticket."; a text that is not an
+  identifier, "Choose a Ticket, or enter its identifier, such as SNTL-42.";
+  and the Ticket itself, "A Ticket can't be a duplicate of itself.". The error
+  shows at the field when the user submits the form, the field takes the
+  focus, and the error goes once the input changes.
+- Mark as duplicate… asks for no confirmation: Revert duplicate reverses it,
+  and the duplicates that it moved return with changes of their own
+  (`docs/behaviors.md`, Confirmation; Sentinel
+  `docs/features/tickets/tickets.md`, Revert-Duplicate Operation). Its input
+  is a text typed or chosen, other than whitespace, and before discarding it
+  the question says "SNTL-30 isn't marked as a duplicate." (above). While the
+  request is in progress, the field keeps the original sent, read-only, and
+  its focus.
+- Reopen, Revert duplicate, and Rerun convergence apply at once, as the items
+  of a menu do, without confirmation (`docs/design-system.md`, Menus,
+  Popovers, and Tooltips; `docs/behaviors.md`, Confirmation): Reopen and
+  Revert duplicate make the user the assignee, when they can be, in place of
+  the one that the screen shows, as an assignment does, and a rerun changes
+  nothing by itself (Sentinel `docs/features/tickets/tickets.md`,
+  Reassignment, Expected assignee; Rerun Ticket Convergence). While one is in
+  progress, assistive technologies read with its item, as its description,
+  "Reopening.", "Reverting the duplicate.", or "Starting the convergence.";
+  meanwhile the other items of the menu are unavailable. Once Sentinel
+  answers, the menu closes, and the focus returns to Actions.
+- A change of the status can change the assignee, the status, which Sentinel
+  evaluates anew as the Ticket leaves Ignored or Duplicated, the deadlines,
+  the eligibility of the Products, and the duplicates of the Ticket and of its
+  original (Sentinel `docs/features/tickets/tickets.md`, Auto-Assignment on
+  Unassigned Tickets; Ignored; Duplicate Handling; Sentinel
+  `docs/features/tickets/ticket-service.md`, `mark_as_duplicate`;
+  `reopen_from_ignored()`; `revert_duplicate()`). After each of the four, the
+  screen reads again the Ticket, the work of a maintainer on it, the users who
+  acted on it, its audit log, and the reads of the Ticket list, its duplicates
+  included.
+- The outcome of Mark as duplicate…, Reopen, and Revert duplicate is announced
+  once the read of the Ticket after it arrives (above), as Sentinel returns
+  the Ticket: "Marked as a duplicate of SNTL-21."; and, with the status and
+  the assignee that the Ticket now has, "Reopened: Analysis, assigned to
+  you.", "Duplicate reverted: Analyzed, assigned to Bob Wilson.", or
+  "Reopened: Resolved, unassigned.". Actions shows on every tab, so a change
+  of its menu ends elsewhere only once the user has left the screen, not the
+  tab: its outcome, or its failure, then shows in the message area, starting
+  with the Ticket (above). Until the read of the Ticket after a change
+  arrives, Actions offers the items of the status that the screen still shows.
+- Sentinel accepts Rerun convergence with `202`, and its message says that it
+  started, in the `info` tone: "Convergence started." (`docs/behaviors.md`,
+  Outcome of a Change). The screen shows no progress of the convergence, of
+  which Sentinel offers none (Sentinel `docs/features/tickets/tickets.md`,
+  TicketConvergenceDispatchResponse): what it changes shows with the later
+  reads of the screen (`docs/behaviors.md`, Loading).
+- Actions stays after each of them, with the focus, since a Ticket of every
+  status that the pinned contract lists offers a user who holds
+  `triage_ticket` one of them. When a read removes Actions while it holds the
+  focus, as after a read of the signed-in user took the capability away, the
+  focus moves to the screen's heading (`docs/behaviors.md`, Accessibility,
+  Focus after an action).
 
 **Edit assignee**, Assign Ticket, `PATCH /api/v1/tickets/{ticket_id}/assignee`,
 in the details, for a user who holds `triage_ticket` (Sentinel
@@ -1719,6 +1874,57 @@ document, Manual-Zone Exception):
   the reads that show the Ticket no longer confidential, so the dialog then
   says so in place of its explanation, the form, the grants, and their
   confirmation, and takes the focus (Participants).
+- **Errors of Mark as duplicate…, Reopen, Revert duplicate, and Rerun
+  convergence.** A failure of Mark as duplicate… shows in its form, which
+  keeps the original (`docs/behaviors.md`, Where Errors Appear). The screen
+  handles three codes specifically, at the field, which takes the focus: `400
+  TICKET_SELF_DUPLICATE`, "A Ticket can't be a duplicate of itself."; `404
+  TICKET_NOT_FOUND`, "SNTL-99 doesn't exist, or you don't have access to it.",
+  which names the original sent, since "this Ticket" is the Ticket of the
+  dialog, and which Sentinel answers alike for an original that does not exist
+  and for one that the user cannot see, and also for the Ticket of the screen
+  once the user no longer sees it, which the read after the change then shows
+  as Not found (`docs/behaviors.md`, Missing and Inaccessible Records;
+  Sentinel `docs/api-spec.md`, Ticket Accessibility Check); and `409
+  TICKET_DUPLICATE_TARGET_DUPLICATED`, which names the original of the Ticket
+  sent, when a read of the dialog shows it, the Tickets that the field
+  suggested for the text sent or the duplicates of the Ticket, so that a user
+  who cannot read the label of its disabled option learns it too: "SNTL-41 is
+  a duplicate of SNTL-40: choose SNTL-40 instead.", or, for a duplicate of the
+  Ticket itself, "SNTL-31 is a duplicate of this Ticket: to make it the
+  original, use Revert duplicate on SNTL-31 first."; otherwise "SNTL-41 is a
+  duplicate itself: choose its original instead." (Sentinel
+  `docs/features/tickets/tickets.md`, Mark Ticket as Duplicate). A field error
+  of a `VALIDATION_ERROR` for `duplicate_of_ticket_id` also shows there. It
+  handles one more code specifically, at the top of the form, which takes the
+  focus, in the `danger` tone, since Sentinel then changed nothing: `409
+  TICKET_DUPLICATE_CONCURRENT_MODIFICATION`, "A duplicate of this Ticket was
+  being changed at the same time, so Sentinel changed nothing. Try again."
+  (same document, Mark-as-Duplicate Operation). Every other failure shows at
+  the top of the form in the presentation of its status, as a warning when
+  Sentinel did not confirm the change (`docs/behaviors.md`, Default
+  Presentation by Status; Retries and Unconfirmed Changes), such as the `409
+  TICKET_NOT_MUTABLE` of a Ticket that became Ignored or Duplicated meanwhile.
+  A failure of Mark as duplicate… that ends after the user left the screen
+  (Actions) shows in the message area in the presentation of the dialog,
+  except that `409 TICKET_DUPLICATE_TARGET_DUPLICATED` then names no original
+  of the duplicate, which the reads of the dialog told, such as "SNTL-30:
+  SNTL-41 is a duplicate itself: choose its original instead.", and that `404
+  TICKET_NOT_FOUND` names both Tickets, since no read of the screen tells
+  which of them Sentinel did not find: "SNTL-30: This Ticket or the original
+  SNTL-21 doesn't exist, or you don't have access to it.". A failure of
+  Reopen, Revert duplicate, or Rerun convergence shows in the message area in
+  the presentation of its status, as a warning when Sentinel did not confirm
+  the change, such as the `503 CELERY_UNAVAILABLE` of a rerun, which may still
+  run (Sentinel `docs/features/tickets/tickets.md`, Rerun Ticket Convergence).
+  The screen handles one code of Reopen and of Revert duplicate specifically:
+  `409 TICKET_INVALID_TRANSITION`, for a Ticket that left Ignored or
+  Duplicated meanwhile, as when another user reopened it, says "SNTL-17 is no
+  longer Ignored." or "SNTL-22 is no longer Duplicated." in the message area
+  in the `info` tone, as Sentinel answers (same document, Reopen Ticket;
+  Revert Duplicate Status); after the user left the screen, it has the
+  presentation of its status. The screen handles no code of Rerun convergence
+  specifically.
 - **Errors of Edit assignee.** A failure shows in the popover, which stays open
   (`docs/behaviors.md`, Where Errors Appear; Accessibility, Announcements). The
   screen handles three codes specifically, at the search field: `404
@@ -1911,14 +2117,18 @@ document, Manual-Zone Exception):
   Auto-Classification; Mutability and Concurrency (Manual-Zone Exception);
   API Schemas; API Endpoints (List References; Add Reference; Update
   Reference; Delete Reference)
-- Sentinel `docs/features/tickets/tickets.md` — API Lookup; Status Transitions;
-  Gate: Analysis → Analyzed; Gate: Analyzed → Resolved; Automatic Status
-  Evaluation; Reassignment; Self-Unassignment; Auto-Assignment on Unassigned
-  Tickets; Duplicate Handling; Confidential
-  Tickets (Identifier Disclosure Boundary; Coordinated Release Date); Ignore
-  Reason; Response Schemas (Shared Sub-Schemas; TicketDetail); Get Ticket; List
-  Tickets (Duplicate filter); Assign Ticket; Set Confidentiality; Access Grant
-  Management (List Access Grants; Grant Access; Revoke Access)
+- Sentinel `docs/features/tickets/tickets.md` — API Lookup; Search; Status
+  Transitions; Gate: Analysis → Analyzed; Gate: Analyzed → Resolved; Automatic
+  Status Evaluation; Reassignment; Self-Unassignment; Auto-Assignment on
+  Unassigned Tickets; Duplicate Handling; Ignored; Confidential Tickets
+  (Identifier Disclosure Boundary; Coordinated Release Date); Ignore Reason;
+  Response Schemas (Shared Sub-Schemas; TicketDetail;
+  TicketConvergenceDispatchResponse); Get Ticket; List Tickets (Duplicate
+  filter); Assign Ticket; Mark Ticket as Duplicate; Reopen Ticket; Revert
+  Duplicate Status; Rerun Ticket Convergence; Set Confidentiality; Access
+  Grant Management (List Access Grants; Grant Access; Revoke Access)
+- Sentinel `docs/features/tickets/ticket-service.md` — `mark_as_duplicate`;
+  `reopen_from_ignored()`; `revert_duplicate()`
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Actors and Phases;
   Due Dates (Null Due Dates); Track Milestones (Observability of Later
   Phases; Completion Evidence); Ticket Current Phase
@@ -1981,7 +2191,8 @@ document, Manual-Zone Exception):
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Published Input Constraints; Ticket
   Identifier Resolution; User Identifier Resolution; CVE Identifier
-  Resolution; CNA Identifier Resolution; CVE Accessibility Check; Pagination;
+  Resolution; CNA Identifier Resolution; Ticket Accessibility Check; CVE
+  Accessibility Check; Pagination;
   Enum Filter Validation; Date Range Interpretation; Infrastructure Dependency
   Errors (HTTP 503); Manual-Zone Mutability Guard; Partial Update Semantics;
   User References in Responses

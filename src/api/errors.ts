@@ -350,6 +350,136 @@ export function presentMarkerConflict(
   return undefined;
 }
 
+// The messages of the field of the original of Mark as duplicate, at the
+// field (docs/screens/ticket.md, States): the original is the Ticket itself;
+// Sentinel finds no such Ticket that the user can see, which it does not
+// tell apart (Sentinel docs/api-spec.md, Anti-Enumeration Boundary); or the
+// original is a duplicate itself, whose own original the user chooses
+// instead (Sentinel docs/features/tickets/tickets.md, Mark Ticket as
+// Duplicate), which the message names when the screen knows it, so that a
+// user who cannot read the label of its option learns it too (WCAG 2.2,
+// 3.3.3 Error Suggestion); a duplicate of the Ticket itself is reverted
+// first.
+export const MESSAGE_DUPLICATE_OF_ITSELF =
+  "A Ticket can't be a duplicate of itself.";
+// What the screen knows of the Ticket that a request named as the original:
+// its identifier, by which the messages name it, since "this Ticket" is the
+// Ticket that the request marks; the Ticket of which a read of the dialog
+// shows it to be a duplicate, if any; and the Ticket that the request marks.
+export interface NamedOriginal {
+  original: string;
+  duplicateOf: string | undefined;
+  ticketId: string;
+}
+
+// The error of the field of the original that a failure of Mark Ticket as
+// Duplicate states, or undefined for a failure of the form: 400
+// TICKET_SELF_DUPLICATE, 404 TICKET_NOT_FOUND, and 409
+// TICKET_DUPLICATE_TARGET_DUPLICATED, which names the original of the Ticket
+// named when named gives it.
+export function duplicateOriginalError(
+  failure: RequestFailure,
+  named: NamedOriginal,
+): string | undefined {
+  if (!(failure instanceof ApiError)) {
+    return undefined;
+  }
+  if (failure.status === 400 && failure.code === "TICKET_SELF_DUPLICATE") {
+    return MESSAGE_DUPLICATE_OF_ITSELF;
+  }
+  if (failure.status === 404 && failure.code === "TICKET_NOT_FOUND") {
+    return `${named.original} doesn't exist, or you don't have access to it.`;
+  }
+  if (
+    failure.status === 409 &&
+    failure.code === "TICKET_DUPLICATE_TARGET_DUPLICATED"
+  ) {
+    if (named.duplicateOf === undefined) {
+      return `${named.original} is a duplicate itself: choose its original instead.`;
+    }
+    return named.duplicateOf === named.ticketId
+      ? `${named.original} is a duplicate of this Ticket: to make it the original, use Revert duplicate on ${named.original} first.`
+      : `${named.original} is a duplicate of ${named.duplicateOf}: choose ${named.duplicateOf} instead.`;
+  }
+  return undefined;
+}
+
+// The message of Mark as duplicate when a duplicate of the Ticket was locked
+// by another change, after which Sentinel changed nothing and asks the
+// client to read again and retry (Sentinel docs/features/tickets/tickets.md,
+// Mark-as-Duplicate Operation).
+const MESSAGE_DUPLICATES_BUSY =
+  "A duplicate of this Ticket was being changed at the same time, so Sentinel changed nothing. Try again.";
+
+// The presentation of a failure of Mark as duplicate at the top of its form
+// (docs/screens/ticket.md, States): 409
+// TICKET_DUPLICATE_CONCURRENT_MODIFICATION as an error, and every other
+// failure as a change.
+export function presentMarkDuplicateFailure(
+  failure: RequestFailure,
+): ChangeFailurePresentation | undefined {
+  if (
+    failure instanceof ApiError &&
+    failure.status === 409 &&
+    failure.code === "TICKET_DUPLICATE_CONCURRENT_MODIFICATION"
+  ) {
+    return {
+      message: MESSAGE_DUPLICATES_BUSY,
+      reference: undefined,
+      unconfirmed: false,
+    };
+  }
+  return presentChangeFailure(failure);
+}
+
+// The presentation of a failure of Mark as duplicate that ends after the
+// user left the screen, in the message area of the screen that the user is
+// on (docs/screens/ticket.md, States): an error of its field as an error,
+// which names the original, without the original of a duplicate, which the
+// reads of the dialog told, and every other failure as in the dialog.
+// Sentinel answers 404 TICKET_NOT_FOUND alike for the original and for the
+// Ticket that the request marks (Sentinel docs/features/tickets/tickets.md,
+// Mark Ticket as Duplicate), and no read of its screen then tells which, so
+// the message names both.
+export function presentLeftMarkDuplicateFailure(
+  failure: RequestFailure,
+  original: string,
+): ChangeFailurePresentation | undefined {
+  const atField = duplicateOriginalError(failure, {
+    original,
+    duplicateOf: undefined,
+    ticketId: "",
+  });
+  if (atField === undefined) {
+    return presentMarkDuplicateFailure(failure);
+  }
+  return {
+    message:
+      failure instanceof ApiError && failure.status === 404
+        ? `This Ticket or the original ${original} doesn't exist, or you don't have access to it.`
+        : atField,
+    reference: undefined,
+    unconfirmed: false,
+  };
+}
+
+// The message of Reopen or Revert duplicate of a Ticket that another user,
+// or Sentinel, took out of Ignored or Duplicated meanwhile, 409
+// TICKET_INVALID_TRANSITION (Sentinel docs/features/tickets/tickets.md,
+// Reopen Ticket; Revert Duplicate Status), such as "SNTL-17 is no longer
+// Ignored.". Every other failure has the presentation of a change.
+export function presentExitConflict(
+  failure: RequestFailure,
+  ticketId: string,
+  status: "Ignored" | "Duplicated",
+): string | undefined {
+  return failure instanceof ApiError &&
+    failure.status === 409 &&
+    failure.code === "TICKET_INVALID_TRANSITION"
+    ? `${ticketId} is no longer ${status}.`
+    : undefined;
+}
+
 // The messages of the name field of Add package, at the field
 // (docs/screens/ticket.md, States): SMELT maintains no package of the name,
 // whose letter case counts; no Product that SMELT lists for it, in a

@@ -4,7 +4,7 @@ import {
   Outlet,
   useChildMatches,
 } from "@tanstack/react-router";
-import { createContext, use, useRef, type ReactNode } from "react";
+import { createContext, use, useMemo, useRef, type ReactNode } from "react";
 import type {
   TicketDetail,
   TicketDetailResponse,
@@ -33,6 +33,7 @@ import { ScreenHeading } from "../components/screen-heading";
 import { Severity } from "../components/severity";
 import { TicketStatus } from "../components/ticket-status";
 import { rootRoute } from "./root";
+import { TicketActions } from "./ticket/actions";
 
 // The Ticket screen (docs/screens/ticket.md): one Ticket, from Get Ticket
 // (Sentinel docs/features/tickets/tickets.md, Get Ticket), with its heading
@@ -256,8 +257,13 @@ interface TicketFrameProps {
 // moving the focus (docs/behaviors.md, Accessibility, Focus after a
 // navigation; docs/screen-map.md, Contract URLs). After the identifier, 4 px
 // later, the lock and the label Confidential for a confidential Ticket, then
-// its main values, 16 px apart; the tabs follow 12 px below the row, or right
-// below it in the compact heading (docs/design-system.md, Detail Screens).
+// its main values, 16 px apart, and at its end Actions, for a user who can
+// take one of its actions on the Ticket (src/routes/ticket/actions.tsx). The
+// row is at least as high as its actions for every user, 36 px, or 32 px in
+// the compact heading, so that the tabs keep their place as the Ticket
+// arrives and whether Actions shows or not; the tabs follow 12 px below the
+// row, or right below it in the compact heading (docs/design-system.md,
+// Detail Screens).
 function TicketFrame({
   ticketId,
   selected,
@@ -267,13 +273,16 @@ function TicketFrame({
 }: TicketFrameProps) {
   const root = useRef<HTMLDivElement>(null);
   const twoColumns = useTwoColumns(root);
+  const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
   return (
     <div ref={root}>
       <DetailTabs selected={selected}>
         <DetailHeading sticky={twoColumns === true}>
           {(compact) => (
             <>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <div
+                className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${compact ? "min-h-8" : "min-h-9"}`}
+              >
                 <div className="flex items-center gap-1">
                   <ScreenHeading compact={compact}>
                     {ticket?.ticket_id ?? "Ticket"}
@@ -282,6 +291,15 @@ function TicketFrame({
                 </div>
                 {ticket !== undefined && (
                   <MainValues ticket={ticket} now={now} compact={compact} />
+                )}
+                {ticket !== undefined && (
+                  <div className="ms-auto flex items-center">
+                    <TicketActions
+                      ticket={ticket}
+                      record={record}
+                      compact={compact}
+                    />
+                  </div>
                 )}
               </div>
               <div className={compact ? "" : "mt-3"}>
