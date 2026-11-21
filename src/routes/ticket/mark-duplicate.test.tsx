@@ -1898,6 +1898,8 @@ describe("leaving Mark as duplicate…", () => {
       .element(originalField(dialog))
       .toHaveAccessibleDescription(`${DESCRIPTION} ${MESSAGE_NOT_AN_ID}`);
     await expect.element(originalField(dialog)).toHaveFocus();
+    const cancel = cancelButton(dialog).element();
+    const pressed = cancel.getBoundingClientRect();
 
     await cancelButton(dialog).click();
 
@@ -1912,6 +1914,11 @@ describe("leaving Mark as duplicate…", () => {
     await expect
       .element(discard.getByRole("button", { name: "Keep editing" }))
       .toHaveFocus();
+    // Cancel stays where the pointer pressed it, as the error stays at the
+    // field that loses the focus to it: a move of Cancel, which a shorter
+    // dialog brings, can end the press outside it and cancel it.
+    const shown = cancel.getBoundingClientRect();
+    expect([shown.left, shown.top]).toEqual([pressed.left, pressed.top]);
   });
 
   test.each([

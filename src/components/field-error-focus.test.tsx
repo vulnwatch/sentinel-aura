@@ -23,16 +23,22 @@ interface CheckedFormProps {
   // Whether the form drops the error of its field, as it can without an
   // event of the field.
   drops?: boolean;
+  // Whether the form tells the region whether it still shows the error. A
+  // form whose field errors React Aria holds, such as Sign in, does not, so
+  // its region empties on the events of the field alone.
+  tells?: boolean;
 }
 
 // A form that checks its fields itself as it is submitted, and gives the
 // first field with an error its error, a new object for each submission.
-function CheckedForm({ drops = false }: CheckedFormProps) {
+function CheckedForm({ drops = false, tells = true }: CheckedFormProps) {
   const [name, setName] = useState("");
   const [checked, setFailure] = useState<{ text: string }>();
   const failure = drops ? undefined : checked;
   const nameRef = useRef<HTMLInputElement>(null);
-  const { focusField, region } = useFieldErrorFocus(failure !== undefined);
+  const { focusField, region } = useFieldErrorFocus(
+    tells ? failure !== undefined : true,
+  );
   useEffect(() => {
     if (failure !== undefined) {
       focusField(nameRef.current, failure.text);
@@ -171,7 +177,9 @@ test.each<[string, () => Promise<void>]>([
 ])(
   "empties the region once %s, so that it does not repeat the error later",
   async (_, leave) => {
-    const screen = await render(<CheckedForm />);
+    // The form does not tell the region that its error went as the input
+    // changed: the event of the field alone empties the region.
+    const screen = await render(<CheckedForm tells={false} />);
     await field(screen, "Name").click();
     await userEvent.keyboard("{Enter}");
     await expect.poll(() => statusTexts(screen)).toEqual([MESSAGE_NAME]);
