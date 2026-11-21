@@ -14,9 +14,8 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 The Ticket screen shows one Ticket: its heading row with its main values and
 the menu of its actions, with which an analyst ignores it with a reason,
 marks it as a duplicate, reopens it, and reverts its duplicate status, and an
-analyst or a user who
-manages fetchers reruns its convergence; in
-the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
+analyst or a user who manages fetchers reruns its convergence; in the tab
+Overview its CVE, the CVSS assessments of its CVE, whose SUSE
 assessment an analyst who manages CVSS adds, edits, and deletes, its package
 tree, with the IBS requests of its tracks, to which an analyst who manages
 packages adds the packages that Sentinel missed, whose packages, tracks, and
@@ -1030,18 +1029,16 @@ depart from them:
 **Ignore…** and **Ignore as not shipped by SUSE**, Ignore Ticket, `POST
 /api/v1/tickets/{ticket_id}/ignore`; **Mark as duplicate…**, Mark Ticket as
 Duplicate, `POST /api/v1/tickets/{ticket_id}/duplicate`; **Reopen**, Reopen
-Ticket, `POST
-/api/v1/tickets/{ticket_id}/reopen`; and **Revert duplicate**, Revert
-Duplicate Status, `POST /api/v1/tickets/{ticket_id}/revert-duplicate`, for a
-user who holds `triage_ticket`; and **Rerun convergence**, Rerun Ticket
+Ticket, `POST /api/v1/tickets/{ticket_id}/reopen`; and **Revert duplicate**,
+Revert Duplicate Status, `POST /api/v1/tickets/{ticket_id}/revert-duplicate`,
+for a user who holds `triage_ticket`; and **Rerun convergence**, Rerun Ticket
 Convergence, `POST /api/v1/tickets/{ticket_id}/rerun-reactivation`, for a user
-who holds `triage_ticket` or `manage_fetchers`, in Actions, the menu at the
-end of the heading row (`docs/design-system.md`, Detail Screens; Sentinel
+who holds `triage_ticket` or `manage_fetchers`, in Actions, the menu at the end
+of the heading row (`docs/design-system.md`, Detail Screens; Sentinel
 `docs/features/tickets/tickets.md`, Status Transitions; Duplicate Handling;
-Ignored; Ignore Reason; Ignore Ticket; Mark Ticket as Duplicate; Reopen
-Ticket; Revert Duplicate Status;
-Rerun Ticket Convergence; Sentinel `docs/features/identity/rbac.md`, Endpoint
-Permission Map (Tickets)):
+Ignored; Ignore Reason; Ignore Ticket; Mark Ticket as Duplicate; Reopen Ticket;
+Revert Duplicate Status; Rerun Ticket Convergence; Sentinel
+`docs/features/identity/rbac.md`, Endpoint Permission Map (Tickets)):
 
 - Actions offers the actions that the user can take on the Ticket in its status
   (above): first, so that the keyboard, which opens the menu on its first item,

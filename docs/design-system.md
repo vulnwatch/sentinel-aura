@@ -1490,12 +1490,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   checkbox or a radio button is 16 px, with a `border-strong` boundary, a
   4 px radius or round, and when selected an `accent` fill with its mark,
   `check` or a dot of 6 px, in `on-accent`; a date field shows its parts as
-  `docs/behaviors.md` (Input)
-  orders them and ends with a quiet icon button 24 px square with `calendar`
-  at 16 px in `fg-muted`, named "Calendar" followed by the name of its
-  field, such as "Calendar From", which its tooltip shows; and a
-  search field starts with `search` at 16 px and, with a value, ends with a
-  clear button.
+  `docs/behaviors.md` (Input) orders them and ends with a quiet icon button
+  24 px square with `calendar` at 16 px in `fg-muted`, named "Calendar"
+  followed by the name of its field, such as "Calendar From", which its
+  tooltip shows; and a search field starts with `search` at 16 px and, with a
+  value, ends with a clear button.
 - A combobox of users, such as the user field of a grant, searches the
   directory, List Users, with the filters that its screen document states,
   such as active users only (Sentinel
