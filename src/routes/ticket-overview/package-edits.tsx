@@ -43,7 +43,7 @@ import {
 } from "../../components/modal-dialog";
 import {
   FocusHandOff,
-  focusScreenHeading,
+  focusHeadingAfterClose,
 } from "../../components/screen-heading";
 
 // The edits of the packages and the tracks of the package tree
@@ -139,28 +139,6 @@ export function createRecordTriggers(): RecordTriggers {
     },
     get: (id) => elements.get(id),
   };
-}
-
-// Moves the focus to the screen's heading once a menu has closed whose
-// button the screen no longer offers, as after a read of the signed-in user
-// took its capability away while it was open: React Aria cannot return the
-// focus to the button, which leaves the page with the menu
-// (docs/behaviors.md, Accessibility, Focus after an action). Where the button
-// stays, React Aria returns the focus to it, in a later frame in some
-// browsers, and the focus is left to it.
-function handOffAfterClose(button: () => HTMLElement | null | undefined) {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const element = button();
-      if (
-        (document.activeElement === null ||
-          document.activeElement === document.body) &&
-        (element === null || element === undefined || !element.isConnected)
-      ) {
-        focusScreenHeading();
-      }
-    });
-  });
 }
 
 // What the records of the package tree need for their edits (PackagesPart,
@@ -317,7 +295,7 @@ function MarkerActions({
       if (conflict !== undefined) {
         setOpen(false);
         setConfirming(false);
-        handOffAfterClose(button);
+        focusHeadingAfterClose(button);
         showMessage({ tone: "info", text: conflict });
         return;
       }
@@ -330,7 +308,7 @@ function MarkerActions({
         return;
       }
       setOpen(false);
-      handOffAfterClose(button);
+      focusHeadingAfterClose(button);
       showMessage({
         tone: presentation.unconfirmed ? "warning" : "danger",
         text: presentation.message,
@@ -400,7 +378,7 @@ function MarkerActions({
           onOpenChange={(next) => {
             setOpen(next);
             if (!next && !edits.manages) {
-              handOffAfterClose(button);
+              focusHeadingAfterClose(button);
             }
           }}
           busy={pending}
@@ -523,7 +501,7 @@ export function TrackAffectedness({
         return;
       }
       setOpen(false);
-      handOffAfterClose(button);
+      focusHeadingAfterClose(button);
       const presentation = presentChangeFailure(failure);
       if (presentation !== undefined) {
         showMessage({
@@ -555,7 +533,7 @@ export function TrackAffectedness({
           if (next) {
             setOfferedAtOpen(edits.settable);
           } else if (!offers(edits.settable)) {
-            handOffAfterClose(button);
+            focusHeadingAfterClose(button);
           }
         }}
         onChoose={(choice) => {

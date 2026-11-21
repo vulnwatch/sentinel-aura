@@ -1,6 +1,7 @@
-import { Ellipsis } from "lucide-react";
+import { ChevronDown, Ellipsis } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import { Menu, MenuTrigger } from "react-aria-components";
+import { Button } from "./button";
 import { IconButton } from "./icon-button";
 import { MENU_FOCUS_RING, MenuPopover } from "./menu";
 
@@ -54,6 +55,61 @@ export function ActionsMenu({
           onPress={() => undefined}
         />
       </span>
+      <MenuPopover placement="bottom end">
+        <Menu className={`min-w-44 ${MENU_FOCUS_RING}`}>{children}</Menu>
+      </MenuPopover>
+    </MenuTrigger>
+  );
+}
+
+interface ScreenActionsMenuProps {
+  // The accessible name of the button, which starts with its label, Actions,
+  // and names its record, such as "Actions of SNTL-42"; the menu takes the
+  // same name.
+  label: string;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  // Whether the change of one of its items is in progress (ActionsMenu).
+  busy: boolean;
+  // Whether the button is in the compact heading of a detail screen, 32 px
+  // high, rather than 36 px in the heading row.
+  compact: boolean;
+  ref?: Ref<HTMLButtonElement> | undefined;
+  // Its items (MenuAction), and the separators of their groups.
+  children: ReactNode;
+}
+
+// The actions of a detail screen, at the end of its heading row
+// (docs/design-system.md, Detail Screens): Actions, a secondary button with
+// chevron-down after its label, which opens them as a menu below its end, at
+// least as wide as the button and as its longest item. An item whose change
+// applies at once keeps the menu open, busy, until Sentinel answers.
+export function ScreenActionsMenu({
+  label,
+  isOpen,
+  onOpenChange,
+  busy,
+  compact,
+  ref,
+  children,
+}: ScreenActionsMenuProps) {
+  return (
+    <MenuTrigger
+      isOpen={isOpen}
+      onOpenChange={(open) => {
+        if (!busy) {
+          onOpenChange(open);
+        }
+      }}
+    >
+      <Button
+        ref={ref}
+        aria-label={label}
+        endIcon={ChevronDown}
+        size={compact ? "small" : "medium"}
+      >
+        Actions
+      </Button>
       <MenuPopover placement="bottom end">
         <Menu className={`min-w-44 ${MENU_FOCUS_RING}`}>{children}</Menu>
       </MenuPopover>

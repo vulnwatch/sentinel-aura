@@ -258,10 +258,18 @@ export async function expectScreenshot(page: Page, name: string) {
     // A date that a popover open above it covers whole, such as one of the
     // details of a record below the popover of a field, shows nothing of its
     // own, and its mask would cover the popover instead. React Aria marks a
-    // popover with the side of its trigger on which it opens.
+    // popover with the side of its trigger on which it opens. So does a date
+    // that the page has scrolled below an element that stays at the top of
+    // the window, such as the compact heading of a detail screen with its
+    // actions (docs/design-system.md, Detail Screens), which sticks there.
     const dates = dateTimes(page);
     const shown = await dates.evaluateAll((elements) => {
-      const popovers = [...document.querySelectorAll("[data-placement]")];
+      const popovers = [
+        ...document.querySelectorAll("[data-placement]"),
+        ...[...document.querySelectorAll("main *")].filter(
+          (candidate) => getComputedStyle(candidate).position === "sticky",
+        ),
+      ];
       return elements.flatMap((element, index) => {
         const box = element.getBoundingClientRect();
         const covered = popovers.some((popover) => {

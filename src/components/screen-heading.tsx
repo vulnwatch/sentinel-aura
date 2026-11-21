@@ -137,6 +137,30 @@ export function useFocusHeadingOnRemoval(ref: RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 
+// Moves the focus to the screen's heading once a menu has closed whose
+// button the screen no longer offers, as after a read of the signed-in user
+// took its capability away while it was open: React Aria cannot return the
+// focus to the button, which leaves the page with the menu
+// (docs/behaviors.md, Accessibility, Focus after an action). Where the button
+// stays, React Aria returns the focus to it, in a later frame in some
+// browsers, and the focus is left to it.
+export function focusHeadingAfterClose(
+  button: () => HTMLElement | null | undefined,
+) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const element = button();
+      if (
+        (document.activeElement === null ||
+          document.activeElement === document.body) &&
+        (element === null || element === undefined || !element.isConnected)
+      ) {
+        focusScreenHeading();
+      }
+    });
+  });
+}
+
 interface FocusHandOffProps {
   children: ReactNode;
 }

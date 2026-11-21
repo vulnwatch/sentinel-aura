@@ -967,8 +967,10 @@ describe("the actions", () => {
       name: "Actions",
     });
     await expect.element(header).toBeInTheDocument();
+    // The header's own text, apart from Actions of the heading row of the
+    // screen, which shows its label.
     expect(
-      screen
+      header
         .getByText("Actions", { exact: true })
         .element()
         .getBoundingClientRect().width,

@@ -16,8 +16,8 @@ import { Option, OPTIONS_POPOVER, OptionsStatus } from "./options";
 
 // A combobox that searches as the user types (docs/design-system.md, Forms):
 // a field whose term, once the user has stopped typing, reads the matching
-// options, which open below it, such as the combobox of users or the name of
-// a package.
+// options, which open below it, or above it where they do not fit, such as
+// the combobox of users or the name of a package.
 
 // The shortest term that the combobox searches, and the longest that the
 // field takes, the length of a query parameter (Sentinel docs/api-spec.md,
@@ -103,9 +103,10 @@ interface SearchComboBoxProps<TItem extends object> {
 // 16 px of side padding, which takes at most 500 characters; its description
 // and its error after it, as the error of every field of a form follows it,
 // after circle-alert, and assistive technologies read them with the field.
-// Its options open below it (OPTIONS_POPOVER); while they load, the loading
-// indicator shows in their place, and the status below them, which a status
-// region of the menu announces.
+// Its options open below it, or above it where they do not fit below it and
+// the window has more room above (OPTIONS_POPOVER); while they load, the
+// loading indicator shows in their place, and the status below them, which a
+// status region of the menu announces.
 export function SearchComboBox<TItem extends object>({
   label,
   name,

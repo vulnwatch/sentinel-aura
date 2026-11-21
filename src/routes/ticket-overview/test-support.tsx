@@ -22,6 +22,7 @@ import type {
   ProductDetail,
   ProductEligibilityResponse,
   ProductExclusionResponse,
+  TicketConvergenceDispatchDataResponse,
   TicketDetail,
   TrackDetail,
   TrackExclusionResponse,
@@ -67,9 +68,10 @@ declare module "vitest/browser" {
 }
 
 // What the test files of the modules of Overview, the first tab of the Ticket
-// screen (src/routes/ticket-overview.tsx), share: the responses of the API to
-// the screen, its rendering, the elements of its parts, and the waits for its
-// reads.
+// screen (src/routes/ticket-overview.tsx), share, with those of Actions in its
+// heading row (src/routes/ticket/), which show over Overview: the responses
+// of the API to the screen, its rendering, the elements of its parts, and the
+// waits for its reads.
 
 export const ME = "/api/v1/users/me";
 export const TICKETS = "/api/v1/tickets";
@@ -222,6 +224,10 @@ export interface Stub {
   addPackage: (body: unknown) => Response | Promise<Response>;
   // The response to a search of the maintained packages, given its query.
   maintainedPackages: (query: URLSearchParams) => Response | Promise<Response>;
+  // The response to a change of the status of the Ticket or to a rerun of
+  // its convergence from Actions (src/routes/ticket/actions.tsx), given the
+  // last segment of its path, such as reopen, and its body.
+  ticketChange: (action: string, body: unknown) => Response | Promise<Response>;
 }
 
 // Answers the read of the signed-in user, an analyst who maintains no
@@ -234,8 +240,8 @@ export interface Stub {
 // without any, the search of the directory, Grant and Revoke Access, Assign
 // Ticket, Add Package to Ticket, by default an addition of
 // fictional-openssl, the search of the maintained packages, by default
-// without any, and the reads of Audit log, and returns the spy, whose calls
-// name the requests.
+// without any, the changes of Actions (ticketChangeResponse), and the reads
+// of Audit log, and returns the spy, whose calls name the requests.
 export function stubTicket(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: OTHER_USER,
@@ -260,6 +266,7 @@ export function stubTicket(fields: Partial<Stub> = {}) {
     packageChange: packageChangeResponse,
     addPackage: () => packageAdditionResponse(),
     maintainedPackages: () => maintainedPackagesPage([]),
+    ticketChange: ticketChangeResponse,
     ...fields,
   };
   return stubApi((request) => {
@@ -315,6 +322,12 @@ export function stubTicket(fields: Partial<Stub> = {}) {
       return stub.packageChange(
         request.method,
         request.path.slice(`${TICKET}/packages/`.length),
+        request.body,
+      );
+    }
+    if (request.path.startsWith(`${TICKET}/`) && request.method === "POST") {
+      return stub.ticketChange(
+        request.path.slice(`${TICKET}/`.length),
         request.body,
       );
     }
@@ -1106,6 +1119,42 @@ export function packageAdditionResponse(
     },
   };
   return jsonResponse(201, body);
+}
+
+// The 202 response of Rerun Ticket Convergence for SNTL-12.
+export function convergenceResponse(): Response {
+  const body: TicketConvergenceDispatchDataResponse = {
+    data: {
+      ticket_id: "SNTL-12",
+      task_id: "01994c20-7c00-7000-8000-000000000002",
+    },
+  };
+  return jsonResponse(202, body);
+}
+
+// The response of a change of Actions by the last segment of its path: SNTL-12
+// after it, Duplicated, a duplicate of the original that the body sends,
+// after Mark Ticket as Duplicate, and in Analysis after Reopen Ticket and
+// Revert Duplicate Status; and the 202 of Rerun Ticket Convergence.
+function ticketChangeResponse(action: string, body: unknown): Response {
+  if (action === "rerun-reactivation") {
+    return convergenceResponse();
+  }
+  if (action === "duplicate") {
+    const original =
+      typeof body === "object" &&
+      body !== null &&
+      "duplicate_of_ticket_id" in body
+        ? String(body.duplicate_of_ticket_id)
+        : null;
+    return ticketResponse(
+      fictionalTicketDetail({
+        status: "duplicated",
+        duplicate_of_ticket_id: original,
+      }),
+    );
+  }
+  return ticketResponse(fictionalTicketDetail({ status: "analysis" }));
 }
 
 // A page of Search Maintained Packages, of 20 names: the names, in their

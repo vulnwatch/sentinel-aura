@@ -119,6 +119,13 @@ const STATUSES = new Map<string, KnownStatus>(
   } satisfies Record<TicketStatusValue, KnownStatus>),
 );
 
+// The name of a Ticket status, such as "Analysis", or a status that the
+// pinned contract does not list as received (docs/behaviors.md, Domain
+// Terms; Unknown Values).
+export function ticketStatusName(status: string): string {
+  return STATUSES.get(status)?.name ?? status;
+}
+
 interface TicketStatusProps {
   // A value of TicketStatusValue, or another value that a later Sentinel
   // release returns.

@@ -2,15 +2,20 @@ import { describe, expect, test } from "vitest";
 import {
   assigneeFieldError,
   cvssVectorError,
+  duplicateOriginalError,
   grantAccessFieldError,
   isAssigneeChanged,
   isNotConfidential,
   isRequestFailure,
+  MESSAGE_DUPLICATE_OF_ITSELF,
   packageNameError,
   presentAddPackageFailure,
   presentChangeFailure,
+  presentExitConflict,
   presentLeftAddPackageFailure,
+  presentLeftMarkDuplicateFailure,
   presentFailure,
+  presentMarkDuplicateFailure,
   presentMarkerConflict,
   presentRefetchFailure,
   presentSignInFailure,
@@ -18,6 +23,7 @@ import {
   validationErrorFields,
   type ChangeFailurePresentation,
   type FailurePresentation,
+  type NamedOriginal,
   type RequestFailure,
 } from "./errors";
 import { ApiError, NetworkError, UnreadableResponseError } from "./request";
@@ -823,6 +829,385 @@ describe("presentLeftAddPackageFailure", () => {
         "fictional-openssl",
       ),
     ).toBeUndefined();
+  });
+});
+
+// The messages of Mark as duplicate.
+const SELF_DUPLICATE = "A Ticket can't be a duplicate of itself.";
+const DUPLICATES_BUSY =
+  "A duplicate of this Ticket was being changed at the same time, so Sentinel changed nothing. Try again.";
+
+// SNTL-41, sent as the original of SNTL-30, of which no read of the dialog
+// shows the original.
+const SENT_SNTL_41: NamedOriginal = {
+  original: "SNTL-41",
+  duplicateOf: undefined,
+  ticketId: "SNTL-30",
+};
+
+// The codes of Mark Ticket as Duplicate that the field of the original shows,
+// with their messages for SNTL-41, which name it, since "this Ticket" is the
+// Ticket that the request marks.
+const ORIGINAL_FIELD_ERRORS: [number, string, string][] = [
+  [400, "TICKET_SELF_DUPLICATE", SELF_DUPLICATE],
+  [
+    404,
+    "TICKET_NOT_FOUND",
+    "SNTL-41 doesn't exist, or you don't have access to it.",
+  ],
+  [
+    409,
+    "TICKET_DUPLICATE_TARGET_DUPLICATED",
+    "SNTL-41 is a duplicate itself: choose its original instead.",
+  ],
+];
+
+describe("duplicateOriginalError", () => {
+  test.each(ORIGINAL_FIELD_ERRORS)(
+    "states the error of the field of the original of %i %s",
+    (status, code, message) => {
+      expect(
+        duplicateOriginalError(errorResponse(status, code), SENT_SNTL_41),
+      ).toBe(message);
+    },
+  );
+
+  test.each([
+    [
+      404,
+      "TICKET_NOT_FOUND",
+      "SNTL-2147483647 doesn't exist, or you don't have access to it.",
+    ],
+    [
+      409,
+      "TICKET_DUPLICATE_TARGET_DUPLICATED",
+      "SNTL-2147483647 is a duplicate itself: choose its original instead.",
+    ],
+  ])(
+    "names after %i %s the original that it is given",
+    (status, code, message) => {
+      expect(
+        duplicateOriginalError(errorResponse(status, code), {
+          original: "SNTL-2147483647",
+          duplicateOf: undefined,
+          ticketId: "SNTL-8",
+        }),
+      ).toBe(message);
+    },
+  );
+
+  test("states the same error as the check of the form for the Ticket itself", () => {
+    expect(MESSAGE_DUPLICATE_OF_ITSELF).toBe(SELF_DUPLICATE);
+  });
+
+  test.each<[string, NamedOriginal, string]>([
+    [
+      "the original of the Ticket named, which the user chooses instead",
+      { original: "SNTL-41", duplicateOf: "SNTL-40", ticketId: "SNTL-30" },
+      "SNTL-41 is a duplicate of SNTL-40: choose SNTL-40 instead.",
+    ],
+    [
+      "that the Ticket named is a duplicate of the Ticket itself, which Revert duplicate makes the original",
+      { original: "SNTL-31", duplicateOf: "SNTL-30", ticketId: "SNTL-30" },
+      "SNTL-31 is a duplicate of this Ticket: to make it the original, use Revert duplicate on SNTL-31 first.",
+    ],
+    [
+      "no original when the screen does not know the original of the Ticket named",
+      SENT_SNTL_41,
+      "SNTL-41 is a duplicate itself: choose its original instead.",
+    ],
+  ])(
+    "names after 409 TICKET_DUPLICATE_TARGET_DUPLICATED %s",
+    (_, known, message) => {
+      expect(
+        duplicateOriginalError(
+          errorResponse(409, "TICKET_DUPLICATE_TARGET_DUPLICATED"),
+          known,
+        ),
+      ).toBe(message);
+    },
+  );
+
+  test("names after 409 TICKET_DUPLICATE_TARGET_DUPLICATED the Tickets that it is given", () => {
+    expect(
+      duplicateOriginalError(
+        errorResponse(409, "TICKET_DUPLICATE_TARGET_DUPLICATED"),
+        {
+          original: "SNTL-2147483647",
+          duplicateOf: "SNTL-7",
+          ticketId: "SNTL-8",
+        },
+      ),
+    ).toBe("SNTL-2147483647 is a duplicate of SNTL-7: choose SNTL-7 instead.");
+  });
+
+  test.each([
+    [
+      "TICKET_SELF_DUPLICATE with another status",
+      errorResponse(409, "TICKET_SELF_DUPLICATE"),
+    ],
+    [
+      "TICKET_NOT_FOUND with another status",
+      errorResponse(409, "TICKET_NOT_FOUND"),
+    ],
+    [
+      "TICKET_DUPLICATE_TARGET_DUPLICATED with another status",
+      errorResponse(400, "TICKET_DUPLICATE_TARGET_DUPLICATED"),
+    ],
+    [
+      "another 409 code",
+      errorResponse(409, "TICKET_DUPLICATE_CONCURRENT_MODIFICATION"),
+    ],
+    ["another 404 code", errorResponse(404, "RESOURCE_NOT_FOUND")],
+    ["a VALIDATION_ERROR", errorResponse(422, "VALIDATION_ERROR")],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+    ],
+    [
+      "a status that the pinned contract does not list",
+      errorResponse(418, "FICTIONAL_CODE"),
+    ],
+    ["an error without a code", errorResponse(404)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+    [
+      "a successful response that the UI cannot read",
+      new UnreadableResponseError(200, REQUEST_ID, {
+        cause: new SyntaxError("Unexpected token"),
+      }),
+    ],
+  ])("leaves %s to the form", (_, failure) => {
+    expect(duplicateOriginalError(failure, SENT_SNTL_41)).toBeUndefined();
+  });
+});
+
+describe("presentMarkDuplicateFailure", () => {
+  test("says after 409 TICKET_DUPLICATE_CONCURRENT_MODIFICATION that Sentinel changed nothing, without a reference, as a failure whose outcome is known", () => {
+    expect(
+      presentMarkDuplicateFailure(
+        errorResponse(409, "TICKET_DUPLICATE_CONCURRENT_MODIFICATION"),
+      ),
+    ).toEqual({
+      message: DUPLICATES_BUSY,
+      reference: undefined,
+      unconfirmed: false,
+    });
+  });
+
+  test.each(CHANGE_FAILURES)(
+    "presents %s as any other change",
+    (_, failure, presentation) => {
+      expect(presentMarkDuplicateFailure(failure)).toEqual(presentation);
+    },
+  );
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "TICKET_DUPLICATE_CONCURRENT_MODIFICATION with another status",
+      errorResponse(503, "TICKET_DUPLICATE_CONCURRENT_MODIFICATION"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "409 TICKET_NOT_MUTABLE",
+      errorResponse(409, "TICKET_NOT_MUTABLE"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a 409 with a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a 409 without a code",
+      errorResponse(409),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+  ])("presents %s by its status", (_, failure, presentation) => {
+    expect(presentMarkDuplicateFailure(failure)).toEqual(presentation);
+  });
+
+  test("presents no message for a 401", () => {
+    expect(
+      presentMarkDuplicateFailure(errorResponse(401, "AUTH_NOT_AUTHENTICATED")),
+    ).toBeUndefined();
+  });
+});
+
+describe("presentLeftMarkDuplicateFailure", () => {
+  test.each([
+    [400, "TICKET_SELF_DUPLICATE", SELF_DUPLICATE],
+    [
+      409,
+      "TICKET_DUPLICATE_TARGET_DUPLICATED",
+      "SNTL-21 is a duplicate itself: choose its original instead.",
+    ],
+  ])(
+    "presents %i %s with the message of the field, which names the original and no original of a duplicate, as an error without a reference",
+    (status, code, message) => {
+      expect(
+        presentLeftMarkDuplicateFailure(errorResponse(status, code), "SNTL-21"),
+      ).toEqual({
+        message,
+        reference: undefined,
+        unconfirmed: false,
+      });
+    },
+  );
+
+  test("presents 404 TICKET_NOT_FOUND naming both the Ticket and the original, which Sentinel does not tell apart, as an error without a reference", () => {
+    expect(
+      presentLeftMarkDuplicateFailure(
+        errorResponse(404, "TICKET_NOT_FOUND"),
+        "SNTL-21",
+      ),
+    ).toEqual({
+      message:
+        "This Ticket or the original SNTL-21 doesn't exist, or you don't have access to it.",
+      reference: undefined,
+      unconfirmed: false,
+    });
+  });
+
+  test("presents 409 TICKET_DUPLICATE_CONCURRENT_MODIFICATION as the form does, without the original", () => {
+    expect(
+      presentLeftMarkDuplicateFailure(
+        errorResponse(409, "TICKET_DUPLICATE_CONCURRENT_MODIFICATION"),
+        "SNTL-21",
+      ),
+    ).toEqual({
+      message: DUPLICATES_BUSY,
+      reference: undefined,
+      unconfirmed: false,
+    });
+  });
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+      { message: UNCONFIRMED, reference: undefined, unconfirmed: true },
+    ],
+    [
+      "a 503 with a code that the pinned contract does not list",
+      errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "409 TICKET_NOT_MUTABLE",
+      errorResponse(409, "TICKET_NOT_MUTABLE"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a status that the pinned contract does not list",
+      errorResponse(418, "FICTIONAL_CODE"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a code of the field with another status",
+      errorResponse(409, "TICKET_NOT_FOUND"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a field error of the original, whose field is no longer shown",
+      validationError([entry(["body", "duplicate_of_ticket_id"])]),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+  ])("presents %s by its status", (_, failure, presentation) => {
+    expect(presentLeftMarkDuplicateFailure(failure, "SNTL-21")).toEqual(
+      presentation,
+    );
+  });
+
+  test.each([
+    [
+      404,
+      "TICKET_NOT_FOUND",
+      "This Ticket or the original SNTL-2147483647 doesn't exist, or you don't have access to it.",
+    ],
+    [
+      409,
+      "TICKET_DUPLICATE_TARGET_DUPLICATED",
+      "SNTL-2147483647 is a duplicate itself: choose its original instead.",
+    ],
+  ])(
+    "names the original that it is given after %i %s",
+    (status, code, message) => {
+      expect(
+        presentLeftMarkDuplicateFailure(
+          errorResponse(status, code),
+          "SNTL-2147483647",
+        )?.message,
+      ).toBe(message);
+    },
+  );
+
+  test("presents no message for a 401", () => {
+    expect(
+      presentLeftMarkDuplicateFailure(
+        errorResponse(401, "AUTH_NOT_AUTHENTICATED"),
+        "SNTL-21",
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe("presentExitConflict", () => {
+  test.each([
+    ["Ignored", "SNTL-17 is no longer Ignored."],
+    ["Duplicated", "SNTL-17 is no longer Duplicated."],
+  ] as const)(
+    "says after 409 TICKET_INVALID_TRANSITION that the Ticket is no longer %s",
+    (status, message) => {
+      expect(
+        presentExitConflict(
+          errorResponse(409, "TICKET_INVALID_TRANSITION"),
+          "SNTL-17",
+          status,
+        ),
+      ).toBe(message);
+    },
+  );
+
+  test("names the Ticket that it is given", () => {
+    expect(
+      presentExitConflict(
+        errorResponse(409, "TICKET_INVALID_TRANSITION"),
+        "SNTL-22",
+        "Duplicated",
+      ),
+    ).toBe("SNTL-22 is no longer Duplicated.");
+  });
+
+  test.each([
+    [
+      "the code with another status",
+      errorResponse(400, "TICKET_INVALID_TRANSITION"),
+    ],
+    ["another 409 code", errorResponse(409, "TICKET_NOT_MUTABLE")],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+    ],
+    [
+      "a status that the pinned contract does not list",
+      errorResponse(418, "TICKET_INVALID_TRANSITION"),
+    ],
+    ["an error without a code", errorResponse(409)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+    [
+      "a successful response that the UI cannot read",
+      new UnreadableResponseError(200, REQUEST_ID, {
+        cause: new SyntaxError("Unexpected token"),
+      }),
+    ],
+  ])("leaves %s to the presentation of a change", (_, failure) => {
+    expect(presentExitConflict(failure, "SNTL-17", "Ignored")).toBeUndefined();
   });
 });
 
