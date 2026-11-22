@@ -167,16 +167,87 @@ function Provenance({ ticket }: ProvenanceProps) {
   );
 }
 
+interface PriorityBasisProps {
+  ticket: PriorityFields;
+  // Whether the basis starts with the automatic priority itself, as beside
+  // an override, which hides it: its section is then "Automatic priority",
+  // and otherwise "Based on".
+  withAutomatic: boolean;
+  // The level of the headings of its sections, one below the title of what
+  // shows it: 3 in the explanation, and 4 in a dialog, whose title is a
+  // heading of level 3.
+  headingLevel?: 3 | 4 | undefined;
+}
+
+// What the automatic priority of a Ticket is based on, in two sections 12 px
+// apart, each with its heading in text-12, weight 500, fg-muted, and its
+// lines 4 px apart: "Based on", or "Automatic priority" with the automatic
+// priority first, P1 in red included, so that the P1 that an override hides
+// stands out, then the severity and the exploitation level of the basis; and
+// "Evidence", each piece of deciding evidence on a line of its own, or "No
+// evidence." (Sentinel docs/features/tickets/ticket-priority.md, Automatic
+// Priority Basis). The explanation of the priority shows it, and so does the
+// dialog of Override priority… (docs/screens/ticket.md, Actions), with its
+// headings one level below the title of each (docs/design-system.md,
+// Priority, Explanation).
+export function PriorityBasis({
+  ticket,
+  withAutomatic,
+  headingLevel = 3,
+}: PriorityBasisProps) {
+  const basis = ticket.priority_automatic_basis;
+  const SectionHeading = headingLevel === 4 ? "h4" : "h3";
+  const heading = "text-12 font-medium text-fg-muted";
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <SectionHeading className={heading}>
+          {withAutomatic ? "Automatic priority" : "Based on"}
+        </SectionHeading>
+        {withAutomatic && (
+          <p className="flex items-center">
+            {ticket.priority_automatic === null ? (
+              "Not yet prioritizable"
+            ) : (
+              <Priority priority={ticket.priority_automatic} />
+            )}
+          </p>
+        )}
+        <p className="flex items-center gap-1.5">
+          <span className="text-fg-muted">Severity</span>
+          <Severity severity={basis.severity} />
+        </p>
+        <p className="flex items-center gap-1.5">
+          <span className="text-fg-muted">Exploitation</span>
+          <span>
+            {EXPLOITATION_LEVELS.get(basis.exploitation) ?? basis.exploitation}
+          </span>
+        </p>
+      </div>
+      <div className="flex flex-col gap-1">
+        <SectionHeading className={heading}>Evidence</SectionHeading>
+        {basis.evidence.length === 0 ? (
+          <p className="text-fg-muted">No evidence.</p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {basis.evidence.map((evidence, index) => (
+              <li key={`${evidence.kind}-${index}`}>
+                {evidenceLine(evidence)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // The content of the explanation: its title, which names it, a border line
-// 12 px below it and 12 px above the sections, then the section of the basis
-// and the section of the evidence, 12 px apart, each with its heading in
-// text-12, weight 500, fg-muted, and its lines 4 px apart, and last, for an
+// 12 px below it and 12 px above the basis (PriorityBasis), and last, for an
 // override, another border line 12 px around and who set it and when, as
 // details of the override, right below the evidence with which the reader
 // compares them.
 function Explanation({ ticket, isOverride }: ExplanationProps) {
-  const basis = ticket.priority_automatic_basis;
-  const heading = "text-12 font-medium text-fg-muted";
   return (
     <>
       {ticket.priority === null ? (
@@ -198,47 +269,7 @@ function Explanation({ ticket, isOverride }: ExplanationProps) {
         </Heading>
       )}
       <PopoverLine />
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h3 className={heading}>
-            {isOverride ? "Automatic priority" : "Based on"}
-          </h3>
-          {isOverride && (
-            <p className="flex items-center">
-              {ticket.priority_automatic === null ? (
-                "Not yet prioritizable"
-              ) : (
-                <Priority priority={ticket.priority_automatic} />
-              )}
-            </p>
-          )}
-          <p className="flex items-center gap-1.5">
-            <span className="text-fg-muted">Severity</span>
-            <Severity severity={basis.severity} />
-          </p>
-          <p className="flex items-center gap-1.5">
-            <span className="text-fg-muted">Exploitation</span>
-            <span>
-              {EXPLOITATION_LEVELS.get(basis.exploitation) ??
-                basis.exploitation}
-            </span>
-          </p>
-        </div>
-        <div className="flex flex-col gap-1">
-          <h3 className={heading}>Evidence</h3>
-          {basis.evidence.length === 0 ? (
-            <p className="text-fg-muted">No evidence.</p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {basis.evidence.map((evidence, index) => (
-                <li key={`${evidence.kind}-${index}`}>
-                  {evidenceLine(evidence)}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+      <PriorityBasis ticket={ticket} withAutomatic={isOverride} />
       {isOverride && (
         <>
           <PopoverLine />

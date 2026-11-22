@@ -4,7 +4,11 @@ import { expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
-import { RadioGroupField, type RadioOption } from "./radio-group";
+import {
+  chosenOrFirstRadio,
+  RadioGroupField,
+  type RadioOption,
+} from "./radio-group";
 
 // A group of radio buttons of a form (docs/design-system.md, Forms), at the
 // browser's default text size, in the light theme.
@@ -23,7 +27,11 @@ const FOCUS = "rgb(9, 105, 218)";
 
 type Delivery = "pickup" | "courier" | "post";
 
-const DELIVERIES: readonly RadioOption<Delivery>[] = [
+// The options, each with a label and a meaning as text.
+const DELIVERIES: readonly (RadioOption<Delivery> & {
+  label: string;
+  description: string;
+})[] = [
   {
     value: "pickup",
     label: "Pickup",
@@ -362,4 +370,87 @@ test("gives each radio button a 2 px boundary in danger-icon with an error, also
       DANGER_ICON,
     ]);
   }
+});
+
+// A form whose options are values with their marks, of which only one has a
+// meaning.
+function MarkedForm({ initial }: { initial?: "low" | "high" | "none" }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <Form>
+      <RadioGroupField<"low" | "high" | "none">
+        label="Level"
+        name="level"
+        options={[
+          {
+            value: "low",
+            label: (
+              <span>
+                <svg aria-hidden viewBox="0 0 8 8" className="size-2">
+                  <circle cx={4} cy={4} r={4} />
+                </svg>
+                Low
+              </span>
+            ),
+          },
+          { value: "high", label: "High" },
+          {
+            value: "none",
+            label: "None",
+            description: "A fictional level without effect.",
+          },
+        ]}
+        value={value}
+        onChange={setValue}
+      />
+    </Form>
+  );
+}
+
+test("names an option by the text of a label with a mark, and gives an option without a meaning no description", async () => {
+  const screen = await render(<MarkedForm initial="high" />);
+
+  const low = screen.getByRole("radio", { name: "Low", exact: true });
+  await expect.element(low).toBeInTheDocument();
+  expect(low.element().getAttribute("aria-describedby")).toBeNull();
+  await expect.element(low).not.toHaveAccessibleDescription();
+  await expect
+    .element(screen.getByRole("radio", { name: "None", exact: true }))
+    .toHaveAccessibleDescription("A fictional level without effect.");
+});
+
+test("leaves the focus where it is as it renders, also with a chosen option", async () => {
+  const screen = await render(<DeliveryForm initial="post" />);
+
+  await expect.element(groupOf(screen)).toBeVisible();
+  await nextFrames();
+  expect(document.activeElement).not.toBe(radioOf(screen, "Post").element());
+});
+
+test("gives as the button that takes the focus for the group its chosen option, or its first option without a choice", async () => {
+  const chosen = await render(<DeliveryForm initial="post" />);
+  await expect.element(radioOf(chosen, "Post")).toBeChecked();
+
+  expect(chosenOrFirstRadio(groupOf(chosen).element())).toBe(
+    radioOf(chosen, "Post").element(),
+  );
+
+  await chosen.unmount();
+  const unchosen = await render(<DeliveryForm />);
+  await expect.element(groupOf(unchosen)).toBeVisible();
+
+  expect(chosenOrFirstRadio(groupOf(unchosen).element())).toBe(
+    radioOf(unchosen, "Pickup").element(),
+  );
+});
+
+test("gives no button without a group, or for an element whose inputs are not radio buttons", async () => {
+  const screen = await render(<input aria-label="Fictional field" />);
+  await expect
+    .element(screen.getByRole("textbox", { name: "Fictional field" }))
+    .toBeVisible();
+
+  expect(chosenOrFirstRadio(null)).toBeNull();
+  expect(chosenOrFirstRadio(undefined)).toBeNull();
+  expect(chosenOrFirstRadio(screen.container)).toBeNull();
 });

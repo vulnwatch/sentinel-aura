@@ -1,9 +1,12 @@
 import {
   CirclePause,
   CirclePlay,
+  Gauge,
   ListRestart,
   Merge,
+  Plus,
   Split,
+  UserPen,
   type LucideIcon,
 } from "lucide-react";
 import { describe, expect, test, vi } from "vitest";
@@ -244,17 +247,27 @@ const ICONS: Record<string, LucideIcon> = {
   "Mark as duplicate…": Merge,
   Reopen: CirclePlay,
   "Revert duplicate": Split,
+  "Override priority…": UserPen,
+  "Set severity…": Gauge,
+  "Associate CVE…": Plus,
   "Rerun convergence": ListRestart,
 };
 
-// The actions of a user who holds triage_ticket on a Ticket in New and in
-// Analysis, the ignores first.
+// The actions of a user who holds triage_ticket on a Ticket with a CVE in New
+// and in Analysis, the ignores first, then the override of the priority.
 const IN_NEW = [
   "Ignore…",
   "Ignore as not shipped by SUSE",
   "Mark as duplicate…",
+  "Override priority…",
 ];
 const IN_ANALYSIS = [...IN_NEW, "Rerun convergence"];
+// The actions on an Analyzed or Resolved Ticket with a CVE.
+const IN_ANALYZED = [
+  "Mark as duplicate…",
+  "Override priority…",
+  "Rerun convergence",
+];
 
 // The outcome of the quick action as Sentinel returns the Ticket after it,
 // assigned to the signed-in user.
@@ -265,8 +278,8 @@ const IGNORED = "Ignored as Not shipped, assigned to you.";
 const OFFERED: [string, string[]][] = [
   ["new", IN_NEW],
   ["analysis", IN_ANALYSIS],
-  ["analyzed", ["Mark as duplicate…", "Rerun convergence"]],
-  ["resolved", ["Mark as duplicate…", "Rerun convergence"]],
+  ["analyzed", IN_ANALYZED],
+  ["resolved", IN_ANALYZED],
   ["ignored", ["Reopen"]],
   ["duplicated", ["Revert duplicate"]],
 ];
@@ -315,7 +328,7 @@ describe("Actions", () => {
   );
 
   test.each(["analysis", "analyzed", "resolved"])(
-    "sets Rerun convergence apart from Mark as duplicate… by a border line on a Ticket in %s",
+    "sets Override priority… apart from Mark as duplicate…, and Rerun convergence apart from Override priority…, by border lines on a Ticket in %s",
     async (status) => {
       showingStatus(status);
       const { screen } = await renderTicket();
@@ -323,28 +336,52 @@ describe("Actions", () => {
       const menu = await openActions(screen);
 
       const separators = menu.getByRole("separator").elements();
-      expect(separators).toHaveLength(1);
-      const separator = separators[0]!;
+      expect(separators).toHaveLength(2);
+      const first = separators[0]!;
+      const second = separators[1]!;
       expect(
-        follows(itemOf(menu, "Mark as duplicate…").element(), separator),
+        follows(itemOf(menu, "Mark as duplicate…").element(), first),
       ).toBeTruthy();
       expect(
-        follows(separator, itemOf(menu, "Rerun convergence").element()),
+        follows(first, itemOf(menu, "Override priority…").element()),
       ).toBeTruthy();
-      const line = getComputedStyle(separator);
-      expect([line.borderTopWidth, line.borderTopColor]).toEqual([
-        "1px",
-        BORDER,
-      ]);
+      expect(
+        follows(itemOf(menu, "Override priority…").element(), second),
+      ).toBeTruthy();
+      expect(
+        follows(second, itemOf(menu, "Rerun convergence").element()),
+      ).toBeTruthy();
+      for (const separator of separators) {
+        const line = getComputedStyle(separator);
+        expect([line.borderTopWidth, line.borderTopColor]).toEqual([
+          "1px",
+          BORDER,
+        ]);
+      }
     },
   );
 
+  test("sets Override priority… apart from Mark as duplicate… by one border line on a Ticket in New, without Rerun convergence", async () => {
+    showingStatus("new");
+    const { screen } = await renderTicket();
+
+    const menu = await openActions(screen);
+
+    await expect.poll(() => itemsOf(menu)).toEqual(IN_NEW);
+    const separators = menu.getByRole("separator").elements();
+    expect(separators).toHaveLength(1);
+    expect(
+      follows(itemOf(menu, "Mark as duplicate…").element(), separators[0]!),
+    ).toBeTruthy();
+    expect(
+      follows(separators[0]!, itemOf(menu, "Override priority…").element()),
+    ).toBeTruthy();
+  });
+
   test.each(
-    OFFERED.filter(([status]) =>
-      ["new", "ignored", "duplicated"].includes(status),
-    ),
+    OFFERED.filter(([status]) => ["ignored", "duplicated"].includes(status)),
   )(
-    "has no line on a Ticket in %s, without Rerun convergence: %j",
+    "has no line on a Ticket in %s, without Rerun convergence and the corrections: %j",
     async (status, items) => {
       showingStatus(status);
       const { screen } = await renderTicket();
@@ -353,6 +390,71 @@ describe("Actions", () => {
 
       await expect.poll(() => itemsOf(menu)).toEqual(items);
       expect(menu.getByRole("separator").elements()).toHaveLength(0);
+    },
+  );
+
+  test.each<[string, string[]]>([
+    [
+      "new",
+      [
+        "Ignore…",
+        "Ignore as not shipped by SUSE",
+        "Mark as duplicate…",
+        "Override priority…",
+        "Set severity…",
+        "Associate CVE…",
+      ],
+    ],
+    [
+      "analysis",
+      [
+        "Ignore…",
+        "Ignore as not shipped by SUSE",
+        "Mark as duplicate…",
+        "Override priority…",
+        "Set severity…",
+        "Associate CVE…",
+        "Rerun convergence",
+      ],
+    ],
+    [
+      "analyzed",
+      [
+        "Mark as duplicate…",
+        "Override priority…",
+        "Set severity…",
+        "Associate CVE…",
+        "Rerun convergence",
+      ],
+    ],
+    [
+      "resolved",
+      [
+        "Mark as duplicate…",
+        "Override priority…",
+        "Set severity…",
+        "Associate CVE…",
+        "Rerun convergence",
+      ],
+    ],
+    ["ignored", ["Reopen"]],
+    ["duplicated", ["Revert duplicate"]],
+  ])(
+    "offers a user who holds triage_ticket, on a Ticket without a CVE in %s, Set severity… and Associate CVE… after Override priority…: %j, each with its icon",
+    async (status, items) => {
+      showingStatus(status, { ticket: () => ticketIn(status, { cve: null }) });
+      const { screen } = await renderTicket();
+
+      const menu = await openActions(screen);
+
+      await expect.poll(() => itemsOf(menu)).toEqual(items);
+      for (const name of items) {
+        const Icon = ICONS[name]!;
+        const icon = await render(<Icon />);
+        expect(
+          itemOf(menu, name).element().querySelector("svg")?.innerHTML,
+        ).toBe(icon.container.querySelector("svg")?.innerHTML);
+      }
     },
   );
 
@@ -439,7 +541,7 @@ describe("Actions", () => {
 
     await readEnded(TICKET);
     await nextFrames();
-    expect(itemsOf(menu)).toEqual(["Mark as duplicate…", "Rerun convergence"]);
+    expect(itemsOf(menu)).toEqual(IN_ANALYZED);
     await userEvent.keyboard("{Escape}");
     await expect.element(menu).not.toBeInTheDocument();
     await expect
@@ -460,7 +562,7 @@ describe("Actions", () => {
 
     await expect.element(editAssignee(screen)).not.toBeInTheDocument();
     await expect.element(menu).toBeVisible();
-    expect(itemsOf(menu)).toEqual(["Mark as duplicate…", "Rerun convergence"]);
+    expect(itemsOf(menu)).toEqual(IN_ANALYZED);
 
     await userEvent.keyboard("{Escape}");
 
@@ -657,9 +759,7 @@ describe("Reopen and Revert duplicate", () => {
       // that the read shows.
       expect(document.activeElement).toBe(actionsButton(screen).element());
       const again = await openActions(screen);
-      await expect
-        .poll(() => itemsOf(again))
-        .toEqual(["Mark as duplicate…", "Rerun convergence"]);
+      await expect.poll(() => itemsOf(again)).toEqual(IN_ANALYZED);
     },
   );
 
@@ -872,7 +972,12 @@ describe("Ignore as not shipped by SUSE", () => {
     await expect.element(item).toHaveAccessibleDescription("Ignoring.");
     expect(animationsIn(item.element())).toEqual(["spin"]);
     expect(changesOf(spy)).toEqual([["ignore", { reason: "not_shipped" }]]);
-    const others = ["Ignore…", "Mark as duplicate…", "Rerun convergence"];
+    const others = [
+      "Ignore…",
+      "Mark as duplicate…",
+      "Override priority…",
+      "Rerun convergence",
+    ];
     for (const name of others) {
       await expect
         .element(itemOf(menu, name))
@@ -1191,6 +1296,43 @@ describe("Rerun convergence", () => {
         .not.toHaveAttribute("aria-disabled");
     }
     expect(itemsOf(again)).toEqual(IN_ANALYSIS);
+  });
+
+  test("keeps Set severity… and Associate CVE… of a Ticket without a CVE unavailable until Sentinel answers, opening neither dialog", async () => {
+    const response = later();
+    const spy = showingStatus("analysis", {
+      ticket: () => ticketIn("analysis", { cve: null }),
+      ticketChange: () => response.promise,
+    });
+    const { screen } = await renderTicket();
+
+    const menu = await choose(screen, "Rerun convergence");
+
+    await expect
+      .element(itemOf(menu, "Rerun convergence"))
+      .toHaveAccessibleDescription("Starting the convergence.");
+    const corrections = ["Set severity…", "Associate CVE…"];
+    for (const name of corrections) {
+      await expect
+        .element(itemOf(menu, name))
+        .toHaveAttribute("aria-disabled", "true");
+    }
+    for (const name of corrections) {
+      await itemOf(menu, name).click({ force: true });
+    }
+    await frames();
+    await expect.element(menu).toBeVisible();
+    for (const name of [
+      "Set the severity of SNTL-12",
+      "Associate a CVE with SNTL-12",
+    ]) {
+      expect(screen.getByRole("dialog", { name }).query()).toBeNull();
+    }
+    expect(changesOf(spy)).toHaveLength(1);
+
+    response.resolve(convergenceResponse());
+
+    await expect.element(menu).not.toBeInTheDocument();
   });
 
   test("starts the convergence for a user who holds manage_fetchers alone", async () => {

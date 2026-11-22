@@ -75,11 +75,12 @@ export function duplicatesOf(ticketId: string) {
 // Reads again what a change of the Ticket affects: the Ticket, whose status,
 // assignee, and package tree it can change, the work of a maintainer on it,
 // the users who acted on it, its audit log, and the reads of the Ticket
-// list; but for the duplicates of the Ticket after an assignment or an edit
-// of the package tree, which changes neither their identifiers, their
-// confidentiality, nor their number, and with them after a change of the
-// status of the Ticket, which can move them to another original
-// (docs/behaviors.md, Outcome of a Change).
+// list; but for the duplicates of the Ticket after an assignment, an edit of
+// the package tree, or a correction of its priority, its severity, or its
+// CVE, which changes neither their identifiers, their confidentiality, nor
+// their number, and with them after a change of the status of the Ticket,
+// which can move them to another original (docs/behaviors.md, Outcome of a
+// Change).
 export function useReadAfterTicketChange(
   ticketId: string,
   withDuplicates = false,

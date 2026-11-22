@@ -5,6 +5,7 @@ import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { Button } from "./button";
+import { Link } from "./link";
 import { TextAreaField, TextField } from "./text-field";
 
 // The colors of docs/design-system.md (Color Tokens; Tones) in the light
@@ -320,4 +321,47 @@ describe("a multi-line field", () => {
       .element(screen.getByRole("textbox", { name: "Description" }))
       .toHaveFocus();
   });
+});
+
+test("shows an error that its form holds with a link, which names a record, after its control, read with the control", async () => {
+  const screen = await render(
+    <Form>
+      <TextField
+        label="Code"
+        name="code"
+        value="FICTIONAL-1"
+        error={
+          <>
+            FICTIONAL-1 is already the code of{" "}
+            <Link placement="message" href="/fictional/7">
+              Fictional record 7
+            </Link>
+            .
+          </>
+        }
+      />
+    </Form>,
+  );
+
+  const field = screen.getByRole("textbox", { name: "Code" });
+  await expect
+    .element(field)
+    .toHaveAccessibleDescription(
+      "FICTIONAL-1 is already the code of Fictional record 7.",
+    );
+  await expect.element(field).toHaveAttribute("aria-invalid", "true");
+  const link = screen.getByRole("link", {
+    name: "Fictional record 7",
+    exact: true,
+  });
+  await expect.element(link).toHaveAttribute("href", "/fictional/7");
+  // In the color of the error, underlined.
+  const style = getComputedStyle(link.element());
+  expect([style.color, style.textDecorationLine]).toEqual([
+    DANGER_ON_SOFT,
+    "underline",
+  ]);
+  expect(link.element().getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    field.element().getBoundingClientRect().bottom,
+  );
 });

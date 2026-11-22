@@ -1,13 +1,5 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { Form } from "react-aria-components";
-import {
-  ignoreReasonError,
-  isRequestFailure,
-  MESSAGE_INVALID_VALUE,
-  presentChangeFailure,
-  presentLeftIgnoreFailure,
-  validationErrorFields,
-} from "../../api/errors";
+import { useState } from "react";
+import { ignoreReasonError, presentLeftIgnoreFailure } from "../../api/errors";
 import {
   CveStateValue,
   UserTicketIgnoreReasonValue,
@@ -17,19 +9,10 @@ import type {
   TicketDetailResponse,
 } from "../../api/generated/model";
 import { useIgnoreTicket } from "../../api/generated/tickets";
-import { Button } from "../../components/button";
-import { useChangeOutcome, useMounted } from "../../components/change-outcome";
-import { useDiscardQuestion } from "../../components/discard-question";
-import { useFieldErrorFocus } from "../../components/field-error-focus";
+import { useChangeOutcome } from "../../components/change-outcome";
 import { ignoreReasonName } from "../../components/ignore-reason";
 import type { MessageRecord } from "../../components/message-area";
-import {
-  DialogErrorMessage,
-  FirstFieldFocus,
-  ModalDialog,
-  type DialogError,
-} from "../../components/modal-dialog";
-import { RadioGroupField } from "../../components/radio-group";
+import { ChoiceDialog } from "./choice-dialog";
 import { assigneeOutcome } from "./shared";
 
 // Ignore…, Ignore Ticket, POST /api/v1/tickets/{ticket_id}/ignore, from
@@ -85,17 +68,6 @@ export function ignoredText(
   return `${done}, ${assigneeOutcome(data.assignee, signedInUser)}.`;
 }
 
-// What a submission that failed shows: the error of the reason, and the
-// error at the top of the form.
-interface FormFailure {
-  field: string | undefined;
-  form: DialogError | undefined;
-}
-
-const NO_FAILURE: FormFailure = { field: undefined, form: undefined };
-
-const MESSAGE_NO_REASON = "Choose a reason.";
-
 interface IgnoreDialogProps {
   ticket: TicketDetail;
   record: MessageRecord;
@@ -110,21 +82,14 @@ interface IgnoreDialogProps {
   onDone: (text: string) => void;
 }
 
-// The dialog of Ignore… (docs/design-system.md, Dialogs), titled such as
-// "Ignore SNTL-31", at most 560 px wide: what the change does; then Reason,
-// the reasons that the user can choose as the dialog opens, each with its
-// meaning, none chosen, which takes the focus as the dialog opens; then
-// Cancel and Ignore, a primary button. The form checks that a reason is
-// chosen before it sends it. 409 TICKET_CVE_NOT_REJECTED and a field error of
-// a VALIDATION_ERROR for reason show at the reason, which takes the focus,
-// until another reason is chosen; every other failure at the top of the
-// form, which takes it, in the presentation of a change, as a warning when
-// Sentinel did not confirm it (docs/behaviors.md, Where Errors Appear;
-// Retries and Unconfirmed Changes). Reopen reverses it, so it asks for no
-// confirmation (docs/behaviors.md, Confirmation); with a reason chosen,
-// Cancel, Escape, and every navigation of the UI ask "Discard changes?"
-// first. While the change is in progress, the dialog cannot be closed, and
-// the reason cannot change.
+// The dialog of Ignore… (ChoiceDialog), titled such as "Ignore SNTL-31":
+// what the change does; then Reason, the reasons that the user can choose as
+// the dialog opens, each with its meaning, none chosen; then Cancel and
+// Ignore, a primary button. 409 TICKET_CVE_NOT_REJECTED shows at Reason, as a
+// field error of a VALIDATION_ERROR for reason does; every other failure at
+// the top of the form, in the presentation of a change. Reopen reverses it,
+// so it asks for no confirmation (docs/behaviors.md, Confirmation); with a
+// reason chosen, leaving it asks "Discard changes?" first.
 export function IgnoreDialog({
   ticket,
   record,
@@ -152,147 +117,24 @@ export function IgnoreDialog({
       (failure) => presentLeftIgnoreFailure(failure, cveId),
     ),
   });
-  const mounted = useMounted();
-  const formId = useId();
-  const group = useRef<HTMLDivElement>(null);
-  const [reason, setReason] = useState<UserReason>();
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<FormFailure>(NO_FAILURE);
-  // A failure of the UI itself, which the router shows (src/router.ts).
-  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
-  const submitting = useRef(false);
-  // With an error at Reason alone, the reason chosen takes the focus, or the
-  // first one without a choice, once the error is on the page, so that it is
-  // read with it, or the error is announced when that reason holds the focus
-  // already, as after Enter on it (docs/behaviors.md, Accessibility,
-  // Announcements).
-  const { focusField, region } = useFieldErrorFocus(
-    failure.field !== undefined,
-  );
-  useEffect(() => {
-    if (failure.form !== undefined || failure.field === undefined) {
-      return;
-    }
-    const inputs = group.current;
-    focusField(
-      inputs?.querySelector<HTMLInputElement>("input:checked") ??
-        inputs?.querySelector<HTMLInputElement>("input"),
-      failure.field,
-    );
-  }, [failure, focusField]);
-  const { close, question } = useDiscardQuestion({
-    held: reason !== undefined && !busy,
-    consequence: `${ticketId} isn't ignored.`,
-    onDiscard: onClose,
-  });
-  if (uiFailure !== undefined) {
-    throw uiFailure.error;
-  }
-
-  const fail = (error: unknown) => {
-    if (!isRequestFailure(error)) {
-      setUiFailure({ error });
-      return;
-    }
-    const atField = ignoreReasonError(error, cveId);
-    if (atField !== undefined) {
-      setFailure({ field: atField, form: undefined });
-      return;
-    }
-    const { fields, unmatched } = validationErrorFields(error, ["reason"]);
-    setFailure({
-      field: fields.length > 0 ? MESSAGE_INVALID_VALUE : undefined,
-      form: unmatched ? presentChangeFailure(error) : undefined,
-    });
-  };
-
-  const submit = async () => {
-    if (submitting.current) {
-      return;
-    }
-    if (reason === undefined) {
-      setFailure({ field: MESSAGE_NO_REASON, form: undefined });
-      return;
-    }
-    setFailure(NO_FAILURE);
-    submitting.current = true;
-    setBusy(true);
-    try {
-      await ignore.mutateAsync({ ticketId, data: { reason } });
-    } catch (failed) {
-      if (mounted.current) {
-        fail(failed);
-      }
-    }
-    submitting.current = false;
-    setBusy(false);
-  };
-
   return (
-    <ModalDialog
-      isOpen
-      onClose={close}
-      width="form"
+    <ChoiceDialog<UserReason>
       title={`Ignore ${ticketId}`}
-      closable={!busy}
-      buttons={
-        <>
-          <Button size="large" isDisabled={busy} onPress={close}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant="primary"
-            size="large"
-            isBusy={busy}
-          >
-            Ignore
-          </Button>
-          {question}
-        </>
-      }
-    >
-      <p className="text-fg-muted">
-        {ticketId} stops being worked, and accepts no change to its analysis
-        until Reopen.
-      </p>
-      <FirstFieldFocus>
-        <Form
-          id={formId}
-          onSubmit={(event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            void submit();
-          }}
-          validationErrors={
-            failure.field === undefined ? undefined : { reason: failure.field }
-          }
-          className="mt-4 flex max-w-112 flex-col gap-3"
-        >
-          {failure.form !== undefined && (
-            <DialogErrorMessage error={failure.form} />
-          )}
-          <RadioGroupField
-            label="Reason"
-            name="reason"
-            options={reasonsOf(opened).map((item) => ({
-              value: item,
-              label: ignoreReasonName(item),
-              description: DESCRIPTIONS[item](opened),
-            }))}
-            value={reason}
-            onChange={(next) => {
-              setReason(next);
-              if (failure.field !== undefined) {
-                setFailure((current) => ({ ...current, field: undefined }));
-              }
-            }}
-            isReadOnly={busy}
-            groupRef={group}
-          />
-          {region}
-        </Form>
-      </FirstFieldFocus>
-    </ModalDialog>
+      intro={`${ticketId} stops being worked, and accepts no change to its analysis until Reopen.`}
+      label="Reason"
+      name="reason"
+      options={reasonsOf(opened).map((item) => ({
+        value: item,
+        label: ignoreReasonName(item),
+        description: DESCRIPTIONS[item](opened),
+      }))}
+      openedWith={undefined}
+      emptyMessage="Choose a reason."
+      discardConsequence={`${ticketId} isn't ignored.`}
+      action="Ignore"
+      submit={(reason) => ignore.mutateAsync({ ticketId, data: { reason } })}
+      fieldError={(failure) => ignoreReasonError(failure, cveId)}
+      onClose={onClose}
+    />
   );
 }
