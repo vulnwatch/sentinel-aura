@@ -2039,7 +2039,7 @@ document, Manual-Zone Exception):
   Appear): the screen handles two codes specifically, at the user field, `404
   USER_NOT_FOUND`, "Sentinel doesn't know this user.", and `409 USER_INACTIVE`,
   for a user who became inactive, "This user is inactive, so they can't be
-  granted access." (Sentinel `docs/features/tickets/tickets.md`, Grant Access);
+  granted access." (Sentinel `docs/features/tickets/tickets.md`, Grant Access).
   A failure of Revoke access shows at the top of its confirmation, which stays
   open, as every other failure of a form does (Errors); the screen handles no
   code of it specifically. After a `403`, the dialog keeps its form, Revoke
@@ -2069,8 +2069,8 @@ document, Manual-Zone Exception):
   original, use Revert duplicate on SNTL-31 first."; otherwise "SNTL-41 is a
   duplicate itself: choose its original instead." (Sentinel
   `docs/features/tickets/tickets.md`, Mark Ticket as Duplicate). It handles one
-  more code specifically, at the top of the form, which takes the focus, in the
-  `danger` tone, since Sentinel then changed nothing: `409
+  more code specifically, at the top of the form, in the `danger` tone, since
+  Sentinel then changed nothing: `409
   TICKET_DUPLICATE_CONCURRENT_MODIFICATION`, "A duplicate of this Ticket was
   being changed at the same time, so Sentinel changed nothing. Try again."
   (same document, Mark-as-Duplicate Operation). A failure of Mark as duplicate…
@@ -2195,19 +2195,19 @@ document, Manual-Zone Exception):
   and Restore in the menu of its actions includes it again." (Sentinel
   `docs/features/packages/package-model.md`, Add Package to Ticket; Interaction
   with add_package_to_ticket). It handles two more codes specifically, at the
-  top of the form, which takes the focus, in the `danger` tone with their
-  reference rather than as a change that Sentinel did not confirm, since
-  Sentinel returns them before any change (same document, Adding Packages to a
-  Ticket; Sentinel `docs/api-spec.md`, Infrastructure Dependency Errors (HTTP
-  503)): `503 SMELT_UNAVAILABLE`, "Sentinel couldn't get the tracks and
-  Products of this package from SMELT, so it added nothing. Try again later.",
-  and `503 PRODUCT_CATALOG_NOT_READY`, "Sentinel hasn't loaded the Products
-  from SMELT yet, so it added nothing. Try again later.". Every other failure,
-  such as another `5xx`, shows at the top of the form (Errors). The read of the
-  names of Package name shows its failure in their place, in the presentation
-  of its status; the screen handles no code of Search Maintained Packages
-  specifically (Sentinel `docs/features/packages/maintained-package-names.md`,
-  Search Maintained Packages).
+  top of the form, in the `danger` tone with their reference rather than as a
+  change that Sentinel did not confirm, since Sentinel returns them before any
+  change (same document, Adding Packages to a Ticket; Sentinel
+  `docs/api-spec.md`, Infrastructure Dependency Errors (HTTP 503)): `503
+  SMELT_UNAVAILABLE`, "Sentinel couldn't get the tracks and Products of this
+  package from SMELT, so it added nothing. Try again later.", and `503
+  PRODUCT_CATALOG_NOT_READY`, "Sentinel hasn't loaded the Products from SMELT
+  yet, so it added nothing. Try again later.". Every other failure, such as
+  another `5xx`, shows at the top of the form (Errors). The read of the names
+  of Package name shows its failure in their place, in the presentation of its
+  status; the screen handles no code of Search Maintained Packages specifically
+  (Sentinel `docs/features/packages/maintained-package-names.md`, Search
+  Maintained Packages).
 - **References.** The toolbar shows at once with the tabs, and the
   references as they arrive, without waiting for the Ticket; a failure of
   the references shows once the Ticket has arrived, so that a Ticket that
