@@ -537,6 +537,15 @@ actor of a recorded action (Representation of a User) are exceptions.
 
 - A date field shows the day, the month, and the year in this order, and a
   time field the 24-hour clock, both in the time zone of the browser.
+- A field of a date and time shows the date and then the time, as one field.
+  Its description names the time zone of the browser for the date entered,
+  such as "In your time zone, Central European Standard Time.", and, once
+  the date and the time are complete, the same instant in UTC, such as "In
+  your time zone, Central European Standard Time: 25 Nov 2026, 13:00 UTC.":
+  the parties that agree on an instant, such as the Coordinated Release Date
+  of an embargo, often state it in UTC, while the UI shows every date and
+  time in the time zone of the browser (Display), so that the user can check
+  that the instant entered is the one agreed.
 - A date field also offers a calendar. A click anywhere on the field, the
   button at its end, which Tab reaches after the parts of the date, or
   Alt+Down Arrow opens it on the month of the field's date, or without one
@@ -548,8 +557,10 @@ actor of a recorded action (Representation of a User) are exceptions.
   field's date, or without one to today, or, when that day is disabled, to
   the nearest day that the calendar enables; the button to the previous or
   the next month that becomes disabled while it holds the focus hands the
-  focus to the days. Choosing a day sets the date and closes the calendar,
-  and Escape, or a click outside the calendar, closes it without a change;
+  focus to the days. Choosing a day sets the date and closes the calendar;
+  in a field of a date and time, it keeps the time of a complete date and
+  time, or otherwise sets 00:00, which the field shows. Escape, or a click
+  outside the calendar, closes it without a change;
   a click on the field that closes it does not open it again. Each way the
   focus returns where it was in the field, such as the part that the user
   clicked to open the calendar, so that the user can still type the date;
