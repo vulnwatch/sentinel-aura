@@ -216,12 +216,15 @@ interface FirstFieldFocusProps {
 // Content of a dialog whose first field, or first button, takes the focus as
 // the dialog opens (docs/behaviors.md, Accessibility, Dialogs), such as the
 // field of a form, or Cancel in a confirmation; a group of radio buttons
-// takes it on its chosen option, or on its first option without a choice
-// (docs/design-system.md, Forms). It adds no box of its own to the layout.
+// takes it on its chosen option, or on its first option without a choice,
+// and a date field on its first part (docs/design-system.md, Forms). It adds
+// no box of its own to the layout.
 export function FirstFieldFocus({ children }: FirstFieldFocusProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const first = ref.current?.querySelector<HTMLElement>("input, button");
+    const first = ref.current?.querySelector<HTMLElement>(
+      'input, button, [role="spinbutton"]',
+    );
     if (first instanceof HTMLInputElement && first.type === "radio") {
       chosenOrFirstRadio(first.closest('[role="radiogroup"]'))?.focus();
       return;

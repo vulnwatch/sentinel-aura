@@ -18,6 +18,10 @@ import { ignoreReasonName } from "../../components/ignore-reason";
 import { Link } from "../../components/link";
 import { PartRead } from "../../components/read-view";
 import { type Assignee, AssigneeField } from "./assignee";
+import {
+  CoordinatedReleaseField,
+  type CoordinatedReleaseDate,
+} from "./coordinated-release-date";
 import { COUNT, DETAILS_ANCHOR, duplicatesOf, PHASES } from "./shared";
 
 // The details of the Ticket, the first part of the side column of Overview
@@ -217,6 +221,7 @@ interface DetailsProps {
   now: number;
   duplicates: DuplicatesRead;
   assignee: Assignee;
+  release: CoordinatedReleaseDate;
 }
 
 // The details of the Ticket, as a description list (docs/design-system.md,
@@ -224,13 +229,20 @@ interface DetailsProps {
 // pencil for a user who can change it (AssigneeField); the reason of an
 // Ignored Ticket; the Coordinated Release Date while the Ticket is
 // confidential, as an absent value without a date, and while it has one,
-// also after it became non-confidential (Sentinel
+// also after it became non-confidential, with its pencil for a user who can
+// change it (CoordinatedReleaseField; Sentinel
 // docs/features/tickets/tickets.md, Coordinated Release Date); the deadlines;
 // the original of a duplicate, which is only an identifier, or the duplicates
 // of any other Ticket; the creation; and the last change, as "Last modified",
 // as the Ticket list names it. Users show without a link and a card while the
 // UI has no screen User (docs/behaviors.md, Open Decisions).
-export function Details({ ticket, now, duplicates, assignee }: DetailsProps) {
+export function Details({
+  ticket,
+  now,
+  duplicates,
+  assignee,
+  release,
+}: DetailsProps) {
   return (
     <SideSection id={DETAILS_ANCHOR} heading="Details">
       <DescriptionList>
@@ -248,11 +260,7 @@ export function Details({ ticket, now, duplicates, assignee }: DetailsProps) {
         )}
         {(ticket.is_confidential || ticket.coordinated_release_at !== null) && (
           <DescriptionItem term="Coordinated Release Date">
-            {ticket.coordinated_release_at === null ? (
-              <AbsentValue />
-            ) : (
-              <DateTime value={ticket.coordinated_release_at} />
-            )}
+            <CoordinatedReleaseField ticket={ticket} release={release} />
           </DescriptionItem>
         )}
         <Deadlines ticket={ticket} now={now} />

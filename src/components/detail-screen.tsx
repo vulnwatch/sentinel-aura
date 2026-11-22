@@ -22,11 +22,19 @@ const TWO_COLUMNS_REM = 60;
 // Whether the element, which takes the width of the main content inside its
 // space, is wide enough for two columns, or undefined until it is measured.
 // It follows the width of the window, the sidebar, and the text size while
-// the screen is open, and is measured before the screen first shows.
+// the screen is open, and is measured before the screen first shows. While
+// held, as while a dialog of a section that moves with the layout is open,
+// it keeps the layout that it had, and follows the width again once the
+// hold ends (docs/design-system.md, Detail Screens).
 export function useTwoColumns(
   element: RefObject<HTMLElement | null>,
+  held = false,
 ): boolean | undefined {
-  const [twoColumns, setTwoColumns] = useState<boolean>();
+  const [measured, setTwoColumns] = useState<boolean>();
+  const [twoColumns, setShown] = useState(measured);
+  if (!held && twoColumns !== measured) {
+    setShown(measured);
+  }
   useLayoutEffect(() => {
     const current = element.current;
     if (current === null) {

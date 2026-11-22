@@ -6,6 +6,7 @@ import type { Read } from "../components/read-view";
 import { sameSearch } from "../search-params";
 import { ticketRoute, useShownTicket } from "./ticket";
 import { useAssignee } from "./ticket-overview/assignee";
+import { useCoordinatedReleaseDate } from "./ticket-overview/coordinated-release-date";
 import { CvePart } from "./ticket-overview/cve";
 import { CvssPart, useCvssAssessments } from "./ticket-overview/cvss";
 import { Details, useDuplicates } from "./ticket-overview/details";
@@ -106,6 +107,7 @@ function TicketOverview() {
   const sources = useCveSources(ticket);
   const participants = useParticipantReads(ticket);
   const assignee = useAssignee(ticket, twoColumns);
+  const release = useCoordinatedReleaseDate(ticket);
   // The reads of the tab, which useReadAgain reads again too
   // (src/routes/ticket-overview/shared.tsx).
   useAnchorTarget([
@@ -126,6 +128,7 @@ function TicketOverview() {
             now={now}
             duplicates={duplicates}
             assignee={assignee}
+            release={release}
           />
         }
         trailingSections={
@@ -154,6 +157,8 @@ function TicketOverview() {
         }
       />
       {assignee.region}
+      {release.region}
+      {release.dialog}
     </>
   );
 }
