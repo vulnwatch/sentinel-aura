@@ -3394,13 +3394,11 @@ test.describe("the references", () => {
     );
     await address.press("Enter");
 
-    await expect(
-      dialog.getByText(
-        "This Ticket already has a reference with this address.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await expect(address).toBeFocused();
+    await expectAnnouncedFieldError(
+      dialog,
+      address,
+      "This Ticket already has a reference with this address.",
+    );
     await expect(address).toHaveValue(
       "http://advisories.example.com/fictional-openssl/2099-0012",
     );
