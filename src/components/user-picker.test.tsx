@@ -566,6 +566,7 @@ test("shows its error at the field, which takes the focus, and tells when the te
   // The field that takes the focus is read with its error, which is then
   // not announced as well.
   await expect.element(field).toHaveFocus();
+  await nextFrames();
   expect(statusTexts(screen)).not.toContain(
     "This user can't be the assignee of this Ticket.",
   );

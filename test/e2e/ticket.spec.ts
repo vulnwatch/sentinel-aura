@@ -1464,7 +1464,7 @@ test.describe("for an analyst", () => {
     await expect(add).toBeFocused();
   });
 
-  test("says in Add package how many maintained names match when it lists only some, and when none does, and checks a name before sending it", async ({
+  test("says in Add package how many maintained names match when it lists only some, and when none does, checks a name before sending it, and asks before a press of Cancel discards it", async ({
     page,
   }) => {
     // asmith holds manage_packages, and SNTL-20, in Analysis, has no
@@ -1556,6 +1556,18 @@ test.describe("for an analyst", () => {
     expect(sent).toEqual([]);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-add-package-check.png");
+
+    // A press of the pointer on Cancel, which the field loses the focus to,
+    // asks before discarding the name: the error stays at the field, so
+    // Cancel does not move during the press.
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    const discard = page.getByRole("dialog", { name: "Discard changes?" });
+    await expect(discard).toContainText(
+      "The package that you entered isn't added.",
+    );
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
   });
 
   test("asks for confirmation before excluding a package with maintainers of a confidential Ticket", async ({
