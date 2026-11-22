@@ -161,6 +161,16 @@ async function setTo(screen: Screen, name: string, focused?: string) {
   return dialog;
 }
 
+// The severity that the heading row shows, also behind the dialog, which
+// keeps it from assistive technologies: the definition of its term.
+function shownSeverity(screen: Screen): string | null | undefined {
+  return screen
+    .getByRole("term", { includeHidden: true })
+    .elements()
+    .find((term) => term.textContent === "Severity")?.nextElementSibling
+    ?.textContent;
+}
+
 // The bodies of the requests of Set Severity Manual.
 function severities(spy: ReturnType<typeof stubApi>): unknown[] {
   return spy.mock.calls
@@ -315,10 +325,31 @@ describe("the submission of Set severity…", () => {
     expect(severities(spy)).toEqual([]);
   });
 
+  test("closes without a request when Save keeps the severity with which the dialog opened, also after a read meanwhile shows another severity", async () => {
+    let fields: Partial<TicketDetail> = {};
+    const spy = showingSettable({}, { ticket: () => withoutCve(fields) });
+    const { screen } = await renderTicket();
+    const dialog = await openSeverity(screen);
+    // Another user sets the severity Critical meanwhile.
+    fields = { severity: "critical" };
+
+    await returnToForeground();
+
+    await readEnded(TICKET);
+    await expect.poll(() => shownSeverity(screen)).toBe("Critical");
+    await expect.element(optionOf(dialog, "High")).toBeChecked();
+    await saveButton(dialog).click();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    expect(discardDialog(screen).query()).toBeNull();
+    await expectFocusSettledOn(actionsButton(screen));
+    expect(severities(spy)).toEqual([]);
+  });
+
   test.each<[string, TicketDetail["severity"], string]>([
     ["Critical", "critical", "Severity set to Critical."],
     ["None", "none", "Severity set to None."],
-    ["Not set", null, "Severity removed."],
+    ["Not set", null, "Severity cleared."],
   ])(
     "sends %s as %j, with nothing else in the body, and announces the severity that Sentinel returns once the read of the Ticket after it arrives",
     async (name, severity, text) => {

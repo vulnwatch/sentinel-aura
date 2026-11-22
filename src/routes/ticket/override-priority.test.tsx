@@ -391,6 +391,37 @@ describe("the submission of Override priority…", () => {
     expect(overrides(spy)).toEqual([]);
   });
 
+  test("closes without a request when Save keeps the choice with which the dialog opened, also after a read meanwhile shows another override", async () => {
+    let fields: Partial<TicketDetail> = {};
+    const spy = showingOverridable({}, { ticket: () => inAnalysis(fields) });
+    const { screen } = await renderTicket();
+    const dialog = await openOverride(screen);
+    // Another user overrides the priority with P2 meanwhile.
+    fields = { priority: "p2", priority_override: "p2" };
+
+    await returnToForeground();
+
+    await readEnded(TICKET);
+    // The priority of the heading row, behind the dialog, which keeps it
+    // from assistive technologies, shows the override.
+    await expect
+      .element(
+        screen.getByRole("button", {
+          name: "P2, override",
+          exact: true,
+          includeHidden: true,
+        }),
+      )
+      .toBeInTheDocument();
+    await expect.element(optionOf(dialog, "Automatic")).toBeChecked();
+    await saveButton(dialog).click();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    expect(discardDialog(screen).query()).toBeNull();
+    await expectFocusSettledOn(actionsButton(screen));
+    expect(overrides(spy)).toEqual([]);
+  });
+
   test.each<[string, Partial<TicketDetail>, string, string, unknown, string]>([
     [
       "sets an override",

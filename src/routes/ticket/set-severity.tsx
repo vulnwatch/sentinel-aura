@@ -75,10 +75,10 @@ function unsetMeaning({ ticket_id: id, status }: TicketDetail): string {
 }
 
 // The outcome of a change of the severity, as Sentinel returns the Ticket
-// after it: "Severity set to High.", or "Severity removed.".
+// after it: "Severity set to High.", or "Severity cleared.".
 export function severityText({ data }: TicketDetailResponse): string {
   return data.severity === null
-    ? "Severity removed."
+    ? "Severity cleared."
     : `Severity set to ${severityName(data.severity)}.`;
 }
 

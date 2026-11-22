@@ -833,12 +833,13 @@ event (Sentinel `docs/features/tickets/ticket-priority.md`,
      `docs/features/tickets/ticket-priority.md`, Manual Override;
      `docs/behaviors.md`, Absent Values; Representation of a User). An
      automatic priority has neither the line nor the two lines.
-- A dialog that changes the priority of a Ticket, such as the override of
-  its screen document, shows the automatic priority and what it is based on
-  as the explanation shows them beside an override, from its section of the
-  basis to its section of the evidence, in a box on `surface` with a `border`
-  line, an 8 px radius, and 12 px by 16 px of padding, in `text-14`, as wide
-  as the form, their headings one level below the title of the dialog.
+- The dialog of the priority override of a Ticket (`docs/screens/ticket.md`,
+  Actions, Override priority…) shows the automatic priority and what it is
+  based on as the explanation shows them beside an override, from its
+  section of the basis to its section of the evidence, in a box on `surface`
+  with a `border` line, an 8 px radius, and 12 px by 16 px of padding, in
+  `text-14`, as wide as the form, their headings one level below the title of
+  the dialog.
 - An exploitation level or an SSVC value that the pinned contract does not
   list shows as received, as a level and a severity do (above; Severity), and
   a piece of evidence of a kind that it does not list shows its kind as
