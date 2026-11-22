@@ -1229,10 +1229,11 @@ Priority Basis; Manual Override):
   `border` line after the actions of the status, in this order: Override
   priority…, with `user-pen`, the mark of an override; and, on a Ticket
   without a CVE only, since Sentinel derives the severity of a Ticket with a
-  CVE from CVSS and keeps the CVE of a Ticket once associated, Set
-  severity…, with `gauge`, and Associate CVE…, with `plus`. Each opens a
-  dialog at most 560 px wide (`docs/design-system.md`, Dialogs) once its menu
-  has closed, as Ignore… does, which belongs to the heading row too.
+  CVE from CVSS and keeps the CVE of a Ticket once associated, Set severity…,
+  with `gauge`, and Associate CVE…, with `plus`. Each opens a dialog at most
+  560 px wide (`docs/design-system.md`, Dialogs) once its menu has closed, as
+  Ignore… does; it belongs to the heading row, so a navigation between the
+  tabs of the Ticket leaves it open.
 - Override priority… opens "Override the priority of SNTL-12". It says, in
   `fg-muted`, "An override replaces the automatic priority of SNTL-12 until
   it is cleared. Sentinel keeps calculating the automatic priority."; below
