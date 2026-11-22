@@ -1566,6 +1566,7 @@ test.describe("for an analyst", () => {
     await expect(discard).toContainText(
       "The package that you entered isn't added.",
     );
+    await expectAccessible(page);
     await discard.getByRole("button", { name: "Discard", exact: true }).click();
     await expect(dialog).toHaveCount(0);
   });
