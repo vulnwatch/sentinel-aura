@@ -150,8 +150,11 @@ function ZoneDescription({ value, now }: ZoneDescriptionProps) {
   const instant = instantOf(value);
   return (
     <>
-      In your time zone, {timeZoneName(instant)}: {formatUtcDateTime(instant)}{" "}
-      UTC.{instant < now && " It has already passed."}
+      In your time zone, {timeZoneName(instant)}:{" "}
+      <time dateTime={new Date(instant).toISOString()}>
+        {formatUtcDateTime(instant)} UTC
+      </time>
+      .{instant < now && " It has already passed."}
     </>
   );
 }
