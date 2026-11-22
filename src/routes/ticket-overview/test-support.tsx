@@ -1173,3 +1173,75 @@ export function maintainedPackagesPage(
   };
   return jsonResponse(200, body);
 }
+
+// Carol White, who holds the grant of fictionalGrant, and a second grantee.
+export const CAROL = fictionalGrant();
+export const EMMA = fictionalGrant({
+  user: {
+    id: "00000000-0000-0000-0000-000000000009",
+    username: "egreen",
+    full_name: "Emma Green",
+    active: true,
+    bot: false,
+    avatar_url: null,
+  },
+  granted_at: "2099-10-11T08:00:00Z",
+});
+
+// The same SNTL-12, no longer confidential.
+export function declassifiedTicket() {
+  return ticketResponse(
+    fictionalTicketDetail({ assignee: FICTIONAL_ACTORS[1]! }),
+  );
+}
+
+export function participantsPart(screen: Screen) {
+  return screen.getByRole("region", { name: "Participants", exact: true });
+}
+
+export function participantsGroup(screen: Screen) {
+  return participantsPart(screen).getByRole("toolbar", {
+    name: "Participants",
+  });
+}
+
+// The names of the participants, in their order.
+export function participantNames(screen: Screen): (string | null)[] {
+  return participantsGroup(screen)
+    .getByRole("img")
+    .elements()
+    .map((element) => element.getAttribute("aria-label"));
+}
+
+export function accessGrantsButton(screen: Screen) {
+  return participantsPart(screen).getByRole("button", {
+    name: "Access grants",
+    exact: true,
+  });
+}
+
+export function accessGrantsDialog(screen: Screen) {
+  return screen.getByRole("dialog", { name: "Access grants" });
+}
+
+// The lines of the grants in the dialog, in their order.
+export function grantLines(screen: Screen): (string | null)[] {
+  return accessGrantsDialog(screen)
+    .getByRole("list", { name: "Access grants" })
+    .getByRole("listitem")
+    .elements()
+    .map((element) => element.textContent);
+}
+
+// Renders the screen of SNTL-12 and waits until its participants show.
+export async function renderParticipants() {
+  const rendered = await renderApp("/tickets/SNTL-12");
+  await expect
+    .element(
+      participantsPart(rendered.screen)
+        .getByRole("toolbar")
+        .or(participantsPart(rendered.screen).getByText("No participants.")),
+    )
+    .toBeVisible();
+  return rendered;
+}
