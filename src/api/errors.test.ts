@@ -7,6 +7,7 @@ import {
   grantAccessFieldError,
   ignoreReasonError,
   isAssigneeChanged,
+  isCoordinatedReleaseBeforeCreation,
   isNotConfidential,
   isRequestFailure,
   MESSAGE_DUPLICATE_OF_ITSELF,
@@ -14,6 +15,7 @@ import {
   presentAddPackageFailure,
   presentAssociateCveFailure,
   presentChangeFailure,
+  presentCoordinatedReleaseFailure,
   presentExitConflict,
   presentLeftAddPackageFailure,
   presentLeftAssociateCveFailure,
@@ -1382,6 +1384,86 @@ describe("isNotConfidential", () => {
     ["any other error", new Error("A fictional error")],
   ])("tells nothing else: %s", (_, error) => {
     expect(isNotConfidential(error)).toBe(false);
+  });
+});
+
+describe("isCoordinatedReleaseBeforeCreation", () => {
+  test("tells 422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION", () => {
+    expect(
+      isCoordinatedReleaseBeforeCreation(
+        errorResponse(422, "TICKET_COORDINATED_RELEASE_BEFORE_CREATION"),
+      ),
+    ).toBe(true);
+  });
+
+  test.each<[string, RequestFailure]>([
+    [
+      "another status",
+      errorResponse(400, "TICKET_COORDINATED_RELEASE_BEFORE_CREATION"),
+    ],
+    ["another 422 code", errorResponse(422, "VALIDATION_ERROR")],
+    ["a 422 without a code", errorResponse(422)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("tells nothing else: %s", (_, failure) => {
+    expect(isCoordinatedReleaseBeforeCreation(failure)).toBe(false);
+  });
+});
+
+const NOT_CONFIDENTIAL_RELEASE =
+  "SNTL-21 is no longer confidential and has no Coordinated Release Date, so it can't receive one.";
+
+describe("presentCoordinatedReleaseFailure", () => {
+  test("presents 409 TICKET_NOT_CONFIDENTIAL as an error, without a reference, that names the Ticket", () => {
+    expect(
+      presentCoordinatedReleaseFailure(
+        errorResponse(409, "TICKET_NOT_CONFIDENTIAL"),
+        "SNTL-21",
+      ),
+    ).toEqual({
+      message: NOT_CONFIDENTIAL_RELEASE,
+      reference: undefined,
+      unconfirmed: false,
+    });
+  });
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation | undefined]>([
+    [
+      "the code with another status",
+      errorResponse(400, "TICKET_NOT_CONFIDENTIAL"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "another 409 code",
+      errorResponse(409, "FICTIONAL_CONFLICT"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION, which its form shows at the field",
+      errorResponse(422, "TICKET_COORDINATED_RELEASE_BEFORE_CREATION"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a 503",
+      errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+      { message: UNCONFIRMED, reference: undefined, unconfirmed: true },
+    ],
+    [
+      "a 401, which shows nothing",
+      errorResponse(401, "AUTH_NOT_AUTHENTICATED"),
+      undefined,
+    ],
+  ])("presents %s as a change", (_, failure, presentation) => {
+    expect(presentCoordinatedReleaseFailure(failure, "SNTL-21")).toEqual(
+      presentation,
+    );
   });
 });
 

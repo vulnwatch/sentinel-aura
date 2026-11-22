@@ -170,9 +170,11 @@ export function firstPart(
 // of its calendar. A click anywhere on the field opens the calendar, as the
 // button and Alt+Down Arrow do; a click while it is open closes it, on the
 // layer that the popover spreads behind it, and opens it no more. Choosing a
-// day sets the date, keeps the time of a date and time, or sets 00:00
-// without one, and closes the calendar. As the calendar closes, React Aria
-// gives the focus back where it was in the field.
+// day sets the date and closes the calendar; in a date and time field, it
+// keeps the time of a complete date and time, and otherwise sets 00:00, as
+// React Aria does. As the calendar closes, React Aria gives the focus back
+// where it was in the field. Every part shows its leading zeros, such as
+// 00:05, in every browser.
 export function DateField({
   label,
   look,
@@ -198,6 +200,7 @@ export function DateField({
         defaultValue={start}
         granularity={granularity}
         hourCycle={24}
+        shouldForceLeadingZeros
         isInvalid={error !== undefined}
         isReadOnly={isReadOnly}
         validationBehavior="aria"

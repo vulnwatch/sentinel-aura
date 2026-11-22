@@ -130,7 +130,12 @@ export default defineConfig({
     attachmentsDir: "test-results/vitest",
     browser: {
       enabled: true,
-      provider: playwright(),
+      // A time zone with daylight saving time and an offset from UTC, so
+      // that the tests tell the time zone of the browser from UTC, as the
+      // dates and times that a user enters and reads require
+      // (docs/behaviors.md, Dates and Times). The tests pass in any time
+      // zone; this one only lets them see a confusion of the two.
+      provider: playwright({ contextOptions: { timezoneId: "Europe/Berlin" } }),
       headless: true,
       instances: [{ browser: "chromium" }, { browser: "firefox" }],
       commands: { emulateReducedMotion },

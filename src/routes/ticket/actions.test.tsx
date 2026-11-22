@@ -3,6 +3,8 @@ import {
   CirclePlay,
   Gauge,
   ListRestart,
+  Lock,
+  LockOpen,
   Merge,
   Plus,
   Split,
@@ -49,6 +51,7 @@ import {
   leaveForTickets,
   leftInvalidated,
   MAINTAINER,
+  ME,
   MESSAGE_CONFLICT,
   MESSAGE_GONE,
   MESSAGE_NOT_ACCEPTED,
@@ -101,6 +104,18 @@ const BOTH: CurrentUserResponse = {
     ...OTHER_USER.data,
     capabilities: ["triage_ticket", "manage_fetchers"],
   },
+};
+
+// The analyst who also holds manage_confidentiality, and a user who holds
+// it alone of the capabilities of Actions.
+const CONFIDENTIALITY_ANALYST: CurrentUserResponse = {
+  data: {
+    ...OTHER_USER.data,
+    capabilities: ["triage_ticket", "manage_confidentiality"],
+  },
+};
+const CONFIDENTIALITY_MANAGER: CurrentUserResponse = {
+  data: { ...FICTIONAL_USER.data, capabilities: ["manage_confidentiality"] },
 };
 
 // Bob Wilson, another analyst, as the assignee of a Ticket.
@@ -251,7 +266,20 @@ const ICONS: Record<string, LucideIcon> = {
   "Set severity…": Gauge,
   "Associate CVE…": Plus,
   "Rerun convergence": ListRestart,
+  "Make confidential…": Lock,
+  "Make non-confidential…": LockOpen,
 };
+
+// Checks that each item of the menu shows its icon.
+async function expectIcons(menu: Locator, items: readonly string[]) {
+  for (const name of items) {
+    const Icon = ICONS[name]!;
+    const icon = await render(<Icon />);
+    expect(itemOf(menu, name).element().querySelector("svg")?.innerHTML).toBe(
+      icon.container.querySelector("svg")?.innerHTML,
+    );
+  }
+}
 
 // The actions of a user who holds triage_ticket on a Ticket with a CVE in New
 // and in Analysis, the ignores first, then the override of the priority.
@@ -283,6 +311,17 @@ const OFFERED: [string, string[]][] = [
   ["ignored", ["Reopen"]],
   ["duplicated", ["Revert duplicate"]],
 ];
+
+// The border lines that set apart the groups of the actions of a user who
+// holds triage_ticket on a Ticket with a CVE in each status.
+const LINES: Record<string, number> = {
+  new: 1,
+  analysis: 2,
+  analyzed: 2,
+  resolved: 2,
+  ignored: 0,
+  duplicated: 0,
+};
 
 describe("Actions", () => {
   test("is a secondary button that shows Actions, named by the Ticket, which opens the actions as a menu of the same name", async () => {
@@ -528,6 +567,174 @@ describe("Actions", () => {
       expect(actionsButton(screen).query()).toBeNull();
     },
   );
+
+  test.each(
+    [false, true].flatMap((confidential) =>
+      OFFERED.map(
+        ([status, items]) =>
+          [
+            confidential ? "Make non-confidential…" : "Make confidential…",
+            status,
+            confidential,
+            items,
+          ] as const,
+      ),
+    ),
+  )(
+    "offers %s with its icon to a user who also holds manage_confidentiality, on a Ticket in %s, last, apart from the other actions by a border line",
+    async (item, status, confidential, items) => {
+      showingStatus(status, {
+        user: CONFIDENTIALITY_ANALYST,
+        ticket: () => ticketIn(status, { is_confidential: confidential }),
+      });
+      const { screen } = await renderTicket();
+
+      const menu = await openActions(screen);
+
+      await expect.poll(() => itemsOf(menu)).toEqual([...items, item]);
+      await expectIcons(menu, [item]);
+      const separators = menu.getByRole("separator").elements();
+      // The lines of the groups of triage_ticket, then one more.
+      expect(separators).toHaveLength((LINES[status] ?? 0) + 1);
+      const line = separators.at(-1)!;
+      expect(follows(itemOf(menu, items.at(-1)!).element(), line)).toBeTruthy();
+      expect(follows(line, itemOf(menu, item).element())).toBeTruthy();
+      const style = getComputedStyle(line);
+      expect([style.borderTopWidth, style.borderTopColor]).toEqual([
+        "1px",
+        BORDER,
+      ]);
+    },
+  );
+
+  test.each([
+    ["Make confidential…", false],
+    ["Make non-confidential…", true],
+  ] as const)(
+    "offers %s alone, without a line, to a user who also holds manage_confidentiality on a Ticket in a status that the pinned contract does not list",
+    async (item, confidential) => {
+      showingStatus("fictional_status", {
+        user: CONFIDENTIALITY_ANALYST,
+        ticket: () =>
+          ticketIn("fictional_status", { is_confidential: confidential }),
+      });
+      const { screen } = await renderTicket();
+
+      const menu = await openActions(screen);
+
+      await expect.poll(() => itemsOf(menu)).toEqual([item]);
+      expect(menu.getByRole("separator").elements()).toHaveLength(0);
+    },
+  );
+
+  test.each<[string, boolean, string]>([
+    ...[...OFFERED.map(([status]) => status), "fictional_status"].map(
+      (status) =>
+        [status, false, "Make confidential…"] as [string, boolean, string],
+    ),
+    ["analyzed", true, "Make non-confidential…"],
+    ["fictional_status", true, "Make non-confidential…"],
+  ])(
+    "shows to a user who holds manage_confidentiality alone, on a Ticket in %s, confidential %s, with %s alone, without a line",
+    async (status, confidential, item) => {
+      showingStatus(status, {
+        user: CONFIDENTIALITY_MANAGER,
+        ticket: () => ticketIn(status, { is_confidential: confidential }),
+      });
+      const { screen } = await renderTicket();
+
+      const menu = await openActions(screen);
+
+      await expect.poll(() => itemsOf(menu)).toEqual([item]);
+      await expectIcons(menu, [item]);
+      expect(menu.getByRole("separator").elements()).toHaveLength(0);
+    },
+  );
+
+  test.each(OFFERED)(
+    "offers a user who holds triage_ticket without manage_confidentiality no change of the confidentiality, on a confidential Ticket in %s: %j",
+    async (status, items) => {
+      showingStatus(status, {
+        ticket: () => ticketIn(status, { is_confidential: true }),
+      });
+      const { screen } = await renderTicket();
+
+      const menu = await openActions(screen);
+
+      await expect.poll(() => itemsOf(menu)).toEqual(items);
+    },
+  );
+
+  test("does not show to a user who holds no capability of Actions on a confidential Ticket", async () => {
+    showingStatus("analyzed", {
+      user: FICTIONAL_USER,
+      ticket: () => ticketIn("analyzed", { is_confidential: true }),
+    });
+    const { screen } = await renderTicket();
+
+    await expect
+      .element(screen.getByText("Confidential", { exact: true }))
+      .toBeVisible();
+    expect(actionsButton(screen).query()).toBeNull();
+  });
+
+  test("opens on its only item for a user who holds manage_confidentiality alone, so that Enter opens its confirmation, and the focus returns to Actions as Escape closes it", async () => {
+    showingStatus("analyzed", { user: CONFIDENTIALITY_MANAGER });
+    const { screen } = await renderTicket();
+    actionsButton(screen).element().focus();
+    await userEvent.keyboard("{Enter}");
+    const menu = actionsMenu(screen);
+    await expect.element(itemOf(menu, "Make confidential…")).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Make SNTL-12 confidential?",
+      exact: true,
+    });
+    await expect
+      .element(dialog.getByRole("button", { name: "Cancel", exact: true }))
+      .toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expectFocusSettledOn(actionsButton(screen));
+  });
+
+  test("keeps Actions while the confirmation of the confidentiality is open after a read of the signed-in user takes manage_confidentiality away, then goes as it closes, and the focus moves to the screen's heading", async () => {
+    let user = CONFIDENTIALITY_MANAGER;
+    const spy = showingStatus("analyzed", { user: () => user });
+    const { screen } = await renderTicket();
+    await choose(screen, "Make confidential…");
+    const dialog = screen.getByRole("dialog", {
+      name: "Make SNTL-12 confidential?",
+      exact: true,
+    });
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+    await expect.element(cancel).toHaveFocus();
+    const userReads = requestsTo(spy, ME);
+    user = FICTIONAL_USER;
+
+    await returnToForeground();
+
+    await expect.poll(() => requestsTo(spy, ME)).toBe(userReads + 1);
+    await readEnded(ME);
+    await nextFrames();
+    await expect.element(dialog).toBeVisible();
+    expect(
+      screen
+        .getByRole("button", {
+          name: "Actions of SNTL-12",
+          exact: true,
+          includeHidden: true,
+        })
+        .query(),
+    ).not.toBeNull();
+    await cancel.click();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect.element(actionsButton(screen)).not.toBeInTheDocument();
+    await expectFocusSettledOn(screenHeading(screen));
+  });
 
   test("keeps the items that it offered as its menu opened while a read changes the status of the Ticket, and offers those of the new status once it opens again", async () => {
     let status = "analyzed";
@@ -1333,6 +1540,39 @@ describe("Rerun convergence", () => {
     response.resolve(convergenceResponse());
 
     await expect.element(menu).not.toBeInTheDocument();
+  });
+
+  test("keeps the change of the confidentiality unavailable until Sentinel answers, opening no confirmation", async () => {
+    const response = later();
+    showingStatus("analysis", {
+      user: CONFIDENTIALITY_ANALYST,
+      ticketChange: () => response.promise,
+    });
+    const { screen } = await renderTicket();
+
+    const menu = await choose(screen, "Rerun convergence");
+
+    await expect
+      .element(itemOf(menu, "Rerun convergence"))
+      .toHaveAccessibleDescription("Starting the convergence.");
+    const item = itemOf(menu, "Make confidential…");
+    await expect.element(item).toHaveAttribute("aria-disabled", "true");
+    await item.click({ force: true });
+    await frames();
+    await expect.element(menu).toBeVisible();
+    expect(
+      screen
+        .getByRole("dialog", { name: "Make SNTL-12 confidential?" })
+        .query(),
+    ).toBeNull();
+
+    response.resolve(convergenceResponse());
+
+    await expect.element(menu).not.toBeInTheDocument();
+    const again = await openActions(screen);
+    await expect
+      .element(itemOf(again, "Make confidential…"))
+      .not.toHaveAttribute("aria-disabled");
   });
 
   test("starts the convergence for a user who holds manage_fetchers alone", async () => {

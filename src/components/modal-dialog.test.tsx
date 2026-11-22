@@ -1,3 +1,4 @@
+import { CalendarDate, CalendarDateTime } from "@internationalized/date";
 import { useEffect, useRef, useState } from "react";
 import { Form } from "react-aria-components";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -6,6 +7,7 @@ import { render } from "vitest-browser-react";
 import "../styles.css";
 import { Button } from "./button";
 import { FramedTable, type TableColumn } from "./data-table";
+import { DateField } from "./date-field";
 import {
   ConfirmationDialog,
   FirstFieldFocus,
@@ -618,3 +620,48 @@ test("gives the focus as it opens to the first option of a group of radio button
     .element(dialog.getByRole("radio", { name: "Low", exact: true }))
     .toHaveFocus();
 });
+
+test.each([
+  ["without a value", null],
+  ["with a date and time", new CalendarDateTime(2099, 11, 25, 13, 0)],
+])(
+  "gives the focus as it opens to the first part, the day, of a date and time field that comes first in its content, %s",
+  async (_, initial) => {
+    const screen = await render(
+      <ModalDialog
+        isOpen
+        onClose={() => undefined}
+        width="form"
+        title="Fictional release"
+        buttons={<Button>Cancel</Button>}
+      >
+        <FirstFieldFocus>
+          <Form>
+            <DateField
+              label="Release"
+              look="form"
+              granularity="minute"
+              initial={initial}
+              error={undefined}
+              first={new CalendarDate(2099, 1, 1)}
+              last={new CalendarDate(2099, 12, 30)}
+              onTyped={() => undefined}
+              onEdit={() => undefined}
+              onEnter={() => undefined}
+            />
+          </Form>
+        </FirstFieldFocus>
+      </ModalDialog>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Fictional release" });
+    const day = dialog
+      .getByRole("group", { name: "Release", exact: true })
+      .getByRole("spinbutton")
+      .first();
+    await expect.element(day).toHaveFocus();
+    await expect.element(day).toHaveAccessibleName(/^day,? Release$/);
+    // Without opening the calendar.
+    expect(screen.getByRole("dialog").elements()).toHaveLength(1);
+  },
+);
