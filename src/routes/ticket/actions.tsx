@@ -44,7 +44,7 @@ import { useSignedInUser } from "../../session-gate";
 import { useReadAfterTicketChange } from "../ticket-overview/shared";
 import { IgnoreDialog, ignoredText } from "./ignore";
 import { MarkDuplicateDialog } from "./mark-duplicate";
-import { assigneeOutcome } from "./shared";
+import { assigneeOutcome, OPERABLE_STATUSES } from "./shared";
 
 // Actions, the menu at the end of the heading row of the Ticket screen
 // (src/routes/ticket.tsx; docs/design-system.md, Detail Screens), with the
@@ -72,18 +72,11 @@ const IGNORABLE_STATUSES = new Set<string>([
   TicketStatusValue.analysis,
 ]);
 
-// The statuses from which Sentinel marks a Ticket as a duplicate, its
-// operable statuses, and those in which it reruns its convergence: New is
-// not among the latter (Sentinel docs/features/tickets/tickets.md,
-// Mark-as-Duplicate Operation; Rerun Ticket Convergence). A status that the
-// pinned contract does not list offers no action (docs/behaviors.md, Unknown
-// Values).
-const MARKABLE_STATUSES = new Set<string>([
-  TicketStatusValue.new,
-  TicketStatusValue.analysis,
-  TicketStatusValue.analyzed,
-  TicketStatusValue.resolved,
-]);
+// The statuses in which Sentinel reruns the convergence of a Ticket: New is
+// not among them (Sentinel docs/features/tickets/tickets.md, Rerun Ticket
+// Convergence). Sentinel marks a Ticket as a duplicate from its operable
+// statuses (OPERABLE_STATUSES). A status that the pinned contract does not
+// list offers no action (docs/behaviors.md, Unknown Values).
 const RERUNNABLE_STATUSES = new Set<string>([
   TicketStatusValue.analysis,
   TicketStatusValue.analyzed,
@@ -104,7 +97,7 @@ function actionsOf(
   if (triages && IGNORABLE_STATUSES.has(status)) {
     actions.push("ignore", "ignore-not-shipped");
   }
-  if (triages && MARKABLE_STATUSES.has(status)) {
+  if (triages && OPERABLE_STATUSES.has(status)) {
     actions.push("mark-duplicate");
   }
   if (triages && status === TicketStatusValue.ignored) {

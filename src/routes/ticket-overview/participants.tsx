@@ -46,6 +46,7 @@ import {
 import { DateTime } from "../../components/date-time";
 import { sectionHeadingId, SideSection } from "../../components/detail-screen";
 import { useDiscardQuestion } from "../../components/discard-question";
+import { useFieldErrorFocus } from "../../components/field-error-focus";
 import {
   ConfirmationDialog,
   DialogErrorMessage,
@@ -297,15 +298,19 @@ function GrantAccessForm({
   const [busy, setBusy] = useState(false);
   // The error of the field and of the form, a new object for each failure,
   // so that each shows again.
-  const [fieldError, setFieldError] = useState<{ user: string }>();
+  const [fieldError, setFieldError] = useState<{ text: string }>();
   const [formError, setFormError] = useState<DialogError>();
   // A failure of the UI itself, which the router shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
+  // After a failure at the field, the field takes the focus, or its error is
+  // announced when it holds the focus already (docs/behaviors.md,
+  // Accessibility, Announcements).
+  const { focusField, region } = useFieldErrorFocus(fieldError !== undefined);
   useEffect(() => {
     if (fieldError !== undefined) {
-      inputRef.current?.focus();
+      focusField(inputRef.current, fieldError.text);
     }
-  }, [fieldError, inputRef]);
+  }, [fieldError, inputRef, focusField]);
   useLayoutEffect(() => {
     if (refocus.current) {
       refocus.current = false;
@@ -333,7 +338,7 @@ function GrantAccessForm({
         ? MESSAGE_INVALID_VALUE
         : undefined);
     if (atField !== undefined) {
-      setFieldError({ user: atField });
+      setFieldError({ text: atField });
       return;
     }
     const presentation = presentChangeFailure(error);
@@ -352,7 +357,7 @@ function GrantAccessForm({
     }
     setFormError(undefined);
     if (user === null) {
-      setFieldError({ user: "Choose a user." });
+      setFieldError({ text: "Choose a user." });
       return;
     }
     setFieldError(undefined);
@@ -379,7 +384,6 @@ function GrantAccessForm({
         event.preventDefault();
         void submit();
       }}
-      validationErrors={fieldError}
       aria-label="Grant access"
       className="flex max-w-112 flex-col gap-3"
     >
@@ -398,7 +402,9 @@ function GrantAccessForm({
         }}
         unavailable={{ ids: granted, label: GRANTED }}
         inputRef={inputRef}
+        error={fieldError?.text}
       />
+      {region}
       <div className="flex justify-end">
         <Button type="submit" variant="primary" size="large" isBusy={busy}>
           Grant access

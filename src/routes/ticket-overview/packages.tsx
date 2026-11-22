@@ -71,12 +71,12 @@ import {
 import { User } from "../../components/user";
 import { useSignedInUser } from "../../session-gate";
 import { ticketRecord } from "../ticket";
+import { OPERABLE_STATUSES } from "../ticket/shared";
 import { AddPackageDialog, addedText } from "./add-package";
 import { ReleaseRequests, SubmissionRequests } from "./ibs-requests";
 import {
   createRecordTriggers,
   MANAGED_AFFECTEDNESS,
-  PACKAGE_EDITABLE_STATUSES,
   PackageActions,
   TrackActions,
   TrackAffectedness,
@@ -1049,7 +1049,7 @@ export function PackagesPart({
     showsHidden.current = showHidden;
   }, [showHidden]);
   const capabilities = user?.capabilities ?? [];
-  const editable = PACKAGE_EDITABLE_STATUSES.has(ticket.status);
+  const editable = OPERABLE_STATUSES.has(ticket.status);
   const manages = editable && capabilities.includes("manage_packages");
   // Add package, for a user who adds packages; its dialog stays open, with
   // what it offered as it opened, also once a read of the signed-in user

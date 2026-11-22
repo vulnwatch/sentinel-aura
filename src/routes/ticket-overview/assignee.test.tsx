@@ -501,7 +501,7 @@ describe("the assignee", () => {
       "This value isn't valid.",
     ],
   ])(
-    "shows %s at the user field, which keeps the focus, reads the users again, and drops the error once the term changes",
+    "shows %s at the user field, which keeps the focus and announces it, reads the users again, and drops the error once the term changes",
     async (_, failure, message) => {
       const spy = stubTicket({
         ticket: () => assignedTo(null),
@@ -513,12 +513,20 @@ describe("the assignee", () => {
 
       await userOption(screen, "Bob Wilson @bwilson").click();
 
-      const error = assigneePopover(screen).getByText(message);
-      await expect.element(error).toBeVisible();
-      await expect.element(searchUsers(screen)).toHaveFocus();
       await expect
         .element(searchUsers(screen))
         .toHaveAccessibleDescription(message);
+      await expect.element(searchUsers(screen)).toBeInvalid();
+      await expect.element(searchUsers(screen)).toHaveFocus();
+      // The field held the focus as the choice failed, so a status region of
+      // the popover announces the error.
+      await expect
+        .element(
+          assigneePopover(screen)
+            .getByRole("status")
+            .getByText(message, { exact: true }),
+        )
+        .toBeInTheDocument();
       await expect.poll(() => directoryReads(spy)).toHaveLength(2);
       await expect
         .element(editAssignee(screen))
@@ -526,7 +534,9 @@ describe("the assignee", () => {
 
       await userEvent.keyboard("b");
 
-      await expect.element(error).not.toBeInTheDocument();
+      await expect.element(searchUsers(screen)).not.toBeInvalid();
+      await expect.element(searchUsers(screen)).toHaveAccessibleDescription("");
+      expect(assigneePopover(screen).getByText(message).query()).toBeNull();
     },
   );
 

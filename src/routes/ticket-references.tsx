@@ -55,6 +55,7 @@ import {
 } from "../components/data-table";
 import { DateTime } from "../components/date-time";
 import { useDiscardQuestion } from "../components/discard-question";
+import { useFieldErrorFocus } from "../components/field-error-focus";
 import {
   FilterGroup,
   Filters,
@@ -516,17 +517,21 @@ function ReferenceDialog({
     description: createRef<HTMLTextAreaElement>(),
   }));
   // After a failure with errors of fields alone, the first of them takes the
-  // focus; the error of the form takes it itself (docs/behaviors.md,
-  // Accessibility, Announcements).
+  // focus, or its error is announced when it holds the focus already, as
+  // after Enter in it, also when the checks of the form stop it; the error
+  // of the form takes it itself (docs/behaviors.md, Accessibility,
+  // Announcements).
+  const { focusField, formRef, region } = useFieldErrorFocus();
   useEffect(() => {
     if (failure.form !== undefined) {
       return;
     }
     const field = FIELDS.find((name) => failure.fields[name] !== undefined);
-    if (field !== undefined) {
-      refs[field].current?.focus();
+    const error = field === undefined ? undefined : failure.fields[field];
+    if (field !== undefined && error !== undefined) {
+      focusField(refs[field].current, error);
     }
-  }, [failure, refs]);
+  }, [failure, refs, focusField]);
   const changed =
     input.url !== initial.url ||
     input.title !== initial.title ||
@@ -643,6 +648,7 @@ function ReferenceDialog({
             void submit();
           }}
           validationErrors={failure.fields}
+          ref={formRef}
           className="flex flex-col gap-3"
         >
           {failure.form !== undefined && (
@@ -703,6 +709,7 @@ function ReferenceDialog({
             validate={validateLength(DESCRIPTION_MAX_LENGTH)}
             inputRef={refs.description}
           />
+          {region}
         </Form>
       </FirstFieldFocus>
     </ModalDialog>

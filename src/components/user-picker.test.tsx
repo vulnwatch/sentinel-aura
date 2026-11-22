@@ -72,7 +72,7 @@ interface PickerProps {
   onInput?: () => void;
 }
 
-async function renderPicker({
+function Picker({
   eligibility = ["all", "non_confidential"],
   first,
   chosen = null,
@@ -81,8 +81,8 @@ async function renderPicker({
   onChoose = () => undefined,
   error,
   onInput = () => undefined,
-}: PickerProps = {}) {
-  const screen = await render(
+}: PickerProps) {
+  return (
     <QueryClientProvider client={client}>
       <div className="w-80 p-4">
         <UserPicker
@@ -100,12 +100,44 @@ async function renderPicker({
           onInput={onInput}
         />
       </div>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+}
+
+async function renderPicker(props: PickerProps = {}) {
+  const screen = await render(<Picker {...props} />);
   return {
     screen,
     field: screen.getByRole("searchbox", { name: "Search users" }),
+    // Renders the picker again with other props, as its popover does after
+    // a choice.
+    rerender: (next: PickerProps) => screen.rerender(<Picker {...next} />),
   };
+}
+
+// The node that a status region of the picker added for a text, which
+// assistive technologies announce as it is added.
+function announcedNode(
+  screen: Awaited<ReturnType<typeof renderPicker>>["screen"],
+  text: string,
+): Element | undefined {
+  return (
+    screen
+      .getByRole("status")
+      .elements()
+      .find((status) => status.textContent === text)?.firstElementChild ??
+    undefined
+  );
+}
+
+// The text of the status regions of the picker.
+function statusTexts(
+  screen: Awaited<ReturnType<typeof renderPicker>>["screen"],
+): string[] {
+  return screen
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent ?? "");
 }
 
 // The reads of the directory, as their queries.
@@ -512,7 +544,7 @@ test("ends its search field with Clear search while it holds a term, which bring
     ]);
 });
 
-test("shows its error at the field, and tells when the term changes", async () => {
+test("shows its error at the field, which takes the focus, and tells when the term changes", async () => {
   stubApi(() => usersPage([]));
   const onInput = vi.fn();
   const { screen, field } = await renderPicker({
@@ -531,17 +563,41 @@ test("shows its error at the field, and tells when the term changes", async () =
     .toHaveAccessibleDescription(
       "This user can't be the assignee of this Ticket.",
     );
-
-  // In a status region, so that it is announced while the field keeps the
-  // focus.
-  await expect
-    .element(
-      screen
-        .getByRole("status")
-        .getByText("This user can't be the assignee of this Ticket."),
-    )
-    .toBeVisible();
+  // The field that takes the focus is read with its error, which is then
+  // not announced as well.
+  await expect.element(field).toHaveFocus();
+  await nextFrames();
+  expect(statusTexts(screen)).not.toContain(
+    "This user can't be the assignee of this Ticket.",
+  );
 
   await field.fill("b");
   expect(onInput).toHaveBeenCalled();
+});
+
+test("announces its error while the field holds the focus, as after a choice, for each new error, until the term changes", async () => {
+  stubApi(() => usersPage([]));
+  const { screen, field, rerender } = await renderPicker();
+  await field.click();
+  await expect.element(field).toHaveFocus();
+  const message = "This user can't be the assignee of this Ticket.";
+
+  await rerender({ error: message });
+
+  await expect.poll(() => statusTexts(screen)).toContain(message);
+  await expect.element(field).toHaveFocus();
+  await expect.element(field).toHaveAccessibleDescription(message);
+
+  // A new failure with the same error is announced again: the region adds
+  // the text anew, which assistive technologies announce.
+  const announced = announcedNode(screen, message);
+  await rerender({});
+  await rerender({ error: message });
+
+  await expect.poll(() => announcedNode(screen, message)).not.toBe(announced);
+  expect(announcedNode(screen, message)).toBeDefined();
+
+  await userEvent.keyboard("b");
+
+  await expect.poll(() => statusTexts(screen)).not.toContain(message);
 });

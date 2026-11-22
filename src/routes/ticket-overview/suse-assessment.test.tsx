@@ -565,6 +565,15 @@ function scoreSaid(dialog: Locator): string {
   return spokenOf(scorePlaceOf(dialog).element());
 }
 
+// The texts of the status regions of the dialog, that of the score among
+// them.
+function statusTexts(dialog: Locator): string[] {
+  return dialog
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent ?? "");
+}
+
 // Records what the place of the score says to assistive technologies after
 // each change of the dialog, until stop, so that a test sees an outcome
 // that shows for one render alone.
@@ -2462,6 +2471,42 @@ describe("the SUSE assessment", () => {
         .element(vectorOf(dialog))
         .toHaveAccessibleDescription(VECTOR_DESCRIPTION);
     });
+
+    test("announce the error of an empty vector after Enter in it in a status region of the dialog, while the vector keeps the focus", async () => {
+      const spy = stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+      const field = vectorOf(dialog);
+      await field.click();
+      await expect.element(field).toHaveFocus();
+
+      await userEvent.keyboard("{Enter}");
+
+      const message = "Choose the metrics, or enter the vector.";
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(`${VECTOR_DESCRIPTION} ${message}`);
+      await expect.poll(() => statusTexts(dialog)).toContain(message);
+      await expect.element(field).toHaveFocus();
+      expect(requestsWith(spy, "POST")).toHaveLength(0);
+    });
+
+    test("do not announce the error of an empty vector as well when the vector takes the focus from Add SUSE assessment", async () => {
+      stubSuse(() => assessmentsWith([NVD_V40, NVD_V31]));
+      const { screen } = await renderSuse();
+      const dialog = await openSuseAdd(screen);
+
+      await press(submitOf(dialog));
+
+      const message = "Choose the metrics, or enter the vector.";
+      const field = vectorOf(dialog);
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(`${VECTOR_DESCRIPTION} ${message}`);
+      await expect.element(field).toHaveFocus();
+      await nextFrames();
+      expect(statusTexts(dialog)).not.toContain(message);
+    });
   });
 
   describe("its Base score", () => {
@@ -2960,6 +3005,38 @@ describe("the SUSE assessment", () => {
         .poll(() => vectorOf(dialog).element(), { interval: 0 })
         .toHaveValue("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L");
       vi.useRealTimers();
+    });
+
+    test("keeps the error of 422 CVSS_INVALID_VECTOR of the read at the vector once the vector loses the focus, until the input changes", async () => {
+      stubSuse(() => fictionalCvssAssessments(), {
+        baseScore: rejectingTemporal,
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      const field = vectorOf(dialog);
+      await field.fill(TEMPORAL_V31);
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(
+          `${VECTOR_DESCRIPTION} ${NOT_ACCEPTED_V31}`,
+        );
+      await expect.element(field).toHaveFocus();
+
+      await userEvent.keyboard("{Tab}");
+
+      await expect
+        .element(dialog.getByRole("button", { name: "Cancel" }))
+        .toHaveFocus();
+      await nextFrames();
+      expect(field.element()).toBeInvalid();
+      expect(field.element()).toHaveAccessibleDescription(
+        `${VECTOR_DESCRIPTION} ${NOT_ACCEPTED_V31}`,
+      );
+      await field.fill(VECTOR_V31);
+      await expect.element(field).not.toBeInvalid();
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(VECTOR_DESCRIPTION);
     });
 
     test("leaves Save sending a vector that the read rejects with 422 CVSS_INVALID_VECTOR", async () => {
@@ -3674,6 +3751,39 @@ describe("the SUSE assessment", () => {
         expect(dialog.getByRole("alert").query()).toBeNull();
       },
     );
+
+    test("keeps the error of 422 CVSS_INVALID_VECTOR after Enter in the vector once the vector loses the focus, until the input changes", async () => {
+      const message =
+        "Sentinel doesn't accept this vector. Enter a complete CVSS v3.1 Base vector.";
+      stubSuse(() => fictionalCvssAssessments(), {
+        upsertSuse: () => errorResponse(422, "CVSS_INVALID_VECTOR"),
+      });
+      const { screen } = await renderSuse();
+      const dialog = await openSuseEdit(screen);
+      const field = vectorOf(dialog);
+      await field.fill(VECTOR_V31);
+      await userEvent.keyboard("{Enter}");
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(`${VECTOR_DESCRIPTION} ${message}`);
+      await expect.element(field).toHaveFocus();
+
+      await userEvent.keyboard("{Tab}");
+
+      await expect
+        .element(dialog.getByRole("button", { name: "Cancel" }))
+        .toHaveFocus();
+      await nextFrames();
+      expect(field.element()).toBeInvalid();
+      expect(field.element()).toHaveAccessibleDescription(
+        `${VECTOR_DESCRIPTION} ${message}`,
+      );
+      await field.fill(SUSE_V31.vector_string);
+      await expect.element(field).not.toBeInvalid();
+      await expect
+        .element(field)
+        .toHaveAccessibleDescription(VECTOR_DESCRIPTION);
+    });
 
     test("names the version of the tab in the error of 422 CVSS_INVALID_VECTOR in Add", async () => {
       stubSuse(() => fictionalCvssAssessments(), {

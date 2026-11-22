@@ -243,6 +243,14 @@ function ignores(spy: ReturnType<typeof stubApi>): unknown[] {
     );
 }
 
+// The texts of the status regions of the dialog.
+function statusTexts(dialog: Locator): string[] {
+  return dialog
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent ?? "");
+}
+
 // The elements outside the status regions that hold the text, such as the
 // message area.
 function shownOutsideStatus(screen: Screen, text: string): Element[] {
@@ -398,6 +406,21 @@ describe("the check of Ignore…", () => {
 
     await expect.element(group).not.toHaveAccessibleDescription();
     expect(dialog.getByText(MESSAGE_NO_REASON).query()).toBeNull();
+  });
+
+  test("does not announce Choose a reason. as well when the first reason takes the focus from Ignore", async () => {
+    showingIgnorable();
+    const { screen } = await renderTicket();
+    const dialog = await openIgnore(screen);
+
+    await submitButton(dialog).click();
+
+    await expect
+      .element(reasonGroup(dialog))
+      .toHaveAccessibleDescription(MESSAGE_NO_REASON);
+    await expect.element(reasonOf(dialog, "Not shipped")).toHaveFocus();
+    await nextFrames();
+    expect(statusTexts(dialog)).not.toContain(MESSAGE_NO_REASON);
   });
 });
 
@@ -703,6 +726,31 @@ describe("a failure of Ignore…", () => {
     await expect.element(group).not.toHaveAccessibleDescription();
     await expect.element(chosen).toHaveAccessibleDescription(CVE_REJECTED);
     expect(dialog.getByText(MESSAGE_NOT_REJECTED).query()).toBeNull();
+  });
+
+  test("announces 409 TICKET_CVE_NOT_REJECTED after Enter on the reason chosen in a status region of the dialog, while the reason keeps the focus", async () => {
+    showingIgnorable(REJECTED, {
+      ticketChange: () => errorResponse(409, "TICKET_CVE_NOT_REJECTED"),
+    });
+    const { screen } = await renderTicket();
+    const dialog = await openIgnore(screen);
+    // The arrow keys choose CVE rejected, after Not shipped, which has the
+    // focus.
+    await userEvent.keyboard("{ArrowDown}");
+    const chosen = reasonOf(dialog, "CVE rejected");
+    await expect.element(chosen).toBeChecked();
+    await expect.element(chosen).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(reasonGroup(dialog))
+      .toHaveAccessibleDescription(MESSAGE_NOT_REJECTED);
+    await expect
+      .poll(() => statusTexts(dialog))
+      .toContain(MESSAGE_NOT_REJECTED);
+    await expect.element(chosen).toHaveFocus();
+    await expect.element(chosen).toBeChecked();
   });
 
   test("shows a field error of a VALIDATION_ERROR for reason at Reason, the reason chosen staying chosen, until another reason is chosen", async () => {

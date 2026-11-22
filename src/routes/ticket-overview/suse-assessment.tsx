@@ -47,6 +47,7 @@ import { useChangeOutcome } from "../../components/change-outcome";
 import { DialogTabs } from "../../components/dialog-tabs";
 import { useDiscardQuestion } from "../../components/discard-question";
 import { ErrorInPlace } from "../../components/error-in-place";
+import { useFieldErrorFocus } from "../../components/field-error-focus";
 import { FOCUS_RING } from "../../components/focus-ring";
 import { Loading, UpdatingBar } from "../../components/loading";
 import { Message } from "../../components/message";
@@ -83,18 +84,6 @@ export function isEditableVersion(version: string): version is EditableVersion {
 // The provider of the SUSE assessment, as Sentinel stores it (Sentinel
 // docs/features/tickets/cvss-scoring.md, Provider Identity and Authority).
 const SUSE = "SUSE";
-
-// The statuses of a Ticket in which Sentinel accepts a change of the SUSE
-// assessment of its CVE: Ignored and Duplicated refuse it with 409
-// TICKET_NOT_MUTABLE, and a status that the pinned contract does not list
-// offers no action (Sentinel docs/features/tickets/ticket-mutations.md, CVSS
-// Status Matrix; docs/behaviors.md, Unknown Values).
-export const SUSE_CHANGEABLE_STATUSES = new Set<string>([
-  TicketStatusValue.new,
-  TicketStatusValue.analysis,
-  TicketStatusValue.analyzed,
-  TicketStatusValue.resolved,
-]);
 
 // Whether the screen edits and deletes an assessment: one of SUSE in a
 // version that it changes.
@@ -931,14 +920,18 @@ export function SuseAssessmentDialog({
     switched.current = false;
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- each version shown is the event that the effect follows
   }, [version]);
-  // After a failure at the field alone, the field takes the focus; the error
-  // of the form takes it itself (docs/behaviors.md, Accessibility,
-  // Announcements).
+  // After a failure at the field alone, the field takes the focus, or its
+  // error is announced when it holds the focus already, as after Enter in
+  // it; the error of the form takes it itself (docs/behaviors.md,
+  // Accessibility, Announcements).
+  const { focusField, region } = useFieldErrorFocus(
+    failure.field !== undefined,
+  );
   useEffect(() => {
     if (failure.field !== undefined && failure.form === undefined) {
-      vectorRef.current?.focus();
+      focusField(vectorRef.current, failure.field);
     }
-  }, [failure]);
+  }, [failure, focusField]);
 
   const entered = inputs[version];
   const { prefix } = VERSION_FORMS[version];
@@ -1161,9 +1154,6 @@ export function SuseAssessmentDialog({
         event.preventDefault();
         void submit();
       }}
-      validationErrors={
-        vectorError === undefined ? {} : { vector_string: vectorError }
-      }
       className="flex flex-col gap-5"
     >
       {failure.form !== undefined && (
@@ -1222,7 +1212,9 @@ export function SuseAssessmentDialog({
         value={entered}
         onChange={change}
         inputRef={vectorRef}
+        error={vectorError}
       />
+      {region}
     </Form>
   );
 

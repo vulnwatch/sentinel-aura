@@ -10,7 +10,6 @@ import {
   presentChangeFailure,
   validationErrorFields,
 } from "../../api/errors";
-import { TicketStatusValue } from "../../api/generated/model";
 import type {
   ListUsersAssignmentEligibilityItem,
   TicketDetail,
@@ -36,23 +35,11 @@ import { displayName, User, type UserFields } from "../../components/user";
 import { UserPicker } from "../../components/user-picker";
 import { useSignedInUser } from "../../session-gate";
 import { ticketRecord } from "../ticket";
+import { OPERABLE_STATUSES } from "../ticket/shared";
 import { useReadAfterTicketChange } from "./shared";
 
 // The assignee of the Ticket in its details
 // (src/routes/ticket-overview/details.tsx), with its change from them.
-
-// The statuses of a Ticket in which Sentinel accepts an assignment: Ignored
-// and Duplicated refuse it with 409 TICKET_NOT_MUTABLE, and a status that the
-// pinned contract does not list offers no action (Sentinel
-// docs/features/tickets/tickets.md, Reassignment; Sentinel
-// docs/api-spec.md, Manual-Zone Mutability Guard; docs/behaviors.md, Unknown
-// Values).
-const ASSIGNABLE_STATUSES = new Set<string>([
-  TicketStatusValue.new,
-  TicketStatusValue.analysis,
-  TicketStatusValue.analyzed,
-  TicketStatusValue.resolved,
-]);
 
 // The assignment eligibility of the users who can be the assignee of a
 // Ticket: all for a confidential Ticket, all and non_confidential for every
@@ -163,7 +150,7 @@ export function useAssignee(ticket: TicketDetail, twoColumns: boolean) {
   const pending = assign.isPending;
   const capable =
     user?.capabilities.includes("triage_ticket") === true &&
-    ASSIGNABLE_STATUSES.has(ticket.status);
+    OPERABLE_STATUSES.has(ticket.status);
   const eligible =
     user !== undefined && admits(user.assignment_eligibility, ticket);
   // Whether the open popover offers the signed-in user first, as it did as it

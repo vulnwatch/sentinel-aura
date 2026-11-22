@@ -48,6 +48,7 @@ import { Severity } from "../../components/severity";
 import { WebLink } from "../../components/web-link";
 import { useSignedInUser } from "../../session-gate";
 import { ticketRecord } from "../ticket";
+import { OPERABLE_STATUSES } from "../ticket/shared";
 import {
   CVSS_ANCHOR,
   CVSS_VERSIONS,
@@ -63,7 +64,6 @@ import {
   type Deleting,
   isChangeable,
   isEditableVersion,
-  SUSE_CHANGEABLE_STATUSES,
   SuseAssessmentDialog,
   type SuseDialogMode,
   versionsToAdd,
@@ -642,7 +642,7 @@ export function CvssPart({ read, ticket }: CvssPartProps) {
   const user = useSignedInUser();
   const changes =
     user?.capabilities.includes("manage_cvss") === true &&
-    SUSE_CHANGEABLE_STATUSES.has(ticket.status);
+    OPERABLE_STATUSES.has(ticket.status);
   const ticketId = ticket.ticket_id;
   const cveId = ticket.cve?.cve_id ?? "";
   // The assessments of the open dialogs, which keep their input and show

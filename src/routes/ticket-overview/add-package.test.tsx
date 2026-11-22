@@ -244,6 +244,36 @@ async function addName(screen: Screen, name: string) {
   return dialog;
 }
 
+// The search of the maintained packages that suggests fictional-openssl for
+// every term.
+function suggestingOpenssl(): Response {
+  return maintainedPackagesPage(["fictional-openssl"]);
+}
+
+// Opens Add package, types the name, and submits it with Enter in the field,
+// which keeps the focus, as the user does once the menu of the field shows
+// the names that match (suggestingOpenssl): the first Enter closes the menu,
+// keeping the text, and the second submits the form.
+async function addWithEnter(screen: Screen, name: string) {
+  const dialog = await openAdd(screen);
+  const field = nameField(dialog);
+  await field.fill(name);
+  await expect.element(option(screen, "fictional-openssl")).toBeVisible();
+  await userEvent.keyboard("{Enter}");
+  await expect.element(field).toHaveAttribute("aria-expanded", "false");
+  await expect.element(field).toHaveValue(name);
+  await userEvent.keyboard("{Enter}");
+  return dialog;
+}
+
+// The texts of the status regions of the dialog.
+function statusTexts(dialog: Locator): string[] {
+  return dialog
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent ?? "");
+}
+
 // Waits until the message area shows the text as a success message, outside
 // the part, rather than only announcing it.
 async function expectSuccessMessage(screen: Screen, text: string) {
@@ -509,10 +539,13 @@ describe("the dialog of Add package", () => {
       .element(field)
       .toHaveAccessibleDescription(`${DESCRIPTION} Enter the package name.`);
     await expect.element(field).toHaveFocus();
-    const error = dialog
-      .getByText("Enter the package name.", { exact: true })
-      .element();
-    expect(statuses.some((status) => status.contains(error))).toBe(true);
+    const announced = dialog
+      .getByRole("status")
+      .getByText("Enter the package name.", { exact: true });
+    await expect.element(announced).toBeInTheDocument();
+    expect(
+      statuses.some((status) => status.contains(announced.element())),
+    ).toBe(true);
   });
 
   test("submits the form with Enter in the field once its menu is closed, the field keeping the focus while the addition is in progress, and sends one request", async () => {
@@ -581,6 +614,49 @@ describe("the dialog of Add package", () => {
 
     await expect.element(field).not.toBeInvalid();
     await expect.element(field).toHaveAccessibleDescription(DESCRIPTION);
+  });
+
+  test("keeps the error of a check after Enter in the field once the field loses the focus, until the name changes", async () => {
+    showingAddable({ maintainedPackages: suggestingOpenssl });
+    const { screen } = await renderTree();
+    const dialog = await addWithEnter(screen, "-openssl");
+    const field = nameField(dialog);
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription(`${DESCRIPTION} ${MESSAGE_PATTERN}`);
+    await expect.element(field).toHaveFocus();
+
+    await userEvent.keyboard("{Tab}");
+
+    await expect.element(cancelButton(dialog)).toHaveFocus();
+    await nextFrames();
+    expect(field.element()).toBeInvalid();
+    expect(field.element()).toHaveAccessibleDescription(
+      `${DESCRIPTION} ${MESSAGE_PATTERN}`,
+    );
+    // The field takes the focus again with its error, which goes once the
+    // name changes.
+    await field.click();
+    await expect.element(field).toHaveFocus();
+    expect(field.element()).toBeInvalid();
+    await userEvent.keyboard("x");
+    await expect.element(field).not.toBeInvalid();
+    await expect.element(field).toHaveAccessibleDescription(DESCRIPTION);
+  });
+
+  test("does not announce the error of a check as well when the field takes the focus from Add package", async () => {
+    showingAddable();
+    const { screen } = await renderTree();
+
+    await addName(screen, "-openssl");
+
+    const field = nameField(addDialog(screen));
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription(`${DESCRIPTION} ${MESSAGE_PATTERN}`);
+    await expect.element(field).toHaveFocus();
+    await nextFrames();
+    expect(statusTexts(addDialog(screen))).not.toContain(MESSAGE_PATTERN);
   });
 });
 
@@ -959,6 +1035,26 @@ describe("a failure of Add package", () => {
       await expect.element(field).toHaveAccessibleDescription(DESCRIPTION);
     },
   );
+
+  test("announces 422 PACKAGE_NOT_FOUND_IN_SMELT after Enter in the field in a status region of the dialog, while the field keeps the focus", async () => {
+    showingAddable({
+      maintainedPackages: suggestingOpenssl,
+      addPackage: () => errorResponse(422, "PACKAGE_NOT_FOUND_IN_SMELT"),
+    });
+    const { screen } = await renderTree();
+
+    const dialog = await addWithEnter(screen, "fictional-opensll");
+
+    const field = nameField(dialog);
+    await expect
+      .element(field)
+      .toHaveAccessibleDescription(`${DESCRIPTION} ${MESSAGE_NOT_IN_SMELT}`);
+    await expect
+      .poll(() => statusTexts(dialog))
+      .toContain(MESSAGE_NOT_IN_SMELT);
+    await expect.element(field).toHaveFocus();
+    await expect.element(field).toHaveValue("fictional-opensll");
+  });
 
   test.each<
     [

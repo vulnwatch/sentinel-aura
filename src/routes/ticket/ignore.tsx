@@ -20,6 +20,7 @@ import { useIgnoreTicket } from "../../api/generated/tickets";
 import { Button } from "../../components/button";
 import { useChangeOutcome, useMounted } from "../../components/change-outcome";
 import { useDiscardQuestion } from "../../components/discard-question";
+import { useFieldErrorFocus } from "../../components/field-error-focus";
 import { ignoreReasonName } from "../../components/ignore-reason";
 import type { MessageRecord } from "../../components/message-area";
 import {
@@ -162,17 +163,23 @@ export function IgnoreDialog({
   const submitting = useRef(false);
   // With an error at Reason alone, the reason chosen takes the focus, or the
   // first one without a choice, once the error is on the page, so that it is
-  // read with it (docs/behaviors.md, Accessibility, Announcements).
+  // read with it, or the error is announced when that reason holds the focus
+  // already, as after Enter on it (docs/behaviors.md, Accessibility,
+  // Announcements).
+  const { focusField, region } = useFieldErrorFocus(
+    failure.field !== undefined,
+  );
   useEffect(() => {
     if (failure.form !== undefined || failure.field === undefined) {
       return;
     }
     const inputs = group.current;
-    (
+    focusField(
       inputs?.querySelector<HTMLInputElement>("input:checked") ??
-      inputs?.querySelector<HTMLInputElement>("input")
-    )?.focus();
-  }, [failure]);
+        inputs?.querySelector<HTMLInputElement>("input"),
+      failure.field,
+    );
+  }, [failure, focusField]);
   const { close, question } = useDiscardQuestion({
     held: reason !== undefined && !busy,
     consequence: `${ticketId} isn't ignored.`,
@@ -283,6 +290,7 @@ export function IgnoreDialog({
             isReadOnly={busy}
             groupRef={group}
           />
+          {region}
         </Form>
       </FirstFieldFocus>
     </ModalDialog>
