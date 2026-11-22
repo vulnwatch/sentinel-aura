@@ -5,7 +5,6 @@ import { SeverityValue } from "../../api/generated/model";
 import type { TicketDetail } from "../../api/generated/model";
 import {
   errorResponse,
-  fictionalCve,
   fictionalPackage,
   fictionalTicketDetail,
   jsonResponse,
@@ -575,50 +574,4 @@ describe("leaving Set severity…", () => {
     await expectFocusSettledOn(actionsButton(screen));
     expect(severities(spy)).toEqual([]);
   });
-
-  test.each(["Cancel", "Escape", "a navigation"])(
-    "closes on %s without asking, and without a request, once a read shows the Ticket with a CVE, whose severity Sentinel then derives, also with another severity chosen",
-    async (way) => {
-      let fields: Partial<TicketDetail> = {};
-      const spy = showingSettable({}, { ticket: () => withoutCve(fields) });
-      const { router, screen } = await renderTicket();
-      const dialog = await openSeverity(screen);
-      await choose(dialog, "Critical");
-      // Another user associates a CVE with the Ticket meanwhile.
-      fields = { cve: fictionalCve() };
-
-      await returnToForeground();
-
-      await readEnded(TICKET);
-      // The heading row, behind the dialog, which keeps it from assistive
-      // technologies, shows the CVE ID.
-      await expect
-        .element(
-          screen
-            .getByRole("main", { includeHidden: true })
-            .getByText("CVE-2099-0012", { exact: true })
-            .first(),
-        )
-        .toBeInTheDocument();
-      await expect.element(optionOf(dialog, "Critical")).toBeChecked();
-      if (way === "Escape") {
-        await userEvent.keyboard("{Escape}");
-      } else if (way === "Cancel") {
-        await cancelButton(dialog).click();
-      } else {
-        router.history.push("/tickets");
-      }
-
-      await expect.element(dialog).not.toBeInTheDocument();
-      expect(discardDialog(screen).query()).toBeNull();
-      if (way === "a navigation") {
-        await expect
-          .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
-          .toBeVisible();
-      } else {
-        await expectFocusSettledOn(actionsButton(screen));
-      }
-      expect(severities(spy)).toEqual([]);
-    },
-  );
 });

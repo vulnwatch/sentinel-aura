@@ -83,10 +83,6 @@ interface ChoiceDialogProps<T extends string> {
   // the presentation of a change, or undefined for a failure that shows
   // nothing there, such as a 401.
   presentFailure?: (failure: RequestFailure) => DialogError | undefined;
-  // Whether another choice is input that leaving the dialog discards: not
-  // once the Ticket as the screen shows it no longer takes the change, as a
-  // Ticket with a CVE does not take a severity set by hand.
-  inputHeld?: boolean;
   onClose: () => void;
 }
 
@@ -125,7 +121,6 @@ export function ChoiceDialog<T extends string>({
   submit,
   fieldError,
   presentFailure = presentChangeFailure,
-  inputHeld = true,
   onClose,
 }: ChoiceDialogProps<T>) {
   const mounted = useMounted();
@@ -152,7 +147,7 @@ export function ChoiceDialog<T extends string>({
     focusField(chosenOrFirstRadio(group.current), failure.field);
   }, [failure, focusField]);
   const { close, question } = useDiscardQuestion({
-    held: inputHeld && choice !== opened && !busy,
+    held: choice !== opened && !busy,
     consequence: discardConsequence,
     onDiscard: onClose,
   });

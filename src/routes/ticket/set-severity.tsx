@@ -88,8 +88,7 @@ interface SetSeverityDialogProps {
 // the form as an error, and every other failure there in the presentation of
 // a change. Another change reverses it, so it asks for no confirmation
 // (docs/behaviors.md, Confirmation); with another choice, leaving it asks
-// "Discard changes?" first, until a read shows the Ticket with a CVE, whose
-// severity Sentinel then derives, so that the choice no longer holds input.
+// "Discard changes?" first.
 export function SetSeverityDialog({
   ticket,
   record,
@@ -146,7 +145,6 @@ export function SetSeverityDialog({
         })
       }
       presentFailure={(failure) => presentSetSeverityFailure(failure, ticketId)}
-      inputHeld={ticket.cve === null}
       onClose={onClose}
     />
   );

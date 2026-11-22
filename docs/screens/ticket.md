@@ -1072,8 +1072,7 @@ Revert Duplicate Status; Rerun Ticket Convergence; Sentinel
   "SNTL-31 stops being worked, and accepts no change to its analysis until
   Reopen."; then Reason, in a form (`docs/design-system.md`, Forms), a group of
   radio buttons that offers the reasons that a user can choose, none chosen,
-  each with its meaning below it, and whose first reason takes the focus as the
-  dialog opens:
+  each with its meaning below it:
   - Not shipped, `not_shipped`: "SUSE ships none of the affected software. If
     SUSE ships it but the issue doesn't affect it, set its tracks to Not
     affected instead.";
@@ -1091,12 +1090,11 @@ Revert Duplicate Status; Rerun Ticket Convergence; Sentinel
   as duplicate…, it belongs to the heading row, so a navigation between the
   tabs of the Ticket leaves it open.
 - The form checks that a reason is chosen before sending it: without one,
-  "Choose a reason." at Reason when the user submits the form, and the first
-  reason takes the focus; the error goes once a reason is chosen. Ignore… asks
-  for no confirmation: Reopen reverses it (`docs/behaviors.md`, Confirmation).
-  Its input is the reason chosen, and before discarding it the question says
-  "SNTL-31 isn't ignored." (above). While the request is in progress, the
-  reason is read-only, and keeps its look and the focus.
+  "Choose a reason." at Reason (above). Ignore… asks for no confirmation:
+  Reopen reverses it (`docs/behaviors.md`, Confirmation). Its input is the
+  reason chosen, and before discarding it the question says "SNTL-31 isn't
+  ignored." (above). While the request is in progress, the reason is read-only
+  (`docs/design-system.md`, Forms).
 - Ignore as not shipped by SUSE ignores the Ticket with `not_shipped` at
   once, the quick action of the most common reason; its label says that SUSE
   ships none of the affected software, so that it is not used for software
@@ -1276,12 +1274,10 @@ Priority Basis; Manual Override):
   reverses it (`docs/behaviors.md`, Confirmation). Their input is another
   choice than the one with which the dialog opened, and before discarding it
   the question says "The priority of SNTL-12 isn't changed." or "The severity
-  of SNTL-21 isn't changed." (above). Once a read shows the Ticket with a CVE,
-  as after another user's association, the choice of Set severity… no longer
-  holds input, since Sentinel then derives the severity: Cancel, Escape, and a
-  navigation close the dialog without the question, and Save, with another
-  choice, shows `409 TICKET_SEVERITY_DERIVED` (States). While the request is in
-  progress, the choice is read-only (`docs/design-system.md`, Forms).
+  of SNTL-21 isn't changed." (above), also once a read shows the Ticket with a
+  CVE, after which Save, with another choice, shows `409
+  TICKET_SEVERITY_DERIVED` (States). While the request is in progress, the
+  choice is read-only (`docs/design-system.md`, Forms).
 - Associate CVE… opens "Associate a CVE with SNTL-21". It says, in
   `fg-muted`, "SNTL-21 takes the severity, the CVSS assessments, the sources,
   and the affected versions of the CVE that you enter. Sentinel creates a CVE
@@ -1300,28 +1296,28 @@ Priority Basis; Manual Override):
 - No operation removes a CVE from a Ticket, so Associate CVE… asks for
   confirmation once the form passes its checks (`docs/behaviors.md`,
   Confirmation): "Associate CVE-2099-1234 with SNTL-21?", "SNTL-21 takes its
-  severity from the CVSS assessments of CVE-2099-1234, in place of the
-  severity High set by hand, and Sentinel fetches the CVE from its sources.",
-  without the severity set by hand when the Ticket has none; then, for an
-  Analyzed Ticket, "SNTL-21 can also return to Analysis until CVE-2099-1234
-  has a SUSE assessment.", or, for a Resolved Ticket, whose fixed tracks then
-  wait for the release of their Products, "SNTL-21 can also return to
-  Analysis until CVE-2099-1234 has a SUSE assessment, and to Analyzed until
-  its eligible Products are released." (Sentinel
-  `docs/features/tickets/tickets.md`, Associating a CVE Later; Gate: Analysis
-  → Analyzed; Gate: Analyzed → Resolved); and "No action removes a CVE from a
-  Ticket, so this can't be undone."; Cancel and Associate CVE, a danger
-  button, which sends the CVE ID. The consequences follow the Ticket as the
-  screen shows it. Cancel and Escape return to the form, and a navigation of
-  the UI asks "Discard changes?" over the confirmation, whose Keep editing
-  returns to it. Its input is a text typed, other than whitespace, and before
-  discarding it the question says "No CVE is associated with SNTL-21."
-  (above). Once a read shows the Ticket with a CVE, as after another user's
-  association or the user's own that Sentinel did not confirm, the text no
-  longer holds input: Cancel, Escape, and a navigation close the dialog
-  without the question, and its action shows `400 TICKET_CVE_ALREADY_SET`
-  (States). While the request is in progress, the field keeps the CVE ID,
-  read-only.
+  severity from the CVSS assessments of CVE-2099-1234, in place of the severity
+  High set by hand, and Sentinel fetches the CVE from its sources.", without
+  the severity set by hand when the Ticket has none; then, for an Analyzed
+  Ticket, "SNTL-21 can also return to Analysis until CVE-2099-1234 has a SUSE
+  assessment.", or, for a Resolved Ticket, whose fixed tracks then wait for the
+  release of their Products, "SNTL-21 can also return to Analysis until
+  CVE-2099-1234 has a SUSE assessment, and to Analyzed until its eligible
+  Products are released." (Sentinel `docs/features/tickets/tickets.md`,
+  Associating a CVE Later; Gate: Analysis → Analyzed; Gate: Analyzed →
+  Resolved); and "No action removes a CVE from a Ticket, so this can't be
+  undone."; Cancel and Associate CVE, a danger button, which sends the CVE ID.
+  The consequences follow the Ticket as the screen shows it. Cancel and Escape
+  return to the form, and a navigation of the UI asks "Discard changes?" over
+  the confirmation, whose Keep editing returns to it. Its input is a text
+  typed, other than whitespace, and before discarding it the question says "No
+  CVE is associated with SNTL-21." (above). Once a read shows the Ticket with a
+  CVE, as after another user's association or the user's own that Sentinel did
+  not confirm, the text no longer holds input, since the question would state
+  what is no longer true: Cancel, Escape, and a navigation close the dialog
+  without the question, and Associate CVE, through the confirmation, shows `400
+  TICKET_CVE_ALREADY_SET` (States). While the request is in progress, the field
+  keeps the CVE ID, read-only.
 - An effective change can assign an unassigned Ticket to the user, move it
   from New to Analysis, and change its status; a change of the severity
   also changes its deadlines and its automatic priority, and an association
@@ -1983,11 +1979,11 @@ document, Manual-Zone Exception):
   of a new term are read, which the failure of their read replaces with the
   message of its status (`docs/design-system.md`, Forms).
 - **Errors.** The default presentation applies (`docs/behaviors.md`, Errors). A
-  failure of a change submitted from a form, a dialog, or a popover shows in
-  it, which keeps the input (`docs/behaviors.md`, Where Errors Appear): the
-  codes that the entries below handle at a field, and a field error of a
-  `VALIDATION_ERROR` for a member of the request, at their field, which takes
-  the focus, or, in a group of radio buttons, its chosen option
+  failure of a change submitted from a form, a dialog, or the popover of a
+  field shows in it, which keeps the input (`docs/behaviors.md`, Where Errors
+  Appear): the codes that the entries below handle at a field, and a field
+  error of a `VALIDATION_ERROR` for a member of the request, at their field,
+  which takes the focus, or, in a group of radio buttons, its chosen option
   (`docs/design-system.md`, Forms); every other failure at the top of the form,
   which takes the focus, in the presentation of its status, as a warning when
   Sentinel did not confirm the change (`docs/behaviors.md`, Default
@@ -2044,26 +2040,25 @@ document, Manual-Zone Exception):
   USER_NOT_FOUND`, "Sentinel doesn't know this user.", and `409 USER_INACTIVE`,
   for a user who became inactive, "This user is inactive, so they can't be
   granted access." (Sentinel `docs/features/tickets/tickets.md`, Grant Access);
-  a field error of a `VALIDATION_ERROR` for `user` also shows at the field; the
-  field then takes the focus. A failure of Revoke access shows at the top of
-  its confirmation, which stays open, as every other failure of a form does
-  (Errors); the screen handles no code of it specifically. After a `403`, the
-  dialog keeps its form, Revoke access, and the error (`docs/behaviors.md`, The
-  Signed-in User). A `409 TICKET_NOT_CONFIDENTIAL` of either is followed by the
-  reads that show the Ticket no longer confidential, so the dialog then says so
-  in place of its explanation, the form, the grants, and their confirmation,
-  and takes the focus (Participants).
+  A failure of Revoke access shows at the top of its confirmation, which stays
+  open, as every other failure of a form does (Errors); the screen handles no
+  code of it specifically. After a `403`, the dialog keeps its form, Revoke
+  access, and the error (`docs/behaviors.md`, The Signed-in User). A `409
+  TICKET_NOT_CONFIDENTIAL` of either is followed by the reads that show the
+  Ticket no longer confidential, so the dialog then says so in place of its
+  explanation, the form, the grants, and their confirmation, and takes the
+  focus (Participants).
 - **Errors of Mark as duplicate…, Reopen, Revert duplicate, and Rerun
   convergence.** A failure of Mark as duplicate… shows in its form, which keeps
   the original (`docs/behaviors.md`, Where Errors Appear). The screen handles
-  three codes specifically, at the field, which takes the focus: `400
-  TICKET_SELF_DUPLICATE`, "A Ticket can't be a duplicate of itself."; `404
-  TICKET_NOT_FOUND`, "SNTL-99 doesn't exist, or you don't have access to it.",
-  which names the original sent, since "this Ticket" is the Ticket of the
-  dialog, and which Sentinel answers alike for an original that does not exist
-  and for one that the user cannot see, and also for the Ticket of the screen
-  once the user no longer sees it, which the read after the change then shows
-  as Not found (`docs/behaviors.md`, Missing and Inaccessible Records; Sentinel
+  three codes specifically, at the field: `400 TICKET_SELF_DUPLICATE`, "A
+  Ticket can't be a duplicate of itself."; `404 TICKET_NOT_FOUND`, "SNTL-99
+  doesn't exist, or you don't have access to it.", which names the original
+  sent, since "this Ticket" is the Ticket of the dialog, and which Sentinel
+  answers alike for an original that does not exist and for one that the user
+  cannot see, and also for the Ticket of the screen once the user no longer
+  sees it, which the read after the change then shows as Not found
+  (`docs/behaviors.md`, Missing and Inaccessible Records; Sentinel
   `docs/api-spec.md`, Ticket Accessibility Check); and `409
   TICKET_DUPLICATE_TARGET_DUPLICATED`, which names the original of the Ticket
   sent, when a read of the dialog shows it, the Tickets that the field
@@ -2073,10 +2068,9 @@ document, Manual-Zone Exception):
   Ticket itself, "SNTL-31 is a duplicate of this Ticket: to make it the
   original, use Revert duplicate on SNTL-31 first."; otherwise "SNTL-41 is a
   duplicate itself: choose its original instead." (Sentinel
-  `docs/features/tickets/tickets.md`, Mark Ticket as Duplicate). A field error
-  of a `VALIDATION_ERROR` for `duplicate_of_ticket_id` also shows there. It
-  handles one more code specifically, at the top of the form, which takes the
-  focus, in the `danger` tone, since Sentinel then changed nothing: `409
+  `docs/features/tickets/tickets.md`, Mark Ticket as Duplicate). It handles one
+  more code specifically, at the top of the form, which takes the focus, in the
+  `danger` tone, since Sentinel then changed nothing: `409
   TICKET_DUPLICATE_CONCURRENT_MODIFICATION`, "A duplicate of this Ticket was
   being changed at the same time, so Sentinel changed nothing. Try again."
   (same document, Mark-as-Duplicate Operation). A failure of Mark as duplicate…
@@ -2101,19 +2095,18 @@ document, Manual-Zone Exception):
   its status. The screen handles no code of Rerun convergence specifically.
 - **Errors of Ignore… and Ignore as not shipped by SUSE.** A failure of Ignore…
   shows in its form, which keeps the reason (`docs/behaviors.md`, Where Errors
-  Appear). The screen handles one code specifically, at Reason, whose chosen
-  reason takes the focus: `409 TICKET_CVE_NOT_REJECTED`, for `cve_rejected` on
-  a Ticket whose CVE is no longer rejected, as after a revert of the rejection
-  since the dialog opened, "CVE-2099-0027 is no longer rejected. Choose another
-  reason." (Sentinel `docs/features/tickets/tickets.md`, Ignore Ticket); the
-  read of the Ticket after it shows the CVE published. A field error of a
-  `VALIDATION_ERROR` for `reason` also shows there. Every other failure shows
-  at the top of the form (Errors), such as the `409 TICKET_INVALID_TRANSITION`
-  of a Ticket that became Analyzed meanwhile. A failure that ends after the
-  user left the screen shows in the message area in the presentation of the
-  dialog, starting with the Ticket (Actions). A failure of Ignore as not
-  shipped by SUSE shows in the message area in the presentation of its status;
-  the screen handles no code of it specifically.
+  Appear). The screen handles one code specifically, at Reason: `409
+  TICKET_CVE_NOT_REJECTED`, for `cve_rejected` on a Ticket whose CVE is no
+  longer rejected, as after a revert of the rejection since the dialog opened,
+  "CVE-2099-0027 is no longer rejected. Choose another reason." (Sentinel
+  `docs/features/tickets/tickets.md`, Ignore Ticket); the read of the Ticket
+  after it shows the CVE published. Every other failure shows at the top of the
+  form (Errors), such as the `409 TICKET_INVALID_TRANSITION` of a Ticket that
+  became Analyzed meanwhile. A failure that ends after the user left the screen
+  shows in the message area in the presentation of the dialog, starting with
+  the Ticket (Actions). A failure of Ignore as not shipped by SUSE shows in the
+  message area in the presentation of its status; the screen handles no code of
+  it specifically.
 - **Errors of Override priority…, Set severity…, and Associate CVE….** A
   failure shows in the form of its dialog, which keeps the input
   (`docs/behaviors.md`, Where Errors Appear). A failure of Associate CVE…
@@ -2124,14 +2117,14 @@ document, Manual-Zone Exception):
     form in the `danger` tone, "SNTL-21 now has a CVE, whose CVSS assessments
     set its severity." (Sentinel `docs/features/tickets/tickets.md`, Set
     Severity Manual);
-  - Associate CVE…, at the field, which takes the focus: `422
-    CVE_INVALID_FORMAT`, "Enter a CVE ID, such as CVE-2099-1234."; and `409
-    TICKET_CVE_CONFLICT`, for a CVE that another Ticket holds, "CVE-2099-0012
-    is already the CVE of SNTL-12.", the Ticket of `existing_ticket_id` as a
-    link to its screen (`docs/design-system.md`, Forms), or "CVE-2099-0012 is
-    already the CVE of another Ticket." when that field does not have the form
-    `SNTL-{n}`. That Ticket can be one that the user does not see, whose screen
-    then shows Not found, since Sentinel names it whatever its access (Sentinel
+  - Associate CVE…, at the field: `422 CVE_INVALID_FORMAT`, "Enter a CVE ID,
+    such as CVE-2099-1234."; and `409 TICKET_CVE_CONFLICT`, for a CVE that
+    another Ticket holds, "CVE-2099-0012 is already the CVE of SNTL-12.", the
+    Ticket of `existing_ticket_id` as a link to its screen
+    (`docs/design-system.md`, Forms), or "CVE-2099-0012 is already the CVE of
+    another Ticket." when that field does not have the form `SNTL-{n}`. That
+    Ticket can be one that the user does not see, whose screen then shows Not
+    found, since Sentinel names it whatever its access (Sentinel
     `docs/features/tickets/tickets.md`, CVE Resolution Behavior; Identifier
     Disclosure Boundary);
   - Associate CVE…, at the top of the form in the `danger` tone: `400
@@ -2193,30 +2186,28 @@ document, Manual-Zone Exception):
   and so does either code after the user left the tab (Actions).
 - **Errors of Add package.** A failure shows in its form, which keeps the name
   (`docs/behaviors.md`, Where Errors Appear). The screen handles three codes
-  specifically, at the field, which takes the focus: `422
-  PACKAGE_NOT_FOUND_IN_SMELT`, "SMELT doesn't maintain a package of this name.
-  Check the name, whose letter case counts."; `422 PACKAGE_TARGETS_UNRESOLVED`,
-  "Sentinel can't add any of the Products that SMELT lists for this package, so
-  it added nothing."; and `409 PACKAGE_ALREADY_EXCLUDED`, for a package of the
-  Ticket that its own marker excludes, "This package is excluded from this
-  Ticket: Show hidden shows it, and Restore in the menu of its actions includes
-  it again." (Sentinel `docs/features/packages/package-model.md`, Add Package
-  to Ticket; Interaction with add_package_to_ticket). A field error of a
-  `VALIDATION_ERROR` for `package_name` also shows there. It handles two more
-  codes specifically, at the top of the form, which takes the focus, in the
-  `danger` tone with their reference rather than as a change that Sentinel did
-  not confirm, since Sentinel returns them before any change (same document,
-  Adding Packages to a Ticket; Sentinel `docs/api-spec.md`, Infrastructure
-  Dependency Errors (HTTP 503)): `503 SMELT_UNAVAILABLE`, "Sentinel couldn't
-  get the tracks and Products of this package from SMELT, so it added nothing.
-  Try again later.", and `503 PRODUCT_CATALOG_NOT_READY`, "Sentinel hasn't
-  loaded the Products from SMELT yet, so it added nothing. Try again later.".
-  Every other failure, such as another `5xx`, shows at the top of the form
-  (Errors). The read of the names of Package name shows its failure in their
-  place, in the presentation of its status; the screen handles no code of
-  Search Maintained Packages specifically (Sentinel
-  `docs/features/packages/maintained-package-names.md`, Search Maintained
-  Packages).
+  specifically, at the field: `422 PACKAGE_NOT_FOUND_IN_SMELT`, "SMELT doesn't
+  maintain a package of this name. Check the name, whose letter case counts.";
+  `422 PACKAGE_TARGETS_UNRESOLVED`, "Sentinel can't add any of the Products
+  that SMELT lists for this package, so it added nothing."; and `409
+  PACKAGE_ALREADY_EXCLUDED`, for a package of the Ticket that its own marker
+  excludes, "This package is excluded from this Ticket: Show hidden shows it,
+  and Restore in the menu of its actions includes it again." (Sentinel
+  `docs/features/packages/package-model.md`, Add Package to Ticket; Interaction
+  with add_package_to_ticket). It handles two more codes specifically, at the
+  top of the form, which takes the focus, in the `danger` tone with their
+  reference rather than as a change that Sentinel did not confirm, since
+  Sentinel returns them before any change (same document, Adding Packages to a
+  Ticket; Sentinel `docs/api-spec.md`, Infrastructure Dependency Errors (HTTP
+  503)): `503 SMELT_UNAVAILABLE`, "Sentinel couldn't get the tracks and
+  Products of this package from SMELT, so it added nothing. Try again later.",
+  and `503 PRODUCT_CATALOG_NOT_READY`, "Sentinel hasn't loaded the Products
+  from SMELT yet, so it added nothing. Try again later.". Every other failure,
+  such as another `5xx`, shows at the top of the form (Errors). The read of the
+  names of Package name shows its failure in their place, in the presentation
+  of its status; the screen handles no code of Search Maintained Packages
+  specifically (Sentinel `docs/features/packages/maintained-package-names.md`,
+  Search Maintained Packages).
 - **References.** The toolbar shows at once with the tabs, and the
   references as they arrive, without waiting for the Ticket; a failure of
   the references shows once the Ticket has arrived, so that a Ticket that
