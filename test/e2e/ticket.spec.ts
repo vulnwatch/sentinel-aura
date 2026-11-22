@@ -4147,7 +4147,8 @@ test.describe("the actions of a Ticket", () => {
     page,
   }) => {
     // asmith holds triage_ticket, and SNTL-12 is Analyzed (Users; Tickets):
-    // Mark as duplicate…, then, below a line, Rerun convergence.
+    // Mark as duplicate…, then, below a line, Override priority…, then,
+    // below a line, Rerun convergence.
     await signIn(page, "asmith");
     await page.goto("/tickets/SNTL-12");
     await expectOverviewShown(page);
@@ -4185,9 +4186,10 @@ test.describe("the actions of a Ticket", () => {
     const menu = actionsMenu(page, "SNTL-12");
     await expect(menu.getByRole("menuitem")).toHaveText([
       "Mark as duplicate…",
+      "Override priority…",
       "Rerun convergence",
     ]);
-    await expect(menu.getByRole("separator")).toHaveCount(1);
+    await expect(menu.getByRole("separator")).toHaveCount(2);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-actions.png");
 
@@ -4197,11 +4199,15 @@ test.describe("the actions of a Ticket", () => {
     await expect(actions).toBeFocused();
 
     // From the keyboard, the menu opens on its first item, and the arrow
-    // keys pass over the line.
+    // keys pass over the lines.
     await page.keyboard.press("Enter");
 
     await expect(
       menu.getByRole("menuitem", { name: "Mark as duplicate…" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      menu.getByRole("menuitem", { name: "Override priority…" }),
     ).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(
@@ -4264,8 +4270,9 @@ test.describe("the actions of a Ticket", () => {
       "Ignore…",
       "Ignore as not shipped by SUSE",
       "Mark as duplicate…",
+      "Override priority…",
     ]);
-    await expect(menu.getByRole("separator")).toHaveCount(0);
+    await expect(menu.getByRole("separator")).toHaveCount(1);
     await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(menu).toHaveCount(0);
@@ -4437,9 +4444,10 @@ test.describe("the actions of a Ticket", () => {
       "Ignore…",
       "Ignore as not shipped by SUSE",
       "Mark as duplicate…",
+      "Override priority…",
       "Rerun convergence",
     ]);
-    await expect(menu.getByRole("separator")).toHaveCount(1);
+    await expect(menu.getByRole("separator")).toHaveCount(2);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-actions-analysis.png");
     const ignore = menu.getByRole("menuitem", { name: "Ignore…", exact: true });
@@ -4786,7 +4794,7 @@ test.describe("the actions of a Ticket", () => {
 
     const menu = await openActions(page, "SNTL-12");
 
-    await expect(menu.getByRole("menuitem")).toHaveCount(2);
+    await expect(menu.getByRole("menuitem")).toHaveCount(3);
     const menuBox = await menu.boundingBox();
     expect(menuBox?.x).toBeGreaterThanOrEqual(0);
     expect((menuBox?.x ?? 0) + (menuBox?.width ?? 0)).toBeLessThanOrEqual(320);
@@ -5107,14 +5115,19 @@ test.describe("the actions of a Ticket", () => {
       await expect(status).toHaveText("Analysis");
       const actions = actionsButton(page, ticketId);
 
+      // Without a CVE, Set severity… and Associate CVE… follow Override
+      // priority….
       const menu = await openActions(page, ticketId);
       await expect(menu.getByRole("menuitem")).toHaveText([
         "Ignore…",
         "Ignore as not shipped by SUSE",
         "Mark as duplicate…",
+        "Override priority…",
+        "Set severity…",
+        "Associate CVE…",
         "Rerun convergence",
       ]);
-      await expect(menu.getByRole("separator")).toHaveCount(1);
+      await expect(menu.getByRole("separator")).toHaveCount(2);
       await menu
         .getByRole("menuitem", { name: "Rerun convergence", exact: true })
         .click();
@@ -5164,6 +5177,369 @@ test.describe("the actions of a Ticket", () => {
       // The screen reads the Ticket again, which shows its current status.
       await expect(status).toHaveText("Analysis");
       await expect(announcement(page, "Reopened")).toHaveCount(0);
+    },
+  );
+});
+
+// The dialog of an action of Actions, by its title.
+function actionDialog(page: Page, title: string) {
+  return page.getByRole("dialog", { name: title, exact: true });
+}
+
+// Opens an item of Actions, which opens its dialog, and returns the dialog
+// once it shows.
+async function openActionDialog(
+  page: Page,
+  ticketId: string,
+  item: string,
+  title: string,
+) {
+  const menu = await openActions(page, ticketId);
+  await menu.getByRole("menuitem", { name: item, exact: true }).click();
+  const dialog = actionDialog(page, title);
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+// A CVE ID that no other Ticket of the backend holds, for a test that
+// associates it: the dataset holds CVE-2099-0001 to CVE-2099-0027 (Sentinel
+// docs/features/platform/example-dataset.md, CVEs).
+function unusedCveId(): string {
+  return `CVE-2098-${String(Math.floor(Math.random() * 90_000_000) + 10_000_000)}`;
+}
+
+test.describe("the corrections of a Ticket", () => {
+  test("offers Set severity… and Associate CVE… after Override priority… on a Ticket without a CVE, whose dialogs choose its priority and its severity and ask for confirmation of the CVE ID", async ({
+    page,
+  }) => {
+    // SNTL-21, without a CVE, in Analysis, has the severity High set by
+    // asmith (Tickets).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-21");
+    await expectOverviewShown(page);
+    const actions = actionsButton(page, "SNTL-21");
+
+    const menu = await openActions(page, "SNTL-21");
+
+    await expect(menu.getByRole("menuitem")).toHaveText([
+      "Ignore…",
+      "Ignore as not shipped by SUSE",
+      "Mark as duplicate…",
+      "Override priority…",
+      "Set severity…",
+      "Associate CVE…",
+      "Rerun convergence",
+    ]);
+    await expect(menu.getByRole("separator")).toHaveCount(2);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-actions-without-cve.png");
+    await menu
+      .getByRole("menuitem", { name: "Override priority…", exact: true })
+      .click();
+
+    // Its automatic priority is P3, of the severity High without deciding
+    // evidence, without an override (Priorities). The reference shows the
+    // dialog on this Ticket, without a CVE, whose part CVE has no dates,
+    // which the reference would mask above the dialog.
+    const override = actionDialog(page, "Override the priority of SNTL-21");
+    const automatic = override.getByRole("radio", { name: "Automatic" });
+    await expect(automatic).toBeChecked();
+    await expect(automatic).toBeFocused();
+    await expect(automatic).toHaveAccessibleDescription(
+      "The automatic priority, now P3.",
+    );
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-override-priority.png");
+    await page.keyboard.press("Escape");
+    await expect(override).toHaveCount(0);
+    await expect(actions).toBeFocused();
+
+    await (
+      await openActions(page, "SNTL-21")
+    )
+      .getByRole("menuitem", { name: "Set severity…", exact: true })
+      .click();
+
+    const severity = actionDialog(page, "Set the severity of SNTL-21");
+    const high = severity.getByRole("radio", { name: "High", exact: true });
+    await expect(high).toBeChecked();
+    await expect(high).toBeFocused();
+    await expect(
+      severity.getByRole("radio", { name: "Not set", exact: true }),
+    ).toHaveAccessibleDescription(
+      "SNTL-21 can't become Analyzed without a severity.",
+    );
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-set-severity.png");
+    await page.keyboard.press("Escape");
+    await expect(severity).toHaveCount(0);
+    await expect(actions).toBeFocused();
+
+    const associate = await openActionDialog(
+      page,
+      "SNTL-21",
+      "Associate CVE…",
+      "Associate a CVE with SNTL-21",
+    );
+    const field = associate.getByRole("textbox", { name: "CVE ID" });
+    await expect(field).toBeFocused();
+    await field.fill("cve-2099-1234");
+    await associate
+      .getByRole("button", { name: "Associate CVE", exact: true })
+      .click();
+
+    // The confirmation names the CVE ID as the form sends it.
+    const confirmation = actionDialog(
+      page,
+      "Associate CVE-2099-1234 with SNTL-21?",
+    );
+    await expect(
+      confirmation.getByText(
+        "SNTL-21 takes its severity from the CVSS assessments of CVE-2099-1234, in place of the severity High set by hand, and Sentinel fetches the CVE from its sources.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      confirmation.getByRole("button", { name: "Cancel" }),
+    ).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-associate-cve-confirm.png");
+
+    // Cancel returns to the form, and the question discards its input.
+    await confirmation.getByRole("button", { name: "Cancel" }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(field).toHaveValue("cve-2099-1234");
+    // The focus returns to the button that asked for confirmation.
+    await expect(
+      associate.getByRole("button", { name: "Associate CVE", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    const discard = actionDialog(page, "Discard changes?");
+    await expect(
+      discard.getByText("No CVE is associated with SNTL-21.", { exact: true }),
+    ).toBeVisible();
+    await expectAccessible(page);
+    await discard.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(associate).toHaveCount(0);
+    await expect(actions).toBeFocused();
+    await expect(part(page, "CVE").getByText("No CVE.")).toBeVisible();
+  });
+
+  test("shows at the field that another Ticket holds the CVE, as a link to that Ticket, and changes nothing", async ({
+    page,
+  }) => {
+    // CVE-2099-0012 is the CVE of SNTL-12 (Tickets), so Sentinel refuses it
+    // for SNTL-21 with 409 TICKET_CVE_CONFLICT before any change (Sentinel
+    // docs/features/tickets/tickets.md, CVE Resolution Behavior).
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-21");
+    await expectOverviewShown(page);
+    const dialog = await openActionDialog(
+      page,
+      "SNTL-21",
+      "Associate CVE…",
+      "Associate a CVE with SNTL-21",
+    );
+    const field = dialog.getByRole("textbox", { name: "CVE ID" });
+    await field.fill("CVE-2099-0012");
+    await dialog.getByRole("button", { name: "Associate CVE" }).click();
+    const confirmation = actionDialog(
+      page,
+      "Associate CVE-2099-0012 with SNTL-21?",
+    );
+
+    await confirmation.getByRole("button", { name: "Associate CVE" }).click();
+
+    await expect(confirmation).toHaveCount(0);
+    await expect(field).toHaveAccessibleDescription(
+      "Such as CVE-2099-1234. CVE-2099-0012 is already the CVE of SNTL-12.",
+    );
+    await expect(field).toBeFocused();
+    await expect(
+      dialog.getByRole("link", { name: "SNTL-12", exact: true }),
+    ).toHaveAttribute("href", "/tickets/SNTL-12");
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-associate-cve-conflict.png");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await actionDialog(page, "Discard changes?")
+      .getByRole("button", { name: "Discard", exact: true })
+      .click();
+    await expect(dialog).toHaveCount(0);
+    await expect(part(page, "CVE").getByText("No CVE.")).toBeVisible();
+  });
+
+  test(
+    "sets, changes, and clears the override of the priority, which the heading row shows with each announcement",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, without a CVE and without a severity, so
+      // not yet prioritizable (Sentinel docs/features/tickets/ticket-priority.md,
+      // Decision Table).
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const actions = actionsButton(page, ticketId);
+      const priority = page
+        .getByRole("main")
+        .getByRole("button", { name: /^(P\d|Not yet prioritizable)/ })
+        .first();
+      await expect(priority).toHaveAccessibleName("Not yet prioritizable");
+      const title = `Override the priority of ${ticketId}`;
+
+      for (const [choice, name, text] of [
+        ["P2", "P2, override", "Priority overridden: P2."],
+        ["P1", "P1, override", "Priority overridden: P1."],
+        [
+          "Automatic",
+          "Not yet prioritizable",
+          "Priority override cleared: not yet prioritizable.",
+        ],
+      ] as const) {
+        const dialog = await openActionDialog(
+          page,
+          ticketId,
+          "Override priority…",
+          title,
+        );
+        if (choice === "P2") {
+          // The first dialog, of the Ticket not yet prioritizable.
+          await expect(
+            dialog.getByRole("radio", { name: "Automatic", exact: true }),
+          ).toHaveAccessibleDescription(
+            "The automatic priority, not yet prioritizable now.",
+          );
+          await expectAccessible(page);
+        }
+        await dialog
+          .getByRole("radiogroup", { name: "Priority" })
+          .getByText(choice, { exact: true })
+          .click();
+        await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+        await expect(dialog).toHaveCount(0);
+        await expect(announcement(page, text)).toHaveCount(1);
+        await expect(priority).toHaveAccessibleName(name);
+        await expect(actions).toBeFocused();
+      }
+    },
+  );
+
+  test(
+    "sets and removes the severity of a Ticket without a CVE, which the heading row shows with the automatic priority that it gives",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, without a CVE and without a severity.
+      // High without exploitation evidence gives the automatic priority P3
+      // (Sentinel docs/features/tickets/ticket-priority.md, Decision Table).
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const severity = await headingValue(page, "Severity");
+      await expect(severity).toHaveText("Severity not set");
+      const title = `Set the severity of ${ticketId}`;
+
+      let dialog = await openActionDialog(
+        page,
+        ticketId,
+        "Set severity…",
+        title,
+      );
+      await expect(
+        dialog.getByRole("radio", { name: "Not set", exact: true }),
+      ).toBeChecked();
+      await dialog
+        .getByRole("radiogroup", { name: "Severity" })
+        .getByText("High", { exact: true })
+        .click();
+      await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(announcement(page, "Severity set to High.")).toHaveCount(1);
+      await expect(severity).toHaveText("High");
+      await expect(await headingValue(page, "Priority")).toHaveText("P3");
+
+      dialog = await openActionDialog(page, ticketId, "Set severity…", title);
+      await dialog
+        .getByRole("radiogroup", { name: "Severity" })
+        .getByText("Not set", { exact: true })
+        .click();
+      await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(announcement(page, "Severity removed.")).toHaveCount(1);
+      await expect(severity).toHaveText("Severity not set");
+    },
+  );
+
+  test(
+    "associates a CVE once confirmed, after which the screen shows the CVE, its CVSS assessments, its sources, and its affected versions, and Actions no longer offers Set severity… and Associate CVE…",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, without a CVE, and a CVE that Sentinel
+      // does not know, of which it creates a record (Sentinel
+      // docs/features/tickets/tickets.md, CVE Resolution Behavior).
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      const cveId = unusedCveId();
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const actions = actionsButton(page, ticketId);
+      const dialog = await openActionDialog(
+        page,
+        ticketId,
+        "Associate CVE…",
+        `Associate a CVE with ${ticketId}`,
+      );
+      await dialog.getByRole("textbox", { name: "CVE ID" }).fill(cveId);
+      await dialog.getByRole("button", { name: "Associate CVE" }).click();
+      const confirmation = actionDialog(
+        page,
+        `Associate ${cveId} with ${ticketId}?`,
+      );
+
+      await confirmation.getByRole("button", { name: "Associate CVE" }).click();
+
+      await expect(dialog).toHaveCount(0);
+      await expect(announcement(page, `${cveId} associated.`)).toHaveCount(1);
+      await expect(actions).toBeFocused();
+      await expect(await headingValue(page, "CVE")).toHaveText(cveId);
+      await expect(part(page, cveId)).toBeVisible();
+      // The parts that the CVE brings read theirs, whose outcomes show once
+      // the reads arrive: the CVSS assessments or none, and the sources or
+      // none.
+      await expect(
+        cvssTable(page).or(
+          part(page, "CVSS assessments").getByText("No CVSS assessments.", {
+            exact: true,
+          }),
+        ),
+      ).toBeVisible();
+      await expect(
+        sources(page)
+          .getByRole("listitem")
+          .first()
+          .or(sources(page).getByText("No sources.", { exact: true })),
+      ).toBeVisible();
+      const menu = await openActions(page, ticketId);
+      await expect(
+        menu.getByRole("menuitem", { name: "Override priority…" }),
+      ).toBeVisible();
+      await expect(
+        menu.getByRole("menuitem", { name: "Set severity…" }),
+      ).toHaveCount(0);
+      await expect(
+        menu.getByRole("menuitem", { name: "Associate CVE…" }),
+      ).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await page.getByRole("tab", { name: "Affected versions" }).click();
+      await expect(page).toHaveURL(`/tickets/${ticketId}/affected-versions`);
+      await expect(
+        affectedPanel(page).getByText(
+          "Sentinel has no version data for this CVE.",
+        ),
+      ).toBeVisible();
     },
   );
 });

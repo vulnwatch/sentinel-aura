@@ -224,9 +224,10 @@ export interface Stub {
   addPackage: (body: unknown) => Response | Promise<Response>;
   // The response to a search of the maintained packages, given its query.
   maintainedPackages: (query: URLSearchParams) => Response | Promise<Response>;
-  // The response to a change of the status of the Ticket or to a rerun of
-  // its convergence from Actions (src/routes/ticket/actions.tsx), given the
-  // last segment of its path, such as reopen, and its body.
+  // The response to a change of Actions (src/routes/ticket/actions.tsx),
+  // such as a change of the status of the Ticket, of its priority override,
+  // or of its severity, or a rerun of its convergence, given the last segment
+  // of its path, such as reopen or priority, and its body.
   ticketChange: (action: string, body: unknown) => Response | Promise<Response>;
 }
 
@@ -325,7 +326,10 @@ export function stubTicket(fields: Partial<Stub> = {}) {
         request.body,
       );
     }
-    if (request.path.startsWith(`${TICKET}/`) && request.method === "POST") {
+    if (
+      request.path.startsWith(`${TICKET}/`) &&
+      (request.method === "POST" || request.method === "PATCH")
+    ) {
       return stub.ticketChange(
         request.path.slice(`${TICKET}/`.length),
         request.body,

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   assigneeFieldError,
+  cveIdError,
   cvssVectorError,
   duplicateOriginalError,
   grantAccessFieldError,
@@ -11,15 +12,18 @@ import {
   MESSAGE_DUPLICATE_OF_ITSELF,
   packageNameError,
   presentAddPackageFailure,
+  presentAssociateCveFailure,
   presentChangeFailure,
   presentExitConflict,
   presentLeftAddPackageFailure,
+  presentLeftAssociateCveFailure,
   presentLeftIgnoreFailure,
   presentLeftMarkDuplicateFailure,
   presentFailure,
   presentMarkDuplicateFailure,
   presentMarkerConflict,
   presentRefetchFailure,
+  presentSetSeverityFailure,
   presentSignInFailure,
   referenceAddressError,
   validationErrorFields,
@@ -1513,5 +1517,189 @@ describe("isRequestFailure", () => {
     undefined,
   ])("is false for anything else: %s", (error) => {
     expect(isRequestFailure(error)).toBe(false);
+  });
+});
+
+// A 409 TICKET_CVE_CONFLICT whose body names the Ticket that holds the CVE,
+// or names none.
+function cveConflict(existing?: unknown): ApiError {
+  const body: Record<string, unknown> = {
+    code: "TICKET_CVE_CONFLICT",
+    detail: "A fictional detail",
+  };
+  if (existing !== undefined) {
+    body.existing_ticket_id = existing;
+  }
+  return new ApiError(409, "TICKET_CVE_CONFLICT", body, REQUEST_ID);
+}
+
+const DERIVED =
+  "SNTL-21 now has a CVE, whose CVSS assessments set its severity.";
+const ALREADY_SET = "SNTL-21 already has a CVE.";
+const CVE_ID_FORMAT = "Enter a CVE ID, such as CVE-2099-1234.";
+
+describe("presentSetSeverityFailure", () => {
+  test("presents 409 TICKET_SEVERITY_DERIVED as an error, without a reference, that names the Ticket", () => {
+    expect(
+      presentSetSeverityFailure(
+        errorResponse(409, "TICKET_SEVERITY_DERIVED"),
+        "SNTL-21",
+      ),
+    ).toEqual({ message: DERIVED, reference: undefined, unconfirmed: false });
+  });
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "the code with another status",
+      errorResponse(400, "TICKET_SEVERITY_DERIVED"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "another 409 code",
+      errorResponse(409, "TICKET_NOT_MUTABLE"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a 503",
+      errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+  ])("presents %s as a change", (_, failure, presentation) => {
+    expect(presentSetSeverityFailure(failure, "SNTL-21")).toEqual(presentation);
+  });
+});
+
+describe("cveIdError", () => {
+  test("says after 422 CVE_INVALID_FORMAT to enter a CVE ID", () => {
+    expect(
+      cveIdError(errorResponse(422, "CVE_INVALID_FORMAT"), "CVE-2099-1234"),
+    ).toEqual({ message: CVE_ID_FORMAT, holder: undefined });
+  });
+
+  test("names after 409 TICKET_CVE_CONFLICT the CVE and the Ticket that holds it", () => {
+    expect(cveIdError(cveConflict("SNTL-12"), "CVE-2099-0012")).toEqual({
+      message: "CVE-2099-0012 is already the CVE of SNTL-12.",
+      holder: "SNTL-12",
+    });
+  });
+
+  test.each([
+    ["without the Ticket", undefined],
+    ["with a Ticket that is not in the form SNTL-{n}", "sntl-12"],
+    ["with a Ticket with a leading zero", "SNTL-012"],
+    ["with a Ticket that is not text", 12],
+    ["with a Ticket in a list, which is not text either", ["SNTL-12"]],
+  ])(
+    "names after 409 TICKET_CVE_CONFLICT %s another Ticket, without a holder",
+    (_, existing) => {
+      expect(cveIdError(cveConflict(existing), "CVE-2099-0012")).toEqual({
+        message: "CVE-2099-0012 is already the CVE of another Ticket.",
+        holder: undefined,
+      });
+    },
+  );
+
+  test.each<[string, RequestFailure]>([
+    [
+      "the code of the format with another status",
+      errorResponse(400, "CVE_INVALID_FORMAT"),
+    ],
+    [
+      "the code of the conflict with another status",
+      errorResponse(400, "TICKET_CVE_CONFLICT"),
+    ],
+    [
+      "400 TICKET_CVE_ALREADY_SET",
+      errorResponse(400, "TICKET_CVE_ALREADY_SET"),
+    ],
+    [
+      "a code that the pinned contract does not list",
+      errorResponse(409, "FICTIONAL_CODE"),
+    ],
+    ["an error without a code", errorResponse(409)],
+    [
+      "a network failure",
+      new NetworkError({ cause: new TypeError("Failed to fetch") }),
+    ],
+  ])("leaves %s to the rest of the form", (_, failure) => {
+    expect(cveIdError(failure, "CVE-2099-1234")).toBeUndefined();
+  });
+});
+
+describe("presentAssociateCveFailure", () => {
+  test("presents 400 TICKET_CVE_ALREADY_SET as an error, without a reference, that names the Ticket", () => {
+    expect(
+      presentAssociateCveFailure(
+        errorResponse(400, "TICKET_CVE_ALREADY_SET"),
+        "SNTL-21",
+      ),
+    ).toEqual({
+      message: ALREADY_SET,
+      reference: undefined,
+      unconfirmed: false,
+    });
+  });
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "the code with another status",
+      errorResponse(409, "TICKET_CVE_ALREADY_SET"),
+      { message: CONFLICT, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a status and a code that the pinned contract does not list",
+      errorResponse(418, "FICTIONAL_CODE"),
+      { message: NOT_ACCEPTED, reference: undefined, unconfirmed: false },
+    ],
+    [
+      "a 503",
+      errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+      { message: UNCONFIRMED, reference: REQUEST_ID, unconfirmed: true },
+    ],
+  ])("presents %s as a change", (_, failure, presentation) => {
+    expect(presentAssociateCveFailure(failure, "SNTL-21")).toEqual(
+      presentation,
+    );
+  });
+});
+
+describe("presentLeftAssociateCveFailure", () => {
+  test.each<[string, RequestFailure, string]>([
+    [
+      "409 TICKET_CVE_CONFLICT",
+      cveConflict("SNTL-12"),
+      "CVE-2099-0012 is already the CVE of SNTL-12.",
+    ],
+    [
+      "422 CVE_INVALID_FORMAT",
+      errorResponse(422, "CVE_INVALID_FORMAT"),
+      CVE_ID_FORMAT,
+    ],
+    [
+      "400 TICKET_CVE_ALREADY_SET",
+      errorResponse(400, "TICKET_CVE_ALREADY_SET"),
+      ALREADY_SET,
+    ],
+  ])(
+    "presents %s with its message as an error without a reference",
+    (_, failure, message) => {
+      expect(
+        presentLeftAssociateCveFailure(failure, "CVE-2099-0012", "SNTL-21"),
+      ).toEqual({ message, reference: undefined, unconfirmed: false });
+    },
+  );
+
+  test("presents every other failure as a change", () => {
+    expect(
+      presentLeftAssociateCveFailure(
+        errorResponse(503, "FICTIONAL_UNAVAILABLE"),
+        "CVE-2099-0012",
+        "SNTL-21",
+      ),
+    ).toEqual({
+      message: UNCONFIRMED,
+      reference: REQUEST_ID,
+      unconfirmed: true,
+    });
   });
 });

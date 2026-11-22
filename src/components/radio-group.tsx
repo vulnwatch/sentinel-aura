@@ -1,14 +1,16 @@
-import { useId, type Ref } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import { Label, Radio, RadioGroup } from "react-aria-components";
 import { FieldErrorMessage } from "./text-field";
 
 export interface RadioOption<T extends string> {
   // The value that the group holds when the option is chosen.
   value: T;
-  // Its label, which follows its button.
-  label: string;
-  // What the option means, below its label.
-  description: string;
+  // Its label, which follows its button, such as a value with its mark,
+  // whose text names the option.
+  label: ReactNode;
+  // What the option means, below its label, for an option whose label does
+  // not say it.
+  description?: string | undefined;
 }
 
 interface RadioGroupFieldProps<T extends string> {
@@ -24,8 +26,22 @@ interface RadioGroupFieldProps<T extends string> {
   // in progress: the options keep their look and the focus.
   isReadOnly?: boolean | undefined;
   // The element of the group, which a form searches for the button that
-  // takes the focus with an error.
+  // takes the focus with an error (chosenOrFirstRadio).
   groupRef?: Ref<HTMLDivElement> | undefined;
+}
+
+// The button of a group of radio buttons that takes the focus for the
+// group, as the first field of a dialog as it opens (FirstFieldFocus) or
+// with an error: its chosen option, the one stop of the Tab key of the
+// group, or its first option without a choice.
+export function chosenOrFirstRadio(
+  group: Element | null | undefined,
+): HTMLInputElement | null {
+  return (
+    group?.querySelector<HTMLInputElement>('input[type="radio"]:checked') ??
+    group?.querySelector<HTMLInputElement>('input[type="radio"]') ??
+    null
+  );
 }
 
 // A field of a form that chooses one value among a few whose meanings the
@@ -33,13 +49,16 @@ interface RadioGroupFieldProps<T extends string> {
 // (docs/design-system.md, Forms): its label above it, in text-15, weight
 // 500; then its options, 12 px apart, each a radio button of 16 px, round,
 // with a border-strong boundary, and when chosen an accent fill with a dot
-// of 6 px in on-accent; 8 px after it its label in text-15, and below the
-// label its meaning in text-13, fg-muted. The button, its label, and its
+// of 6 px in on-accent; 8 px after it its label in text-15, such as a value
+// with its mark, and below the label its meaning in text-13, fg-muted, for
+// an option whose label does not say it. The button, its label, and its
 // meaning are one target, and the focus ring goes around the button on
 // keyboard focus. Assistive technologies read the label as the name of the
 // option and its meaning as its description; the arrow keys move between
 // the options. Its error follows the options, as a field's does, and gives
 // each button a 2 px boundary in danger-icon. Read-only, it keeps its look.
+// As the first field of a dialog, its chosen option takes the focus as it
+// opens, or its first option without a choice (chosenOrFirstRadio).
 export function RadioGroupField<T extends string>({
   label,
   name,
@@ -71,7 +90,11 @@ export function RadioGroupField<T extends string>({
             key={option.value}
             value={option.value}
             aria-labelledby={`${id}-${option.value}-label`}
-            aria-describedby={`${id}-${option.value}-description`}
+            aria-describedby={
+              option.description === undefined
+                ? undefined
+                : `${id}-${option.value}-description`
+            }
             className="group flex cursor-default items-start gap-2"
           >
             <span
@@ -84,12 +107,14 @@ export function RadioGroupField<T extends string>({
               <span id={`${id}-${option.value}-label`} className="text-15">
                 {option.label}
               </span>
-              <span
-                id={`${id}-${option.value}-description`}
-                className="text-13 text-fg-muted"
-              >
-                {option.description}
-              </span>
+              {option.description !== undefined && (
+                <span
+                  id={`${id}-${option.value}-description`}
+                  className="text-13 text-fg-muted"
+                >
+                  {option.description}
+                </span>
+              )}
             </span>
           </Radio>
         ))}

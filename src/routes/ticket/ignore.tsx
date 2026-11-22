@@ -29,7 +29,10 @@ import {
   ModalDialog,
   type DialogError,
 } from "../../components/modal-dialog";
-import { RadioGroupField } from "../../components/radio-group";
+import {
+  chosenOrFirstRadio,
+  RadioGroupField,
+} from "../../components/radio-group";
 import { assigneeOutcome } from "./shared";
 
 // Ignore…, Ignore Ticket, POST /api/v1/tickets/{ticket_id}/ignore, from
@@ -173,12 +176,7 @@ export function IgnoreDialog({
     if (failure.form !== undefined || failure.field === undefined) {
       return;
     }
-    const inputs = group.current;
-    focusField(
-      inputs?.querySelector<HTMLInputElement>("input:checked") ??
-        inputs?.querySelector<HTMLInputElement>("input"),
-      failure.field,
-    );
+    focusField(chosenOrFirstRadio(group.current), failure.field);
   }, [failure, focusField]);
   const { close, question } = useDiscardQuestion({
     held: reason !== undefined && !busy,

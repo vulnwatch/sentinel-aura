@@ -1,9 +1,12 @@
 import {
   CirclePause,
   CirclePlay,
+  Gauge,
   ListRestart,
   Merge,
+  Plus,
   Split,
+  UserPen,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Separator } from "react-aria-components";
@@ -42,17 +45,22 @@ import {
 import { ticketStatusName } from "../../components/ticket-status";
 import { useSignedInUser } from "../../session-gate";
 import { useReadAfterTicketChange } from "../ticket-overview/shared";
+import { AssociateCveDialog } from "./associate-cve";
 import { IgnoreDialog, ignoredText } from "./ignore";
 import { MarkDuplicateDialog } from "./mark-duplicate";
+import { OverridePriorityDialog } from "./override-priority";
+import { SetSeverityDialog } from "./set-severity";
 import { assigneeOutcome, OPERABLE_STATUSES } from "./shared";
 
 // Actions, the menu at the end of the heading row of the Ticket screen
 // (src/routes/ticket.tsx; docs/design-system.md, Detail Screens), with the
-// changes of the status of the Ticket and Rerun convergence.
+// changes of the status of the Ticket, the corrections of what Sentinel
+// derived for it, and Rerun convergence.
 
 // The actions of the menu, in its order: those of the status, Ignore…
 // first, so that the keyboard, which opens the menu on its first item, opens
-// a dialog rather than ignoring at once; then, apart, Rerun convergence, a
+// a dialog rather than ignoring at once; then, apart, the corrections of
+// what Sentinel derived for the Ticket; then, apart, Rerun convergence, a
 // recovery of Sentinel's own work.
 type ActionId =
   | "ignore"
@@ -60,10 +68,25 @@ type ActionId =
   | "mark-duplicate"
   | "reopen"
   | "revert-duplicate"
+  | "override-priority"
+  | "set-severity"
+  | "associate-cve"
   | "rerun";
 
 // The dialogs that an action opens.
-type DialogId = "ignore" | "mark-duplicate";
+type DialogId =
+  | "ignore"
+  | "mark-duplicate"
+  | "override-priority"
+  | "set-severity"
+  | "associate-cve";
+
+// The actions that correct what Sentinel derived for the Ticket.
+const CORRECTIONS = new Set<ActionId>([
+  "override-priority",
+  "set-severity",
+  "associate-cve",
+]);
 
 // The statuses from which Sentinel ignores a Ticket (Sentinel
 // docs/features/tickets/tickets.md, Status Transitions; Ignore Ticket).
@@ -87,9 +110,11 @@ const RERUNNABLE_STATUSES = new Set<string>([
 // its status with triage_ticket, and Rerun convergence with triage_ticket or
 // manage_fetchers (Sentinel docs/features/identity/rbac.md, Endpoint
 // Permission Map (Tickets)). An action that the status does not allow is not
-// offered (docs/screens/ticket.md, Actions).
+// offered (docs/screens/ticket.md, Actions), and neither are Set severity…
+// and Associate CVE… on a Ticket with a CVE.
 function actionsOf(
   status: string,
+  hasCve: boolean,
   capabilities: readonly string[],
 ): readonly ActionId[] {
   const triages = capabilities.includes("triage_ticket");
@@ -105,6 +130,15 @@ function actionsOf(
   }
   if (triages && status === TicketStatusValue.duplicated) {
     actions.push("revert-duplicate");
+  }
+  // Without a CVE, Sentinel takes the severity set by hand, and the Ticket
+  // can take a CVE (Sentinel docs/features/tickets/tickets.md, Set Severity
+  // Manual; Associate CVE).
+  if (triages && OPERABLE_STATUSES.has(status)) {
+    actions.push("override-priority");
+    if (!hasCve) {
+      actions.push("set-severity", "associate-cve");
+    }
   }
   if (
     (triages || capabilities.includes("manage_fetchers")) &&
@@ -158,8 +192,11 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
   const ticketRead = useGetTicket(ticketId, { query: { enabled: false } });
   const outcome = useOutcomeAfterRead(ticketRead, record);
   // The reads after a change of the status, the duplicates of the Ticket
-  // included.
+  // included, which it can move to another original.
   const readAgain = useReadAfterTicketChange(ticketId, true);
+  // The reads after a correction of the priority, the severity, or the CVE,
+  // which changes none of the duplicates (docs/screens/ticket.md, Actions).
+  const readAfterCorrection = useReadAfterTicketChange(ticketId);
   const button = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   // The dialog that is open, or opens once the menu has closed.
@@ -243,7 +280,11 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
       },
     },
   });
-  const offered = actionsOf(ticket.status, user?.capabilities ?? []);
+  const offered = actionsOf(
+    ticket.status,
+    ticket.cve !== null,
+    user?.capabilities ?? [],
+  );
   if (uiFailure !== undefined) {
     throw uiFailure.error;
   }
@@ -336,7 +377,24 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
     }
   };
 
-  const statusItems = shown.filter((action) => action !== "rerun");
+  const statusItems = shown.filter(
+    (action) => action !== "rerun" && !CORRECTIONS.has(action),
+  );
+  const corrections = shown.filter((action) => CORRECTIONS.has(action));
+  // The dialog of a correction that is open, with the outcome of its change
+  // and the reads after it, without the duplicates.
+  const dialogProps = {
+    ticket,
+    record,
+    readAgain: readAfterCorrection,
+    onClose: () => {
+      setDialog(undefined);
+    },
+    onDone: (text: string) => {
+      setDialog(undefined);
+      outcome.after(text);
+    },
+  };
   return (
     <>
       <FocusHandOff>
@@ -419,9 +477,49 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
               Revert duplicate
             </MenuAction>
           )}
-          {shown.includes("rerun") && statusItems.length > 0 && (
+          {corrections.length > 0 && statusItems.length > 0 && (
             <Separator className={MENU_SEPARATOR} />
           )}
+          {shown.includes("override-priority") && (
+            <MenuAction
+              id="override-priority"
+              icon={UserPen}
+              unavailable={pending}
+              onAction={() => {
+                openDialog("override-priority");
+              }}
+            >
+              Override priority…
+            </MenuAction>
+          )}
+          {shown.includes("set-severity") && (
+            <MenuAction
+              id="set-severity"
+              icon={Gauge}
+              unavailable={pending}
+              onAction={() => {
+                openDialog("set-severity");
+              }}
+            >
+              Set severity…
+            </MenuAction>
+          )}
+          {shown.includes("associate-cve") && (
+            <MenuAction
+              id="associate-cve"
+              icon={Plus}
+              unavailable={pending}
+              onAction={() => {
+                openDialog("associate-cve");
+              }}
+            >
+              Associate CVE…
+            </MenuAction>
+          )}
+          {shown.includes("rerun") &&
+            statusItems.length + corrections.length > 0 && (
+              <Separator className={MENU_SEPARATOR} />
+            )}
           {shown.includes("rerun") && (
             <MenuAction
               id="rerun"
@@ -452,6 +550,15 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
             outcome.after(text);
           }}
         />
+      )}
+      {dialog?.open === true && dialog.id === "override-priority" && (
+        <OverridePriorityDialog {...dialogProps} />
+      )}
+      {dialog?.open === true && dialog.id === "set-severity" && (
+        <SetSeverityDialog {...dialogProps} />
+      )}
+      {dialog?.open === true && dialog.id === "associate-cve" && (
+        <AssociateCveDialog {...dialogProps} />
       )}
       {dialog?.open === true && dialog.id === "ignore" && (
         <IgnoreDialog

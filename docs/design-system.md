@@ -450,7 +450,7 @@ that the code imports ship.
 | The account button | `chevrons-up-down` |
 | Account, API keys, Sign out | `user`, `key-round`, `log-out` |
 | Theme System, Light, Dark; the selected item of a menu, a selected checkbox | `monitor`, `sun`, `moon`; `check` |
-| Create a record, add an item to a record, such as a reference to a Ticket | `plus` |
+| Create a record, add an item to a record, such as a reference to a Ticket, or associate a CVE with a Ticket | `plus` |
 | Filters | `list-filter` |
 | The sort of a column, ascending and descending | `arrow-up`, `arrow-down` |
 | Previous and next page, previous and next month of a calendar | `chevron-left`, `chevron-right` |
@@ -464,7 +464,8 @@ that the code imports ship.
 | The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
 | The state of a request: in progress, accepted, failed (Other Values) | `git-pull-request`, `git-merge`, `git-pull-request-closed` |
 | A confidential Ticket | `lock` |
-| A priority override, an eligibility set by hand, and the actions that set an eligibility by hand | `user-pen` |
+| A priority override, an eligibility set by hand, and the actions that set them by hand | `user-pen` |
+| Set the severity of a Ticket by hand, as the kind CVE and CVSS of the timeline, which holds its changes, does | `gauge` |
 | Return a value set by hand to its automatic value, such as the eligibility of a Product | `rotate-ccw` |
 | The maintainers of a package: one, several, none | `user-round`, `users-round`, `user-round-x` |
 | The access grants of a confidential Ticket | `user-round-key` |
@@ -832,6 +833,12 @@ event (Sentinel `docs/features/tickets/ticket-priority.md`,
      `docs/features/tickets/ticket-priority.md`, Manual Override;
      `docs/behaviors.md`, Absent Values; Representation of a User). An
      automatic priority has neither the line nor the two lines.
+- A dialog that changes the priority of a Ticket, such as the override of
+  its screen document, shows the automatic priority and what it is based on
+  as the explanation shows them beside an override, from its section of the
+  basis to its section of the evidence, in a box on `surface` with a `border`
+  line, an 8 px radius, and 12 px by 16 px of padding, in `text-14`, as wide
+  as the form, their headings one level below the title of the dialog.
 - An exploitation level or an SSVC value that the pinned contract does not
   list shows as received, as a level and a severity do (above; Severity), and
   a piece of evidence of a kind that it does not list shows its kind as
@@ -1469,7 +1476,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   `text-13` and `fg-muted`.
 - A field with an error has a 2 px boundary in `danger-icon`, and its message
   follows the field, after `circle-alert` at 14 px, in `text-13`, weight 500,
-  `danger-on-soft` (`docs/behaviors.md`, Where Errors Appear).
+  `danger-on-soft` (`docs/behaviors.md`, Where Errors Appear). A record that
+  the message names, such as the Ticket that holds a CVE, can be a link in
+  the color of the message, underlined, as a link in a message is
+  (Messages).
 - An error of the whole form shows at its top as a `danger` message, or as a
   `warning` one for a change that Sentinel did not confirm, without a dismiss
   button (Messages).
@@ -1587,17 +1597,20 @@ states it, such as that of a Ticket; the other audit logs are tables
 - A group of radio buttons chooses one value among a few whose meanings the
   user reads before choosing, such as the reason of an ignored Ticket: its
   label above it, as a field's, then its options 12 px apart, each its radio
-  button, then, 8 px later, its label in `text-15` and below the label its
-  meaning in `text-13`, `fg-muted`. The button, its label, and its meaning
-  are one target, with the focus ring around the button on keyboard focus;
-  assistive technologies read the label as the name of the option and its
-  meaning as its description. Its error follows the options, as a field's
-  does, gives each button a 2 px boundary in `danger-icon`, also the one
-  selected, and is read with each option after its meaning, so that the
+  button, then, 8 px later, its label in `text-15`, such as a value with its
+  mark (Values), and below the label its meaning in `text-13`, `fg-muted`,
+  unless the label says it, such as a severity of Critical. The button, its
+  label, and its meaning are one target, with the focus ring around the button
+  on keyboard focus; assistive technologies read the label as the name of the
+  option and its meaning as its description. Its error follows the options, as
+  a field's does, gives each button a 2 px boundary in `danger-icon`, also the
+  one selected, and is read with each option after its meaning, so that the
   option that holds the focus states it. Read-only, as while the change that
-  sends it is in progress, it keeps its look and the focus. A choice among a
-  few short values that need no meaning, such as the values of a metric of a
-  CVSS vector, is a segmented control instead (above).
+  sends it is in progress, it keeps its look and the focus. As the first field
+  of a dialog, its chosen option takes the focus as the dialog opens, or its
+  first option without a choice. A choice among a few short values that need no
+  meaning, such as the values of a metric of a CVSS vector, is a segmented
+  control instead (above).
 - A field whose value users copy character by character, such as a CVSS
   vector, shows its value in monospace (Font).
 - A select of a value of a record within the line of the record, whose

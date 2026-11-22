@@ -12,30 +12,31 @@ contract belong to Sentinel (`README.md`, Specification Boundary).
 ## Purpose
 
 The Ticket screen shows one Ticket: its heading row with its main values and
-the menu of its actions, with which an analyst ignores it with a reason,
-marks it as a duplicate, reopens it, and reverts its duplicate status, and an
-analyst or a user who manages fetchers reruns its convergence; in the tab
-Overview its CVE, the CVSS assessments of its CVE, whose SUSE
-assessment an analyst who manages CVSS adds, edits, and deletes, its package
-tree, with the IBS requests of its tracks, to which an analyst who manages
-packages adds the packages that Sentinel missed, whose packages, tracks, and
-Products they exclude and restore, and on which they set the affectedness of
-the tracks and the eligibility of the Products,
-its details, whose assignee an analyst changes, the sources of its CVE, which
-an analyst refetches, and who is involved in it, with the access grants of a
-confidential Ticket, which an analyst who manages confidentiality grants and
-revokes; in the tab References its references, the advisories, patches, and
-other pages of other sites that analysts read while they analyze it, which an
-analyst who manages references adds, edits, and deletes; in the tab Affected
-versions the versions of the software that its CVE affects, as the CVE record,
-its ADPs, GHSA, and OSV report them, which an analyst compares with the tracks
-of its packages; and in the tab Audit log its history, which an analyst
-searches and filters to reconstruct who changed what and what Sentinel did by
-itself. Vulnerability and restricted analysts work in it all day; every other
-user reads it, as a package maintainer does a Ticket of one of their packages
-that an analyst shares, and finds in its package tree the tracks that wait for
-them (`docs/screen-map.md`, Users and Frequent Tasks; Areas and Screens). It
-shows the same Ticket to every user who can see it.
+the menu of its actions, with which an analyst ignores it with a reason, marks
+it as a duplicate, reopens it, reverts its duplicate status, overrides its
+priority, and, without a CVE, sets its severity and associates a CVE with it,
+and an analyst or a user who manages fetchers reruns its convergence; in the
+tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE assessment an
+analyst who manages CVSS adds, edits, and deletes, its package tree, with the
+IBS requests of its tracks, to which an analyst who manages packages adds the
+packages that Sentinel missed, whose packages, tracks, and Products they
+exclude and restore, and on which they set the affectedness of the tracks and
+the eligibility of the Products, its details, whose assignee an analyst
+changes, the sources of its CVE, which an analyst refetches, and who is
+involved in it, with the access grants of a confidential Ticket, which an
+analyst who manages confidentiality grants and revokes; in the tab References
+its references, the advisories, patches, and other pages of other sites that
+analysts read while they analyze it, which an analyst who manages references
+adds, edits, and deletes; in the tab Affected versions the versions of the
+software that its CVE affects, as the CVE record, its ADPs, GHSA, and OSV
+report them, which an analyst compares with the tracks of its packages; and in
+the tab Audit log its history, which an analyst searches and filters to
+reconstruct who changed what and what Sentinel did by itself. Vulnerability and
+restricted analysts work in it all day; every other user reads it, as a package
+maintainer does a Ticket of one of their packages that an analyst shares, and
+finds in its package tree the tracks that wait for them (`docs/screen-map.md`,
+Users and Frequent Tasks; Areas and Screens). It shows the same Ticket to every
+user who can see it.
 
 ## Access
 
@@ -46,7 +47,8 @@ package maintainership decide which confidential Tickets they are (Sentinel
 `docs/features/identity/rbac.md`, Scope and Confidential Ticket Visibility).
 The screen is the same for every user, except that it offers Refetch, Edit
 assignee, Ignore… and Ignore as not shipped by SUSE, Mark as duplicate…,
-Reopen, and Revert duplicate to a user who holds `triage_ticket`; Rerun
+Reopen, Revert duplicate, Override priority…, Set severity…, and Associate
+CVE… to a user who holds `triage_ticket`; Rerun
 convergence to a user who holds `triage_ticket` or `manage_fetchers`; Add SUSE
 assessment, and Edit and Delete on the SUSE assessments, to a user who holds
 `manage_cvss`, Grant access and Revoke access to a user who holds
@@ -1047,15 +1049,18 @@ Revert Duplicate Status; Rerun Ticket Convergence; Sentinel
   since Sentinel refuses an ignore on an Analyzed or Resolved Ticket with `409
   TICKET_INVALID_TRANSITION`; Mark as duplicate…, with `merge`, on a Ticket in
   New, Analysis, Analyzed, or Resolved; Reopen, with `circle-play`, on an
-  Ignored Ticket; Revert duplicate, with `split`, on a Duplicated Ticket; and,
+  Ignored Ticket; Revert duplicate, with `split`, on a Duplicated Ticket;
+  below a `border` line, the actions on the priority, the severity, and the
+  CVE of the Ticket (below), Override priority…, Set severity…, and Associate
+  CVE…; and,
   below a `border` line when one of them precedes it, Rerun convergence, with
   `list-restart`, on a Ticket in Analysis, Analyzed, or Resolved, since
   Sentinel refuses it on a New, Ignored, or Duplicated Ticket with `409
   TICKET_INVALID_TRANSITION`. So Actions does not show to a user who holds
   neither capability, nor to a user who holds `manage_fetchers` alone on a New,
   Ignored, or Duplicated Ticket. While its menu is open, the change of one of
-  its items is in progress, or the dialog of Ignore… or of Mark as duplicate…
-  is open, Actions stays, with the items that it offered as its menu opened
+  its items is in progress, or the dialog of one of its items is open,
+  Actions stays, with the items that it offered as its menu opened
   (`docs/behaviors.md`, The Signed-in User).
 - Ignore… opens a dialog at most 560 px wide (`docs/design-system.md`,
   Dialogs), titled such as "Ignore SNTL-31", once its menu has closed, so that
@@ -1210,6 +1215,122 @@ Revert Duplicate Status; Rerun Ticket Convergence; Sentinel
   focus, as after a read of the signed-in user took the capability away, the
   focus moves to the screen's heading (`docs/behaviors.md`, Accessibility,
   Focus after an action).
+
+**Override priority…**, Set Priority Override,
+`PATCH /api/v1/tickets/{ticket_id}/priority`; **Set severity…**, Set Severity
+Manual, `PATCH /api/v1/tickets/{ticket_id}/severity`; and **Associate CVE…**,
+Associate CVE, `POST /api/v1/tickets/{ticket_id}/associate-cve`, in Actions,
+for a user who holds `triage_ticket` (Sentinel
+`docs/features/tickets/tickets.md`, CVE Association; Severity Resolution;
+Tickets Without CVE: Behavioral Differences; Associate CVE; Set Severity
+Manual; Set Priority Override; Sentinel
+`docs/features/tickets/ticket-priority.md`, Priority Levels; Automatic
+Priority Basis; Manual Override):
+
+- Actions offers them on the statuses that accept a change (above), below a
+  `border` line after the actions of the status, in this order: Override
+  priority…, with `user-pen`, the mark of an override; and, on a Ticket
+  without a CVE only, since Sentinel derives the severity of a Ticket with a
+  CVE from CVSS and keeps the CVE of a Ticket once associated, Set
+  severity…, with `gauge`, and Associate CVE…, with `plus`. Each opens a
+  dialog at most 560 px wide (`docs/design-system.md`, Dialogs) once its menu
+  has closed, as Ignore… does, which belongs to the heading row too.
+- Override priority… opens "Override the priority of SNTL-12". It says, in
+  `fg-muted`, "An override replaces the automatic priority of SNTL-12 until
+  it is cleared. Sentinel keeps calculating the automatic priority."; below
+  it, in a frame, the automatic priority and what it is based on, as the
+  explanation of the priority shows them beside an override
+  (`docs/design-system.md`, Priority, Explanation). Then Priority, in a form
+  (`docs/design-system.md`, Forms), a group of radio buttons: Automatic,
+  "The automatic priority, now P3.", or "…, not yet prioritizable now."
+  without one, which clears the override and sends `null`; then P1 to P4,
+  each with its mark, and the meaning that Sentinel gives it, "Remediate
+  immediately.", "Remediate with high urgency.", "Remediate in the normal
+  flow.", and "Remediate when convenient.", which sets the override and sends
+  its level. The override of the Ticket as the dialog opened is chosen; an
+  override that the pinned contract does not list chooses none
+  (`docs/behaviors.md`, Unknown Values). Then Cancel and Save, a primary
+  button.
+- Set severity… opens "Set the severity of SNTL-21". It says, in `fg-muted`,
+  "Without a CVE, SNTL-21 has the severity that you set here. It decides the
+  deadlines and the automatic priority of SNTL-21."; then Severity, a group
+  of radio buttons: Critical, High, Medium, and Low, each with its mark
+  (`docs/design-system.md`, Severity); None, with its mark and "Informational:
+  no deadline applies.", since Sentinel applies no SLA to it (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, SLA Tier); and Not set, which
+  sends `null`, "SNTL-21 can't become Analyzed without a severity.", or, on an
+  Analyzed or Resolved Ticket, "SNTL-21 returns to Analysis without a
+  severity." (Sentinel `docs/features/tickets/tickets.md`, Gate: Analysis →
+  Analyzed). The severity of the Ticket as the dialog opened is chosen; a
+  severity that the pinned contract does not list chooses none. Then Cancel
+  and Save, a primary button.
+- Without a choice, Save says "Choose a priority." or "Choose a severity." at
+  the group, and the first option takes the focus. Save with the choice with
+  which the dialog opened closes it without a request, also when a read
+  meanwhile shows another value: the choice is the user's input, while the
+  frame of the automatic priority, the meaning of Automatic and of Not set,
+  and the consequences that the confirmation of Associate CVE… states follow
+  the Ticket as the screen shows it. Neither asks for confirmation: another
+  change reverses it (`docs/behaviors.md`, Confirmation). Their input is
+  another choice than the one with which the dialog opened, and before
+  discarding it the question says "The priority of SNTL-12 isn't changed." or
+  "The severity of SNTL-21 isn't changed." (above). While the request is in
+  progress, the choice is read-only (`docs/design-system.md`, Forms).
+- Associate CVE… opens "Associate a CVE with SNTL-21". It says, in
+  `fg-muted`, "SNTL-21 takes the severity, the CVSS assessments, the sources,
+  and the affected versions of the CVE that you enter. Sentinel creates a CVE
+  that it doesn't know yet, so check its ID.", since an unknown CVE becomes a
+  record of its own (Sentinel `docs/features/tickets/tickets.md`, CVE
+  Resolution Behavior); then CVE ID, a single-line field, described "Such as
+  CVE-2099-1234.", which takes the focus as the dialog opens; then Cancel and
+  Associate CVE, a primary button.
+- The form takes the CVE ID without its surrounding whitespace, with `CVE-`
+  in any letter case, which it sends in capitals, and checks it before
+  sending it, as the pinned OpenAPI document publishes it (Sentinel
+  `docs/api-spec.md`, Published Input Constraints): empty, "Enter the CVE
+  ID."; more than 20 characters, "Enter at most 20 characters."; and
+  another form than `CVE-`, four digits, `-`, and at least four digits,
+  "Enter a CVE ID, such as CVE-2099-1234.". The error shows at the field when
+  the user submits the form, the field takes the focus, and the error goes
+  once the input changes.
+- No operation removes a CVE from a Ticket, so Associate CVE… asks for
+  confirmation once the form passes its checks (`docs/behaviors.md`,
+  Confirmation): "Associate CVE-2099-1234 with SNTL-21?", "SNTL-21 takes its
+  severity from the CVSS assessments of CVE-2099-1234, in place of the
+  severity High set by hand, and Sentinel fetches the CVE from its
+  sources.", without the severity set by hand when the Ticket has none; then,
+  for an Analyzed Ticket, "SNTL-21 can also return to Analysis until
+  CVE-2099-1234 has a SUSE assessment.", or, for a Resolved Ticket, whose
+  fixed tracks then wait for the release of their Products, "SNTL-21 can also
+  return to Analysis until CVE-2099-1234 has a SUSE assessment, and to
+  Analyzed until its eligible Products are released." (Sentinel
+  `docs/features/tickets/tickets.md`, Associating a CVE Later; Gate: Analysis
+  → Analyzed; Gate: Analyzed → Resolved); and "No action removes a CVE from a
+  Ticket, so this can't be undone."; Cancel and Associate CVE, a danger
+  button, which sends the CVE ID. Cancel and Escape return to the form. Its
+  input is a text typed, other than whitespace, and before discarding it the
+  question says "No CVE is associated with SNTL-21." (above). While the
+  request is in progress, the field keeps the CVE ID, read-only.
+- An effective change can assign an unassigned Ticket to the user, move it
+  from New to Analysis, and change its status; a change of the severity
+  also changes its deadlines and its automatic priority, and an association
+  replaces the severity set by hand with the one of the CVE, changes the
+  eligibility of the Products, and starts a fetch of the CVE (Sentinel
+  `docs/features/tickets/ticket-priority.md`, `set_priority_override()`;
+  Sentinel `docs/features/tickets/ticket-mutations.md`,
+  `set_severity_manual()`; Sentinel `docs/features/tickets/ticket-service.md`,
+  `associate_cve`). None changes the duplicates. The screen then reads again
+  the Ticket, the work of a maintainer on it, the users who acted on it, its
+  audit log, and the reads of the Ticket list; once the Ticket shows its CVE,
+  the parts that the CVE brings, the CVSS assessments, the sources, and the
+  affected versions, read theirs (Content).
+- The outcome is announced once the read of the Ticket after it arrives
+  (above), as Sentinel returns the Ticket: "Priority overridden: P2.",
+  "Priority override cleared: P3, automatic.", or "Priority override
+  cleared: not yet prioritizable."; "Severity set to High." or "Severity
+  removed."; and "CVE-2099-1234 associated.". After an association, Set
+  severity… and Associate CVE… leave Actions, which holds the focus as its
+  dialog closes.
 
 **Edit assignee**, Assign Ticket, `PATCH /api/v1/tickets/{ticket_id}/assignee`,
 in the details, for a user who holds `triage_ticket` (Sentinel
@@ -1992,6 +2113,43 @@ document, Manual-Zone Exception):
   (Actions). A failure of Ignore as not shipped by SUSE shows in the message
   area in the presentation of its status; the screen handles no code of it
   specifically.
+- **Errors of Override priority…, Set severity…, and Associate CVE….** A
+  failure shows in the form of its dialog, which keeps the input
+  (`docs/behaviors.md`, Where Errors Appear). A failure of Associate CVE…
+  closes its confirmation, so that the form shows it. The screen handles
+  these codes specifically:
+  - Set severity…: `409 TICKET_SEVERITY_DERIVED`, for a Ticket that another
+    user associated with a CVE since the dialog opened, at the top of the
+    form in the `danger` tone, "SNTL-21 now has a CVE, whose CVSS assessments
+    set its severity." (Sentinel `docs/features/tickets/tickets.md`, Set
+    Severity Manual);
+  - Associate CVE…, at the field, which takes the focus: `422
+    CVE_INVALID_FORMAT`, "Enter a CVE ID, such as CVE-2099-1234."; and `409
+    TICKET_CVE_CONFLICT`, for a CVE that another Ticket holds, "CVE-2099-0012
+    is already the CVE of SNTL-12.", the Ticket of `existing_ticket_id` as a
+    link to its screen (`docs/design-system.md`, Forms), or "CVE-2099-0012 is
+    already the CVE of another Ticket." when that field does not have the form
+    `SNTL-{n}`. That Ticket can be one that the user does not see, whose screen
+    then shows Not found, since Sentinel names it whatever its access (Sentinel
+    `docs/features/tickets/tickets.md`, CVE Resolution Behavior; Identifier
+    Disclosure Boundary);
+  - Associate CVE…, at the top of the form in the `danger` tone: `400
+    TICKET_CVE_ALREADY_SET`, for a Ticket that has a CVE since the dialog
+    opened, as after another user's association or the user's own that
+    Sentinel did not confirm, "SNTL-21 already has a CVE." (same document,
+    Associate CVE).
+
+  A field error of a `VALIDATION_ERROR` for `priority`, `severity`, or
+  `cve_id` shows at its group or its field. Every other failure shows at the
+  top of the form, which takes the focus, in the presentation of its status,
+  as a warning when Sentinel did not confirm the change (`docs/behaviors.md`,
+  Default Presentation by Status; Retries and Unconfirmed Changes), such as
+  the `409 TICKET_NOT_MUTABLE` of a Ticket that became Ignored or Duplicated
+  meanwhile. Override priority… has no code of its own (Sentinel
+  `docs/features/tickets/tickets.md`, Set Priority Override). A failure that
+  ends after the user left the screen shows in the message area in the
+  presentation of the dialog, starting with the Ticket (Actions), the
+  conflict without a link.
 - **Errors of Edit assignee.** A failure shows in the popover, which stays open
   (`docs/behaviors.md`, Where Errors Appear; Accessibility, Announcements). The
   screen handles three codes specifically, at the search field: `404
@@ -2184,21 +2342,23 @@ document, Manual-Zone Exception):
   Auto-Classification; Mutability and Concurrency (Manual-Zone Exception);
   API Schemas; API Endpoints (List References; Add Reference; Update
   Reference; Delete Reference)
-- Sentinel `docs/features/tickets/tickets.md` — API Lookup; Search; Status
-  Transitions; Gate: Analysis → Analyzed; Gate: Analyzed → Resolved; Automatic
-  Status Evaluation; Reassignment; Self-Unassignment; Auto-Assignment on
-  Unassigned Tickets; Duplicate Handling; Ignored; Confidential Tickets
-  (Identifier Disclosure Boundary; Coordinated Release Date); Ignore Reason;
-  Response Schemas (Shared Sub-Schemas; TicketDetail;
+- Sentinel `docs/features/tickets/tickets.md` — API Lookup; Search; CVE
+  Association (CVE Resolution Behavior; Associating a CVE Later); Severity
+  Resolution; Status Transitions; Gate: Analysis → Analyzed; Gate: Analyzed →
+  Resolved; Automatic Status Evaluation; Reassignment; Self-Unassignment;
+  Auto-Assignment on Unassigned Tickets; Duplicate Handling; Ignored; Tickets
+  Without CVE: Behavioral Differences; Confidential Tickets (Identifier
+  Disclosure Boundary; Coordinated Release Date); Ignore Reason; Response
+  Schemas (Shared Sub-Schemas; TicketDetail;
   TicketConvergenceDispatchResponse); Get Ticket; List Tickets (Duplicate
-  filter); Assign Ticket; Ignore Ticket; Mark Ticket as Duplicate; Reopen
-  Ticket; Revert
-  Duplicate Status; Rerun Ticket Convergence; Set Confidentiality; Access
-  Grant Management (List Access Grants; Grant Access; Revoke Access)
-- Sentinel `docs/features/tickets/ticket-service.md` — `mark_as_duplicate`;
-  `reopen_from_ignored()`; `revert_duplicate()`
+  filter); Associate CVE; Set Severity Manual; Set Priority Override; Assign
+  Ticket; Ignore Ticket; Mark Ticket as Duplicate; Reopen Ticket; Revert
+  Duplicate Status; Rerun Ticket Convergence; Set Confidentiality; Access Grant
+  Management (List Access Grants; Grant Access; Revoke Access)
+- Sentinel `docs/features/tickets/ticket-service.md` — `associate_cve`;
+  `mark_as_duplicate`; `reopen_from_ignored()`; `revert_duplicate()`
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Actors and Phases;
-  Due Dates (Null Due Dates); Track Milestones (Observability of Later
+  SLA Tier; Due Dates (Null Due Dates); Track Milestones (Observability of Later
   Phases; Completion Evidence); Ticket Current Phase
 - Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
   Dimensions; Affectedness-Delivery Independence; Status Behavior
@@ -2221,8 +2381,8 @@ document, Manual-Zone Exception):
   Details for Ticket
 - Sentinel `docs/features/packages/product-catalog.md` — Product Lifecycle
   Phases
-- Sentinel `docs/features/tickets/ticket-priority.md` — Automatic Priority
-  Basis; Manual Override
+- Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
+  Automatic Priority Basis; Manual Override (`set_priority_override()`)
 - Sentinel `docs/features/tickets/cve-tracking.md` — CVE Sources; Get CVE;
   Get CVE Affected Versions; External Identifiers; CVE Rejection Handling;
   Re-fetch CVE Data
@@ -2249,7 +2409,8 @@ document, Manual-Zone Exception):
   Assessment Persistence and Ticket Status; API Endpoints (Shared Assessment
   Item; Get CVSS Assessments for a CVE; Set or Update SUSE CVSS Assessment;
   Delete SUSE CVSS Assessment; Calculate CVSS Base Score)
-- Sentinel `docs/features/tickets/ticket-mutations.md` — CVSS Status Matrix
+- Sentinel `docs/features/tickets/ticket-mutations.md` — CVSS Status Matrix;
+  `set_severity_manual()`
 - Sentinel `docs/features/identity/rbac.md` — Scope and Confidential Ticket
   Visibility; Business Rules (10); Assignment Eligibility Wire Format;
   Endpoint Permission Map (Users; CVEs; CVSS; Tickets; Ticket Packages;

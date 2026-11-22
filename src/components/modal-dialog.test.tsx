@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Form } from "react-aria-components";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -7,9 +8,11 @@ import { Button } from "./button";
 import { FramedTable, type TableColumn } from "./data-table";
 import {
   ConfirmationDialog,
+  FirstFieldFocus,
   ModalDialog,
   type DialogError,
 } from "./modal-dialog";
+import { RadioGroupField } from "./radio-group";
 
 // A dialog centered over the page and a confirmation (docs/design-system.md,
 // Dialogs; docs/behaviors.md, Confirmation), in the light theme.
@@ -563,4 +566,55 @@ test("moves the focus to the screen's heading when it leaves the page while it i
   await dialog.getByRole("button", { name: "Remove" }).click();
 
   await expect.element(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+});
+
+type Level = "low" | "high";
+
+// A dialog whose content, a form with a group of radio buttons as its first
+// field, takes the focus as the dialog opens, with the option chosen at
+// first, if any.
+function LevelDialog({ initial }: { initial?: Level | undefined }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <ModalDialog
+      isOpen
+      onClose={() => undefined}
+      width="form"
+      title="Fictional level"
+      buttons={<Button>Cancel</Button>}
+    >
+      <FirstFieldFocus>
+        <Form>
+          <RadioGroupField<Level>
+            label="Level"
+            name="level"
+            options={[
+              { value: "low", label: "Low" },
+              { value: "high", label: "High" },
+            ]}
+            value={value}
+            onChange={setValue}
+          />
+        </Form>
+      </FirstFieldFocus>
+    </ModalDialog>
+  );
+}
+
+test("gives the focus as it opens to the chosen option of a group of radio buttons that comes first in its content", async () => {
+  const screen = await render(<LevelDialog initial="high" />);
+
+  const dialog = screen.getByRole("dialog", { name: "Fictional level" });
+  await expect
+    .element(dialog.getByRole("radio", { name: "High", exact: true }))
+    .toHaveFocus();
+});
+
+test("gives the focus as it opens to the first option of a group of radio buttons that comes first in its content, without a choice", async () => {
+  const screen = await render(<LevelDialog />);
+
+  const dialog = screen.getByRole("dialog", { name: "Fictional level" });
+  await expect
+    .element(dialog.getByRole("radio", { name: "Low", exact: true }))
+    .toHaveFocus();
 });

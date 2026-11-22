@@ -508,6 +508,120 @@ export function presentLeftIgnoreFailure(
     : { message: atField, reference: undefined, unconfirmed: false };
 }
 
+// The message of Set severity… on a Ticket that another user associated with
+// a CVE meanwhile, 409 TICKET_SEVERITY_DERIVED: the CVSS assessments of its
+// CVE then set its severity (Sentinel docs/features/tickets/tickets.md, Set
+// Severity Manual; Severity Resolution), such as "SNTL-21 now has a CVE,
+// whose CVSS assessments set its severity.". Every other failure has the
+// presentation of a change.
+export function presentSetSeverityFailure(
+  failure: RequestFailure,
+  ticketId: string,
+): ChangeFailurePresentation | undefined {
+  if (
+    failure instanceof ApiError &&
+    failure.status === 409 &&
+    failure.code === "TICKET_SEVERITY_DERIVED"
+  ) {
+    return {
+      message: `${ticketId} now has a CVE, whose CVSS assessments set its severity.`,
+      reference: undefined,
+      unconfirmed: false,
+    };
+  }
+  return presentChangeFailure(failure);
+}
+
+// The message of a CVE ID that does not have the form of the contract,
+// which the form of Associate CVE… checks before sending it, and which
+// Sentinel answers with 422 CVE_INVALID_FORMAT (Sentinel
+// docs/features/tickets/tickets.md, Associate CVE).
+export const MESSAGE_CVE_ID_FORMAT = "Enter a CVE ID, such as CVE-2099-1234.";
+
+// The canonical identity of a Ticket, as the link to a Ticket that another
+// response names takes it (Sentinel docs/api-spec.md, Ticket Identifier
+// Resolution).
+const CANONICAL_TICKET_ID = /^SNTL-[1-9][0-9]*$/;
+
+// The error of the CVE ID of Associate CVE… at its field: its message, and,
+// for a CVE that another Ticket holds, that Ticket, which the message names
+// last, before its period, and which the field shows as a link to it.
+export interface CveIdError {
+  message: string;
+  holder: string | undefined;
+}
+
+// The error of the CVE ID that a failure of Associate CVE states, or
+// undefined for a failure of the form: 422 CVE_INVALID_FORMAT, and 409
+// TICKET_CVE_CONFLICT, for a CVE that another Ticket holds, which names that
+// Ticket by the existing_ticket_id of the response when it has the form
+// SNTL-{n}. That Ticket can be one that the user does not see, whose screen
+// then shows Not found (Sentinel docs/features/tickets/tickets.md, CVE
+// Resolution Behavior; Identifier Disclosure Boundary).
+export function cveIdError(
+  failure: RequestFailure,
+  cveId: string,
+): CveIdError | undefined {
+  if (!(failure instanceof ApiError)) {
+    return undefined;
+  }
+  if (failure.status === 422 && failure.code === "CVE_INVALID_FORMAT") {
+    return { message: MESSAGE_CVE_ID_FORMAT, holder: undefined };
+  }
+  if (failure.status !== 409 || failure.code !== "TICKET_CVE_CONFLICT") {
+    return undefined;
+  }
+  const holder =
+    typeof failure.body === "object" &&
+    failure.body !== null &&
+    "existing_ticket_id" in failure.body &&
+    typeof failure.body.existing_ticket_id === "string" &&
+    CANONICAL_TICKET_ID.test(failure.body.existing_ticket_id)
+      ? failure.body.existing_ticket_id
+      : undefined;
+  return holder === undefined
+    ? { message: `${cveId} is already the CVE of another Ticket.`, holder }
+    : { message: `${cveId} is already the CVE of ${holder}.`, holder };
+}
+
+// The presentation of a failure of Associate CVE… at the top of its form
+// (docs/screens/ticket.md, States): 400 TICKET_CVE_ALREADY_SET, for a Ticket
+// that has a CVE since the dialog opened, as an error that names no actor,
+// since the association can be another user's or the user's own that
+// Sentinel did not confirm; and every other failure as a change.
+export function presentAssociateCveFailure(
+  failure: RequestFailure,
+  ticketId: string,
+): ChangeFailurePresentation | undefined {
+  if (
+    failure instanceof ApiError &&
+    failure.status === 400 &&
+    failure.code === "TICKET_CVE_ALREADY_SET"
+  ) {
+    return {
+      message: `${ticketId} already has a CVE.`,
+      reference: undefined,
+      unconfirmed: false,
+    };
+  }
+  return presentChangeFailure(failure);
+}
+
+// The presentation of a failure of Associate CVE… that ends after the user
+// left the screen, in the message area of the screen that the user is on:
+// the error of its CVE ID as an error, and every other failure as in the
+// form.
+export function presentLeftAssociateCveFailure(
+  failure: RequestFailure,
+  cveId: string,
+  ticketId: string,
+): ChangeFailurePresentation | undefined {
+  const atField = cveIdError(failure, cveId);
+  return atField === undefined
+    ? presentAssociateCveFailure(failure, ticketId)
+    : { message: atField.message, reference: undefined, unconfirmed: false };
+}
+
 // The messages of the name field of Add package, at the field
 // (docs/screens/ticket.md, States): SMELT maintains no package of the name,
 // whose letter case counts; no Product that SMELT lists for it, in a

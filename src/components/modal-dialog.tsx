@@ -13,6 +13,7 @@ import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { Button } from "./button";
 import { FOCUS_RING } from "./focus-ring";
 import { Message } from "./message";
+import { chosenOrFirstRadio } from "./radio-group";
 import { focusScreenHeading } from "./screen-heading";
 
 // A dialog centered over the page (docs/design-system.md, Dialogs).
@@ -214,12 +215,18 @@ interface FirstFieldFocusProps {
 
 // Content of a dialog whose first field, or first button, takes the focus as
 // the dialog opens (docs/behaviors.md, Accessibility, Dialogs), such as the
-// field of a form, or Cancel in a confirmation. It adds no box of its own to
-// the layout.
+// field of a form, or Cancel in a confirmation; a group of radio buttons
+// takes it on its chosen option, or on its first option without a choice
+// (docs/design-system.md, Forms). It adds no box of its own to the layout.
 export function FirstFieldFocus({ children }: FirstFieldFocusProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>("input, button")?.focus();
+    const first = ref.current?.querySelector<HTMLElement>("input, button");
+    if (first instanceof HTMLInputElement && first.type === "radio") {
+      chosenOrFirstRadio(first.closest('[role="radiogroup"]'))?.focus();
+      return;
+    }
+    first?.focus();
   }, []);
   return (
     <div ref={ref} className="contents">

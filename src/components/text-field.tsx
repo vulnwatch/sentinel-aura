@@ -1,5 +1,5 @@
 import { CircleAlert } from "lucide-react";
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   FieldError,
   Input,
@@ -37,8 +37,9 @@ export type TextFieldProps = FieldProps & {
   // field by its name once the field commits its value, which a text field
   // does on its change event, as it loses the focus after its value changed.
   // A field whose form gives none takes its errors from the form and from
-  // its own checks, as React Aria shows them.
-  error?: string | undefined;
+  // its own checks, as React Aria shows them. An error can hold a link, such
+  // as to the record that it names.
+  error?: ReactNode;
 };
 
 export type TextAreaFieldProps = FieldProps & {
@@ -81,8 +82,9 @@ function FieldDescription({ text }: { text: string | undefined }) {
 
 // The error of a field, after circle-alert at 14 px, in text-13, weight 500,
 // danger-on-soft, which assistive technologies read with the control: the
-// error that the form holds, or otherwise the errors that React Aria shows.
-export function FieldErrorMessage({ error }: { error?: string | undefined }) {
+// error that the form holds, which can hold a link, or otherwise the errors
+// that React Aria shows.
+export function FieldErrorMessage({ error }: { error?: ReactNode }) {
   return (
     <FieldError className="flex gap-1.5 text-13 font-medium text-danger-on-soft">
       {({ validationErrors }) => (
@@ -98,7 +100,7 @@ export function FieldErrorMessage({ error }: { error?: string | undefined }) {
 // What a field with the error that its form holds gives React Aria: the
 // error alone decides whether the field is invalid, and leaves the
 // browser's own checks of the form untouched.
-function heldError(error: string | undefined) {
+function heldError(error: ReactNode) {
   return error === undefined
     ? {}
     : { isInvalid: true, validationBehavior: "aria" as const };
