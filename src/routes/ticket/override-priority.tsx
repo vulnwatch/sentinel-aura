@@ -1,34 +1,14 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { Form } from "react-aria-components";
-import {
-  isRequestFailure,
-  MESSAGE_INVALID_VALUE,
-  presentChangeFailure,
-  validationErrorFields,
-} from "../../api/errors";
 import { TicketPriorityValue } from "../../api/generated/model";
 import type {
   TicketDetail,
   TicketDetailResponse,
 } from "../../api/generated/model";
 import { useSetTicketPriority } from "../../api/generated/tickets";
-import { Button } from "../../components/button";
-import { useChangeOutcome, useMounted } from "../../components/change-outcome";
-import { useDiscardQuestion } from "../../components/discard-question";
-import { useFieldErrorFocus } from "../../components/field-error-focus";
+import { useChangeOutcome } from "../../components/change-outcome";
 import type { MessageRecord } from "../../components/message-area";
-import {
-  DialogErrorMessage,
-  FirstFieldFocus,
-  ModalDialog,
-  type DialogError,
-} from "../../components/modal-dialog";
 import { Priority, priorityName } from "../../components/priority";
 import { PriorityBasis } from "../../components/priority-explanation";
-import {
-  chosenOrFirstRadio,
-  RadioGroupField,
-} from "../../components/radio-group";
+import { ChoiceDialog } from "./choice-dialog";
 
 // Override priority…, Set Priority Override,
 // PATCH /api/v1/tickets/{ticket_id}/priority, from Actions
@@ -76,17 +56,6 @@ export function overriddenText({ data }: TicketDetailResponse): string {
     : `Priority override cleared: ${priorityName(data.priority)}, automatic.`;
 }
 
-// What a submission that failed shows: the error of the priority, and the
-// error at the top of the form.
-interface FormFailure {
-  field: string | undefined;
-  form: DialogError | undefined;
-}
-
-const NO_FAILURE: FormFailure = { field: undefined, form: undefined };
-
-const MESSAGE_NO_PRIORITY = "Choose a priority.";
-
 interface OverridePriorityDialogProps {
   // The Ticket as the screen shows it, whose automatic priority and basis
   // the dialog shows as they change.
@@ -101,22 +70,16 @@ interface OverridePriorityDialogProps {
   onDone: (text: string) => void;
 }
 
-// The dialog of Override priority… (docs/design-system.md, Dialogs), titled
-// such as "Override the priority of SNTL-12", at most 560 px wide: what an
-// override does; the automatic priority with its basis, in a frame, as the
-// Ticket shows them (PriorityBasis); then Priority, a group of radio buttons
-// with Automatic, which clears the override, and the levels, each with its
-// meaning, its chosen option the override as the dialog opened, which takes
-// the focus; then Cancel and Save, a primary button. Save without another
-// choice closes it without a request. A field error of a VALIDATION_ERROR
-// shows at Priority; every other failure at the top of the form, which takes
-// the focus, in the presentation of a change, as a warning when Sentinel did
-// not confirm it (docs/behaviors.md, Where Errors Appear; Retries and
-// Unconfirmed Changes). Another change reverses it, so it asks for no
-// confirmation (docs/behaviors.md, Confirmation); with another choice,
-// Cancel, Escape, and every navigation of the UI ask "Discard changes?"
-// first. While the change is in progress, the dialog cannot be closed, and
-// the choice cannot change.
+// The dialog of Override priority… (ChoiceDialog), titled such as "Override
+// the priority of SNTL-12": what an override does; the automatic priority
+// with its basis, in a frame, as the Ticket shows them (PriorityBasis); then
+// Priority, with Automatic, which clears the override, and the levels, each
+// with its meaning, its chosen option the override as the dialog opened;
+// then Cancel and Save, a primary button. A field error of a
+// VALIDATION_ERROR shows at Priority; every other failure at the top of the
+// form, in the presentation of a change. Another change reverses it, so it
+// asks for no confirmation (docs/behaviors.md, Confirmation); with another
+// choice, leaving it asks "Discard changes?" first.
 export function OverridePriorityDialog({
   ticket,
   record,
@@ -135,158 +98,47 @@ export function OverridePriorityDialog({
       },
     ),
   });
-  const mounted = useMounted();
-  const formId = useId();
-  const group = useRef<HTMLDivElement>(null);
-  // The override as the dialog opened, which Save without another choice
-  // keeps without a request.
-  const [opened] = useState(() => choiceOf(ticket.priority_override));
-  const [choice, setChoice] = useState<Choice | undefined>(opened);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<FormFailure>(NO_FAILURE);
-  // A failure of the UI itself, which the router shows (src/router.ts).
-  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
-  const submitting = useRef(false);
-  const { focusField, region } = useFieldErrorFocus(
-    failure.field !== undefined,
-  );
-  useEffect(() => {
-    if (failure.form !== undefined || failure.field === undefined) {
-      return;
-    }
-    focusField(chosenOrFirstRadio(group.current), failure.field);
-  }, [failure, focusField]);
-  const { close, question } = useDiscardQuestion({
-    held: choice !== opened && !busy,
-    consequence: `The priority of ${ticketId} isn't changed.`,
-    onDiscard: onClose,
-  });
-  if (uiFailure !== undefined) {
-    throw uiFailure.error;
-  }
-
-  const fail = (error: unknown) => {
-    if (!isRequestFailure(error)) {
-      setUiFailure({ error });
-      return;
-    }
-    const { fields, unmatched } = validationErrorFields(error, ["priority"]);
-    setFailure({
-      field: fields.length > 0 ? MESSAGE_INVALID_VALUE : undefined,
-      form: unmatched ? presentChangeFailure(error) : undefined,
-    });
-  };
-
-  const submit = async () => {
-    if (submitting.current) {
-      return;
-    }
-    if (choice === undefined) {
-      setFailure({ field: MESSAGE_NO_PRIORITY, form: undefined });
-      return;
-    }
-    if (choice === opened) {
-      onClose();
-      return;
-    }
-    setFailure(NO_FAILURE);
-    submitting.current = true;
-    setBusy(true);
-    try {
-      await set.mutateAsync({
-        ticketId,
-        data: { priority: choice === AUTOMATIC ? null : choice },
-      });
-    } catch (failed) {
-      if (mounted.current) {
-        fail(failed);
-      }
-    }
-    submitting.current = false;
-    setBusy(false);
-  };
-
+  // The override as the dialog opens, which Save without another choice
+  // keeps without a request: the dialog keeps the one of its first render.
+  const openedWith = choiceOf(ticket.priority_override);
   const automatic = ticket.priority_automatic;
   return (
-    <ModalDialog
-      isOpen
-      onClose={close}
-      width="form"
+    <ChoiceDialog<Choice>
       title={`Override the priority of ${ticketId}`}
-      closable={!busy}
-      buttons={
-        <>
-          <Button size="large" isDisabled={busy} onPress={close}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant="primary"
-            size="large"
-            isBusy={busy}
-          >
-            Save
-          </Button>
-          {question}
-        </>
+      intro={`An override replaces the automatic priority of ${ticketId} until it is cleared. Sentinel keeps calculating the automatic priority.`}
+      beforeForm={
+        <div className="mt-4 max-w-112 rounded-lg border border-border px-4 py-3 text-14">
+          <PriorityBasis ticket={ticket} withAutomatic headingLevel={4} />
+        </div>
       }
-    >
-      <p className="text-fg-muted">
-        An override replaces the automatic priority of {ticketId} until it is
-        cleared. Sentinel keeps calculating the automatic priority.
-      </p>
-      <div className="mt-4 max-w-112 rounded-lg border border-border px-4 py-3 text-14">
-        <PriorityBasis ticket={ticket} withAutomatic headingLevel={4} />
-      </div>
-      <FirstFieldFocus>
-        <Form
-          id={formId}
-          onSubmit={(event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            void submit();
-          }}
-          validationErrors={
-            failure.field === undefined
-              ? undefined
-              : { priority: failure.field }
-          }
-          className="mt-4 flex max-w-112 flex-col gap-3"
-        >
-          {failure.form !== undefined && (
-            <DialogErrorMessage error={failure.form} />
-          )}
-          <RadioGroupField<Choice>
-            label="Priority"
-            name="priority"
-            options={[
-              {
-                value: AUTOMATIC,
-                label: "Automatic",
-                description:
-                  automatic === null
-                    ? "The automatic priority, not yet prioritizable now."
-                    : `The automatic priority, now ${priorityName(automatic)}.`,
-              },
-              ...LEVELS.map(({ value, meaning }) => ({
-                value,
-                label: <Priority priority={value} />,
-                description: meaning,
-              })),
-            ]}
-            value={choice}
-            onChange={(next) => {
-              setChoice(next);
-              if (failure.field !== undefined) {
-                setFailure((current) => ({ ...current, field: undefined }));
-              }
-            }}
-            isReadOnly={busy}
-            groupRef={group}
-          />
-          {region}
-        </Form>
-      </FirstFieldFocus>
-    </ModalDialog>
+      label="Priority"
+      name="priority"
+      options={[
+        {
+          value: AUTOMATIC,
+          label: "Automatic",
+          description:
+            automatic === null
+              ? "The automatic priority, not yet prioritizable now."
+              : `The automatic priority, now ${priorityName(automatic)}.`,
+        },
+        ...LEVELS.map(({ value, meaning }) => ({
+          value,
+          label: <Priority priority={value} />,
+          description: meaning,
+        })),
+      ]}
+      openedWith={openedWith}
+      emptyMessage="Choose a priority."
+      discardConsequence={`The priority of ${ticketId} isn't changed.`}
+      action="Save"
+      submit={(choice) =>
+        set.mutateAsync({
+          ticketId,
+          data: { priority: choice === AUTOMATIC ? null : choice },
+        })
+      }
+      onClose={onClose}
+    />
   );
 }

@@ -175,7 +175,8 @@ function Consequences({ ticket, cveId }: ConsequencesProps) {
 
 interface AssociateCveDialogProps {
   // The Ticket as the screen shows it, whose severity and status the
-  // confirmation states.
+  // confirmation states, and whose CVE, once a read shows one, ends the
+  // input.
   ticket: TicketDetail;
   record: MessageRecord;
   // Reads again what the change affects, whatever its outcome.
@@ -203,7 +204,9 @@ interface AssociateCveDialogProps {
 // (docs/behaviors.md, Where Errors Appear; Retries and Unconfirmed
 // Changes). A failure closes the confirmation, so that the form,
 // which keeps the CVE ID, shows it. With input, Cancel, Escape, and every
-// navigation of the UI ask "Discard changes?" first. While the change is in
+// navigation of the UI ask "Discard changes?" first, a navigation over the
+// confirmation too, whose Keep editing returns to it; once a read shows the
+// Ticket with a CVE, the text no longer holds input. While the change is in
 // progress, neither the confirmation nor the dialog can be closed.
 export function AssociateCveDialog({
   ticket,
@@ -252,8 +255,11 @@ export function AssociateCveDialog({
       focusField(inputRef.current, failure.field.message);
     }
   }, [failure, inputRef, focusField]);
+  // The CVE ID is input until a read shows the Ticket with a CVE, as after
+  // another user's association, which Sentinel then refuses
+  // (400 TICKET_CVE_ALREADY_SET).
   const { close, question } = useDiscardQuestion({
-    held: text.trim() !== "" && !busy,
+    held: text.trim() !== "" && !busy && ticket.cve === null,
     consequence: `No CVE is associated with ${ticketId}.`,
     onDiscard: onClose,
   });

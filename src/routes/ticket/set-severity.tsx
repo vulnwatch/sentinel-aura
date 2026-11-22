@@ -1,33 +1,14 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { Form } from "react-aria-components";
-import {
-  isRequestFailure,
-  MESSAGE_INVALID_VALUE,
-  presentSetSeverityFailure,
-  validationErrorFields,
-} from "../../api/errors";
+import { presentSetSeverityFailure } from "../../api/errors";
 import { SeverityValue, TicketStatusValue } from "../../api/generated/model";
 import type {
   TicketDetail,
   TicketDetailResponse,
 } from "../../api/generated/model";
 import { useSetTicketSeverity } from "../../api/generated/tickets";
-import { Button } from "../../components/button";
-import { useChangeOutcome, useMounted } from "../../components/change-outcome";
-import { useDiscardQuestion } from "../../components/discard-question";
-import { useFieldErrorFocus } from "../../components/field-error-focus";
+import { useChangeOutcome } from "../../components/change-outcome";
 import type { MessageRecord } from "../../components/message-area";
-import {
-  DialogErrorMessage,
-  FirstFieldFocus,
-  ModalDialog,
-  type DialogError,
-} from "../../components/modal-dialog";
-import {
-  chosenOrFirstRadio,
-  RadioGroupField,
-} from "../../components/radio-group";
 import { Severity, severityName } from "../../components/severity";
+import { ChoiceDialog } from "./choice-dialog";
 
 // Set severity…, Set Severity Manual,
 // PATCH /api/v1/tickets/{ticket_id}/severity, from Actions
@@ -82,20 +63,9 @@ export function severityText({ data }: TicketDetailResponse): string {
     : `Severity set to ${severityName(data.severity)}.`;
 }
 
-// What a submission that failed shows: the error of the severity, and the
-// error at the top of the form.
-interface FormFailure {
-  field: string | undefined;
-  form: DialogError | undefined;
-}
-
-const NO_FAILURE: FormFailure = { field: undefined, form: undefined };
-
-const MESSAGE_NO_SEVERITY = "Choose a severity.";
-
 interface SetSeverityDialogProps {
   // The Ticket as the screen shows it, whose status the meaning of Not set
-  // follows.
+  // follows, and whose CVE, once a read shows one, ends the input.
   ticket: TicketDetail;
   record: MessageRecord;
   // Reads again what the change affects, whatever its outcome.
@@ -107,24 +77,19 @@ interface SetSeverityDialogProps {
   onDone: (text: string) => void;
 }
 
-// The dialog of Set severity… (docs/design-system.md, Dialogs), titled such
-// as "Set the severity of SNTL-21", at most 560 px wide: what the severity
-// of a Ticket without a CVE decides; then Severity, a group of radio buttons
-// with the severities, each with its mark, None with its meaning, and Not
-// set, which clears it, with what that means for the Ticket as the screen
-// shows it, its chosen option the severity as the dialog opened,
-// which takes the focus; then Cancel and Save, a primary button. Save
-// without another choice closes it without a request. A field error of a
+// The dialog of Set severity… (ChoiceDialog), titled such as "Set the
+// severity of SNTL-21": what the severity of a Ticket without a CVE decides;
+// then Severity, with the severities, each with its mark, None with its
+// meaning, and Not set, which clears it, with what that means for the Ticket
+// as the screen shows it, its chosen option the severity as the dialog
+// opened; then Cancel and Save, a primary button. A field error of a
 // VALIDATION_ERROR shows at Severity; 409 TICKET_SEVERITY_DERIVED, for a
-// Ticket that another user associated with a CVE meanwhile, and every other
-// failure at the top of the form, which takes the focus, the others in the
-// presentation of a change, as a warning when Sentinel did not confirm it
-// (docs/behaviors.md, Where Errors Appear; Retries and Unconfirmed Changes).
-// Another change reverses it, so it asks for no confirmation
-// (docs/behaviors.md, Confirmation); with another choice, Cancel, Escape,
-// and every navigation of the UI ask "Discard changes?" first. While the
-// change is in progress, the dialog cannot be closed, and the choice cannot
-// change.
+// Ticket that another user associated with a CVE meanwhile, at the top of
+// the form as an error, and every other failure there in the presentation of
+// a change. Another change reverses it, so it asks for no confirmation
+// (docs/behaviors.md, Confirmation); with another choice, leaving it asks
+// "Discard changes?" first, until a read shows the Ticket with a CVE, whose
+// severity Sentinel then derives, so that the choice no longer holds input.
 export function SetSeverityDialog({
   ticket,
   record,
@@ -144,156 +109,45 @@ export function SetSeverityDialog({
       (failure) => presentSetSeverityFailure(failure, ticketId),
     ),
   });
-  const mounted = useMounted();
-  const formId = useId();
-  const group = useRef<HTMLDivElement>(null);
-  // The severity as the dialog opened, which Save without another choice
-  // keeps without a request. Without a CVE, the resolved severity is the
-  // one set by hand (Sentinel docs/features/tickets/tickets.md, Resolution
-  // Rules).
-  const [opened] = useState(() => choiceOf(ticket.severity));
-  const [choice, setChoice] = useState<Choice | undefined>(opened);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<FormFailure>(NO_FAILURE);
-  // A failure of the UI itself, which the router shows (src/router.ts).
-  const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
-  const submitting = useRef(false);
-  const { focusField, region } = useFieldErrorFocus(
-    failure.field !== undefined,
-  );
-  useEffect(() => {
-    if (failure.form !== undefined || failure.field === undefined) {
-      return;
-    }
-    focusField(chosenOrFirstRadio(group.current), failure.field);
-  }, [failure, focusField]);
-  const { close, question } = useDiscardQuestion({
-    held: choice !== opened && !busy,
-    consequence: `The severity of ${ticketId} isn't changed.`,
-    onDiscard: onClose,
-  });
-  if (uiFailure !== undefined) {
-    throw uiFailure.error;
-  }
-
-  const fail = (error: unknown) => {
-    if (!isRequestFailure(error)) {
-      setUiFailure({ error });
-      return;
-    }
-    const { fields, unmatched } = validationErrorFields(error, ["severity"]);
-    setFailure({
-      field: fields.length > 0 ? MESSAGE_INVALID_VALUE : undefined,
-      form: unmatched ? presentSetSeverityFailure(error, ticketId) : undefined,
-    });
-  };
-
-  const submit = async () => {
-    if (submitting.current) {
-      return;
-    }
-    if (choice === undefined) {
-      setFailure({ field: MESSAGE_NO_SEVERITY, form: undefined });
-      return;
-    }
-    if (choice === opened) {
-      onClose();
-      return;
-    }
-    setFailure(NO_FAILURE);
-    submitting.current = true;
-    setBusy(true);
-    try {
-      await set.mutateAsync({
-        ticketId,
-        data: { severity: choice === UNSET ? null : choice },
-      });
-    } catch (failed) {
-      if (mounted.current) {
-        fail(failed);
-      }
-    }
-    submitting.current = false;
-    setBusy(false);
-  };
-
+  // The severity as the dialog opens, which Save without another choice
+  // keeps without a request: the dialog keeps the one of its first render.
+  // Without a CVE, the resolved severity is the one set by hand (Sentinel
+  // docs/features/tickets/tickets.md, Resolution Rules).
+  const openedWith = choiceOf(ticket.severity);
   return (
-    <ModalDialog
-      isOpen
-      onClose={close}
-      width="form"
+    <ChoiceDialog<Choice>
       title={`Set the severity of ${ticketId}`}
-      closable={!busy}
-      buttons={
-        <>
-          <Button size="large" isDisabled={busy} onPress={close}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant="primary"
-            size="large"
-            isBusy={busy}
-          >
-            Save
-          </Button>
-          {question}
-        </>
+      intro={`Without a CVE, ${ticketId} has the severity that you set here. It decides the deadlines and the automatic priority of ${ticketId}.`}
+      label="Severity"
+      name="severity"
+      options={[
+        ...SEVERITIES.map((value) => ({
+          value,
+          label: <Severity severity={value} />,
+          description:
+            value === SeverityValue.none
+              ? "Informational: no deadline applies."
+              : undefined,
+        })),
+        {
+          value: UNSET,
+          label: "Not set",
+          description: unsetMeaning(ticket),
+        },
+      ]}
+      openedWith={openedWith}
+      emptyMessage="Choose a severity."
+      discardConsequence={`The severity of ${ticketId} isn't changed.`}
+      action="Save"
+      submit={(choice) =>
+        set.mutateAsync({
+          ticketId,
+          data: { severity: choice === UNSET ? null : choice },
+        })
       }
-    >
-      <p className="text-fg-muted">
-        Without a CVE, {ticketId} has the severity that you set here. It decides
-        the deadlines and the automatic priority of {ticketId}.
-      </p>
-      <FirstFieldFocus>
-        <Form
-          id={formId}
-          onSubmit={(event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            void submit();
-          }}
-          validationErrors={
-            failure.field === undefined
-              ? undefined
-              : { severity: failure.field }
-          }
-          className="mt-4 flex max-w-112 flex-col gap-3"
-        >
-          {failure.form !== undefined && (
-            <DialogErrorMessage error={failure.form} />
-          )}
-          <RadioGroupField<Choice>
-            label="Severity"
-            name="severity"
-            options={[
-              ...SEVERITIES.map((value) => ({
-                value,
-                label: <Severity severity={value} />,
-                description:
-                  value === SeverityValue.none
-                    ? "Informational: no deadline applies."
-                    : undefined,
-              })),
-              {
-                value: UNSET,
-                label: "Not set",
-                description: unsetMeaning(ticket),
-              },
-            ]}
-            value={choice}
-            onChange={(next) => {
-              setChoice(next);
-              if (failure.field !== undefined) {
-                setFailure((current) => ({ ...current, field: undefined }));
-              }
-            }}
-            isReadOnly={busy}
-            groupRef={group}
-          />
-          {region}
-        </Form>
-      </FirstFieldFocus>
-    </ModalDialog>
+      presentFailure={(failure) => presentSetSeverityFailure(failure, ticketId)}
+      inputHeld={ticket.cve === null}
+      onClose={onClose}
+    />
   );
 }

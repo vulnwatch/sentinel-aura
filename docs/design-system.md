@@ -1606,11 +1606,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   a field's does, gives each button a 2 px boundary in `danger-icon`, also the
   one selected, and is read with each option after its meaning, so that the
   option that holds the focus states it. Read-only, as while the change that
-  sends it is in progress, it keeps its look and the focus. As the first field
-  of a dialog, its chosen option takes the focus as the dialog opens, or its
-  first option without a choice. A choice among a few short values that need no
-  meaning, such as the values of a metric of a CVSS vector, is a segmented
-  control instead (above).
+  sends it is in progress, it keeps its look and the focus. Its chosen option,
+  or its first option without a choice, takes the focus for the group: as the
+  first field of a dialog as the dialog opens, and as a field with an error
+  (`docs/behaviors.md`, Accessibility, Announcements). A choice among a few
+  short values that need no meaning, such as the values of a metric of a CVSS
+  vector, is a segmented control instead (above).
 - A field whose value users copy character by character, such as a CVSS
   vector, shows its value in monospace (Font).
 - A select of a value of a record within the line of the record, whose

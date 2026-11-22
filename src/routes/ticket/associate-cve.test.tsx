@@ -19,6 +19,7 @@ import {
   validationError,
 } from "../../test-api";
 import { pointerAwayFrom } from "../../test-pointer";
+import { screenshot } from "../../test-screenshot";
 import {
   ACTORS,
   announcements,
@@ -75,8 +76,9 @@ const BACK_TO_ANALYZED =
   "SNTL-12 can also return to Analysis until CVE-2099-1234 has a SUSE assessment, and to Analyzed until its eligible Products are released.";
 
 // The color of a danger button in the light theme (docs/design-system.md,
-// Buttons and Links): danger-solid.
+// Buttons and Links): danger-solid, as a style and as a pixel.
 const DANGER_SOLID = "rgb(207, 34, 46)";
+const DANGER_SOLID_PIXEL = "#cf222e";
 
 const ASSOCIATE = `${TICKET}/associate-cve`;
 
@@ -714,5 +716,99 @@ describe("leaving Associate CVE…", () => {
 
     await expect.element(dialog).not.toBeInTheDocument();
     expect(discardDialog(screen).query()).toBeNull();
+  });
+
+  test.each(["Cancel", "Escape", "a navigation"])(
+    "closes on %s without asking, and without a request, once a read shows the Ticket with a CVE, also with a CVE ID in the field",
+    async (way) => {
+      let fields: Partial<TicketDetail> = {};
+      const spy = showingAssociable({}, { ticket: () => withoutCve(fields) });
+      const { router, screen } = await renderTicket();
+      const dialog = await openAssociate(screen);
+      await cveField(dialog).fill("CVE-2099-1234");
+      // Another user associates a CVE with the Ticket meanwhile.
+      fields = { cve: fictionalCve() };
+
+      await returnToForeground();
+
+      await readEnded(TICKET);
+      // The heading row, behind the dialog, which keeps it from assistive
+      // technologies, shows the CVE ID.
+      await expect
+        .element(
+          screen
+            .getByRole("main", { includeHidden: true })
+            .getByText("CVE-2099-0012", { exact: true })
+            .first(),
+        )
+        .toBeInTheDocument();
+      await expect.element(cveField(dialog)).toHaveValue("CVE-2099-1234");
+      if (way === "Escape") {
+        await userEvent.keyboard("{Escape}");
+      } else if (way === "Cancel") {
+        await cancelButton(dialog).click();
+      } else {
+        router.history.push("/tickets");
+      }
+
+      await expect.element(dialog).not.toBeInTheDocument();
+      expect(discardDialog(screen).query()).toBeNull();
+      if (way === "a navigation") {
+        await expect
+          .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+          .toBeVisible();
+      } else {
+        await expectFocusSettledOn(actionsButton(screen));
+      }
+      expect(associations(spy)).toEqual([]);
+    },
+  );
+
+  test("asks over the confirmation before a navigation discards the CVE ID, returns to the confirmation on Keep editing, and closes both and leaves on Discard", async () => {
+    const spy = showingAssociable();
+    const { router, screen } = await renderTicket();
+    const { dialog, asked } = await submitCveId(screen, "CVE-2099-1234");
+    await expect.element(cancelButton(asked)).toHaveFocus();
+
+    router.history.push("/tickets");
+
+    const discard = discardDialog(screen);
+    const keep = discard.getByRole("button", { name: "Keep editing" });
+    await expect.element(keep).toHaveFocus();
+    await expect
+      .element(
+        discard.getByText("No CVE is associated with SNTL-12.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+    // The question shows above the confirmation, which would otherwise cover
+    // it: its Discard, a danger button, shows its color beside its label.
+    const discardButton = discard.getByRole("button", {
+      name: "Discard",
+      exact: true,
+    });
+    const picture = await screenshot(discardButton);
+    expect(picture.at(4, picture.height / 2)).toBe(DANGER_SOLID_PIXEL);
+    await nextFrames();
+    expect(router.state.location.pathname).toBe("/tickets/SNTL-12");
+    await keep.click();
+    await expect.element(discard).not.toBeInTheDocument();
+    await nextFrames();
+    await expect.element(asked).toBeVisible();
+    await expect
+      .poll(() => asked.element().contains(document.activeElement))
+      .toBe(true);
+    expect(router.state.location.pathname).toBe("/tickets/SNTL-12");
+
+    router.history.push("/tickets");
+    await discardButton.click();
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
+      .toBeVisible();
+    expect(asked.query()).toBeNull();
+    expect(dialog.query()).toBeNull();
+    expect(associations(spy)).toEqual([]);
   });
 });

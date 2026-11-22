@@ -1008,6 +1008,12 @@ depart from them:
   returns to the button that opened it (`docs/behaviors.md`, Accessibility,
   Dialogs), or moves as the entry states when the change removes that
   button.
+- **Forms.** A form checks before sending what its entry states, and the error
+  of a check shows at its field when the user submits the form, the field takes
+  the focus, and the error goes once the input changes (`docs/behaviors.md`,
+  Where Errors Appear; Accessibility, Announcements). A dialog that edits
+  values closes without a request when its values are those with which it
+  opened.
 - **Outcome.** The screen announces an outcome once the read after the
   change that the entry names arrives, and shows it in the message area
   when that read fails, also when the failure replaces the screen, as a
@@ -1153,10 +1159,8 @@ Revert Duplicate Status; Rerun Ticket Convergence; Sentinel
   failure of their read, which shows in the menu, leaves the change possible.
 - The form checks the original, without its surrounding whitespace, before
   sending it: empty, "Choose the original Ticket."; a text that is not an
-  identifier, "Choose a Ticket, or enter its identifier, such as SNTL-42.";
-  and the Ticket itself, "A Ticket can't be a duplicate of itself.". The error
-  shows at the field when the user submits the form, the field takes the
-  focus, and the error goes once the input changes.
+  identifier, "Choose a Ticket, or enter its identifier, such as SNTL-42."; and
+  the Ticket itself, "A Ticket can't be a duplicate of itself." (above).
 - Mark as duplicate… asks for no confirmation: Revert duplicate reverses it,
   and the duplicates that it moved return with changes of their own
   (`docs/behaviors.md`, Confirmation; Sentinel
@@ -1264,15 +1268,19 @@ Priority Basis; Manual Override):
   severity that the pinned contract does not list chooses none. Then Cancel
   and Save, a primary button.
 - Without a choice, Save says "Choose a priority." or "Choose a severity." at
-  the group, and the first option takes the focus. Save with the choice with
-  which the dialog opened closes it without a request, also when a read
-  meanwhile shows another value: the choice is the user's input, while the
-  frame of the automatic priority and the meaning of Automatic and of Not set
-  follow the Ticket as the screen shows it. Neither asks for confirmation:
-  another change reverses it (`docs/behaviors.md`, Confirmation). Their input
-  is another choice than the one with which the dialog opened, and before
-  discarding it the question says "The priority of SNTL-12 isn't changed." or
-  "The severity of SNTL-21 isn't changed." (above). While the request is in
+  the group. The choice with which the dialog opened stays its value also when
+  a read meanwhile shows another value, so Save then closes it without a
+  request (above): the choice is the user's input, while the frame of the
+  automatic priority and the meaning of Automatic and of Not set follow the
+  Ticket as the screen shows it. Neither asks for confirmation: another change
+  reverses it (`docs/behaviors.md`, Confirmation). Their input is another
+  choice than the one with which the dialog opened, and before discarding it
+  the question says "The priority of SNTL-12 isn't changed." or "The severity
+  of SNTL-21 isn't changed." (above). Once a read shows the Ticket with a CVE,
+  as after another user's association, the choice of Set severity… no longer
+  holds input, since Sentinel then derives the severity: Cancel, Escape, and a
+  navigation close the dialog without the question, and Save, with another
+  choice, shows `409 TICKET_SEVERITY_DERIVED` (States). While the request is in
   progress, the choice is read-only (`docs/design-system.md`, Forms).
 - Associate CVE… opens "Associate a CVE with SNTL-21". It says, in
   `fg-muted`, "SNTL-21 takes the severity, the CVSS assessments, the sources,
@@ -1282,15 +1290,13 @@ Priority Basis; Manual Override):
   Resolution Behavior); then CVE ID, a single-line field, described "Such as
   CVE-2099-1234.", which takes the focus as the dialog opens; then Cancel and
   Associate CVE, a primary button.
-- The form takes the CVE ID without its surrounding whitespace, with `CVE-`
-  in any letter case, which it sends in capitals, and checks it before
-  sending it, as the pinned OpenAPI document publishes it (Sentinel
-  `docs/api-spec.md`, Published Input Constraints): empty, "Enter the CVE
-  ID."; more than 20 characters, "Enter at most 20 characters."; and
-  another form than `CVE-`, four digits, `-`, and at least four digits,
-  "Enter a CVE ID, such as CVE-2099-1234.". The error shows at the field when
-  the user submits the form, the field takes the focus, and the error goes
-  once the input changes.
+- The form takes the CVE ID without its surrounding whitespace, with `CVE-` in
+  any letter case, which it sends in capitals, and checks it before sending it,
+  as the pinned OpenAPI document publishes it (Sentinel `docs/api-spec.md`,
+  Published Input Constraints): empty, "Enter the CVE ID."; more than 20
+  characters, "Enter at most 20 characters."; and another form than `CVE-`,
+  four digits, `-`, and at least four digits, "Enter a CVE ID, such as
+  CVE-2099-1234." (above).
 - No operation removes a CVE from a Ticket, so Associate CVE… asks for
   confirmation once the form passes its checks (`docs/behaviors.md`,
   Confirmation): "Associate CVE-2099-1234 with SNTL-21?", "SNTL-21 takes its
@@ -1306,10 +1312,16 @@ Priority Basis; Manual Override):
   → Analyzed; Gate: Analyzed → Resolved); and "No action removes a CVE from a
   Ticket, so this can't be undone."; Cancel and Associate CVE, a danger
   button, which sends the CVE ID. The consequences follow the Ticket as the
-  screen shows it. Cancel and Escape return to the form. Its input is a text
-  typed, other than whitespace, and before discarding it the question says
-  "No CVE is associated with SNTL-21." (above). While the request is in
-  progress, the field keeps the CVE ID, read-only.
+  screen shows it. Cancel and Escape return to the form, and a navigation of
+  the UI asks "Discard changes?" over the confirmation, whose Keep editing
+  returns to it. Its input is a text typed, other than whitespace, and before
+  discarding it the question says "No CVE is associated with SNTL-21."
+  (above). Once a read shows the Ticket with a CVE, as after another user's
+  association or the user's own that Sentinel did not confirm, the text no
+  longer holds input: Cancel, Escape, and a navigation close the dialog
+  without the question, and its action shows `400 TICKET_CVE_ALREADY_SET`
+  (States). While the request is in progress, the field keeps the CVE ID,
+  read-only.
 - An effective change can assign an unassigned Ticket to the user, move it
   from New to Analysis, and change its status; a change of the severity
   also changes its deadlines and its automatic priority, and an association
@@ -1526,27 +1538,24 @@ Delete SUSE CVSS Assessment):
     user enters chooses the metrics that it names.
   - Then Cancel and the action, a primary button: "Add SUSE assessment", or
     "Save" in Edit.
-- The form checks the vector without its surrounding whitespace before
-  sending it, and sends it without that whitespace (Sentinel
+- The form checks the vector without its surrounding whitespace before sending
+  it, and sends it without that whitespace (Sentinel
   `docs/features/tickets/cvss-scoring.md`, Input Rules): empty, "Choose the
-  metrics, or enter the vector."; more than 200 characters, "Enter at most
-  200 characters."; a vector without the prefix of its version,
-  "Enter a CVSS v3.1 vector, which starts with CVSS:3.1/.", or in Add, for a
-  version of which SUSE has an assessment, "SUSE already has a CVSS v4.0
-  assessment: edit it in its row.". The error shows at the field when the
-  user submits the form, the field takes the focus, and the error goes once
-  the input changes. Every other rule of the vector is Sentinel's: a vector
-  that the read of its score rejects shows the error of `422
-  CVSS_INVALID_VECTOR` (States) at the field at once, without moving the
-  focus, until the input changes, and the form still sends it.
+  metrics, or enter the vector."; more than 200 characters, "Enter at most 200
+  characters."; a vector without the prefix of its version, "Enter a CVSS v3.1
+  vector, which starts with CVSS:3.1/.", or in Add, for a version of which SUSE
+  has an assessment, "SUSE already has a CVSS v4.0 assessment: edit it in its
+  row." (above). Every other rule of the vector is Sentinel's: a vector that
+  the read of its score rejects shows the error of `422 CVSS_INVALID_VECTOR`
+  (States) at the field at once, without moving the focus, until the input
+  changes, and the form still sends it.
 - Sentinel sets or replaces the SUSE assessment of the version of the vector
-  that it receives (same document, Set or Update SUSE CVSS Assessment), so
-  Add reads the assessments again as it submits, and when SUSE has one of
-  the version by then, sends nothing: the tab then says so in place of its
-  form, and that line takes the focus. Two users who add the same version at
-  the same instant can still replace one another. Edit sends only a vector
-  of its version, and closes without a request when the vector is the saved
-  one.
+  that it receives (same document, Set or Update SUSE CVSS Assessment), so Add
+  reads the assessments again as it submits, and when SUSE has one of the
+  version by then, sends nothing: the tab then says so in place of its form,
+  and that line takes the focus. Two users who add the same version at the same
+  instant can still replace one another. Edit sends only a vector of its
+  version.
 - Add SUSE assessment and Edit ask for no confirmation. Before discarding
   input, the question says "The SUSE assessment that you entered isn't
   added." in Add or "Your changes to this SUSE assessment aren't saved." in
@@ -1768,15 +1777,13 @@ Maintained Packages):
   and returns none before its first one, so the field takes a name that it
   does not suggest, and a failure of their read, which shows in the menu,
   leaves the addition possible.
-- The form checks the name without its surrounding whitespace before sending
-  it so, as the pinned OpenAPI document publishes it (Sentinel
-  `docs/api-spec.md`, Published Input Constraints): empty, "Enter the package
-  name."; more than 255 characters, "Enter at most 255 characters."; and
-  another character than letters, digits, ".", "_", "+", and "-", or a first
-  character that is not a letter or a digit, "Enter only letters, digits, and
-  . _ + -, starting with a letter or a digit.", so a name such as `libxml++`
-  passes. The error shows at the field when the user submits the form, the
-  field takes the focus, and the error goes once the name changes.
+- The form checks the name without its surrounding whitespace before sending it
+  so, as the pinned OpenAPI document publishes it (Sentinel `docs/api-spec.md`,
+  Published Input Constraints): empty, "Enter the package name."; more than 255
+  characters, "Enter at most 255 characters."; and another character than
+  letters, digits, ".", "_", "+", and "-", or a first character that is not a
+  letter or a digit, "Enter only letters, digits, and . _ + -, starting with a
+  letter or a digit.", so a name such as `libxml++` passes (above).
 - Add package asks for no confirmation, also on a confidential Ticket, whose
   maintainers that it adds to the package then see the Ticket: it ends no
   one's access, and Exclude reverses it (`docs/behaviors.md`, Confirmation;
@@ -1913,15 +1920,14 @@ document, Manual-Zone Exception):
   check or one that Sentinel returns (States), goes once the user leaves
   the field after changing it, or, at Type, chooses another type; a check
   that the new value fails shows in its place.
-- Add reference sends the address without its surrounding whitespace, the
-  title and the description as typed, or `null` when they are empty or hold
-  only whitespace, which Sentinel does not accept (Sentinel
+- Add reference sends the address without its surrounding whitespace, the title
+  and the description as typed, or `null` when they are empty or hold only
+  whitespace, which Sentinel does not accept (Sentinel
   `docs/features/tickets/ticket-references.md`, URL Normalization), and the
-  type as chosen. Edit sends only the fields that the user changed, in the
-  same way: the address without its surrounding whitespace, and a title or a
-  description that is empty or holds only whitespace as `null`; it closes
-  without a request when the user changed none (Sentinel `docs/api-spec.md`,
-  Partial Update Semantics).
+  type as chosen. Edit sends only the fields that the user changed, in the same
+  way: the address without its surrounding whitespace, and a title or a
+  description that is empty or holds only whitespace as `null` (Sentinel
+  `docs/api-spec.md`, Partial Update Semantics).
 - Add reference and Edit ask for no confirmation. A navigation that asks
   before discarding input includes another filter of the tab, and the
   question says "The reference that you entered isn't added." in Add
@@ -1976,7 +1982,17 @@ document, Manual-Zone Exception):
   indicator below them until its other users arrive, and again while the users
   of a new term are read, which the failure of their read replaces with the
   message of its status (`docs/design-system.md`, Forms).
-- **Errors.** The default presentation applies (`docs/behaviors.md`, Errors).
+- **Errors.** The default presentation applies (`docs/behaviors.md`, Errors). A
+  failure of a change submitted from a form, a dialog, or a popover shows in
+  it, which keeps the input (`docs/behaviors.md`, Where Errors Appear): the
+  codes that the entries below handle at a field, and a field error of a
+  `VALIDATION_ERROR` for a member of the request, at their field, which takes
+  the focus, or, in a group of radio buttons, its chosen option
+  (`docs/design-system.md`, Forms); every other failure at the top of the form,
+  which takes the focus, in the presentation of its status, as a warning when
+  Sentinel did not confirm the change (`docs/behaviors.md`, Default
+  Presentation by Status; Retries and Unconfirmed Changes), such as the `409
+  TICKET_NOT_MUTABLE` of a Ticket that became Ignored or Duplicated meanwhile.
   The failure of the first read of Get Ticket replaces the screen, its heading
   row and tabs included; `404 TICKET_NOT_FOUND`, for a Ticket that does not
   exist or that the user cannot see, shows Not found (`docs/behaviors.md`,
@@ -2022,42 +2038,38 @@ document, Manual-Zone Exception):
   the participants show without grants, and the screen reads the Ticket again,
   which removes Access grants, and turns an open dialog of the access grants to
   the line that says that the Ticket is no longer confidential (Participants).
-- **Errors of Grant access and Revoke access.** A failure of Grant access
-  shows in its form, which keeps the user chosen (`docs/behaviors.md`, Where
-  Errors Appear): the screen handles two codes specifically, at the user
-  field, `404 USER_NOT_FOUND`, "Sentinel doesn't know this user.", and
-  `409 USER_INACTIVE`, for a user who became inactive, "This user is inactive,
-  so they can't be granted access." (Sentinel
-  `docs/features/tickets/tickets.md`, Grant Access); a field error of a
-  `VALIDATION_ERROR` for `user` also shows at the field; the field then takes
-  the focus. Every other failure shows at the top of the form, which takes
-  the focus, in the presentation of its status, as a warning when Sentinel
-  did not confirm the change (`docs/behaviors.md`, Default Presentation by
-  Status; Retries and Unconfirmed Changes). A failure of Revoke access shows
-  in the same way at the top of its confirmation, which stays open; the
-  screen handles no code of it specifically. After a `403`, the dialog keeps
-  its form, Revoke access, and the error (`docs/behaviors.md`, The
-  Signed-in User). A `409 TICKET_NOT_CONFIDENTIAL` of either is followed by
-  the reads that show the Ticket no longer confidential, so the dialog then
-  says so in place of its explanation, the form, the grants, and their
-  confirmation, and takes the focus (Participants).
+- **Errors of Grant access and Revoke access.** A failure of Grant access shows
+  in its form, which keeps the user chosen (`docs/behaviors.md`, Where Errors
+  Appear): the screen handles two codes specifically, at the user field, `404
+  USER_NOT_FOUND`, "Sentinel doesn't know this user.", and `409 USER_INACTIVE`,
+  for a user who became inactive, "This user is inactive, so they can't be
+  granted access." (Sentinel `docs/features/tickets/tickets.md`, Grant Access);
+  a field error of a `VALIDATION_ERROR` for `user` also shows at the field; the
+  field then takes the focus. A failure of Revoke access shows at the top of
+  its confirmation, which stays open, as every other failure of a form does
+  (Errors); the screen handles no code of it specifically. After a `403`, the
+  dialog keeps its form, Revoke access, and the error (`docs/behaviors.md`, The
+  Signed-in User). A `409 TICKET_NOT_CONFIDENTIAL` of either is followed by the
+  reads that show the Ticket no longer confidential, so the dialog then says so
+  in place of its explanation, the form, the grants, and their confirmation,
+  and takes the focus (Participants).
 - **Errors of Mark as duplicate…, Reopen, Revert duplicate, and Rerun
-  convergence.** A failure of Mark as duplicate… shows in its form, which
-  keeps the original (`docs/behaviors.md`, Where Errors Appear). The screen
-  handles three codes specifically, at the field, which takes the focus: `400
+  convergence.** A failure of Mark as duplicate… shows in its form, which keeps
+  the original (`docs/behaviors.md`, Where Errors Appear). The screen handles
+  three codes specifically, at the field, which takes the focus: `400
   TICKET_SELF_DUPLICATE`, "A Ticket can't be a duplicate of itself."; `404
   TICKET_NOT_FOUND`, "SNTL-99 doesn't exist, or you don't have access to it.",
   which names the original sent, since "this Ticket" is the Ticket of the
   dialog, and which Sentinel answers alike for an original that does not exist
   and for one that the user cannot see, and also for the Ticket of the screen
   once the user no longer sees it, which the read after the change then shows
-  as Not found (`docs/behaviors.md`, Missing and Inaccessible Records;
-  Sentinel `docs/api-spec.md`, Ticket Accessibility Check); and `409
+  as Not found (`docs/behaviors.md`, Missing and Inaccessible Records; Sentinel
+  `docs/api-spec.md`, Ticket Accessibility Check); and `409
   TICKET_DUPLICATE_TARGET_DUPLICATED`, which names the original of the Ticket
   sent, when a read of the dialog shows it, the Tickets that the field
   suggested for the text sent or the duplicates of the Ticket, so that a user
-  who cannot read the label of its disabled option learns it too: "SNTL-41 is
-  a duplicate of SNTL-40: choose SNTL-40 instead.", or, for a duplicate of the
+  who cannot read the label of its disabled option learns it too: "SNTL-41 is a
+  duplicate of SNTL-40: choose SNTL-40 instead.", or, for a duplicate of the
   Ticket itself, "SNTL-31 is a duplicate of this Ticket: to make it the
   original, use Revert duplicate on SNTL-31 first."; otherwise "SNTL-41 is a
   duplicate itself: choose its original instead." (Sentinel
@@ -2067,51 +2079,41 @@ document, Manual-Zone Exception):
   focus, in the `danger` tone, since Sentinel then changed nothing: `409
   TICKET_DUPLICATE_CONCURRENT_MODIFICATION`, "A duplicate of this Ticket was
   being changed at the same time, so Sentinel changed nothing. Try again."
-  (same document, Mark-as-Duplicate Operation). Every other failure shows at
-  the top of the form in the presentation of its status, as a warning when
-  Sentinel did not confirm the change (`docs/behaviors.md`, Default
-  Presentation by Status; Retries and Unconfirmed Changes), such as the `409
-  TICKET_NOT_MUTABLE` of a Ticket that became Ignored or Duplicated meanwhile.
-  A failure of Mark as duplicate… that ends after the user left the screen
-  (Actions) shows in the message area in the presentation of the dialog,
-  except that `409 TICKET_DUPLICATE_TARGET_DUPLICATED` then names no original
-  of the duplicate, which the reads of the dialog told, such as "SNTL-30:
-  SNTL-41 is a duplicate itself: choose its original instead.", and that `404
-  TICKET_NOT_FOUND` names both Tickets, since no read of the screen tells
-  which of them Sentinel did not find: "SNTL-30: This Ticket or the original
-  SNTL-21 doesn't exist, or you don't have access to it.". A failure of
-  Reopen, Revert duplicate, or Rerun convergence shows in the message area in
-  the presentation of its status, as a warning when Sentinel did not confirm
-  the change, such as the `503 CELERY_UNAVAILABLE` of a rerun, which may still
-  run (Sentinel `docs/features/tickets/tickets.md`, Rerun Ticket Convergence).
-  The screen handles one code of Reopen and of Revert duplicate specifically:
-  `409 TICKET_INVALID_TRANSITION`, for a Ticket that left Ignored or
-  Duplicated meanwhile, as when another user reopened it, says "SNTL-17 is no
-  longer Ignored." or "SNTL-22 is no longer Duplicated." in the message area
-  in the `info` tone, as Sentinel answers (same document, Reopen Ticket;
-  Revert Duplicate Status); after the user left the screen, it has the
-  presentation of its status. The screen handles no code of Rerun convergence
-  specifically.
-- **Errors of Ignore… and Ignore as not shipped by SUSE.** A failure of
-  Ignore… shows in its form, which keeps the reason (`docs/behaviors.md`,
-  Where Errors Appear). The screen handles one code specifically, at Reason,
-  whose chosen reason takes the focus: `409 TICKET_CVE_NOT_REJECTED`, for
-  `cve_rejected` on a Ticket whose CVE is no longer rejected, as after a
-  revert of the rejection since the dialog opened, "CVE-2099-0027 is no
-  longer rejected. Choose another reason." (Sentinel
-  `docs/features/tickets/tickets.md`, Ignore Ticket); the read of the Ticket
-  after it shows the CVE published. A field error of a `VALIDATION_ERROR` for
-  `reason` also shows there. Every other failure shows at the top of the
-  form, which takes the focus, in the presentation of its status, as a
-  warning when Sentinel did not confirm the change (`docs/behaviors.md`,
-  Default Presentation by Status; Retries and Unconfirmed Changes), such as
-  the `409 TICKET_INVALID_TRANSITION` of a Ticket that became Analyzed
-  meanwhile or the `409 TICKET_NOT_MUTABLE` of one that became Ignored or
-  Duplicated. A failure that ends after the user left the screen shows in the
-  message area in the presentation of the dialog, starting with the Ticket
-  (Actions). A failure of Ignore as not shipped by SUSE shows in the message
-  area in the presentation of its status; the screen handles no code of it
-  specifically.
+  (same document, Mark-as-Duplicate Operation). A failure of Mark as duplicate…
+  that ends after the user left the screen (Actions) shows in the message area
+  in the presentation of the dialog, except that `409
+  TICKET_DUPLICATE_TARGET_DUPLICATED` then names no original of the duplicate,
+  which the reads of the dialog told, such as "SNTL-30: SNTL-41 is a duplicate
+  itself: choose its original instead.", and that `404 TICKET_NOT_FOUND` names
+  both Tickets, since no read of the screen tells which of them Sentinel did
+  not find: "SNTL-30: This Ticket or the original SNTL-21 doesn't exist, or you
+  don't have access to it.". A failure of Reopen, Revert duplicate, or Rerun
+  convergence shows in the message area in the presentation of its status, as a
+  warning when Sentinel did not confirm the change, such as the `503
+  CELERY_UNAVAILABLE` of a rerun, which may still run (Sentinel
+  `docs/features/tickets/tickets.md`, Rerun Ticket Convergence). The screen
+  handles one code of Reopen and of Revert duplicate specifically: `409
+  TICKET_INVALID_TRANSITION`, for a Ticket that left Ignored or Duplicated
+  meanwhile, as when another user reopened it, says "SNTL-17 is no longer
+  Ignored." or "SNTL-22 is no longer Duplicated." in the message area in the
+  `info` tone, as Sentinel answers (same document, Reopen Ticket; Revert
+  Duplicate Status); after the user left the screen, it has the presentation of
+  its status. The screen handles no code of Rerun convergence specifically.
+- **Errors of Ignore… and Ignore as not shipped by SUSE.** A failure of Ignore…
+  shows in its form, which keeps the reason (`docs/behaviors.md`, Where Errors
+  Appear). The screen handles one code specifically, at Reason, whose chosen
+  reason takes the focus: `409 TICKET_CVE_NOT_REJECTED`, for `cve_rejected` on
+  a Ticket whose CVE is no longer rejected, as after a revert of the rejection
+  since the dialog opened, "CVE-2099-0027 is no longer rejected. Choose another
+  reason." (Sentinel `docs/features/tickets/tickets.md`, Ignore Ticket); the
+  read of the Ticket after it shows the CVE published. A field error of a
+  `VALIDATION_ERROR` for `reason` also shows there. Every other failure shows
+  at the top of the form (Errors), such as the `409 TICKET_INVALID_TRANSITION`
+  of a Ticket that became Analyzed meanwhile. A failure that ends after the
+  user left the screen shows in the message area in the presentation of the
+  dialog, starting with the Ticket (Actions). A failure of Ignore as not
+  shipped by SUSE shows in the message area in the presentation of its status;
+  the screen handles no code of it specifically.
 - **Errors of Override priority…, Set severity…, and Associate CVE….** A
   failure shows in the form of its dialog, which keeps the input
   (`docs/behaviors.md`, Where Errors Appear). A failure of Associate CVE…
@@ -2138,17 +2140,11 @@ document, Manual-Zone Exception):
     Sentinel did not confirm, "SNTL-21 already has a CVE." (same document,
     Associate CVE).
 
-  A field error of a `VALIDATION_ERROR` for `priority`, `severity`, or
-  `cve_id` shows at its group or its field. Every other failure shows at the
-  top of the form, which takes the focus, in the presentation of its status,
-  as a warning when Sentinel did not confirm the change (`docs/behaviors.md`,
-  Default Presentation by Status; Retries and Unconfirmed Changes), such as
-  the `409 TICKET_NOT_MUTABLE` of a Ticket that became Ignored or Duplicated
-  meanwhile. Override priority… has no code of its own (Sentinel
-  `docs/features/tickets/tickets.md`, Set Priority Override). A failure that
-  ends after the user left the screen shows in the message area in the
-  presentation of the dialog, starting with the Ticket (Actions), the
-  conflict without a link.
+  Every other failure shows at the top of the form (Errors). Override priority…
+  has no code of its own (Sentinel `docs/features/tickets/tickets.md`, Set
+  Priority Override). A failure that ends after the user left the screen shows
+  in the message area in the presentation of the dialog, starting with the
+  Ticket (Actions), the conflict without a link.
 - **Errors of Edit assignee.** A failure shows in the popover, which stays open
   (`docs/behaviors.md`, Where Errors Appear; Accessibility, Announcements). The
   screen handles three codes specifically, at the search field: `404
@@ -2195,37 +2191,32 @@ document, Manual-Zone Exception):
   Restore Product). Either code of the other operation, or of Change Track
   Status or Override Product Eligibility, has the presentation of its status,
   and so does either code after the user left the tab (Actions).
-- **Errors of Add package.** A failure shows in its form, which keeps the
-  name (`docs/behaviors.md`, Where Errors Appear). The screen handles three
-  codes specifically, at the field, which takes the focus: `422
-  PACKAGE_NOT_FOUND_IN_SMELT`, "SMELT doesn't maintain a package of this
-  name. Check the name, whose letter case counts."; `422
-  PACKAGE_TARGETS_UNRESOLVED`, "Sentinel can't add any of the Products that
-  SMELT lists for this package, so it added nothing."; and
-  `409 PACKAGE_ALREADY_EXCLUDED`, for a package of the Ticket that its own
-  marker excludes, "This package is excluded from this Ticket: Show hidden
-  shows it, and Restore in the menu of its actions includes it again."
-  (Sentinel
-  `docs/features/packages/package-model.md`, Add Package to Ticket;
-  Interaction with add_package_to_ticket). A field error of a
+- **Errors of Add package.** A failure shows in its form, which keeps the name
+  (`docs/behaviors.md`, Where Errors Appear). The screen handles three codes
+  specifically, at the field, which takes the focus: `422
+  PACKAGE_NOT_FOUND_IN_SMELT`, "SMELT doesn't maintain a package of this name.
+  Check the name, whose letter case counts."; `422 PACKAGE_TARGETS_UNRESOLVED`,
+  "Sentinel can't add any of the Products that SMELT lists for this package, so
+  it added nothing."; and `409 PACKAGE_ALREADY_EXCLUDED`, for a package of the
+  Ticket that its own marker excludes, "This package is excluded from this
+  Ticket: Show hidden shows it, and Restore in the menu of its actions includes
+  it again." (Sentinel `docs/features/packages/package-model.md`, Add Package
+  to Ticket; Interaction with add_package_to_ticket). A field error of a
   `VALIDATION_ERROR` for `package_name` also shows there. It handles two more
   codes specifically, at the top of the form, which takes the focus, in the
-  `danger` tone with their reference rather than as a change that Sentinel
-  did not confirm, since Sentinel returns them before any change (same
-  document, Adding Packages to a Ticket; Sentinel `docs/api-spec.md`,
-  Infrastructure Dependency Errors (HTTP 503)): `503 SMELT_UNAVAILABLE`,
-  "Sentinel couldn't get the tracks and Products of this package from SMELT,
-  so it added nothing. Try again later.", and `503 PRODUCT_CATALOG_NOT_READY`,
-  "Sentinel hasn't loaded the Products from SMELT yet, so it added nothing.
-  Try again later.". Every other failure shows at the top of the form in the
-  presentation of its status, as a warning when Sentinel did not confirm the
-  change, such as another `5xx` (`docs/behaviors.md`, Default Presentation by
-  Status; Retries and Unconfirmed Changes), or the `409 TICKET_NOT_MUTABLE`
-  of a Ticket that became Ignored meanwhile. The read of the names of
-  Package name shows its failure in their place, in the presentation of its
-  status; the screen handles no code of Search Maintained Packages
-  specifically (Sentinel `docs/features/packages/maintained-package-names.md`,
-  Search Maintained Packages).
+  `danger` tone with their reference rather than as a change that Sentinel did
+  not confirm, since Sentinel returns them before any change (same document,
+  Adding Packages to a Ticket; Sentinel `docs/api-spec.md`, Infrastructure
+  Dependency Errors (HTTP 503)): `503 SMELT_UNAVAILABLE`, "Sentinel couldn't
+  get the tracks and Products of this package from SMELT, so it added nothing.
+  Try again later.", and `503 PRODUCT_CATALOG_NOT_READY`, "Sentinel hasn't
+  loaded the Products from SMELT yet, so it added nothing. Try again later.".
+  Every other failure, such as another `5xx`, shows at the top of the form
+  (Errors). The read of the names of Package name shows its failure in their
+  place, in the presentation of its status; the screen handles no code of
+  Search Maintained Packages specifically (Sentinel
+  `docs/features/packages/maintained-package-names.md`, Search Maintained
+  Packages).
 - **References.** The toolbar shows at once with the tabs, and the
   references as they arrive, without waiting for the Ticket; a failure of
   the references shows once the Ticket has arrived, so that a Ticket that
@@ -2277,29 +2268,25 @@ document, Manual-Zone Exception):
   empty state leaves the page while it holds the focus, the focus moves to
   the screen's heading (`docs/behaviors.md`, Accessibility, Focus after an
   action).
-- **Errors of Add SUSE assessment, Edit, and Delete.** The screen handles
-  one code of Set or Update SUSE CVSS Assessment specifically: `422
+- **Errors of Add SUSE assessment, Edit, and Delete.** The screen handles one
+  code of Set or Update SUSE CVSS Assessment specifically: `422
   CVSS_INVALID_VECTOR`, a vector that Sentinel does not accept, such as one
   with a Temporal metric, says "Sentinel doesn't accept this vector. Enter a
   complete CVSS v3.1 Base vector." at Vector (Sentinel
-  `docs/features/tickets/cvss-scoring.md`, Input Rules; Set or Update SUSE
-  CVSS Assessment). A field error of a `VALIDATION_ERROR` for
-  `vector_string` shows at Vector. Each takes the focus at the field. Every
-  other failure, of the change or of the read of the assessments before Add,
-  shows at the top of the form, which keeps the input and takes the focus,
-  such as the `409 TICKET_NOT_MUTABLE` of a Ticket that became Ignored or
-  Duplicated meanwhile, as a warning when Sentinel did not confirm the change
-  (`docs/behaviors.md`, Where Errors Appear; Retries and Unconfirmed
-  Changes). A failure of Delete shows at the top of its confirmation, which
-  stays open, such as the `404 CVSS_ASSESSMENT_NOT_FOUND` of an assessment
-  that another user deleted; the screen handles no code of it specifically.
-  The failure of the read of the score of the vector shows in the place of the
-  score, with Try again where it offers it while the form holds that vector,
-  and leaves the form and its action usable (`docs/behaviors.md`, Where Errors
-  Appear); the screen handles one code of Calculate CVSS Base Score
-  specifically, `422 CVSS_INVALID_VECTOR`, which shows at Vector as above and
-  as no score in the place of the score (Sentinel
-  `docs/features/tickets/cvss-scoring.md`, Calculate CVSS Base Score).
+  `docs/features/tickets/cvss-scoring.md`, Input Rules; Set or Update SUSE CVSS
+  Assessment). A field error of a `VALIDATION_ERROR` for `vector_string` shows
+  at Vector. Every other failure, of the change or of the read of the
+  assessments before Add, shows at the top of the form (Errors). A failure of
+  Delete shows at the top of its confirmation, which stays open, such as the
+  `404 CVSS_ASSESSMENT_NOT_FOUND` of an assessment that another user deleted;
+  the screen handles no code of it specifically. The failure of the read of the
+  score of the vector shows in the place of the score, with Try again where it
+  offers it while the form holds that vector, and leaves the form and its
+  action usable (`docs/behaviors.md`, Where Errors Appear); the screen handles
+  one code of Calculate CVSS Base Score specifically, `422
+  CVSS_INVALID_VECTOR`, which shows at Vector as above and as no score in the
+  place of the score (Sentinel `docs/features/tickets/cvss-scoring.md`,
+  Calculate CVSS Base Score).
 - **Errors of Refetch.** A failure follows the default presentation of a
   change (`docs/behaviors.md`, Errors), such as `503 CELERY_UNAVAILABLE`,
   after which the fetch may still run (`docs/behaviors.md`, Retries and
