@@ -1326,7 +1326,7 @@ Priority Basis; Manual Override):
   (above), as Sentinel returns the Ticket: "Priority overridden: P2.",
   "Priority override cleared: P3, automatic.", or "Priority override
   cleared: not yet prioritizable."; "Severity set to High." or "Severity
-  cleared."; and "CVE-2099-1234 associated.". After an association, Set
+  removed."; and "CVE-2099-1234 associated.". After an association, Set
   severity… and Associate CVE… leave Actions, which holds the focus as its
   dialog closes.
 

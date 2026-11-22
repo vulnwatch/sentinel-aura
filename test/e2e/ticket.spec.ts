@@ -5426,7 +5426,7 @@ test.describe("the corrections of a Ticket", () => {
   );
 
   test(
-    "sets and clears the severity of a Ticket without a CVE, which the heading row shows with the automatic priority that it gives",
+    "sets and removes the severity of a Ticket without a CVE, which the heading row shows with the automatic priority that it gives",
     { tag: "@changes-data" },
     async ({ page }) => {
       // A Ticket of this test's own, without a CVE and without a severity.
@@ -5468,7 +5468,7 @@ test.describe("the corrections of a Ticket", () => {
       await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
       await expect(dialog).toHaveCount(0);
-      await expect(announcement(page, "Severity cleared.")).toHaveCount(1);
+      await expect(announcement(page, "Severity removed.")).toHaveCount(1);
       await expect(severity).toHaveText("Severity not set");
     },
   );
