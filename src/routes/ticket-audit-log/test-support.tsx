@@ -30,7 +30,8 @@ import {
 // What the test files of the tab Audit log (src/routes/ticket-audit-log.tsx)
 // and of its kinds and sentences (src/routes/ticket-audit-log/) share: the
 // paths, the actors, the events of the tests and the responses of the API,
-// the rendering of the tab, its elements, and the waits for its reads.
+// the rendering of the tab, its elements, the waits for its reads, the
+// actions on its filters, and the kinds with the event types that each sends.
 
 export const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
