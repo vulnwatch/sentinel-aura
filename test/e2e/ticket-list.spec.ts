@@ -814,6 +814,69 @@ test.describe("refined by an analyst", () => {
       ),
     );
   });
+
+  test("filters the Tickets by their ignore reason, and shows the reason of each ignored Ticket", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await expectViewCounts(page);
+    await views(page).filter({ hasText: "All" }).click();
+    await expect(page).toHaveURL("/tickets");
+    // Once the counts have arrived, which widen the tabs and the summary, so
+    // that the popover opens below Filters where it stays.
+    await expectAttentionCounts(page);
+
+    // The auto-ignore policy of its CNA ignored SNTL-28 (Tickets; CNAs).
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filters
+      .getByRole("group", { name: "Ignore reason" })
+      .getByText("CNA policy", { exact: true })
+      .click();
+
+    await expect(page).toHaveURL("/tickets?ignore_reason=cna_policy");
+    await expect(identifiers(page)).toHaveText(["SNTL-28"]);
+    await expect(
+      table(page)
+        .getByRole("row", { name: /SNTL-28/ })
+        .getByRole("gridcell", { name: "Ignored · CNA policy" }),
+    ).toBeVisible();
+    await expectAccessible(page);
+
+    await expectScreenshot(page, "ticket-list-ignore-reason.png");
+
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Filters 1 applied" }),
+    ).toBeFocused();
+
+    // The ignored Tickets, one for each reason (Tickets).
+    await page.goto("/tickets?status=ignored");
+    await expect(identifiers(page)).toHaveText(
+      await ticketsOf(
+        page,
+        "status=ignored&sort_by=updated_at&sort_order=desc",
+      ),
+    );
+    for (const [ticket, reason] of [
+      ["SNTL-8", "CVE rejected"],
+      ["SNTL-17", "Not shipped"],
+      ["SNTL-25", "Other"],
+      ["SNTL-28", "CNA policy"],
+    ] as const) {
+      await expect(
+        table(page)
+          .getByRole("row", { name: new RegExp(`${ticket}\\b`) })
+          .getByRole("gridcell", { name: `Ignored · ${reason}` }),
+      ).toBeVisible();
+    }
+    await expectAccessible(page);
+    await expectViewCounts(page);
+    await expectAttentionCounts(page);
+    await pointerAway(page);
+
+    await expectScreenshot(page, "ticket-list-ignored.png");
+  });
 });
 
 test.describe("for a restricted analyst", () => {

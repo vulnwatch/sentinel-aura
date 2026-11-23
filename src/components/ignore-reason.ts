@@ -2,7 +2,8 @@ import type { TicketIgnoreReason } from "../api/generated/model";
 
 // The reasons of an ignored Ticket by their names (docs/behaviors.md, Domain
 // Terms; Sentinel docs/features/tickets/tickets.md, Ignore Reason), which the
-// details, the dialog of Ignore…, and the audit log of a Ticket share. A Map,
+// details, the dialog of Ignore…, and the audit log of a Ticket, and the rows
+// and the filters of the Ticket list share. A Map,
 // so that a reason that a later Sentinel release returns is looked up only
 // among them (docs/conventions.md, Data Read from the API), and every reason
 // of the pinned contract has its name.

@@ -4,6 +4,7 @@ import {
   Filters,
   type FilterOption,
 } from "../../components/filters";
+import { ignoreReasonName } from "../../components/ignore-reason";
 import { Priority } from "../../components/priority";
 import { Severity } from "../../components/severity";
 import { TicketStatus } from "../../components/ticket-status";
@@ -11,6 +12,7 @@ import {
   EMBARGO_STATES,
   EMBARGO_VIEW,
   filtersApplied,
+  IGNORE_REASONS,
   OVERDUE_PHASES,
   PHASE_NAMES,
   PHASES,
@@ -25,13 +27,21 @@ import {
 // its filters.
 
 // The options of the filters (docs/design-system.md, Values; docs/behaviors.md,
-// Domain Terms): a status, a severity, or a priority with its mark, and
-// "Not set" for the absence that unresolved filters.
+// Domain Terms): a status, a severity, or a priority with its mark, the
+// reason of an ignored Ticket by its name, and "Not set" for the absence that
+// unresolved filters.
 const STATUS_OPTIONS: readonly FilterOption<(typeof STATUSES)[number]>[] =
   STATUSES.map((status) => ({
     value: status,
     label: <TicketStatus status={status} />,
   }));
+
+const IGNORE_REASON_OPTIONS: readonly FilterOption<
+  (typeof IGNORE_REASONS)[number]
+>[] = IGNORE_REASONS.map((reason) => ({
+  value: reason,
+  label: ignoreReasonName(reason),
+}));
 
 const SEVERITY_OPTIONS: readonly FilterOption<(typeof SEVERITIES)[number]>[] =
   SEVERITIES.map((severity) => ({
@@ -73,8 +83,12 @@ interface TicketFiltersProps {
 }
 
 // Filters, with the number of the filters that apply and a group of
-// checkboxes for each filter that the view accepts: the status in a view
-// whose Tickets have every status, and the embargo in the Embargo view.
+// checkboxes for each filter that the view accepts: the status and the
+// ignore reason in a view whose Tickets have every status, and the embargo in
+// the Embargo view. The ignore reason is a filter of its own, as List Tickets
+// gives it, rather than a part of Ignored: a reason matches only an ignored
+// Ticket, whatever the statuses that apply (Sentinel
+// docs/features/tickets/tickets.md, List Tickets).
 export function TicketFilters({
   view,
   search,
@@ -84,14 +98,24 @@ export function TicketFilters({
   return (
     <Filters applied={filtersApplied(search)} status={status}>
       {view.everyStatus && (
-        <FilterGroup
-          label="Status"
-          options={STATUS_OPTIONS}
-          selected={search.status ?? []}
-          onChange={(values) => {
-            refine({ status: values });
-          }}
-        />
+        <>
+          <FilterGroup
+            label="Status"
+            options={STATUS_OPTIONS}
+            selected={search.status ?? []}
+            onChange={(values) => {
+              refine({ status: values });
+            }}
+          />
+          <FilterGroup
+            label="Ignore reason"
+            options={IGNORE_REASON_OPTIONS}
+            selected={search.ignore_reason ?? []}
+            onChange={(values) => {
+              refine({ ignore_reason: values });
+            }}
+          />
+        </>
       )}
       {view === EMBARGO_VIEW && (
         <FilterGroup
