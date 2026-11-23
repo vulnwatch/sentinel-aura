@@ -55,8 +55,11 @@ export function confidentialityText(
 
 // Reads again what a change of the confidentiality affects: what a change of
 // the Ticket affects, the Embargo view and its count among the reads of the
-// Ticket list, and its access grants, which making it non-confidential
-// deletes (docs/behaviors.md, Outcome of a Change).
+// Ticket list included; and its access grants, which making it
+// non-confidential deletes, once a read shows the Ticket confidential, since
+// Sentinel refuses the read of the grants of a Ticket that is not
+// (docs/behaviors.md, Outcome of a Change; Sentinel
+// docs/features/tickets/tickets.md, List Access Grants).
 export function useReadAfterConfidentiality(ticketId: string) {
   const client = useQueryClient();
   const readAfterChange = useReadAfterTicketChange(ticketId);
@@ -64,6 +67,7 @@ export function useReadAfterConfidentiality(ticketId: string) {
     readAfterChange();
     void client.invalidateQueries({
       queryKey: getListTicketAccessGrantsQueryKey(ticketId),
+      refetchType: "none",
     });
   }, [client, readAfterChange, ticketId]);
 }
@@ -75,13 +79,13 @@ interface ConsequencesProps {
 }
 
 // What the change does, as the confirmation states it. Making the Ticket
-// confidential leaves it to the users who see every Ticket, the maintainers
-// of its packages that are not excluded, and the users with an access grant,
-// of which it has none yet, since Sentinel deletes them as it makes a Ticket
-// non-confidential (Sentinel docs/features/identity/rbac.md, Scope and
+// confidential leaves it to the users who see every Ticket and the
+// maintainers of its packages that are not excluded, since a Ticket that is
+// not confidential has no access grants: Sentinel deletes them as it makes a
+// Ticket non-confidential (Sentinel docs/features/identity/rbac.md, Scope and
 // Confidential Ticket Visibility); in New, Analysis, and Analyzed, it also
 // unassigns an assignee who cannot be the assignee of a confidential Ticket,
-// which the screen knows only of the signed-in user, from their assignment
+// which the screen reads only of the signed-in user, from their assignment
 // eligibility (docs/screen-map.md, Roles, Principles). Making it
 // non-confidential discloses it to every user, deletes its access grants, and
 // keeps its Coordinated Release Date, which still decides its deadlines
@@ -119,9 +123,9 @@ function Consequences({ ticket, confidential, user }: ConsequencesProps) {
   return (
     <div className="flex flex-col gap-3">
       <p>
-        Only the users who see every Ticket, the maintainers of its packages
-        that are not excluded, and the users to whom access is granted then see{" "}
-        {ticketId}. Every other user loses access to it.
+        Only the users who see every Ticket and the maintainers of its packages
+        that are not excluded keep seeing {ticketId}. Every other user loses
+        access to it.
       </p>
       {unassigned !== undefined && <p>{unassigned}</p>}
     </div>

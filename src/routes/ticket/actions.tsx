@@ -89,7 +89,8 @@ type DialogId =
   | "override-priority"
   | "set-severity"
   | "associate-cve"
-  | "confidentiality";
+  | "make-confidential"
+  | "make-non-confidential";
 
 // The actions that change the confidentiality of the Ticket, each with its
 // confirmation.
@@ -234,9 +235,6 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
     open: boolean;
   }>();
   const [offeredAtOpen, setOfferedAtOpen] = useState<readonly ActionId[]>([]);
-  // Whether the confirmation of the confidentiality makes the Ticket
-  // confidential, as its item did.
-  const [makesConfidential, setMakesConfidential] = useState(false);
   // A failure of the UI itself, which the router shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const reopenedText = (response: TicketDetailResponse) =>
@@ -347,12 +345,7 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
     });
   };
 
-  const run = async (
-    action: Exclude<
-      ActionId,
-      DialogId | "make-confidential" | "make-non-confidential"
-    >,
-  ) => {
+  const run = async (action: Exclude<ActionId, DialogId>) => {
     if (pending) {
       return;
     }
@@ -581,8 +574,7 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
               icon={Lock}
               unavailable={pending}
               onAction={() => {
-                setMakesConfidential(true);
-                openDialog("confidentiality");
+                openDialog("make-confidential");
               }}
             >
               Make confidential…
@@ -594,8 +586,7 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
               icon={LockOpen}
               unavailable={pending}
               onAction={() => {
-                setMakesConfidential(false);
-                openDialog("confidentiality");
+                openDialog("make-non-confidential");
               }}
             >
               Make non-confidential…
@@ -627,14 +618,16 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
       {dialog?.open === true && dialog.id === "associate-cve" && (
         <AssociateCveDialog {...dialogProps} />
       )}
-      {dialog?.open === true && dialog.id === "confidentiality" && (
-        <ConfidentialityDialog
-          {...dialogProps}
-          readAgain={readAfterConfidentiality}
-          confidential={makesConfidential}
-          user={user}
-        />
-      )}
+      {dialog?.open === true &&
+        (dialog.id === "make-confidential" ||
+          dialog.id === "make-non-confidential") && (
+          <ConfidentialityDialog
+            {...dialogProps}
+            readAgain={readAfterConfidentiality}
+            confidential={dialog.id === "make-confidential"}
+            user={user}
+          />
+        )}
       {dialog?.open === true && dialog.id === "ignore" && (
         <IgnoreDialog
           ticket={ticket}

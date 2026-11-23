@@ -62,15 +62,28 @@ export type Typed = (
 export const UNTYPED: Typed = { kind: "empty", edited: false };
 
 interface TypedProbeProps {
-  // Records what the field holds.
+  // Receives what the field holds.
   onTyped: (typed: Typed) => void;
   // Called when the parts that the field shows change.
   onEdit: () => void;
 }
 
-// Within the parts of a field: records what the field holds, which the
-// field's value does not tell while only some of its parts are typed, and
-// reports each change of the parts that it shows.
+// Whether two reports of what a field holds are the same.
+function sameTyped(a: Typed, b: Typed): boolean {
+  if (a.kind !== b.kind || a.edited !== b.edited) {
+    return false;
+  }
+  return (
+    a.kind !== "complete" ||
+    b.kind !== "complete" ||
+    a.value.toString() === b.value.toString()
+  );
+}
+
+// Within the parts of a field: reports what the field holds, which the
+// field's value does not tell while only some of its parts are typed, as it
+// starts and each time it changes, so that a form can keep it in its state;
+// and reports each change of the parts that it shows.
 function TypedProbe({ onTyped, onEdit }: TypedProbeProps) {
   const state = use(DateFieldStateContext);
   const editable = state?.segments.filter((segment) => segment.isEditable);
@@ -79,14 +92,20 @@ function TypedProbe({ onTyped, onEdit }: TypedProbeProps) {
   const value = state?.value ?? null;
   const shownFirst = useRef(shown);
   const shownBefore = useRef(shown);
+  const reported = useRef<Typed>(undefined);
   useLayoutEffect(() => {
     const edited = shown !== shownFirst.current;
+    let typed: Typed;
     if (filled.length === 0) {
-      onTyped({ kind: "empty", edited });
+      typed = { kind: "empty", edited };
     } else if (filled.length < (editable?.length ?? 0) || value === null) {
-      onTyped({ kind: "incomplete", edited });
+      typed = { kind: "incomplete", edited };
     } else {
-      onTyped({ kind: "complete", value, edited });
+      typed = { kind: "complete", value, edited };
+    }
+    if (reported.current === undefined || !sameTyped(reported.current, typed)) {
+      reported.current = typed;
+      onTyped(typed);
     }
     if (shown !== shownBefore.current) {
       shownBefore.current = shown;
@@ -153,6 +172,7 @@ export interface DateFieldProps {
   popoverRef?: RefObject<HTMLElement | null>;
   // The parts of the date, which a form focuses when the field has an error.
   groupRef?: RefObject<HTMLDivElement | null>;
+  // Receives what the field holds as it starts and each time it changes.
   onTyped: (typed: Typed) => void;
   onEdit: () => void;
   // Called when the user presses Enter in a part of the field.

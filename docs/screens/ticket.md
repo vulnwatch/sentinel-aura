@@ -17,16 +17,18 @@ it as a duplicate, reopens it, reverts its duplicate status, overrides its
 priority, and, without a CVE, sets its severity and associates a CVE with it,
 an analyst or a user who manages fetchers reruns its convergence, and an
 analyst who manages confidentiality places it under embargo and discloses it;
-in the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE assessment an
-analyst who manages CVSS adds, edits, and deletes, its package tree, with the
+in the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
+assessment an analyst who manages CVSS adds, edits, and deletes, its package
+tree, with the
 IBS requests of its tracks, to which an analyst who manages packages adds the
 packages that Sentinel missed, whose packages, tracks, and Products they
 exclude and restore, and on which they set the affectedness of the tracks and
 the eligibility of the Products, its details, whose assignee an analyst
 changes and whose Coordinated Release Date, the end of the embargo, an
-analyst who manages confidentiality sets, changes, and removes, the sources of its CVE, which an analyst refetches, and who is
-involved in it, with the access grants of a confidential Ticket, which an
-analyst who manages confidentiality grants and revokes; in the tab References
+analyst who manages confidentiality sets, changes, and removes, the sources
+of its CVE, which an analyst refetches, and who is involved in it, with the
+access grants of a confidential Ticket, which an analyst who manages
+confidentiality grants and revokes; in the tab References
 its references, the advisories, patches, and other pages of other sites that
 analysts read while they analyze it, which an analyst who manages references
 adds, edits, and deletes; in the tab Affected versions the versions of the
@@ -55,8 +57,7 @@ to a user who holds `triage_ticket`; Rerun convergence to a user who holds
 on the SUSE assessments, to a user who holds `manage_cvss`, Grant access and
 Revoke access, Make confidential… and Make non-confidential…, and Edit
 Coordinated Release Date to a user who holds `manage_confidentiality`, Add
-reference, and
-Edit and Delete on the manual references, to a user who holds
+reference, and Edit and Delete on the manual references, to a user who holds
 `manage_references`, Add package, Exclude and Restore on the packages, tracks,
 and Products, the affectedness of the tracks, and the eligibility of the
 Products to a user who holds `manage_packages`, and Fixed to a user who holds
@@ -998,8 +999,8 @@ depart from them:
   Unknown Values). Refetch, Grant access and Revoke access, Make
   confidential… and Make non-confidential…, Edit Coordinated Release Date,
   and the actions of the references are outside the guard, and the screen
-  offers them in every status. Reopen, Revert duplicate, and Rerun convergence are outside
-  the guard too, each with the statuses that its entry states. An action
+  offers them in every status. Reopen, Revert duplicate, and Rerun
+  convergence are outside the guard too, each with the statuses that its entry states. An action
   that the status of the Ticket does not allow is not offered, in a menu
   too, rather than shown disabled: the arrow keys of a menu pass over a
   disabled item, so its reason would not be read, and a control whose
@@ -1368,19 +1369,18 @@ Confidential Ticket Visibility):
   `all`, other than the maintainers of its packages, and making it
   non-confidential discloses it to every user, which cannot be undone. The
   consequences follow the Ticket as the screen shows it:
-  - "Make SNTL-12 confidential?", "Only the users who see every Ticket, the
-    maintainers of its packages that are not excluded, and the users to whom
-    access is granted then see SNTL-12. Every other user loses access to
-    it.", since a Ticket that is not confidential has no access grants; then,
-    for a Ticket in New, Analysis, or Analyzed with an assignee, whom
-    Sentinel unassigns when they cannot be the assignee of a confidential
-    Ticket: "If Bob Wilson, the assignee, can't be the assignee of a
-    confidential Ticket, SNTL-12 becomes unassigned.", since the screen does
-    not know the assignment eligibility of another user, or, for the
-    signed-in user as the assignee, whose assignment eligibility the screen
-    knows, "You can't be the assignee of a confidential Ticket, so SNTL-12
-    becomes unassigned." unless it is `all`; Cancel and Make confidential, a
-    danger button;
+  - "Make SNTL-12 confidential?", "Only the users who see every Ticket and
+    the maintainers of its packages that are not excluded keep seeing
+    SNTL-12. Every other user loses access to it.", since a Ticket that is
+    not confidential has no access grants; then, for a Ticket in New,
+    Analysis, or Analyzed with an assignee, whom Sentinel unassigns when they
+    cannot be the assignee of a confidential Ticket: "If Bob Wilson, the
+    assignee, can't be the assignee of a confidential Ticket, SNTL-12 becomes
+    unassigned.", since the screen reads the assignment eligibility of no
+    other user, or, for the signed-in user as the assignee, whose assignment
+    eligibility the screen has, "You can't be the assignee of a confidential
+    Ticket, so SNTL-12 becomes unassigned." unless it is `all`; Cancel and
+    Make confidential, a danger button;
   - "Make SNTL-18 non-confidential?", "Every user can then see SNTL-18.
     Making it confidential again doesn't undo that disclosure.", "Its access
     grants are deleted, and making it confidential again doesn't restore
@@ -1391,9 +1391,11 @@ Confidential Ticket Visibility):
   returns to Actions, which offers the other item. A change of the
   confidentiality can unassign the Ticket and deletes the access grants of a
   Ticket made non-confidential, so the screen then reads again the Ticket,
-  its access grants, the work of a maintainer on it, the users who acted on
-  it, its audit log, and the reads of the Ticket list, the Embargo view and
-  its count included.
+  the work of a maintainer on it, the users who acted on it, its audit log,
+  and the reads of the Ticket list, the Embargo view and its count included,
+  and its access grants once a read shows the Ticket confidential, since
+  Sentinel refuses the read of the grants of a Ticket that is not (Sentinel
+  `docs/features/tickets/tickets.md`, List Access Grants).
 - The outcome is announced once the read of the Ticket after it arrives
   (above), as Sentinel returns the Ticket: "Made confidential.", "Made
   confidential, unassigned." when Sentinel cleared the assignee that the
@@ -1473,9 +1475,7 @@ Coordinated Release Window):
   Coordinated Release Date, also once it is no longer confidential, since
   Sentinel changes and removes the date there. While its dialog is open, it
   stays, also when a read of the signed-in user takes
-  `manage_confidentiality` away (`docs/behaviors.md`, The Signed-in User),
-  and the layout of the screen waits until the dialog closes (Content,
-  Layout of Overview).
+  `manage_confidentiality` away (`docs/behaviors.md`, The Signed-in User).
 - It opens a dialog at most 560 px wide (`docs/design-system.md`, Dialogs),
   titled such as "Edit the Coordinated Release Date of SNTL-18". It says, in
   `fg-muted`, on a confidential Ticket, "The date and time agreed with the
@@ -1484,7 +1484,11 @@ Coordinated Release Window):
   a Ticket that is no longer confidential, "SNTL-18 is no longer
   confidential, but its Coordinated Release Date still decides its
   deadlines: they divide the time from its creation to it, and follow the
-  SLA without it. Once removed, it can't be set again.". Then Coordinated
+  SLA without it. Once removed, it can't be set again.", or, once a read
+  shows it no longer confidential and without a date, as after another
+  user's changes, "SNTL-18 is no longer confidential and has no Coordinated
+  Release Date, so it can't receive one.". The texts, Remove date, and its
+  confirmation follow the Ticket as the screen shows it. Then Coordinated
   Release Date, in a form (`docs/design-system.md`, Forms), a date and time
   field whose first part takes the focus as the dialog opens, with the date
   of the Ticket to the minute, or empty without one, and whose description
@@ -1493,8 +1497,9 @@ Coordinated Release Window):
   passed." for an instant before the dialog opened, which Sentinel accepts,
   so that a mistyped year shows. Its calendar enables the days from that of
   the creation of the Ticket to 30 Dec 9999. Then, while the Ticket had a
-  date as the dialog opened, Remove date, a secondary button at the start of
-  the buttons; Cancel; and Save, a primary button.
+  date as the dialog opened and can still have one, Remove date, a secondary
+  button at the start of the buttons (`docs/design-system.md`, Dialogs);
+  Cancel; and Save, a primary button.
 - Save checks the field before sending it: with only some of its parts, or
   emptied, "Enter the day, the month, the year, and the time."; an instant
   before the creation of the Ticket, which Sentinel refuses, taken to the
@@ -1512,8 +1517,9 @@ Coordinated Release Window):
   Coordinated Release Date again, and its deadlines then follow the SLA.
   This can't be undone.", Cancel, and Remove date, a danger button.
 - Save asks for no confirmation: another change reverses it. Its input is a
-  date and time other than the one with which the dialog opened, and before
-  discarding it the question says "The Coordinated Release Date of SNTL-18
+  field whose parts differ from those with which the dialog opened, also
+  while only some of them are typed, and before discarding it the question
+  says "The Coordinated Release Date of SNTL-18
   isn't changed." (above). While the request is in progress, the field is
   read-only and keeps its focus.
 - A change moves the deadlines of the Ticket, and a removal returns them to
@@ -2274,20 +2280,19 @@ document, Manual-Zone Exception):
   (`docs/behaviors.md`, Where Errors Appear; Default Presentation by Status;
   Retries and Unconfirmed Changes); the screen handles no code of Set
   Confidentiality specifically (Sentinel `docs/features/tickets/tickets.md`,
-  Set Confidentiality). A failure that ends after the user left the screen
-  shows in the message area in the presentation of its status, starting with
-  the Ticket (Actions).
+  Set Confidentiality).
 - **Errors of Edit Coordinated Release Date.** A failure shows in the form of
   its dialog, which keeps the date and time (`docs/behaviors.md`, Where Errors
   Appear). The screen handles two codes specifically: `422
   TICKET_COORDINATED_RELEASE_BEFORE_CREATION`, at the field, with the message
   of the check of the creation (Actions); and `409 TICKET_NOT_CONFIDENTIAL`,
   for a Ticket that is no longer confidential and has no date, as after
-  another user made it non-confidential and removed its date meanwhile, at
-  the top of the form in the `danger` tone, since Sentinel then changed
-  nothing, "SNTL-18 is no longer confidential and has no Coordinated Release
-  Date, so it can't receive one." (Sentinel
-  `docs/features/tickets/tickets.md`, Set Coordinated Release Date). A field
+  another user made it non-confidential and removed its date meanwhile, of
+  Save and of Remove date alike, at the top of the form in the `danger` tone,
+  since Sentinel then changed nothing, "SNTL-18 is no longer confidential and
+  has no Coordinated Release Date." (Sentinel
+  `docs/features/tickets/tickets.md`, Set Coordinated Release Date); the
+  confirmation of a removal then closes, so that the form shows it. A field
   error of a `VALIDATION_ERROR` for `coordinated_release_at` shows at the
   field. Every other failure shows at the top of the form (Errors), or, for a
   removal that the user confirmed, at the top of its confirmation, which
@@ -2492,8 +2497,9 @@ document, Manual-Zone Exception):
 - Sentinel `docs/features/tickets/ticket-service.md` — `associate_cve`;
   `mark_as_duplicate`; `reopen_from_ignored()`; `revert_duplicate()`
 - Sentinel `docs/features/tickets/ticket-deadlines.md` — Actors and Phases;
-  SLA Tier; Due Dates (Coordinated Release Window; Null Due Dates); Track Milestones (Observability of Later
-  Phases; Completion Evidence); Ticket Current Phase
+  SLA Tier; Due Dates (Coordinated Release Window; Null Due Dates); Track
+  Milestones (Observability of Later Phases; Completion Evidence); Ticket
+  Current Phase
 - Sentinel `docs/features/packages/package-model.md` — Three Orthogonal
   Dimensions; Affectedness-Delivery Independence; Status Behavior
   (User-Attributed Status Change; Authorized-User Overrides Product

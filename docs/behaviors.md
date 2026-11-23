@@ -519,7 +519,8 @@ actor of a recorded action (Representation of a User) are exceptions.
   `9 Oct 2026, 14:05`: the day without a leading zero, the English
   abbreviation of the month, the year, and the time on the 24-hour clock. A
   screen document adds the seconds where they matter, as `14:05:09`. The time
-  zone is not shown.
+  zone is not shown, except in the description of a field of a date and time
+  (Input).
 - A date without a time, such as the end of support of a Product, shows as
   `9 Oct 2026`, as the API returns it, without a conversion between time
   zones.
@@ -912,7 +913,7 @@ also meets these requirements, which they cannot check:
 | Cancel | Leave an edit or a dialog without a change |
 | Close | Leave a dialog that shows a result, such as a new API key |
 | Delete | Remove a record for good, such as a reference |
-| Remove | Take an item out of a set that the user edits, such as a role from a user's roles |
+| Remove | Take an item out of a set that the user edits, such as a role from a user's roles, or a value out of a field, such as the Coordinated Release Date of a Ticket |
 | Discard, Keep editing | Drop input not yet submitted, or keep it |
 | Try again | Repeat a read that failed |
 | Reload page | Load the whole page again after a failure of the UI itself (Default Presentation by Status) |

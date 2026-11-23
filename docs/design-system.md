@@ -1504,12 +1504,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   `docs/behaviors.md` (Input) orders them, each with its leading zeros, such
   as 08/01/2099 or 00:05, and ends with a quiet icon button 24 px square
   with `calendar` at 16 px in `fg-muted`, named "Calendar" followed by the
-  name of its field, such as "Calendar From", which its tooltip shows; a
-  date and time field of a form, such as the Coordinated Release Date of a
-  Ticket, is 224 px wide, its parts the day, the month, and the year, then
-  the hour and the minute, and its description names its time zone
-  (`docs/behaviors.md`, Input); and a search field starts with `search` at
-  16 px and, with a value, ends with a clear button.
+  name of its field, such as "Calendar From", which its tooltip shows, and
+  the control of a date and time field of a form (`docs/behaviors.md`,
+  Input) is 224 px wide; and a search field starts with `search` at 16 px
+  and, with a value, ends with a clear button.
 - A combobox of users, such as the user field of a grant, searches the
   directory, List Users, with the filters that its screen document states,
   such as active users only (Sentinel
@@ -1673,10 +1671,10 @@ states it, such as that of a Ticket; the other audit logs are tables
 - Its title is in `text-16`, weight 600, its text in `fg-muted`, and its
   buttons, 40 px high, close it aligned to its end: Cancel, or Keep editing,
   as a secondary button, then the action, primary or danger as Buttons and
-  Links states (`docs/behaviors.md`, Confirmation). An action of a dialog
-  that removes the value that the dialog edits, such as Remove date of the
-  Coordinated Release Date of a Ticket, is a secondary button at the start
-  of the line of the buttons, apart from Cancel and the action.
+  Links states (`docs/behaviors.md`, Confirmation). The dialog of the
+  Coordinated Release Date of a Ticket starts the line with Remove date, a
+  secondary button, apart from Cancel and the action
+  (`docs/screens/ticket.md`, Actions).
 - A centered dialog has no close icon: Cancel, Close, and Escape close it.
 
 ### Messages

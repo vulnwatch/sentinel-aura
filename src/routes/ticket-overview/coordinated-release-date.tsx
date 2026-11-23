@@ -20,6 +20,7 @@ import {
 import { Form } from "react-aria-components";
 import {
   isCoordinatedReleaseBeforeCreation,
+  isNotConfidential,
   isRequestFailure,
   MESSAGE_INVALID_VALUE,
   presentCoordinatedReleaseFailure,
@@ -182,25 +183,27 @@ interface CoordinatedReleaseDialogProps {
 // Dialogs), at most 560 px wide, titled such as "Edit the Coordinated
 // Release Date of SNTL-18": what the date decides, in fg-muted; then the date
 // and time field, Coordinated Release Date, which takes the focus as the
-// dialog opens; then, while the Ticket had a date as the dialog opened,
-// Remove date, a secondary button at the start of the buttons, and Cancel
-// and Save, a primary button. Save checks before sending that the date and
-// the time are complete, and that they lie between the creation of the
-// Ticket and the last day that the field takes; a date and time unchanged
-// closes the dialog without a request. Remove date sends null at once on a
-// confidential Ticket, and asks for confirmation on one that is no longer
-// confidential, which cannot receive a date again (docs/behaviors.md,
-// Confirmation). A check, a field error of a VALIDATION_ERROR, and 422
-// TICKET_COORDINATED_RELEASE_BEFORE_CREATION show at the field, which takes
-// the focus, until the input changes; every other failure at the top of the
-// form, which takes the focus, 409 TICKET_NOT_CONFIDENTIAL as an error and
-// the others in the presentation of a change, as a warning when Sentinel did
-// not confirm it, or at the top of the confirmation, which stays open
-// (docs/behaviors.md, Where Errors Appear; Retries and Unconfirmed Changes).
-// With another date and time than the one with which the dialog opened,
-// Cancel, Escape, and every navigation of the UI ask "Discard changes?"
-// first. While the change is in progress, the dialog cannot be closed and
-// the field is read-only.
+// dialog opens; then, while the Ticket had a date as the dialog opened and
+// can still have one, Remove date, a secondary button at the start of the
+// buttons, and Cancel and Save, a primary button. Save checks before sending
+// that the date and the time are complete, and that they lie between the
+// creation of the Ticket and the last day that the field takes; a date and
+// time unchanged closes the dialog without a request. Remove date sends null
+// at once on a confidential Ticket, and asks for confirmation on one that is
+// no longer confidential, which cannot receive a date again
+// (docs/behaviors.md, Confirmation). A check, a field error of a
+// VALIDATION_ERROR, and 422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION show
+// at the field, which takes the focus, or whose part with the focus
+// announces it, until the input changes; 409 TICKET_NOT_CONFIDENTIAL, also
+// of a confirmed removal, whose confirmation then closes, at the top of the
+// form as an error; every other failure at the top of the form, which takes
+// the focus, or, for a confirmed removal, at the top of the confirmation,
+// which stays open, in the presentation of a change, as a warning when
+// Sentinel did not confirm it (docs/behaviors.md, Where Errors Appear;
+// Retries and Unconfirmed Changes). With other parts than those with which
+// the dialog opened, Cancel, Escape, and every navigation of the UI ask
+// "Discard changes?" first. While the change is in progress, the dialog
+// cannot be closed and the field is read-only.
 function CoordinatedReleaseDialog({
   ticket,
   record,
@@ -235,16 +238,9 @@ function CoordinatedReleaseDialog({
       ? null
       : fieldValueOf(Date.parse(ticket.coordinated_release_at)),
   );
-  // What the field holds, as it last reported it, and as its description
-  // and the question before discarding it show it.
   const [now] = useState(() => Date.now());
-  const [initial] = useState<Typed>(() =>
-    opened === null
-      ? UNTYPED
-      : { kind: "complete", value: opened, edited: false },
-  );
-  const typedRef = useRef(initial);
-  const [typed, setTyped] = useState(initial);
+  // What the field holds, as it last reported it.
+  const [typed, setTyped] = useState<Typed>(UNTYPED);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [removeError, setRemoveError] = useState<DialogError>();
   const [failure, setFailure] = useState<FormFailure>(NO_FAILURE);
@@ -257,9 +253,18 @@ function CoordinatedReleaseDialog({
   const { focusField, region } = useFieldErrorFocus(
     failure.field !== undefined,
   );
+  // The field with an error takes the focus on its first part, unless one of
+  // its parts holds it already, as after Enter in it, whose error is then
+  // announced (docs/behaviors.md, Accessibility, Announcements).
   useEffect(() => {
     if (failure.form === undefined && failure.field !== undefined) {
-      focusField(firstPart(group.current), failure.field);
+      const active = document.activeElement;
+      focusField(
+        active instanceof HTMLElement && group.current?.contains(active)
+          ? active
+          : firstPart(group.current),
+        failure.field,
+      );
     }
   }, [failure, focusField]);
   const value = dateTimeOf(typed);
@@ -297,7 +302,10 @@ function CoordinatedReleaseDialog({
             reference: presentation.reference,
             unconfirmed: presentation.unconfirmed,
           };
-    if (inConfirmation && fields.length === 0) {
+    // A removal that the user confirmed shows its failure in the
+    // confirmation, except one that says that the Ticket can no longer have a
+    // date, which the form shows, as it does for Save.
+    if (inConfirmation && fields.length === 0 && !isNotConfidential(error)) {
       setRemoveError(form);
       return;
     }
@@ -333,10 +341,9 @@ function CoordinatedReleaseDialog({
     if (change.isPending) {
       return;
     }
-    const current = typedRef.current;
-    const shown = dateTimeOf(current);
+    const shown = dateTimeOf(typed);
     if (
-      (current.kind === "empty" && opened === null) ||
+      (typed.kind === "empty" && opened === null) ||
       (shown !== undefined && opened !== null && shown.compare(opened) === 0)
     ) {
       onClose();
@@ -366,19 +373,33 @@ function CoordinatedReleaseDialog({
     }
   };
 
-  const intro = ticket.is_confidential ? (
-    <>
-      The date and time agreed with the other parties at which the embargo of{" "}
-      {ticketId} ends. Its deadlines divide the time from its creation to it,
-      and follow the SLA without it.
-    </>
-  ) : (
-    <>
-      {ticketId} is no longer confidential, but its Coordinated Release Date
-      still decides its deadlines: they divide the time from its creation to it,
-      and follow the SLA without it. Once removed, it can&apos;t be set again.
-    </>
-  );
+  // The texts and Remove date follow the Ticket as the screen shows it, also
+  // once a read shows it changed while the dialog is open: a Ticket that is
+  // no longer confidential and has no date can't receive one (Sentinel
+  // docs/features/tickets/tickets.md, Set Coordinated Release Date).
+  const closed =
+    !ticket.is_confidential && ticket.coordinated_release_at === null;
+  let intro: ReactNode;
+  if (ticket.is_confidential) {
+    intro = (
+      <>
+        The date and time agreed with the other parties at which the embargo of{" "}
+        {ticketId} ends. Its deadlines divide the time from its creation to it,
+        and follow the SLA without it.
+      </>
+    );
+  } else if (closed) {
+    intro = `${ticketId} is no longer confidential and has no Coordinated Release Date, so it can't receive one.`;
+  } else {
+    intro = (
+      <>
+        {ticketId} is no longer confidential, but its Coordinated Release Date
+        still decides its deadlines: they divide the time from its creation to
+        it, and follow the SLA without it. Once removed, it can&apos;t be set
+        again.
+      </>
+    );
+  }
 
   return (
     <ModalDialog
@@ -389,7 +410,7 @@ function CoordinatedReleaseDialog({
       closable={!busy}
       buttons={
         <>
-          {opened !== null && (
+          {opened !== null && !closed && (
             <div className="me-auto flex">
               <Button
                 size="large"
@@ -461,11 +482,8 @@ function CoordinatedReleaseDialog({
             last={LAST_DAY}
             isReadOnly={busy}
             groupRef={group}
-            onTyped={(next) => {
-              typedRef.current = next;
-            }}
+            onTyped={setTyped}
             onEdit={() => {
-              setTyped(typedRef.current);
               if (failure.field !== undefined) {
                 setFailure((current) => ({ ...current, field: undefined }));
               }
@@ -490,8 +508,9 @@ function CoordinatedReleaseDialog({
 // fails (useOutcomeAfterRead); the outcome of a change that ends after the
 // user left the tab shows there too, naming the Ticket (docs/behaviors.md,
 // Outcome of a Change). Whatever the outcome, the screen then reads again
-// what the change affects: the Ticket, whose deadlines it moves, the users
-// who acted on it, its audit log, and the reads of the Ticket list.
+// what the change affects: the Ticket, whose deadlines it moves, the work of
+// a maintainer on it, the users who acted on it, its audit log, and the
+// reads of the Ticket list.
 export function useCoordinatedReleaseDate(ticket: TicketDetail) {
   const ticketId = ticket.ticket_id;
   const user = useSignedInUser();

@@ -741,7 +741,8 @@ export function isCoordinatedReleaseBeforeCreation(
 // its form (docs/screens/ticket.md, States): 409 TICKET_NOT_CONFIDENTIAL, for
 // a Ticket that is no longer confidential and has no Coordinated Release
 // Date, as after another user made it non-confidential and removed its date
-// meanwhile, as an error, since Sentinel then changed nothing (Sentinel
+// meanwhile, whether the user set the date or removed it, as an error, since
+// Sentinel then changed nothing (Sentinel
 // docs/features/tickets/tickets.md, Set Coordinated Release Date); and every
 // other failure as a change.
 export function presentCoordinatedReleaseFailure(
@@ -750,7 +751,7 @@ export function presentCoordinatedReleaseFailure(
 ): ChangeFailurePresentation | undefined {
   if (isNotConfidential(failure)) {
     return {
-      message: `${ticketId} is no longer confidential and has no Coordinated Release Date, so it can't receive one.`,
+      message: `${ticketId} is no longer confidential and has no Coordinated Release Date.`,
       reference: undefined,
       unconfirmed: false,
     };
