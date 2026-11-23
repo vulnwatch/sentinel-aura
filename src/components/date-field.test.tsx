@@ -178,6 +178,27 @@ test("shows the placeholders of its parts without a value", async () => {
   expect(valuesOf(screen)).toEqual([null, null, null, null, null]);
 });
 
+test("sets its parts 24 px apart at least, center to center, empty or with a value, and shows the space after the comma before the time", async () => {
+  for (const initial of [null, new CalendarDateTime(2099, 1, 1, 11, 11)]) {
+    const screen = await render(<FormField initial={initial} />);
+    const centers = fieldOf(screen)
+      .getByRole("spinbutton")
+      .elements()
+      .map((part) => {
+        const box = part.getBoundingClientRect();
+        return box.left + box.width / 2;
+      });
+    for (const [index, center] of centers.slice(1).entries()) {
+      expect(center - (centers[index] ?? 0)).toBeGreaterThanOrEqual(24);
+    }
+    const year = partOf(screen, 2).element().getBoundingClientRect();
+    const hour = partOf(screen, 3).element().getBoundingClientRect();
+    // The comma and the space, at least 6 px in text-15.
+    expect(hour.left - year.right).toBeGreaterThanOrEqual(6);
+    await screen.unmount();
+  }
+});
+
 test("reports what it holds, empty, only some of its parts, or a complete date and time, with whether the user changed what it showed as it started, and each change of the parts that it shows", async () => {
   const onTyped = vi.fn<(typed: Typed) => void>();
   const onEdit = vi.fn<() => void>();
@@ -336,6 +357,16 @@ test("shows its description below it in text-13, fg-muted, which describes it to
   await expect
     .element(partOf(screen, 0))
     .toHaveAccessibleDescription(new RegExp(DESCRIPTION.replace(".", "\\.")));
+});
+
+test("shows a description longer than the control on lines as wide as the form, not the control", async () => {
+  const long = `${DESCRIPTION} ${DESCRIPTION}`;
+  const screen = await render(<FormField description={long} />);
+
+  const description = screen.getByText(long, { exact: true }).element();
+  expect(description.getBoundingClientRect().width).toBeGreaterThan(
+    fieldOf(screen).element().getBoundingClientRect().width,
+  );
 });
 
 test("shows its error below its description, marks its parts invalid, and draws its boundary in danger-icon, 2 px wide", async () => {

@@ -121,10 +121,15 @@ function MonthButton({ slot }: MonthButtonProps) {
 // The looks of a field: that of a filter of a list, 160 px wide, its name in
 // the style of the name of a group of checkboxes (docs/design-system.md,
 // Lists); and that of a field of a form, its label in text-15, weight 500,
-// 224 px wide for a date and time (docs/design-system.md, Forms).
+// its control 224 px wide for a date and time, and its description and its
+// error as wide as the form (docs/design-system.md, Forms).
 const LOOKS = {
-  filter: { field: "w-40 gap-1", label: "text-12 font-medium text-fg-muted" },
-  form: { field: "w-56 gap-1.5", label: "text-15 font-medium" },
+  filter: {
+    field: "w-40 gap-1",
+    control: "",
+    label: "text-12 font-medium text-fg-muted",
+  },
+  form: { field: "gap-1.5", control: "w-56", label: "text-15 font-medium" },
 } as const;
 
 export interface DateFieldProps {
@@ -228,13 +233,18 @@ export function DateField({
               onEnter();
             }
           }}
-          className="flex h-10 cursor-default items-center rounded-md border border-border-strong bg-surface pr-1.75 pl-4 text-15 text-fg tabular-nums data-focus-within:outline-2 data-focus-within:outline-offset-2 data-focus-within:outline-focus data-invalid:border-2 data-invalid:border-danger-icon data-invalid:pr-1.5 data-invalid:pl-3.75"
+          className={`${LOOKS[look].control} flex h-10 cursor-default items-center rounded-md border border-border-strong bg-surface pr-1.75 pl-4 text-15 text-fg tabular-nums data-focus-within:outline-2 data-focus-within:outline-offset-2 data-focus-within:outline-focus data-invalid:border-2 data-invalid:border-danger-icon data-invalid:pr-1.5 data-invalid:pl-3.75`}
         >
           <DateInput className="flex flex-1">
             {(segment) => (
               <DateSegment
                 segment={segment}
-                className="rounded-sm px-px outline-none data-placeholder:text-fg-muted data-focused:bg-accent data-focused:text-on-accent data-focused:data-placeholder:text-on-accent data-[type=literal]:px-0"
+                // Each part 3 px wider on each side than its text, so that
+                // two parts beside a narrow literal, such as the hour and the
+                // minute, stand 24 px apart at least (WCAG 2.2, 2.5.8 Target
+                // Size (Minimum)); a literal keeps its spaces, such as the
+                // one after the comma before the time.
+                className="rounded-sm px-0.75 outline-none data-placeholder:text-fg-muted data-focused:bg-accent data-focused:text-on-accent data-focused:data-placeholder:text-on-accent data-[type=literal]:px-0 data-[type=literal]:whitespace-pre"
               >
                 {({ text }) => (
                   <>
