@@ -14,6 +14,7 @@ import type {
   CurrentUserResponse,
   TicketDetail,
 } from "../api/generated/model";
+import { focusScreenHeading } from "../components/screen-heading";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { useShownTicket } from "./ticket";
@@ -272,6 +273,21 @@ function scrollPaddingTop(): number {
   return Number.parseFloat(
     getComputedStyle(document.documentElement).scrollPaddingTop,
   );
+}
+
+// Scrolls the page of SNTL-12, with two columns, until the heading row shows
+// as the compact heading, and returns the scroll position once the scroll
+// padding, and the scroll margins of the elements of the compact heading,
+// have followed its height (scrollPaddingTop).
+async function scrollToCompactHeading(screen: Screen): Promise<number> {
+  window.scrollTo(0, 120);
+  await expect
+    .poll(() => getComputedStyle(heading(screen, "SNTL-12").element()).fontSize)
+    .toBe("16px");
+  const overview = screen.getByRole("tab", { name: "Overview" });
+  await expect.poll(scrollPaddingTop).toBe(boxOf(overview).bottom);
+  await nextFrames();
+  return window.scrollY;
 }
 
 describe("the read of the Ticket", () => {
@@ -811,6 +827,102 @@ describe("the layout", () => {
     await expect.element(actionsOf(screen)).not.toBeInTheDocument();
     expect(getComputedStyle(title.element()).fontSize).toBe("16px");
     expect(boxOf(tabs).top).toBe(top);
+  });
+
+  test("leaves the page where it is when the keyboard moves the focus onto the controls of the compact heading", async () => {
+    await page.viewport(1280, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket();
+    const scrolled = await scrollToCompactHeading(screen);
+    const overview = screen.getByRole("tab", { name: "Overview" });
+    const references = screen.getByRole("tab", { name: "References" });
+    // The button of the explanation of the priority, P2, before Actions.
+    const priority = screen.getByRole("button", { name: "P2", exact: true });
+    // The focus starts on the tab Overview, where the page is.
+    overview.element().focus({ preventScroll: true });
+    await expect.element(overview).toHaveFocus();
+
+    // Shift+Tab to Actions, and to the priority before it.
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+    await expect.element(actionsOf(screen)).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(scrolled);
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+    await expect.element(priority).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(scrolled);
+
+    // Tab back to Actions and to the tab, then an arrow key to the next tab,
+    // which it does not open.
+    await userEvent.keyboard("{Tab}");
+    await expect.element(actionsOf(screen)).toHaveFocus();
+    await userEvent.keyboard("{Tab}");
+    await expect.element(overview).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(scrolled);
+    await userEvent.keyboard("{ArrowRight}");
+    await expect.element(references).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(scrolled);
+    await expect.element(overview).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("leaves the page where it is when the focus moves to the heading of the screen in the compact heading", async () => {
+    await page.viewport(1280, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket();
+    const title = heading(screen, "SNTL-12");
+    const scrolled = await scrollToCompactHeading(screen);
+
+    focusScreenHeading();
+
+    await expect.element(title).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(scrolled);
+  });
+
+  test("leaves the page where it is when the keyboard moves the focus onto the controls of the heading row before it reaches the top of the window", async () => {
+    await page.viewport(1280, 300);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket();
+    const title = heading(screen, "SNTL-12");
+    // A few pixels, which leave the heading row below the top of the window,
+    // not yet the compact heading, though it can stay there.
+    window.scrollTo(0, 10);
+    await expect.poll(() => window.scrollY).toBe(10);
+    await nextFrames();
+    expect(getComputedStyle(title.element()).fontSize).toBe("20px");
+    const overview = screen.getByRole("tab", { name: "Overview" });
+    // The focus starts on the tab Overview, where the page is.
+    overview.element().focus({ preventScroll: true });
+    await expect.element(overview).toHaveFocus();
+
+    // Shift+Tab to Actions, and Tab back to the tab.
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+    await expect.element(actionsOf(screen)).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(10);
+    await userEvent.keyboard("{Tab}");
+    await expect.element(overview).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(10);
+  });
+
+  test("leaves the page where it is when the keyboard moves the focus onto a tab of the heading row in a window barely taller than it", async () => {
+    await page.viewport(1280, 180);
+    showing(fictionalTicketDetail({ cve: longCve() }));
+    const { screen } = await renderTicket();
+    const overview = screen.getByRole("tab", { name: "Overview" });
+    // The heading row, with its tabs, ends close to the end of the window.
+    expect(boxOf(overview).bottom).toBeGreaterThan(window.innerHeight / 2);
+    actionsOf(screen).element().focus({ preventScroll: true });
+    await expect.element(actionsOf(screen)).toHaveFocus();
+
+    await userEvent.keyboard("{Tab}");
+
+    await expect.element(overview).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(0);
   });
 
   test("scrolls the page until an element of a side column taller than the window shows when it takes the focus from the keyboard, at the end of the page and back above it, below the compact heading", async () => {

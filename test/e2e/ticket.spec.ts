@@ -2606,6 +2606,111 @@ test.describe("for an analyst", () => {
       .toBeGreaterThanOrEqual(0);
   });
 
+  test("leaves the page where it is as the keyboard and a click move the focus onto Actions and the tabs of the compact heading, on Overview and on Audit log", async ({
+    page,
+  }) => {
+    // SNTL-12, Analyzed, on which asmith has Actions, and whose audit log is
+    // longer than the window (Tickets; References; Packages, Tracks, and
+    // Maintainers).
+    await page.setViewportSize({ width: 1280, height: 400 });
+    await signIn(page, "asmith");
+    const title = heading(page, "SNTL-12");
+    const actions = actionsButton(page, "SNTL-12");
+    const scrollY = () => page.evaluate(() => window.scrollY);
+    // The two frames after an event, in which React renders what it set and
+    // runs the effects of that render, such as the scroll of React Aria to
+    // the tab that an arrow key focuses.
+    const nextFrames = () =>
+      page.evaluate(
+        () =>
+          new Promise<void>((done) => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                done();
+              });
+            });
+          }),
+      );
+    // Each tab, and the arrow key to the tab beside it.
+    for (const [path, name, arrow, next] of [
+      ["/tickets/SNTL-12", "Overview", "ArrowRight", "References"],
+      [
+        "/tickets/SNTL-12/audit-log",
+        "Audit log",
+        "ArrowLeft",
+        "Affected versions",
+      ],
+    ] as const) {
+      await page.goto(path);
+      if (name === "Overview") {
+        await expectOverviewShown(page);
+      } else {
+        await expect(event(page, "Bob Wilson assigned")).toBeVisible();
+      }
+      await page.evaluate(() => {
+        window.scrollTo(0, 200);
+      });
+      await expect.poll(scrollY).toBe(200);
+      await expect(title).toHaveCSS("font-size", "16px");
+      const tab = page.getByRole("tab", { name, exact: true });
+      // Once the scroll padding of the page, and the scroll margins of the
+      // elements of the compact heading, have followed its height, which
+      // ends with the tabs (src/components/fixed-top.ts).
+      await expect
+        .poll(async () => {
+          const box = await tab.boundingBox();
+          const padding = await page.evaluate(() =>
+            Number.parseFloat(
+              getComputedStyle(document.documentElement).scrollPaddingTop,
+            ),
+          );
+          return box === null
+            ? Infinity
+            : Math.abs(box.y + box.height - padding);
+        })
+        .toBeLessThanOrEqual(1);
+      await nextFrames();
+      // The focus starts on the tab, where the page is.
+      await tab.evaluate((element) => {
+        if (element instanceof HTMLElement) {
+          element.focus({ preventScroll: true });
+        }
+      });
+      await expect(tab).toBeFocused();
+
+      await page.keyboard.press("Shift+Tab");
+
+      await expect(actions).toBeFocused();
+      expect(await scrollY()).toBe(200);
+
+      await page.keyboard.press("Tab");
+
+      await expect(tab).toBeFocused();
+      expect(await scrollY()).toBe(200);
+
+      await page.keyboard.press(arrow);
+
+      await expect(
+        page.getByRole("tab", { name: next, exact: true }),
+      ).toBeFocused();
+      await nextFrames();
+      expect(await scrollY()).toBe(200);
+      await expect(page).toHaveURL(path);
+
+      // A click, before which Playwright scrolls Actions into view, and the
+      // return of the focus to Actions as its menu closes.
+      await actions.click();
+
+      await expect(actionsMenu(page, "SNTL-12")).toBeVisible();
+      expect(await scrollY()).toBe(200);
+      await expectAccessible(page);
+      await page.keyboard.press("Escape");
+      await expect(actions).toBeFocused();
+      await nextFrames();
+      expect(await scrollY()).toBe(200);
+    }
+  });
+
   test("opens the assignee picker of a Ticket from its details, with the users who can be its assignee, and closes it without a change", async ({
     page,
   }) => {
@@ -3978,9 +4083,12 @@ async function openActions(page: Page, ticketId: string) {
 
 // Presses an element with the pointer where it shows, as a user does, once
 // it has arrived. Playwright's click first scrolls the element into view,
-// which for Actions in the compact heading, which sticks at the top of the
-// window, and for the items of its menu, scrolls the page back to its top,
-// as a press of a user does not.
+// below what stays at the top of the window, which for an item of the menu
+// of Actions, whose menu opens from the compact heading and so starts in the
+// space that the window keeps for the compact heading, moves the page, as a
+// press of a user does not. Actions itself, which the window takes as in view
+// in the compact heading (src/components/detail-screen.tsx), takes
+// Playwright's click.
 async function pressWhereShown(page: Page, element: Locator) {
   await expect(element).toBeVisible();
   const box = await element.boundingBox();
@@ -4449,7 +4557,7 @@ test.describe("the actions of a Ticket", () => {
 
     // The menu and the dialog open where the page is, which stays there.
     const scrollY = await page.evaluate(() => window.scrollY);
-    await pressWhereShown(page, actions);
+    await actions.click();
 
     // In Analysis, Rerun convergence follows, below a line, and Make
     // confidential… last, below another.
@@ -4522,7 +4630,7 @@ test.describe("the actions of a Ticket", () => {
 
     // Submitted without a reason, the form sends nothing, says so at Reason,
     // and gives the first reason the focus.
-    await pressWhereShown(page, actions);
+    await actions.click();
     await pressWhereShown(page, ignore);
     await expectReasons(dialog, ["Not shipped", "CVE rejected", "Other"]);
 
