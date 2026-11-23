@@ -29,6 +29,10 @@ import { IconButton } from "../components/icon-button";
 import { Loading, UpdatingBar } from "../components/loading";
 import { OptionsStatus } from "../components/options";
 import { dataPlace, placeMessage } from "../components/read-view";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
 import { useRowFocusAfterRemoval } from "../components/row-focus";
 import { FocusHandOff } from "../components/screen-heading";
 import { addressText, WebLink } from "../components/web-link";
@@ -439,11 +443,7 @@ function TicketReferences() {
   // opens does not (docs/behaviors.md, Accessibility, Focus after a
   // navigation).
   const key = stringifySearch(search);
-  const [openedAt] = useState(key);
-  const [changed, setChanged] = useState(false);
-  if (!changed && key !== openedAt) {
-    setChanged(true);
-  }
+  const changed = useChangedSinceOpened(key);
   // What the tab shows after the change of the filters, as it shows it
   // then: a later change of the references, such as a Delete, announces its
   // own outcome, not the result of the filters again.
@@ -557,9 +557,7 @@ function TicketReferences() {
           Clear filters or the browser history makes, outside the popover
           (docs/behaviors.md, Accessibility, Focus after a navigation); and
           the outcome of a change. */}
-      <output className="sr-only">
-        <span key={key}>{filtered}</span>
-      </output>
+      <ResultAnnouncement state={key}>{filtered}</ResultAnnouncement>
       {outcome.region}
       {dialog !== undefined && (
         <ReferenceDialog

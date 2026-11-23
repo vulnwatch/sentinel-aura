@@ -35,6 +35,10 @@ import {
 } from "../components/options";
 import { Pagination } from "../components/pagination";
 import { dataPlace, placeMessage } from "../components/read-view";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
 import { FocusHandOff } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { Timeline } from "../components/timeline";
@@ -389,11 +393,7 @@ function TicketAuditLog() {
   // timeline shows, once it shows it; the tab as it opens does not
   // (docs/behaviors.md, Accessibility, Focus after a navigation).
   const key = stringifySearch(search);
-  const [openedAt] = useState(key);
-  const [changed, setChanged] = useState(false);
-  if (!changed && key !== openedAt) {
-    setChanged(true);
-  }
+  const changed = useChangedSinceOpened(key);
   const announcement =
     changed && events.status === "success" && !events.isPlaceholderData
       ? resultText(events.data, search)
@@ -496,9 +496,7 @@ function TicketAuditLog() {
           />
         )}
       </div>
-      <output className="sr-only">
-        <span key={key}>{announcement}</span>
-      </output>
+      <ResultAnnouncement state={key}>{announcement}</ResultAnnouncement>
     </>
   );
 }

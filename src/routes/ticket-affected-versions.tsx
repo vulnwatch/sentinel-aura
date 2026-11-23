@@ -1,6 +1,6 @@
 import { createRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { X } from "lucide-react";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { z } from "zod";
 import { useGetCveAffectedVersions } from "../api/generated/cves";
 import type {
@@ -22,6 +22,10 @@ import { GroupBand } from "../components/group-band";
 import { Loading, UpdatingBar } from "../components/loading";
 import { MarkedValue, type MarkedName } from "../components/marked-value";
 import { dataPlace } from "../components/read-view";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
 import {
   FocusHandOff,
   useFocusHeadingOnRemoval,
@@ -710,9 +714,9 @@ function Versions({ cveId, search, searched, onClear }: VersionsProps) {
   );
   return (
     <div className="relative">
-      <output className="sr-only">
-        <span key={search ?? ""}>{announcement}</span>
-      </output>
+      <ResultAnnouncement state={search ?? ""}>
+        {announcement}
+      </ResultAnnouncement>
       {place.updating && <UpdatingBar />}
       <output className="block">{place.failure ?? place.warning}</output>
       {groups === undefined ||
@@ -772,12 +776,7 @@ function TicketAffectedVersions() {
   const navigate = useNavigate();
   const ticket = useGetTicket(ticketId, { query: { enabled: false } }).data
     ?.data;
-  const key = stringifySearch(search);
-  const [openedAt] = useState(key);
-  const [searched, setSearched] = useState(false);
-  if (!searched && key !== openedAt) {
-    setSearched(true);
-  }
+  const searched = useChangedSinceOpened(stringifySearch(search));
   const refine = (term: string) => {
     void navigate({
       to: "/tickets/$ticketId/affected-versions",

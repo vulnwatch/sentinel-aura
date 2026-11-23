@@ -18,6 +18,10 @@ import { Button } from "../components/button";
 import type { TableSort } from "../components/data-table";
 import { Pagination } from "../components/pagination";
 import { placeMessage, ScreenRead } from "../components/read-view";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
 import { FocusHandOff, ScreenHeading } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { Count, ViewTabs } from "../components/view-tabs";
@@ -291,13 +295,8 @@ function TicketList({ user }: TicketListProps) {
   // A change of the view, the page, the search, a filter, or the sorting
   // announces what the list shows, once it shows it, and the screen as it
   // opens does not (docs/behaviors.md, Accessibility, Focus after a
-  // navigation). Each change gives the announcement a node of its own, so
-  // that the same words as before are announced too.
-  const [openedAt] = useState(key);
-  const [changed, setChanged] = useState(false);
-  if (!changed && key !== openedAt) {
-    setChanged(true);
-  }
+  // navigation).
+  const changed = useChangedSinceOpened(key);
   const announcement =
     changed && list.status === "success" && !list.isPlaceholderData
       ? resultText(list.data, search)
@@ -384,9 +383,7 @@ function TicketList({ user }: TicketListProps) {
               )}
             </ViewTabs>
           </div>
-          <output className="sr-only">
-            <span key={key}>{announcement}</span>
-          </output>
+          <ResultAnnouncement state={key}>{announcement}</ResultAnnouncement>
         </>
       )}
       renderPlace={(read) => (
