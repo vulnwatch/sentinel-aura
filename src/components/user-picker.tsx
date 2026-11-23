@@ -11,6 +11,7 @@ import {
 } from "react-aria-components";
 import type { ListUsersAssignmentEligibilityItem } from "../api/generated/model";
 import { useListUsers } from "../api/generated/users";
+import { COUNT } from "./count";
 import { useFieldErrorFocus } from "./field-error-focus";
 import { FOCUS_RING } from "./focus-ring";
 import { Label as UserLabel } from "./label";
@@ -26,7 +27,6 @@ import { Tooltip } from "./tooltip";
 import type { UserFields } from "./user";
 import {
   characters,
-  COUNT,
   SEARCH_MAX_LENGTH,
   SEARCH_MIN_LENGTH,
   useSettledTerm,

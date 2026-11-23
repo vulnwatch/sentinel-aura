@@ -24,6 +24,7 @@ import type {
 import { useAddTicketPackage } from "../../api/generated/ticket-packages";
 import { Button } from "../../components/button";
 import { useChangeOutcome } from "../../components/change-outcome";
+import { COUNT, counted } from "../../components/count";
 import { useDiscardQuestion } from "../../components/discard-question";
 import {
   DialogErrorMessage,
@@ -34,7 +35,6 @@ import {
 import { useFieldErrorFocus } from "../../components/field-error-focus";
 import {
   characters,
-  COUNT,
   FreeTextComboBox,
   useSearchTerm,
 } from "../../components/search-combobox";
@@ -73,11 +73,6 @@ export function nameError(name: string): string | null {
     : "Enter only letters, digits, and . _ + -, starting with a letter or a digit.";
 }
 
-// What a count of the outcome says, such as "1 track" or "7 Products".
-function counted(count: number, one: string, several: string): string {
-  return `${COUNT.format(count)} ${count === 1 ? one : several}`;
-}
-
 // The outcome of an addition, from the counts that Sentinel returns, which
 // say what it created and not whether the package is new: "Package
 // fictional-openssl: 3 tracks and 7 Products added.", or, when it created
@@ -91,10 +86,10 @@ function counted(count: number, one: string, several: string): string {
 export function addedText({ data }: PackageAdditionResponse): string {
   const created = [
     ...(data.tracks_created > 0
-      ? [counted(data.tracks_created, "track", "tracks")]
+      ? [counted(data.tracks_created, { one: "track", other: "tracks" })]
       : []),
     ...(data.products_created > 0
-      ? [counted(data.products_created, "Product", "Products")]
+      ? [counted(data.products_created, { one: "Product", other: "Products" })]
       : []),
   ];
   return created.length === 0

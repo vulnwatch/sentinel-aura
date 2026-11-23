@@ -6,7 +6,6 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { z } from "zod";
 import type { TicketAuditListResponse } from "../api/generated/model";
@@ -15,12 +14,14 @@ import {
   useListTicketEvents,
 } from "../api/generated/ticket-audit-log";
 import { useGetTicket } from "../api/generated/tickets";
-import { Button } from "../components/button";
 import { ButtonLink } from "../components/button-link";
+import { COUNT, counted } from "../components/count";
 import { EmptyState } from "../components/data-table";
 import { DateRangeFilter } from "../components/date-range-filter";
 import { dayOf } from "../components/date-time";
 import {
+  ClearFilters,
+  ClearFiltersAction,
   FilterGroup,
   Filters,
   FilterSelect,
@@ -35,14 +36,18 @@ import {
 } from "../components/options";
 import { Pagination } from "../components/pagination";
 import { dataPlace, placeMessage } from "../components/read-view";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
 import { FocusHandOff } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { Timeline } from "../components/timeline";
 import { Actor, type UserFields } from "../components/user";
 import {
   LAST_PAGE,
-  sameSearch,
   SEARCH_MAX_LENGTH,
+  searchRedirect,
   searchTermParam,
   stringifySearch,
   valueListParam,
@@ -185,8 +190,6 @@ function refinedBy(search: AuditLogSearch): "search" | "filters" | undefined {
 // --------------------------------------------------------------------------
 // The screen.
 
-const COUNT = new Intl.NumberFormat("en-US");
-
 // The empty state of a page without events (docs/behaviors.md, Empty States).
 function emptyMessage(
   { meta }: TicketAuditListResponse,
@@ -214,7 +217,7 @@ function resultText(list: TicketAuditListResponse, search: AuditLogSearch) {
     return emptyMessage(list, search);
   }
   if (meta.total <= meta.per_page) {
-    return `${COUNT.format(meta.total)} ${meta.total === 1 ? "event" : "events"}`;
+    return counted(meta.total, { one: "event", other: "events" });
   }
   const first = (meta.page - 1) * meta.per_page + 1;
   const last = first + data.length - 1;
@@ -389,11 +392,7 @@ function TicketAuditLog() {
   // timeline shows, once it shows it; the tab as it opens does not
   // (docs/behaviors.md, Accessibility, Focus after a navigation).
   const key = stringifySearch(search);
-  const [openedAt] = useState(key);
-  const [changed, setChanged] = useState(false);
-  if (!changed && key !== openedAt) {
-    setChanged(true);
-  }
+  const changed = useChangedSinceOpened(key);
   const announcement =
     changed && events.status === "success" && !events.isPlaceholderData
       ? resultText(events.data, search)
@@ -448,14 +447,7 @@ function TicketAuditLog() {
             }}
           />
         </Filters>
-        {refined !== undefined && (
-          <FocusHandOff>
-            <Button variant="quiet" size="small" onPress={clearFilters}>
-              <X aria-hidden className="size-4" />
-              Clear filters
-            </Button>
-          </FocusHandOff>
-        )}
+        {refined !== undefined && <ClearFilters onPress={clearFilters} />}
       </div>
       <div className="relative mt-4">
         {place.updating && <UpdatingBar />}
@@ -474,10 +466,7 @@ function TicketAuditLog() {
                     Go to the first page
                   </ButtonLink>
                 ) : refinedBy(shownSearch) === undefined ? undefined : (
-                  <Button onPress={clearFilters}>
-                    <X aria-hidden className="size-4" />
-                    Clear filters
-                  </Button>
+                  <ClearFiltersAction onPress={clearFilters} />
                 )
               }
             />
@@ -496,9 +485,7 @@ function TicketAuditLog() {
           />
         )}
       </div>
-      <output className="sr-only">
-        <span key={key}>{announcement}</span>
-      </output>
+      <ResultAnnouncement state={key}>{announcement}</ResultAnnouncement>
     </>
   );
 }
@@ -513,17 +500,12 @@ export const ticketAuditLogRoute = createRoute({
   path: "audit-log",
   validateSearch: auditLogSearch,
   beforeLoad: ({ location, params }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself.
-    const accepted = auditLogSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
+    const accepted = searchRedirect(auditLogSearch, location);
+    if (accepted !== undefined) {
       throw redirect({
         to: "/tickets/$ticketId/audit-log",
         params,
-        search: accepted,
-        hash: location.hash,
-        replace: true,
+        ...accepted,
       });
     }
   },

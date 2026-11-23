@@ -13,6 +13,7 @@ import type {
   TicketSortField,
 } from "../../api/generated/model";
 import { useListTickets } from "../../api/generated/tickets";
+import { PHASE_NAMES as REMEDIATION_PHASE_NAMES } from "../../components/phases";
 import {
   LAST_PAGE,
   searchTermParam,
@@ -436,13 +437,11 @@ export function refinedBy(
   return search.search === undefined ? undefined : "search";
 }
 
-// The names of the phases (Sentinel docs/features/tickets/ticket-deadlines.md,
-// Actors and Phases; docs/behaviors.md, Deadlines).
+// The names of the phases (src/components/phases.ts), and Done, the current
+// phase of a Ticket without a phase left (Sentinel
+// docs/features/tickets/ticket-deadlines.md, Ticket Current Phase).
 export const PHASE_NAMES: Record<(typeof PHASES)[number], string> = {
-  triage: "Triage",
-  submission: "Submission",
-  um: "UM",
-  qa: "QA",
+  ...REMEDIATION_PHASE_NAMES,
   done: "Done",
 };
 

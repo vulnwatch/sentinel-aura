@@ -5,7 +5,6 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { z } from "zod";
 import type {
@@ -14,16 +13,20 @@ import type {
   SortOrder,
 } from "../api/generated/model";
 import { useListTickets } from "../api/generated/tickets";
-import { Button } from "../components/button";
+import { ClearFilters } from "../components/filters";
 import type { TableSort } from "../components/data-table";
 import { Pagination } from "../components/pagination";
 import { placeMessage, ScreenRead } from "../components/read-view";
-import { FocusHandOff, ScreenHeading } from "../components/screen-heading";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
+import { ScreenHeading } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { Count, ViewTabs } from "../components/view-tabs";
 import {
-  sameSearch,
   SEARCH_MAX_LENGTH,
+  searchRedirect,
   stringifySearch,
 } from "../search-params";
 import { useSignedInUser } from "../session-gate";
@@ -291,13 +294,8 @@ function TicketList({ user }: TicketListProps) {
   // A change of the view, the page, the search, a filter, or the sorting
   // announces what the list shows, once it shows it, and the screen as it
   // opens does not (docs/behaviors.md, Accessibility, Focus after a
-  // navigation). Each change gives the announcement a node of its own, so
-  // that the same words as before are announced too.
-  const [openedAt] = useState(key);
-  const [changed, setChanged] = useState(false);
-  if (!changed && key !== openedAt) {
-    setChanged(true);
-  }
+  // navigation).
+  const changed = useChangedSinceOpened(key);
   const announcement =
     changed && list.status === "success" && !list.isPlaceholderData
       ? resultText(list.data, search)
@@ -356,19 +354,7 @@ function TicketList({ user }: TicketListProps) {
                     onRefine={refine}
                   />
                   {refined !== undefined && (
-                    // When it leaves the page with the search and the
-                    // filters that it removed, the focus moves to the
-                    // screen's heading.
-                    <FocusHandOff>
-                      <Button
-                        variant="quiet"
-                        size="small"
-                        onPress={clearFilters}
-                      >
-                        <X aria-hidden className="size-4" />
-                        Clear filters
-                      </Button>
-                    </FocusHandOff>
+                    <ClearFilters onPress={clearFilters} />
                   )}
                 </>
               }
@@ -384,9 +370,7 @@ function TicketList({ user }: TicketListProps) {
               )}
             </ViewTabs>
           </div>
-          <output className="sr-only">
-            <span key={key}>{announcement}</span>
-          </output>
+          <ResultAnnouncement state={key}>{announcement}</ResultAnnouncement>
         </>
       )}
       renderPlace={(read) => (
@@ -423,18 +407,9 @@ export const ticketListRoute = createRoute({
   path: "/tickets",
   validateSearch: ticketListSearch,
   beforeLoad: ({ location }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself. The URL gives every value as text, such as the page, which
-    // the schema reads as a number, so the two compare as URLs.
-    const accepted = ticketListSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
-      throw redirect({
-        to: "/tickets",
-        search: accepted,
-        hash: location.hash,
-        replace: true,
-      });
+    const accepted = searchRedirect(ticketListSearch, location);
+    if (accepted !== undefined) {
+      throw redirect({ to: "/tickets", ...accepted });
     }
   },
   component: TicketListPage,

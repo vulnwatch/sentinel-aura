@@ -1,4 +1,4 @@
-import { ChevronDown, ListFilter } from "lucide-react";
+import { ChevronDown, ListFilter, X } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import {
   Button as AriaButton,
@@ -17,9 +17,12 @@ import { Checkbox } from "./checkbox";
 import { FOCUS_RING } from "./focus-ring";
 import { FirstFieldFocus } from "./modal-dialog";
 import { Option, OPTIONS_POPOVER } from "./options";
+import { FocusHandOff } from "./screen-heading";
 
 // The filters of a list (docs/design-system.md, Lists): Filters in the
-// toolbar, which opens a popover with a group of checkboxes for each filter.
+// toolbar, which opens a popover with a group of checkboxes for each filter,
+// and Clear filters, in the toolbar and in the empty state of a list whose
+// records do not match.
 
 export interface FilterOption<T extends string> {
   // The value that the filter sends.
@@ -226,5 +229,41 @@ export function Filters({ applied, status, children }: FiltersProps) {
         </Dialog>
       </Popover>
     </DialogTrigger>
+  );
+}
+
+interface ClearFiltersProps {
+  // Removes the search and the filters of the list, and keeps its view and
+  // its sorting.
+  onPress: () => void;
+}
+
+// Clear filters at the end of the toolbar of a list, while a filter or a
+// search applies: a quiet button 32 px high with x, which comes last, so
+// that it moves no other control to another row as it appears
+// (docs/design-system.md, Lists). When it leaves the page with the search
+// and the filters that it removed while it holds the focus, the focus moves
+// to the screen's heading (docs/behaviors.md, Accessibility, Focus after an
+// action).
+export function ClearFilters({ onPress }: ClearFiltersProps) {
+  return (
+    <FocusHandOff>
+      <Button variant="quiet" size="small" onPress={onPress}>
+        <X aria-hidden className="size-4" />
+        Clear filters
+      </Button>
+    </FocusHandOff>
+  );
+}
+
+// Clear filters as the action of the empty state of a list whose records do
+// not match its filters or its search: a secondary button with x
+// (docs/behaviors.md, Empty States; docs/design-system.md, Empty States).
+export function ClearFiltersAction({ onPress }: ClearFiltersProps) {
+  return (
+    <Button onPress={onPress}>
+      <X aria-hidden className="size-4" />
+      Clear filters
+    </Button>
   );
 }

@@ -6,7 +6,6 @@ import {
 } from "../../api/generated/cves";
 import { getGetTicketPackageWorkQueryKey } from "../../api/generated/maintainer-operations";
 import { CVSSVersionValue } from "../../api/generated/model";
-import type { CurrentPhaseValue } from "../../api/generated/model";
 import {
   getListTicketActorsQueryKey,
   getListTicketEventsQueryKey,
@@ -20,9 +19,8 @@ import { AbsentValue } from "../../components/absent-value";
 import { DateTime } from "../../components/date-time";
 
 // What several parts of Overview (src/routes/ticket-overview.tsx) share: the
-// anchors of the parts, the formats of a count and of a score, the phases of
-// the remediation of a Ticket, the fields of a line, and the reads after a
-// change.
+// anchors of the parts, the format of a score, the fields of a line, and the
+// reads after a change.
 
 // The anchors of the parts that the tab shows, the same on every Ticket,
 // although a Ticket without a CVE lacks its CVSS assessments and its
@@ -37,28 +35,6 @@ export const PARTICIPANTS_ANCHOR = "participants";
 // The largest page of List Tickets (Sentinel docs/api-spec.md, Pagination):
 // the details show at most this many duplicates, and how many more there are.
 const DUPLICATES_PAGE = 100;
-
-// A count, its thousands grouped (docs/behaviors.md, Style).
-export const COUNT = new Intl.NumberFormat("en-US");
-
-// The phases of the remediation of a Ticket, in their order, with their due
-// dates (Sentinel docs/features/tickets/ticket-deadlines.md, Actors and
-// Phases; Due Dates).
-type Phase = Exclude<CurrentPhaseValue, "done">;
-export const PHASES: readonly { phase: Phase; name: string; due: DueField }[] =
-  [
-    { phase: "triage", name: "Triage", due: "triage_due_at" },
-    { phase: "submission", name: "Submission", due: "submission_due_at" },
-    { phase: "um", name: "UM", due: "um_due_at" },
-    { phase: "qa", name: "QA", due: "qa_due_at" },
-  ];
-
-type DueField =
-  | "triage_due_at"
-  | "submission_due_at"
-  | "um_due_at"
-  | "qa_due_at"
-  | "release_due_at";
 
 // The parameters of the read of the duplicates of a Ticket: the visible
 // Tickets whose original it is, the oldest first, at most a page of them

@@ -5,6 +5,7 @@ import { CvssVector } from "../../components/cvss-vector";
 import { formatDateTime } from "../../components/date-time";
 import { ignoreReasonName } from "../../components/ignore-reason";
 import { Link } from "../../components/link";
+import { referenceTypeName } from "../../components/reference-type";
 import { TimelineObject, type TimelineEvent } from "../../components/timeline";
 import { WebAddress, WebLink } from "../../components/web-link";
 import { isTicketId } from "../ticket";
@@ -21,13 +22,6 @@ const TRACK_STATUSES: Record<string, string> = {
   NOT_AFFECTED: "Not affected",
   FIXED: "Fixed",
   WONT_FIX: "Won't fix",
-};
-
-const REFERENCE_TYPES: Record<string, string> = {
-  advisory: "Advisory",
-  patch: "Patch",
-  issue: "Issue",
-  article: "Article",
 };
 
 const ELIGIBILITY_REASONS: Record<string, string> = {
@@ -367,10 +361,6 @@ function referenceText(
   );
 }
 
-function referenceType(value: string | null): string {
-  return value === null ? "Uncategorized" : named(REFERENCE_TYPES, value);
-}
-
 // What the actor of an event did, by its type (docs/screens/ticket.md, Audit
 // log); an event type that the pinned contract does not list shows its type
 // as received, and none of its values (docs/behaviors.md, Unknown Values).
@@ -579,7 +569,7 @@ function sentenceOf(event: TicketAuditEventData): Sentence {
         <>
           changed the type of{" "}
           {url === undefined ? "a reference" : <Address value={url} />} from{" "}
-          {referenceType(before)} to {referenceType(after)}
+          {referenceTypeName(before)} to {referenceTypeName(after)}
         </>,
       );
     }

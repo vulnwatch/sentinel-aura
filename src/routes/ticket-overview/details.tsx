@@ -5,6 +5,7 @@ import type { TicketDetail } from "../../api/generated/model";
 import { useListTickets } from "../../api/generated/tickets";
 import { AbsentValue } from "../../components/absent-value";
 import { ConfidentialMark } from "../../components/confidential-mark";
+import { COUNT } from "../../components/count";
 import { DateTime } from "../../components/date-time";
 import { dueState } from "../../components/deadline-badge";
 import {
@@ -16,13 +17,14 @@ import {
 import { SideSection } from "../../components/detail-screen";
 import { ignoreReasonName } from "../../components/ignore-reason";
 import { Link } from "../../components/link";
+import { PHASES } from "../../components/phases";
 import { PartRead } from "../../components/read-view";
 import { type Assignee, AssigneeField } from "./assignee";
 import {
   CoordinatedReleaseField,
   type CoordinatedReleaseDate,
 } from "./coordinated-release-date";
-import { COUNT, DETAILS_ANCHOR, duplicatesOf, PHASES } from "./shared";
+import { DETAILS_ANCHOR, duplicatesOf } from "./shared";
 
 // The details of the Ticket, the first part of the side column of Overview
 // (src/routes/ticket-overview.tsx): its fields, with its deadlines, its

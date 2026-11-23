@@ -19,6 +19,7 @@ import { dueState } from "./deadline-badge";
 import { ValueRecords } from "./details-popover";
 import { FOCUS_RING } from "./focus-ring";
 import { InfoPopover, PopoverLine, PopoverTitle } from "./info-popover";
+import { PHASES as REMEDIATION_PHASES, type Phase } from "./phases";
 
 // The milestones of a track (docs/design-system.md, Track Milestones;
 // Sentinel docs/features/tickets/ticket-deadlines.md, Actors and Phases;
@@ -26,36 +27,20 @@ import { InfoPopover, PopoverLine, PopoverTitle } from "./info-popover";
 // docs/features/packages/package-model.md, Axis 3: Delivery and Release
 // Observation).
 
-type Phase = "triage" | "submission" | "um" | "qa";
+// The actor of each phase.
+const ACTORS = {
+  triage: "Vulnerability analyst",
+  submission: "Maintainer",
+  um: "Maintenance update team",
+  qa: "QA",
+} satisfies Record<Phase, string>;
 
-// The phases of a track in their order, each with its actor and its due
-// date.
-const PHASES: readonly {
-  phase: Phase;
-  name: string;
-  actor: string;
-  due: "triage_due_at" | "submission_due_at" | "um_due_at" | "qa_due_at";
-}[] = [
-  {
-    phase: "triage",
-    name: "Triage",
-    actor: "Vulnerability analyst",
-    due: "triage_due_at",
-  },
-  {
-    phase: "submission",
-    name: "Submission",
-    actor: "Maintainer",
-    due: "submission_due_at",
-  },
-  {
-    phase: "um",
-    name: "UM",
-    actor: "Maintenance update team",
-    due: "um_due_at",
-  },
-  { phase: "qa", name: "QA", actor: "QA", due: "qa_due_at" },
-];
+// The phases of a track in their order (src/components/phases.ts), each with
+// its actor and its due date.
+const PHASES = REMEDIATION_PHASES.map((phase) => ({
+  ...phase,
+  actor: ACTORS[phase.phase],
+}));
 
 // The fields of a track that its milestones show. A milestone status and the
 // current phase take every string: a later Sentinel release can return a

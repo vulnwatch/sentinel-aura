@@ -44,6 +44,7 @@ import {
   useMounted,
   useOutcomeAfterRead,
 } from "../../components/change-outcome";
+import { COUNT } from "../../components/count";
 import { DateTime } from "../../components/date-time";
 import {
   DescriptionItem,
@@ -57,6 +58,7 @@ import { Maintainers } from "../../components/maintainers";
 import { UpdatingBar } from "../../components/loading";
 import { MenuAction } from "../../components/menu";
 import { useShowMessage } from "../../components/message-area";
+import { PHASES } from "../../components/phases";
 import { marksPlace } from "../../components/read-view";
 import {
   FocusHandOff,
@@ -85,10 +87,8 @@ import {
   useMarkerOutcome,
 } from "./package-edits";
 import {
-  COUNT,
   MaybeDateTime,
   PACKAGES_ANCHOR,
-  PHASES,
   useReadAfterTicketChange,
 } from "./shared";
 

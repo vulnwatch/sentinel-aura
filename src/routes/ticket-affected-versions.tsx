@@ -1,6 +1,5 @@
 import { createRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { X } from "lucide-react";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { z } from "zod";
 import { useGetCveAffectedVersions } from "../api/generated/cves";
 import type {
@@ -9,8 +8,8 @@ import type {
 } from "../api/generated/model";
 import { useGetTicket } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
-import { Button } from "../components/button";
 import { ClampedText } from "../components/clamped-text";
+import { counted } from "../components/count";
 import { EmptyState } from "../components/data-table";
 import {
   DescriptionItem,
@@ -18,10 +17,15 @@ import {
   FIELD,
 } from "../components/description-list";
 import { DetailsName } from "../components/details-popover";
+import { ClearFilters, ClearFiltersAction } from "../components/filters";
 import { GroupBand } from "../components/group-band";
 import { Loading, UpdatingBar } from "../components/loading";
 import { MarkedValue, type MarkedName } from "../components/marked-value";
 import { dataPlace } from "../components/read-view";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
 import {
   FocusHandOff,
   useFocusHeadingOnRemoval,
@@ -29,8 +33,8 @@ import {
 import { SearchField } from "../components/search-field";
 import { addressText, WebLink } from "../components/web-link";
 import {
-  sameSearch,
   SEARCH_MAX_LENGTH,
+  searchRedirect,
   searchTermParam,
   stringifySearch,
 } from "../search-params";
@@ -43,13 +47,6 @@ import { CVE_SOURCE_NAMES, ticketRoute } from "./ticket";
 // Versions), by affected product, and within a product by the source that
 // reports them: the provenance scope of the entries, which is not one of the
 // CVE sources that Overview shows.
-
-// A count, its thousands grouped (docs/behaviors.md, Style).
-const COUNT = new Intl.NumberFormat("en-US");
-
-function entriesText(count: number): string {
-  return `${COUNT.format(count)} ${count === 1 ? "entry" : "entries"}`;
-}
 
 // ----------------------------------------------------------------------------
 // Sources
@@ -661,7 +658,9 @@ function resultText(shown: number, all: number): string {
   if (all === 0) {
     return NO_ENTRIES;
   }
-  return shown === 0 ? NO_MATCH : entriesText(shown);
+  return shown === 0
+    ? NO_MATCH
+    : counted(shown, { one: "entry", other: "entries" });
 }
 
 // ----------------------------------------------------------------------------
@@ -710,9 +709,9 @@ function Versions({ cveId, search, searched, onClear }: VersionsProps) {
   );
   return (
     <div className="relative">
-      <output className="sr-only">
-        <span key={search ?? ""}>{announcement}</span>
-      </output>
+      <ResultAnnouncement state={search ?? ""}>
+        {announcement}
+      </ResultAnnouncement>
       {place.updating && <UpdatingBar />}
       <output className="block">{place.failure ?? place.warning}</output>
       {groups === undefined ||
@@ -727,12 +726,7 @@ function Versions({ cveId, search, searched, onClear }: VersionsProps) {
         <FocusHandOff key="no-match">
           <EmptyState
             message={NO_MATCH}
-            action={
-              <Button onPress={onClear}>
-                <X aria-hidden className="size-4" />
-                Clear filters
-              </Button>
-            }
+            action={<ClearFiltersAction onPress={onClear} />}
           />
         </FocusHandOff>
       ) : (
@@ -772,12 +766,7 @@ function TicketAffectedVersions() {
   const navigate = useNavigate();
   const ticket = useGetTicket(ticketId, { query: { enabled: false } }).data
     ?.data;
-  const key = stringifySearch(search);
-  const [openedAt] = useState(key);
-  const [searched, setSearched] = useState(false);
-  if (!searched && key !== openedAt) {
-    setSearched(true);
-  }
+  const searched = useChangedSinceOpened(stringifySearch(search));
   const refine = (term: string) => {
     void navigate({
       to: "/tickets/$ticketId/affected-versions",
@@ -805,14 +794,7 @@ function TicketAffectedVersions() {
               maxLength={SEARCH_MAX_LENGTH}
               onApply={refine}
             />
-            {search.search !== undefined && (
-              <FocusHandOff>
-                <Button variant="quiet" size="small" onPress={clear}>
-                  <X aria-hidden className="size-4" />
-                  Clear filters
-                </Button>
-              </FocusHandOff>
-            )}
+            {search.search !== undefined && <ClearFilters onPress={clear} />}
           </div>
         </FocusHandOff>
       )}
@@ -846,17 +828,12 @@ export const ticketAffectedVersionsRoute = createRoute({
   path: "affected-versions",
   validateSearch: affectedVersionsSearch,
   beforeLoad: ({ location, params }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself.
-    const accepted = affectedVersionsSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
+    const accepted = searchRedirect(affectedVersionsSearch, location);
+    if (accepted !== undefined) {
       throw redirect({
         to: "/tickets/$ticketId/affected-versions",
         params,
-        search: accepted,
-        hash: location.hash,
-        replace: true,
+        ...accepted,
       });
     }
   },

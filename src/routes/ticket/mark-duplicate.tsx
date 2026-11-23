@@ -31,6 +31,7 @@ import {
 } from "../../api/generated/tickets";
 import { Button } from "../../components/button";
 import { ConfidentialMark } from "../../components/confidential-mark";
+import { COUNT } from "../../components/count";
 import { useFieldErrorFocus } from "../../components/field-error-focus";
 import { useChangeOutcome, useMounted } from "../../components/change-outcome";
 import { useDiscardQuestion } from "../../components/discard-question";
@@ -43,7 +44,6 @@ import {
   type DialogError,
 } from "../../components/modal-dialog";
 import {
-  COUNT,
   FreeTextComboBox,
   useSearchTerm,
 } from "../../components/search-combobox";

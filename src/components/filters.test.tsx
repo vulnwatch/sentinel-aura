@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent, type Locator } from "vitest/browser";
@@ -5,6 +6,8 @@ import { render } from "vitest-browser-react";
 import "../styles.css";
 import { pointerAwayFrom } from "../test-pointer";
 import {
+  ClearFilters,
+  ClearFiltersAction,
   FilterGroup,
   Filters,
   FilterSelect,
@@ -622,5 +625,99 @@ describe("a select", () => {
       .toHaveTextContent("Fictional failure of the read of the users.");
     // The same region, which the status fills.
     expect(status.element()).toBe(region);
+  });
+});
+
+// The shapes of x, the icon of Clear filters (docs/design-system.md,
+// Icons by Need).
+async function shapesOfX(): Promise<string> {
+  const screen = await render(
+    <div data-icon>
+      <X />
+    </div>,
+  );
+  const shapes = screen.container.querySelector("[data-icon] svg")!.innerHTML;
+  await screen.unmount();
+  return shapes;
+}
+
+// A fictional list whose toolbar shows Clear filters while its filters
+// apply, below the screen's heading.
+function ClearableList() {
+  const [applied, setApplied] = useState(true);
+  return (
+    <>
+      <h1 tabIndex={-1}>Tickets</h1>
+      {applied && (
+        <ClearFilters
+          onPress={() => {
+            setApplied(false);
+          }}
+        />
+      )}
+      <p>{applied ? "Filters apply" : "No filters apply"}</p>
+    </>
+  );
+}
+
+describe("Clear filters", () => {
+  test("shows in the toolbar a quiet button 32 px high, x at 16 px with its name, which removes the filters", async () => {
+    const shapes = await shapesOfX();
+    const onPress = vi.fn();
+    const screen = await render(<ClearFilters onPress={onPress} />);
+    const button = screen.getByRole("button", {
+      name: "Clear filters",
+      exact: true,
+    });
+    await pointerAwayFrom(button);
+
+    const style = getComputedStyle(button.element());
+    expect(button.element().getBoundingClientRect().height).toBe(32);
+    expect([style.backgroundColor, style.borderTopWidth]).toEqual([
+      "rgba(0, 0, 0, 0)",
+      "0px",
+    ]);
+    const icon = button.element().querySelector("svg")!;
+    expect(icon.getBoundingClientRect().width).toBe(16);
+    expect(icon.innerHTML).toBe(shapes);
+    await button.click();
+    expect(onPress).toHaveBeenCalledOnce();
+  });
+
+  test("moves the focus to the screen's heading when it leaves the page with the filters that it removed", async () => {
+    const screen = await render(<ClearableList />);
+    const button = screen.getByRole("button", { name: "Clear filters" });
+    button.element().focus();
+
+    await userEvent.keyboard("{Enter}");
+
+    await expect
+      .element(screen.getByText("No filters apply", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("heading", { name: "Tickets" }))
+      .toHaveFocus();
+  });
+
+  test("shows in an empty state a secondary button, x at 16 px with its name, which removes the filters", async () => {
+    const shapes = await shapesOfX();
+    const onPress = vi.fn();
+    const screen = await render(<ClearFiltersAction onPress={onPress} />);
+    const button = screen.getByRole("button", {
+      name: "Clear filters",
+      exact: true,
+    });
+    await pointerAwayFrom(button);
+
+    const style = getComputedStyle(button.element());
+    expect([style.backgroundColor, style.borderTopWidth]).toEqual([
+      SURFACE,
+      "1px",
+    ]);
+    const icon = button.element().querySelector("svg")!;
+    expect(icon.getBoundingClientRect().width).toBe(16);
+    expect(icon.innerHTML).toBe(shapes);
+    await button.click();
+    expect(onPress).toHaveBeenCalledOnce();
   });
 });

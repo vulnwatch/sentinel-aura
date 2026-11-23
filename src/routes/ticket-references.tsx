@@ -1,5 +1,5 @@
 import { createRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { Pencil, Plus, Trash, X } from "lucide-react";
+import { Pencil, Plus, Trash } from "lucide-react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import {
@@ -12,6 +12,7 @@ import { AbsentValue } from "../components/absent-value";
 import { Button } from "../components/button";
 import { useMounted, useOutcomeAfterRead } from "../components/change-outcome";
 import { ClampedText } from "../components/clamped-text";
+import { counted } from "../components/count";
 import {
   EmptyState,
   FramedTable,
@@ -19,6 +20,8 @@ import {
 } from "../components/data-table";
 import { DateTime } from "../components/date-time";
 import {
+  ClearFilters,
+  ClearFiltersAction,
   FilterGroup,
   Filters,
   FilterSelect,
@@ -29,10 +32,19 @@ import { IconButton } from "../components/icon-button";
 import { Loading, UpdatingBar } from "../components/loading";
 import { OptionsStatus } from "../components/options";
 import { dataPlace, placeMessage } from "../components/read-view";
+import { referenceTypeName } from "../components/reference-type";
+import {
+  ResultAnnouncement,
+  useChangedSinceOpened,
+} from "../components/result-announcement";
 import { useRowFocusAfterRemoval } from "../components/row-focus";
 import { FocusHandOff } from "../components/screen-heading";
 import { addressText, WebLink } from "../components/web-link";
-import { sameSearch, stringifySearch, valueListParam } from "../search-params";
+import {
+  searchRedirect,
+  stringifySearch,
+  valueListParam,
+} from "../search-params";
 import { useSignedInUser } from "../session-gate";
 import { CVE_FETCHER_NAMES, ticketRecord, ticketRoute } from "./ticket";
 import { DeleteDialog } from "./ticket-references/delete-dialog";
@@ -40,13 +52,7 @@ import {
   ReferenceDialog,
   type DialogMode,
 } from "./ticket-references/reference-dialog";
-import {
-  COUNT,
-  DELETE,
-  EDIT,
-  referenceName,
-  typeName,
-} from "./ticket-references/shared";
+import { DELETE, EDIT, referenceName } from "./ticket-references/shared";
 
 // The tab References of the Ticket screen (docs/screens/ticket.md,
 // References): the references of the Ticket, from List References, which a
@@ -134,9 +140,9 @@ function columnsOf(
       // ReferenceType; docs/behaviors.md, Absent Values).
       render: (reference) =>
         reference.type === null ? (
-          <AbsentValue name={typeName(null)} />
+          <AbsentValue name={referenceTypeName(null)} />
         ) : (
-          typeName(reference.type)
+          referenceTypeName(reference.type)
         ),
     },
     {
@@ -232,7 +238,10 @@ const TYPE_FILTER_OPTIONS: readonly FilterOption<
   (typeof TYPE_FILTERS)[number]
 >[] = TYPE_FILTERS.map((value) => ({
   value,
-  label: value === "uncategorized" ? typeName(null) : typeName(value),
+  label:
+    value === "uncategorized"
+      ? referenceTypeName(null)
+      : referenceTypeName(value),
 }));
 
 // The source filter: one source, as Sentinel records it, at most as long as
@@ -312,7 +321,7 @@ function resultText(shown: number, all: number): string {
   if (shown === 0) {
     return NO_MATCH;
   }
-  return `${COUNT.format(shown)} ${shown === 1 ? "reference" : "references"}`;
+  return counted(shown, { one: "reference", other: "references" });
 }
 
 const NO_MATCH = "No references match the filters.";
@@ -435,11 +444,7 @@ function TicketReferences() {
   // opens does not (docs/behaviors.md, Accessibility, Focus after a
   // navigation).
   const key = stringifySearch(search);
-  const [openedAt] = useState(key);
-  const [changed, setChanged] = useState(false);
-  if (!changed && key !== openedAt) {
-    setChanged(true);
-  }
+  const changed = useChangedSinceOpened(key);
   // What the tab shows after the change of the filters, as it shows it
   // then: a later change of the references, such as a Delete, announces its
   // own outcome, not the result of the filters again.
@@ -508,14 +513,7 @@ function TicketReferences() {
             }}
           />
         </Filters>
-        {applied > 0 && (
-          <FocusHandOff>
-            <Button variant="quiet" size="small" onPress={clearFilters}>
-              <X aria-hidden className="size-4" />
-              Clear filters
-            </Button>
-          </FocusHandOff>
-        )}
+        {applied > 0 && <ClearFilters onPress={clearFilters} />}
       </div>
       <div ref={references} className="relative">
         {place.updating && <UpdatingBar />}
@@ -538,12 +536,7 @@ function TicketReferences() {
             empty={
               <EmptyState
                 message={NO_MATCH}
-                action={
-                  <Button onPress={clearFilters}>
-                    <X aria-hidden className="size-4" />
-                    Clear filters
-                  </Button>
-                }
+                action={<ClearFiltersAction onPress={clearFilters} />}
               />
             }
           />
@@ -553,9 +546,7 @@ function TicketReferences() {
           Clear filters or the browser history makes, outside the popover
           (docs/behaviors.md, Accessibility, Focus after a navigation); and
           the outcome of a change. */}
-      <output className="sr-only">
-        <span key={key}>{filtered}</span>
-      </output>
+      <ResultAnnouncement state={key}>{filtered}</ResultAnnouncement>
       {outcome.region}
       {dialog !== undefined && (
         <ReferenceDialog
@@ -617,17 +608,12 @@ export const ticketReferencesRoute = createRoute({
   path: "references",
   validateSearch: referencesSearch,
   beforeLoad: ({ location, params }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself.
-    const accepted = referencesSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
+    const accepted = searchRedirect(referencesSearch, location);
+    if (accepted !== undefined) {
       throw redirect({
         to: "/tickets/$ticketId/references",
         params,
-        search: accepted,
-        hash: location.hash,
-        replace: true,
+        ...accepted,
       });
     }
   },

@@ -10,6 +10,7 @@ import {
   Text,
   type Key,
 } from "react-aria-components";
+import { COUNT } from "./count";
 import { FOCUS_RING } from "./focus-ring";
 import { Loading } from "./loading";
 import { Option, OPTIONS_POPOVER, OptionsStatus } from "./options";
@@ -29,8 +30,6 @@ export const SEARCH_MAX_LENGTH = 500;
 // How long the field waits after the user stops typing before it reads the
 // options of the term, so that it does not read them for every character.
 export const SEARCH_DELAY_MS = 250;
-
-export const COUNT = new Intl.NumberFormat("en-US");
 
 // The length of a term as Sentinel counts it, in characters, rather than in
 // the UTF-16 code units of a string of JavaScript (Sentinel docs/api-spec.md,

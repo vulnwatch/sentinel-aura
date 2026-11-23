@@ -7,10 +7,9 @@ import {
   type RefObject,
 } from "react";
 import { ButtonLink } from "./button-link";
+import { COUNT } from "./count";
 import type { ScreenHref } from "./router-links";
 import { FocusHandOff } from "./screen-heading";
-
-const COUNT = new Intl.NumberFormat("en-US");
 
 interface PageLinkProps {
   // The address of the page, or undefined when there is none, which disables

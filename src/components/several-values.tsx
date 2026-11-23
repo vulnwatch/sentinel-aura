@@ -1,17 +1,9 @@
 import type { ReactNode } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { AbsentValue } from "./absent-value";
+import { COUNT, counted, type Noun } from "./count";
 import { FOCUS_RING } from "./focus-ring";
 import { Tooltip } from "./tooltip";
-
-const COUNT = new Intl.NumberFormat("en-US");
-
-// What a value is, in the singular and the plural, such as "package" and
-// "packages".
-export interface Noun {
-  one: string;
-  other: string;
-}
 
 interface SeveralValuesProps {
   // The values, distinct, in the order in which they show.
@@ -23,11 +15,6 @@ interface SeveralValuesProps {
 // that the tooltip of a record with many values fits in the window
 // (docs/design-system.md, Tables).
 export const LISTED = 10;
-
-// A number of values, such as "3 packages" or "1 package".
-export function counted(count: number, { one, other }: Noun): string {
-  return `${COUNT.format(count)} ${count === 1 ? one : other}`;
-}
 
 // How many values a list of LISTED values does not name, such as "and 42
 // more", or undefined when it names them all.

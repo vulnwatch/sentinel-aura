@@ -86,6 +86,30 @@ export function sameSearch(
   return canonicalSearch(first) === canonicalSearch(second);
 }
 
+// The redirect options of a route's beforeLoad for a URL whose search
+// parameters are not those that the route's schema gives them: a parameter
+// or a value that the schema does not accept, a value in another form than
+// the schema's, or a parameter that names the screen's default
+// (docs/conventions.md, Routes; docs/behaviors.md, Invalid Search
+// Parameters). They lead to the parameters that the schema gives, keeping
+// the anchor, in place of the URL in the browser history
+// (docs/screen-map.md, Browser History), or are undefined when the URL gives
+// those parameters already. The router's search of the route also passes on
+// every parameter of the URL that the schema does not declare, and gives
+// every value as text, such as a page, which the schema reads as a number,
+// so the schema reads the URL itself, and the two compare as the URLs that
+// they give. The route names its own path and parameters in its redirect,
+// which the route tree types.
+export function searchRedirect<T extends Record<string, unknown>>(
+  schema: { parse: (search: unknown) => T },
+  location: { search: Record<string, unknown>; hash: string },
+): { search: T; hash: string; replace: true } | undefined {
+  const accepted = schema.parse(location.search);
+  return sameSearch(location.search, accepted)
+    ? undefined
+    : { search: accepted, hash: location.hash, replace: true };
+}
+
 // The number of a whole-number parameter, as a URL writes it: digits without
 // a sign or a leading zero. Any other text stays as it is, so that the
 // schema does not accept it.

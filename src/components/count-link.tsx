@@ -1,8 +1,7 @@
 import { Link as AriaLink } from "react-aria-components";
+import { COUNT } from "./count";
 import { FOCUS_RING } from "./focus-ring";
 import type { ScreenHref } from "./router-links";
-
-const COUNT = new Intl.NumberFormat("en-US");
 
 interface CountLinkProps {
   // The name of what it counts, such as "Active P1", or, in a group of
