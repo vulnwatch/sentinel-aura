@@ -22,11 +22,48 @@ export function formatDateTime(value: string): string {
   if (Number.isNaN(instant)) {
     return value;
   }
+  return formatParts(PARTS, instant);
+}
+
+// The same parts in UTC.
+const UTC_PARTS = new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "UTC",
+});
+
+// An instant, in milliseconds since the epoch, as a date and time in UTC,
+// such as 9 Oct 2026, 12:05, which a date and time field shows beside the
+// value that the user enters in the time zone of the browser
+// (docs/behaviors.md, Dates and Times, Input).
+export function formatUtcDateTime(instant: number): string {
+  return formatParts(UTC_PARTS, instant);
+}
+
+function formatParts(format: Intl.DateTimeFormat, instant: number): string {
   const parts = new Map(
-    PARTS.formatToParts(instant).map((part) => [part.type, part.value]),
+    format.formatToParts(instant).map((part) => [part.type, part.value]),
   );
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.get(type) ?? "";
   return `${part("day")} ${part("month")} ${part("year")}, ${part("hour")}:${part("minute")}`;
+}
+
+const ZONE_NAME = new Intl.DateTimeFormat("en-US", { timeZoneName: "long" });
+
+// The name of the time zone of the browser at an instant, in milliseconds
+// since the epoch, such as Central European Standard Time, or Central
+// European Summer Time at an instant of the summer, as a date and time field
+// names it (docs/behaviors.md, Dates and Times, Input).
+export function timeZoneName(instant: number): string {
+  return (
+    ZONE_NAME.formatToParts(instant).find(
+      (part) => part.type === "timeZoneName",
+    )?.value ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
 }
 
 // The time alone of a date and time of the API, in the time zone of the

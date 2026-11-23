@@ -463,7 +463,8 @@ that the code imports ship.
 | The other statuses of a milestone: done, pending, not applicable, not observed (Track Milestones); an observation never made (Other Values) | `circle-check`, `circle`, `circle-minus`, `circle-dashed` |
 | The `missing` status of a source of a CVE, an attempt that found nothing (Other Values) | `circle` |
 | The state of a request: in progress, accepted, failed (Other Values) | `git-pull-request`, `git-merge`, `git-pull-request-closed` |
-| A confidential Ticket | `lock` |
+| A confidential Ticket, and the action that makes a Ticket confidential | `lock` |
+| Make a confidential Ticket non-confidential | `lock-open` |
 | A priority override, an eligibility set by hand, and the actions that set them by hand | `user-pen` |
 | Set the severity of a Ticket by hand, as the kind CVE and CVSS of the timeline, which holds its changes, does | `gauge` |
 | Return a value set by hand to its automatic value, such as the eligibility of a Product | `rotate-ccw` |
@@ -1500,11 +1501,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   checkbox or a radio button is 16 px, with a `border-strong` boundary, a
   4 px radius or round, and when selected an `accent` fill with its mark,
   `check` or a dot of 6 px, in `on-accent`; a date field shows its parts as
-  `docs/behaviors.md` (Input) orders them and ends with a quiet icon button
-  24 px square with `calendar` at 16 px in `fg-muted`, named "Calendar"
-  followed by the name of its field, such as "Calendar From", which its
-  tooltip shows; and a search field starts with `search` at 16 px and, with a
-  value, ends with a clear button.
+  `docs/behaviors.md` (Input) orders them, each with its leading zeros, such
+  as 08/01/2099 or 00:05, and ends with a quiet icon button 24 px square
+  with `calendar` at 16 px in `fg-muted`, named "Calendar" followed by the
+  name of its field, such as "Calendar From", which its tooltip shows, and
+  the control of a date and time field of a form (`docs/behaviors.md`,
+  Input) is 224 px wide; and a search field starts with `search` at 16 px
+  and, with a value, ends with a clear button.
 - A combobox of users, such as the user field of a grant, searches the
   directory, List Users, with the filters that its screen document states,
   such as active users only (Sentinel
@@ -1668,7 +1671,10 @@ states it, such as that of a Ticket; the other audit logs are tables
 - Its title is in `text-16`, weight 600, its text in `fg-muted`, and its
   buttons, 40 px high, close it aligned to its end: Cancel, or Keep editing,
   as a secondary button, then the action, primary or danger as Buttons and
-  Links states (`docs/behaviors.md`, Confirmation).
+  Links states (`docs/behaviors.md`, Confirmation). The dialog of the
+  Coordinated Release Date of a Ticket starts the line with Remove date, a
+  secondary button, apart from Cancel and the action
+  (`docs/screens/ticket.md`, Actions).
 - A centered dialog has no close icon: Cancel, Close, and Escape close it.
 
 ### Messages

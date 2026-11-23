@@ -723,6 +723,42 @@ export function isNotConfidential(error: unknown): boolean {
   );
 }
 
+// Whether Set Coordinated Release Date refused an instant before the creation
+// of the Ticket, 422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION, which shows
+// at the field (Sentinel docs/features/tickets/tickets.md, Set Coordinated
+// Release Date).
+export function isCoordinatedReleaseBeforeCreation(
+  failure: RequestFailure,
+): boolean {
+  return (
+    failure instanceof ApiError &&
+    failure.status === 422 &&
+    failure.code === "TICKET_COORDINATED_RELEASE_BEFORE_CREATION"
+  );
+}
+
+// The presentation of a failure of Set Coordinated Release Date at the top of
+// its form (docs/screens/ticket.md, States): 409 TICKET_NOT_CONFIDENTIAL, for
+// a Ticket that is no longer confidential and has no Coordinated Release
+// Date, as after another user made it non-confidential and removed its date
+// meanwhile, whether the user set the date or removed it, as an error, since
+// Sentinel then changed nothing (Sentinel
+// docs/features/tickets/tickets.md, Set Coordinated Release Date); and every
+// other failure as a change.
+export function presentCoordinatedReleaseFailure(
+  failure: RequestFailure,
+  ticketId: string,
+): ChangeFailurePresentation | undefined {
+  if (isNotConfidential(failure)) {
+    return {
+      message: `${ticketId} is no longer confidential and has no Coordinated Release Date.`,
+      reference: undefined,
+      unconfirmed: false,
+    };
+  }
+  return presentChangeFailure(failure);
+}
+
 // The message of a field error of a VALIDATION_ERROR response
 // (docs/behaviors.md, Where Errors Appear).
 export const MESSAGE_INVALID_VALUE = "This value isn't valid.";

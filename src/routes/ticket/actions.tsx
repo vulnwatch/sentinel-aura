@@ -3,6 +3,8 @@ import {
   CirclePlay,
   Gauge,
   ListRestart,
+  Lock,
+  LockOpen,
   Merge,
   Plus,
   Split,
@@ -46,6 +48,10 @@ import { ticketStatusName } from "../../components/ticket-status";
 import { useSignedInUser } from "../../session-gate";
 import { useReadAfterTicketChange } from "../ticket-overview/shared";
 import { AssociateCveDialog } from "./associate-cve";
+import {
+  ConfidentialityDialog,
+  useReadAfterConfidentiality,
+} from "./confidentiality";
 import { IgnoreDialog, ignoredText } from "./ignore";
 import { MarkDuplicateDialog } from "./mark-duplicate";
 import { OverridePriorityDialog } from "./override-priority";
@@ -61,7 +67,8 @@ import { assigneeOutcome, OPERABLE_STATUSES } from "./shared";
 // first, so that the keyboard, which opens the menu on its first item, opens
 // a dialog rather than ignoring at once; then, apart, the corrections of
 // what Sentinel derived for the Ticket; then, apart, Rerun convergence, a
-// recovery of Sentinel's own work.
+// recovery of Sentinel's own work; then, apart, the change of the
+// confidentiality.
 type ActionId =
   | "ignore"
   | "ignore-not-shipped"
@@ -71,7 +78,9 @@ type ActionId =
   | "override-priority"
   | "set-severity"
   | "associate-cve"
-  | "rerun";
+  | "rerun"
+  | "make-confidential"
+  | "make-non-confidential";
 
 // The dialogs that an action opens.
 type DialogId =
@@ -79,7 +88,16 @@ type DialogId =
   | "mark-duplicate"
   | "override-priority"
   | "set-severity"
-  | "associate-cve";
+  | "associate-cve"
+  | "make-confidential"
+  | "make-non-confidential";
+
+// The actions that change the confidentiality of the Ticket, each with its
+// confirmation.
+const CONFIDENTIALITY = new Set<ActionId>([
+  "make-confidential",
+  "make-non-confidential",
+]);
 
 // The actions that correct what Sentinel derived for the Ticket.
 const CORRECTIONS = new Set<ActionId>([
@@ -107,16 +125,20 @@ const RERUNNABLE_STATUSES = new Set<string>([
 ]);
 
 // The actions that the user can take on the Ticket in its status: those of
-// its status with triage_ticket, and Rerun convergence with triage_ticket or
-// manage_fetchers (Sentinel docs/features/identity/rbac.md, Endpoint
-// Permission Map (Tickets)). An action that the status does not allow is not
-// offered (docs/screens/ticket.md, Actions), and neither are Set severity…
-// and Associate CVE… on a Ticket with a CVE.
+// its status with triage_ticket, Rerun convergence with triage_ticket or
+// manage_fetchers, and the change of the confidentiality with
+// manage_confidentiality, in every status, since Sentinel accepts it also on
+// an Ignored or Duplicated Ticket (Sentinel docs/features/identity/rbac.md,
+// Endpoint Permission Map (Tickets); Sentinel
+// docs/features/tickets/tickets.md, Set Confidentiality). An action that the
+// status does not allow is not offered (docs/screens/ticket.md, Actions), and
+// neither are Set severity… and Associate CVE… on a Ticket with a CVE.
 function actionsOf(
-  status: string,
-  hasCve: boolean,
+  ticket: TicketDetail,
   capabilities: readonly string[],
 ): readonly ActionId[] {
+  const status = ticket.status;
+  const hasCve = ticket.cve !== null;
   const triages = capabilities.includes("triage_ticket");
   const actions: ActionId[] = [];
   if (triages && IGNORABLE_STATUSES.has(status)) {
@@ -146,6 +168,11 @@ function actionsOf(
   ) {
     actions.push("rerun");
   }
+  if (capabilities.includes("manage_confidentiality")) {
+    actions.push(
+      ticket.is_confidential ? "make-non-confidential" : "make-confidential",
+    );
+  }
   return actions;
 }
 
@@ -171,7 +198,9 @@ interface TicketActionsProps {
 // Actions, for a user who can take at least one of its actions on the
 // Ticket, and while it is open, its change is in progress, or a dialog of
 // one of its items is open, which keep it as it started (docs/behaviors.md,
-// The Signed-in User). Ignore… and Mark as duplicate… open their dialogs;
+// The Signed-in User). Ignore…, Mark as duplicate…, and the corrections open
+// their dialogs, and Make confidential… and Make non-confidential… their
+// confirmations (src/routes/ticket/confidentiality.tsx);
 // the quick action that ignores the Ticket as not shipped, Reopen, Revert
 // duplicate, and Rerun convergence apply at once, without confirmation
 // (docs/behaviors.md, Confirmation): while one is in progress, its item is
@@ -197,6 +226,7 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
   // The reads after a correction of the priority, the severity, or the CVE,
   // which changes none of the duplicates (docs/screens/ticket.md, Actions).
   const readAfterCorrection = useReadAfterTicketChange(ticketId);
+  const readAfterConfidentiality = useReadAfterConfidentiality(ticketId);
   const button = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   // The dialog that is open, or opens once the menu has closed.
@@ -280,11 +310,7 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
       },
     },
   });
-  const offered = actionsOf(
-    ticket.status,
-    ticket.cve !== null,
-    user?.capabilities ?? [],
-  );
+  const offered = actionsOf(ticket, user?.capabilities ?? []);
   if (uiFailure !== undefined) {
     throw uiFailure.error;
   }
@@ -378,9 +404,13 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
   };
 
   const statusItems = shown.filter(
-    (action) => action !== "rerun" && !CORRECTIONS.has(action),
+    (action) =>
+      action !== "rerun" &&
+      !CORRECTIONS.has(action) &&
+      !CONFIDENTIALITY.has(action),
   );
   const corrections = shown.filter((action) => CORRECTIONS.has(action));
+  const confidentiality = shown.filter((action) => CONFIDENTIALITY.has(action));
   // The dialog of a correction that is open, with the outcome of its change
   // and the reads after it, without the duplicates.
   const dialogProps = {
@@ -534,6 +564,34 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
               Rerun convergence
             </MenuAction>
           )}
+          {confidentiality.length > 0 &&
+            shown.length > confidentiality.length && (
+              <Separator className={MENU_SEPARATOR} />
+            )}
+          {shown.includes("make-confidential") && (
+            <MenuAction
+              id="make-confidential"
+              icon={Lock}
+              unavailable={pending}
+              onAction={() => {
+                openDialog("make-confidential");
+              }}
+            >
+              Make confidential…
+            </MenuAction>
+          )}
+          {shown.includes("make-non-confidential") && (
+            <MenuAction
+              id="make-non-confidential"
+              icon={LockOpen}
+              unavailable={pending}
+              onAction={() => {
+                openDialog("make-non-confidential");
+              }}
+            >
+              Make non-confidential…
+            </MenuAction>
+          )}
         </ScreenActionsMenu>
       </FocusHandOff>
       {outcome.region}
@@ -560,6 +618,16 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
       {dialog?.open === true && dialog.id === "associate-cve" && (
         <AssociateCveDialog {...dialogProps} />
       )}
+      {dialog?.open === true &&
+        (dialog.id === "make-confidential" ||
+          dialog.id === "make-non-confidential") && (
+          <ConfidentialityDialog
+            {...dialogProps}
+            readAgain={readAfterConfidentiality}
+            confidential={dialog.id === "make-confidential"}
+            user={user}
+          />
+        )}
       {dialog?.open === true && dialog.id === "ignore" && (
         <IgnoreDialog
           ticket={ticket}

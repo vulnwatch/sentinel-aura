@@ -8,6 +8,8 @@ import {
   formatDate,
   formatDateTime,
   formatTime,
+  formatUtcDateTime,
+  timeZoneName,
 } from "./date-time";
 
 // A date and time of the API (docs/behaviors.md, Dates and Times, Display),
@@ -32,6 +34,53 @@ test("reads the microseconds that the API sends", () => {
 
 test("shows a value that is not a date and time as received", () => {
   expect(formatDateTime("not a date")).toBe("not a date");
+});
+
+test.each([
+  [Date.UTC(2026, 9, 9, 12, 5), "9 Oct 2026, 12:05"],
+  [Date.UTC(2026, 8, 30, 0, 7), "30 Sep 2026, 00:07"],
+  [Date.UTC(2027, 0, 1, 9, 0), "1 Jan 2027, 09:00"],
+  [Date.UTC(2026, 11, 31, 23, 59, 59, 999), "31 Dec 2026, 23:59"],
+])(
+  "shows the instant %i in UTC as %s, whatever the time zone of the browser",
+  (instant, text) => {
+    expect(formatUtcDateTime(instant)).toBe(text);
+  },
+);
+
+// The name of the time zone of the browser at an instant as Intl gives it in
+// English, in full.
+function longZoneName(instant: number): string | undefined {
+  return new Intl.DateTimeFormat("en-US", { timeZoneName: "long" })
+    .formatToParts(instant)
+    .find((part) => part.type === "timeZoneName")?.value;
+}
+
+// An instant of the winter, and one of the summer, of the northern
+// hemisphere.
+const WINTER = Date.UTC(2026, 0, 15, 12, 0);
+const SUMMER = Date.UTC(2026, 6, 15, 12, 0);
+
+test.each([WINTER, SUMMER])(
+  "names the time zone of the browser at the instant %i in full, in English",
+  (instant) => {
+    expect(timeZoneName(instant)).toBe(longZoneName(instant));
+    if (Intl.DateTimeFormat().resolvedOptions().timeZone === "UTC") {
+      expect(timeZoneName(instant)).toBe("Coordinated Universal Time");
+    }
+  },
+);
+
+test("names the time zone of the browser for the instant, which differs between winter and summer where the zone moves its clocks, and is the same otherwise", () => {
+  const moves =
+    new Date(WINTER).getTimezoneOffset() !==
+    new Date(SUMMER).getTimezoneOffset();
+
+  if (moves) {
+    expect(timeZoneName(WINTER)).not.toBe(timeZoneName(SUMMER));
+  } else {
+    expect(timeZoneName(WINTER)).toBe(timeZoneName(SUMMER));
+  }
 });
 
 test.each([

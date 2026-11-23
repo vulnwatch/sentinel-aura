@@ -4,7 +4,16 @@ import {
   Outlet,
   useChildMatches,
 } from "@tanstack/react-router";
-import { createContext, use, useMemo, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  use,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type {
   TicketDetail,
   TicketDetailResponse,
@@ -61,11 +70,13 @@ export function isTicketId(value: string): boolean {
 }
 
 // What the screen gives its tabs: the identifier of the Ticket, from the
-// path, and whether the main content is wide enough for two columns
-// (useTwoColumns).
+// path, whether the main content is wide enough for two columns
+// (useTwoColumns), and the hold of that layout (useLayoutHold).
 interface TicketScreenState {
   ticketId: string;
   twoColumns: boolean;
+  // Holds the layout until the function that it returns ends the hold.
+  holdLayout: () => () => void;
 }
 
 const TicketScreenContext = createContext<TicketScreenState | null>(null);
@@ -94,6 +105,22 @@ export function useShownTicket(): {
     now: read.dataUpdatedAt,
     twoColumns: screen.twoColumns,
   };
+}
+
+// Holds the layout of the screen while active, as while a dialog of the
+// details is open, so that the details, which change place with the layout,
+// keep the dialog with its input and its change in progress; once the hold
+// ends, the layout follows the width again (docs/design-system.md, Detail
+// Screens).
+export function useLayoutHold(active: boolean) {
+  const screen = use(TicketScreenContext);
+  const hold = screen?.holdLayout;
+  useLayoutEffect(() => {
+    if (!active || hold === undefined) {
+      return undefined;
+    }
+    return hold();
+  }, [active, hold]);
 }
 
 // The Ticket as the record of the outcome of a change of a tab: its
@@ -272,7 +299,15 @@ function TicketFrame({
   children,
 }: TicketFrameProps) {
   const root = useRef<HTMLDivElement>(null);
-  const twoColumns = useTwoColumns(root);
+  // The holds of the layout in effect (useLayoutHold).
+  const [holds, setHolds] = useState(0);
+  const twoColumns = useTwoColumns(root, holds > 0);
+  const holdLayout = useCallback(() => {
+    setHolds((current) => current + 1);
+    return () => {
+      setHolds((current) => current - 1);
+    };
+  }, []);
   const record = useMemo(() => ticketRecord(ticketId), [ticketId]);
   return (
     <div ref={root}>
@@ -314,7 +349,7 @@ function TicketFrame({
         </DetailHeading>
         <DetailTabPanel selected={selected}>
           {twoColumns !== undefined && (
-            <TicketScreenContext value={{ ticketId, twoColumns }}>
+            <TicketScreenContext value={{ ticketId, twoColumns, holdLayout }}>
               {children}
             </TicketScreenContext>
           )}
