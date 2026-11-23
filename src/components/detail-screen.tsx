@@ -62,6 +62,21 @@ interface Heights {
   compact: number;
 }
 
+// The scroll margin of the elements of the heading row while it can stay at
+// the top of the window. The window scrolls an element into view below what
+// stays there (src/components/fixed-top.ts), the heading row included, so it
+// would scroll an element of the heading row itself, such as Actions or a tab
+// that takes the focus from the keyboard, as if the heading row covered it,
+// and move the page, as far as its top in Chromium. This margin moves the top
+// of the box by which the window places each element down by the height of
+// the heading row, below it, where the window takes the box as in view, its
+// bottom unchanged, so that a short window does not take it as below its end:
+// the window leaves the page where it is, as the heading row is always in
+// view while it can stay at the top (docs/design-system.md, Detail Screens;
+// docs/behaviors.md, Accessibility, Keyboard).
+const IN_VIEW_BELOW_HEADING =
+  "**:scroll-mt-[calc(var(--compact-heading-height,0px)*-1)]";
+
 interface DetailHeadingProps {
   // Whether the main content is wide enough for two columns, where the
   // heading row becomes the compact heading once it has scrolled to the top
@@ -133,10 +148,9 @@ export function DetailHeading({ sticky, children }: DetailHeadingProps) {
 
   let className = "";
   if (compact) {
-    className =
-      "sticky top-[var(--message-area-height,0px)] z-10 -mx-6 border-b border-border bg-surface px-6 pt-2.5";
+    className = `sticky top-[var(--message-area-height,0px)] z-10 -mx-6 border-b border-border bg-surface px-6 pt-2.5 ${IN_VIEW_BELOW_HEADING}`;
   } else if (sticky) {
-    className = "sticky top-[var(--message-area-height,0px)] z-10";
+    className = `sticky top-[var(--message-area-height,0px)] z-10 ${IN_VIEW_BELOW_HEADING}`;
   }
   return (
     <>

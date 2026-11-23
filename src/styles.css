@@ -150,7 +150,10 @@
      these properties (src/components/fixed-top.ts): the window scrolls the
      element with the focus, and the target of an anchor, below both, and
      what sticks below them takes --fixed-top as its offset
-     (docs/design-system.md, Main Content; Detail Screens). */
+     (docs/design-system.md, Main Content; Detail Screens). The elements of
+     the compact heading itself take scroll margins that place them below it,
+     so that their focus leaves the page where it is
+     (src/components/detail-screen.tsx). */
   :root {
     --fixed-top: calc(
       var(--message-area-height, 0px) + var(--compact-heading-height, 0px)
