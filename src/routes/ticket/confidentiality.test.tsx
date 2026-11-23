@@ -91,7 +91,7 @@ const DANGER_SOLID = "rgb(207, 34, 46)";
 
 // What the confirmations say (docs/screens/ticket.md, Actions).
 const RESTRICTED =
-  "Only the users who see every Ticket, the maintainers of its packages that are not excluded, and the users to whom access is granted then see SNTL-12. Every other user loses access to it.";
+  "Only the users who see every Ticket and the maintainers of its packages that are not excluded keep seeing SNTL-12. Every other user loses access to it.";
 const BOB_UNASSIGNED =
   "If Bob Wilson, the assignee, can't be the assignee of a confidential Ticket, SNTL-12 becomes unassigned.";
 const YOU_UNASSIGNED =
@@ -588,55 +588,176 @@ describe("confirming a change of the confidentiality", () => {
   });
 });
 
-describe("the reads after a change of the confidentiality", () => {
-  test.each<[string, Partial<Stub>]>([
-    ["that Sentinel confirms", {}],
-    [
-      "that fails",
-      { ticketChange: () => errorResponse(409, "FICTIONAL_CONFLICT") },
-    ],
-  ])(
-    "read again, after a change %s, the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, the reads of the Ticket list, and its access grants",
-    async (_, outcome) => {
-      const spy = showing(
-        { is_confidential: true, packages: [fictionalPackage()] },
-        {
-          user: {
-            data: {
-              ...MAINTAINER.data,
-              capabilities: ["manage_confidentiality"],
-            },
-          },
-          grants: () => grantsResponse([CAROL]),
-          ...outcome,
-        },
-      );
-      const { screen } = await renderTicket();
-      await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(1);
-      await expect.poll(() => readsOf(spy, ACCESS)).toBe(1);
-      await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
-      const reads = {
-        ticket: requestsTo(spy, TICKET),
-        actors: requestsTo(spy, ACTORS),
-        work: requestsTo(spy, YOUR_WORK),
-        grants: readsOf(spy, ACCESS),
-      };
-      // The user saw the Ticket list, with Embargo, and Audit log before,
-      // which wait in the cache.
-      client.setQueryData([EVENTS], {});
-      client.setQueryData([TICKETS, { page: 1, is_confidential: true }], {});
+// Dave Brown, the maintainer of fictional-openssl, who also holds
+// manage_confidentiality.
+const CONFIDENTIALITY_MAINTAINER: UserBody = {
+  data: { ...MAINTAINER.data, capabilities: ["manage_confidentiality"] },
+};
 
-      await confirm(screen, false);
-
-      await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
-      await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
-      await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(reads.work + 1);
-      await expect.poll(() => readsOf(spy, ACCESS)).toBe(reads.grants + 1);
-      await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
-      expect(leftInvalidated(EVENTS)).toBe(true);
-      expect(leftInvalidated(TICKETS)).toBe(true);
+// Answers as Sentinel does for SNTL-12 with fictional-openssl, confidential
+// or not, for the maintainer who manages confidentiality: List Access Grants
+// with a grant to Carol White while the Ticket is confidential, and 409
+// TICKET_NOT_CONFIDENTIAL otherwise; Set Confidentiality with the Ticket as
+// the body makes it, which the Ticket then is, or with the failure.
+function showingGrants(
+  confidential: boolean,
+  {
+    failure,
+    reread,
+  }: { failure?: () => Response; reread?: Promise<Response> } = {},
+) {
+  let now = confidential;
+  let changed = false;
+  const ticket = () =>
+    ticketIn("analyzed", {
+      is_confidential: now,
+      packages: [fictionalPackage()],
+    });
+  return stubTicket({
+    user: CONFIDENTIALITY_MAINTAINER,
+    ticket: () =>
+      changed && reread !== undefined ? reread.then(() => ticket()) : ticket(),
+    grants: () =>
+      now
+        ? grantsResponse([CAROL])
+        : errorResponse(409, "TICKET_NOT_CONFIDENTIAL"),
+    ticketChange: (_, body) => {
+      changed = true;
+      if (failure !== undefined) {
+        return failure();
+      }
+      now = confidentialIn(body);
+      return ticket();
     },
+  });
+}
+
+// Whether every read of the path that the query client holds is to be read
+// again, active or not, such as a read that the screen shows but that a
+// change left to be read on its next occasion.
+function toBeReadAgain(path: string): boolean {
+  const queries = client.getQueryCache().findAll({ queryKey: [path] });
+  return (
+    queries.length > 0 && queries.every((query) => query.state.isInvalidated)
   );
+}
+
+// Waits until no read is in progress, also none that the outcome of a read
+// starts in an effect, such as the read of the Ticket after a 409 of the
+// access grants.
+async function settled() {
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+  await nextFrames();
+  await expect.poll(() => client.isFetching(), { interval: 0 }).toBe(0);
+}
+
+describe("the reads after a change of the confidentiality", () => {
+  test("Make non-confidential, once Sentinel confirms it, reads again the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, and sends no read of the access grants, which Sentinel no longer lists, but leaves them to be read once a read shows the Ticket confidential", async () => {
+    const spy = showingGrants(true);
+    const { screen } = await renderTicket();
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(1);
+    await expect.poll(() => readsOf(spy, ACCESS)).toBe(1);
+    await settled();
+    const reads = {
+      ticket: requestsTo(spy, TICKET),
+      actors: requestsTo(spy, ACTORS),
+      work: requestsTo(spy, YOUR_WORK),
+    };
+    // The user saw the Ticket list, with Embargo, and Audit log before,
+    // which wait in the cache.
+    client.setQueryData([EVENTS], {});
+    client.setQueryData([TICKETS, { page: 1, is_confidential: true }], {});
+
+    await confirm(screen, false);
+
+    await expect
+      .poll(() => announcements(screen))
+      .toContain("Made non-confidential.");
+    await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(reads.work + 1);
+    await settled();
+    expect(readsOf(spy, ACCESS)).toBe(1);
+    // Read once: no 409 of the access grants made the screen read it again.
+    expect(requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
+    expect(leftInvalidated(ACCESS)).toBe(true);
+    expect(leftInvalidated(EVENTS)).toBe(true);
+    expect(leftInvalidated(TICKETS)).toBe(true);
+  });
+
+  test("Make non-confidential, when it fails, reads again the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, and sends no read of the access grants, but leaves them to be read again", async () => {
+    const spy = showingGrants(true, {
+      failure: () => errorResponse(409, "FICTIONAL_CONFLICT"),
+    });
+    const { screen } = await renderTicket();
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(1);
+    await expect.poll(() => readsOf(spy, ACCESS)).toBe(1);
+    await settled();
+    const reads = {
+      ticket: requestsTo(spy, TICKET),
+      actors: requestsTo(spy, ACTORS),
+      work: requestsTo(spy, YOUR_WORK),
+    };
+    client.setQueryData([EVENTS], {});
+    client.setQueryData([TICKETS, { page: 1, is_confidential: true }], {});
+
+    const dialog = await confirm(screen, false);
+
+    await expect
+      .element(dialog.getByText(MESSAGE_CONFLICT, { exact: true }))
+      .toBeVisible();
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
+    await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
+    await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(reads.work + 1);
+    await settled();
+    expect(readsOf(spy, ACCESS)).toBe(1);
+    expect(requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
+    expect(toBeReadAgain(ACCESS)).toBe(true);
+    expect(leftInvalidated(EVENTS)).toBe(true);
+    expect(leftInvalidated(TICKETS)).toBe(true);
+  });
+
+  test("Make confidential, once Sentinel confirms it, reads the access grants once the read of the Ticket after it shows the Ticket confidential, and not before", async () => {
+    const reread = later();
+    const spy = showingGrants(false, { reread: reread.promise });
+    const { screen } = await renderTicket();
+    await settled();
+    expect(readsOf(spy, ACCESS)).toBe(0);
+    const reads = requestsTo(spy, TICKET);
+
+    await confirm(screen, true);
+
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
+    await frames();
+    expect(readsOf(spy, ACCESS)).toBe(0);
+    reread.resolve(new Response(null, { status: 204 }));
+
+    await expect
+      .element(screen.getByText("Confidential", { exact: true }))
+      .toBeVisible();
+    await expect.poll(() => readsOf(spy, ACCESS)).toBe(1);
+    await settled();
+    expect(readsOf(spy, ACCESS)).toBe(1);
+    expect(requestsTo(spy, TICKET)).toBe(reads + 1);
+  });
+
+  test("Make confidential, when it fails, reads again the Ticket, which is still not confidential, and sends no read of its access grants", async () => {
+    const spy = showingGrants(false, {
+      failure: () => errorResponse(409, "FICTIONAL_CONFLICT"),
+    });
+    const { screen } = await renderTicket();
+    await settled();
+    const reads = requestsTo(spy, TICKET);
+
+    const dialog = await confirm(screen, true);
+
+    await expect
+      .element(dialog.getByText(MESSAGE_CONFLICT, { exact: true }))
+      .toBeVisible();
+    await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
+    await settled();
+    expect(readsOf(spy, ACCESS)).toBe(0);
+    expect(requestsTo(spy, TICKET)).toBe(reads + 1);
+  });
 });
 
 // The failures of Set Confidentiality, which the screen handles in the

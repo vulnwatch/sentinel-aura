@@ -113,7 +113,11 @@ const FIRST = Date.UTC(2099, 9, 9, 14, 6);
 
 const RANGE = `Enter a date and time from ${formatDateTime(new Date(FIRST).toISOString())} to 30 Dec 9999, 23:59.`;
 const INCOMPLETE = "Enter the day, the month, the year, and the time.";
+// 409 TICKET_NOT_CONFIDENTIAL of a change, and the intro of a Ticket that a
+// read shows no longer confidential and without a date.
 const NOT_CONFIDENTIAL =
+  "SNTL-12 is no longer confidential and has no Coordinated Release Date.";
+const INTRO_CLOSED =
   "SNTL-12 is no longer confidential and has no Coordinated Release Date, so it can't receive one.";
 const INTRO_CONFIDENTIAL =
   "The date and time agreed with the other parties at which the embargo of SNTL-12 ends. Its deadlines divide the time from its creation to it, and follow the SLA without it.";
@@ -294,6 +298,16 @@ function invalid(dialog: Locator): boolean {
     .getByRole("spinbutton")
     .elements()
     .every((part) => part.getAttribute("aria-invalid") === "true");
+}
+
+// What the status regions of the dialog say, such as the error of the field
+// that its part with the focus announces.
+function formStatus(dialog: Locator): string {
+  return dialog
+    .getByRole("status")
+    .elements()
+    .map((status) => status.textContent)
+    .join("");
 }
 
 // Opens the dialog from the pencil and waits until the day of the field has
@@ -721,6 +735,153 @@ describe("the dialog of the Coordinated Release Date", () => {
       )
       .toBeVisible();
   });
+
+  test.each<[string, Partial<TicketDetail>]>([
+    ["a confidential Ticket with a date", {}],
+    ["a confidential Ticket without a date", { coordinated_release_at: null }],
+    ["a Ticket no longer confidential with a date", { is_confidential: false }],
+  ])(
+    "says, once a read shows %s, on which it opened, no longer confidential and without a date, that it can't receive one, without Remove date",
+    async (_, fields) => {
+      let shown: Partial<TicketDetail> = {
+        is_confidential: true,
+        coordinated_release_at: SET_AT,
+        ...fields,
+      };
+      showingRelease({}, { ticket: () => ticketIn("analyzed", shown) });
+      const { screen } = await renderTicket();
+      const dialog = await openRelease(screen);
+      // Meanwhile another user made it non-confidential and removed its date.
+      shown = { is_confidential: false, coordinated_release_at: null };
+
+      await returnToForeground();
+
+      await expect
+        .element(dialog.getByText(INTRO_CLOSED, { exact: true }))
+        .toBeVisible();
+      expect(
+        getComputedStyle(dialog.getByText(INTRO_CLOSED).element()).color,
+      ).toBe(FG_MUTED);
+      expect(dialog.getByText(INTRO_CONFIDENTIAL).query()).toBeNull();
+      expect(dialog.getByText(INTRO_DECLASSIFIED).query()).toBeNull();
+      expect(buttonOf(dialog, "Remove date").query()).toBeNull();
+      expect(
+        dialog
+          .getByRole("button")
+          .elements()
+          .map((button) => button.textContent),
+      ).toEqual(["", "Cancel", "Save"]);
+    },
+  );
+
+  test("says, once a read shows the confidential Ticket on which it opened no longer confidential with its date, what the date of such a Ticket decides, and Remove date then asks first", async () => {
+    let confidential = true;
+    const spy = showingRelease(
+      {},
+      {
+        ticket: () =>
+          ticketIn("analyzed", {
+            is_confidential: confidential,
+            coordinated_release_at: SET_AT,
+          }),
+      },
+    );
+    const { screen } = await renderTicket();
+    const dialog = await openRelease(screen);
+    // Meanwhile another user made it non-confidential.
+    confidential = false;
+
+    await returnToForeground();
+
+    await expect
+      .element(dialog.getByText(INTRO_DECLASSIFIED, { exact: true }))
+      .toBeVisible();
+    expect(dialog.getByText(INTRO_CONFIDENTIAL).query()).toBeNull();
+    await buttonOf(dialog, "Remove date").click();
+    const confirmation = removeConfirmation(screen);
+    await expect.element(buttonOf(confirmation, "Cancel")).toHaveFocus();
+    await expect
+      .element(confirmation.getByText(REMOVE_CONSEQUENCE, { exact: true }))
+      .toBeVisible();
+    expect(releases(spy)).toEqual([]);
+  });
+});
+
+// The calendar that is open, over the dialog, in a popover of the page.
+function calendar(): Locator {
+  return page.getByRole("dialog").filter({ has: page.getByRole("grid") });
+}
+
+// The days of the month that the calendar shows, each with whether it
+// enables it.
+function daysOf(): [number, boolean][] {
+  return calendar()
+    .getByRole("grid")
+    .getByRole("button")
+    .elements()
+    .filter((cell) => getComputedStyle(cell).visibility !== "hidden")
+    .map((cell) => [
+      Number(cell.textContent),
+      cell.getAttribute("aria-disabled") !== "true",
+    ]);
+}
+
+describe("the calendar of the Coordinated Release Date", () => {
+  test.each<[string, string, number, number, boolean]>([
+    [
+      "of the creation of the Ticket",
+      "2099-10-09T14:05:09Z",
+      // October 2099, whose days after the first it enables to the end.
+      31,
+      31,
+      false,
+    ],
+    [
+      "of the creation of a Ticket created in December 9999 to 30 Dec 9999",
+      "9999-12-20T12:00:00Z",
+      31,
+      30,
+      true,
+    ],
+  ])(
+    "of an empty field opens on the first month in which it enables a day, and enables the days from that %s",
+    async (_, created, length, last, lastMonth) => {
+      showingRelease({ coordinated_release_at: null, created_at: created });
+      const { screen } = await renderTicket();
+      const dialog = await openRelease(screen);
+      // The first day that the field takes, in the time zone of the
+      // browser: the day of the next whole minute after the creation.
+      const first = new Date(
+        Math.ceil(Date.parse(created) / 60_000) * 60_000,
+      ).getDate();
+
+      await fieldOf(dialog)
+        .getByRole("button", {
+          name: "Calendar Coordinated Release Date",
+          exact: true,
+        })
+        .click();
+
+      await expect.element(calendar()).toBeVisible();
+      // The day before the first disabled, the first enabled, and, in
+      // December 9999, 31 Dec disabled.
+      expect(daysOf()).toEqual(
+        Array.from({ length }, (_day, index) => [
+          index + 1,
+          index + 1 >= first && index + 1 <= last,
+        ]),
+      );
+      await expect
+        .element(calendar().getByRole("button", { name: "Previous month" }))
+        .toBeDisabled();
+      expect(
+        calendar()
+          .getByRole("button", { name: "Next month" })
+          .element()
+          .hasAttribute("disabled"),
+      ).toBe(lastMonth);
+    },
+  );
 });
 
 describe("Save", () => {
@@ -956,6 +1117,46 @@ describe("Save", () => {
     await expect.element(partOf(dialog, 0)).toHaveFocus();
   });
 
+  test.each<[string, Partial<Stub>, string, string]>([
+    ["only some of its parts", {}, "25112099", INCOMPLETE],
+    [
+      "a date and time before the creation of the Ticket",
+      {},
+      digitsOf(CREATED - 60_000),
+      RANGE,
+    ],
+    [
+      "422 TICKET_COORDINATED_RELEASE_BEFORE_CREATION",
+      {
+        ticketChange: () =>
+          errorResponse(422, "TICKET_COORDINATED_RELEASE_BEFORE_CREATION"),
+      },
+      digitsOf(LATER),
+      RANGE,
+    ],
+  ])(
+    "keeps the focus on the minute after Enter in it for %s, and announces the error at the field in a status region of the form",
+    async (_, stub, digits, message) => {
+      showingRelease({ coordinated_release_at: null }, stub);
+      const { screen } = await renderTicket();
+      const dialog = await openRelease(screen);
+      await typeInto(dialog, digits);
+      partOf(dialog, 4).element().focus();
+      await expect.element(partOf(dialog, 4)).toHaveFocus();
+
+      await userEvent.keyboard("{Enter}");
+
+      await expect
+        .element(partOf(dialog, 0))
+        .toHaveAccessibleDescription(within(message));
+      expect(invalid(dialog)).toBe(true);
+      await expect.poll(() => formStatus(dialog)).toBe(message);
+      // The frames in which the focus would move to the day.
+      await nextFrames();
+      expect(document.activeElement).toBe(partOf(dialog, 4).element());
+    },
+  );
+
   test.each<[string, number]>([
     ["before the creation of the Ticket", CREATED - 60_000],
     ["in the minute of the creation, before its next whole minute", CREATED],
@@ -1167,6 +1368,31 @@ describe("Remove date", () => {
       expect(dialog.getByText(message).query()).toBeNull();
     },
   );
+
+  test("closes the confirmation of a removal that Sentinel refuses with 409 TICKET_NOT_CONFIDENTIAL, and shows it at the top of the form, as an error that takes the focus", async () => {
+    const spy = showingRelease(
+      { is_confidential: false },
+      { ticketChange: () => errorResponse(409, "TICKET_NOT_CONFIDENTIAL") },
+    );
+    const { screen } = await renderTicket();
+    const dialog = await openRelease(screen);
+    await buttonOf(dialog, "Remove date").click();
+    const confirmation = removeConfirmation(screen);
+
+    await buttonOf(confirmation, "Remove date").click();
+
+    await expect.element(confirmation).not.toBeInTheDocument();
+    const error = dialog.getByText(NOT_CONFIDENTIAL, { exact: true });
+    await expect.element(error).toBeVisible();
+    expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES.danger);
+    await expectFocusOnError(error);
+    // Once the confirmation has given back the focus.
+    await nextFrames();
+    await expectFocusOnError(error);
+    expect(boxOf(error).bottom).toBeLessThan(boxOf(fieldOf(dialog)).top);
+    expect(dialog.getByText(/^Reference:/).query()).toBeNull();
+    expect(releases(spy)).toEqual([{ coordinated_release_at: null }]);
+  });
 
   test("shows a failure of the removal of the date of a confidential Ticket at the top of the form, which keeps the date", async () => {
     showingRelease(

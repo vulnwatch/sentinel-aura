@@ -1413,7 +1413,7 @@ describe("isCoordinatedReleaseBeforeCreation", () => {
 });
 
 const NOT_CONFIDENTIAL_RELEASE =
-  "SNTL-21 is no longer confidential and has no Coordinated Release Date, so it can't receive one.";
+  "SNTL-21 is no longer confidential and has no Coordinated Release Date.";
 
 describe("presentCoordinatedReleaseFailure", () => {
   test("presents 409 TICKET_NOT_CONFIDENTIAL as an error, without a reference, that names the Ticket", () => {

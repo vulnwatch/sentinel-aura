@@ -1392,10 +1392,11 @@ Confidential Ticket Visibility):
   confidentiality can unassign the Ticket and deletes the access grants of a
   Ticket made non-confidential, so the screen then reads again the Ticket,
   the work of a maintainer on it, the users who acted on it, its audit log,
-  and the reads of the Ticket list, the Embargo view and its count included,
-  and its access grants once a read shows the Ticket confidential, since
-  Sentinel refuses the read of the grants of a Ticket that is not (Sentinel
-  `docs/features/tickets/tickets.md`, List Access Grants).
+  and the reads of the Ticket list, the Embargo view and its count included;
+  its access grants it reads on their next read rather than at once, since
+  Sentinel refuses the read of the grants of a Ticket that is not
+  confidential, so a Ticket made confidential reads them as the screen shows
+  it so (Sentinel `docs/features/tickets/tickets.md`, List Access Grants).
 - The outcome is announced once the read of the Ticket after it arrives
   (above), as Sentinel returns the Ticket: "Made confidential.", "Made
   confidential, unassigned." when Sentinel cleared the assignee that the

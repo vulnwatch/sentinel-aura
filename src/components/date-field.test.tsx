@@ -100,6 +100,15 @@ function valuesOf(screen: Screen): (string | null)[] {
     .map((part) => part.getAttribute("aria-valuenow"));
 }
 
+// Whether every part of the field is marked as invalid for assistive
+// technologies.
+function invalidParts(screen: Screen): boolean {
+  return fieldOf(screen)
+    .getByRole("spinbutton")
+    .elements()
+    .every((part) => part.getAttribute("aria-invalid") === "true");
+}
+
 // Types digits from the day, which takes the focus as from the keyboard,
 // without opening the calendar.
 async function typeInto(screen: Screen, digits: string) {
@@ -133,6 +142,23 @@ function dayCell(day: number): Locator {
 // What the field held as it last reported it.
 function lastTyped(onTyped: Mock<(typed: Typed) => void>): Typed | undefined {
   return onTyped.mock.lastCall?.[0];
+}
+
+// What the field reported, each report as text, such as "complete
+// 2099-11-25T13:00:00 edited", in their order.
+function reportsOf(onTyped: Mock<(typed: Typed) => void>): string[] {
+  return onTyped.mock.calls.map(([typed]) =>
+    [
+      typed.kind,
+      ...(typed.kind === "complete" ? [typed.value.toString()] : []),
+      ...(typed.edited ? ["edited"] : []),
+    ].join(" "),
+  );
+}
+
+// Whether no report repeats the one before it.
+function eachChangeOnce(reports: readonly string[]): boolean {
+  return reports.every((report, index) => report !== reports[index - 1]);
 }
 
 // The date and time of a complete value, as text, such as
@@ -203,17 +229,18 @@ test("reports what it holds, empty, only some of its parts, or a complete date a
   const onTyped = vi.fn<(typed: Typed) => void>();
   const onEdit = vi.fn<() => void>();
   const screen = await render(<FormField onTyped={onTyped} onEdit={onEdit} />);
-  expect(lastTyped(onTyped)).toEqual({ kind: "empty", edited: false });
+  expect(reportsOf(onTyped)).toEqual(["empty"]);
   expect(onEdit).not.toHaveBeenCalled();
 
   await typeInto(screen, "25");
 
-  expect(lastTyped(onTyped)).toEqual({ kind: "incomplete", edited: true });
+  // Reported once, as the first digit makes it hold only some of its parts.
+  expect(reportsOf(onTyped)).toEqual(["empty", "incomplete edited"]);
   expect(onEdit).toHaveBeenCalled();
 
-  // The time alone is only some of the parts too.
+  // The time alone is only some of the parts too: nothing more to report.
   await userEvent.keyboard("112099");
-  expect(lastTyped(onTyped)).toEqual({ kind: "incomplete", edited: true });
+  expect(reportsOf(onTyped)).toEqual(["empty", "incomplete edited"]);
 
   await userEvent.keyboard("1305");
 
@@ -227,6 +254,43 @@ test("reports what it holds, empty, only some of its parts, or a complete date a
 
   expect(shownIn(screen)).toBe("dd/mm/yyyy, ––:––");
   expect(lastTyped(onTyped)).toEqual({ kind: "empty", edited: false });
+  expect(eachChangeOnce(reportsOf(onTyped))).toBe(true);
+});
+
+test("reports nothing on a render that changes nothing of what it holds, such as a new description or error, and each change of what it holds once", async () => {
+  const onTyped = vi.fn<(typed: Typed) => void>();
+  const initial = new CalendarDateTime(2099, 11, 25, 13, 0);
+  const screen = await render(
+    <FormField initial={initial} onTyped={onTyped} />,
+  );
+  expect(reportsOf(onTyped)).toEqual(["complete 2099-11-25T13:00:00"]);
+
+  await screen.rerender(
+    <FormField initial={initial} description={DESCRIPTION} onTyped={onTyped} />,
+  );
+  await screen.rerender(
+    <FormField
+      initial={initial}
+      description={DESCRIPTION}
+      error={ERROR}
+      onTyped={onTyped}
+    />,
+  );
+
+  await expect.element(screen.getByText(ERROR, { exact: true })).toBeVisible();
+  expect(invalidParts(screen)).toBe(true);
+  // The frames in which React runs the effects of those renders.
+  await nextFrames();
+  expect(reportsOf(onTyped)).toEqual(["complete 2099-11-25T13:00:00"]);
+
+  // Each digit changes the day: 02, then 26.
+  await typeInto(screen, "26");
+
+  expect(reportsOf(onTyped)).toEqual([
+    "complete 2099-11-25T13:00:00",
+    "complete 2099-11-02T13:00:00 edited",
+    "complete 2099-11-26T13:00:00 edited",
+  ]);
 });
 
 test("reports the date and time with which it starts as complete and not changed, and changed once the user changes it and not once they type it again", async () => {

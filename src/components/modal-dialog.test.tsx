@@ -661,7 +661,9 @@ test.each([
       .first();
     await expect.element(day).toHaveFocus();
     await expect.element(day).toHaveAccessibleName(/^day,? Release$/);
-    // Without opening the calendar.
+    // Without opening the calendar, once React has rendered what the focus
+    // of the day could have set.
+    await nextFrames();
     expect(screen.getByRole("dialog").elements()).toHaveLength(1);
   },
 );

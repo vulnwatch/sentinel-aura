@@ -56,9 +56,10 @@ export function confidentialityText(
 // Reads again what a change of the confidentiality affects: what a change of
 // the Ticket affects, the Embargo view and its count among the reads of the
 // Ticket list included; and its access grants, which making it
-// non-confidential deletes, once a read shows the Ticket confidential, since
+// non-confidential deletes, on their next read rather than at once, since
 // Sentinel refuses the read of the grants of a Ticket that is not
-// (docs/behaviors.md, Outcome of a Change; Sentinel
+// confidential: a Ticket made confidential reads them as the screen shows it
+// so (docs/behaviors.md, Outcome of a Change; Sentinel
 // docs/features/tickets/tickets.md, List Access Grants).
 export function useReadAfterConfidentiality(ticketId: string) {
   const client = useQueryClient();
