@@ -5720,24 +5720,8 @@ function endingWith(text: string): RegExp {
   );
 }
 
-// Waits for two animation frames of the page, in which React renders what
-// the cause that the test waited for set, and runs the effects of that
-// render (docs/conventions.md, Tests).
-async function nextFrames(page: Page) {
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            resolve();
-          });
-        });
-      }),
-  );
-}
-
 test.describe("the confidentiality and the Coordinated Release Date of a Ticket", () => {
-  test("asks before making a Ticket confidential, saying who then sees it and that its assignee may lose it, and closes on Cancel without a change", async ({
+  test("asks before making a Ticket confidential, saying who keeps seeing it and that its assignee may lose it, and closes on Cancel without a change", async ({
     page,
   }) => {
     // SNTL-20, in Analysis and not confidential, is assigned to cwhite, a
@@ -5761,7 +5745,7 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
 
     await expect(
       confirmation.getByText(
-        "Only the users who see every Ticket, the maintainers of its packages that are not excluded, and the users to whom access is granted then see SNTL-20. Every other user loses access to it.",
+        "Only the users who see every Ticket and the maintainers of its packages that are not excluded keep seeing SNTL-20. Every other user loses access to it.",
         { exact: true },
       ),
     ).toBeVisible();
@@ -5812,6 +5796,7 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
       "Make non-confidential…",
     ]);
     await expect(menu.getByRole("separator")).toHaveCount(3);
+    await expectAccessible(page);
 
     await menu
       .getByRole("menuitem", { name: "Make non-confidential…", exact: true })
@@ -5835,6 +5820,7 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
       }),
     ).toBeVisible();
     await expectAccessible(page);
+    await expectScreenshot(page, "ticket-make-non-confidential.png");
 
     await page.keyboard.press("Escape");
 
@@ -5914,6 +5900,7 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
         "Rerun convergence",
       ]);
       await expect(menu.getByRole("separator")).toHaveCount(2);
+      await expectAccessible(page);
       await page.keyboard.press("Escape");
       await expect(menu).toHaveCount(0);
     }
@@ -5930,77 +5917,82 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
     await expect(releasePencil(page)).toHaveCount(0);
   });
 
-  test("keeps the details in the side column while the dialog of the Coordinated Release Date is open in a window that becomes too narrow for two columns, with the input of the dialog, and moves them above the CVE once it closes", async ({
+  test("shows on Save with only some parts of the Coordinated Release Date the error at the field, which takes the focus, and sends nothing", async ({
     page,
   }) => {
     // SNTL-18 is confidential, with a Coordinated Release Date (Embargoes).
-    // The test sends no change, so it changes no data. The parts are found
-    // also while the dialog keeps them from assistive technologies.
+    // The check sends no request, so the test changes no data.
     await signIn(page, "asmith");
     await page.goto("/tickets/SNTL-18");
     await expectOverviewShown(page);
-    const details = page.getByRole("region", {
-      name: "Details",
-      exact: true,
-      includeHidden: true,
-    });
-    const cve = page.getByRole("region", {
-      name: "CVE-2099-0018",
-      exact: true,
-      includeHidden: true,
-    });
-    const boxes = async () => {
-      const detailsBox = await details.boundingBox();
-      const cveBox = await cve.boundingBox();
-      if (detailsBox === null || cveBox === null) {
-        throw new Error("the details or the CVE are not shown");
+    const release = await detail(page, "Coordinated Release Date");
+    const shownText = (await release.textContent()) ?? "";
+    // The requests of Set Coordinated Release Date that the page sends.
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname ===
+          "/api/v1/tickets/SNTL-18/coordinated-release-date"
+      ) {
+        sent.push(request.url());
       }
-      return { detailsBox, cveBox };
-    };
-    // Whether the details show beside the CVE, in the side column, or above
-    // it, in one column.
-    const beside = async () => {
-      const { detailsBox, cveBox } = await boxes();
-      return detailsBox.x > cveBox.x + cveBox.width;
-    };
-    const above = async () => {
-      const { detailsBox, cveBox } = await boxes();
-      return detailsBox.y + detailsBox.height < cveBox.y;
-    };
-    // In a window of 1280 px, the main content is wide enough for two
-    // columns.
-    expect(await beside()).toBe(true);
+    });
     await releasePencil(page).click();
+    const dialog = releaseDialog(page, "SNTL-18");
+    const parts = releaseParts(dialog);
+    const day = parts.first();
+    await expect(day).toBeFocused();
+    // Another date and time, whose minute, which keeps the focus, Backspace
+    // then empties: the field holds only some of its parts.
+    await page.keyboard.type(SET_RELEASE_DIGITS);
+    await expect(parts.last()).toBeFocused();
+    await page.keyboard.press("Backspace");
+    await expect(parts.last()).toHaveText("––");
+
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+    const incomplete = "Enter the day, the month, the year, and the time.";
+    await expect(dialog.getByText(incomplete, { exact: true })).toBeVisible();
+    await expect(day).toBeFocused();
+    await expect(day).toHaveAccessibleDescription(endingWith(incomplete));
+    expect(sent).toEqual([]);
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-coordinated-release-date-error.png");
+
+    // Cancel asks before discarding the input, and Discard closes the
+    // dialog.
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await actionDialog(page, "Discard changes?")
+      .getByRole("button", { name: "Discard", exact: true })
+      .click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(release).toHaveText(shownText);
+    expect(sent).toEqual([]);
+  });
+
+  test("asks before Cancel discards another Coordinated Release Date, saying that the date isn't changed, keeps the input on Keep editing, and closes on Discard", async ({
+    page,
+  }) => {
+    // SNTL-18 is confidential, with a Coordinated Release Date (Embargoes).
+    // The test sends no change, so it changes no data.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-18");
+    await expectOverviewShown(page);
+    const release = await detail(page, "Coordinated Release Date");
+    const shownText = (await release.textContent()) ?? "";
+    const pencil = releasePencil(page);
+    await pencil.click();
     const dialog = releaseDialog(page, "SNTL-18");
     const parts = releaseParts(dialog);
     await expect(parts.first()).toBeFocused();
     await page.keyboard.type(SET_RELEASE_DIGITS);
     await expectReleaseParts(parts, SET_RELEASE);
-    const { cveBox } = await boxes();
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
 
-    // In a window of 900 px, the main content is narrower than 960 px, too
-    // narrow for two columns (docs/design-system.md, Detail Screens).
-    await page.setViewportSize({ width: 900, height: 800 });
+    await cancel.click();
 
-    // The sidebar collapses below 1024 px, as React renders it, and the
-    // main column takes the width that the window leaves it beside the side
-    // column; the screen has then measured the new width.
-    await expect(
-      page.getByRole("button", {
-        name: "Expand navigation",
-        includeHidden: true,
-      }),
-    ).toBeVisible();
-    await expect
-      .poll(async () => (await boxes()).cveBox.width)
-      .toBeLessThan(cveBox.width);
-    await nextFrames(page);
-    expect(await beside()).toBe(true);
-    await expect(dialog).toBeVisible();
-    await expectReleaseParts(parts, SET_RELEASE);
-
-    // Another date and time is input: Cancel asks before discarding it.
-    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     const discard = actionDialog(page, "Discard changes?");
     await expect(
       discard.getByText(
@@ -6008,10 +6000,116 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
         { exact: true },
       ),
     ).toBeVisible();
+    const keep = discard.getByRole("button", {
+      name: "Keep editing",
+      exact: true,
+    });
+    await expect(keep).toBeFocused();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-coordinated-release-date-discard.png");
+
+    await keep.click();
+
+    await expect(discard).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expectReleaseParts(parts, SET_RELEASE);
+
+    await cancel.click();
     await discard.getByRole("button", { name: "Discard", exact: true }).click();
 
     await expect(dialog).toHaveCount(0);
-    await expect.poll(above).toBe(true);
+    await expect(pencil).toBeFocused();
+    await expect(release).toHaveText(shownText);
+  });
+
+  test("opens the dialog of the Coordinated Release Date of a Ticket no longer confidential, which says that the date still decides its deadlines and can't be set again once removed, and asks before Remove date removes it", async ({
+    page,
+  }) => {
+    // SNTL-29, without a CVE, is no longer confidential and keeps its
+    // Coordinated Release Date (Tickets; Embargoes). The test cancels the
+    // removal and the dialog, so it changes no data.
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-29");
+    await expectOverviewShown(page);
+    await expect(confidentialLabel(page)).toHaveCount(0);
+    const release = await detail(page, "Coordinated Release Date");
+    await expect(release).toHaveText(new RegExp(`^${DATE_TIME}$`));
+    const shownText = (await release.textContent()) ?? "";
+    const shown = localDateTimeOf(shownText);
+    // The requests of Set Coordinated Release Date that the page sends.
+    const sent: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname ===
+          "/api/v1/tickets/SNTL-29/coordinated-release-date"
+      ) {
+        sent.push(request.url());
+      }
+    });
+    const pencil = releasePencil(page);
+
+    await pencil.click();
+
+    const dialog = releaseDialog(page, "SNTL-29");
+    const parts = releaseParts(dialog);
+    await expect(parts.first()).toBeFocused();
+    await expect(
+      dialog.getByText(
+        "SNTL-29 is no longer confidential, but its Coordinated Release Date still decides its deadlines: they divide the time from its creation to it, and follow the SLA without it. Once removed, it can't be set again.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expectReleaseParts(parts, shown);
+    const remove = dialog.getByRole("button", {
+      name: "Remove date",
+      exact: true,
+    });
+    await expect(remove).toBeVisible();
+    await expectAccessible(page);
+    await expectScreenshot(
+      page,
+      "ticket-coordinated-release-date-not-confidential.png",
+    );
+
+    // Remove date asks for confirmation, since the Ticket can't receive a
+    // date again; Cancel returns to the dialog.
+    await remove.click();
+
+    const confirmation = actionDialog(
+      page,
+      "Remove the Coordinated Release Date of SNTL-29?",
+    );
+    await expect(
+      confirmation.getByText(
+        "SNTL-29 is no longer confidential, so it can't receive a Coordinated Release Date again, and its deadlines then follow the SLA. This can't be undone.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const cancelRemoval = confirmation.getByRole("button", {
+      name: "Cancel",
+      exact: true,
+    });
+    await expect(cancelRemoval).toBeFocused();
+    await expect(
+      confirmation.getByRole("button", { name: "Remove date", exact: true }),
+    ).toBeVisible();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-coordinated-release-date-remove.png");
+
+    await cancelRemoval.click();
+
+    await expect(confirmation).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expectReleaseParts(parts, shown);
+
+    // The date and time unchanged, Cancel closes the dialog at once.
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(pencil).toBeFocused();
+    await expect(release).toHaveText(shownText);
+    expect(sent).toEqual([]);
   });
 
   test(
@@ -6048,7 +6146,7 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
       );
       await expect(
         confirmation.getByText(
-          `Only the users who see every Ticket, the maintainers of its packages that are not excluded, and the users to whom access is granted then see ${ticketId}. Every other user loses access to it.`,
+          `Only the users who see every Ticket and the maintainers of its packages that are not excluded keep seeing ${ticketId}. Every other user loses access to it.`,
           { exact: true },
         ),
       ).toBeVisible();
@@ -6175,6 +6273,7 @@ test.describe("the confidentiality and the Coordinated Release Date of a Ticket"
         ),
       ).toBeVisible();
       await expectReleaseParts(releaseParts(dialog), SET_RELEASE);
+      await expectAccessible(page);
       await dialog
         .getByRole("button", { name: "Remove date", exact: true })
         .click();
