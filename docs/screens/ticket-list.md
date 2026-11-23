@@ -167,7 +167,11 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   matches no Ticket of that status, and the list says that none match the
   filters (States). CNA policy lists the Tickets that the CNA auto-ignore
   policy ignored without review, so that an analyst reviews them (Sentinel
-  `docs/features/tickets/cna.md`, A Curated Policy per CNA).
+  `docs/features/tickets/cna.md`, A Curated Policy per CNA). The reasons have
+  the names that the details of a Ticket give them, which show the reason of
+  an Ignored Ticket (`docs/screens/ticket.md`, Content, Details); the rows
+  do not show it, so that the Status column keeps its width from one page to
+  the next and leaves its room to the other columns.
 - The table of the Tickets of the view, "Tickets" for assistive
   technologies, from List Tickets with the filters of the view, the search
   and the filters that the user applied, the sorting, the page, and
@@ -253,14 +257,7 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   that List Tickets returns for the row: `priority`, `priority_automatic`,
   `priority_override`, `priority_override_by`, `priority_override_at`, and
   `priority_automatic_basis` (Sentinel `docs/features/tickets/tickets.md`,
-  TicketSummary; PriorityBasis; PriorityEvidence). The status of an Ignored
-  Ticket is followed, 6 px later and on its line, by "·" and its reason,
-  `ignore_reason`, by the name that the details of the Ticket give it
-  (`docs/screens/ticket.md`, Content, Details), in `fg-muted`: "Ignored · CNA
-  policy", which assistive technologies read as such. A reason that the
-  pinned contract does not list shows as received (Sentinel
-  `docs/features/tickets/tickets.md`, Ignore Reason; `docs/behaviors.md`,
-  Unknown Values).
+  TicketSummary; PriorityBasis; PriorityEvidence).
 - **Deadline**: the deadline badge (`docs/behaviors.md`, Deadlines), which
   compares the dates with the instant at which the data of the list arrived,
   the same for every row. A Ticket without a deadline leaves the place empty.

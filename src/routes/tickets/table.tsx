@@ -17,7 +17,6 @@ import {
 import { DateTime } from "../../components/date-time";
 import { DeadlineBadge } from "../../components/deadline-badge";
 import { ClearFiltersAction } from "../../components/filters";
-import { ignoreReasonName } from "../../components/ignore-reason";
 import { Link } from "../../components/link";
 import { ExplainedPriority } from "../../components/priority-explanation";
 import type { Read } from "../../components/read-view";
@@ -35,19 +34,6 @@ import {
 
 // The table of the Ticket list (src/routes/tickets.tsx), with its columns,
 // its empty state, and what the list shows, in words.
-
-interface IgnoreReasonProps {
-  // A value of TicketIgnoreReason, or another value that a later Sentinel
-  // release returns.
-  reason: string;
-}
-
-// The reason of an ignored Ticket, 6 px after its status and centered on its
-// line, as "· CNA policy" in fg-muted: by its name, or as received
-// (docs/behaviors.md, Unknown Values).
-function IgnoreReason({ reason }: IgnoreReasonProps) {
-  return <span className="text-fg-muted">· {ignoreReasonName(reason)}</span>;
-}
 
 // The columns of the table, with the cell of each column in a row. The
 // deadline badge compares with now, the instant at which the list's data
@@ -104,23 +90,11 @@ function columnsOf(
         />
       ),
     },
-    // The status, followed by the reason of an ignored Ticket, so that the
-    // Tickets that the CNA auto-ignore policy ignored stand apart from those
-    // that a user ignored (Sentinel docs/features/tickets/tickets.md, Ignore
-    // Reason).
     status: {
       id: "status",
       name: "Status",
       allowsSorting: true,
-      render: (row) =>
-        row.ignore_reason === null ? (
-          <TicketStatus status={row.status} />
-        ) : (
-          <span className="inline-flex items-center gap-1.5 align-middle">
-            <TicketStatus status={row.status} />
-            <IgnoreReason reason={row.ignore_reason} />
-          </span>
-        ),
+      render: (row) => <TicketStatus status={row.status} />,
     },
     severity: {
       id: "severity",

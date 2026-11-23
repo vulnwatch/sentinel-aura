@@ -815,7 +815,7 @@ test.describe("refined by an analyst", () => {
     );
   });
 
-  test("filters the Tickets by their ignore reason, and shows the reason of each ignored Ticket", async ({
+  test("filters the Tickets by their ignore reason, which the rows do not show", async ({
     page,
   }) => {
     await signIn(page, "asmith");
@@ -836,41 +836,16 @@ test.describe("refined by an analyst", () => {
 
     await expect(page).toHaveURL("/tickets?ignore_reason=cna_policy");
     await expect(identifiers(page)).toHaveText(["SNTL-28"]);
+    // The row shows the status alone; the details of the Ticket show its
+    // reason.
     await expect(
       table(page)
         .getByRole("row", { name: /SNTL-28/ })
-        .getByRole("gridcell", { name: "Ignored · CNA policy" }),
+        .getByRole("gridcell", { name: "Ignored", exact: true }),
     ).toBeVisible();
     await expectAccessible(page);
 
     await expectScreenshot(page, "ticket-list-ignore-reason.png");
-
-    // The ignored Tickets, one for each reason (Tickets).
-    await page.goto("/tickets?status=ignored");
-    await expect(identifiers(page)).toHaveText(
-      await ticketsOf(
-        page,
-        "status=ignored&sort_by=updated_at&sort_order=desc",
-      ),
-    );
-    for (const [ticket, reason] of [
-      ["SNTL-8", "CVE rejected"],
-      ["SNTL-17", "Not shipped"],
-      ["SNTL-25", "Other"],
-      ["SNTL-28", "CNA policy"],
-    ] as const) {
-      await expect(
-        table(page)
-          .getByRole("row", { name: new RegExp(`${ticket}\\b`) })
-          .getByRole("gridcell", { name: `Ignored · ${reason}` }),
-      ).toBeVisible();
-    }
-    await expectAccessible(page);
-    await expectViewCounts(page);
-    await expectAttentionCounts(page);
-    await pointerAway(page);
-
-    await expectScreenshot(page, "ticket-list-ignored.png");
   });
 });
 

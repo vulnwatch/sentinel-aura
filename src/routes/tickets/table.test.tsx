@@ -3,7 +3,7 @@ import { page, userEvent } from "vitest/browser";
 import "../../styles.css";
 import type { TicketSummary } from "../../api/generated/model";
 import { formatDateTime } from "../../components/date-time";
-import { fictionalTicket, jsonResponse, ticketPage } from "../../test-api";
+import { fictionalTicket, ticketPage } from "../../test-api";
 import {
   ancestorOf,
   EMBARGO_ANALYST,
@@ -35,9 +35,6 @@ const OVERRIDE_BY: NonNullable<TicketSummary["priority_override_by"]> = {
   avatar_url: null,
 };
 const OVERRIDE_AT = "2099-10-09T15:05:09Z";
-
-// fg-muted of the light theme.
-const FG_MUTED = "rgb(89, 99, 110)";
 
 describe("the table", () => {
   // The names of the columns that every view shows first.
@@ -270,76 +267,6 @@ describe("the table", () => {
       "Alice Smith",
       "9 Oct 2026, 14:05",
     ]);
-  });
-
-  test("shows the reason of an ignored Ticket after its status, by its name in fg-muted, and a reason that the pinned contract does not list as received", async () => {
-    const tickets = [
-      fictionalTicket({
-        ticket_id: "SNTL-28",
-        status: "ignored",
-        ignore_reason: "cna_policy",
-      }),
-      fictionalTicket({
-        ticket_id: "SNTL-17",
-        status: "ignored",
-        ignore_reason: "not_shipped",
-      }),
-      // A reason that a later Sentinel release can return.
-      {
-        ...fictionalTicket({ ticket_id: "SNTL-9", status: "ignored" }),
-        ignore_reason: "fictional_reason",
-      },
-      fictionalTicket({ ticket_id: "SNTL-4", status: "analysis" }),
-    ];
-    stubTickets({
-      list: () =>
-        jsonResponse(200, {
-          data: tickets,
-          meta: { total: tickets.length, page: 1, per_page: 20 },
-        }),
-    });
-    const { screen } = await renderApp("/tickets");
-    const rows = tableOf(screen).getByRole("row");
-    // The cell of the status, after CVE, Title, and Packages.
-    const status = (index: number) =>
-      rows.nth(index).getByRole("gridcell").nth(3);
-
-    await expect.element(rows.nth(4)).toBeVisible();
-    await expect
-      .element(status(1))
-      .toHaveAccessibleName("Ignored · CNA policy");
-    await expect
-      .element(status(2))
-      .toHaveAccessibleName("Ignored · Not shipped");
-    await expect
-      .element(status(3))
-      .toHaveAccessibleName("Ignored · fictional_reason");
-    await expect.element(status(4)).toHaveAccessibleName("Analysis");
-    // The reason, centered on the line of the status, in fg-muted, and the
-    // status in fg.
-    const reason = status(1).getByText("· CNA policy", { exact: true });
-    expect(getComputedStyle(reason.element()).color).toBe(FG_MUTED);
-    const name = status(1).getByText("Ignored", { exact: true });
-    expect(getComputedStyle(name.element()).color).not.toBe(FG_MUTED);
-    const [statusBox, reasonBox] = [name, reason].map((element) =>
-      element.element().getBoundingClientRect(),
-    );
-    expect(Math.abs(statusBox!.bottom - reasonBox!.bottom)).toBeLessThanOrEqual(
-      1,
-    );
-    // 6 px after the name of the status.
-    expect(reasonBox!.left - statusBox!.right).toBeCloseTo(6, 0);
-    // The status of an ignored Ticket, with its reason, at the same height in
-    // its row as the status of a row without a reason.
-    const offsetIn = (cell: number, text: string) =>
-      status(cell)
-        .getByText(text, { exact: true })
-        .element()
-        .getBoundingClientRect().top -
-      status(cell).element().getBoundingClientRect().top;
-    expect(
-      Math.abs(offsetIn(1, "Ignored") - offsetIn(4, "Analysis")),
-    ).toBeLessThanOrEqual(1);
   });
 
   test("explains the priority of a row from its fields, opened from the keyboard in the table", async () => {
