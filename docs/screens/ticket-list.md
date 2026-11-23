@@ -70,20 +70,20 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   removed from the URL in place of the URL in the browser history, before the
   list reads anything (`docs/behaviors.md`, Invalid Search Parameters). So
   are a status filter and an ignore reason filter in a view whose statuses
-  its filters fix, which holds no Ignored Ticket, an embargo filter outside
-  the Embargo view, and a sorting that the list does not accept, such as by
-  a column that the view does not show, with its order. A filter keeps the
-  values that it knows, once each, in the order of the table above, a
-  search term loses its surrounding whitespace, and a parameter that names
-  the value of the last column, such as `page=1`, is left out, all in place
-  of the URL in the browser history. A user who is
-  not shown a view, Assigned to me or Embargo (Access), sees the All view for
-  its `view`, and the list removes that parameter in the same way once it
-  knows the user, with those that the All view does not accept, such as the
-  embargo filter or a sorting by Coordinated Release Date, also when a read
-  of the signed-in user tells during the session that the user is no longer
-  shown the view (`docs/behaviors.md`, The Signed-in User); no request
-  carries them. The other parameters and the fragment stay.
+  its filters fix, an embargo filter outside the Embargo view, and a sorting
+  that the list does not accept, such as by a column that the view does not
+  show, with its order. A filter keeps the values that it knows, once each,
+  in the order of the table above, a search term loses its surrounding
+  whitespace, and a parameter that names the value of the last column, such
+  as `page=1`, is left out, all in place of the URL in the browser history.
+  A user who is not shown a view, Assigned to me or Embargo (Access), sees
+  the All view for its `view`, and the list removes that parameter in the
+  same way once it knows the user, with those that the All view does not
+  accept, such as the embargo filter or a sorting by Coordinated Release
+  Date, also when a read of the signed-in user tells during the session that
+  the user is no longer shown the view (`docs/behaviors.md`, The Signed-in
+  User); no request carries them. The other parameters and the fragment
+  stay.
 - The Tickets entry of the sidebar and `/`, the landing, lead to
   `/tickets?view=new` for a user who holds `triage_ticket`, and to `/tickets`
   for every other user. `/` leads there in place of itself in the browser
@@ -166,8 +166,8 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   reason changes no other filter: with a status other than Ignored, it
   matches no Ticket of that status, and the list says that none match the
   filters (States). CNA policy lists the Tickets that the CNA auto-ignore
-  policy ignored, which no one reviewed, so that an analyst reviews them
-  (Sentinel `docs/features/tickets/cna.md`, A Curated Policy per CNA).
+  policy ignored without review, so that an analyst reviews them (Sentinel
+  `docs/features/tickets/cna.md`, A Curated Policy per CNA).
 - The table of the Tickets of the view, "Tickets" for assistive
   technologies, from List Tickets with the filters of the view, the search
   and the filters that the user applied, the sorting, the page, and

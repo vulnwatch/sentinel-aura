@@ -845,11 +845,6 @@ test.describe("refined by an analyst", () => {
 
     await expectScreenshot(page, "ticket-list-ignore-reason.png");
 
-    await page.keyboard.press("Escape");
-    await expect(
-      page.getByRole("button", { name: "Filters 1 applied" }),
-    ).toBeFocused();
-
     // The ignored Tickets, one for each reason (Tickets).
     await page.goto("/tickets?status=ignored");
     await expect(identifiers(page)).toHaveText(

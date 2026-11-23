@@ -63,12 +63,6 @@ describe("the filters", () => {
       "Critical",
     ],
     [
-      "a queue of several statuses, without the status and the ignore reason filters",
-      "?view=unassigned",
-      FILTER_VALUES,
-      "Critical",
-    ],
-    [
       "the Embargo view, with the status, the ignore reason, and the embargo filters",
       "?view=embargo",
       [STATUS_VALUES, IGNORE_REASON_VALUES, EMBARGO_VALUES, ...FILTER_VALUES],

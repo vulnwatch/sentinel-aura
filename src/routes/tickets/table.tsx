@@ -43,9 +43,8 @@ interface IgnoreReasonProps {
 }
 
 // The reason of an ignored Ticket, 6 px after its status and centered on its
-// line, as "· CNA policy" in fg-muted, as a detail follows what it qualifies
-// in a timeline: by its name, or as received (docs/behaviors.md, Unknown
-// Values).
+// line, as "· CNA policy" in fg-muted: by its name, or as received
+// (docs/behaviors.md, Unknown Values).
 function IgnoreReason({ reason }: IgnoreReasonProps) {
   return <span className="text-fg-muted">· {ignoreReasonName(reason)}</span>;
 }
