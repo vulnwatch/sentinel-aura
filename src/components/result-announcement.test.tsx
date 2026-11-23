@@ -15,8 +15,13 @@ import {
 
 const WORDS = "3 Tickets";
 
-function FictionalList() {
-  const [state, setState] = useState("");
+interface FictionalListProps {
+  // The state with which the list opens, as the URL that it gives.
+  opened?: string;
+}
+
+function FictionalList({ opened = "" }: FictionalListProps) {
+  const [state, setState] = useState(opened);
   const changed = useChangedSinceOpened(state);
   return (
     <>
@@ -38,14 +43,20 @@ function FictionalList() {
   );
 }
 
-test("counts no change while the state is the one with which the screen opened, and announces nothing", async () => {
-  const screen = await render(<FictionalList />);
+test.each([
+  ["no parameters", ""],
+  ["a page", "?page=2"],
+])(
+  "counts no change while the state is the one with which the screen opened, with %s, and announces nothing",
+  async (_, opened) => {
+    const screen = await render(<FictionalList opened={opened} />);
 
-  await expect
-    .element(screen.getByText("Unchanged", { exact: true }))
-    .toBeVisible();
-  expect(screen.getByRole("status").element().textContent).toBe("");
-});
+    await expect
+      .element(screen.getByText("Unchanged", { exact: true }))
+      .toBeVisible();
+    expect(screen.getByRole("status").element().textContent).toBe("");
+  },
+);
 
 test("counts another state as a change, which lasts once the state returns to the one with which the screen opened", async () => {
   const screen = await render(<FictionalList />);
