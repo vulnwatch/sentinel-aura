@@ -17,13 +17,14 @@ import {
 import { SideSection } from "../../components/detail-screen";
 import { ignoreReasonName } from "../../components/ignore-reason";
 import { Link } from "../../components/link";
+import { PHASES } from "../../components/phases";
 import { PartRead } from "../../components/read-view";
 import { type Assignee, AssigneeField } from "./assignee";
 import {
   CoordinatedReleaseField,
   type CoordinatedReleaseDate,
 } from "./coordinated-release-date";
-import { DETAILS_ANCHOR, duplicatesOf, PHASES } from "./shared";
+import { DETAILS_ANCHOR, duplicatesOf } from "./shared";
 
 // The details of the Ticket, the first part of the side column of Overview
 // (src/routes/ticket-overview.tsx): its fields, with its deadlines, its

@@ -1,6 +1,7 @@
 import { ClockAlert } from "lucide-react";
-import type { CurrentPhaseValue, TicketSummary } from "../api/generated/model";
+import type { TicketSummary } from "../api/generated/model";
 import { COUNT, counted } from "./count";
+import { PHASES as REMEDIATION_PHASES } from "./phases";
 
 // The deadline of a Ticket (docs/behaviors.md, Deadlines;
 // docs/design-system.md, Deadline Badge; Sentinel
@@ -35,20 +36,17 @@ interface Phase {
 // docs/features/tickets/ticket-deadlines.md, Observability of Later Phases).
 const RELEASE: Phase = { name: "Release", due: "release_due_at" };
 
-// The current phases that the pinned contract lists, by their value; done,
-// which leaves no deadline, is null. A Map, so that a value that a later
-// Sentinel release returns is looked up only among them, never among the
-// members of an object's prototype (docs/conventions.md, Data Read from the
-// API).
-const PHASES = new Map<string, Phase | null>(
-  Object.entries({
-    triage: { name: "Triage", due: "triage_due_at" },
-    submission: { name: "Submission", due: "submission_due_at" },
-    um: { name: "UM", due: "um_due_at" },
-    qa: { name: "QA", due: "qa_due_at" },
-    done: null,
-  } satisfies Record<CurrentPhaseValue, Phase | null>),
-);
+// The current phases that the pinned contract lists, by their value
+// (src/components/phases.ts); done, which leaves no deadline, is null. A Map,
+// so that a value that a later Sentinel release returns is looked up only
+// among them, never among the members of an object's prototype
+// (docs/conventions.md, Data Read from the API).
+const PHASES = new Map<string, Phase | null>([
+  ...REMEDIATION_PHASES.map(
+    ({ phase, name, due }) => [phase, { name, due }] as const,
+  ),
+  ["done", null],
+]);
 
 export type DeadlineTone = "success" | "warning" | "danger" | "neutral";
 

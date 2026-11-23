@@ -58,6 +58,7 @@ import { Maintainers } from "../../components/maintainers";
 import { UpdatingBar } from "../../components/loading";
 import { MenuAction } from "../../components/menu";
 import { useShowMessage } from "../../components/message-area";
+import { PHASES } from "../../components/phases";
 import { marksPlace } from "../../components/read-view";
 import {
   FocusHandOff,
@@ -88,7 +89,6 @@ import {
 import {
   MaybeDateTime,
   PACKAGES_ANCHOR,
-  PHASES,
   useReadAfterTicketChange,
 } from "./shared";
 
