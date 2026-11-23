@@ -19,9 +19,8 @@ an analyst or a user who manages fetchers reruns its convergence, and an
 analyst who manages confidentiality places it under embargo and discloses it;
 in the tab Overview its CVE, the CVSS assessments of its CVE, whose SUSE
 assessment an analyst who manages CVSS adds, edits, and deletes, its package
-tree, with the
-IBS requests of its tracks, to which an analyst who manages packages adds the
-packages that Sentinel missed, whose packages, tracks, and Products they
+tree, with the IBS requests of its tracks, to which an analyst who manages
+packages adds the packages that Sentinel missed, whose packages, tracks, and Products they
 exclude and restore, and on which they set the affectedness of the tracks and
 the eligibility of the Products, its details, whose assignee an analyst
 changes and whose Coordinated Release Date, the end of the embargo, an
@@ -1000,8 +999,8 @@ depart from them:
   confidential… and Make non-confidential…, Edit Coordinated Release Date,
   and the actions of the references are outside the guard, and the screen
   offers them in every status. Reopen, Revert duplicate, and Rerun
-  convergence are outside the guard too, each with the statuses that its entry states. An action
-  that the status of the Ticket does not allow is not offered, in a menu
+  convergence are outside the guard too, each with the statuses that its
+  entry states. An action that the status of the Ticket does not allow is not offered, in a menu
   too, rather than shown disabled: the arrow keys of a menu pass over a
   disabled item, so its reason would not be read, and a control whose
   actions are all left out does not show (`docs/screen-map.md`, Roles,
@@ -1392,11 +1391,11 @@ Confidential Ticket Visibility):
   confidentiality can unassign the Ticket and deletes the access grants of a
   Ticket made non-confidential, so the screen then reads again the Ticket,
   the work of a maintainer on it, the users who acted on it, its audit log,
-  and the reads of the Ticket list, the Embargo view and its count included;
-  its access grants it reads on their next read rather than at once, since
-  Sentinel refuses the read of the grants of a Ticket that is not
-  confidential, so a Ticket made confidential reads them as the screen shows
-  it so (Sentinel `docs/features/tickets/tickets.md`, List Access Grants).
+  and the reads of the Ticket list, the Embargo view and its count included.
+  It reads the access grants again only once it shows the Ticket
+  confidential, since Sentinel refuses the read of the grants of a Ticket
+  that is not confidential (Sentinel `docs/features/tickets/tickets.md`,
+  List Access Grants).
 - The outcome is announced once the read of the Ticket after it arrives
   (above), as Sentinel returns the Ticket: "Made confidential.", "Made
   confidential, unassigned." when Sentinel cleared the assignee that the
@@ -1489,7 +1488,9 @@ Coordinated Release Window):
   shows it no longer confidential and without a date, as after another
   user's changes, "SNTL-18 is no longer confidential and has no Coordinated
   Release Date, so it can't receive one.". The texts, Remove date, and its
-  confirmation follow the Ticket as the screen shows it. Then Coordinated
+  confirmation follow the Ticket as the screen shows it; a confirmation of
+  Remove date that is open stays, and its removal then gets the `409` of a
+  Ticket that can no longer have a date (States). Then Coordinated
   Release Date, in a form (`docs/design-system.md`, Forms), a date and time
   field whose first part takes the focus as the dialog opens, with the date
   of the Ticket to the minute, or empty without one, and whose description
@@ -1520,8 +1521,7 @@ Coordinated Release Window):
 - Save asks for no confirmation: another change reverses it. Its input is a
   field whose parts differ from those with which the dialog opened, also
   while only some of them are typed, and before discarding it the question
-  says "The Coordinated Release Date of SNTL-18
-  isn't changed." (above). While the request is in progress, the field is
+  says "The Coordinated Release Date of SNTL-18 isn't changed." (above). While the request is in progress, the field is
   read-only and keeps its focus.
 - A change moves the deadlines of the Ticket, and a removal returns them to
   the SLA window; neither assigns the Ticket nor changes its status

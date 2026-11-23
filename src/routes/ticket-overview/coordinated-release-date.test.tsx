@@ -774,6 +774,32 @@ describe("the dialog of the Coordinated Release Date", () => {
     },
   );
 
+  test("moves the focus to the dialog when a read removes Remove date while it holds the focus", async () => {
+    let shown: Partial<TicketDetail> = {
+      is_confidential: false,
+      coordinated_release_at: SET_AT,
+    };
+    showingRelease({}, { ticket: () => ticketIn("analyzed", shown) });
+    const { screen } = await renderTicket();
+    const dialog = await openRelease(screen);
+    const remove = buttonOf(dialog, "Remove date");
+    const element = remove.element();
+    if (element instanceof HTMLElement) {
+      element.focus();
+    }
+    await expect.element(remove).toHaveFocus();
+    // Meanwhile another user removed its date.
+    shown = { is_confidential: false, coordinated_release_at: null };
+
+    await returnToForeground();
+
+    await expect
+      .element(dialog.getByText(INTRO_CLOSED, { exact: true }))
+      .toBeVisible();
+    expect(remove.query()).toBeNull();
+    await expect.element(dialog).toHaveFocus();
+  });
+
   test("says, once a read shows the confidential Ticket on which it opened no longer confidential with its date, what the date of such a Ticket decides, and Remove date then asks first", async () => {
     let confidential = true;
     const spy = showingRelease(

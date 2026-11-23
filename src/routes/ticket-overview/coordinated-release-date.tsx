@@ -411,15 +411,20 @@ function CoordinatedReleaseDialog({
       buttons={
         <>
           {opened !== null && !closed && (
+            // When a read removes Remove date while it holds the focus, the
+            // focus moves to the dialog (docs/behaviors.md, Accessibility,
+            // Focus after an action).
             <div className="me-auto flex">
-              <Button
-                size="large"
-                isBusy={removing && !confirmingRemove}
-                isDisabled={busy && !removing}
-                onPress={remove}
-              >
-                Remove date
-              </Button>
+              <FocusHandOff>
+                <Button
+                  size="large"
+                  isBusy={removing && !confirmingRemove}
+                  isDisabled={busy && !removing}
+                  onPress={remove}
+                >
+                  Remove date
+                </Button>
+              </FocusHandOff>
             </div>
           )}
           <Button size="large" isDisabled={busy} onPress={close}>
