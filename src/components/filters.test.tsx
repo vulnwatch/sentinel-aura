@@ -628,39 +628,39 @@ describe("a select", () => {
   });
 });
 
+// The shapes of x, the icon of Clear filters (docs/design-system.md,
+// Icons by Need).
+async function shapesOfX(): Promise<string> {
+  const screen = await render(
+    <div data-icon>
+      <X />
+    </div>,
+  );
+  const shapes = screen.container.querySelector("[data-icon] svg")!.innerHTML;
+  await screen.unmount();
+  return shapes;
+}
+
+// A fictional list whose toolbar shows Clear filters while its filters
+// apply, below the screen's heading.
+function ClearableList() {
+  const [applied, setApplied] = useState(true);
+  return (
+    <>
+      <h1 tabIndex={-1}>Tickets</h1>
+      {applied && (
+        <ClearFilters
+          onPress={() => {
+            setApplied(false);
+          }}
+        />
+      )}
+      <p>{applied ? "Filters apply" : "No filters apply"}</p>
+    </>
+  );
+}
+
 describe("Clear filters", () => {
-  // The shapes of x, the icon of Clear filters (docs/design-system.md,
-  // Icons by Need).
-  async function shapesOfX(): Promise<string> {
-    const screen = await render(
-      <div data-icon>
-        <X />
-      </div>,
-    );
-    const shapes = screen.container.querySelector("[data-icon] svg")!.innerHTML;
-    await screen.unmount();
-    return shapes;
-  }
-
-  // A fictional list whose toolbar shows Clear filters while its filters
-  // apply, below the screen's heading.
-  function ClearableList() {
-    const [applied, setApplied] = useState(true);
-    return (
-      <>
-        <h1 tabIndex={-1}>Tickets</h1>
-        {applied && (
-          <ClearFilters
-            onPress={() => {
-              setApplied(false);
-            }}
-          />
-        )}
-        <p>{applied ? "Filters apply" : "No filters apply"}</p>
-      </>
-    );
-  }
-
   test("shows in the toolbar a quiet button 32 px high, x at 16 px with its name, which removes the filters", async () => {
     const shapes = await shapesOfX();
     const onPress = vi.fn();
