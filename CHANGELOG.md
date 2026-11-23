@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.10.0...v0.11.0) (2026-11-23)
+
+
+### Features
+
+* add a package to a Ticket from its package tree ([#305](https://github.com/vulnwatch/sentinel-aura/issues/305)) ([20fc080](https://github.com/vulnwatch/sentinel-aura/commit/20fc080b688df401cce7239ccfb8eed0e8cbc51f))
+* add the Actions menu of a Ticket with its status actions ([#309](https://github.com/vulnwatch/sentinel-aura/issues/309)) ([21042ec](https://github.com/vulnwatch/sentinel-aura/commit/21042ecf7915d15eedf4332d6f18f2cccd79a9a8))
+* change the confidentiality and the CRD of a Ticket ([#325](https://github.com/vulnwatch/sentinel-aura/issues/325)) ([90ab041](https://github.com/vulnwatch/sentinel-aura/commit/90ab0416083f1d40072958bc022c1524ab93bb17))
+* **deps:** pin Sentinel 0.28.0 ([#303](https://github.com/vulnwatch/sentinel-aura/issues/303)) ([c10ea01](https://github.com/vulnwatch/sentinel-aura/commit/c10ea01b40924ede1c795a27a49fdfacf07efd7a))
+* ignore a Ticket with a reason ([#311](https://github.com/vulnwatch/sentinel-aura/issues/311)) ([34ec140](https://github.com/vulnwatch/sentinel-aura/commit/34ec140f1c8778c3dc206580f50fabc2ff7dedd2))
+* override the priority, set the severity, and associate a CVE ([#321](https://github.com/vulnwatch/sentinel-aura/issues/321)) ([74c4e58](https://github.com/vulnwatch/sentinel-aura/commit/74c4e583733407e29be9537bec484807b95be062))
+
+
+### Bug Fixes
+
+* keep field errors in place and announce them at a focused field ([#316](https://github.com/vulnwatch/sentinel-aura/issues/316)) ([d2f350e](https://github.com/vulnwatch/sentinel-aura/commit/d2f350eebb7acc17093917e06506ec61957919e4))
+* keep the page in place as the compact heading takes the focus ([#326](https://github.com/vulnwatch/sentinel-aura/issues/326)) ([4eff858](https://github.com/vulnwatch/sentinel-aura/commit/4eff858aa15a236da7fb2d81716fcd260b4517c8))
+* show outcomes after a failed read and keep menu focus visible ([#306](https://github.com/vulnwatch/sentinel-aura/issues/306)) ([46a4bf9](https://github.com/vulnwatch/sentinel-aura/commit/46a4bf9001112a3e73089d38a6f20949208d8e7a))
+
 ## [0.10.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.9.0...v0.10.0) (2026-11-19)
 
 
