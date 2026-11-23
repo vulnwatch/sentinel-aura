@@ -90,7 +90,9 @@ interface ConsequencesProps {
 // eligibility (docs/screen-map.md, Roles, Principles). Making it
 // non-confidential discloses it to every user, deletes its access grants, and
 // keeps its Coordinated Release Date, which still decides its deadlines
-// (Sentinel docs/features/tickets/tickets.md, Set Confidentiality).
+// while it has any (Sentinel docs/features/tickets/tickets.md, Set
+// Confidentiality; Sentinel docs/features/tickets/ticket-deadlines.md, Null
+// Due Dates).
 function Consequences({ ticket, confidential, user }: ConsequencesProps) {
   const ticketId = ticket.ticket_id;
   if (!confidential) {
@@ -106,7 +108,9 @@ function Consequences({ ticket, confidential, user }: ConsequencesProps) {
         </p>
         {ticket.coordinated_release_at !== null && (
           <p>
-            Its Coordinated Release Date stays, and still decides its deadlines.
+            {ticket.release_due_at === null
+              ? "Its Coordinated Release Date stays."
+              : "Its Coordinated Release Date stays, and still decides its deadlines."}
           </p>
         )}
       </div>

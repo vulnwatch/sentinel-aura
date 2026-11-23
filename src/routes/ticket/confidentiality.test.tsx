@@ -389,6 +389,34 @@ describe("the confirmation of Make non-confidential…", () => {
     await expect.element(stays).toBeVisible();
     expect(boxOf(deleted).bottom).toBeLessThan(boxOf(stays).top);
   });
+
+  test("says only that the Coordinated Release Date stays on a Ticket without deadlines, such as an Ignored one", async () => {
+    showing(
+      {
+        is_confidential: true,
+        coordinated_release_at: "2099-11-25T13:00:00Z",
+        triage_due_at: null,
+        submission_due_at: null,
+        um_due_at: null,
+        qa_due_at: null,
+        release_due_at: null,
+      },
+      {},
+      "ignored",
+    );
+    const { screen } = await renderTicket();
+
+    const dialog = await openConfirmation(screen, false);
+
+    await expect
+      .element(
+        dialog.getByText("Its Coordinated Release Date stays.", {
+          exact: true,
+        }),
+      )
+      .toBeVisible();
+    expect(dialog.getByText(RELEASE_STAYS).query()).toBeNull();
+  });
 });
 
 describe("confirming a change of the confidentiality", () => {

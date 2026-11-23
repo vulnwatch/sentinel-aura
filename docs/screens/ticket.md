@@ -1385,7 +1385,10 @@ Confidential Ticket Visibility):
     grants are deleted, and making it confidential again doesn't restore
     them.", and, for a Ticket with a Coordinated Release Date, which Sentinel
     keeps, "Its Coordinated Release Date stays, and still decides its
-    deadlines."; Cancel and Make non-confidential, a danger button.
+    deadlines.", or "Its Coordinated Release Date stays." for a Ticket
+    without deadlines, as an Ignored or Duplicated one, or one of severity
+    None (Sentinel `docs/features/tickets/ticket-deadlines.md`, Null Due
+    Dates); Cancel and Make non-confidential, a danger button.
 - Once Sentinel confirms the change, the confirmation closes and the focus
   returns to Actions, which offers the other item. A change of the
   confidentiality can unassign the Ticket and deletes the access grants of a
@@ -1487,7 +1490,13 @@ Coordinated Release Window):
   SLA without it. Once removed, it can't be set again.", or, once a read
   shows it no longer confidential and without a date, as after another
   user's changes, "SNTL-18 is no longer confidential and has no Coordinated
-  Release Date, so it can't receive one.". The texts, Remove date, and its
+  Release Date, so it can't receive one.". On a Ticket without deadlines,
+  as an Ignored or Duplicated one, or one of severity None, which has none
+  with or without a date (Sentinel
+  `docs/features/tickets/ticket-deadlines.md`, Null Due Dates), the texts
+  say nothing of the deadlines: the first ends after "… ends.", and the
+  second is "SNTL-18 is no longer confidential. Once its Coordinated Release
+  Date is removed, it can't be set again.". The texts, Remove date, and its
   confirmation follow the Ticket as the screen shows it; a confirmation of
   Remove date that is open stays, and its removal then gets the `409` of a
   Ticket that can no longer have a date (States). Then Coordinated
@@ -1517,7 +1526,8 @@ Coordinated Release Window):
   receive a date again, it asks "Remove the Coordinated Release Date of
   SNTL-18?", "SNTL-18 is no longer confidential, so it can't receive a
   Coordinated Release Date again, and its deadlines then follow the SLA.
-  This can't be undone.", Cancel, and Remove date, a danger button.
+  This can't be undone.", without ", and its deadlines then follow the SLA"
+  on a Ticket without deadlines, Cancel, and Remove date, a danger button.
 - Save asks for no confirmation: another change reverses it. Its input is a
   field whose parts differ from those with which the dialog opened, also
   while only some of them are typed, and before discarding it the question

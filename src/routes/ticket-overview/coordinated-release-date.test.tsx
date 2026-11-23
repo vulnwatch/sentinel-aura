@@ -662,6 +662,72 @@ describe("the dialog of the Coordinated Release Date", () => {
     await expect.element(buttonOf(dialog, "Remove date")).toBeVisible();
   });
 
+  test.each<[string, Partial<TicketDetail>, string]>([
+    [
+      "a confidential",
+      {},
+      "The date and time agreed with the other parties at which the embargo of SNTL-12 ends.",
+    ],
+    [
+      "a no longer confidential",
+      { is_confidential: false },
+      "SNTL-12 is no longer confidential. Once its Coordinated Release Date is removed, it can't be set again.",
+    ],
+  ])(
+    "says nothing of the deadlines on %s Ticket without deadlines, such as an Ignored one",
+    async (_, fields, intro) => {
+      showingRelease(
+        {
+          ...fields,
+          triage_due_at: null,
+          submission_due_at: null,
+          um_due_at: null,
+          qa_due_at: null,
+          release_due_at: null,
+        },
+        {},
+        "ignored",
+      );
+      const { screen } = await renderTicket();
+
+      const dialog = await openRelease(screen);
+
+      await expect
+        .element(dialog.getByText(intro, { exact: true }))
+        .toBeVisible();
+      expect(dialog.getByText(/deadlines/).query()).toBeNull();
+    },
+  );
+
+  test("asks to remove the date of a Ticket no longer confidential and without deadlines without saying that its deadlines follow the SLA", async () => {
+    showingRelease(
+      {
+        is_confidential: false,
+        triage_due_at: null,
+        submission_due_at: null,
+        um_due_at: null,
+        qa_due_at: null,
+        release_due_at: null,
+      },
+      {},
+      "duplicated",
+    );
+    const { screen } = await renderTicket();
+    const dialog = await openRelease(screen);
+
+    await buttonOf(dialog, "Remove date").click();
+
+    const confirmation = removeConfirmation(screen);
+    await expect
+      .element(
+        confirmation.getByText(
+          "SNTL-12 is no longer confidential, so it can't receive a Coordinated Release Date again. This can't be undone.",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+  });
+
   test("opens empty on a Ticket without a date, its description naming the time zone of the browser alone, without Remove date", async () => {
     showingRelease({ coordinated_release_at: null });
     const { screen } = await renderTicket();

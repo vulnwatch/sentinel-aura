@@ -379,26 +379,20 @@ function CoordinatedReleaseDialog({
   // docs/features/tickets/tickets.md, Set Coordinated Release Date).
   const closed =
     !ticket.is_confidential && ticket.coordinated_release_at === null;
-  let intro: ReactNode;
+  // What the date decides of the deadlines, only while the Ticket has
+  // deadlines: an Ignored or Duplicated Ticket, or one of severity None, has
+  // none, with or without a date (Sentinel
+  // docs/features/tickets/ticket-deadlines.md, Null Due Dates).
+  const deadlines = ticket.release_due_at !== null;
+  let intro: string;
   if (ticket.is_confidential) {
-    intro = (
-      <>
-        The date and time agreed with the other parties at which the embargo of{" "}
-        {ticketId} ends. Its deadlines divide the time from its creation to it,
-        and follow the SLA without it.
-      </>
-    );
+    intro = `The date and time agreed with the other parties at which the embargo of ${ticketId} ends.${deadlines ? " Its deadlines divide the time from its creation to it, and follow the SLA without it." : ""}`;
   } else if (closed) {
     intro = `${ticketId} is no longer confidential and has no Coordinated Release Date, so it can't receive one.`;
+  } else if (deadlines) {
+    intro = `${ticketId} is no longer confidential, but its Coordinated Release Date still decides its deadlines: they divide the time from its creation to it, and follow the SLA without it. Once removed, it can't be set again.`;
   } else {
-    intro = (
-      <>
-        {ticketId} is no longer confidential, but its Coordinated Release Date
-        still decides its deadlines: they divide the time from its creation to
-        it, and follow the SLA without it. Once removed, it can&apos;t be set
-        again.
-      </>
-    );
+    intro = `${ticketId} is no longer confidential. Once its Coordinated Release Date is removed, it can't be set again.`;
   }
 
   return (
@@ -454,9 +448,7 @@ function CoordinatedReleaseDialog({
               isBusy={busy}
               error={removeError}
             >
-              {ticketId} is no longer confidential, so it can&apos;t receive a
-              Coordinated Release Date again, and its deadlines then follow the
-              SLA. This can&apos;t be undone.
+              {`${ticketId} is no longer confidential, so it can't receive a Coordinated Release Date again${deadlines ? ", and its deadlines then follow the SLA" : ""}. This can't be undone.`}
             </ConfirmationDialog>
           )}
           {question}
