@@ -329,6 +329,17 @@ describe("the table", () => {
     );
     // 6 px after the name of the status.
     expect(reasonBox!.left - statusBox!.right).toBeCloseTo(6, 0);
+    // The status of an ignored Ticket, with its reason, at the same height in
+    // its row as the status of a row without a reason.
+    const offsetIn = (cell: number, text: string) =>
+      status(cell)
+        .getByText(text, { exact: true })
+        .element()
+        .getBoundingClientRect().top -
+      status(cell).element().getBoundingClientRect().top;
+    expect(
+      Math.abs(offsetIn(1, "Ignored") - offsetIn(4, "Analysis")),
+    ).toBeLessThanOrEqual(1);
   });
 
   test("explains the priority of a row from its fields, opened from the keyboard in the table", async () => {
