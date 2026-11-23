@@ -32,6 +32,7 @@ import { IconButton } from "../components/icon-button";
 import { Loading, UpdatingBar } from "../components/loading";
 import { OptionsStatus } from "../components/options";
 import { dataPlace, placeMessage } from "../components/read-view";
+import { referenceTypeName } from "../components/reference-type";
 import {
   ResultAnnouncement,
   useChangedSinceOpened,
@@ -51,12 +52,7 @@ import {
   ReferenceDialog,
   type DialogMode,
 } from "./ticket-references/reference-dialog";
-import {
-  DELETE,
-  EDIT,
-  referenceName,
-  typeName,
-} from "./ticket-references/shared";
+import { DELETE, EDIT, referenceName } from "./ticket-references/shared";
 
 // The tab References of the Ticket screen (docs/screens/ticket.md,
 // References): the references of the Ticket, from List References, which a
@@ -144,9 +140,9 @@ function columnsOf(
       // ReferenceType; docs/behaviors.md, Absent Values).
       render: (reference) =>
         reference.type === null ? (
-          <AbsentValue name={typeName(null)} />
+          <AbsentValue name={referenceTypeName(null)} />
         ) : (
-          typeName(reference.type)
+          referenceTypeName(reference.type)
         ),
     },
     {
@@ -242,7 +238,10 @@ const TYPE_FILTER_OPTIONS: readonly FilterOption<
   (typeof TYPE_FILTERS)[number]
 >[] = TYPE_FILTERS.map((value) => ({
   value,
-  label: value === "uncategorized" ? typeName(null) : typeName(value),
+  label:
+    value === "uncategorized"
+      ? referenceTypeName(null)
+      : referenceTypeName(value),
 }));
 
 // The source filter: one source, as Sentinel records it, at most as long as

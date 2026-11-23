@@ -29,11 +29,12 @@ import {
   ModalDialog,
   type DialogError,
 } from "../../components/modal-dialog";
+import { referenceTypeName } from "../../components/reference-type";
 import { SelectField, type FieldOption } from "../../components/select-field";
 import { TextAreaField, TextField } from "../../components/text-field";
 import { addressText, WebAddress } from "../../components/web-link";
 import { ticketRecord } from "../ticket";
-import { referenceName, typeName, useReadAgain } from "./shared";
+import { referenceName, useReadAgain } from "./shared";
 
 // The dialog of Add reference and Edit reference of the tab References
 // (src/routes/ticket-references.tsx), with its input, its checks, and the
@@ -63,7 +64,7 @@ type TypeChoice = ReferenceTypeValue | "uncategorized" | "detect" | "received";
 const TYPE_OPTIONS: readonly FieldOption<TypeChoice>[] = [
   ...Object.values(ReferenceTypeValue).map((value) => ({
     value,
-    label: typeName(value),
+    label: referenceTypeName(value),
   })),
   { value: "uncategorized", label: "Uncategorized" },
 ];

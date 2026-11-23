@@ -1,9 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import {
-  ReferenceTypeValue,
-  type TicketReferenceResponse,
-} from "../../api/generated/model";
+import type { TicketReferenceResponse } from "../../api/generated/model";
 import {
   getListTicketActorsQueryKey,
   getListTicketEventsQueryKey,
@@ -13,28 +10,8 @@ import { getGetTicketQueryKey } from "../../api/generated/tickets";
 import { addressText } from "../../components/web-link";
 
 // What the tab References (src/routes/ticket-references.tsx) and its dialogs
-// share: the names of the types of a reference, the name of a reference and
-// of its actions, and the reads after a change of the references.
-
-// The names of the types of a reference (Sentinel
-// docs/features/tickets/ticket-references.md, ReferenceType). A Map, so that a
-// type that a later Sentinel release returns is looked up only among them
-// (docs/conventions.md, Data Read from the API).
-const TYPE_NAMES = new Map<string, string>(
-  Object.entries({
-    advisory: "Advisory",
-    patch: "Patch",
-    issue: "Issue",
-    article: "Article",
-  } satisfies Record<ReferenceTypeValue, string>),
-);
-
-// The type of a reference by its name, Uncategorized without one, or as
-// received when the pinned contract does not list it (docs/behaviors.md,
-// Unknown Values).
-export function typeName(type: string | null): string {
-  return type === null ? "Uncategorized" : (TYPE_NAMES.get(type) ?? type);
-}
+// share: the name of a reference and of its actions, and the reads after a
+// change of the references.
 
 // What names a reference in the actions on it and in their outcome: its
 // title in quotation marks, as the audit log quotes it, or without one its
