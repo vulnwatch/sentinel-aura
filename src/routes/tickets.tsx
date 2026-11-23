@@ -22,8 +22,8 @@ import { FocusHandOff, ScreenHeading } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { Count, ViewTabs } from "../components/view-tabs";
 import {
-  sameSearch,
   SEARCH_MAX_LENGTH,
+  searchRedirect,
   stringifySearch,
 } from "../search-params";
 import { useSignedInUser } from "../session-gate";
@@ -423,18 +423,9 @@ export const ticketListRoute = createRoute({
   path: "/tickets",
   validateSearch: ticketListSearch,
   beforeLoad: ({ location }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself. The URL gives every value as text, such as the page, which
-    // the schema reads as a number, so the two compare as URLs.
-    const accepted = ticketListSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
-      throw redirect({
-        to: "/tickets",
-        search: accepted,
-        hash: location.hash,
-        replace: true,
-      });
+    const accepted = searchRedirect(ticketListSearch, location);
+    if (accepted !== undefined) {
+      throw redirect({ to: "/tickets", ...accepted });
     }
   },
   component: TicketListPage,

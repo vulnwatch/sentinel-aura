@@ -29,8 +29,8 @@ import {
 import { SearchField } from "../components/search-field";
 import { addressText, WebLink } from "../components/web-link";
 import {
-  sameSearch,
   SEARCH_MAX_LENGTH,
+  searchRedirect,
   searchTermParam,
   stringifySearch,
 } from "../search-params";
@@ -846,17 +846,12 @@ export const ticketAffectedVersionsRoute = createRoute({
   path: "affected-versions",
   validateSearch: affectedVersionsSearch,
   beforeLoad: ({ location, params }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself.
-    const accepted = affectedVersionsSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
+    const accepted = searchRedirect(affectedVersionsSearch, location);
+    if (accepted !== undefined) {
       throw redirect({
         to: "/tickets/$ticketId/affected-versions",
         params,
-        search: accepted,
-        hash: location.hash,
-        replace: true,
+        ...accepted,
       });
     }
   },

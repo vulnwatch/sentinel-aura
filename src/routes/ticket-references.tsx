@@ -32,7 +32,11 @@ import { dataPlace, placeMessage } from "../components/read-view";
 import { useRowFocusAfterRemoval } from "../components/row-focus";
 import { FocusHandOff } from "../components/screen-heading";
 import { addressText, WebLink } from "../components/web-link";
-import { sameSearch, stringifySearch, valueListParam } from "../search-params";
+import {
+  searchRedirect,
+  stringifySearch,
+  valueListParam,
+} from "../search-params";
 import { useSignedInUser } from "../session-gate";
 import { CVE_FETCHER_NAMES, ticketRecord, ticketRoute } from "./ticket";
 import { DeleteDialog } from "./ticket-references/delete-dialog";
@@ -617,17 +621,12 @@ export const ticketReferencesRoute = createRoute({
   path: "references",
   validateSearch: referencesSearch,
   beforeLoad: ({ location, params }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself.
-    const accepted = referencesSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
+    const accepted = searchRedirect(referencesSearch, location);
+    if (accepted !== undefined) {
       throw redirect({
         to: "/tickets/$ticketId/references",
         params,
-        search: accepted,
-        hash: location.hash,
-        replace: true,
+        ...accepted,
       });
     }
   },

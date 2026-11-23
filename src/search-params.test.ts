@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   parseSearch,
   sameSearch,
+  searchRedirect,
+  searchTermParam,
   stringifySearch,
   valueListParam,
   wholeNumberParam,
@@ -228,5 +230,52 @@ describe("valueListParam", () => {
 
   test("reads a missing parameter as absent", () => {
     expect(schema.parse({}).status).toBeUndefined();
+  });
+});
+
+describe("searchRedirect", () => {
+  // A schema of a list with a page and a search term, which leaves out the
+  // first page, as a route's schema leaves out a default.
+  const schema = z
+    .object({ page: wholeNumberParam(100), search: searchTermParam })
+    .transform((search) => ({
+      ...search,
+      page: search.page === 1 ? undefined : search.page,
+    }));
+
+  test.each([
+    ["no parameters", {}],
+    ["the parameters that the schema gives", { page: "2", search: "curl" }],
+    ["the same parameters in another order", { search: "curl", page: "2" }],
+  ])("leads nowhere from a URL with %s", (_, search) => {
+    expect(searchRedirect(schema, { search, hash: "" })).toBeUndefined();
+  });
+
+  test.each([
+    ["a parameter that the schema does not declare", { page: "2", view: "x" }],
+    ["a value that the schema does not accept", { page: "0", search: "curl" }],
+    [
+      "a value in another form than the schema's",
+      { page: "2", search: " curl " },
+    ],
+    ["a parameter that names the default", { page: "1", search: "curl" }],
+  ])(
+    "leads from a URL with %s to the parameters that the schema gives, in place of the URL, keeping the anchor",
+    (_, search) => {
+      expect(searchRedirect(schema, { search, hash: "packages" })).toEqual({
+        search: schema.parse(search),
+        hash: "packages",
+        replace: true,
+      });
+    },
+  );
+
+  test("leads to the parameters that the schema gives", () => {
+    expect(
+      searchRedirect(schema, {
+        search: { page: "1", search: " curl ", view: "x" },
+        hash: "",
+      })?.search,
+    ).toEqual({ page: undefined, search: "curl" });
   });
 });

@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { z } from "zod";
 import { DetailColumns, showAnchorTarget } from "../components/detail-screen";
 import type { Read } from "../components/read-view";
-import { sameSearch } from "../search-params";
+import { searchRedirect } from "../search-params";
 import { ticketRoute, useShownTicket } from "./ticket";
 import { useAssignee } from "./ticket-overview/assignee";
 import { useCoordinatedReleaseDate } from "./ticket-overview/coordinated-release-date";
@@ -180,18 +180,9 @@ export const ticketOverviewRoute = createRoute({
   path: "/",
   validateSearch: ticketOverviewSearch,
   beforeLoad: ({ location, params }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself.
-    const accepted = ticketOverviewSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
-      throw redirect({
-        to: "/tickets/$ticketId",
-        params,
-        search: accepted,
-        hash: location.hash,
-        replace: true,
-      });
+    const accepted = searchRedirect(ticketOverviewSearch, location);
+    if (accepted !== undefined) {
+      throw redirect({ to: "/tickets/$ticketId", params, ...accepted });
     }
   },
   component: TicketOverview,

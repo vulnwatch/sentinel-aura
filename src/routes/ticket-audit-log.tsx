@@ -41,8 +41,8 @@ import { Timeline } from "../components/timeline";
 import { Actor, type UserFields } from "../components/user";
 import {
   LAST_PAGE,
-  sameSearch,
   SEARCH_MAX_LENGTH,
+  searchRedirect,
   searchTermParam,
   stringifySearch,
   valueListParam,
@@ -513,17 +513,12 @@ export const ticketAuditLogRoute = createRoute({
   path: "audit-log",
   validateSearch: auditLogSearch,
   beforeLoad: ({ location, params }) => {
-    // The router's search of the route also passes on every parameter of the
-    // URL that the schema does not declare, so the schema reads the URL
-    // itself.
-    const accepted = auditLogSearch.parse(location.search);
-    if (!sameSearch(location.search, accepted)) {
+    const accepted = searchRedirect(auditLogSearch, location);
+    if (accepted !== undefined) {
       throw redirect({
         to: "/tickets/$ticketId/audit-log",
         params,
-        search: accepted,
-        hash: location.hash,
-        replace: true,
+        ...accepted,
       });
     }
   },
