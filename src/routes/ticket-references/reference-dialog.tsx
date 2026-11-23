@@ -20,6 +20,7 @@ import {
 } from "../../api/generated/ticket-references";
 import { Button } from "../../components/button";
 import { useChangeOutcome } from "../../components/change-outcome";
+import { COUNT } from "../../components/count";
 import { useDiscardQuestion } from "../../components/discard-question";
 import { useFieldErrorFocus } from "../../components/field-error-focus";
 import {
@@ -32,7 +33,7 @@ import { SelectField, type FieldOption } from "../../components/select-field";
 import { TextAreaField, TextField } from "../../components/text-field";
 import { addressText, WebAddress } from "../../components/web-link";
 import { ticketRecord } from "../ticket";
-import { COUNT, referenceName, typeName, useReadAgain } from "./shared";
+import { referenceName, typeName, useReadAgain } from "./shared";
 
 // The dialog of Add reference and Edit reference of the tab References
 // (src/routes/ticket-references.tsx), with its input, its checks, and the

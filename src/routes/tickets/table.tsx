@@ -7,6 +7,7 @@ import type {
 import { AbsentValue } from "../../components/absent-value";
 import { ButtonLink } from "../../components/button-link";
 import { ConfidentialMark } from "../../components/confidential-mark";
+import { COUNT, counted } from "../../components/count";
 import {
   DataTable,
   EmptyState,
@@ -149,8 +150,6 @@ function columnsOf(
   return view.columns.map((id) => columns[id]);
 }
 
-const COUNT = new Intl.NumberFormat("en-US");
-
 // The empty state of a page of the list without Tickets: a view without
 // Tickets, or a view that the user refined without Tickets that match, on
 // any page, or a page beyond the last (docs/behaviors.md, Empty States).
@@ -181,7 +180,7 @@ export function resultText(list: TicketListResponse, search: TicketListSearch) {
     return emptyMessage(list, search);
   }
   if (meta.total <= meta.per_page) {
-    return `${COUNT.format(meta.total)} ${meta.total === 1 ? "Ticket" : "Tickets"}`;
+    return counted(meta.total, { one: "Ticket", other: "Tickets" });
   }
   const first = (meta.page - 1) * meta.per_page + 1;
   const last = first + data.length - 1;

@@ -12,6 +12,7 @@ import { AbsentValue } from "../components/absent-value";
 import { Button } from "../components/button";
 import { useMounted, useOutcomeAfterRead } from "../components/change-outcome";
 import { ClampedText } from "../components/clamped-text";
+import { counted } from "../components/count";
 import {
   EmptyState,
   FramedTable,
@@ -51,7 +52,6 @@ import {
   type DialogMode,
 } from "./ticket-references/reference-dialog";
 import {
-  COUNT,
   DELETE,
   EDIT,
   referenceName,
@@ -322,7 +322,7 @@ function resultText(shown: number, all: number): string {
   if (shown === 0) {
     return NO_MATCH;
   }
-  return `${COUNT.format(shown)} ${shown === 1 ? "reference" : "references"}`;
+  return counted(shown, { one: "reference", other: "references" });
 }
 
 const NO_MATCH = "No references match the filters.";

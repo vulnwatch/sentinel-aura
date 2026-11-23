@@ -1,12 +1,12 @@
 import { useState, type Ref } from "react";
 import type { UserDirectoryData } from "../api/generated/model";
 import { useListUsers } from "../api/generated/users";
+import { COUNT } from "./count";
 import { Label as UserLabel } from "./label";
 import { userOptionText, UserOptionLabel } from "./options";
 import { placeMessage } from "./read-view";
 import {
   characters,
-  COUNT,
   SearchComboBox,
   SEARCH_MIN_LENGTH,
   useSettledTerm,

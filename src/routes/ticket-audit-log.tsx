@@ -15,6 +15,7 @@ import {
 } from "../api/generated/ticket-audit-log";
 import { useGetTicket } from "../api/generated/tickets";
 import { ButtonLink } from "../components/button-link";
+import { COUNT, counted } from "../components/count";
 import { EmptyState } from "../components/data-table";
 import { DateRangeFilter } from "../components/date-range-filter";
 import { dayOf } from "../components/date-time";
@@ -189,8 +190,6 @@ function refinedBy(search: AuditLogSearch): "search" | "filters" | undefined {
 // --------------------------------------------------------------------------
 // The screen.
 
-const COUNT = new Intl.NumberFormat("en-US");
-
 // The empty state of a page without events (docs/behaviors.md, Empty States).
 function emptyMessage(
   { meta }: TicketAuditListResponse,
@@ -218,7 +217,7 @@ function resultText(list: TicketAuditListResponse, search: AuditLogSearch) {
     return emptyMessage(list, search);
   }
   if (meta.total <= meta.per_page) {
-    return `${COUNT.format(meta.total)} ${meta.total === 1 ? "event" : "events"}`;
+    return counted(meta.total, { one: "event", other: "events" });
   }
   const first = (meta.page - 1) * meta.per_page + 1;
   const last = first + data.length - 1;

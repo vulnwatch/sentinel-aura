@@ -1,5 +1,6 @@
 import { UserRound, UserRoundX, UsersRound } from "lucide-react";
 import { Button as AriaButton, DialogTrigger } from "react-aria-components";
+import { COUNT, counted } from "./count";
 import { FOCUS_RING } from "./focus-ring";
 import { InfoPopover, PopoverLine, PopoverTitle } from "./info-popover";
 import { Tooltip } from "./tooltip";
@@ -9,8 +10,6 @@ import { User, type UserFields } from "./user";
 // (Sentinel docs/features/packages/package-maintainership.md, Maintainers in
 // the Package Tree).
 
-const COUNT = new Intl.NumberFormat("en-US");
-
 // The name of the maintainers of a package, such as "2 maintainers of
 // fictional-openssl" or "No maintainer of fictional-openssl", which names the
 // package, since every package of a Ticket shows its maintainers.
@@ -18,8 +17,7 @@ function maintainersName(count: number, packageName: string): string {
   if (count === 0) {
     return `No maintainer of ${packageName}`;
   }
-  const noun = count === 1 ? "maintainer" : "maintainers";
-  return `${COUNT.format(count)} ${noun} of ${packageName}`;
+  return `${counted(count, { one: "maintainer", other: "maintainers" })} of ${packageName}`;
 }
 
 interface MaintainersProps {

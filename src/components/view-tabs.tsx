@@ -1,13 +1,12 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Tab, TabList, TabPanel, Tabs } from "react-aria-components";
+import { COUNT } from "./count";
 import { FOCUS_RING, INSIDE_FOCUS_RING } from "./focus-ring";
 import type { ScreenHref } from "./router-links";
 import { focusScreenHeading } from "./screen-heading";
 
 // The views of a list as tabs (docs/design-system.md, Lists;
 // docs/screen-map.md, Ticket List Views).
-
-const COUNT = new Intl.NumberFormat("en-US");
 
 interface CountProps {
   // The number, or undefined while it loads.

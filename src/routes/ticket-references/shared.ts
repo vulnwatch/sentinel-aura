@@ -13,12 +13,8 @@ import { getGetTicketQueryKey } from "../../api/generated/tickets";
 import { addressText } from "../../components/web-link";
 
 // What the tab References (src/routes/ticket-references.tsx) and its dialogs
-// share: the count format, the names of the types of a reference, the name
-// of a reference and of its actions, and the reads after a change of the
-// references.
-
-// A count, its thousands grouped (docs/behaviors.md, Style).
-export const COUNT = new Intl.NumberFormat("en-US");
+// share: the names of the types of a reference, the name of a reference and
+// of its actions, and the reads after a change of the references.
 
 // The names of the types of a reference (Sentinel
 // docs/features/tickets/ticket-references.md, ReferenceType). A Map, so that a

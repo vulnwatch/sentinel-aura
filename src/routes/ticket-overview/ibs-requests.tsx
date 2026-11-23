@@ -13,15 +13,10 @@ import type {
   IBSRequestStateValue,
   SubmissionRequestItem,
 } from "../../api/generated/model";
+import { counted, type Noun } from "../../components/count";
 import { Loading } from "../../components/loading";
 import type { Read } from "../../components/read-view";
-import {
-  andMore,
-  counted,
-  LISTED,
-  MoreValues,
-  type Noun,
-} from "../../components/several-values";
+import { andMore, LISTED, MoreValues } from "../../components/several-values";
 import { Tooltip } from "../../components/tooltip";
 import { WebLink } from "../../components/web-link";
 

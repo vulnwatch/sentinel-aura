@@ -1,5 +1,6 @@
 import { ClockAlert } from "lucide-react";
 import type { CurrentPhaseValue, TicketSummary } from "../api/generated/model";
+import { COUNT, counted } from "./count";
 
 // The deadline of a Ticket (docs/behaviors.md, Deadlines;
 // docs/design-system.md, Deadline Badge; Sentinel
@@ -65,12 +66,10 @@ function instant(value: string | null): number {
   return value === null ? Number.NaN : Date.parse(value);
 }
 
-const COUNT = new Intl.NumberFormat("en-US");
-
 // A number of days, with the singular or the plural (docs/behaviors.md,
 // Style).
 function dayCount(days: number): string {
-  return `${COUNT.format(days)} ${days === 1 ? "day" : "days"}`;
+  return counted(days, { one: "day", other: "days" });
 }
 
 // The state of a due date at the instant now, in milliseconds since the

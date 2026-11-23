@@ -20,9 +20,8 @@ import { AbsentValue } from "../../components/absent-value";
 import { DateTime } from "../../components/date-time";
 
 // What several parts of Overview (src/routes/ticket-overview.tsx) share: the
-// anchors of the parts, the formats of a count and of a score, the phases of
-// the remediation of a Ticket, the fields of a line, and the reads after a
-// change.
+// anchors of the parts, the format of a score, the phases of the remediation
+// of a Ticket, the fields of a line, and the reads after a change.
 
 // The anchors of the parts that the tab shows, the same on every Ticket,
 // although a Ticket without a CVE lacks its CVSS assessments and its
@@ -37,9 +36,6 @@ export const PARTICIPANTS_ANCHOR = "participants";
 // The largest page of List Tickets (Sentinel docs/api-spec.md, Pagination):
 // the details show at most this many duplicates, and how many more there are.
 const DUPLICATES_PAGE = 100;
-
-// A count, its thousands grouped (docs/behaviors.md, Style).
-export const COUNT = new Intl.NumberFormat("en-US");
 
 // The phases of the remediation of a Ticket, in their order, with their due
 // dates (Sentinel docs/features/tickets/ticket-deadlines.md, Actors and

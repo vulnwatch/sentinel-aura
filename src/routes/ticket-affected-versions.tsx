@@ -9,6 +9,7 @@ import type {
 import { useGetTicket } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
 import { ClampedText } from "../components/clamped-text";
+import { counted } from "../components/count";
 import { EmptyState } from "../components/data-table";
 import {
   DescriptionItem,
@@ -46,13 +47,6 @@ import { CVE_SOURCE_NAMES, ticketRoute } from "./ticket";
 // Versions), by affected product, and within a product by the source that
 // reports them: the provenance scope of the entries, which is not one of the
 // CVE sources that Overview shows.
-
-// A count, its thousands grouped (docs/behaviors.md, Style).
-const COUNT = new Intl.NumberFormat("en-US");
-
-function entriesText(count: number): string {
-  return `${COUNT.format(count)} ${count === 1 ? "entry" : "entries"}`;
-}
 
 // ----------------------------------------------------------------------------
 // Sources
@@ -664,7 +658,9 @@ function resultText(shown: number, all: number): string {
   if (all === 0) {
     return NO_ENTRIES;
   }
-  return shown === 0 ? NO_MATCH : entriesText(shown);
+  return shown === 0
+    ? NO_MATCH
+    : counted(shown, { one: "entry", other: "entries" });
 }
 
 // ----------------------------------------------------------------------------

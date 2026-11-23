@@ -44,6 +44,7 @@ import {
   useMounted,
   useOutcomeAfterRead,
 } from "../../components/change-outcome";
+import { COUNT } from "../../components/count";
 import { DateTime } from "../../components/date-time";
 import {
   DescriptionItem,
@@ -85,7 +86,6 @@ import {
   useMarkerOutcome,
 } from "./package-edits";
 import {
-  COUNT,
   MaybeDateTime,
   PACKAGES_ANCHOR,
   PHASES,
