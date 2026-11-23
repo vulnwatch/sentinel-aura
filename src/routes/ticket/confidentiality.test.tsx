@@ -757,13 +757,12 @@ describe("a failure of a change of the confidentiality", () => {
 
   test("sends again from the confirmation after a failure, whose error goes as it is sent", async () => {
     let fail = true;
+    const response = later();
     const spy = showing(
       {},
       {
-        ticketChange: (_, body) =>
-          fail
-            ? errorResponse(503, "SERVICE_UNAVAILABLE")
-            : ticketIn("analyzed", { is_confidential: confidentialIn(body) }),
+        ticketChange: () =>
+          fail ? errorResponse(503, "SERVICE_UNAVAILABLE") : response.promise,
       },
     );
     const { screen } = await renderTicket();
@@ -774,6 +773,12 @@ describe("a failure of a change of the confidentiality", () => {
 
     await actionOf(dialog, true).click();
 
+    // While the change that it sent again is in progress.
+    await expect
+      .element(actionOf(dialog, true))
+      .toHaveAttribute("aria-disabled", "true");
+    await expect.element(error).not.toBeInTheDocument();
+    response.resolve(ticketIn("analyzed", { is_confidential: true }));
     await expect.element(dialog).not.toBeInTheDocument();
     expect(changes(spy)).toEqual([
       { is_confidential: true },

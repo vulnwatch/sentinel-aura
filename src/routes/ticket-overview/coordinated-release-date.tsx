@@ -263,11 +263,10 @@ function CoordinatedReleaseDialog({
     }
   }, [failure, focusField]);
   const value = dateTimeOf(typed);
-  const unchanged =
-    (typed.kind === "empty" && opened === null) ||
-    (value !== undefined && opened !== null && value.compare(opened) === 0);
+  // The field reports a change only while it shows another date and time
+  // than the one with which it opened (src/components/date-field.tsx).
   const { close, question } = useDiscardQuestion({
-    held: typed.edited && !unchanged && !busy,
+    held: typed.edited && !busy,
     consequence: `The Coordinated Release Date of ${ticketId} isn't changed.`,
     onDiscard: onClose,
   });

@@ -602,6 +602,12 @@ describe("the dialog of the Coordinated Release Date", () => {
     expect(boxOf(description).top).toBeGreaterThan(
       boxOf(fieldOf(dialog)).bottom,
     );
+    // The instant in UTC, as a time element with the instant that it shows.
+    const utc = dialog
+      .getByText(`${formatUtcDateTime(SET)} UTC`, { exact: true })
+      .element();
+    expect(utc.tagName).toBe("TIME");
+    expect(utc.getAttribute("datetime")).toBe(SET_AT);
     await expect
       .element(partOf(dialog, 0))
       .toHaveAccessibleDescription(within(zoneWithUtc(SET)));
@@ -675,6 +681,14 @@ describe("the dialog of the Coordinated Release Date", () => {
     await typeInto(dialog, digitsOf(LATER));
     await expect
       .element(descriptionOf(dialog, zoneWithUtc(LATER)))
+      .toBeVisible();
+
+    // Complete, in the summer, which a time zone that moves its clocks names
+    // otherwise than the winter in which the tests mostly enter dates.
+    const summer = local(2099, 7, 15, 12, 0);
+    await typeInto(dialog, digitsOf(summer));
+    await expect
+      .element(descriptionOf(dialog, zoneWithUtc(summer)))
       .toBeVisible();
 
     // Complete, in the past.
@@ -1334,18 +1348,12 @@ describe("a failure of Save", () => {
 
   test("removes the error at the top of the form as the date is sent again", async () => {
     let fail = true;
+    const response = later();
     const spy = showingRelease(
       {},
       {
-        ticketChange: (_, body) =>
-          fail
-            ? errorResponse(409, "FICTIONAL_CONFLICT")
-            : ticketResponse(
-                fictionalTicketDetail({
-                  is_confidential: true,
-                  coordinated_release_at: releaseIn(body),
-                }),
-              ),
+        ticketChange: () =>
+          fail ? errorResponse(409, "FICTIONAL_CONFLICT") : response.promise,
       },
     );
     const { screen } = await renderTicket();
@@ -1356,8 +1364,21 @@ describe("a failure of Save", () => {
 
     await buttonOf(dialog, "Save").click();
 
-    await expect.element(dialog).not.toBeInTheDocument();
+    // While the change that it sent again is in progress.
+    await expect
+      .element(buttonOf(dialog, "Save"))
+      .toHaveAttribute("aria-disabled", "true");
+    await expect.element(error).not.toBeInTheDocument();
     expect(releases(spy)).toHaveLength(2);
+    response.resolve(
+      ticketResponse(
+        fictionalTicketDetail({
+          is_confidential: true,
+          coordinated_release_at: new Date(LATER).toISOString(),
+        }),
+      ),
+    );
+    await expect.element(dialog).not.toBeInTheDocument();
   });
 
   test("leaves an answer that the UI cannot show to the page of a failure of the UI", async () => {
