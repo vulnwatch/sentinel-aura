@@ -1,12 +1,10 @@
 import { linkOptions } from "@tanstack/react-router";
-import { X } from "lucide-react";
 import { useMemo } from "react";
 import type {
   TicketListResponse,
   TicketSummary,
 } from "../../api/generated/model";
 import { AbsentValue } from "../../components/absent-value";
-import { Button } from "../../components/button";
 import { ButtonLink } from "../../components/button-link";
 import { ConfidentialMark } from "../../components/confidential-mark";
 import {
@@ -17,6 +15,7 @@ import {
 } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { DeadlineBadge } from "../../components/deadline-badge";
+import { ClearFiltersAction } from "../../components/filters";
 import { Link } from "../../components/link";
 import { ExplainedPriority } from "../../components/priority-explanation";
 import type { Read } from "../../components/read-view";
@@ -234,10 +233,7 @@ export function TicketTable({
                 Go to the first page
               </ButtonLink>
             ) : refinedBy(shown.search) === undefined ? undefined : (
-              <Button onPress={clearFilters}>
-                <X aria-hidden className="size-4" />
-                Clear filters
-              </Button>
+              <ClearFiltersAction onPress={clearFilters} />
             )
           }
         />

@@ -1,5 +1,4 @@
 import { createRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { X } from "lucide-react";
 import { useMemo, useRef, type ReactNode } from "react";
 import { z } from "zod";
 import { useGetCveAffectedVersions } from "../api/generated/cves";
@@ -9,7 +8,6 @@ import type {
 } from "../api/generated/model";
 import { useGetTicket } from "../api/generated/tickets";
 import { AbsentValue } from "../components/absent-value";
-import { Button } from "../components/button";
 import { ClampedText } from "../components/clamped-text";
 import { EmptyState } from "../components/data-table";
 import {
@@ -18,6 +16,7 @@ import {
   FIELD,
 } from "../components/description-list";
 import { DetailsName } from "../components/details-popover";
+import { ClearFilters, ClearFiltersAction } from "../components/filters";
 import { GroupBand } from "../components/group-band";
 import { Loading, UpdatingBar } from "../components/loading";
 import { MarkedValue, type MarkedName } from "../components/marked-value";
@@ -731,12 +730,7 @@ function Versions({ cveId, search, searched, onClear }: VersionsProps) {
         <FocusHandOff key="no-match">
           <EmptyState
             message={NO_MATCH}
-            action={
-              <Button onPress={onClear}>
-                <X aria-hidden className="size-4" />
-                Clear filters
-              </Button>
-            }
+            action={<ClearFiltersAction onPress={onClear} />}
           />
         </FocusHandOff>
       ) : (
@@ -804,14 +798,7 @@ function TicketAffectedVersions() {
               maxLength={SEARCH_MAX_LENGTH}
               onApply={refine}
             />
-            {search.search !== undefined && (
-              <FocusHandOff>
-                <Button variant="quiet" size="small" onPress={clear}>
-                  <X aria-hidden className="size-4" />
-                  Clear filters
-                </Button>
-              </FocusHandOff>
-            )}
+            {search.search !== undefined && <ClearFilters onPress={clear} />}
           </div>
         </FocusHandOff>
       )}

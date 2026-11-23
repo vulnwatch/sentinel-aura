@@ -1,5 +1,5 @@
 import { createRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { Pencil, Plus, Trash, X } from "lucide-react";
+import { Pencil, Plus, Trash } from "lucide-react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import {
@@ -19,6 +19,8 @@ import {
 } from "../components/data-table";
 import { DateTime } from "../components/date-time";
 import {
+  ClearFilters,
+  ClearFiltersAction,
   FilterGroup,
   Filters,
   FilterSelect,
@@ -512,14 +514,7 @@ function TicketReferences() {
             }}
           />
         </Filters>
-        {applied > 0 && (
-          <FocusHandOff>
-            <Button variant="quiet" size="small" onPress={clearFilters}>
-              <X aria-hidden className="size-4" />
-              Clear filters
-            </Button>
-          </FocusHandOff>
-        )}
+        {applied > 0 && <ClearFilters onPress={clearFilters} />}
       </div>
       <div ref={references} className="relative">
         {place.updating && <UpdatingBar />}
@@ -542,12 +537,7 @@ function TicketReferences() {
             empty={
               <EmptyState
                 message={NO_MATCH}
-                action={
-                  <Button onPress={clearFilters}>
-                    <X aria-hidden className="size-4" />
-                    Clear filters
-                  </Button>
-                }
+                action={<ClearFiltersAction onPress={clearFilters} />}
               />
             }
           />

@@ -6,7 +6,6 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { z } from "zod";
 import type { TicketAuditListResponse } from "../api/generated/model";
@@ -15,12 +14,13 @@ import {
   useListTicketEvents,
 } from "../api/generated/ticket-audit-log";
 import { useGetTicket } from "../api/generated/tickets";
-import { Button } from "../components/button";
 import { ButtonLink } from "../components/button-link";
 import { EmptyState } from "../components/data-table";
 import { DateRangeFilter } from "../components/date-range-filter";
 import { dayOf } from "../components/date-time";
 import {
+  ClearFilters,
+  ClearFiltersAction,
   FilterGroup,
   Filters,
   FilterSelect,
@@ -448,14 +448,7 @@ function TicketAuditLog() {
             }}
           />
         </Filters>
-        {refined !== undefined && (
-          <FocusHandOff>
-            <Button variant="quiet" size="small" onPress={clearFilters}>
-              <X aria-hidden className="size-4" />
-              Clear filters
-            </Button>
-          </FocusHandOff>
-        )}
+        {refined !== undefined && <ClearFilters onPress={clearFilters} />}
       </div>
       <div className="relative mt-4">
         {place.updating && <UpdatingBar />}
@@ -474,10 +467,7 @@ function TicketAuditLog() {
                     Go to the first page
                   </ButtonLink>
                 ) : refinedBy(shownSearch) === undefined ? undefined : (
-                  <Button onPress={clearFilters}>
-                    <X aria-hidden className="size-4" />
-                    Clear filters
-                  </Button>
+                  <ClearFiltersAction onPress={clearFilters} />
                 )
               }
             />

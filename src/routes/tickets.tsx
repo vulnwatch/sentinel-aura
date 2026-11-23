@@ -5,7 +5,6 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { z } from "zod";
 import type {
@@ -14,7 +13,7 @@ import type {
   SortOrder,
 } from "../api/generated/model";
 import { useListTickets } from "../api/generated/tickets";
-import { Button } from "../components/button";
+import { ClearFilters } from "../components/filters";
 import type { TableSort } from "../components/data-table";
 import { Pagination } from "../components/pagination";
 import { placeMessage, ScreenRead } from "../components/read-view";
@@ -22,7 +21,7 @@ import {
   ResultAnnouncement,
   useChangedSinceOpened,
 } from "../components/result-announcement";
-import { FocusHandOff, ScreenHeading } from "../components/screen-heading";
+import { ScreenHeading } from "../components/screen-heading";
 import { SearchField } from "../components/search-field";
 import { Count, ViewTabs } from "../components/view-tabs";
 import {
@@ -355,19 +354,7 @@ function TicketList({ user }: TicketListProps) {
                     onRefine={refine}
                   />
                   {refined !== undefined && (
-                    // When it leaves the page with the search and the
-                    // filters that it removed, the focus moves to the
-                    // screen's heading.
-                    <FocusHandOff>
-                      <Button
-                        variant="quiet"
-                        size="small"
-                        onPress={clearFilters}
-                      >
-                        <X aria-hidden className="size-4" />
-                        Clear filters
-                      </Button>
-                    </FocusHandOff>
+                    <ClearFilters onPress={clearFilters} />
                   )}
                 </>
               }
