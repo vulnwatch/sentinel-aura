@@ -66,7 +66,7 @@ const TYPE_OPTIONS: readonly FieldOption<TypeChoice>[] = [
     value,
     label: referenceTypeName(value),
   })),
-  { value: "uncategorized", label: "Uncategorized" },
+  { value: "uncategorized", label: referenceTypeName(null) },
 ];
 
 const DETECT_OPTION: FieldOption<TypeChoice> = {
