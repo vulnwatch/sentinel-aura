@@ -203,8 +203,8 @@ describe("About Sentinel", () => {
   });
 
   test("reads the version of Sentinel each time it opens, and not again while it is open, also when the tab returns to the foreground", async () => {
-    let version = SENTINEL_VERSION;
-    const fetch = stubSession(() => versionResponse(version));
+    let respond: () => Response | Promise<Response> = () => versionResponse();
+    const fetch = stubSession(() => respond());
     const screen = await renderApp();
     let dialog = await openAbout(screen);
     await expect
@@ -230,9 +230,27 @@ describe("About Sentinel", () => {
 
     await userEvent.keyboard("{Escape}");
     await expect.element(dialog).not.toBeInTheDocument();
-    version = "0.42.8";
+    let answer!: (response: Response) => void;
+    respond = () =>
+      new Promise<Response>((resolve) => {
+        answer = resolve;
+      });
     dialog = await openAbout(screen);
 
+    // The version that it showed before does not stay while it is read
+    // again: the loading indicator takes its place.
+    await expect
+      .element(dialog.getByRole("progressbar", { name: "Loading" }))
+      .toBeVisible();
+    await expect
+      .element(
+        dialog.getByRole("link", {
+          name: `${SENTINEL_VERSION} (another site)`,
+        }),
+      )
+      .not.toBeInTheDocument();
+    await expect.poll(() => requestsTo(fetch, VERSION)).toBe(2);
+    answer(versionResponse("0.42.8"));
     await expect
       .element(dialog.getByRole("link", { name: "0.42.8 (another site)" }))
       .toBeVisible();
@@ -251,14 +269,23 @@ describe("About Sentinel", () => {
 
     const dialog = await openAbout(screen);
 
+    // In the value of Sentinel, after the value of Sentinel Aura.
     await expect
-      .element(dialog.getByRole("progressbar", { name: "Loading" }))
+      .element(
+        dialog
+          .getByRole("definition")
+          .last()
+          .getByRole("progressbar", { name: "Loading" }),
+      )
       .toBeVisible();
     await expect
       .element(
-        dialog.getByRole("link", {
-          name: `${SENTINEL_AURA_VERSION} (another site)`,
-        }),
+        dialog
+          .getByRole("definition")
+          .first()
+          .getByRole("link", {
+            name: `${SENTINEL_AURA_VERSION} (another site)`,
+          }),
       )
       .toBeVisible();
     answer(versionResponse());
@@ -283,8 +310,9 @@ describe("About Sentinel", () => {
 
     const dialog = await openAbout(screen);
 
-    // In the status region that announces it.
-    const status = dialog.getByRole("status");
+    // In the status region that announces it, in the value of Sentinel,
+    // after the value of Sentinel Aura.
+    const status = dialog.getByRole("definition").last().getByRole("status");
     await expect
       .element(
         status.getByText(
@@ -297,9 +325,12 @@ describe("About Sentinel", () => {
       .toBeVisible();
     await expect
       .element(
-        dialog.getByRole("link", {
-          name: `${SENTINEL_AURA_VERSION} (another site)`,
-        }),
+        dialog
+          .getByRole("definition")
+          .first()
+          .getByRole("link", {
+            name: `${SENTINEL_AURA_VERSION} (another site)`,
+          }),
       )
       .toBeVisible();
     // The read and its two retries.
