@@ -4,6 +4,7 @@ import { z } from "zod";
 import type {
   CurrentUserData,
   ListTicketsCurrentPhaseItem,
+  ListTicketsIgnoreReasonItem,
   ListTicketsOverdueItem,
   ListTicketsParams,
   ListTicketsPriorityItem,
@@ -39,9 +40,10 @@ const QUEUES = [
 type Queue = (typeof QUEUES)[number];
 
 // The values of the filters, in the order of the pinned contract (List
-// Tickets): the statuses, the resolved severities and the effective
-// priorities, each with unresolved for none, the current phases, and the
-// phases whose milestones can be overdue (Sentinel
+// Tickets): the statuses, the reasons of an ignored Ticket (Sentinel
+// docs/features/tickets/tickets.md, Ignore Reason), the resolved severities
+// and the effective priorities, each with unresolved for none, the current
+// phases, and the phases whose milestones can be overdue (Sentinel
 // docs/features/tickets/ticket-deadlines.md, Ticket-Level Overdue Filter;
 // Current Phase Filter).
 export const STATUSES = [
@@ -52,6 +54,12 @@ export const STATUSES = [
   "ignored",
   "duplicated",
 ] as const satisfies readonly ListTicketsStatusItem[];
+export const IGNORE_REASONS = [
+  "not_shipped",
+  "cve_rejected",
+  "cna_policy",
+  "other",
+] as const satisfies readonly ListTicketsIgnoreReasonItem[];
 export const SEVERITIES = [
   "critical",
   "high",
@@ -134,6 +142,7 @@ export const ticketListParams = z.object({
   view: z.enum(QUEUES).optional().catch(undefined),
   search: searchTermParam,
   status: valueListParam(STATUSES),
+  ignore_reason: valueListParam(IGNORE_REASONS),
   embargo: valueListParam(EMBARGO_STATES),
   severity: valueListParam(SEVERITIES),
   priority: valueListParam(PRIORITIES),
@@ -177,7 +186,8 @@ export interface TicketView {
   // (docs/screen-map.md, Ticket List Views).
   waiting: boolean;
   // Whether its Tickets have every status, so that the status filter refines
-  // it without replacing the statuses of a queue.
+  // it without replacing the statuses of a queue, and so that it can hold
+  // ignored Tickets, which the ignore reason filter refines.
   everyStatus: boolean;
   // The filters of its Tickets, for the signed-in user.
   filters: (user: CurrentUserData) => ListTicketsParams;
@@ -400,7 +410,9 @@ export function pageHref(
 // Only a view whose Tickets have every status accepts the status filter, so
 // it never replaces the statuses of a queue; an expired embargo is a
 // confidential Ticket whose Coordinated Release Date has passed (Sentinel
-// docs/features/tickets/tickets.md, List Tickets, Embargo filters).
+// docs/features/tickets/tickets.md, List Tickets, Embargo filters). An ignore
+// reason matches only an ignored Ticket, whatever the status filter (same
+// document, List Tickets).
 export function refinementOf(search: TicketListSearch): ListTicketsParams {
   return {
     search: search.search,
@@ -411,6 +423,7 @@ export function refinementOf(search: TicketListSearch): ListTicketsParams {
     coordinated_release_passed:
       search.embargo?.includes("expired") === true ? true : undefined,
     ...(search.status === undefined ? {} : { status: search.status }),
+    ignore_reason: search.ignore_reason,
   };
 }
 
@@ -418,6 +431,7 @@ export function refinementOf(search: TicketListSearch): ListTicketsParams {
 export function filtersApplied(search: TicketListSearch): number {
   return [
     search.status,
+    search.ignore_reason,
     search.embargo,
     search.severity,
     search.priority,

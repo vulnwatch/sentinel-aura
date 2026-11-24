@@ -814,6 +814,39 @@ test.describe("refined by an analyst", () => {
       ),
     );
   });
+
+  test("filters the Tickets by their ignore reason, which the rows do not show", async ({
+    page,
+  }) => {
+    await signIn(page, "asmith");
+    await expectViewCounts(page);
+    await views(page).filter({ hasText: "All" }).click();
+    await expect(page).toHaveURL("/tickets");
+    // Once the counts have arrived, which widen the tabs and the summary, so
+    // that the popover opens below Filters where it stays.
+    await expectAttentionCounts(page);
+
+    // The auto-ignore policy of its CNA ignored SNTL-28 (Tickets; CNAs).
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filters
+      .getByRole("group", { name: "Ignore reason" })
+      .getByText("CNA policy", { exact: true })
+      .click();
+
+    await expect(page).toHaveURL("/tickets?ignore_reason=cna_policy");
+    await expect(identifiers(page)).toHaveText(["SNTL-28"]);
+    // The row shows the status alone; the details of the Ticket show its
+    // reason.
+    await expect(
+      table(page)
+        .getByRole("row", { name: /SNTL-28/ })
+        .getByRole("gridcell", { name: "Ignored", exact: true }),
+    ).toBeVisible();
+    await expectAccessible(page);
+
+    await expectScreenshot(page, "ticket-list-ignore-reason.png");
+  });
 });
 
 test.describe("for a restricted analyst", () => {

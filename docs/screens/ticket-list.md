@@ -52,6 +52,7 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   | `view` | `new`, `unassigned`, `analysis`, `analyzed`, `assigned-to-me`, `embargo` | The All view |
   | `search` | The search term, at most 500 characters, without surrounding whitespace and without U+0000, which Sentinel rejects (Sentinel `docs/api-spec.md`, Query Parameter Length Limit; Inadmissible Characters in Request Input) | No search |
   | `status` | One or more of `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`, in the All and Embargo views only | No filter by status |
+  | `ignore_reason` | One or more of `not_shipped`, `cve_rejected`, `cna_policy`, `other`, in the All and Embargo views only | No filter by ignore reason |
   | `embargo` | `expired`, in the Embargo view only: a Coordinated Release Date that has passed | No filter by embargo |
   | `severity` | One or more of `critical`, `high`, `medium`, `low`, `none`, `unresolved` | No filter by severity |
   | `priority` | One or more of `p1`, `p2`, `p3`, `p4`, `unresolved` | No filter by priority |
@@ -68,20 +69,21 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   parameter other than a filter that the URL gives more than once are
   removed from the URL in place of the URL in the browser history, before the
   list reads anything (`docs/behaviors.md`, Invalid Search Parameters). So
-  are a status filter in a view whose statuses its filters fix, an embargo
-  filter outside the Embargo view, and a sorting that the list does not
-  accept, such as by a column that the view does not show, with its order. A
-  filter keeps the values that it knows, once each, in the order of the
-  table above, a search term loses its surrounding whitespace, and a
-  parameter that names the value of the last column, such as `page=1`, is
-  left out, all in place of the URL in the browser history. A user who is
-  not shown a view, Assigned to me or Embargo (Access), sees the All view for
-  its `view`, and the list removes that parameter in the same way once it
-  knows the user, with those that the All view does not accept, such as the
-  embargo filter or a sorting by Coordinated Release Date, also when a read
-  of the signed-in user tells during the session that the user is no longer
-  shown the view (`docs/behaviors.md`, The Signed-in User); no request
-  carries them. The other parameters and the fragment stay.
+  are a status filter and an ignore reason filter in a view whose statuses
+  its filters fix, an embargo filter outside the Embargo view, and a sorting
+  that the list does not accept, such as by a column that the view does not
+  show, with its order. A filter keeps the values that it knows, once each,
+  in the order of the table above, a search term loses its surrounding
+  whitespace, and a parameter that names the value of the last column, such
+  as `page=1`, is left out, all in place of the URL in the browser history.
+  A user who is not shown a view, Assigned to me or Embargo (Access), sees
+  the All view for its `view`, and the list removes that parameter in the
+  same way once it knows the user, with those that the All view does not
+  accept, such as the embargo filter or a sorting by Coordinated Release
+  Date, also when a read of the signed-in user tells during the session that
+  the user is no longer shown the view (`docs/behaviors.md`, The Signed-in
+  User); no request carries them. The other parameters and the fragment
+  stay.
 - The Tickets entry of the sidebar and `/`, the landing, lead to
   `/tickets?view=new` for a user who holds `triage_ticket`, and to `/tickets`
   for every other user. `/` leads there in place of itself in the browser
@@ -150,6 +152,7 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   | Filter | Values | Of List Tickets |
   |---|---|---|
   | Status, in the All and Embargo views only | New, Analysis, Analyzed, Resolved, Ignored, Duplicated, each with its mark | `status` (Sentinel `docs/features/tickets/tickets.md`, Statuses) |
+  | Ignore reason, in the All and Embargo views only | Not shipped, CVE rejected, CNA policy, Other | `ignore_reason`: a reason matches only an Ignored Ticket (Sentinel `docs/features/tickets/tickets.md`, Ignore Reason; List Tickets) |
   | Embargo, in the Embargo view only | Expired | `coordinated_release_passed=true`: a confidential Ticket whose Coordinated Release Date is at or before the instant at which Sentinel evaluates the read (Sentinel `docs/features/tickets/tickets.md`, List Tickets, Embargo filters) |
   | Severity | Critical, High, Medium, Low, None, each with its mark, and Not set for a Ticket without a severity | `severity`, with `unresolved` for Not set |
   | Priority | P1, P2, P3, P4, each with its mark, and Not set for a Ticket that is not yet prioritizable | `priority`, the effective priority, with `unresolved` for Not set (Sentinel `docs/features/tickets/ticket-priority.md`, Persistence and Effective Priority) |
@@ -159,6 +162,16 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   A filter with several values matches a Ticket that has any of them, and the
   filters and the search together match a Ticket that each of them matches
   (Sentinel `docs/api-spec.md`, Filtering; Enum Filter Validation).
+  Ignore reason is a filter of its own, which no status needs, and checking a
+  reason changes no other filter: with a status other than Ignored, it
+  matches no Ticket of that status, and the list says that none match the
+  filters (States). CNA policy lists the Tickets that the CNA auto-ignore
+  policy ignored without review, so that an analyst reviews them (Sentinel
+  `docs/features/tickets/cna.md`, A Curated Policy per CNA). The reasons have
+  the names that the details of a Ticket give them, which show the reason of
+  an Ignored Ticket (`docs/screens/ticket.md`, Content, Details); the rows
+  do not show it, so that the Status column keeps its width from one page to
+  the next and leaves its room to the other columns.
 - The table of the Tickets of the view, "Tickets" for assistive
   technologies, from List Tickets with the filters of the view, the search
   and the filters that the user applied, the sorting, the page, and
@@ -338,9 +351,10 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   Links; Lists; Tables; Forms; Loading; Empty States; Errors in Place of
   Content; Menus, Popovers, and Tooltips; Representation of a User
 - Sentinel `docs/features/tickets/tickets.md` — Ticket Identification;
-  Search; Statuses; Confidential Tickets (Coordinated Release Date);
-  PriorityBasis; PriorityEvidence; TicketSummary; List Tickets (Embargo
-  filters); Reassignment
+  Search; Statuses; Ignore Reason; Confidential Tickets (Coordinated Release
+  Date); PriorityBasis; PriorityEvidence; TicketSummary; List Tickets
+  (Embargo filters); Reassignment
+- Sentinel `docs/features/tickets/cna.md` — A Curated Policy per CNA
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Exploitation Level; Persistence and Effective Priority; Automatic Priority

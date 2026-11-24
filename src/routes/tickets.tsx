@@ -75,8 +75,9 @@ function sortShownIn(
 }
 
 // The search parameters that the view accepts, in the form that the list
-// gives them (docs/behaviors.md, Invalid Search Parameters): the status
-// filter only in a view whose Tickets have every status; the embargo filter
+// gives them (docs/behaviors.md, Invalid Search Parameters): the status and
+// the ignore reason filters only in a view whose Tickets have every status,
+// since the others hold no ignored Ticket; the embargo filter
 // only in the Embargo view; the sorting by a column that the view shows,
 // left out when it is the view's own; its order, left out when it is the
 // first direction of the column, and when the list does not accept the
@@ -92,6 +93,7 @@ function acceptedInView(
   return {
     ...search,
     status: view.everyStatus ? search.status : undefined,
+    ignore_reason: view.everyStatus ? search.ignore_reason : undefined,
     embargo: view === EMBARGO_VIEW ? search.embargo : undefined,
     sort: shown === view.sort ? undefined : shown,
     order:

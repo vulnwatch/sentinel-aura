@@ -41,20 +41,31 @@ describe("the filters", () => {
     "Status",
     ["New", "Analysis", "Analyzed", "Resolved", "Ignored", "Duplicated"],
   ] as const;
+  // The reasons of an ignored Ticket by their names (Sentinel
+  // docs/features/tickets/tickets.md, Ignore Reason).
+  const IGNORE_REASON_VALUES = [
+    "Ignore reason",
+    ["Not shipped", "CVE rejected", "CNA policy", "Other"],
+  ] as const;
   const EMBARGO_VALUES = ["Embargo", ["Expired"]] as const;
 
   test.each([
-    ["the All view", "", [STATUS_VALUES, ...FILTER_VALUES], "New"],
     [
-      "a queue, without the status filter",
+      "the All view",
+      "",
+      [STATUS_VALUES, IGNORE_REASON_VALUES, ...FILTER_VALUES],
+      "New",
+    ],
+    [
+      "a queue, without the status and the ignore reason filters",
       "?view=new",
       FILTER_VALUES,
       "Critical",
     ],
     [
-      "the Embargo view, with the status and the embargo filters",
+      "the Embargo view, with the status, the ignore reason, and the embargo filters",
       "?view=embargo",
-      [STATUS_VALUES, EMBARGO_VALUES, ...FILTER_VALUES],
+      [STATUS_VALUES, IGNORE_REASON_VALUES, EMBARGO_VALUES, ...FILTER_VALUES],
       "New",
     ],
   ])(
@@ -84,6 +95,12 @@ describe("the filters", () => {
 
   test.each([
     ["Status", "Resolved", "status=resolved", "status=resolved"],
+    [
+      "Ignore reason",
+      "CNA policy",
+      "ignore_reason=cna_policy",
+      "ignore_reason=cna_policy",
+    ],
     ["Severity", "Not set", "severity=unresolved", "severity=unresolved"],
     ["Priority", "P1", "priority=p1", "priority=p1"],
     ["Current phase", "UM", "phase=um", "current_phase=um"],
@@ -108,6 +125,28 @@ describe("the filters", () => {
       await expect.element(optionOf(dialog, filter, value)).toBeChecked();
     },
   );
+
+  test("apply an ignore reason as a filter of its own, which leaves the statuses that apply as they are", async () => {
+    const { spy } = stubTickets();
+    const { router, screen } = await renderApp("/tickets?status=new");
+    const dialog = await openFilters(screen);
+
+    await toggle(dialog, "Ignore reason", "CNA policy");
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe("/tickets?status=new&ignore_reason=cna_policy");
+    await expect
+      .poll(() => queriesOf(spy, "list").at(-1))
+      .toBe(`status=new&ignore_reason=cna_policy&${ALL_PAGE}`);
+    await expect.element(optionOf(dialog, "Status", "New")).toBeChecked();
+    await expect
+      .element(optionOf(dialog, "Status", "Ignored"))
+      .not.toBeChecked();
+    await expect
+      .element(screen.getByRole("button", { name: "Filters 2 applied" }))
+      .toBeInTheDocument();
+  });
 
   test("apply Embargo Expired at once in the Embargo view, at the first page, and count it among the filters that apply", async () => {
     const { spy } = stubTickets({ user: EMBARGO_ANALYST });
@@ -166,10 +205,10 @@ describe("the filters", () => {
   test("show the values that apply as checked", async () => {
     stubTickets();
     const { screen } = await renderApp(
-      "/tickets?status=new&severity=none&phase=done&overdue=triage",
+      "/tickets?status=new&ignore_reason=not_shipped&severity=none&phase=done&overdue=triage",
     );
     await expect
-      .element(screen.getByRole("button", { name: "Filters 4 applied" }))
+      .element(screen.getByRole("button", { name: "Filters 5 applied" }))
       .toBeVisible();
 
     const dialog = await openFilters(screen);
@@ -179,9 +218,10 @@ describe("the filters", () => {
         .getByRole("checkbox")
         .elements()
         .filter((box) => box instanceof HTMLInputElement && box.checked),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
     for (const [filter, value] of [
       ["Status", "New"],
+      ["Ignore reason", "Not shipped"],
       ["Severity", "None"],
       ["Current phase", "Done"],
       ["Overdue", "Triage"],

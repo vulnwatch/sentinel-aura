@@ -715,6 +715,12 @@ describe("the URL", () => {
       NEW,
     ],
     [
+      "an ignore reason filter outside the All view, in a view without ignored Tickets",
+      "?view=analysis&ignore_reason=cna_policy",
+      "/tickets?view=analysis",
+      `${FILTERS.Analysis}&${QUEUE_SORT}&sort_order=desc&page=1&per_page=20`,
+    ],
+    [
       "a sorting by a column that the view does not show, with its order",
       "?view=new&sort=last-modified&order=asc",
       "/tickets?view=new",
@@ -867,19 +873,38 @@ describe("the URL", () => {
     );
   });
 
-  test("keeps the status and the embargo filters in the Embargo view, without a state of an embargo that it does not know, and sends them to List Tickets", async () => {
-    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+  test("keeps the ignore reason filter in the All view, its reasons once each in the order of the contract, without a reason that it does not know, and sends it to List Tickets", async () => {
+    const { spy } = stubTickets();
     const { router } = await renderApp(
-      "/tickets?view=embargo&status=resolved&embargo=running&embargo=expired",
+      "/tickets?ignore_reason=other&ignore_reason=fictional_reason&ignore_reason=cna_policy&ignore_reason=other",
     );
 
     await expect
       .poll(() => router.state.location.href)
-      .toBe("/tickets?view=embargo&status=resolved&embargo=expired");
+      .toBe("/tickets?ignore_reason=cna_policy&ignore_reason=other");
     expect(router.history.length).toBe(1);
     await expect
       .poll(() => queriesOf(spy, "list"))
-      .toEqual([`${EXPIRED}&status=resolved&${EMBARGO_PAGE}`]);
+      .toEqual([`ignore_reason=cna_policy&ignore_reason=other&${ALL}`]);
+  });
+
+  test("keeps the status, the ignore reason, and the embargo filters in the Embargo view, without a state of an embargo that it does not know, and sends them to List Tickets", async () => {
+    const { spy } = stubTickets({ user: EMBARGO_ANALYST });
+    const { router } = await renderApp(
+      "/tickets?view=embargo&status=resolved&ignore_reason=not_shipped&embargo=running&embargo=expired",
+    );
+
+    await expect
+      .poll(() => router.state.location.href)
+      .toBe(
+        "/tickets?view=embargo&status=resolved&ignore_reason=not_shipped&embargo=expired",
+      );
+    expect(router.history.length).toBe(1);
+    await expect
+      .poll(() => queriesOf(spy, "list"))
+      .toEqual([
+        `${EXPIRED}&status=resolved&ignore_reason=not_shipped&${EMBARGO_PAGE}`,
+      ]);
   });
 
   test("keeps a page and the fragment that it accepts", async () => {
@@ -1373,6 +1398,7 @@ describe("Clear filters", () => {
     ["without a search or a filter", "?view=new", false],
     ["with a search", "?view=new&search=curl", true],
     ["with a filter", "?view=new&overdue=triage", true],
+    ["with an ignore reason", "?ignore_reason=cna_policy", true],
     ["with a sorting alone", "?view=new&sort=deadline", false],
   ])("shows %s: %s", async (_, search, shown) => {
     stubTickets();
@@ -1731,12 +1757,22 @@ describe("a list that the user refined", () => {
       "?view=new&priority=p4&page=3",
       "No Tickets in this view match the filters.",
     ],
+    [
+      // A reason matches only an ignored Ticket (Sentinel
+      // docs/features/tickets/tickets.md, List Tickets).
+      "an ignore reason with a status other than Ignored",
+      "?status=new&ignore_reason=cna_policy",
+      "No Tickets in this view match the filters.",
+    ],
   ])(
     "says without Tickets that none match %s, and offers Clear filters, which moves the focus to the heading",
     async (_, search, message) => {
       stubTickets({
         list: (query) =>
-          query.has("search") || query.has("severity") || query.has("priority")
+          query.has("search") ||
+          query.has("severity") ||
+          query.has("priority") ||
+          query.has("ignore_reason")
             ? ticketPage([])
             : ticketPage([ROW]),
       });
@@ -1763,7 +1799,7 @@ describe("a list that the user refined", () => {
         .toBeVisible();
       expect(router.state.location.search).not.toHaveProperty("search");
       expect(router.state.location.href).not.toMatch(
-        /search=|severity=|priority=/,
+        /search=|severity=|priority=|status=|ignore_reason=/,
       );
       await expect
         .element(screen.getByRole("heading", { level: 1, name: "Tickets" }))
