@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { Locator, Page, Request } from "@playwright/test";
 import {
   expect,
@@ -25,6 +27,32 @@ const ENTRIES = [
 
 function sidebar(page: Page) {
   return page.getByRole("navigation", { name: "Main" });
+}
+
+const ROOT = join(import.meta.dirname, "..", "..");
+
+// The version of the UI, the version of package.json, which the build of the
+// image under test shows (docs/deployment.md, Release Process, Versions).
+async function builtVersion(): Promise<string> {
+  const manifest: unknown = JSON.parse(
+    await readFile(join(ROOT, "package.json"), "utf8"),
+  );
+  if (
+    typeof manifest !== "object" ||
+    manifest === null ||
+    !("version" in manifest) ||
+    typeof manifest.version !== "string"
+  ) {
+    throw new Error("package.json declares no version");
+  }
+  return manifest.version;
+}
+
+// The pinned Sentinel version (docs/architecture.md, Backend Contract).
+async function pinnedVersion(): Promise<string> {
+  return (
+    await readFile(join(ROOT, "contract", "sentinel-version"), "utf8")
+  ).trim();
 }
 
 // A fictional profile picture on Slack's image host, the one host besides the
@@ -216,6 +244,7 @@ test.describe("the account menu", () => {
     await expect(menu.getByRole("menuitem")).toHaveText([
       "Account",
       "API keys",
+      "About Sentinel",
       "Sign out",
     ]);
     await expect(
@@ -226,6 +255,46 @@ test.describe("the account menu", () => {
     ).toHaveAttribute("href", "/account/api-keys");
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-list-account-menu.png");
+  });
+
+  test("opens About Sentinel, with the version of the UI and the version of Sentinel, each a link to its release", async ({
+    page,
+  }) => {
+    const [uiVersion, sentinelVersion] = await Promise.all([
+      builtVersion(),
+      pinnedVersion(),
+    ]);
+    await signIn(page);
+    await expectTicketListShown(page);
+    const button = sidebar(page).getByRole("button", { name: "John Doe" });
+    await button.click();
+
+    await page
+      .getByRole("menu", { name: "John Doe" })
+      .getByRole("menuitem", { name: "About Sentinel" })
+      .click();
+
+    const dialog = page.getByRole("dialog", { name: "About Sentinel" });
+    await expect(dialog).toBeFocused();
+    await expect(
+      dialog.getByRole("link", { name: `${uiVersion} (another site)` }),
+    ).toHaveAttribute(
+      "href",
+      `https://github.com/vulnwatch/sentinel-aura/releases/tag/v${uiVersion}`,
+    );
+    // The backend runs the image of the pinned Sentinel version
+    // (docs/architecture.md, Backend Contract).
+    await expect(
+      dialog.getByRole("link", { name: `${sentinelVersion} (another site)` }),
+    ).toHaveAttribute(
+      "href",
+      `https://github.com/vulnwatch/sentinel/releases/tag/v${sentinelVersion}`,
+    );
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-list-about.png");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(button).toBeFocused();
   });
 
   test("shows the profile picture of the signed-in user, which the browser loads from Slack's image host without the address of the screen", async ({

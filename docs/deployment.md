@@ -767,6 +767,15 @@ updates it in the release pull request, together with `package-lock.json`,
 version from the tag. Until the first release, `package.json` declares
 `0.0.0`, which no release has.
 
+The build of the UI takes the same `version` and shows it in About Sentinel
+(`docs/screen-map.md`, Sidebar). The image of a release therefore shows the
+version of its tag, which `scripts/release.sh check` requires `package.json`
+to declare (Release Chain). A build of a commit that no release contains
+shows the version of the latest release pull request merged before that
+commit, as Sentinel's version does (Sentinel `docs/deployment.md`, Platform
+Version and Source of Truth), so only the image of a release is identified
+by it.
+
 | Commit subject on `master` | Current version | Release |
 |---|---|---|
 | `fix:` | Any | Patch |

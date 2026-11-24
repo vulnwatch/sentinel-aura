@@ -410,10 +410,12 @@ that needs it; content of another kind needs a new row first.
   the router. The link leads to, and where its text is the address shows,
   the URL that the check parsed, never the value as received, so that the
   check and the browser read the same address. A composed address takes the
-  fixed origin that its screen document states, and holds the value of the
-  API, or the part of it that the screen document names, only encoded,
-  within a path segment or as the value of a query parameter, each encoded
-  as a component, or as the fragment, where the screen document names it,
+  fixed origin that the document that defines it states, its screen
+  document or a foundation document (`docs/behaviors.md`, Links to Other
+  Sites, Composed addresses), and holds the value of the API, or the part of
+  it that the document names, only encoded, within a path segment or as the
+  value of a query parameter, each encoded as a component, or as the
+  fragment, where the document names it,
   encoded as the URL parser encodes a fragment, which keeps such characters
   as `:` and `/`. No other code
   passes a value of the API as the address of a link or of a navigation,
@@ -577,12 +579,16 @@ that needs it; content of another kind needs a new row first.
   run to the next, such as a date that the dataset computes from the instant
   of its load (Sentinel `docs/features/platform/example-dataset.md`, Time
   Base) or the generated avatar of a user, whose `id` the dataset does not
-  fix (same document, Users), is masked. Such a region also keeps the same
-  size in every run, so that neither its mask nor what follows it moves: the
-  text of a date changes in width with the day and the month of the run, so
-  each date takes, for the screenshot alone, a fixed width of at least its
-  widest text. `expectScreenshot` of `fixtures.ts` takes every reference, with
-  these masks and widths. The widths come from a stylesheet of the CSS
+  fix (same document, Users), is masked, and so is a region that changes
+  from one release to the next, such as a version in About Sentinel
+  (`docs/screen-map.md`, Sidebar), so that a release pull request or a new
+  pinned Sentinel version changes no reference. Such a region also keeps the
+  same size in every run, so that neither its mask nor what follows it
+  moves: the text of a date changes in width with the day and the month of
+  the run, so each date, and each version, takes, for the screenshot alone,
+  a fixed width of at least its widest text. `expectScreenshot` of
+  `fixtures.ts` takes every reference, with these masks and widths. The
+  widths come from a stylesheet of the CSS
   object model, which the policy allows (`docs/architecture.md`, Security
   Headers), and the page returns to its own style once the screenshot is
   taken.

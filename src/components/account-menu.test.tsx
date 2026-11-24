@@ -291,6 +291,7 @@ describe("the account menu", () => {
     expect(items.map((item) => item.element().textContent)).toEqual([
       "Account",
       "API keys",
+      "About Sentinel",
       "Sign out",
     ]);
     expect(
@@ -520,9 +521,16 @@ describe("Sign out", () => {
     expect(requestsTo(fetch, LOGOUT)).toBe(1);
     // The other items are unavailable meanwhile, and the arrow keys pass
     // over them.
-    for (const name of ["Account", "API keys", "System", "Light", "Dark"]) {
+    for (const name of [
+      "Account",
+      "API keys",
+      "System",
+      "Light",
+      "Dark",
+      "About Sentinel",
+    ]) {
       const other = menu.getByRole(
-        name === "Account" || name === "API keys"
+        name === "Account" || name === "API keys" || name === "About Sentinel"
           ? "menuitem"
           : "menuitemradio",
         { name, exact: true },

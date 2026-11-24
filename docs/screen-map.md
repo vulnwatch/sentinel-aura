@@ -210,7 +210,8 @@ holds, from top to bottom:
 - the button that collapses or expands the sidebar; and
 - the account menu, which shows the signed-in user, leads to Account and to
   its API keys (Areas and Screens), offers the choice of theme
-  (`docs/behaviors.md`, Preferences), and offers Sign out.
+  (`docs/behaviors.md`, Preferences), opens About Sentinel (below), and
+  offers Sign out.
 
 The My packages entry shows the number of the signed-in user's pending work,
 the tracks that wait for the user's submission (Sentinel
@@ -227,6 +228,32 @@ being hidden, after every change (`docs/behaviors.md`, Outcome of a Change),
 and with every read of the pending work of My packages, so that the entry is
 as current as that list. A failed read follows `docs/behaviors.md` (Where
 Errors Appear).
+
+About Sentinel, in the account menu, opens a dialog with the versions that a
+user states when they report a problem, together with the reference of the
+failing request (`docs/behaviors.md`, Default Presentation by Status;
+Sentinel `docs/features/platform/platform-version.md`, Purpose), for every
+user:
+
+- the version of Sentinel Aura, which the UI is built with
+  (`docs/deployment.md`, Versions); and
+- the version of Sentinel, read from Get Platform Version,
+  `GET /api/v1/version`, each time the dialog opens, and not again while it
+  stays open. The UI cannot derive it from the pinned Sentinel version,
+  since a host can run any later release that the UI supports, and while a
+  host is upgraded two reads can return different versions (Sentinel
+  `docs/features/platform/platform-version.md`, Get Platform Version). A
+  failed read shows in its place, as the read of a part does
+  (`docs/behaviors.md`, Where Errors Appear), and the version of Sentinel
+  Aura stays shown.
+
+Each version is a link to the GitHub Release of its repository,
+`https://github.com/vulnwatch/sentinel-aura/releases/tag/v<version>` and
+`https://github.com/vulnwatch/sentinel/releases/tag/v<version>`, addresses
+that the UI composes with the version in their last path segment
+(`docs/behaviors.md`, Links to Other Sites, Composed addresses). The notes of
+a release of the UI also state its supported Sentinel versions
+(`docs/deployment.md`, Supported Sentinel Versions).
 
 The sidebar is expanded, with the name of each entry, or collapsed to icons,
 each of which shows its name on hover and on keyboard focus
