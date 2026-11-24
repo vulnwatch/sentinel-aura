@@ -20,10 +20,7 @@ type Repository = "sentinel-aura" | "sentinel";
 // address of another site that the UI composes, with the version encoded in
 // its last path segment (docs/behaviors.md, Links to Other Sites, Composed
 // addresses; docs/conventions.md, Links from the API).
-export function releaseAddress(
-  repository: Repository,
-  version: string,
-): string {
+function releaseAddress(repository: Repository, version: string): string {
   return `https://github.com/vulnwatch/${repository}/releases/tag/v${encodeURIComponent(version)}`;
 }
 

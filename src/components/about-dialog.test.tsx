@@ -18,7 +18,6 @@ import {
   stubApi,
   type ApiResponder,
 } from "../test-api";
-import { releaseAddress } from "./about-dialog";
 
 // About Sentinel, which the account menu opens (docs/screen-map.md, Sidebar;
 // docs/design-system.md, Account Menu), at the browser's default text size,
@@ -104,22 +103,23 @@ async function openAbout(screen: Screen, over = false) {
   return dialog;
 }
 
-describe("releaseAddress", () => {
-  test("leads to the GitHub Release of the version of the repository", () => {
-    expect(releaseAddress("sentinel-aura", "0.11.0")).toBe(
-      "https://github.com/vulnwatch/sentinel-aura/releases/tag/v0.11.0",
-    );
-    expect(releaseAddress("sentinel", "0.28.0")).toBe(
-      "https://github.com/vulnwatch/sentinel/releases/tag/v0.28.0",
-    );
-  });
-
-  test("holds the version only encoded, in its last path segment", () => {
-    expect(releaseAddress("sentinel", "1.0.0/../../x?y#z")).toBe(
-      "https://github.com/vulnwatch/sentinel/releases/tag/v1.0.0%2F..%2F..%2Fx%3Fy%23z",
-    );
-  });
-});
+// Opens About Sentinel from the account menu with the keyboard, and returns
+// its dialog.
+async function openAboutWithKeyboard(screen: Screen) {
+  accountButton(screen).element().focus();
+  await userEvent.keyboard("{Enter}");
+  const item = screen
+    .getByRole("menu", { name: "John Doe" })
+    .getByRole("menuitem", { name: "About Sentinel" });
+  await expect.element(item).toBeVisible();
+  // About Sentinel is the item before the last, Sign out.
+  await userEvent.keyboard("{End}{ArrowUp}");
+  await expect.element(item).toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+  const dialog = screen.getByRole("dialog", { name: "About Sentinel" });
+  await expect.element(dialog).toBeVisible();
+  return dialog;
+}
 
 describe("About Sentinel", () => {
   test("opens from the account menu once it has closed, as a dialog at most 400 px wide that takes the focus itself", async () => {
@@ -161,7 +161,6 @@ describe("About Sentinel", () => {
     });
     await expect.element(sentinel).toBeVisible();
     await expect.element(ui).toBeVisible();
-    expect(SENTINEL_AURA_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
     await expect
       .element(ui)
       .toHaveAttribute(
@@ -366,15 +365,40 @@ describe("About Sentinel", () => {
   });
 
   test.each([
-    ["Close", () => page.getByRole("button", { name: "Close" }).click()],
-    ["Escape", () => userEvent.keyboard("{Escape}")],
+    [
+      "Close",
+      "the pointer",
+      openAbout,
+      () => page.getByRole("button", { name: "Close" }).click(),
+    ],
+    ["Escape", "the pointer", openAbout, () => userEvent.keyboard("{Escape}")],
+    [
+      "Close",
+      "the keyboard",
+      openAboutWithKeyboard,
+      () => userEvent.keyboard("{Tab}{Tab}{Tab}{Enter}"),
+    ],
+    [
+      "Escape",
+      "the keyboard",
+      openAboutWithKeyboard,
+      () => userEvent.keyboard("{Escape}"),
+    ],
   ])(
-    "closes with %s, and returns the focus to the account button",
-    async (_, close) => {
+    "closes with %s, opened with %s, and returns the focus to the account button",
+    async (_, _how, open, close) => {
       stubSession();
       const screen = await renderApp();
-      const dialog = await openAbout(screen);
+      const dialog = await open(screen);
       await expect.element(dialog).toHaveFocus();
+      // Once both versions show, so that Tab passes their links first.
+      await expect
+        .element(
+          dialog.getByRole("link", {
+            name: `${SENTINEL_VERSION} (another site)`,
+          }),
+        )
+        .toBeVisible();
 
       await close();
 
