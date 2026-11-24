@@ -1,15 +1,17 @@
 name: Bug Report
-description: Report a bug or unexpected behavior of the web interface.
+description: Report a bug or unexpected behavior that you meet in the web interface.
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: >
         Thank you for reporting a bug. Please fill in the details below
-        to help us reproduce and fix the issue. Report a bug of the Sentinel
-        backend or of its API in the
+        to help us reproduce and fix the issue. Report here a problem that you
+        meet in the web interface, also when it may come from the Sentinel
+        backend or its API: the maintainers move it to the
         [Sentinel issue tracker](https://github.com/vulnwatch/sentinel/issues)
-        instead, and a vulnerability as described in
+        when needed. Report a bug that you meet through the API alone in that
+        tracker, and a vulnerability as described in
         [SECURITY.md](https://github.com/vulnwatch/sentinel-aura/security/policy).
         Use only fictional data in descriptions, logs, and screenshots.
 

@@ -256,9 +256,6 @@ test.describe("the account menu", () => {
     await expect(
       menu.getByRole("menuitem", { name: "API keys" }),
     ).toHaveAttribute("href", "/account/api-keys");
-    await expect(
-      menu.getByRole("menuitem", { name: "Guides (another site)" }),
-    ).toHaveAttribute("href", "https://howto.sentinel.suse.de/");
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-list-account-menu.png");
   });

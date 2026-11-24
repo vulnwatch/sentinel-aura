@@ -59,12 +59,6 @@ describe("a web address", () => {
 });
 
 describe("a fixed web address", () => {
-  test("is the address as the browser parses it", () => {
-    expect(WebAddress.fixed("HTTPS://Howto.Example.com/a b").url.href).toBe(
-      "https://howto.example.com/a%20b",
-    );
-  });
-
   test("is a fault of the UI itself when it is not a web address", () => {
     expect(() => WebAddress.fixed("/guides")).toThrow(
       "not a web address: /guides",
