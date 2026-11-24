@@ -2,10 +2,13 @@ import { ExternalLink } from "lucide-react";
 import { Link as AriaLink } from "react-aria-components";
 import { FOCUS_RING } from "./focus-ring";
 
-// The links to an address that the API returns, or to an address of another
-// site that the UI composes from a value of the API (docs/behaviors.md, Links
-// to Other Sites; docs/conventions.md, Links from the API). This module is the
-// only one that builds them.
+// The links to an address that the API returns, to an address of another
+// site that the UI composes from a value of the API or from its own version,
+// and to a fixed address of another site that a foundation document states
+// (docs/behaviors.md, Links to Other Sites; docs/conventions.md, Links from
+// the API). This module is the only one that builds them, except the item of
+// a menu, which takes a web address of this module
+// (src/components/menu.tsx).
 
 // A value as the browser parses it as an absolute URL, or undefined when it
 // is not one.
@@ -97,8 +100,10 @@ const PLACEMENTS = {
 } as const;
 
 interface WebLinkProps {
-  // The address that the API returns, or that the screen composes from a
-  // value of the API with the fixed origin that its screen document states.
+  // The address that the API returns, or that the UI composes with the fixed
+  // origin that the document that defines it states, its screen document or
+  // a foundation document, or a fixed address that a foundation document
+  // states.
   address: string | null | undefined;
   // The text of the link, which shows as received, without a link, when the
   // address is not a web address.
@@ -120,8 +125,9 @@ interface WebLinkProps {
   describedBy?: string;
 }
 
-// What assistive technologies read after the text of a link to another site.
-const OTHER_SITE = " (another site)";
+// What assistive technologies read after the text of a link to another site,
+// or after the label of an item of a menu that leads to one.
+export const OTHER_SITE = " (another site)";
 
 // A link to an address of the API (docs/behaviors.md, Links to Other Sites):
 // only a web address becomes a link, which leads to the address as the

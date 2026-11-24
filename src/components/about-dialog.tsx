@@ -62,7 +62,8 @@ interface AboutDialogProps {
 // the width of the longest one, each version a link to its release; below a
 // border line, Report a problem, which opens the Bug Report form of Sentinel
 // Aura with the versions, described by the caution beneath it, since the
-// tracker is public; and Close. It takes the focus itself as it opens, so
+// tracker is public and the form opens in the same tab, where the reference
+// of an error is lost unless copied first; and Close. It takes the focus itself as it opens, so
 // that its content is read first, and returns it to the element that opened
 // it as it closes (docs/behaviors.md, Accessibility, Dialogs). It shows while
 // it is in the page.
@@ -118,7 +119,7 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
       </WebLink>
       <p id={caution} className="mt-1 text-14 text-fg-muted">
         The issue tracker is public: leave out confidential data, such as
-        embargoed CVEs.
+        embargoed CVEs. Copy the reference of an error before you open the form.
       </p>
     </ModalDialog>
   );

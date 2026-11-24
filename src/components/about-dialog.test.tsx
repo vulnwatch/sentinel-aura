@@ -228,12 +228,12 @@ describe("About Sentinel", () => {
     await expect
       .element(report)
       .toHaveAccessibleDescription(
-        "The issue tracker is public: leave out confidential data, such as embargoed CVEs.",
+        "The issue tracker is public: leave out confidential data, such as embargoed CVEs. Copy the reference of an error before you open the form.",
       );
     // Below the versions, and the caution below it, in text-14 and fg-muted
     // of the light theme.
     const caution = dialog.getByText(
-      "The issue tracker is public: leave out confidential data, such as embargoed CVEs.",
+      "The issue tracker is public: leave out confidential data, such as embargoed CVEs. Copy the reference of an error before you open the form.",
     );
     const versions = dialog.getByRole("definition").last().element();
     expect(report.element().getBoundingClientRect().top).toBeGreaterThan(

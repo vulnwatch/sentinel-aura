@@ -629,8 +629,9 @@ About Sentinel opens, once the menu has closed, a dialog at most 400 px wide
 terms take the width of the longest one (Detail Screens), Sentinel Aura and
 Sentinel, each version a link to another site (Buttons and Links); a
 `border` line, with 12 px of space above and below it; Report a problem, a
-link to another site on a line of its own, and 4 px below it its description
-in `text-14`, `fg-muted`; and Close, a secondary button. While the version of
+link to another site on a line of its own, underlined under the pointer and
+on focus as a link in a list, and 4 px below it its description in
+`text-14`, `fg-muted`; and Close, a secondary button. While the version of
 Sentinel loads, the loading indicator takes its place (Loading), and its
 error shows there as in place of a part (Errors in Place of Content). Close
 and Escape close the dialog, and the focus returns to the account button.
@@ -1755,11 +1756,10 @@ states it, such as that of a Ticket; the other audit logs are tables
   on keyboard focus (Focus and Motion). The heading of a section is in
   `text-12`, weight 500, `fg-muted`; groups are separated by `border` lines;
   an item of a single selection ends with `check` at 16 px when it is
-  selected; and an item that leads to another site (`docs/behaviors.md`,
-  Links to Other Sites), such as Guides (Account Menu), ends with
-  `external-link` at 16 px in `fg-muted`, and its accessible name ends with
-  "(another site)". While the change that an item started is in progress, the item is
-  busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
+  selected; and an item that leads to another site, such as Guides (Account
+  Menu), ends with `external-link` at 16 px in `fg-muted`, and its accessible
+  name follows `docs/behaviors.md` (Links to Other Sites, Marked). While the
+  change that an item started is in progress, the item is busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
   icon, as on a busy button (Buttons and Links), or, in an item of a single
   selection, of its `check` at its end (`docs/behaviors.md`, Loading). An
   item that holds the focus keeps it while it is busy, and assistive

@@ -266,11 +266,16 @@ GitHub fills in a field of the form from the parameter that its `id` names,
 so the report carries both versions without the user copying them. Until the
 version of Sentinel has arrived, and when its read failed, the address holds
 the version of Sentinel Aura alone. One link serves both repositories: a user
-cannot tell whether a fault lies in the UI or in Sentinel, and the form of
-Sentinel Aura sends a fault of the backend or of the API to Sentinel. The
-tracker is public, and Sentinel holds data under embargo, so the link is
-described, below it and for assistive technologies, by "The issue tracker is
-public: leave out confidential data, such as embargoed CVEs."
+cannot tell whether a fault lies in the UI or in Sentinel, and the
+maintainers move to Sentinel a problem met in the interface that comes from
+the backend or the API (`CONTRIBUTING.md`, Reporting Bugs). The tracker is
+public, and Sentinel holds data under embargo; and the form opens in the same
+tab, where the reference of the failing request, which only the message of
+its error shows (`docs/behaviors.md`, Default Presentation by Status), is
+lost unless the user copied it. So the link is described, below it and for
+assistive technologies, by "The issue tracker is public: leave out
+confidential data, such as embargoed CVEs. Copy the reference of an error
+before you open the form."
 
 Guides, in the account menu, leads to the tutorials of Sentinel, at the fixed
 address `https://howto.sentinel.suse.de/`, a link to another site

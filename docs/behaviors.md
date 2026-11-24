@@ -413,9 +413,10 @@ returns, whatever Sentinel guarantees for its field:
   release of a version in About Sentinel (`docs/screen-map.md`, Sidebar),
   which the UI also composes from its own version, or the form of a report
   of a problem, which it composes from both versions. Such a link follows
-  this section as an address that the API returns does, and so does a link
-  to a fixed address of another site that a foundation document states, such
-  as Guides (`docs/screen-map.md`, Sidebar).
+  this section as an address that the API returns does.
+- **Fixed addresses.** A foundation document can state a fixed address of
+  another site, such as that of Guides (`docs/screen-map.md`, Sidebar). A
+  link to it follows this section as an address that the API returns does.
 - **The same tab.** A link opens in the same tab, as the browser opens a
   link: back returns to the screen, whose state is in its URL
   (`docs/screen-map.md`, Browser History), and the browser's own commands open

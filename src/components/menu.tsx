@@ -12,7 +12,7 @@ import {
 } from "react-aria-components";
 import type { ReactNode } from "react";
 import { INSIDE_FOCUS_RING } from "./focus-ring";
-import { WebAddress } from "./web-link";
+import { OTHER_SITE, WebAddress } from "./web-link";
 
 // The parts of a menu (docs/design-system.md, Menus, Popovers, and Tooltips),
 // which the menus of the screens share, such as the account menu and the
@@ -117,7 +117,7 @@ export function MenuAction({
           )}
           <Text slot="label" className="min-w-0 flex-1">
             {children}
-            {otherSite && <span className="sr-only"> (another site)</span>}
+            {otherSite && <span className="sr-only">{OTHER_SITE}</span>}
           </Text>
           {/* Always there, so that React Aria links it to the item, and
               empty unless the item is busy. */}
