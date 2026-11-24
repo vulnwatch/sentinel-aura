@@ -270,12 +270,13 @@ cannot tell whether a fault lies in the UI or in Sentinel, and the
 maintainers move to Sentinel a problem met in the interface that comes from
 the backend or the API (`CONTRIBUTING.md`, Reporting Bugs). The tracker is
 public, and Sentinel holds data under embargo; and the form opens in the same
-tab, where the reference of the failing request, which only the message of
-its error shows (`docs/behaviors.md`, Default Presentation by Status), is
-lost unless the user copied it. So the link is described, below it and for
-assistive technologies, by "The issue tracker is public: leave out
-confidential data, such as embargoed CVEs. Copy the reference of an error
-before you open the form."
+tab (`docs/behaviors.md`, Links to Other Sites, The same tab), where the
+reference of the failing request, which only the message of its error shows
+(`docs/behaviors.md`, Default Presentation by Status), is lost unless the
+user copied it. So the link is described, below it and for assistive
+technologies, by "The issue tracker is public: leave out confidential data,
+such as embargoed CVEs. Copy the reference of an error before you open the
+form."
 
 Guides, in the account menu, leads to the tutorials of Sentinel, at the fixed
 address `https://howto.sentinel.suse.de/`, a link to another site

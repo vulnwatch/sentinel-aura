@@ -63,10 +63,10 @@ interface AboutDialogProps {
 // border line, Report a problem, which opens the Bug Report form of Sentinel
 // Aura with the versions, described by the caution beneath it, since the
 // tracker is public and the form opens in the same tab, where the reference
-// of an error is lost unless copied first; and Close. It takes the focus itself as it opens, so
-// that its content is read first, and returns it to the element that opened
-// it as it closes (docs/behaviors.md, Accessibility, Dialogs). It shows while
-// it is in the page.
+// of an error is lost unless copied first; and Close. It takes the focus
+// itself as it opens, so that its content is read first, and returns it to
+// the element that opened it as it closes (docs/behaviors.md, Accessibility,
+// Dialogs). It shows while it is in the page.
 //
 // The version of Sentinel comes from Get Platform Version, which the dialog
 // reads each time it opens, since a host can run any later release that the

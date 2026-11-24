@@ -1759,7 +1759,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   selected; and an item that leads to another site, such as Guides (Account
   Menu), ends with `external-link` at 16 px in `fg-muted`, and its accessible
   name follows `docs/behaviors.md` (Links to Other Sites, Marked). While the
-  change that an item started is in progress, the item is busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
+  change that an item started is in progress, the item is busy:
+  `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
   icon, as on a busy button (Buttons and Links), or, in an item of a single
   selection, of its `check` at its end (`docs/behaviors.md`, Loading). An
   item that holds the focus keeps it while it is busy, and assistive

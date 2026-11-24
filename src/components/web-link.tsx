@@ -129,7 +129,8 @@ interface WebLinkProps {
 // or after the label of an item of a menu that leads to one.
 export const OTHER_SITE = " (another site)";
 
-// A link to an address of the API (docs/behaviors.md, Links to Other Sites):
+// A link to an address of the API, or to one that the UI composes or that a
+// foundation document fixes (docs/behaviors.md, Links to Other Sites):
 // only a web address becomes a link, which leads to the address as the
 // browser parsed it; any other value shows the text without a link. A link
 // to another site ends with external-link, 4 px after its text, in link,
