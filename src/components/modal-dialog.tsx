@@ -19,10 +19,11 @@ import { focusScreenHeading } from "./screen-heading";
 // A dialog centered over the page (docs/design-system.md, Dialogs).
 
 // Its widths: at most 400 px for a confirmation, and 560 px for a dialog with
-// a form, or 488 px for a dialog whose content is a form alone, which is at
-// most 448 px wide, so that its buttons end where its fields do, or 880 px for
-// a form in two columns, such as the metrics of a CVSS vector; a window
-// narrower than the dialog with its margin keeps it inside.
+// a form, or 488 px for a dialog whose content is a form alone, the 448 px of
+// a form in a page with the padding of the dialog, or 880 px for a form in two
+// columns, such as the metrics of a CVSS vector; the form of a dialog takes
+// the width of its content, so that its fields end where its buttons do. A
+// window narrower than the dialog with its margin keeps it inside.
 const WIDTHS = {
   confirmation: "max-w-100",
   form: "max-w-140",

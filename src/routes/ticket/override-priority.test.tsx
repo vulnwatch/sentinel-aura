@@ -280,6 +280,32 @@ describe("the dialog of Override priority…", () => {
     expect(boxOf(dialog).width).toBe(560);
   });
 
+  test("spans the frame of the automatic priority and Priority, as what the dialog says, from its start to the end of its buttons", async () => {
+    showingOverridable();
+    const { screen } = await renderTicket();
+
+    const dialog = await openOverride(screen);
+
+    // To within the rounding of a browser.
+    const explanation = boxOf(dialog.getByText(EXPLANATION, { exact: true }));
+    const end = boxOf(saveButton(dialog)).right;
+    expect(explanation.right).toBeCloseTo(end, 0);
+    const frame = frameOf(
+      dialog
+        .getByRole("heading", {
+          level: 4,
+          name: "Automatic priority",
+          exact: true,
+        })
+        .element(),
+    ).getBoundingClientRect();
+    expect(frame.left).toBeCloseTo(explanation.left, 0);
+    expect(frame.right).toBeCloseTo(end, 0);
+    const group = boxOf(priorityGroup(dialog));
+    expect(group.left).toBeCloseTo(explanation.left, 0);
+    expect(group.right).toBeCloseTo(end, 0);
+  });
+
   test("chooses and focuses the override with which the dialog opens", async () => {
     showingOverridable({ priority: "p1", priority_override: "p1" });
     const { screen } = await renderTicket();

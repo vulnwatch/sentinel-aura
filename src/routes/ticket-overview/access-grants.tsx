@@ -126,9 +126,10 @@ interface GrantAccessFormProps {
 
 // Grant access, Grant Access, POST /api/v1/tickets/{ticket_id}/access, for a
 // user who holds manage_confidentiality (Sentinel
-// docs/features/tickets/tickets.md, Grant Access): a form at most 448 px
-// wide, the user field, which takes the focus as the dialog opens, then
-// Grant access, a primary button at the end of the form
+// docs/features/tickets/tickets.md, Grant Access): a form as wide as the
+// dialog, the user field, which takes the focus as the dialog opens, then
+// Grant access, a primary button at the end of the line of the field, or
+// below it, at the end of the form, where the form is narrower than 384 px
 // (docs/design-system.md, Forms). Without a user, Grant access says "Choose
 // a user." at the field. The grant asks for no confirmation: it ends no
 // one's access. It is busy while its request is in progress. Once Sentinel
@@ -258,31 +259,41 @@ function GrantAccessForm({
         void submit();
       }}
       aria-label="Grant access"
-      className="flex max-w-112 flex-col gap-3"
+      className="flex flex-col gap-3"
     >
       {formError !== undefined && <DialogErrorMessage error={formError} />}
-      <UserComboBox
-        key={fieldKey}
-        label="User"
-        name="user"
-        value={user}
-        onChange={(chosen) => {
-          choose(chosen);
-          setFieldError(undefined);
-        }}
-        onInput={() => {
-          setFieldError(undefined);
-        }}
-        unavailable={{ ids: granted, label: GRANTED }}
-        inputRef={inputRef}
-        error={fieldError?.text}
-      />
-      {region}
-      <div className="flex justify-end">
-        <Button type="submit" variant="primary" size="large" isBusy={busy}>
-          Grant access
-        </Button>
+      {/* The field and Grant access on one line where the form is at least
+          384 px wide, Grant access then 30 px down, the height of the label
+          of the field and its 6 px of space, so that it aligns with the
+          control; otherwise Grant access below the field, at the end. */}
+      <div className="@container">
+        <div className="flex flex-col gap-3 @min-[24rem]:flex-row @min-[24rem]:gap-2">
+          <div className="min-w-0 @min-[24rem]:flex-1">
+            <UserComboBox
+              key={fieldKey}
+              label="User"
+              name="user"
+              value={user}
+              onChange={(chosen) => {
+                choose(chosen);
+                setFieldError(undefined);
+              }}
+              onInput={() => {
+                setFieldError(undefined);
+              }}
+              unavailable={{ ids: granted, label: GRANTED }}
+              inputRef={inputRef}
+              error={fieldError?.text}
+            />
+          </div>
+          <div className="flex justify-end @min-[24rem]:mt-7.5 @min-[24rem]:self-start">
+            <Button type="submit" variant="primary" size="large" isBusy={busy}>
+              Grant access
+            </Button>
+          </div>
+        </div>
       </div>
+      {region}
     </Form>
   );
 }
