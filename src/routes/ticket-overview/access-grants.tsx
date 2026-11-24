@@ -286,7 +286,7 @@ function GrantAccessForm({
               error={fieldError?.text}
             />
           </div>
-          <div className="flex justify-end @min-[24rem]:mt-7.5 @min-[24rem]:self-start">
+          <div className="flex justify-end @min-[24rem]:mt-7.5">
             <Button type="submit" variant="primary" size="large" isBusy={busy}>
               Grant access
             </Button>

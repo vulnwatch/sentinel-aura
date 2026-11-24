@@ -1413,6 +1413,48 @@ test("show Grant access at the end of the line of the user field, 8 px after its
   expect(options.right).toBeLessThanOrEqual(field.right);
 });
 
+test("show Grant access at the end of the line of the user field, 8 px after its control, where the dialog is just wide enough for the line, at 464 CSS pixels", async () => {
+  // The form is then 390 px wide: wider than the 384 px from which the line
+  // shows, narrower than the field at its own width with Grant access.
+  await page.viewport(464, 800);
+  stubTicket({
+    user: MANAGER,
+    ticket: () => confidentialTicket(),
+    grants: () => grantsResponse(),
+  });
+  const { screen } = await renderParticipants();
+  await openAccessGrants(screen);
+
+  // The field narrows for Grant access, to within the rounding of a browser.
+  const field = boxOf(userField(screen));
+  const grant = boxOf(grantButton(screen));
+  const close = accessGrantsDialog(screen).getByRole("button", {
+    name: "Close",
+    exact: true,
+  });
+  expect(grant.top).toBeCloseTo(field.top, 0);
+  expect(grant.left - field.right).toBeCloseTo(8, 0);
+  expect(grant.right).toBeCloseTo(boxOf(close).right, 0);
+});
+
+test("show Grant access below the user field, at the end of the form, where the form is just narrower than 384 px, at 456 CSS pixels", async () => {
+  // The form is then 382 px wide.
+  await page.viewport(456, 800);
+  stubTicket({
+    user: MANAGER,
+    ticket: () => confidentialTicket(),
+    grants: () => grantsResponse(),
+  });
+  const { screen } = await renderParticipants();
+  await openAccessGrants(screen);
+
+  const field = boxOf(userField(screen));
+  const grant = boxOf(grantButton(screen));
+  expect(grant.top).toBeGreaterThanOrEqual(field.bottom + 12);
+  // To within the rounding of a browser.
+  expect(grant.right).toBeCloseTo(field.right, 0);
+});
+
 test("show Grant access below the user field, at the end of the form, where the dialog is narrow, at 320 CSS pixels", async () => {
   await page.viewport(320, 800);
   stubTicket({
