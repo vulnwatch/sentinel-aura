@@ -31,6 +31,7 @@ const VERSION = "/api/v1/version";
 const SENTINEL_VERSION = "0.42.7";
 
 let client: QueryClient;
+let router: ReturnType<typeof createAppRouter>;
 
 function versionResponse(version = SENTINEL_VERSION): Response {
   const body: PlatformVersionResponse = { data: { version } };
@@ -70,8 +71,11 @@ afterEach(async () => {
 // Shows a path that matches no screen, which shows Not found without
 // reading anything else.
 async function renderApp() {
-  const router = createAppRouter({
-    history: createMemoryHistory({ initialEntries: ["/fictional/path"] }),
+  router = createAppRouter({
+    history: createMemoryHistory({
+      initialEntries: ["/fictional/start", "/fictional/path"],
+      initialIndex: 1,
+    }),
   });
   const screen = await render(<App router={router} queryClient={client} />);
   await expect.element(screen.getByRole("heading", { level: 1 })).toBeVisible();
@@ -425,5 +429,44 @@ describe("About Sentinel", () => {
     await expect.element(dialog).not.toBeInTheDocument();
     await expect.element(accountButton(screen, true)).toHaveFocus();
     await expect.element(sidebar).toBeVisible();
+  });
+
+  test("closes on a navigation, and the focus follows it", async () => {
+    stubSession();
+    const screen = await renderApp();
+    const dialog = await openAbout(screen);
+    await expect.element(dialog).toHaveFocus();
+
+    router.history.back();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("heading", { level: 1 }))
+      .toHaveFocus();
+    await expect
+      .poll(() => router.state.location.pathname)
+      .toBe("/fictional/start");
+  });
+
+  test("closes with the sidebar over the content, which a navigation closes, and the focus follows the navigation", async () => {
+    await page.viewport(1023, 700);
+    stubSession();
+    const screen = await renderApp();
+    await screen
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("button", { name: "Expand navigation" })
+      .click();
+    const dialog = await openAbout(screen, true);
+    await expect.element(dialog).toHaveFocus();
+
+    router.history.back();
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("dialog", { name: "Navigation" }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("heading", { level: 1 }))
+      .toHaveFocus();
   });
 });

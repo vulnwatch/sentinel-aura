@@ -238,14 +238,15 @@ user:
 - the version of Sentinel Aura, which the UI is built with
   (`docs/deployment.md`, Versions); and
 - the version of Sentinel, read from Get Platform Version,
-  `GET /api/v1/version`, each time the dialog opens, and not again while it
-  stays open. The UI cannot derive it from the pinned Sentinel version,
-  since a host can run any later release that the UI supports, and while a
-  host is upgraded two reads can return different versions (Sentinel
-  `docs/features/platform/platform-version.md`, Get Platform Version). A
-  failed read shows in its place, as the read of a part does
-  (`docs/behaviors.md`, Where Errors Appear), and the version of Sentinel
-  Aura stays shown.
+  `GET /api/v1/version`, each time the dialog opens, and not again by itself
+  while it stays open, also when the tab returns to the foreground. The UI
+  cannot derive it from the pinned Sentinel version, since a host can run
+  any later release that the UI supports, and while a host is upgraded two
+  reads can return different versions (Sentinel
+  `docs/features/platform/platform-version.md`, Purpose; Get Platform
+  Version). A failed read shows in its place, as the read of a part does,
+  with Try again where the failure offers it (`docs/behaviors.md`, Where
+  Errors Appear), and the version of Sentinel Aura stays shown.
 
 Each version is a link to the GitHub Release of its repository,
 `https://github.com/vulnwatch/sentinel-aura/releases/tag/v<version>` and
@@ -254,6 +255,11 @@ that the UI composes with the version in their last path segment
 (`docs/behaviors.md`, Links to Other Sites, Composed addresses). The notes of
 a release of the UI also state its supported Sentinel versions
 (`docs/deployment.md`, Supported Sentinel Versions).
+
+A navigation closes About Sentinel, as it closes the sidebar opened over the
+content (below), and so does the closing of that sidebar when About Sentinel
+opened from it; the focus then moves as the navigation, or the closing of
+the sidebar, moves it.
 
 The sidebar is expanded, with the name of each entry, or collapsed to icons,
 each of which shows its name on hover and on keyboard focus

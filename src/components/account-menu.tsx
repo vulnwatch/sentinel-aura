@@ -9,6 +9,7 @@ import {
   User as UserIcon,
   type LucideIcon,
 } from "lucide-react";
+import { useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   Button as AriaButton,
@@ -131,7 +132,15 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
   const showMessage = useShowMessage();
   const theme = usePreference(themePreference);
   const [isOpen, setOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
+  // The URL at which About Sentinel opened: a navigation closes it, as it
+  // closes the sidebar opened over the content (docs/screen-map.md,
+  // Sidebar), and the focus follows the navigation.
+  const href = useRouterState({ select: (state) => state.location.href });
+  const [aboutOpenedAt, setAboutOpenedAt] = useState<string>();
+  const aboutOpen = aboutOpenedAt === href;
+  if (aboutOpenedAt !== undefined && !aboutOpen) {
+    setAboutOpenedAt(undefined);
+  }
   // A failure of the UI itself, which the root route shows
   // (src/routes/root.tsx).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
@@ -161,7 +170,7 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
   const openAbout = () => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        setAboutOpen(true);
+        setAboutOpenedAt(href);
       });
     });
   };
@@ -252,7 +261,7 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
       {aboutOpen && (
         <AboutDialog
           onClose={() => {
-            setAboutOpen(false);
+            setAboutOpenedAt(undefined);
           }}
         />
       )}

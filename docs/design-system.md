@@ -633,12 +633,11 @@ Sentinel loads, the loading indicator takes its place (Loading), and its
 error shows there as in place of a part (Errors in Place of Content). Close
 and Escape close the dialog, and the focus returns to the account button.
 
-While Sign
-out is in progress, its item is busy, with the description "Signing out"
-(Menus, Popovers, and Tooltips); when it fails, the menu closes, and the
-message area shows its error (`docs/behaviors.md`, Where Errors Appear), which
-also closes the sidebar opened over the content (`docs/screen-map.md`,
-Sidebar).
+While Sign out is in progress, its item is busy, with the description
+"Signing out" (Menus, Popovers, and Tooltips); when it fails, the menu
+closes, and the message area shows its error (`docs/behaviors.md`, Where
+Errors Appear), which also closes the sidebar opened over the content
+(`docs/screen-map.md`, Sidebar).
 
 ### Main Content
 

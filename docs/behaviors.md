@@ -850,9 +850,9 @@ also meets these requirements, which they cannot check:
   (`docs/design-system.md`, Menus, Popovers, and Tooltips) and a dialog that
   shows records or values without a field, whose only button closes it, such
   as the access grants of a Ticket for a user who cannot change them or About
-  Sentinel (`docs/screen-map.md`, Sidebar), so that they are read first. Escape closes it, and the focus then returns to the element
-  that opened it, or follows Focus after an action when that element is
-  gone.
+  Sentinel (`docs/screen-map.md`, Sidebar), so that they are read first.
+  Escape closes it, and the focus then returns to the element that opened
+  it, or follows Focus after an action when that element is gone.
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus, and so is the end of an operation that a screen follows, once a

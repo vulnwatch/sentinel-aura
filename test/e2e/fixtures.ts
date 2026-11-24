@@ -222,30 +222,18 @@ const DATE_TIMES_STYLE = `
 
 // The versions that the page shows, in About Sentinel, which the reference
 // screenshots mask: they change from one release of the UI, or of Sentinel,
-// to the next (docs/conventions.md, End-to-End Tests). Each is a link to its
-// GitHub Release (docs/screen-map.md, Sidebar).
+// to the next (docs/conventions.md, End-to-End Tests). Each is masked with
+// the value of the description list that holds it, whose width the dialog
+// fixes, so that its mask does not change with the width of the version
+// (docs/design-system.md, Account Menu).
 function versions(page: Page): Locator {
-  return page.getByRole("dialog", { name: "About Sentinel" }).getByRole("link");
+  return page
+    .getByRole("dialog", { name: "About Sentinel" })
+    .getByRole("definition");
 }
 
-// The style of the versions while a reference is taken: each takes a fixed
-// width, on one line, so that its mask does not move with the width of its
-// text, which changes with the version. The width is at least that of a
-// version such as 88.88.88 in Inter, about 4.5 em, with the mark of a link
-// to another site after it; the text is transparent, so that none shows
-// beside its mask if it were wider.
-const VERSIONS_STYLE = `
-  a[href^="https://github.com/vulnwatch/"][href*="/releases/tag/v"] {
-    display: inline-block;
-    width: 7em;
-    white-space: nowrap;
-    color: transparent;
-  }
-`;
-
-// Runs an action while the dates and the versions of the page have their
-// fixed widths (DATE_TIMES_STYLE; VERSIONS_STYLE), and then gives the page
-// back its own style, so that the
+// Runs an action while the dates of the page have their fixed widths
+// (DATE_TIMES_STYLE), and then gives the page back its own style, so that the
 // test continues, and its checks run, on the page as the UI renders it. The
 // style comes from a stylesheet of the CSS object model, which the policy
 // allows, unlike a style element (docs/architecture.md, Security Headers).
@@ -258,7 +246,7 @@ export async function withFixedDates<T>(
     added.replaceSync(style);
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, added];
     return added;
-  }, `${DATE_TIMES_STYLE}${VERSIONS_STYLE}`);
+  }, DATE_TIMES_STYLE);
   try {
     return await action();
   } finally {
@@ -276,7 +264,7 @@ export async function withFixedDates<T>(
 // is taken with it, so that each masks the avatars and the dates, which change
 // from one load of the dataset to the next, with the dates at their fixed
 // widths, the identifiers of the requests, which change with each request,
-// and the versions, which change with each release, at their fixed widths.
+// and the versions, which change with each release.
 export async function expectScreenshot(page: Page, name: string) {
   await withFixedDates(page, async () => {
     // A date that a popover open above it covers whole, such as one of the
