@@ -448,7 +448,7 @@ that the code imports ship.
 | Search | `search` |
 | Collapse and expand the sidebar | `panel-left-close`, `panel-left-open` |
 | The account button | `chevrons-up-down` |
-| Account, API keys, Sign out | `user`, `key-round`, `log-out` |
+| Account, API keys, Guides, About Sentinel, Sign out | `user`, `key-round`, `book-open`, `info`, `log-out` |
 | Theme System, Light, Dark; the selected item of a menu, a selected checkbox | `monitor`, `sun`, `moon`; `check` |
 | Create a record, add an item to a record, such as a reference to a Ticket, or associate a CVE with a Ticket | `plus` |
 | Filters | `list-filter` |
@@ -616,16 +616,31 @@ the username, as `@` and the username, such as `@jdoe`, in `text-13`,
 (`docs/behaviors.md`, Representation of a User). The name and the username
 wrap where the menu is too narrow, instead of ending with an ellipsis, so
 that the menu shows whole the name that the account button cuts. Its items
-follow, below a `border` line and separated by `border` lines into three
+follow, below a `border` line and separated by `border` lines into four
 groups: Account and API keys (`docs/screen-map.md`, Sidebar); the section
 Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
 weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
-selected one ends with `check`; and Sign out, an ordinary item. While Sign
-out is in progress, its item is busy, with the description "Signing out"
-(Menus, Popovers, and Tooltips); when it fails, the menu closes, and the
-message area shows its error (`docs/behaviors.md`, Where Errors Appear), which
-also closes the sidebar opened over the content (`docs/screen-map.md`,
-Sidebar).
+selected one ends with `check`; Guides, an item that leads to another site
+(Menus, Popovers, and Tooltips), and About Sentinel (`docs/screen-map.md`,
+Sidebar); and Sign out, an ordinary item.
+
+About Sentinel opens, once the menu has closed, a dialog at most 400 px wide
+(Dialogs), titled "About Sentinel": the versions as a description list whose
+terms take the width of the longest one (Detail Screens), Sentinel Aura and
+Sentinel, each version a link to another site (Buttons and Links); a
+`border` line, with 12 px of space above and below it; Report a problem, a
+link to another site on a line of its own, underlined under the pointer and
+on focus as a link in a list, and 4 px below it its description in
+`text-14`, `fg-muted`; and Close, a secondary button. While the version of
+Sentinel loads, the loading indicator takes its place (Loading), and its
+error shows there as in place of a part (Errors in Place of Content). Close
+and Escape close the dialog, and the focus returns to the account button.
+
+While Sign out is in progress, its item is busy, with the description
+"Signing out" (Menus, Popovers, and Tooltips); when it fails, the menu
+closes, and the message area shows its error (`docs/behaviors.md`, Where
+Errors Appear), which also closes the sidebar opened over the content
+(`docs/screen-map.md`, Sidebar).
 
 ### Main Content
 
@@ -1647,11 +1662,12 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 - A dialog is centered over `overlay`, on `surface` with a `border` line, an
   8 px radius, `shadow-xl`, and 20 px of padding: at most 400 px wide for a
-  confirmation and 560 px for a dialog with a form, or 488 px for a dialog
-  whose content is a form alone, the 448 px of the form with the padding of
-  the dialog, so that its buttons end where its fields do, or 880 px for a
-  dialog whose form holds two columns (Forms). A dialog taller than the
-  window scrolls its content and keeps its buttons in view.
+  confirmation and for a dialog that only shows values, such as About
+  Sentinel (Account Menu), and 560 px for a dialog with a form, or 488 px
+  for a dialog whose content is a form alone, the 448 px of the form with
+  the padding of the dialog, so that its buttons end where its fields do, or
+  880 px for a dialog whose form holds two columns (Forms). A dialog taller
+  than the window scrolls its content and keeps its buttons in view.
 - A dialog can show one of several forms of the same change on tabs at the
   top of its content, such as the versions of a CVSS assessment: tabs as
   those of a detail screen (Detail Screens), above a `border` line across
@@ -1739,9 +1755,12 @@ states it, such as that of a Ticket; the other audit logs are tables
   `surface-hover` under the pointer and on focus, with the focus ring inside it
   on keyboard focus (Focus and Motion). The heading of a section is in
   `text-12`, weight 500, `fg-muted`; groups are separated by `border` lines;
-  and an item of a single selection ends with `check` at 16 px when it is
-  selected. While the change that an item started is in progress, the item is
-  busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
+  an item of a single selection ends with `check` at 16 px when it is
+  selected; and an item that leads to another site, such as Guides (Account
+  Menu), ends with `external-link` at 16 px in `fg-muted`, and its accessible
+  name follows `docs/behaviors.md` (Links to Other Sites, Marked). While the
+  change that an item started is in progress, the item is busy:
+  `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
   icon, as on a busy button (Buttons and Links), or, in an item of a single
   selection, of its `check` at its end (`docs/behaviors.md`, Loading). An
   item that holds the focus keeps it while it is busy, and assistive

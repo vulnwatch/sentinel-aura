@@ -15,9 +15,11 @@ Please report unacceptable behavior to security@suse.com.
 ### Reporting Bugs
 
 1. Check the [existing issues](https://github.com/vulnwatch/sentinel-aura/issues) to avoid duplicates
-2. Report a bug of the backend or of the API in
-   [Sentinel](https://github.com/vulnwatch/sentinel/issues) instead, and a
-   vulnerability as described in [SECURITY.md](SECURITY.md)
+2. Report here a problem that you meet in the interface, also when it may
+   come from the backend or the API: the maintainers move it to
+   [Sentinel](https://github.com/vulnwatch/sentinel/issues) when needed.
+   Report a bug that you meet through the API alone in Sentinel instead, and
+   a vulnerability as described in [SECURITY.md](SECURITY.md)
 3. Open a new issue with the Bug Report form: steps to reproduce, expected
    behavior, and actual behavior
 4. Add the Sentinel Aura and Sentinel versions, and your browser and its

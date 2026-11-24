@@ -5,4 +5,4 @@ contact_links:
     about: Do not open a public issue for security vulnerabilities. See SECURITY.md for the responsible disclosure process.
   - name: Report a Sentinel Backend or API Issue
     url: https://github.com/vulnwatch/sentinel/issues
-    about: Bugs and feature requests for the Sentinel backend and its REST API belong to the Sentinel repository.
+    about: Bugs met through the REST API alone, and feature requests for the Sentinel backend and its REST API, belong to the Sentinel repository. Report a problem met in the web interface with the Bug Report form, whatever its origin.

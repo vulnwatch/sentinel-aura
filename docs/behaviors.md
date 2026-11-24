@@ -408,8 +408,15 @@ returns, whatever Sentinel guarantees for its field:
   link, such as one in a CVE description or in the title of a reference.
 - **Composed addresses.** A screen document can define an address of another
   site that the UI composes from a value of the API, with its fixed origin,
-  such as the page of a CVE on NVD from its CVE ID. Such a link follows this
-  section as an address that the API returns does.
+  such as the page of a CVE on NVD from its CVE ID, and so can the foundation
+  document of a part of the UI that has no screen document, such as the
+  release of a version in About Sentinel (`docs/screen-map.md`, Sidebar),
+  which the UI also composes from its own version, or the form of a report
+  of a problem, which it composes from both versions. Such a link follows
+  this section as an address that the API returns does.
+- **Fixed addresses.** A foundation document can state a fixed address of
+  another site, such as that of Guides (`docs/screen-map.md`, Sidebar). A
+  link to it follows this section as an address that the API returns does.
 - **The same tab.** A link opens in the same tab, as the browser opens a
   link: back returns to the screen, whose state is in its URL
   (`docs/screen-map.md`, Browser History), and the browser's own commands open
@@ -845,11 +852,11 @@ also meets these requirements, which they cannot check:
   priority (`docs/design-system.md`, Priority), takes the focus itself, and so
   do a popover that shows the details of a record before its actions
   (`docs/design-system.md`, Menus, Popovers, and Tooltips) and a dialog that
-  shows records without a field, whose only button closes it, such as the
-  access grants of a Ticket for a user who cannot change them, so that they
-  are read first. Escape closes it, and the focus then returns to the element
-  that opened it, or follows Focus after an action when that element is
-  gone.
+  shows records or values without a field, whose only button closes it, such
+  as the access grants of a Ticket for a user who cannot change them or About
+  Sentinel (`docs/screen-map.md`, Sidebar), so that they are read first.
+  Escape closes it, and the focus then returns to the element that opened
+  it, or follows Focus after an action when that element is gone.
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus, and so is the end of an operation that a screen follows, once a

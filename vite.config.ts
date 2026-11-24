@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -93,8 +94,31 @@ function themeScript(): Plugin {
   };
 }
 
+// The version of the UI, the version of package.json, which release-please
+// sets (docs/deployment.md, Release Process, Versions). The build, the
+// development server, and the tests replace SENTINEL_AURA_VERSION with it,
+// as a string, and About Sentinel shows it (src/components/about-dialog.tsx;
+// docs/screen-map.md, Sidebar). The build fails when it is not a version such
+// as 1.2.3, which the address of its release could not hold.
+function uiVersion(): string {
+  const manifest: unknown = JSON.parse(
+    readFileSync(resolve(import.meta.dirname, "package.json"), "utf8"),
+  );
+  const version =
+    typeof manifest === "object" && manifest !== null && "version" in manifest
+      ? manifest.version
+      : undefined;
+  if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error(
+      `package.json declares no version such as 1.2.3: ${String(version)}`,
+    );
+  }
+  return version;
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), themeScript()],
+  define: { SENTINEL_AURA_VERSION: JSON.stringify(uiVersion()) },
   // Vite pre-bundles the dependencies that the entry document loads, for the
   // development server and for the tests, to which Vitest adds those of the
   // test files. src/main.test.ts imports the entry point under a URL that Vite

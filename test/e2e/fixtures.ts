@@ -220,6 +220,18 @@ const DATE_TIMES_STYLE = `
   }
 `;
 
+// The versions that the page shows, in About Sentinel, which the reference
+// screenshots mask: they change from one release of the UI, or of Sentinel,
+// to the next (docs/conventions.md, End-to-End Tests). Each is masked with
+// the value of the description list that holds it, whose width the dialog
+// fixes, so that its mask does not change with the width of the version
+// (docs/design-system.md, Account Menu).
+function versions(page: Page): Locator {
+  return page
+    .getByRole("dialog", { name: "About Sentinel" })
+    .getByRole("definition");
+}
+
 // Runs an action while the dates of the page have their fixed widths
 // (DATE_TIMES_STYLE), and then gives the page back its own style, so that the
 // test continues, and its checks run, on the page as the UI renders it. The
@@ -251,8 +263,8 @@ export async function withFixedDates<T>(
 // unless it matches (docs/conventions.md, End-to-End Tests). Every reference
 // is taken with it, so that each masks the avatars and the dates, which change
 // from one load of the dataset to the next, with the dates at their fixed
-// widths, and the identifiers of the requests, which change with each
-// request.
+// widths, the identifiers of the requests, which change with each request,
+// and the versions, which change with each release.
 export async function expectScreenshot(page: Page, name: string) {
   await withFixedDates(page, async () => {
     // A date that a popover open above it covers whole, such as one of the
@@ -289,6 +301,7 @@ export async function expectScreenshot(page: Page, name: string) {
       mask: [
         avatars(page),
         requestIds(page),
+        versions(page),
         ...shown.map((index) => dates.nth(index)),
       ],
     });

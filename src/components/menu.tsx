@@ -1,4 +1,9 @@
-import { Check, LoaderCircle, type LucideIcon } from "lucide-react";
+import {
+  Check,
+  ExternalLink,
+  LoaderCircle,
+  type LucideIcon,
+} from "lucide-react";
 import {
   MenuItem,
   Popover,
@@ -7,6 +12,7 @@ import {
 } from "react-aria-components";
 import type { ReactNode } from "react";
 import { INSIDE_FOCUS_RING } from "./focus-ring";
+import { OTHER_SITE, WebAddress } from "./web-link";
 
 // The parts of a menu (docs/design-system.md, Menus, Popovers, and Tooltips),
 // which the menus of the screens share, such as the account menu and the
@@ -80,7 +86,13 @@ interface MenuActionProps extends Omit<
 }
 
 // An item of a menu: its icon at 16 px in fg-muted before its label, and
-// check at its end when it is the selected item of a single selection.
+// check at its end when it is the selected item of a single selection. An
+// item that leads to another site, whose address is a web address on another
+// origin, which the browser loads (src/components/router-links.tsx), ends
+// with external-link at 16 px in fg-muted, hidden from assistive
+// technologies, which read "(another site)" after its label
+// (docs/behaviors.md, Links to Other Sites; docs/design-system.md, Menus,
+// Popovers, and Tooltips).
 export function MenuAction({
   icon: Icon,
   busy,
@@ -88,6 +100,7 @@ export function MenuAction({
   children,
   ...props
 }: MenuActionProps) {
+  const otherSite = props.href instanceof WebAddress && props.href.isOtherSite;
   return (
     <MenuItem
       {...props}
@@ -104,6 +117,7 @@ export function MenuAction({
           )}
           <Text slot="label" className="min-w-0 flex-1">
             {children}
+            {otherSite && <span className="sr-only">{OTHER_SITE}</span>}
           </Text>
           {/* Always there, so that React Aria links it to the item, and
               empty unless the item is busy. */}
@@ -111,6 +125,12 @@ export function MenuAction({
             {busy}
           </Text>
           {isSelected && <Check aria-hidden className="size-4 shrink-0" />}
+          {otherSite && (
+            <ExternalLink
+              aria-hidden
+              className="size-4 shrink-0 text-fg-muted"
+            />
+          )}
         </>
       )}
     </MenuItem>

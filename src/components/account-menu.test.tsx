@@ -291,6 +291,8 @@ describe("the account menu", () => {
     expect(items.map((item) => item.element().textContent)).toEqual([
       "Account",
       "API keys",
+      "Guides (another site)",
+      "About Sentinel",
       "Sign out",
     ]);
     expect(
@@ -379,6 +381,49 @@ describe("the account menu", () => {
     await expect
       .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
       .toHaveFocus();
+  });
+
+  test("leads to Guides, the tutorials of Sentinel on another site, which the browser loads, marked at its end", async () => {
+    stubSession();
+    const { router, screen } = await renderApp();
+    const menu = await openMenu(screen);
+    const item = menu.getByRole("menuitem", {
+      name: "Guides (another site)",
+      exact: true,
+    });
+
+    await expect
+      .element(item)
+      .toHaveAttribute("href", "https://howto.sentinel.suse.de/");
+    // external-link at its end, 16 px, in fg-muted of the light theme, after
+    // book-open, both hidden from assistive technologies.
+    const icons = [...item.element().querySelectorAll("svg")];
+    expect(icons).toHaveLength(2);
+    const mark = icons[1];
+    const box = item.element().getBoundingClientRect();
+    expect(mark?.getAttribute("aria-hidden")).toBe("true");
+    expect(mark?.getBoundingClientRect().width).toBe(16);
+    expect(mark?.getBoundingClientRect().right).toBe(box.right - 10);
+    expect(mark === undefined ? "" : getComputedStyle(mark).color).toBe(
+      "rgb(89, 99, 110)",
+    );
+    // The browser loads it, not the router: nothing prevents the default
+    // action of the click, which the test then prevents, so that the page
+    // stays. The listener is on the body, in which React renders the menu,
+    // after React's own, which stop the click from reaching further.
+    let loads = false;
+    const listener = (event: MouseEvent) => {
+      loads = !event.defaultPrevented;
+      event.preventDefault();
+    };
+    document.body.addEventListener("click", listener);
+    try {
+      await item.click();
+    } finally {
+      document.body.removeEventListener("click", listener);
+    }
+    expect(loads).toBe(true);
+    expect(router.state.location.pathname).toBe("/fictional/path");
   });
 
   test("marks the theme System as selected by default, and with a stored value that it does not list", async () => {
@@ -520,9 +565,22 @@ describe("Sign out", () => {
     expect(requestsTo(fetch, LOGOUT)).toBe(1);
     // The other items are unavailable meanwhile, and the arrow keys pass
     // over them.
-    for (const name of ["Account", "API keys", "System", "Light", "Dark"]) {
+    for (const name of [
+      "Account",
+      "API keys",
+      "System",
+      "Light",
+      "Dark",
+      "Guides (another site)",
+      "About Sentinel",
+    ]) {
       const other = menu.getByRole(
-        name === "Account" || name === "API keys"
+        [
+          "Account",
+          "API keys",
+          "Guides (another site)",
+          "About Sentinel",
+        ].includes(name)
           ? "menuitem"
           : "menuitemradio",
         { name, exact: true },

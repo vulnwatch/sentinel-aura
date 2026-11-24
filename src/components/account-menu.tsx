@@ -1,5 +1,7 @@
 import {
+  BookOpen,
   ChevronsUpDown,
+  Info,
   KeyRound,
   LogOut,
   Monitor,
@@ -8,6 +10,7 @@ import {
   User as UserIcon,
   type LucideIcon,
 } from "lucide-react";
+import { useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   Button as AriaButton,
@@ -24,12 +27,14 @@ import type { CurrentUserData } from "../api/generated/model";
 import { usePreference } from "../preferences";
 import { useSignOut } from "../session-gate";
 import { themePreference, type ThemePreference } from "../theme";
+import { AboutDialog } from "./about-dialog";
 import { Avatar } from "./avatar";
 import { FOCUS_RING } from "./focus-ring";
 import { MENU_SEPARATOR, MenuAction as Item } from "./menu";
 import { useShowMessage } from "./message-area";
 import { Tooltip } from "./tooltip";
 import { compactName, StackedUser, User } from "./user";
+import { WebAddress } from "./web-link";
 
 // The account button of the sidebar and the account menu that it opens
 // (docs/screen-map.md, Sidebar; docs/design-system.md, Sidebar; Account
@@ -47,6 +52,10 @@ const THEMES: readonly {
   { id: "light", name: "Light", icon: Sun },
   { id: "dark", name: "Dark", icon: Moon },
 ];
+
+// The tutorials of Sentinel, which Guides leads to (docs/screen-map.md,
+// Sidebar).
+const GUIDES = WebAddress.fixed("https://howto.sentinel.suse.de/");
 
 function isThemePreference(key: unknown): key is ThemePreference {
   return THEMES.some(({ id }) => id === key);
@@ -116,18 +125,29 @@ interface AccountMenuProps {
 // named by the button. The menu starts with the signed-in user, with the
 // username always on a line of its own, and the name and the username wrap
 // rather than end with an ellipsis, so that the menu shows whole the name
-// that the button cuts. Its items follow in three groups: Account and its API
+// that the button cuts. Its items follow in four groups: Account and its API
 // keys, the screens of the user's own account; the theme, which applies at
-// once in every open tab; and Sign out, which asks for no confirmation and
-// stays in the open menu, busy, until it ends, the other items unavailable
-// meanwhile. When it fails, the menu closes
-// and the message area shows the message of its status, which also closes the
+// once in every open tab; Guides, which leads to the tutorials on another
+// site, and About Sentinel, which opens its dialog once the menu has closed
+// (src/components/about-dialog.tsx); and Sign out, which asks
+// for no confirmation and stays in the open menu, busy, until it ends, the
+// other items unavailable meanwhile. When it fails, the menu closes and the
+// message area shows the message of its status, which also closes the
 // sidebar opened over the content (docs/behaviors.md, Sign-out; Default
 // Presentation by Status).
 export function AccountMenu({ user, compact }: AccountMenuProps) {
   const showMessage = useShowMessage();
   const theme = usePreference(themePreference);
   const [isOpen, setOpen] = useState(false);
+  // The URL at which About Sentinel opened: a navigation closes it, as it
+  // closes the sidebar opened over the content (docs/screen-map.md,
+  // Sidebar), and the focus follows the navigation.
+  const href = useRouterState({ select: (state) => state.location.href });
+  const [aboutOpenedAt, setAboutOpenedAt] = useState<string>();
+  const aboutOpen = aboutOpenedAt === href;
+  if (aboutOpenedAt !== undefined && !aboutOpen) {
+    setAboutOpenedAt(undefined);
+  }
   // A failure of the UI itself, which the root route shows
   // (src/routes/root.tsx).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
@@ -150,76 +170,116 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
     throw uiFailure.error;
   }
 
+  // The dialog returns the focus, as it closes, to the element that has it
+  // as it opens, so it opens once the menu has closed and React Aria has
+  // returned the focus to the account button, in a later frame in some
+  // browsers, rather than on the item, which leaves the page with the menu.
+  const openAbout = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setAboutOpenedAt(href);
+      });
+    });
+  };
+
   return (
-    <MenuTrigger
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        // The menu cannot be closed while Sign out is in progress
-        // (docs/behaviors.md, Loading).
-        if (!signOut.busy) {
-          setOpen(open);
-        }
-      }}
-    >
-      <AccountTrigger user={user} compact={compact} />
-      <Popover
-        placement="top start"
-        offset={4}
-        className="w-64 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
+    <>
+      <MenuTrigger
+        isOpen={isOpen}
+        onOpenChange={(open) => {
+          // The menu cannot be closed while Sign out is in progress
+          // (docs/behaviors.md, Loading).
+          if (!signOut.busy) {
+            setOpen(open);
+          }
+        }}
       >
-        <div className="px-2.5 py-2 font-semibold">
-          <StackedUser user={user} size="medium" />
-        </div>
-        <div className={SEPARATOR} />
-        <Menu className="outline-none">
-          <MenuSection>
-            <Item
-              id="account"
-              icon={UserIcon}
-              href="/account"
-              unavailable={signOut.busy}
-            >
-              Account
-            </Item>
-            <Item
-              id="api-keys"
-              icon={KeyRound}
-              href="/account/api-keys"
-              unavailable={signOut.busy}
-            >
-              API keys
-            </Item>
-          </MenuSection>
-          <Separator className={SEPARATOR} />
-          <MenuSection
-            selectionMode="single"
-            disallowEmptySelection
-            selectedKeys={[theme]}
-            onSelectionChange={selectTheme}
-          >
-            <Header className="px-2.5 pt-1 pb-0.5 text-12 font-medium text-fg-muted">
-              Theme
-            </Header>
-            {THEMES.map(({ id, name, icon }) => (
-              <Item key={id} id={id} icon={icon} unavailable={signOut.busy}>
-                {name}
+        <AccountTrigger user={user} compact={compact} />
+        <Popover
+          placement="top start"
+          offset={4}
+          className="w-64 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
+        >
+          <div className="px-2.5 py-2 font-semibold">
+            <StackedUser user={user} size="medium" />
+          </div>
+          <div className={SEPARATOR} />
+          <Menu className="outline-none">
+            <MenuSection>
+              <Item
+                id="account"
+                icon={UserIcon}
+                href="/account"
+                unavailable={signOut.busy}
+              >
+                Account
               </Item>
-            ))}
-          </MenuSection>
-          <Separator className={SEPARATOR} />
-          <MenuSection>
-            <Item
-              id="sign-out"
-              icon={LogOut}
-              busy={signOut.busy ? "Signing out" : undefined}
-              shouldCloseOnSelect={false}
-              onAction={signOut.start}
+              <Item
+                id="api-keys"
+                icon={KeyRound}
+                href="/account/api-keys"
+                unavailable={signOut.busy}
+              >
+                API keys
+              </Item>
+            </MenuSection>
+            <Separator className={SEPARATOR} />
+            <MenuSection
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={[theme]}
+              onSelectionChange={selectTheme}
             >
-              Sign out
-            </Item>
-          </MenuSection>
-        </Menu>
-      </Popover>
-    </MenuTrigger>
+              <Header className="px-2.5 pt-1 pb-0.5 text-12 font-medium text-fg-muted">
+                Theme
+              </Header>
+              {THEMES.map(({ id, name, icon }) => (
+                <Item key={id} id={id} icon={icon} unavailable={signOut.busy}>
+                  {name}
+                </Item>
+              ))}
+            </MenuSection>
+            <Separator className={SEPARATOR} />
+            <MenuSection>
+              <Item
+                id="guides"
+                icon={BookOpen}
+                href={GUIDES}
+                unavailable={signOut.busy}
+              >
+                Guides
+              </Item>
+              <Item
+                id="about"
+                icon={Info}
+                unavailable={signOut.busy}
+                onAction={openAbout}
+              >
+                About Sentinel
+              </Item>
+            </MenuSection>
+            <Separator className={SEPARATOR} />
+            <MenuSection>
+              <Item
+                id="sign-out"
+                icon={LogOut}
+                busy={signOut.busy ? "Signing out" : undefined}
+                shouldCloseOnSelect={false}
+                onAction={signOut.start}
+              >
+                Sign out
+              </Item>
+            </MenuSection>
+          </Menu>
+        </Popover>
+      </MenuTrigger>
+      {aboutOpen && (
+        <AboutDialog
+          onClose={() => {
+            setAboutOpenedAt(undefined);
+          }}
+        />
+      )}
+    </>
   );
 }

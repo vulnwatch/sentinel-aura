@@ -210,7 +210,8 @@ holds, from top to bottom:
 - the button that collapses or expands the sidebar; and
 - the account menu, which shows the signed-in user, leads to Account and to
   its API keys (Areas and Screens), offers the choice of theme
-  (`docs/behaviors.md`, Preferences), and offers Sign out.
+  (`docs/behaviors.md`, Preferences), leads to Guides and opens About
+  Sentinel (below), and offers Sign out.
 
 The My packages entry shows the number of the signed-in user's pending work,
 the tracks that wait for the user's submission (Sentinel
@@ -228,6 +229,68 @@ and with every read of the pending work of My packages, so that the entry is
 as current as that list. A failed read follows `docs/behaviors.md` (Where
 Errors Appear).
 
+About Sentinel, in the account menu, opens a dialog with the versions that a
+user states when they report a problem, together with the reference of the
+failing request (`docs/behaviors.md`, Default Presentation by Status;
+Sentinel `docs/features/platform/platform-version.md`, Purpose), for every
+user:
+
+- the version of Sentinel Aura, which the UI is built with
+  (`docs/deployment.md`, Versions); and
+- the version of Sentinel, read from Get Platform Version,
+  `GET /api/v1/version`, each time the dialog opens, and not again by itself
+  while it stays open, also when the tab returns to the foreground. The UI
+  cannot derive it from the pinned Sentinel version, since a host can run
+  any later release that the UI supports, and while a host is upgraded two
+  reads can return different versions (Sentinel
+  `docs/features/platform/platform-version.md`, Purpose; Get Platform
+  Version). A failed read shows in its place, as the read of a part does,
+  with Try again where the failure offers it (`docs/behaviors.md`, Where
+  Errors Appear), and the version of Sentinel Aura stays shown.
+
+Each version is a link to the GitHub Release of its repository,
+`https://github.com/vulnwatch/sentinel-aura/releases/tag/v<version>` and
+`https://github.com/vulnwatch/sentinel/releases/tag/v<version>`, addresses
+that the UI composes with the version in their last path segment
+(`docs/behaviors.md`, Links to Other Sites, Composed addresses). The notes of
+a release of the UI also state its supported Sentinel versions
+(`docs/deployment.md`, Supported Sentinel Versions).
+
+About Sentinel also offers Report a problem, a link to the Bug Report form of
+Sentinel Aura,
+`https://github.com/vulnwatch/sentinel-aura/issues/new?template=bug-report.yml`,
+with the version of Sentinel Aura as the value of the parameter `version` and
+the version of Sentinel as that of `sentinel-version`, each encoded as a
+component (`docs/behaviors.md`, Links to Other Sites, Composed addresses):
+GitHub fills in a field of the form from the parameter that its `id` names,
+so the report carries both versions without the user copying them. Until the
+version of Sentinel has arrived, and when its read failed, the address holds
+the version of Sentinel Aura alone. One link serves both repositories: a user
+cannot tell whether a fault lies in the UI or in Sentinel, and the
+maintainers move to Sentinel a problem met in the interface that comes from
+the backend or the API (`CONTRIBUTING.md`, Reporting Bugs). The tracker is
+public, and Sentinel holds data under embargo; and the form opens in the same
+tab (`docs/behaviors.md`, Links to Other Sites, The same tab), where the
+reference of the failing request, which only the message of its error shows
+(`docs/behaviors.md`, Default Presentation by Status), is lost unless the
+user copied it. So the link is described, below it and for assistive
+technologies, by "The issue tracker is public: leave out confidential data,
+such as embargoed CVEs. Copy the reference of an error before you open the
+form."
+
+Guides, in the account menu, leads to the tutorials of Sentinel, at the fixed
+address `https://howto.sentinel.suse.de/`, a link to another site
+(`docs/behaviors.md`, Links to Other Sites).
+
+A navigation closes About Sentinel, as it closes the sidebar opened over the
+content (below), and so does the closing of that sidebar when About Sentinel
+opened from it; it does not open again when the user returns to the URL at
+which it opened. The focus then moves as the navigation, or the closing of
+the sidebar, moves it; after a navigation that keeps the screen, which leaves
+the focus where it was (`docs/behaviors.md`, Accessibility, Focus after a
+navigation), it returns to the account button, as when the dialog closes, or
+to the expand button when that button closed with the sidebar.
+
 The sidebar is expanded, with the name of each entry, or collapsed to icons,
 each of which shows its name on hover and on keyboard focus
 (`docs/design-system.md`, Sidebar). From a window width of 1024 CSS pixels it
@@ -237,13 +300,14 @@ expand button opens the expanded sidebar over the content, as a dialog that
 takes the focus. Escape, its close button, or a click outside it closes it
 and returns the focus to the expand button, and so does a new message in the
 message area, such as the failure of a Sign out from it, so that the message
-shows (`docs/behaviors.md`, Outcome of a Change). A navigation from it, such
-as an entry, the search, or an item of the account menu, closes it, also to
-the URL that shows, and the focus follows the navigation
-(`docs/behaviors.md`, Accessibility). Opening it changes no preference, and a
-window that grows past that width closes it, with the focus on the screen's
-heading. Once it closes, in any of these ways, only the expand button opens
-it again.
+shows (`docs/behaviors.md`, Outcome of a Change). A navigation, such as one
+from it, through an entry, the search, or an item of the account menu, or
+back and forward, closes it, also to the URL that shows, and the focus
+follows the navigation (`docs/behaviors.md`, Accessibility), or returns to
+the expand button after a navigation that keeps the screen, which leaves the
+focus where it was. Opening it changes no preference, and a window that
+grows past that width closes it, with the focus on the screen's heading.
+Once it closes, in any of these ways, only the expand button opens it again.
 
 An entry is marked as current while the path of the URL is the path under
 which every screen of its area lies (Areas and Screens), `/tickets`,

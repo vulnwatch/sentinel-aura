@@ -403,21 +403,27 @@ that needs it; content of another kind needs a new row first.
 ### Links from the API
 
 - A link to an address that the API returns, or to an address of another
-  site that the UI composes from a value of the API (`docs/behaviors.md`,
-  Links to Other Sites), is built only by one shared component, which
-  applies that section: the check of the address, the mark of a link to
-  another site, and the loading of the address by the browser rather than by
-  the router. The link leads to, and where its text is the address shows,
-  the URL that the check parsed, never the value as received, so that the
-  check and the browser read the same address. A composed address takes the
-  fixed origin that its screen document states, and holds the value of the
-  API, or the part of it that the screen document names, only encoded,
-  within a path segment or as the value of a query parameter, each encoded
-  as a component, or as the fragment, where the screen document names it,
-  encoded as the URL parser encodes a fragment, which keeps such characters
-  as `:` and `/`. No other code
-  passes a value of the API as the address of a link or of a navigation,
-  such as an `href`, `window.location`, or `window.open`.
+  site that the UI composes from a value of the API or from its own version,
+  or to a fixed address of another site that a foundation document states
+  (`docs/behaviors.md`, Links to Other Sites), is built only by one shared
+  component, which applies that section: the check of the address, the mark
+  of a link to another site, and the loading of the address by the browser
+  rather than by the router. The link leads to, and where its text is the
+  address shows, the URL that the check parsed, never the value as received,
+  so that the check and the browser read the same address. An item of a
+  menu that leads to such an address is the shared menu item, which takes the
+  address as that component checks it, is loaded by the browser in the same
+  way, and shows the mark of an item that leads to another site
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips). A composed
+  address takes the fixed origin that the document that defines it states,
+  its screen document or a foundation document (`docs/behaviors.md`, Links
+  to Other Sites, Composed addresses), and holds the value, or the part of it
+  that the document names, only encoded, within a path segment or as the
+  value of a query parameter, each encoded as a component, or as the
+  fragment, where the document names it, encoded as the URL parser encodes a
+  fragment, which keeps such characters as `:` and `/`. No other code passes
+  a value of the API as the address of a link or of a navigation, such as an
+  `href`, `window.location`, or `window.open`.
 - No code looks for addresses inside a text of the API to turn them into
   links (`docs/behaviors.md`, Links to Other Sites).
 - The Content Security Policy blocks an address with the scheme `javascript`
@@ -577,15 +583,19 @@ that needs it; content of another kind needs a new row first.
   run to the next, such as a date that the dataset computes from the instant
   of its load (Sentinel `docs/features/platform/example-dataset.md`, Time
   Base) or the generated avatar of a user, whose `id` the dataset does not
-  fix (same document, Users), is masked. Such a region also keeps the same
-  size in every run, so that neither its mask nor what follows it moves: the
-  text of a date changes in width with the day and the month of the run, so
-  each date takes, for the screenshot alone, a fixed width of at least its
-  widest text. `expectScreenshot` of `fixtures.ts` takes every reference, with
-  these masks and widths. The widths come from a stylesheet of the CSS
-  object model, which the policy allows (`docs/architecture.md`, Security
-  Headers), and the page returns to its own style once the screenshot is
-  taken.
+  fix (same document, Users), is masked, and so is a region that changes
+  from one release to the next, such as a version in About Sentinel
+  (`docs/screen-map.md`, Sidebar), so that a release pull request or a new
+  pinned Sentinel version changes no reference. Such a region also keeps the
+  same size in every run, so that neither its mask nor what follows it
+  moves: the text of a date changes in width with the day and the month of
+  the run, so each date takes, for the screenshot alone, a fixed width of at
+  least its widest text, and a version is masked with the value of its
+  description list, whose width does not depend on it. `expectScreenshot` of
+  `fixtures.ts` takes every reference, with these masks and widths. The
+  widths come from a stylesheet of the CSS object model, which the policy
+  allows (`docs/architecture.md`, Security Headers), and the page returns to
+  its own style once the screenshot is taken.
 - A test that changes no data that a screen shows takes the references of
   the dataset as loaded; its own sign-in, which changes only the sessions and
   the time of last sign-in of its user, is not such a change. It runs before
