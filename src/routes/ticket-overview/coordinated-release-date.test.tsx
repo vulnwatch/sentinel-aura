@@ -649,6 +649,23 @@ describe("the dialog of the Coordinated Release Date", () => {
     expect(boxOf(save).right).toBeGreaterThan(boxOf(cancel).right);
   });
 
+  test("spans the description of Coordinated Release Date, as what the dialog says, from its start to the end of its buttons", async () => {
+    showingRelease();
+    const { screen } = await renderTicket();
+
+    const dialog = await openRelease(screen);
+
+    // To within the rounding of a browser.
+    const intro = boxOf(dialog.getByText(INTRO_CONFIDENTIAL, { exact: true }));
+    const description = boxOf(descriptionOf(dialog, zoneWithUtc(SET)));
+    expect(description.left).toBeCloseTo(intro.left, 0);
+    expect(description.right).toBeCloseTo(intro.right, 0);
+    expect(description.right).toBeCloseTo(
+      boxOf(buttonOf(dialog, "Save")).right,
+      0,
+    );
+  });
+
   test("says of a Ticket no longer confidential that the date still decides its deadlines and can't be set again once removed", async () => {
     showingRelease({ is_confidential: false });
     const { screen } = await renderTicket();

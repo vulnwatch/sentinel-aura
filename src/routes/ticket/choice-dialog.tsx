@@ -235,7 +235,7 @@ export function ChoiceDialog<T extends string>({
           validationErrors={
             failure.field === undefined ? undefined : { [name]: failure.field }
           }
-          className="mt-4 flex max-w-112 flex-col gap-3"
+          className="mt-4 flex flex-col gap-3"
         >
           {failure.form !== undefined && (
             <DialogErrorMessage error={failure.form} />

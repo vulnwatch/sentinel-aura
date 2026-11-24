@@ -406,20 +406,25 @@ describe("the dialog of Mark as duplicate…", () => {
     expect(boxOf(dialog).width).toBe(560);
   });
 
-  test("keeps Original and its options at most 448 px wide, as a field of a form is, while what the dialog says takes its whole width", async () => {
+  test("spans Original and its description, as what the dialog says, to the end of its buttons, the description on one line, and keeps the options within the field", async () => {
     showingMarkable();
     const { screen } = await renderTicket();
     const dialog = await openMark(screen);
     const field = originalField(dialog);
 
     expect(boxOf(dialog).width).toBe(560);
-    expect(boxOf(field).width).toBe(448);
-    // The explanation spans the dialog, to the end of its buttons, beyond
-    // the end of the field, to within the rounding of a browser.
+    // The explanation, the field, and its description start and end
+    // together, at the end of the buttons, to within the rounding of a
+    // browser.
+    const end = boxOf(submitButton(dialog)).right;
     const explanation = boxOf(dialog.getByText(EXPLANATION, { exact: true }));
     expect(explanation.left).toBeCloseTo(boxOf(field).left, 0);
-    expect(explanation.right).toBeCloseTo(boxOf(submitButton(dialog)).right, 0);
-    expect(explanation.width).toBeGreaterThan(448);
+    expect(explanation.right).toBeCloseTo(end, 0);
+    expect(boxOf(field).right).toBeCloseTo(end, 0);
+    const description = boxOf(dialog.getByText(DESCRIPTION, { exact: true }));
+    expect(description.right).toBeCloseTo(end, 0);
+    // One line of text-13, 20 px high.
+    expect(description.height).toBeLessThan(40);
 
     await field.fill("21");
 

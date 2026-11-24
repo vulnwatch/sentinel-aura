@@ -1368,6 +1368,113 @@ describe("the access grants", () => {
   });
 });
 
+test("show Grant access at the end of the line of the user field, 8 px after its control and aligned with it, also with an error, ending where Close does, with the options of the field below the control, from its start", async () => {
+  stubTicket({
+    user: MANAGER,
+    ticket: () => confidentialTicket(),
+    grants: () => grantsResponse(),
+    users: () => usersPage([fictionalDirectoryUser()]),
+  });
+  const { screen } = await renderParticipants();
+  await openAccessGrants(screen);
+  const dialog = accessGrantsDialog(screen);
+  const close = dialog.getByRole("button", { name: "Close", exact: true });
+
+  // To within the rounding of a browser.
+  const expectInLine = () => {
+    const field = boxOf(userField(screen));
+    const grant = boxOf(grantButton(screen));
+    expect([field.height, grant.height]).toEqual([40, 40]);
+    expect(grant.top).toBeCloseTo(field.top, 0);
+    expect(grant.left - field.right).toBeCloseTo(8, 0);
+    expect(grant.right).toBeCloseTo(boxOf(close).right, 0);
+  };
+  expectInLine();
+  const explanation = boxOf(
+    dialog.getByText("An access grant lets a user see", { exact: false }),
+  );
+  expect(boxOf(userField(screen)).left).toBeCloseTo(explanation.left, 0);
+
+  await grantButton(screen).click();
+
+  // The error below the control leaves Grant access in line with it.
+  await expect.element(dialog.getByText("Choose a user.")).toBeVisible();
+  expectInLine();
+
+  await userField(screen).fill("an");
+
+  await expect
+    .element(screen.getByRole("option", { name: "Ana Garcia @agarcia" }))
+    .toBeVisible();
+  const options = boxOf(screen.getByRole("listbox"));
+  const field = boxOf(userField(screen));
+  expect(options.top).toBeGreaterThan(field.bottom);
+  // The list starts within the 1 px line and the 4 px of padding of its
+  // menu, which starts with the control, to within the rounding of a
+  // browser.
+  expect(options.left - field.left).toBeCloseTo(5, 0);
+});
+
+test("show Grant access at the end of the line of the user field, 8 px after its control, where the dialog is just wide enough for the line, at 464 CSS pixels", async () => {
+  // The form is then 390 px wide: wider than the 384 px from which the line
+  // shows, narrower than the field at its own width with Grant access.
+  await page.viewport(464, 800);
+  stubTicket({
+    user: MANAGER,
+    ticket: () => confidentialTicket(),
+    grants: () => grantsResponse(),
+  });
+  const { screen } = await renderParticipants();
+  await openAccessGrants(screen);
+
+  // The field narrows for Grant access, to within the rounding of a browser.
+  const field = boxOf(userField(screen));
+  const grant = boxOf(grantButton(screen));
+  const close = accessGrantsDialog(screen).getByRole("button", {
+    name: "Close",
+    exact: true,
+  });
+  expect(grant.top).toBeCloseTo(field.top, 0);
+  expect(grant.left - field.right).toBeCloseTo(8, 0);
+  expect(grant.right).toBeCloseTo(boxOf(close).right, 0);
+});
+
+test("show Grant access below the user field, at the end of the form, where the form is just narrower than 384 px, at 456 CSS pixels", async () => {
+  // The form is then 382 px wide.
+  await page.viewport(456, 800);
+  stubTicket({
+    user: MANAGER,
+    ticket: () => confidentialTicket(),
+    grants: () => grantsResponse(),
+  });
+  const { screen } = await renderParticipants();
+  await openAccessGrants(screen);
+
+  const field = boxOf(userField(screen));
+  const grant = boxOf(grantButton(screen));
+  // 12 px below the field, to within the rounding of a browser.
+  expect(grant.top).toBeCloseTo(field.bottom + 12, 0);
+  expect(grant.right).toBeCloseTo(field.right, 0);
+});
+
+test("show Grant access below the user field, at the end of the form, where the dialog is narrow, at 320 CSS pixels", async () => {
+  await page.viewport(320, 800);
+  stubTicket({
+    user: MANAGER,
+    ticket: () => confidentialTicket(),
+    grants: () => grantsResponse(),
+  });
+  const { screen } = await renderParticipants();
+  await openAccessGrants(screen);
+
+  const field = boxOf(userField(screen));
+  const grant = boxOf(grantButton(screen));
+  // 12 px below the field, to within the rounding of a browser.
+  expect(grant.top).toBeCloseTo(field.bottom + 12, 0);
+  expect(grant.right).toBeCloseTo(field.right, 0);
+  expect(grant.left).toBeGreaterThan(field.left);
+});
+
 test("show Revoke access below its user where the dialog is narrow, at 320 CSS pixels", async () => {
   await page.viewport(320, 800);
   stubTicket({

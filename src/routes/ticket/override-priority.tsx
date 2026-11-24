@@ -107,7 +107,7 @@ export function OverridePriorityDialog({
       title={`Override the priority of ${ticketId}`}
       intro={`An override replaces the automatic priority of ${ticketId} until it is cleared. Sentinel keeps calculating the automatic priority.`}
       beforeForm={
-        <div className="mt-4 max-w-112 rounded-lg border border-border px-4 py-3 text-14">
+        <div className="mt-4 rounded-lg border border-border px-4 py-3 text-14">
           <PriorityBasis ticket={ticket} withAutomatic headingLevel={4} />
         </div>
       }

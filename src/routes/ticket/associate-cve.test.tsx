@@ -235,6 +235,20 @@ describe("the dialog of Associate CVE…", () => {
     ]);
     expect(boxOf(dialog).width).toBe(560);
   });
+
+  test("spans CVE ID, as what the dialog says, from its start to the end of its buttons", async () => {
+    showingAssociable();
+    const { screen } = await renderTicket();
+
+    const dialog = await openAssociate(screen);
+
+    // To within the rounding of a browser.
+    const explanation = boxOf(dialog.getByText(EXPLANATION, { exact: true }));
+    const field = boxOf(cveField(dialog));
+    expect(field.left).toBeCloseTo(explanation.left, 0);
+    expect(field.right).toBeCloseTo(explanation.right, 0);
+    expect(field.right).toBeCloseTo(boxOf(associateButton(dialog)).right, 0);
+  });
 });
 
 describe("the check of Associate CVE…", () => {

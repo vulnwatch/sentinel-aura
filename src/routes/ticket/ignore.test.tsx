@@ -285,6 +285,20 @@ describe("the dialog of Ignore…", () => {
     expect(boxOf(dialog).width).toBe(560);
   });
 
+  test("spans Reason, as what the dialog says, from its start to the end of its buttons", async () => {
+    showingIgnorable();
+    const { screen } = await renderTicket();
+
+    const dialog = await openIgnore(screen);
+
+    // To within the rounding of a browser.
+    const explanation = boxOf(dialog.getByText(EXPLANATION, { exact: true }));
+    const group = boxOf(reasonGroup(dialog));
+    expect(group.left).toBeCloseTo(explanation.left, 0);
+    expect(group.right).toBeCloseTo(explanation.right, 0);
+    expect(group.right).toBeCloseTo(boxOf(submitButton(dialog)).right, 0);
+  });
+
   test.each<[string, string[], Partial<TicketDetail>]>([
     ["a Ticket whose CVE is published", ["Not shipped", "Other"], {}],
     ["a Ticket without a CVE", ["Not shipped", "Other"], { cve: null }],
