@@ -130,9 +130,9 @@ interface GrantAccessFormProps {
 // content of the dialog, the user field, which takes the focus as the dialog
 // opens, then Grant access, a primary button at the end of the line of the
 // field, or 12 px below it, at the end of the form, where the form is
-// narrower than 384 px (docs/design-system.md, Forms). Without a user, Grant access says "Choose
-// a user." at the field. The grant asks for no confirmation: it ends no
-// one's access. It is busy while its request is in progress. Once Sentinel
+// narrower than 384 px (docs/design-system.md, Forms). Without a user, Grant
+// access says "Choose a user." at the field. The grant asks for no
+// confirmation: it ends no one's access. It is busy while its request is in progress. Once Sentinel
 // confirms it, the field empties, the focus stays where it was, on Grant
 // access or in the field, and the dialog announces it once the read of the
 // grants after it arrives, such as "Access granted to Carol White.". The
