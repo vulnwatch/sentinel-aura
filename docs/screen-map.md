@@ -258,8 +258,12 @@ a release of the UI also state its supported Sentinel versions
 
 A navigation closes About Sentinel, as it closes the sidebar opened over the
 content (below), and so does the closing of that sidebar when About Sentinel
-opened from it; the focus then moves as the navigation, or the closing of
-the sidebar, moves it.
+opened from it; it does not open again when the user returns to the URL at
+which it opened. The focus then moves as the navigation, or the closing of
+the sidebar, moves it; after a navigation that keeps the screen, which leaves
+the focus where it was (`docs/behaviors.md`, Accessibility, Focus after a
+navigation), it returns to the account button, as when the dialog closes, or
+moves to the screen's heading when that button closed with the sidebar.
 
 The sidebar is expanded, with the name of each entry, or collapsed to icons,
 each of which shows its name on hover and on keyboard focus
@@ -270,9 +274,10 @@ expand button opens the expanded sidebar over the content, as a dialog that
 takes the focus. Escape, its close button, or a click outside it closes it
 and returns the focus to the expand button, and so does a new message in the
 message area, such as the failure of a Sign out from it, so that the message
-shows (`docs/behaviors.md`, Outcome of a Change). A navigation from it, such
-as an entry, the search, or an item of the account menu, closes it, also to
-the URL that shows, and the focus follows the navigation
+shows (`docs/behaviors.md`, Outcome of a Change). A navigation, such as one
+from it, through an entry, the search, or an item of the account menu, or
+back and forward, closes it, also to the URL that shows, and the focus
+follows the navigation
 (`docs/behaviors.md`, Accessibility). Opening it changes no preference, and a
 window that grows past that width closes it, with the focus on the screen's
 heading. Once it closes, in any of these ways, only the expand button opens

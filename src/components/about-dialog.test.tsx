@@ -84,6 +84,13 @@ async function renderApp() {
 
 type Screen = Awaited<ReturnType<typeof renderApp>>;
 
+// Waits until the browser has rendered two more frames, in which React has
+// rendered what a cause set and run the effects of that render.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
 // The account button of the sidebar beside the content, or of the sidebar
 // opened over it.
 function accountButton(screen: Screen, over = false) {
@@ -380,7 +387,14 @@ describe("About Sentinel", () => {
       "Close",
       "the keyboard",
       openAboutWithKeyboard,
-      () => userEvent.keyboard("{Tab}{Tab}{Tab}{Enter}"),
+      async () => {
+        // Past the two versions to Close.
+        await userEvent.keyboard("{Tab}{Tab}{Tab}");
+        await expect
+          .element(page.getByRole("button", { name: "Close" }))
+          .toHaveFocus();
+        await userEvent.keyboard("{Enter}");
+      },
     ],
     [
       "Escape",
@@ -431,7 +445,7 @@ describe("About Sentinel", () => {
     await expect.element(sidebar).toBeVisible();
   });
 
-  test("closes on a navigation, and the focus follows it", async () => {
+  test("closes on a navigation to another screen, with the focus on its heading, and does not open again when the user returns", async () => {
     stubSession();
     const screen = await renderApp();
     const dialog = await openAbout(screen);
@@ -446,9 +460,31 @@ describe("About Sentinel", () => {
     await expect
       .poll(() => router.state.location.pathname)
       .toBe("/fictional/start");
+
+    router.history.forward();
+
+    await expect
+      .poll(() => router.state.location.pathname)
+      .toBe("/fictional/path");
+    await nextFrames();
+    expect(
+      screen.getByRole("dialog", { name: "About Sentinel" }).query(),
+    ).toBeNull();
   });
 
-  test("closes with the sidebar over the content, which a navigation closes, and the focus follows the navigation", async () => {
+  test("closes on a navigation that keeps the screen, and returns the focus to the account button", async () => {
+    stubSession();
+    const screen = await renderApp();
+    const dialog = await openAbout(screen);
+    await expect.element(dialog).toHaveFocus();
+
+    router.history.push("/fictional/path?fictional=1");
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect.element(accountButton(screen)).toHaveFocus();
+  });
+
+  test("closes with the sidebar over the content, which a window that grows past 1024 px closes, with the focus on the screen's heading", async () => {
     await page.viewport(1023, 700);
     stubSession();
     const screen = await renderApp();
@@ -459,7 +495,7 @@ describe("About Sentinel", () => {
     const dialog = await openAbout(screen, true);
     await expect.element(dialog).toHaveFocus();
 
-    router.history.back();
+    await page.viewport(1280, 700);
 
     await expect.element(dialog).not.toBeInTheDocument();
     await expect
