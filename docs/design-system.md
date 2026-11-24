@@ -1486,8 +1486,7 @@ states it, such as that of a Ticket; the other audit logs are tables
   of a CVSS vector, can hold two columns, each as wide as its widest row, the
   first at the start and the second at the end of the form, 40 px apart at
   least, with its fields 20 px apart; where its place is narrower, they are
-  one column,
-  the first above the second.
+  one column, the first above the second.
 - Each field has its label above it, in `text-15`, weight 500; a field that
   may stay empty adds " (optional)" to its label in `fg-muted`, at weight 400.
   The control is 40 px high, on `surface`, with a `border-strong` boundary, a
