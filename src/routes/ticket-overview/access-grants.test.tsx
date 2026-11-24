@@ -1368,7 +1368,7 @@ describe("the access grants", () => {
   });
 });
 
-test("show Grant access at the end of the line of the user field, 8 px after its control and aligned with it, also with an error, ending where Close does, with the options of the field within it", async () => {
+test("show Grant access at the end of the line of the user field, 8 px after its control and aligned with it, also with an error, ending where Close does, with the options of the field below the control, from its start", async () => {
   stubTicket({
     user: MANAGER,
     ticket: () => confidentialTicket(),

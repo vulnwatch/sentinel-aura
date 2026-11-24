@@ -1480,9 +1480,8 @@ states it, such as that of a Ticket; the other audit logs are tables
 ### Forms
 
 - A form is one column, with its fields 12 px apart: at most 448 px wide in
-  a page, and in a dialog as wide as the content of the dialog, so that its
-  fields and their descriptions end where the buttons of the dialog do
-  (Dialogs). A form whose choices are many short rows, such as the metrics
+  a page, and in a dialog as wide as the content of the dialog, so that it
+  ends where the buttons of the dialog do (Dialogs). A form whose choices are many short rows, such as the metrics
   of a CVSS vector, can hold two columns, each as wide as its widest row, the
   first at the start and the second at the end of the form, 40 px apart at
   least, with its fields 20 px apart; where its place is narrower, they are
@@ -1506,9 +1505,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   that adds an item to a list that follows it, such as the form of the
   access grants of a Ticket, has its action alone, without Cancel, at the
   end of the line of the field, 8 px after the control and aligned with it,
-  the options of the field as wide as the control; where the form is
-  narrower than 384 px, the action goes below the field, at the end of the
-  form.
+  the description and the error of the field below the control; where the
+  form is narrower than 384 px, the action goes 12 px below the field, at
+  the end of the form.
 - Other controls follow the field: a multi-line field is at least 88 px
   high, three lines of text; a select is a field-like button that ends with
   `chevron-down` and opens its options as a menu below it, at least as wide
@@ -1674,9 +1673,8 @@ states it, such as that of a Ticket; the other audit logs are tables
   Sentinel (Account Menu), and 560 px for a dialog with a form, or 488 px
   for a dialog whose content is a form alone, the 448 px of a form in a page
   with the padding of the dialog, or 880 px for a dialog whose form holds
-  two columns; in each, the form takes the width of the content (Forms). A
-  dialog taller than the window scrolls its content and keeps its buttons in
-  view.
+  two columns (Forms). A dialog taller than the window scrolls its content
+  and keeps its buttons in view.
 - A dialog can show one of several forms of the same change on tabs at the
   top of its content, such as the versions of a CVSS assessment: tabs as
   those of a detail screen (Detail Screens), above a `border` line across
@@ -1700,7 +1698,7 @@ states it, such as that of a Ticket; the other audit logs are tables
   removes the value that the dialog edits, such as Remove date in the dialog
   of the Coordinated Release Date of a Ticket (`docs/screens/ticket.md`,
   Actions), starts the line as a secondary button, apart from Cancel and the
-  action.
+  action; while one of the two is in progress, the other is disabled.
 - A centered dialog has no close icon: Cancel, Close, and Escape close it.
 
 ### Messages

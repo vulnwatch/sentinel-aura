@@ -127,7 +127,7 @@ interface GrantAccessFormProps {
 // Grant access, Grant Access, POST /api/v1/tickets/{ticket_id}/access, for a
 // user who holds manage_confidentiality (Sentinel
 // docs/features/tickets/tickets.md, Grant Access): a form as wide as the
-// dialog, the user field, which takes the focus as the dialog opens, then
+// content of the dialog, the user field, which takes the focus as the dialog opens, then
 // Grant access, a primary button at the end of the line of the field, or
 // below it, at the end of the form, where the form is narrower than 384 px
 // (docs/design-system.md, Forms). Without a user, Grant access says "Choose

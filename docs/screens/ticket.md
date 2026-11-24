@@ -1970,8 +1970,7 @@ Access; Revoke Access):
   (`docs/design-system.md`, Forms; Sentinel
   `docs/features/identity/user-management.md`, List Users), in which a user
   who holds a grant shows the label "Granted" and is disabled; then Grant
-  access, a primary button, at the end of the line of the field, or below
-  the field, at the end of the form, where the form is narrower than 384 px
+  access, a primary button, which ends the line of the field
   (`docs/design-system.md`, Forms).
 - Grant access sends the `id` of the user chosen; without one, it says "Choose
   a user." at the field and sends nothing; an error of the field goes as the
