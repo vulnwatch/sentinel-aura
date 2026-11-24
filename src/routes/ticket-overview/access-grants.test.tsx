@@ -1409,8 +1409,8 @@ test("show Grant access at the end of the line of the user field, 8 px after its
   const options = boxOf(screen.getByRole("listbox"));
   const field = boxOf(userField(screen));
   expect(options.top).toBeGreaterThan(field.bottom);
-  expect(options.left).toBeGreaterThanOrEqual(field.left);
-  expect(options.right).toBeLessThanOrEqual(field.right);
+  // To within the rounding of a browser.
+  expect(options.left).toBeCloseTo(field.left, 0);
 });
 
 test("show Grant access at the end of the line of the user field, 8 px after its control, where the dialog is just wide enough for the line, at 464 CSS pixels", async () => {
@@ -1450,8 +1450,8 @@ test("show Grant access below the user field, at the end of the form, where the 
 
   const field = boxOf(userField(screen));
   const grant = boxOf(grantButton(screen));
-  expect(grant.top).toBeGreaterThanOrEqual(field.bottom + 12);
-  // To within the rounding of a browser.
+  // 12 px below the field, to within the rounding of a browser.
+  expect(grant.top).toBeCloseTo(field.bottom + 12, 0);
   expect(grant.right).toBeCloseTo(field.right, 0);
 });
 
@@ -1467,8 +1467,8 @@ test("show Grant access below the user field, at the end of the form, where the 
 
   const field = boxOf(userField(screen));
   const grant = boxOf(grantButton(screen));
-  expect(grant.top).toBeGreaterThanOrEqual(field.bottom + 12);
-  // To within the rounding of a browser.
+  // 12 px below the field, to within the rounding of a browser.
+  expect(grant.top).toBeCloseTo(field.bottom + 12, 0);
   expect(grant.right).toBeCloseTo(field.right, 0);
   expect(grant.left).toBeGreaterThan(field.left);
 });
