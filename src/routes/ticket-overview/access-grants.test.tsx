@@ -1409,8 +1409,10 @@ test("show Grant access at the end of the line of the user field, 8 px after its
   const options = boxOf(screen.getByRole("listbox"));
   const field = boxOf(userField(screen));
   expect(options.top).toBeGreaterThan(field.bottom);
-  // To within the rounding of a browser.
-  expect(options.left).toBeCloseTo(field.left, 0);
+  // The list starts within the 1 px line and the 4 px of padding of its
+  // menu, which starts with the control, to within the rounding of a
+  // browser.
+  expect(options.left - field.left).toBeCloseTo(5, 0);
 });
 
 test("show Grant access at the end of the line of the user field, 8 px after its control, where the dialog is just wide enough for the line, at 464 CSS pixels", async () => {
