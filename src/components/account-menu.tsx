@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   ChevronsUpDown,
   Info,
   KeyRound,
@@ -33,6 +34,7 @@ import { MENU_SEPARATOR, MenuAction as Item } from "./menu";
 import { useShowMessage } from "./message-area";
 import { Tooltip } from "./tooltip";
 import { compactName, StackedUser, User } from "./user";
+import { WebAddress } from "./web-link";
 
 // The account button of the sidebar and the account menu that it opens
 // (docs/screen-map.md, Sidebar; docs/design-system.md, Sidebar; Account
@@ -50,6 +52,10 @@ const THEMES: readonly {
   { id: "light", name: "Light", icon: Sun },
   { id: "dark", name: "Dark", icon: Moon },
 ];
+
+// The tutorials of Sentinel, which Guides leads to (docs/screen-map.md,
+// Sidebar).
+const GUIDES = WebAddress.fixed("https://howto.sentinel.suse.de/");
 
 function isThemePreference(key: unknown): key is ThemePreference {
   return THEMES.some(({ id }) => id === key);
@@ -121,8 +127,9 @@ interface AccountMenuProps {
 // rather than end with an ellipsis, so that the menu shows whole the name
 // that the button cuts. Its items follow in four groups: Account and its API
 // keys, the screens of the user's own account; the theme, which applies at
-// once in every open tab; About Sentinel, which opens its dialog once the
-// menu has closed (src/components/about-dialog.tsx); and Sign out, which asks
+// once in every open tab; Guides, which leads to the tutorials on another
+// site, and About Sentinel, which opens its dialog once the menu has closed
+// (src/components/about-dialog.tsx); and Sign out, which asks
 // for no confirmation and stays in the open menu, busy, until it ends, the
 // other items unavailable meanwhile. When it fails, the menu closes and the
 // message area shows the message of its status, which also closes the
@@ -234,6 +241,14 @@ export function AccountMenu({ user, compact }: AccountMenuProps) {
             </MenuSection>
             <Separator className={SEPARATOR} />
             <MenuSection>
+              <Item
+                id="guides"
+                icon={BookOpen}
+                href={GUIDES}
+                unavailable={signOut.busy}
+              >
+                Guides
+              </Item>
               <Item
                 id="about"
                 icon={Info}

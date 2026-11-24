@@ -411,8 +411,11 @@ returns, whatever Sentinel guarantees for its field:
   such as the page of a CVE on NVD from its CVE ID, and so can the foundation
   document of a part of the UI that has no screen document, such as the
   release of a version in About Sentinel (`docs/screen-map.md`, Sidebar),
-  which the UI also composes from its own version. Such a link follows this
-  section as an address that the API returns does.
+  which the UI also composes from its own version, or the form of a report
+  of a problem, which it composes from both versions. Such a link follows
+  this section as an address that the API returns does, and so does a link
+  to a fixed address of another site that a foundation document states, such
+  as Guides (`docs/screen-map.md`, Sidebar).
 - **The same tab.** A link opens in the same tab, as the browser opens a
   link: back returns to the screen, whose state is in its URL
   (`docs/screen-map.md`, Browser History), and the browser's own commands open

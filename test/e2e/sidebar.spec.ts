@@ -231,7 +231,9 @@ test.describe("the sidebar", () => {
 });
 
 test.describe("the account menu", () => {
-  test("shows the signed-in user, Account, and API keys", async ({ page }) => {
+  test("shows the signed-in user, Account, API keys, and Guides", async ({
+    page,
+  }) => {
     await signIn(page);
     await expectTicketListShown(page);
 
@@ -244,6 +246,7 @@ test.describe("the account menu", () => {
     await expect(menu.getByRole("menuitem")).toHaveText([
       "Account",
       "API keys",
+      "Guides (another site)",
       "About Sentinel",
       "Sign out",
     ]);
@@ -253,11 +256,14 @@ test.describe("the account menu", () => {
     await expect(
       menu.getByRole("menuitem", { name: "API keys" }),
     ).toHaveAttribute("href", "/account/api-keys");
+    await expect(
+      menu.getByRole("menuitem", { name: "Guides (another site)" }),
+    ).toHaveAttribute("href", "https://howto.sentinel.suse.de/");
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-list-account-menu.png");
   });
 
-  test("opens About Sentinel, with the version of the UI and the version of Sentinel, each a link to its release", async ({
+  test("opens About Sentinel, with the version of the UI and the version of Sentinel, each a link to its release, and Report a problem with both", async ({
     page,
   }) => {
     const [uiVersion, sentinelVersion] = await Promise.all([
@@ -289,6 +295,12 @@ test.describe("the account menu", () => {
     ).toHaveAttribute(
       "href",
       `https://github.com/vulnwatch/sentinel/releases/tag/v${sentinelVersion}`,
+    );
+    await expect(
+      dialog.getByRole("link", { name: "Report a problem (another site)" }),
+    ).toHaveAttribute(
+      "href",
+      `https://github.com/vulnwatch/sentinel-aura/issues/new?template=bug-report.yml&version=${uiVersion}&sentinel-version=${sentinelVersion}`,
     );
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-list-about.png");

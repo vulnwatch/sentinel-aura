@@ -210,8 +210,8 @@ holds, from top to bottom:
 - the button that collapses or expands the sidebar; and
 - the account menu, which shows the signed-in user, leads to Account and to
   its API keys (Areas and Screens), offers the choice of theme
-  (`docs/behaviors.md`, Preferences), opens About Sentinel (below), and
-  offers Sign out.
+  (`docs/behaviors.md`, Preferences), leads to Guides and opens About
+  Sentinel (below), and offers Sign out.
 
 The My packages entry shows the number of the signed-in user's pending work,
 the tracks that wait for the user's submission (Sentinel
@@ -255,6 +255,26 @@ that the UI composes with the version in their last path segment
 (`docs/behaviors.md`, Links to Other Sites, Composed addresses). The notes of
 a release of the UI also state its supported Sentinel versions
 (`docs/deployment.md`, Supported Sentinel Versions).
+
+About Sentinel also offers Report a problem, a link to the Bug Report form of
+Sentinel Aura,
+`https://github.com/vulnwatch/sentinel-aura/issues/new?template=bug-report.yml`,
+with the version of Sentinel Aura as the value of the parameter `version` and
+the version of Sentinel as that of `sentinel-version`, each encoded as a
+component (`docs/behaviors.md`, Links to Other Sites, Composed addresses):
+GitHub fills in a field of the form from the parameter that its `id` names,
+so the report carries both versions without the user copying them. Until the
+version of Sentinel has arrived, and when its read failed, the address holds
+the version of Sentinel Aura alone. One link serves both repositories: a user
+cannot tell whether a fault lies in the UI or in Sentinel, and the form of
+Sentinel Aura sends a fault of the backend or of the API to Sentinel. The
+tracker is public, and Sentinel holds data under embargo, so the link is
+described, below it and for assistive technologies, by "The issue tracker is
+public: leave out confidential data, such as embargoed CVEs."
+
+Guides, in the account menu, leads to the tutorials of Sentinel, at the fixed
+address `https://howto.sentinel.suse.de/`, a link to another site
+(`docs/behaviors.md`, Links to Other Sites).
 
 A navigation closes About Sentinel, as it closes the sidebar opened over the
 content (below), and so does the closing of that sidebar when About Sentinel

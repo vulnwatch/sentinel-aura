@@ -5,6 +5,8 @@ import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
 import { App } from "../app";
+// The Bug Report form that Report a problem opens, with its fields.
+import BUG_REPORT from "../../.github/ISSUE_TEMPLATE/bug-report.yml?raw";
 import type { PlatformVersionResponse } from "../api/generated/model";
 import { getGetPlatformVersionQueryKey } from "../api/generated/platform";
 import { createQueryClient } from "../query-client";
@@ -144,11 +146,6 @@ describe("About Sentinel", () => {
       .element(screen.getByRole("menu", { name: "John Doe" }))
       .not.toBeInTheDocument();
     expect(dialog.element().getBoundingClientRect().width).toBe(400);
-    await expect
-      .element(
-        dialog.getByText("Include these versions when you report a problem."),
-      )
-      .toBeVisible();
     // Close is its only button.
     expect(
       dialog
@@ -210,6 +207,100 @@ describe("About Sentinel", () => {
         "href",
         "https://github.com/vulnwatch/sentinel/releases/tag/v1.0.0%2F..%2Fx%3Fy%23z",
       );
+  });
+
+  test("offers Report a problem below the versions, the Bug Report form of Sentinel Aura with both versions, described by the caution that the tracker is public", async () => {
+    stubSession();
+    const screen = await renderApp();
+
+    const dialog = await openAbout(screen);
+
+    const report = dialog.getByRole("link", {
+      name: "Report a problem (another site)",
+      exact: true,
+    });
+    await expect
+      .element(report)
+      .toHaveAttribute(
+        "href",
+        `https://github.com/vulnwatch/sentinel-aura/issues/new?template=bug-report.yml&version=${SENTINEL_AURA_VERSION}&sentinel-version=${SENTINEL_VERSION}`,
+      );
+    await expect
+      .element(report)
+      .toHaveAccessibleDescription(
+        "The issue tracker is public: leave out confidential data, such as embargoed CVEs.",
+      );
+    // Below the versions, and the caution below it, in text-14 and fg-muted
+    // of the light theme.
+    const caution = dialog.getByText(
+      "The issue tracker is public: leave out confidential data, such as embargoed CVEs.",
+    );
+    const versions = dialog.getByRole("definition").last().element();
+    expect(report.element().getBoundingClientRect().top).toBeGreaterThan(
+      versions.getBoundingClientRect().bottom,
+    );
+    expect(caution.element().getBoundingClientRect().top).toBeGreaterThan(
+      report.element().getBoundingClientRect().top,
+    );
+    const style = getComputedStyle(caution.element());
+    expect([style.fontSize, style.color]).toEqual(["14px", "rgb(89, 99, 110)"]);
+  });
+
+  // The address of the form with the version of Sentinel Aura alone.
+  const UI_ONLY = `https://github.com/vulnwatch/sentinel-aura/issues/new?template=bug-report.yml&version=${SENTINEL_AURA_VERSION}`;
+
+  test("offers Report a problem with the version of Sentinel Aura alone while the version of Sentinel loads", async () => {
+    stubSession(() => new Promise<Response>(() => {}));
+    const screen = await renderApp();
+
+    const dialog = await openAbout(screen);
+
+    await expect
+      .element(dialog.getByRole("progressbar", { name: "Loading" }))
+      .toBeVisible();
+    await expect
+      .element(
+        dialog.getByRole("link", { name: "Report a problem (another site)" }),
+      )
+      .toHaveAttribute("href", UI_ONLY);
+  });
+
+  test("offers Report a problem with the version of Sentinel Aura alone after the read of the version of Sentinel failed", async () => {
+    stubSession(() => errorResponse(503, "SERVICE_UNAVAILABLE"));
+    const screen = await renderApp();
+
+    const dialog = await openAbout(screen);
+
+    await expect
+      .element(dialog.getByRole("button", { name: "Try again" }))
+      .toBeVisible();
+    await expect
+      .element(
+        dialog.getByRole("link", { name: "Report a problem (another site)" }),
+      )
+      .toHaveAttribute("href", UI_ONLY);
+  });
+
+  test("encodes the version of Sentinel as the value of its parameter in the address of the form", async () => {
+    stubSession(() => versionResponse("1.0.0&version=x#y z"));
+    const screen = await renderApp();
+
+    const dialog = await openAbout(screen);
+
+    await expect
+      .element(
+        dialog.getByRole("link", { name: "Report a problem (another site)" }),
+      )
+      .toHaveAttribute(
+        "href",
+        `https://github.com/vulnwatch/sentinel-aura/issues/new?template=bug-report.yml&version=${SENTINEL_AURA_VERSION}&sentinel-version=1.0.0%26version%3Dx%23y%20z`,
+      );
+  });
+
+  test("fills in fields that the Bug Report form of Sentinel Aura has", () => {
+    // The ids that the address names, in the form that it opens.
+    expect(BUG_REPORT).toMatch(/^ {4}id: version$/m);
+    expect(BUG_REPORT).toMatch(/^ {4}id: sentinel-version$/m);
   });
 
   test("reads the version of Sentinel each time it opens, and not again while it is open, also when the tab returns to the foreground", async () => {
@@ -388,8 +479,8 @@ describe("About Sentinel", () => {
       "the keyboard",
       openAboutWithKeyboard,
       async () => {
-        // Past the two versions to Close.
-        await userEvent.keyboard("{Tab}{Tab}{Tab}");
+        // Past the two versions and Report a problem to Close.
+        await userEvent.keyboard("{Tab}{Tab}{Tab}{Tab}");
         await expect
           .element(page.getByRole("button", { name: "Close" }))
           .toHaveFocus();

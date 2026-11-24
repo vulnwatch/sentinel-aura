@@ -58,6 +58,20 @@ describe("a web address", () => {
   });
 });
 
+describe("a fixed web address", () => {
+  test("is the address as the browser parses it", () => {
+    expect(WebAddress.fixed("HTTPS://Howto.Example.com/a b").url.href).toBe(
+      "https://howto.example.com/a%20b",
+    );
+  });
+
+  test("is a fault of the UI itself when it is not a web address", () => {
+    expect(() => WebAddress.fixed("/guides")).toThrow(
+      "not a web address: /guides",
+    );
+  });
+});
+
 describe("the text of an address", () => {
   test("is a web address as the browser parses it, which a link to it leads to", () => {
     expect(addressText("HTTPS://Advisories.Example.com/a b")).toBe(
@@ -208,6 +222,30 @@ describe("a link on a line of its own", () => {
         .element()
         .getBoundingClientRect().height,
     ).toBeLessThan(24);
+  });
+});
+
+describe("the description of a link", () => {
+  test("is read with it by assistive technologies", async () => {
+    const { screen } = await renderLink(
+      <>
+        <WebLink
+          address="https://bugzilla.example.com/enter_bug.cgi"
+          describedBy="fictional-caution"
+        >
+          Report a fictional bug
+        </WebLink>
+        <span id="fictional-caution">Leave out fictional secrets.</span>
+      </>,
+    );
+
+    await expect
+      .element(
+        screen.getByRole("link", {
+          name: "Report a fictional bug (another site)",
+        }),
+      )
+      .toHaveAccessibleDescription("Leave out fictional secrets.");
   });
 });
 

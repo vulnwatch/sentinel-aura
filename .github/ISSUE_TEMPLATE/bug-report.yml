@@ -49,6 +49,9 @@ body:
     validations:
       required: true
 
+  # About Sentinel fills in the fields version and sentinel-version through
+  # the query of the address of this form (docs/screen-map.md, Sidebar):
+  # keep their ids, which src/components/about-dialog.test.tsx checks.
   - type: input
     id: version
     attributes:

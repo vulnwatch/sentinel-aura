@@ -448,7 +448,7 @@ that the code imports ship.
 | Search | `search` |
 | Collapse and expand the sidebar | `panel-left-close`, `panel-left-open` |
 | The account button | `chevrons-up-down` |
-| Account, API keys, About Sentinel, Sign out | `user`, `key-round`, `info`, `log-out` |
+| Account, API keys, Guides, About Sentinel, Sign out | `user`, `key-round`, `book-open`, `info`, `log-out` |
 | Theme System, Light, Dark; the selected item of a menu, a selected checkbox | `monitor`, `sun`, `moon`; `check` |
 | Create a record, add an item to a record, such as a reference to a Ticket, or associate a CVE with a Ticket | `plus` |
 | Filters | `list-filter` |
@@ -620,15 +620,17 @@ follow, below a `border` line and separated by `border` lines into four
 groups: Account and API keys (`docs/screen-map.md`, Sidebar); the section
 Theme (`docs/behaviors.md`, Preferences), with its heading in `text-12`,
 weight 500, `fg-muted`, and the items System, Light, and Dark, of which the
-selected one ends with `check`; About Sentinel (`docs/screen-map.md`,
+selected one ends with `check`; Guides, an item that leads to another site
+(Menus, Popovers, and Tooltips), and About Sentinel (`docs/screen-map.md`,
 Sidebar); and Sign out, an ordinary item.
 
 About Sentinel opens, once the menu has closed, a dialog at most 400 px wide
-(Dialogs), titled "About Sentinel": the line "Include these versions when you
-report a problem." in `fg-muted`; 12 px below it, the versions as a
-description list whose terms take the width of the longest one (Detail
-Screens), Sentinel Aura and Sentinel, each version a link to another site
-(Buttons and Links); and Close, a secondary button. While the version of
+(Dialogs), titled "About Sentinel": the versions as a description list whose
+terms take the width of the longest one (Detail Screens), Sentinel Aura and
+Sentinel, each version a link to another site (Buttons and Links); a
+`border` line, with 12 px of space above and below it; Report a problem, a
+link to another site on a line of its own, and 4 px below it its description
+in `text-14`, `fg-muted`; and Close, a secondary button. While the version of
 Sentinel loads, the loading indicator takes its place (Loading), and its
 error shows there as in place of a part (Errors in Place of Content). Close
 and Escape close the dialog, and the focus returns to the account button.
@@ -1752,8 +1754,11 @@ states it, such as that of a Ticket; the other audit logs are tables
   `surface-hover` under the pointer and on focus, with the focus ring inside it
   on keyboard focus (Focus and Motion). The heading of a section is in
   `text-12`, weight 500, `fg-muted`; groups are separated by `border` lines;
-  and an item of a single selection ends with `check` at 16 px when it is
-  selected. While the change that an item started is in progress, the item is
+  an item of a single selection ends with `check` at 16 px when it is
+  selected; and an item that leads to another site (`docs/behaviors.md`,
+  Links to Other Sites), such as Guides (Account Menu), ends with
+  `external-link` at 16 px in `fg-muted`, and its accessible name ends with
+  "(another site)". While the change that an item started is in progress, the item is
   busy: `loader-circle` at 16 px in `fg-muted`, turning, takes the place of its
   icon, as on a busy button (Buttons and Links), or, in an item of a single
   selection, of its `check` at its end (`docs/behaviors.md`, Loading). An

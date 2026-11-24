@@ -403,13 +403,18 @@ that needs it; content of another kind needs a new row first.
 ### Links from the API
 
 - A link to an address that the API returns, or to an address of another
-  site that the UI composes from a value of the API or from its own version
+  site that the UI composes from a value of the API or from its own version,
+  or to a fixed address of another site that a foundation document states
   (`docs/behaviors.md`, Links to Other Sites), is built only by one shared
   component, which applies that section: the check of the address, the mark
   of a link to another site, and the loading of the address by the browser
   rather than by the router. The link leads to, and where its text is the
   address shows, the URL that the check parsed, never the value as received,
-  so that the check and the browser read the same address. A composed
+  so that the check and the browser read the same address. An item of a
+  menu that leads to such an address is the shared menu item, which takes the
+  address as that component checks it, is loaded by the browser in the same
+  way, and shows the mark of an item that leads to another site
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips). A composed
   address takes the fixed origin that the document that defines it states,
   its screen document or a foundation document (`docs/behaviors.md`, Links
   to Other Sites, Composed addresses), and holds the value, or the part of it

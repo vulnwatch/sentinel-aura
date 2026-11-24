@@ -48,6 +48,18 @@ export class WebAddress {
     return new WebAddress(url);
   }
 
+  // The web address of a fixed address of another site that a foundation
+  // document states, such as that of Guides (docs/screen-map.md, Sidebar),
+  // which the same check accepts; an address that it rejects is a fault of
+  // the UI itself.
+  static fixed(address: string): WebAddress {
+    const web = WebAddress.of(address);
+    if (web === undefined) {
+      throw new Error(`not a web address: ${address}`);
+    }
+    return web;
+  }
+
   // Whether the address lies on an origin other than the UI's, another
   // site.
   get isOtherSite(): boolean {
@@ -103,6 +115,9 @@ interface WebLinkProps {
   // of another site, since a hidden text, which the browser reads as a block,
   // would put a space before the comma that precedes the detail.
   detail?: string;
+  // The id of the element that describes the link, which assistive
+  // technologies read with it, such as a caution beneath it.
+  describedBy?: string;
 }
 
 // What assistive technologies read after the text of a link to another site.
@@ -123,6 +138,7 @@ export function WebLink({
   size = "small",
   tall = false,
   detail,
+  describedBy,
 }: WebLinkProps) {
   const web = WebAddress.of(address);
   if (web === undefined) {
@@ -136,6 +152,7 @@ export function WebLink({
   return (
     <AriaLink
       href={web}
+      aria-describedby={describedBy}
       aria-label={
         detail === undefined
           ? undefined
