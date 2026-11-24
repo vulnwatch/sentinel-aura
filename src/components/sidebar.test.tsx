@@ -679,6 +679,21 @@ describe("in a window narrower than 1024 px", () => {
     expect(router.state.location.pathname).toBe("/users");
   });
 
+  test("closes after a navigation that keeps the screen, such as back or forward, and returns the focus to the expand button", async () => {
+    const { router, screen } = await renderApp(SCREEN);
+    const expand = sidebarOf(screen).getByRole("button", {
+      name: "Expand navigation",
+    });
+    await expand.click();
+    const dialog = screen.getByRole("dialog", { name: "Navigation" });
+    await expect.element(dialog).toBeVisible();
+
+    router.history.push(`${SCREEN}?fictional=1`);
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect.element(expand).toHaveFocus();
+  });
+
   test("closes when the window grows past 1024 px, with the focus on the screen's heading, and does not open again when it narrows", async () => {
     const { screen } = await renderApp(SCREEN);
     await sidebarOf(screen)

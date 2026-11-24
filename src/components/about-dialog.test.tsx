@@ -484,6 +484,26 @@ describe("About Sentinel", () => {
     await expect.element(accountButton(screen)).toHaveFocus();
   });
 
+  test("closes with the sidebar over the content on a navigation that keeps the screen, and returns the focus to the expand button", async () => {
+    await page.viewport(1023, 700);
+    stubSession();
+    const screen = await renderApp();
+    const expand = screen
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("button", { name: "Expand navigation" });
+    await expand.click();
+    const dialog = await openAbout(screen, true);
+    await expect.element(dialog).toHaveFocus();
+
+    router.history.push("/fictional/path?fictional=1");
+
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("dialog", { name: "Navigation" }))
+      .not.toBeInTheDocument();
+    await expect.element(expand).toHaveFocus();
+  });
+
   test("closes with the sidebar over the content, which a window that grows past 1024 px closes, with the focus on the screen's heading", async () => {
     await page.viewport(1023, 700);
     stubSession();

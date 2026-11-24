@@ -263,7 +263,7 @@ which it opened. The focus then moves as the navigation, or the closing of
 the sidebar, moves it; after a navigation that keeps the screen, which leaves
 the focus where it was (`docs/behaviors.md`, Accessibility, Focus after a
 navigation), it returns to the account button, as when the dialog closes, or
-moves to the screen's heading when that button closed with the sidebar.
+to the expand button when that button closed with the sidebar.
 
 The sidebar is expanded, with the name of each entry, or collapsed to icons,
 each of which shows its name on hover and on keyboard focus
@@ -277,11 +277,11 @@ message area, such as the failure of a Sign out from it, so that the message
 shows (`docs/behaviors.md`, Outcome of a Change). A navigation, such as one
 from it, through an entry, the search, or an item of the account menu, or
 back and forward, closes it, also to the URL that shows, and the focus
-follows the navigation
-(`docs/behaviors.md`, Accessibility). Opening it changes no preference, and a
-window that grows past that width closes it, with the focus on the screen's
-heading. Once it closes, in any of these ways, only the expand button opens
-it again.
+follows the navigation (`docs/behaviors.md`, Accessibility), or returns to
+the expand button after a navigation that keeps the screen, which leaves the
+focus where it was. Opening it changes no preference, and a window that
+grows past that width closes it, with the focus on the screen's heading.
+Once it closes, in any of these ways, only the expand button opens it again.
 
 An entry is marked as current while the path of the URL is the path under
 which every screen of its area lies (Areas and Screens), `/tickets`,
