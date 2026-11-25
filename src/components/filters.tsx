@@ -151,7 +151,7 @@ export function FilterSelect<T extends string>({
         <ListBox aria-describedby={statusId} className="outline-none">
           {shown.map((group, index) => (
             <ListBoxSection
-              // oxlint-disable-next-line react/no-array-index-key -- the groups have no other key, and their order is fixed
+              // The groups have no other key, and their order is fixed.
               key={index}
               className={index === 0 ? "" : "mt-1 border-t border-border pt-1"}
             >

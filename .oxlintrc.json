@@ -13,7 +13,12 @@
     "no-new-func": "error",
     "no-script-url": "error",
     "typescript/no-explicit-any": "error",
-    "typescript/no-misused-promises": "error",
+    // Also a condition on a value that may be a Promise, such as
+    // T | Promise<T>, which is always true as a Promise and hides an await.
+    "typescript/no-misused-promises": [
+      "error",
+      { "checksConditionals": { "flagUnions": "strict" } }
+    ],
     // A color or a type size is set only by the class of its token
     // (docs/conventions.md, Components and Styling; Checks): no style
     // attribute, and no attribute or prop that sets a color or a type size,
