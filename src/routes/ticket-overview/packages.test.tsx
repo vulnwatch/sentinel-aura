@@ -565,7 +565,7 @@ describe("a track", () => {
     expect(tracks[2]!.item.top - tracks[1]!.item.bottom).toBeCloseTo(12, 0);
   });
 
-  test("puts its line on surface under the pointer, with a 4 px radius, 8 px beyond each end of its text, which keeps its place, and not its Products", async () => {
+  test("puts its line on surface under the pointer, with a 4 px radius, 8 px beyond each end of its text and 2 px above and below it, which keeps its place, and not its Products", async () => {
     showing([fictionalPackage()]);
     const { screen } = await renderTree();
     const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
@@ -591,6 +591,16 @@ describe("a track", () => {
     expect(boxOf(reference).left - boxOf(track).left).toBeCloseTo(1 + 12, 0);
     expect(boxOf(reference).left - boxOf(line).left).toBeCloseTo(8, 0);
     expect(boxOf(line).right - boxOf(track).right).toBeCloseTo(8, 0);
+    // The line 2 px above the track, and 2 px into the 8 px between it and
+    // the list of its Products, which keep their places.
+    const products = track.getByRole("list").filter({
+      has: page.getByRole("button", {
+        name: "Fictional Linux Enterprise Server 15 SP7",
+        exact: true,
+      }),
+    });
+    expect(boxOf(track).top - boxOf(line).top).toBeCloseTo(2, 0);
+    expect(boxOf(products).top - boxOf(line).bottom).toBeCloseTo(8 - 2, 0);
     // Its Products, on lines of their own, stay on the page.
     expect(backgroundBehind(product)).toBe(CANVAS);
   });
@@ -1247,7 +1257,7 @@ describe("a Product", () => {
     ["with its release at the end", "fixed", 1],
     ["with nothing at its end", "affected", 0],
   ])(
-    "puts its line on surface under the pointer, %s, with a 4 px radius, 8 px beyond each end of its text, which keeps its place, and not the line of its track",
+    "puts its line on surface under the pointer, %s, with a 4 px radius, 8 px beyond each end of its text and 2 px above and below it, which keeps its place, and not the line of its track",
     async (_, status, releases) => {
       showing([fictionalPackage({ tracks: [fictionalTrack({ status })] })]);
       const { screen } = await renderTree();
@@ -1290,6 +1300,11 @@ describe("a Product", () => {
       expect(boxOf(name).left - boxOf(products).left).toBeCloseTo(1 + 12, 0);
       expect(boxOf(name).left - boxOf(product).left).toBeCloseTo(8, 0);
       expect(boxOf(product).right - boxOf(track).right).toBeCloseTo(8, 0);
+      // The line 2 px above and below its name, the highest of its line,
+      // which starts the list as without the line.
+      expect(boxOf(name).top - boxOf(product).top).toBeCloseTo(2, 0);
+      expect(boxOf(product).bottom - boxOf(name).bottom).toBeCloseTo(2, 0);
+      expect(boxOf(name).top).toBeCloseTo(boxOf(products).top, 0);
       // The line of its track stays on the page.
       expect(backgroundBehind(reference)).toBe(CANVAS);
     },

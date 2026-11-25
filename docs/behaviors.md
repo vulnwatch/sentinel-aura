@@ -292,7 +292,7 @@ message follows Wording.
   carries one, as text that the user can select and copy, so that a report
   names the request (Sentinel `docs/api-spec.md`, Request Tracing). A
   response without one, such as a response of a proxy in front of Sentinel,
-  shows no reference, and the message of `500` then promises none.
+  shows no reference (above).
 - A failure of the UI itself, such as an error while it shows data, replaces
   the content of the screen under the heading "Something went wrong", with
   "This page couldn't be shown. Reload the page to try again." and "Reload

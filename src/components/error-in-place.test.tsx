@@ -85,37 +85,6 @@ describe("in place of the content of a screen", () => {
     expect(screen.getByText(/Reference/).query()).toBeNull();
   });
 
-  test("offers Try again after a 500 without a request identifier, such as one of a proxy, with the message that promises no reference, and shows none", async () => {
-    const screen = await render(
-      <ErrorInPlace
-        error={new ApiError(500, undefined, undefined, undefined)}
-        placement="screen"
-        onRetry={retry}
-      />,
-    );
-
-    await expect
-      .element(
-        screen.getByRole("heading", {
-          level: 1,
-          name: "This page couldn't be loaded",
-        }),
-      )
-      .toBeVisible();
-    await expect
-      .element(
-        screen.getByText(
-          "Something went wrong in Sentinel. Try again, and if it happens again, report it.",
-          { exact: true },
-        ),
-      )
-      .toBeVisible();
-    await expect
-      .element(screen.getByRole("button", { name: "Try again" }))
-      .toBeVisible();
-    expect(screen.getByText(/reference/i).query()).toBeNull();
-  });
-
   test("shows Not found for a 404, with a link to the landing", async () => {
     const screen = await render(
       <ErrorInPlace error={NOT_FOUND} placement="screen" onRetry={retry} />,

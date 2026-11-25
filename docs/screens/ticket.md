@@ -238,7 +238,8 @@ the layout waits until it closes, and then the details move
     that the pinned contract does not list shows as received;
   - EPSS: Score, cut to five decimals, with at least two, since most scores
     are below 0.01; Percentile, cut to two decimals, as in the explanation of
-    the priority (`docs/design-system.md`, Priority); and Assessed, a date.
+    the priority (`docs/design-system.md`, Priority, Explanation); and
+    Assessed, a date.
 
   Without an SSVC assessment or an EPSS score, an absent value.
 - A Ticket without a CVE shows the heading "CVE" and "No CVE.".
@@ -348,10 +349,10 @@ edits of its packages, tracks, and Products (Actions; Sentinel
   sets the affectedness, so that the pipelines and the affectedness of the
   tracks line up; then, 4 px later, for a user who holds `manage_packages`,
   the menu of the actions of the track (Actions). Where the line wraps, the
-  pipeline or the delivery and the affectedness each stay at the end of
-  their line. The line is on `surface` under the pointer, without its
-  Products (`docs/design-system.md`, Detail Screens). IBS and Git tracks
-  show alike.
+  pipeline or the delivery and the affectedness move below the reference,
+  each at the end of its line. The line is on `surface` under the pointer,
+  without its Products (`docs/design-system.md`, Detail Screens). IBS and
+  Git tracks show alike.
   - The affectedness is a value with the dot of its tone
     (`docs/design-system.md`, Other Values): Analysis `info`, Affected
     `warning`, Not affected and Fixed `success`, Won't fix `neutral`; for a
@@ -448,17 +449,17 @@ edits of its packages, tracks, and Products (Actions; Sentinel
     Ignored or Duplicated Ticket, Sentinel observes neither (Sentinel
     `docs/features/packages/package-model.md`, Continued Updates).
 - Its Products are a list below the track, with a border line at their left,
-  each on a line that wraps, which is on `surface` under the pointer, also
-  without a release at its end (`docs/design-system.md`, Detail Screens):
-  its name, which wraps, in `fg-muted` when it is not eligible; `user-pen`
-  when its eligibility is set by hand, read as ", eligibility set by hand";
-  and the label Not eligible. Its details (below) show its release:
-  "Released" with the date and time of `released_at`, which keep to one
-  line, on a released Product, and on an actionable, eligible Product of a
-  track in Analysis, Affected, or Fixed, "Not released" where Sentinel
-  observes the QA of the track, or "Not observed" where it does not. A Product that does
-  not take part or is not eligible, or whose track has no due dates, has no
-  release unless it is released.
+  each on a line that wraps, which is on `surface` under the pointer
+  (`docs/design-system.md`, Detail Screens): its name, which wraps, in
+  `fg-muted` when it is not eligible; `user-pen` when its eligibility is set
+  by hand, read as ", eligibility set by hand"; and the label Not eligible.
+  Its details (below) show its release: "Released" with the date and time of
+  `released_at`, which keep to one line, on a released Product, and on an
+  actionable, eligible Product of a track in Analysis, Affected, or Fixed,
+  "Not released" where Sentinel observes the QA of the track, or "Not
+  observed" where it does not. A Product that does not take part or is not
+  eligible, or whose track has no due dates, has no release unless it is
+  released.
 - A Product that keeps the Ticket from Resolved also shows its release at
   the end of its line, or of the next line where the line wraps: on a Ticket
   with a CVE, an actionable, eligible Product of an actionable Fixed track,

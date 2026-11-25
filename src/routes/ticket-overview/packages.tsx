@@ -190,11 +190,12 @@ function ReleaseText({ release, notObserved }: ReleaseTextProps) {
 
 // The look of the line of a track or of a Product under the pointer, as a
 // line of a list whose lines can hold a value at their end: on surface, with
-// a 4 px radius and 8 px of space on each side of its text, which keeps its
-// place, so that the eye follows the line to the affectedness of a track or
-// the release of a Product (docs/design-system.md, Detail Screens). Every
-// line of such a list takes it, also one with nothing at its end.
-const LINE_UNDER_POINTER = "-mx-2 rounded px-2 hover:bg-surface";
+// a 4 px radius, reaching 8 px beyond each side of its text and 2 px above
+// and below it, while its text keeps its place, so that the eye follows the
+// line to the affectedness of a track or the release of a Product
+// (docs/design-system.md, Detail Screens). Every line of such a list takes
+// it, also one with nothing at its end.
+const LINE_UNDER_POINTER = "-mx-2 -my-0.5 rounded px-2 py-0.5 hover:bg-surface";
 
 // Whether a track has work: actionable and in Analysis, or Affected or Fixed
 // with a Product that is actionable and eligible. A track without work, a
