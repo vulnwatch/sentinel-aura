@@ -503,7 +503,7 @@ function SourceItem({ block, shown, name, ordinal }: SourceItemProps) {
         <ul className="flex flex-col text-14">
           {lines.map((entry, index) => (
             <VersionLine
-              // oxlint-disable-next-line react/no-array-index-key -- the entries have no identifier, and their order is fixed
+              // The entries have no identifier, and their order is fixed.
               key={index}
               status={entry.status ?? (record ? entry.default_status : null)}
             >

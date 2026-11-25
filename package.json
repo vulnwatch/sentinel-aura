@@ -12,7 +12,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
-    "lint": "oxlint --type-aware --deny-warnings",
+    "lint": "oxlint --type-aware --deny-warnings --report-unused-disable-directives",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "generate": "orval",
