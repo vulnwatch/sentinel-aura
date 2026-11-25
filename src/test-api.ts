@@ -699,7 +699,7 @@ export function eventPage(
 export function actorsResponse(
   actors: readonly UserReference[] = FICTIONAL_ACTORS,
 ): Response {
-  const body: TicketActorListResponse = { data: [...actors] };
+  const body: TicketActorListResponse = { data: actors };
   return jsonResponse(200, body);
 }
 
@@ -728,7 +728,7 @@ export function fictionalGrant(
 export function grantsResponse(
   grants: readonly TicketAccessGrantResponse[] = [fictionalGrant()],
 ): Response {
-  const body: TicketAccessGrantListResponse = { data: [...grants] };
+  const body: TicketAccessGrantListResponse = { data: grants };
   return jsonResponse(200, body);
 }
 

@@ -111,7 +111,8 @@
       "rules": {
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/no-unnecessary-type-conversion": "off",
-        "unicorn/consistent-function-scoping": "off"
+        // getHeaders reverses in place arrays that it owns.
+        "unicorn/no-array-reverse": "off"
       }
     }
   ]

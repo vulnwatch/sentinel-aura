@@ -47,7 +47,7 @@ export const UNLISTED_CAPABILITY = "fictional_capability";
 interface UserResponse {
   data: Omit<CurrentUserData, "assignment_eligibility" | "capabilities"> & {
     assignment_eligibility: AssignmentEligibility | typeof UNLISTED_ELIGIBILITY;
-    capabilities: (Capability | typeof UNLISTED_CAPABILITY)[];
+    capabilities: readonly (Capability | typeof UNLISTED_CAPABILITY)[];
   };
 }
 
@@ -62,7 +62,7 @@ export function withEligibility(
 // The user with other capabilities.
 export function withCapabilities(
   user: UserResponse,
-  capabilities: (Capability | typeof UNLISTED_CAPABILITY)[],
+  capabilities: readonly (Capability | typeof UNLISTED_CAPABILITY)[],
 ): UserResponse {
   return { data: { ...user.data, capabilities } };
 }
