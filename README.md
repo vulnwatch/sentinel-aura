@@ -21,6 +21,14 @@ for the people who work with them: the vulnerability analysts who triage and
 follow their queues all day, the package maintainers who look for the fixes
 that wait for them, and every colleague who needs SUSE's status for a CVE.
 
+> [!NOTE]
+> **Internal, non-commercial project.** Sentinel Aura is the web interface of
+> Sentinel, an internal tool of the SUSE Security Team, published as open
+> source. Neither is a commercial product: SUSE does not sell, market, or
+> offer them as a product or service. They are not related to, affiliated
+> with, or endorsed by any other product or company that uses the name
+> Sentinel. All trademarks belong to their respective owners.
+
 <p align="center">
 <img src=".github/assets/screenshot-ticket-list.png" alt="The Ticket list of Sentinel Aura, in the light theme on the left and the dark theme on the right, split along a diagonal: the Tickets that need attention, the views of the list, and a page of Tickets with their CVE, packages, status, severity, priority, deadline, and assignee">
 <br>
