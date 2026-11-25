@@ -56,6 +56,10 @@ const CONFLICT =
 const TOO_MANY = "Too many attempts. Try again later.";
 const INTERNAL =
   "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.";
+// The message of 500 for a response without a request identifier, which
+// promises no reference.
+const INTERNAL_WITHOUT_REFERENCE =
+  "Something went wrong in Sentinel. Try again, and if it happens again, report it.";
 const UNAVAILABLE = "Sentinel isn't available right now. Try again later.";
 const GONE = "This no longer exists, or you no longer have access to it.";
 const UNCONFIRMED =
@@ -68,6 +72,42 @@ function shown(
 ): FailurePresentation {
   return { heading, message, reference, retry };
 }
+
+// An error response without a request identifier, such as one of a proxy in
+// front of Sentinel, with its code when it has one.
+function withoutRequestId(status: number, code?: string): ApiError {
+  return new ApiError(
+    status,
+    code,
+    code === undefined ? undefined : { code, detail: "A fictional detail" },
+    undefined,
+  );
+}
+
+// The failures with the message of 500 whose response carries no request
+// identifier, with whether they offer Try again: the message promises no
+// reference, and none shows.
+const INTERNAL_WITHOUT_REQUEST_ID: [string, RequestFailure, boolean][] = [
+  ["500", withoutRequestId(500, "INTERNAL_ERROR"), true],
+  ["a 500 of a proxy, without a code", withoutRequestId(500), true],
+  [
+    "403 AUTH_CROSS_ORIGIN_REJECTED",
+    withoutRequestId(403, "AUTH_CROSS_ORIGIN_REJECTED"),
+    false,
+  ],
+  [
+    "a successful response that the UI cannot read",
+    new UnreadableResponseError(200, undefined, {
+      cause: new SyntaxError("Unexpected token"),
+    }),
+    true,
+  ],
+  [
+    "a status that is neither successful nor an error",
+    withoutRequestId(304),
+    true,
+  ],
+];
 
 // docs/behaviors.md, Default Presentation by Status. Each failure of a read
 // shows the same in place of a part of a screen and of the screen, except a
@@ -181,6 +221,21 @@ describe("presentFailure", () => {
     );
   });
 
+  test.each(
+    INTERNAL_WITHOUT_REQUEST_ID.flatMap(([name, failure, retry]) =>
+      (["screen", "part", "session"] as const).map(
+        (context) => [name, context, failure, retry] as const,
+      ),
+    ),
+  )(
+    "presents %s without a request identifier, of a %s, with the message of 500 that promises no reference",
+    (_, context, failure, retry) => {
+      expect(presentFailure(failure, context)).toEqual(
+        shown(INTERNAL_WITHOUT_REFERENCE, { retry }),
+      );
+    },
+  );
+
   test.each([
     ["a code", errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION")],
     ["no code", errorResponse(403)],
@@ -290,6 +345,47 @@ describe("presentFailure", () => {
         expect(presentFailure(failure, "change")?.message).toBe(message);
       },
     );
+
+    // Every failure with the message of 500 but a 500 itself, which leaves
+    // the outcome of a change unknown (below).
+    test.each<[string, RequestFailure, boolean]>([
+      [
+        "403 AUTH_CROSS_ORIGIN_REJECTED",
+        withoutRequestId(403, "AUTH_CROSS_ORIGIN_REJECTED"),
+        false,
+      ],
+      [
+        "a successful response that the UI cannot read",
+        new UnreadableResponseError(202, undefined, {
+          cause: new SyntaxError("Unexpected token"),
+        }),
+        true,
+      ],
+      [
+        "a status that is neither successful nor an error",
+        withoutRequestId(304),
+        true,
+      ],
+    ])(
+      "that fails with %s without a request identifier gets the message of 500 that promises no reference",
+      (_, failure, retry) => {
+        expect(presentFailure(failure, "change")).toEqual(
+          shown(INTERNAL_WITHOUT_REFERENCE, { retry }),
+        );
+      },
+    );
+
+    test.each([
+      ["500", withoutRequestId(500, "INTERNAL_ERROR")],
+      ["a 500 of a proxy, without a code", withoutRequestId(500)],
+    ])(
+      "that fails with %s without a request identifier is unconfirmed, without a reference",
+      (_, failure) => {
+        expect(presentFailure(failure, "change")).toEqual(
+          shown(UNCONFIRMED, { retry: true }),
+        );
+      },
+    );
   });
 
   describe("sign-in and sign-out", () => {
@@ -376,6 +472,39 @@ describe("presentChangeFailure", () => {
       presentChangeFailure(errorResponse(401, "AUTH_NOT_AUTHENTICATED")),
     ).toBeUndefined();
   });
+
+  test.each<[string, RequestFailure, ChangeFailurePresentation]>([
+    [
+      "403 AUTH_CROSS_ORIGIN_REJECTED",
+      withoutRequestId(403, "AUTH_CROSS_ORIGIN_REJECTED"),
+      {
+        message: INTERNAL_WITHOUT_REFERENCE,
+        reference: undefined,
+        unconfirmed: false,
+      },
+    ],
+    [
+      "a successful response that the UI cannot read",
+      new UnreadableResponseError(202, undefined, {
+        cause: new SyntaxError("Unexpected token"),
+      }),
+      {
+        message: INTERNAL_WITHOUT_REFERENCE,
+        reference: undefined,
+        unconfirmed: false,
+      },
+    ],
+    [
+      "a 500",
+      withoutRequestId(500, "INTERNAL_ERROR"),
+      { message: UNCONFIRMED, reference: undefined, unconfirmed: true },
+    ],
+  ])(
+    "presents %s without a request identifier without a reference, the message of 500 promising none",
+    (_, failure, presentation) => {
+      expect(presentChangeFailure(failure)).toEqual(presentation);
+    },
+  );
 });
 
 describe("presentRefetchFailure", () => {
@@ -1579,6 +1708,21 @@ describe("presentSignInFailure", () => {
           request,
         ),
       ).toEqual({ message: NETWORK, reference: undefined });
+    },
+  );
+
+  test.each([
+    ["sign-in", "sign-in"],
+    ["the read of the signed-in user", "signed-in user"],
+  ] as const)(
+    "presents a 500 of %s with its reference, or, without a request identifier, with the message of 500 that promises none",
+    (_, request) => {
+      expect(
+        presentSignInFailure(errorResponse(500, "INTERNAL_ERROR"), request),
+      ).toEqual({ message: INTERNAL, reference: REQUEST_ID });
+      expect(
+        presentSignInFailure(withoutRequestId(500, "INTERNAL_ERROR"), request),
+      ).toEqual({ message: INTERNAL_WITHOUT_REFERENCE, reference: undefined });
     },
   );
 });

@@ -270,7 +270,7 @@ message follows Wording.
 | `409` | "This can't be done in the current state, which may have changed. Check it and try again." |
 | `422` | The field errors of a `VALIDATION_ERROR` of a form, or of the popover of a field, as Where Errors Appear states; every other `422`, and a `VALIDATION_ERROR` of a request that neither sent, as `400` |
 | `429` | "Too many attempts. Try again later." |
-| `500`, and a successful response that the UI cannot read | "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below." |
+| `500`, and a successful response that the UI cannot read | "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.", or, for a response without a request identifier, "Something went wrong in Sentinel. Try again, and if it happens again, report it." |
 | `502`, `503`, `504`, and every other `5xx` | "Sentinel isn't available right now. Try again later." |
 
 - In place of the content of a screen, the heading is "No access" for a
@@ -290,7 +290,9 @@ message follows Wording.
   successful response that the UI cannot read also shows "Reference:"
   followed by the request identifier that the response carries, when it
   carries one, as text that the user can select and copy, so that a report
-  names the request (Sentinel `docs/api-spec.md`, Request Tracing).
+  names the request (Sentinel `docs/api-spec.md`, Request Tracing). A
+  response without one, such as a response of a proxy in front of Sentinel,
+  shows no reference, and the message of `500` then promises none.
 - A failure of the UI itself, such as an error while it shows data, replaces
   the content of the screen under the heading "Something went wrong", with
   "This page couldn't be shown. Reload the page to try again." and "Reload

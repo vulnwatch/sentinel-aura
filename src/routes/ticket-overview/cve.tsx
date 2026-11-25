@@ -11,6 +11,7 @@ import type {
 import { AbsentValue } from "../../components/absent-value";
 import { ClampedText } from "../../components/clamped-text";
 import { CalendarDate } from "../../components/date-time";
+import { cutPercentile } from "../../components/epss-percentile";
 import {
   DescriptionItem,
   DescriptionList,
@@ -57,10 +58,11 @@ const SSVC_TECHNICAL_IMPACT = new Map<string, string>(
   } satisfies Record<SSVCTechnicalImpact, string>),
 );
 
-// An EPSS probability or percentile, from 0 to 1, cut to the five decimals
-// that FIRST publishes, and with at least two, such as 0.94 or 0.00043, so
-// that it never shows more than its value. Its text with ten decimals leaves
-// out the error of its binary representation.
+// An EPSS score, a probability from 0 to 1, cut to the five decimals that
+// FIRST publishes, and with at least two, such as 0.94 or 0.00043, so that it
+// never shows more than its value; most scores are below 0.01, which two
+// decimals would show as 0.00. Its text with ten decimals leaves out the
+// error of its binary representation.
 export function epssNumber(value: number): string {
   const text = value.toFixed(10);
   const point = text.indexOf(".");
@@ -102,7 +104,9 @@ function Epss({ epss }: EpssProps) {
   return (
     <dl className="flex flex-col gap-0.5">
       <InlineField term="Score">{epssNumber(epss.score)}</InlineField>
-      <InlineField term="Percentile">{epssNumber(epss.percentile)}</InlineField>
+      <InlineField term="Percentile">
+        {cutPercentile(epss.percentile)}
+      </InlineField>
       <InlineField term="Assessed">
         <CalendarDate value={epss.assessed_at} />
       </InlineField>
@@ -119,8 +123,8 @@ interface ExploitationProps {
 // the other where the part is narrower than 576 px: CISA KEV, "Not listed"
 // or the date on which the entry was added, never that the CVE is in KEV now;
 // SSVC, with its decision points, version, and date and time; and EPSS, with
-// its score, percentile, and date. Without SSVC or EPSS data, an absent
-// value.
+// its score, its percentile cut to two decimals, and its date. Without SSVC
+// or EPSS data, an absent value.
 function Exploitation({ cve }: ExploitationProps) {
   const column = "px-4 py-3";
   const term = "text-13 text-fg-muted";

@@ -21,6 +21,7 @@ import {
 } from "../../test-api";
 import { screenshot } from "../../test-screenshot";
 import {
+  backgroundBehind,
   band,
   BORDER,
   boxOf,
@@ -46,6 +47,7 @@ import {
   renderTree,
   returnToForeground,
   type Screen,
+  screenHeading,
   SET_AT,
   SET_BY_HAND,
   SETTER,
@@ -132,6 +134,35 @@ async function pressShowHidden(screen: Screen) {
     throw new Error("Show hidden has no label");
   }
   await page.elementLocator(label).click();
+}
+
+// The background of a line of a track or of a Product at rest, and under the
+// pointer, surface in the light theme; and the page behind it, canvas.
+const TRANSPARENT = "rgba(0, 0, 0, 0)";
+const SURFACE = "rgb(255, 255, 255)";
+const CANVAS = "rgb(246, 248, 250)";
+
+function backgroundOf(element: Element): string {
+  return getComputedStyle(element).backgroundColor;
+}
+
+// The line of a track, which its reference starts and its affectedness ends,
+// before its Products: the innermost element that holds both. The list item
+// of the track also holds its Products, and the line is no list item of its
+// own, so no role finds it.
+function lineOfTrack(
+  track: Locator,
+  reference: string,
+  affectedness: string,
+): HTMLElement {
+  const words = document.createRange();
+  words.setStartBefore(track.getByText(reference, { exact: true }).element());
+  words.setEndAfter(track.getByText(affectedness, { exact: true }).element());
+  const line = words.commonAncestorContainer;
+  if (!(line instanceof HTMLElement)) {
+    throw new Error(`The track ${reference} has no line`);
+  }
+  return line;
 }
 
 // A date and time of the API that lies the duration from now.
@@ -343,13 +374,13 @@ describe("the part", () => {
     expect(affectedness.top).toBeGreaterThanOrEqual(pipeline.bottom);
     expect(affectedness.left).toBeCloseTo(end - 104 + 8 + 6, 0);
     // The release of its Product, which keeps the Ticket from Resolved, at
-    // the end of the line below its name.
+    // the end of the line below its name, where the pipeline ends too.
     const product = track.getByRole("listitem");
     const release = boxOf(product.getByText("Not released", { exact: true }));
     expect(release.top).toBeGreaterThanOrEqual(
       boxOf(product.getByRole("button")).bottom,
     );
-    expect(release.right).toBeCloseTo(boxOf(product).right, 0);
+    expect(release.right).toBeCloseTo(end, 0);
   });
 });
 
@@ -532,6 +563,36 @@ describe("a track", () => {
     // The tracks 12 px apart.
     expect(tracks[1]!.item.top - tracks[0]!.item.bottom).toBeCloseTo(12, 0);
     expect(tracks[2]!.item.top - tracks[1]!.item.bottom).toBeCloseTo(12, 0);
+  });
+
+  test("puts its line on surface under the pointer, with a 4 px radius, 8 px beyond each end of its text, which keeps its place, and not its Products", async () => {
+    showing([fictionalPackage()]);
+    const { screen } = await renderTree();
+    const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+    const reference = track.getByText("SUSE:FLES-15-SP7:Update", {
+      exact: true,
+    });
+    await expect.element(reference).toBeVisible();
+    const line = lineOfTrack(track, "SUSE:FLES-15-SP7:Update", "Affected");
+    const product = screen
+      .getByRole("button", { name: "Fictional Linux Enterprise Server 15 SP7" })
+      .element();
+    await screenHeading(screen).hover();
+    expect(backgroundOf(line)).toBe(TRANSPARENT);
+    expect(backgroundBehind(product)).toBe(CANVAS);
+
+    await page.elementLocator(line).hover();
+
+    await expect.poll(() => backgroundOf(line)).toBe(SURFACE);
+    expect(getComputedStyle(line).borderTopLeftRadius).toBe("4px");
+    // The reference where the track starts its text, after its border line
+    // of 1 px and its padding of 12 px, and the end of the line where the
+    // track ends, as without the line; the line 8 px beyond both.
+    expect(boxOf(reference).left - boxOf(track).left).toBeCloseTo(1 + 12, 0);
+    expect(boxOf(reference).left - boxOf(line).left).toBeCloseTo(8, 0);
+    expect(boxOf(line).right - boxOf(track).right).toBeCloseTo(8, 0);
+    // Its Products, on lines of their own, stay on the page.
+    expect(backgroundBehind(product)).toBe(CANVAS);
   });
 
   test.each<[TrackDetail["status"], string]>([
@@ -1153,7 +1214,11 @@ describe("a Product", () => {
     expect(style.color).toBe(WARNING_ON_SOFT);
     expect(style.fontSize).toBe("13px");
     expect(style.fontWeight).toBe("500");
-    expect(boxOf(release).right).toBeCloseTo(boxOf(product).right, 0);
+    // At the end of its line, where the line of its track ends too.
+    expect(boxOf(release).right).toBeCloseTo(
+      boxOf(trackOf(screen, "SUSE:FLES-15-SP7:Update")).right,
+      0,
+    );
     // triangle-alert at 14 px in warning-icon starts it, 4 px before its
     // words: the pixel of the first 14 px closest to warning-icon is it,
     // apart from the smoothing of its edges.
@@ -1177,6 +1242,58 @@ describe("a Product", () => {
         .elements(),
     ).toHaveLength(0);
   });
+
+  test.each<[string, TrackDetail["status"], number]>([
+    ["with its release at the end", "fixed", 1],
+    ["with nothing at its end", "affected", 0],
+  ])(
+    "puts its line on surface under the pointer, %s, with a 4 px radius, 8 px beyond each end of its text, which keeps its place, and not the line of its track",
+    async (_, status, releases) => {
+      showing([fictionalPackage({ tracks: [fictionalTrack({ status })] })]);
+      const { screen } = await renderTree();
+      const track = trackOf(screen, "SUSE:FLES-15-SP7:Update");
+      const reference = track
+        .getByText("SUSE:FLES-15-SP7:Update", { exact: true })
+        .element();
+      const product = productOf(
+        screen,
+        "Fictional Linux Enterprise Server 15 SP7",
+      );
+      const name = product.getByRole("button", {
+        name: "Fictional Linux Enterprise Server 15 SP7",
+      });
+      await expect.element(name).toBeVisible();
+      expect(product.getByText("Not released").elements()).toHaveLength(
+        releases,
+      );
+      await screenHeading(screen).hover();
+      expect(backgroundOf(product.element())).toBe(TRANSPARENT);
+      expect(backgroundBehind(reference)).toBe(CANVAS);
+
+      await product.hover();
+
+      await expect.poll(() => backgroundOf(product.element())).toBe(SURFACE);
+      expect(getComputedStyle(product.element()).borderTopLeftRadius).toBe(
+        "4px",
+      );
+      // The name where the list of the Products starts its text, after its
+      // border line of 1 px and its padding of 12 px, and the end of the line
+      // where the track ends, as without the line; the line 8 px beyond both.
+      // A locator within a filter is relative to the lists, so it starts
+      // from the page.
+      const products = track.getByRole("list").filter({
+        has: page.getByRole("button", {
+          name: "Fictional Linux Enterprise Server 15 SP7",
+          exact: true,
+        }),
+      });
+      expect(boxOf(name).left - boxOf(products).left).toBeCloseTo(1 + 12, 0);
+      expect(boxOf(name).left - boxOf(product).left).toBeCloseTo(8, 0);
+      expect(boxOf(product).right - boxOf(track).right).toBeCloseTo(8, 0);
+      // The line of its track stays on the page.
+      expect(backgroundBehind(reference)).toBe(CANVAS);
+    },
+  );
 
   test.each<
     [
@@ -1331,6 +1448,29 @@ describe("a Product", () => {
         .getByText(/released/i)
         .elements(),
     ).toHaveLength(0);
+  });
+
+  test("keeps the date and time of its release on one line in its details, where Released and they take two lines", async () => {
+    const releasedAt = "2099-12-20T09:00:00Z";
+    const details = await openProductDetails({ released_at: releasedAt });
+
+    const value = details
+      .getByRole("definition")
+      .filter({ hasText: /^Released / });
+    const time = value.getByText(formatDateTime(releasedAt), { exact: true });
+    await expect.element(time).toHaveAttribute("datetime", releasedAt);
+    expect(value.element().textContent).toBe(
+      `Released ${formatDateTime(releasedAt)}`,
+    );
+    // The value wraps, but never within the date and time, which follow
+    // Released on the next line, whole.
+    const released = document.createRange();
+    released.selectNodeContents(value.element().firstChild!);
+    expect(boxOf(value).height).toBeGreaterThan(20);
+    expect(time.element().getClientRects()).toHaveLength(1);
+    expect(boxOf(time).top).toBeGreaterThanOrEqual(
+      released.getBoundingClientRect().bottom,
+    );
   });
 
   test.each<[string, Partial<TrackDetail>, Partial<ProductDetail>]>([

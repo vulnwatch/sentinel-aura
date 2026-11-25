@@ -247,6 +247,77 @@ test.each([
   },
 );
 
+// The bottom of the text of an element, which stands on its baseline.
+function textBottom(node: Node): number {
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  return range.getBoundingClientRect().bottom;
+}
+
+// The vertical middle of a box.
+function middleOf(element: Element): number {
+  const box = element.getBoundingClientRect();
+  return (box.top + box.bottom) / 2;
+}
+
+describe.each([
+  ["a person", ALICE, "Alice Smith"],
+  ["System", null, "System"],
+] as const)("the full form of %s in running text", (_, actor, name) => {
+  test.each(["text-14", "text-13"])(
+    "stands the name on the baseline of the text around it, in %s, with the picture centered on the line",
+    async (size) => {
+      const screen = await render(
+        <p className={`${size} leading-6`}>
+          <span className="font-medium">
+            <Actor actor={actor} />
+          </span>{" "}
+          set the status
+        </p>,
+      );
+      const line = screen.getByText(/set the status$/).element();
+      const nameText = screen.getByText(name, { exact: true }).element();
+      await expect
+        .element(screen.getByText(name, { exact: true }))
+        .toBeVisible();
+
+      expect(textBottom(nameText)).toBeCloseTo(textBottom(line.lastChild!), 1);
+      // The picture, as high as the line, fills it without making it higher,
+      // so it is centered on it.
+      expect(line.getBoundingClientRect().height).toBe(24);
+    },
+  );
+});
+
+test.each([
+  ["small, by default", undefined],
+  ["medium", "medium"],
+  ["large", "large"],
+] as const)(
+  "keeps the name in the middle of its avatar outside running text: %s",
+  async (_, size) => {
+    const screen = await render(
+      <section aria-label="Row" className="flex items-center text-14">
+        <User user={{ ...ALICE, active: false }} size={size} />
+      </section>,
+    );
+    const row = screen.getByRole("region").element();
+    const name = screen.getByText("Alice Smith", { exact: true }).element();
+    const label = screen.getByText("Inactive", { exact: true }).element();
+
+    await expect.element(screen.getByText("Alice Smith")).toBeVisible();
+    const words = document.createRange();
+    words.selectNodeContents(name);
+    const text = words.getBoundingClientRect();
+    // Within a pixel, which the ascent and the descent of the font take
+    // apart, as they do when the name is centered in a box of its own.
+    expect(
+      Math.abs((text.top + text.bottom) / 2 - middleOf(row)),
+    ).toBeLessThanOrEqual(1);
+    expect(Math.abs(middleOf(label) - middleOf(row))).toBeLessThanOrEqual(1);
+  },
+);
+
 describe("with the username on a line of its own", () => {
   test.each([
     ["a user with a full name", ALICE, "Alice Smith", "@asmith"],
@@ -453,6 +524,32 @@ describe("actor of a recorded action", () => {
       expect(
         screen.getByRole("region").element().getBoundingClientRect().height,
       ).toBe(pixels);
+    },
+  );
+
+  test.each([
+    ["small, by default", undefined],
+    ["medium", "medium"],
+    ["large", "large"],
+  ] as const)(
+    "keeps System in the middle of its picture outside running text: %s",
+    async (_, size) => {
+      const screen = await render(
+        <section aria-label="Row" className="flex items-center text-14">
+          <Actor actor={null} size={size} />
+        </section>,
+      );
+      const row = screen.getByRole("region").element();
+      const name = screen.getByText("System", { exact: true }).element();
+
+      await expect.element(screen.getByText("System")).toBeVisible();
+      const words = document.createRange();
+      words.selectNodeContents(name);
+      const text = words.getBoundingClientRect();
+      // Within a pixel, as the name of a user (above).
+      expect(
+        Math.abs((text.top + text.bottom) / 2 - middleOf(row)),
+      ).toBeLessThanOrEqual(1);
     },
   );
 });

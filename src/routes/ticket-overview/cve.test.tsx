@@ -215,11 +215,15 @@ describe("the CVE", () => {
     expect(valueOfTerm("EPSS")).toBe("–Not set");
   });
 
-  test("shows the date of its CISA KEV entry, and its EPSS score and percentile cut to five decimals, with at least two", async () => {
+  test("shows the date of its CISA KEV entry, its EPSS score cut to five decimals, with at least two, and its percentile cut to two", async () => {
     const { part } = await renderCve({
       kev: { date_added: "2099-10-05", reference_url: null },
       ssvc: null,
-      epss: { score: 0.000436, percentile: 0.3, assessed_at: "2099-10-08" },
+      epss: {
+        score: 0.000436,
+        percentile: 0.30987,
+        assessed_at: "2099-10-08",
+      },
     });
 
     const terms = textsOf(part.getByRole("term"));
