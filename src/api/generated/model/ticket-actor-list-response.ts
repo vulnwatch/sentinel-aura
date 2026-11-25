@@ -12,5 +12,5 @@ import type { UserReference } from "./user-reference";
  * `username` in Unicode code-point order.
  */
 export interface TicketActorListResponse {
-  data: UserReference[];
+  data: readonly UserReference[];
 }

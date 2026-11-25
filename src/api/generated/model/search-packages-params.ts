@@ -21,7 +21,7 @@ export type SearchPackagesParams = {
    * Ticket statuses to include: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored; if all values are invalid, the result is empty. Default: all statuses.
    * @items.maxLength 500
    */
-  ticket_status?: SearchPackagesTicketStatusItem[];
+  ticket_status?: readonly SearchPackagesTicketStatusItem[];
   /**
    * Sort field (default `created_at`): `package_name` (Unicode code-point order) or `created_at` (when the package was added to the Ticket).
    * @maxLength 500

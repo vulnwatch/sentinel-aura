@@ -79,6 +79,10 @@ export default defineConfig({
         mutator: { path: "./src/api/request.ts", name: "apiRequest" },
         // The request functions return the body; apiRequest throws on errors.
         fetch: { includeHttpResponseReturnType: false },
+        // Every array and tuple of the API types is readonly, so that the
+        // type check rejects code that changes an array of the data read from
+        // the API in place (docs/conventions.md, Data Read from the API).
+        useReadonlyArrays: true,
         // The documentation of each hook also names the method and path of
         // its operation, by which the documents name it, such as
         // "@route GET /api/v1/tickets" on useListTickets.

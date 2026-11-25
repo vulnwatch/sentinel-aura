@@ -133,7 +133,7 @@ export const EVERY_REFERENCE = [NVD, ADVISORY, PATCH, ISSUE, POST] as const;
 export function referencesResponse(
   references: readonly TicketReferenceResponse[] = EVERY_REFERENCE,
 ): Response {
-  const body: TicketReferenceListResponse = { data: [...references] };
+  const body: TicketReferenceListResponse = { data: references };
   return jsonResponse(200, body);
 }
 

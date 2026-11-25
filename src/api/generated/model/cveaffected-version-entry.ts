@@ -32,7 +32,7 @@ export interface CVEAffectedVersionEntry {
   /** `true` when `version_end` is inclusive, `false` when exclusive, `null` without a range end. */
   version_end_inclusive: boolean | null;
   /** Affected source files. */
-  program_files: string[] | null;
+  program_files: readonly string[] | null;
   /** CPE supplied with the entry. */
   cpe: string | null;
   /** OSSF canonical ecosystem identifier. */

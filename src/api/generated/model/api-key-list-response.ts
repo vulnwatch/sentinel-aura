@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/api-keys`.
  */
 export interface ApiKeyListResponse {
-  data: ApiKeyData[];
+  data: readonly ApiKeyData[];
   meta: PaginationMeta;
 }

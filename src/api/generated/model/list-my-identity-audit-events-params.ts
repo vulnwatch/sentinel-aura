@@ -9,7 +9,7 @@ export type ListMyIdentityAuditEventsParams = {
    * Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
-  event_type?: ListMyIdentityAuditEventsEventTypeItem[];
+  event_type?: readonly ListMyIdentityAuditEventsEventTypeItem[];
   /**
    * ISO 8601 date/datetime; inclusive lower bound.
    * @maxLength 500

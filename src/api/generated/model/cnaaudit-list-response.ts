@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/admin/cnas/audit-log` (paginated).
  */
 export interface CNAAuditListResponse {
-  data: CNAAuditEventData[];
+  data: readonly CNAAuditEventData[];
   meta: PaginationMeta;
 }

@@ -30,7 +30,7 @@ export interface UserData {
   source: UserType;
   external_id: string | null;
   manager: UserManagerData | null;
-  roles: UserRoleAssignmentData[];
+  roles: readonly UserRoleAssignmentData[];
   assignment_eligibility: AssignmentEligibility;
   last_login_at: string | null;
   created_at: string;

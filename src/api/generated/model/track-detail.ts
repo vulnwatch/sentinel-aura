@@ -27,7 +27,7 @@ export interface TrackDetail {
   /** Computed: `true` when the affectedness is `analysis` or `affected`, or `delivery_status` is not `pending`. When `false`, `delivery_status` is the system default, carries no delivery signal, and consumers should not make decisions based on it. */
   delivery_relevant: boolean;
   /** Product occurrences under this track, including excluded and non-actionable ones, ordered by `product_cpe` (Unicode code point). */
-  products: ProductDetail[];
+  products: readonly ProductDetail[];
   /** Direct manual-exclusion timestamp of this track only; `null` when not directly excluded. */
   deleted_at: string | null;
   /** Whether the track is not manually excluded (directly or through its package) and has at least one actionable Product. */

@@ -9,7 +9,7 @@ export type ListFetcherAuditEventsParams = {
    * Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
-  event_type?: ListFetcherAuditEventsEventTypeItem[];
+  event_type?: readonly ListFetcherAuditEventsEventTypeItem[];
   /**
    * Actor UUID or exact username.
    * @maxLength 500

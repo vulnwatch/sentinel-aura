@@ -22,12 +22,12 @@ export type ListProductsParams = {
    * Filter by membership in the latest complete SMELT snapshot: `current` (observed in it) or `historical` (retained, not observed in it). Repeatable; OR semantics; both values select every retained Product. Default when absent: `current`. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
-  catalog_presence?: ListProductsCatalogPresenceItem[];
+  catalog_presence?: readonly ListProductsCatalogPresenceItem[];
   /**
    * Filter by current lifecycle phase: `pre_release`, `general_support`, `extended_support`, `reactive_support`, `eol`, or the filter-only `unavailable` (no phase can be established; never emitted in a response). Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
-  lifecycle_phase?: ListProductsLifecyclePhaseItem[];
+  lifecycle_phase?: readonly ListProductsLifecyclePhaseItem[];
   /**
    * Page number.
    * @minimum 1

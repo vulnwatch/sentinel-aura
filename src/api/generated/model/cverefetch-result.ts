@@ -11,11 +11,11 @@
  */
 export interface CVERefetchResult {
   /** Sources whose single-CVE fetch publication returned without raising. */
-  sources_enqueued: string[];
+  sources_enqueued: readonly string[];
   /** Sources with an on-demand fetch already pending; no new publication was attempted. */
-  sources_already_pending: string[];
+  sources_already_pending: readonly string[];
   /** Registered refetchable sources skipped because they are disabled (broadcast only). */
-  sources_disabled: string[];
+  sources_disabled: readonly string[];
   /** Sources whose publication attempt raised; broker acceptance is unconfirmed, not certainly rejected. */
-  sources_failed: string[];
+  sources_failed: readonly string[];
 }

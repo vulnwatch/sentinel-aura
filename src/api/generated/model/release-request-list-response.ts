@@ -9,6 +9,6 @@ import type { ReleaseRequestItem } from "./release-request-item";
  * Response body for `GET /api/v1/tickets/{ticket_id}/release-requests`.
  */
 export interface ReleaseRequestListResponse {
-  data: ReleaseRequestItem[];
+  data: readonly ReleaseRequestItem[];
   meta: PaginationMeta;
 }

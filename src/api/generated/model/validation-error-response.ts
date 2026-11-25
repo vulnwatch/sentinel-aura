@@ -14,5 +14,5 @@ import type { ValidationErrorItem } from "./validation-error-item";
 export interface ValidationErrorResponse {
   code: string;
   detail: string;
-  errors: ValidationErrorItem[];
+  errors: readonly ValidationErrorItem[];
 }

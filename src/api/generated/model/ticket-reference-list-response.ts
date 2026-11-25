@@ -10,5 +10,5 @@ import type { TicketReferenceResponse } from "./ticket-reference-response";
  * Unpaginated: references are a small Ticket-scoped collection.
  */
 export interface TicketReferenceListResponse {
-  data: TicketReferenceResponse[];
+  data: readonly TicketReferenceResponse[];
 }

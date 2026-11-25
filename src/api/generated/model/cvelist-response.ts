@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/cves` (paginated).
  */
 export interface CVEListResponse {
-  data: CVEListItem[];
+  data: readonly CVEListItem[];
   meta: PaginationMeta;
 }

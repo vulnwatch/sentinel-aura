@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * A paginated workbench global list.
  */
 export interface MaintainerWorkListResponse {
-  data: MaintainerWorkItem[];
+  data: readonly MaintainerWorkItem[];
   meta: PaginationMeta;
 }

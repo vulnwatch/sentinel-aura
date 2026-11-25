@@ -301,6 +301,11 @@ that needs it; content of another kind needs a new row first.
 - Data read from the API lives only in TanStack Query's cache, read through
   the generated hooks. Components do not copy it into their state, a context,
   a module variable, or browser storage.
+- The generated API types declare every array read-only (`orval.config.ts`),
+  so the type check rejects code that changes an array of the data read from
+  the API in place, such as a `push` or a `sort` on an array of the cache.
+  Code that receives such an array declares it `readonly`, and derives
+  another one with a method that returns a new array, such as `toSorted`.
 - After a change, whether it succeeds or fails, the code invalidates the
   queries whose data the change affects, so that they are read again from the
   API, instead of editing the cached data (`docs/behaviors.md`, Outcome of a

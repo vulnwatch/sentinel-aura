@@ -9,7 +9,7 @@ export type ListSettingAuditEventsParams = {
    * Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
-  event_type?: ListSettingAuditEventsEventTypeItem[];
+  event_type?: readonly ListSettingAuditEventsEventTypeItem[];
   /**
    * Filter by exact setting key.
    * @maxLength 500

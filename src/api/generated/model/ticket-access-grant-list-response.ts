@@ -12,5 +12,5 @@ import type { TicketAccessGrantResponse } from "./ticket-access-grant-response";
  * which is not client-configurable.
  */
 export interface TicketAccessGrantListResponse {
-  data: TicketAccessGrantResponse[];
+  data: readonly TicketAccessGrantResponse[];
 }

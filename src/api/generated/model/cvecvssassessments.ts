@@ -12,7 +12,7 @@ import type { DefaultCVSSVersionValue } from "./default-cvss-version-value";
  */
 export interface CVECVSSAssessments {
   /** Complete assessment set, ordered by version 4.0, 3.1, 3.0, 2.0, then provider name by Unicode code point. */
-  assessments: CVSSAssessmentItem[];
+  assessments: readonly CVSSAssessmentItem[];
   /** The configured default CVSS version observed by this read. */
   default_cvss_version: DefaultCVSSVersionValue;
   /** Severity Resolution result, or null without assessments. */

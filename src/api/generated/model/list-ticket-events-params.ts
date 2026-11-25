@@ -9,7 +9,7 @@ export type ListTicketEventsParams = {
    * Filter by event type. Repeatable; OR semantics. Invalid values are ignored.
    * @items.maxLength 500
    */
-  event_type?: ListTicketEventsEventTypeItem[];
+  event_type?: readonly ListTicketEventsEventTypeItem[];
   /**
    * Actor user UUID, exact username, or 'system'.
    * @maxLength 500

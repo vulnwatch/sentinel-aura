@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/cve-sources` (paginated).
  */
 export interface CVESourceListResponse {
-  data: CVESourceListItem[];
+  data: readonly CVESourceListItem[];
   meta: PaginationMeta;
 }

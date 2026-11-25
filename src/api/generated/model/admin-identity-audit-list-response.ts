@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/admin/identity/audit-log`.
  */
 export interface AdminIdentityAuditListResponse {
-  data: AdminIdentityAuditEventData[];
+  data: readonly AdminIdentityAuditEventData[];
   meta: PaginationMeta;
 }

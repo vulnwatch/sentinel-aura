@@ -9,7 +9,7 @@
  */
 export interface ValidationErrorItem {
   /** Path to the invalid input, e.g. `["body", "field_name"]`. */
-  loc: (string | number)[];
+  loc: readonly (string | number)[];
   /** Human-readable message. */
   msg: string;
   /** Stable machine-readable error type. */

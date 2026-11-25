@@ -6,6 +6,6 @@ import type { FetcherDisabledPeriodData } from "./fetcher-disabled-period-data";
 import type { FetcherTimelinePointData } from "./fetcher-timeline-point-data";
 
 export interface FetcherTimelineData {
-  points: FetcherTimelinePointData[];
-  disabled_periods: FetcherDisabledPeriodData[];
+  points: readonly FetcherTimelinePointData[];
+  disabled_periods: readonly FetcherDisabledPeriodData[];
 }

@@ -9,5 +9,5 @@ import type { CVESourceStatusItem } from "./cvesource-status-item";
  * fixed ascending `source` code-point order).
  */
 export interface CVESourceStatusResponse {
-  data: CVESourceStatusItem[];
+  data: readonly CVESourceStatusItem[];
 }

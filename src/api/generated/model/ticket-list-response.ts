@@ -9,6 +9,6 @@ import type { TicketSummary } from "./ticket-summary";
  * Response body for `GET /api/v1/tickets` (paginated).
  */
 export interface TicketListResponse {
-  data: TicketSummary[];
+  data: readonly TicketSummary[];
   meta: PaginationMeta;
 }

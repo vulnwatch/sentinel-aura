@@ -10,5 +10,5 @@ import type { CVEAffectedVersionGroup } from "./cveaffected-version-group";
  * order).
  */
 export interface CVEAffectedVersionsResponse {
-  data: CVEAffectedVersionGroup[];
+  data: readonly CVEAffectedVersionGroup[];
 }

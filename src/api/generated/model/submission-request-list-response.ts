@@ -9,6 +9,6 @@ import type { SubmissionRequestItem } from "./submission-request-item";
  * Response body for `GET /api/v1/tickets/{ticket_id}/submission-requests`.
  */
 export interface SubmissionRequestListResponse {
-  data: SubmissionRequestItem[];
+  data: readonly SubmissionRequestItem[];
   meta: PaginationMeta;
 }

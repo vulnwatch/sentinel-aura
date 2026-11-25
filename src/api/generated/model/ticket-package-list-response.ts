@@ -10,5 +10,5 @@ import type { PackageDetail } from "./package-detail";
  * Unpaginated: the package count per Ticket is bounded.
  */
 export interface TicketPackageListResponse {
-  data: PackageDetail[];
+  data: readonly PackageDetail[];
 }

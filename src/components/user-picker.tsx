@@ -145,7 +145,7 @@ export function UserPicker({
   const read = useListUsers(
     {
       ...(searching ? { search: term } : {}),
-      assignment_eligibility: [...eligibility],
+      assignment_eligibility: eligibility,
       per_page: LISTED_USERS,
     },
     { query: { gcTime: 0, refetchOnWindowFocus: false } },

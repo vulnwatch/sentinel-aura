@@ -9,6 +9,6 @@ import type { UserDirectoryData } from "./user-directory-data";
  * Response body for `GET /api/v1/users`.
  */
 export interface UserDirectoryListResponse {
-  data: UserDirectoryData[];
+  data: readonly UserDirectoryData[];
   meta: PaginationMeta;
 }

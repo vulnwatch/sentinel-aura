@@ -177,7 +177,7 @@ const EVERY_SCOPE: CVEAffectedVersionGroup[] = [
 function versionsResponse(
   groups: readonly CVEAffectedVersionGroup[] = EVERY_SCOPE,
 ): Response {
-  const body: CVEAffectedVersionsResponse = { data: [...groups] };
+  const body: CVEAffectedVersionsResponse = { data: groups };
   return jsonResponse(200, body);
 }
 

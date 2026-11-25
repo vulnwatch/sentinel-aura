@@ -9,6 +9,6 @@ import type { TicketAuditEventData } from "./ticket-audit-event-data";
  * Response body for `GET /api/v1/tickets/{ticket_id}/audit-log`.
  */
 export interface TicketAuditListResponse {
-  data: TicketAuditEventData[];
+  data: readonly TicketAuditEventData[];
   meta: PaginationMeta;
 }

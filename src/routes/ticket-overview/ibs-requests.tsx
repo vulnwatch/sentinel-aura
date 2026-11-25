@@ -137,7 +137,7 @@ const RELEASE_REQUEST: RequestKind = {
 };
 
 interface RequestCellProps {
-  read: Read<{ data: IbsRequest[]; meta: { total: number } }>;
+  read: Read<{ data: readonly IbsRequest[]; meta: { total: number } }>;
   kind: RequestKind;
   // What the place says without requests, or nothing.
   empty?: string;
