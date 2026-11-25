@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.12.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.11.0...v0.12.0) (2026-11-25)
+
+
+### Features
+
+* add About Sentinel and Guides to the account menu ([#330](https://github.com/vulnwatch/sentinel-aura/issues/330)) ([897ec40](https://github.com/vulnwatch/sentinel-aura/commit/897ec405176becd3f1f9fc156eb3ca908c9cb372))
+* filter the Ticket list by the ignore reason ([#328](https://github.com/vulnwatch/sentinel-aura/issues/328)) ([5ce9a2b](https://github.com/vulnwatch/sentinel-aura/commit/5ce9a2b2fb3da9fe27a68e916248f8924b183a8a))
+
+
+### Bug Fixes
+
+* let a form span the width of its dialog ([#332](https://github.com/vulnwatch/sentinel-aura/issues/332)) ([d9804e9](https://github.com/vulnwatch/sentinel-aura/commit/d9804e97c07355608ab77048d63e365d2a0caa4a))
+* polish the Ticket screen and the message of a 500 ([#335](https://github.com/vulnwatch/sentinel-aura/issues/335)) ([0e4f726](https://github.com/vulnwatch/sentinel-aura/commit/0e4f7269017d5e7683b46c631d951a4fe10e65fa))
+
+
+### Dependencies
+
+* **deps:** Lock file maintenance ([#324](https://github.com/vulnwatch/sentinel-aura/issues/324)) ([12184e2](https://github.com/vulnwatch/sentinel-aura/commit/12184e268236dae3ce9d3de96f26873702670475))
+* **deps:** Update nginx ([#275](https://github.com/vulnwatch/sentinel-aura/issues/275)) ([5f7a72f](https://github.com/vulnwatch/sentinel-aura/commit/5f7a72f73fc157c6242cab3ebd8bcac8ecd69e41))
+* **deps:** update npm minor and patch dependencies ([#337](https://github.com/vulnwatch/sentinel-aura/issues/337)) ([9900648](https://github.com/vulnwatch/sentinel-aura/commit/990064843adaf897462409fce0939f2e4876aa5a))
+
 ## [0.11.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.10.0...v0.11.0) (2026-11-23)
 
 
