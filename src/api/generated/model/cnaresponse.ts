@@ -16,7 +16,7 @@ export interface CNAResponse {
   /** Organization name from the CVE Program CNA list. */
   organization_name: string | null;
   /** CNA types from the CVE Program CNA list, in ascending Unicode code-point order; empty when unknown. Values are those of the list, such as `Vendor`, `Open Source`, or `Researcher`, and are not a closed set. */
-  types: string[];
+  types: readonly string[];
   /** Scope from the CVE Program CNA list as plain text, which may contain line feeds; never markup. */
   scope: string | null;
   /** Whether the new Tickets of the CNA are ignored automatically (auto-ignore policy). */

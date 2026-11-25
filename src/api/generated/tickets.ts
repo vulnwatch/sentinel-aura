@@ -45,6 +45,36 @@ import type { ErrorType } from "../request";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
+const getHeaders = (
+  ...sources: (RequestInit["headers"] | Record<string, string | undefined>)[]
+) => {
+  const seen = new Set<string>();
+  const layers: [string, string | readonly string[]][][] = [];
+  for (const source of sources.reverse()) {
+    if (!source) continue;
+    const entries =
+      source instanceof Headers
+        ? source.entries()
+        : Symbol.iterator in source
+          ? Array.from(
+              source as Iterable<Iterable<string>>,
+              (entry) => Array.from(entry) as [string, string],
+            )
+          : Object.entries<string | readonly string[] | undefined>(source);
+    const layer: [string, string | readonly string[]][] = [];
+    for (const [name, value] of entries) {
+      if (value !== undefined && !seen.has(name.toLowerCase()))
+        layer.push([name, value]);
+    }
+    for (const [name] of layer) seen.add(name.toLowerCase());
+    layers.push(layer);
+  }
+  return Object.fromEntries(layers.reverse().flat()) as Extract<
+    RequestInit["headers"],
+    Record<string, unknown>
+  >;
+};
+
 const withQueryKey = <T extends object, K>(
   query: T,
   queryKey: K,
@@ -266,34 +296,13 @@ export const createTicket = async (
   ticketCreateRequest: TicketCreateRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(getCreateTicketUrl(), {
     ...options,
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
+    headers: getHeaders(
+      { "Content-Type": "application/json" },
+      options?.headers,
+    ),
     body: JSON.stringify(ticketCreateRequest),
   });
 };
@@ -556,34 +565,13 @@ export const setTicketSeverity = async (
   ticketSeverityUpdateRequest: TicketSeverityUpdateRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(getSetTicketSeverityUrl(ticketId), {
     ...options,
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
+    headers: getHeaders(
+      { "Content-Type": "application/json" },
+      options?.headers,
+    ),
     body: JSON.stringify(ticketSeverityUpdateRequest),
   });
 };
@@ -681,34 +669,13 @@ export const associateTicketCve = async (
   ticketAssociateCVERequest: TicketAssociateCVERequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(getAssociateTicketCveUrl(ticketId), {
     ...options,
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
+    headers: getHeaders(
+      { "Content-Type": "application/json" },
+      options?.headers,
+    ),
     body: JSON.stringify(ticketAssociateCVERequest),
   });
 };
@@ -813,34 +780,13 @@ export const setTicketPriority = async (
   ticketPriorityUpdateRequest: TicketPriorityUpdateRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(getSetTicketPriorityUrl(ticketId), {
     ...options,
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
+    headers: getHeaders(
+      { "Content-Type": "application/json" },
+      options?.headers,
+    ),
     body: JSON.stringify(ticketPriorityUpdateRequest),
   });
 };
@@ -938,34 +884,13 @@ export const assignTicket = async (
   ticketAssigneeUpdateRequest: TicketAssigneeUpdateRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(getAssignTicketUrl(ticketId), {
     ...options,
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
+    headers: getHeaders(
+      { "Content-Type": "application/json" },
+      options?.headers,
+    ),
     body: JSON.stringify(ticketAssigneeUpdateRequest),
   });
 };
@@ -1062,34 +987,13 @@ export const ignoreTicket = async (
   ticketIgnoreRequest: TicketIgnoreRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(getIgnoreTicketUrl(ticketId), {
     ...options,
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
+    headers: getHeaders(
+      { "Content-Type": "application/json" },
+      options?.headers,
+    ),
     body: JSON.stringify(ticketIgnoreRequest),
   });
 };
@@ -1186,36 +1090,15 @@ export const markTicketAsDuplicate = async (
   ticketDuplicateRequest: TicketDuplicateRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(
     getMarkTicketAsDuplicateUrl(ticketId),
     {
       ...options,
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getHeaders(options?.headers),
-      },
+      headers: getHeaders(
+        { "Content-Type": "application/json" },
+        options?.headers,
+      ),
       body: JSON.stringify(ticketDuplicateRequest),
     },
   );
@@ -1613,36 +1496,15 @@ export const setTicketConfidentiality = async (
   ticketConfidentialityUpdateRequest: TicketConfidentialityUpdateRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(
     getSetTicketConfidentialityUrl(ticketId),
     {
       ...options,
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...getHeaders(options?.headers),
-      },
+      headers: getHeaders(
+        { "Content-Type": "application/json" },
+        options?.headers,
+      ),
       body: JSON.stringify(ticketConfidentialityUpdateRequest),
     },
   );
@@ -1745,36 +1607,15 @@ export const setTicketCoordinatedReleaseDate = async (
   ticketCoordinatedReleaseDateUpdateRequest: TicketCoordinatedReleaseDateUpdateRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketDetailResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketDetailResponse>(
     getSetTicketCoordinatedReleaseDateUrl(ticketId),
     {
       ...options,
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...getHeaders(options?.headers),
-      },
+      headers: getHeaders(
+        { "Content-Type": "application/json" },
+        options?.headers,
+      ),
       body: JSON.stringify(ticketCoordinatedReleaseDateUpdateRequest),
     },
   );
@@ -2069,36 +1910,15 @@ export const grantTicketAccess = async (
   ticketAccessGrantRequest: TicketAccessGrantRequest,
   options?: Parameters<typeof apiRequest>[1],
 ): Promise<TicketAccessGrantDataResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<
-      string | readonly string[] | undefined
-    >(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return apiRequest<TicketAccessGrantDataResponse>(
     getGrantTicketAccessUrl(ticketId),
     {
       ...options,
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getHeaders(options?.headers),
-      },
+      headers: getHeaders(
+        { "Content-Type": "application/json" },
+        options?.headers,
+      ),
       body: JSON.stringify(ticketAccessGrantRequest),
     },
   );

@@ -12,5 +12,5 @@ export interface CVEAffectedVersionGroup {
   /** Provenance scope (e.g. `cna`, `adp:CISA-ADP`, `ghsa`, `osv`). */
   source_container: string;
   /** The scope's entries, never empty, ordered by `vendor`, `product`, `package_name`, `ecosystem`, `repo`, `version_type`, `version`, then `version_end`, each by ascending Unicode code point with absent values last. */
-  entries: CVEAffectedVersionEntry[];
+  entries: readonly CVEAffectedVersionEntry[];
 }

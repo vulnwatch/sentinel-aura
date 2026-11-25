@@ -32,6 +32,6 @@ export interface AdminUserCreateRequest {
    * @maxLength 128
    */
   password: string;
-  roles?: RoleValue[];
+  roles?: readonly RoleValue[];
   bot?: boolean;
 }

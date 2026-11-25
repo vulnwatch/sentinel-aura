@@ -16,7 +16,7 @@ export interface PackageDetail {
   /** Source package name. */
   package_name: string;
   /** Tracks of this package, including excluded and non-actionable ones, ordered by `reference` (Unicode code point). */
-  tracks: TrackDetail[];
+  tracks: readonly TrackDetail[];
   /** Direct manual-exclusion timestamp of this package; `null` when not directly excluded. */
   deleted_at: string | null;
   /** Whether the package is not manually excluded and has at least one actionable track. */
@@ -24,5 +24,5 @@ export interface PackageDetail {
   /** First applicable reason in the order `package_excluded`, `no_actionable_tracks`; `null` when actionable. */
   non_actionable_reason: PackageReasonValue | null;
   /** The users that Sentinel associated with this package as its maintainers, from SMELT maintainership data, as current user references ordered by `username` (Unicode code point); empty when none is associated. Associations are only added, never removed: a directly excluded package keeps them (they grant no access to a confidential Ticket while it is excluded), and an inactive user remains with `active` set to `false`. */
-  maintainers: UserReference[];
+  maintainers: readonly UserReference[];
 }

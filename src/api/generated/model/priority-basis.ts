@@ -20,5 +20,5 @@ export interface PriorityBasis {
   /** Exploitation level that selects the Decision Table row: `kev` (listed in CISA KEV), `active` (SSVC exploitation `active`), `likely` (SSVC exploitation `poc` or a high EPSS percentile), or `unknown`. */
   exploitation: ExploitationLevel;
   /** Persisted evidence that decided `exploitation`, ordered `kev`, `ssvc_exploitation`, `epss_percentile`; empty when `exploitation` is `unknown`. */
-  evidence: PriorityEvidence[];
+  evidence: readonly PriorityEvidence[];
 }

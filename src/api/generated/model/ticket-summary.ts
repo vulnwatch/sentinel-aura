@@ -64,7 +64,7 @@ export interface TicketSummary {
   /** Milestone status of `current_phase`: `overdue` when the Ticket matches the `overdue` filter value of its current phase (the phase is not completed and its due date is past), otherwise `pending`; `null` when `current_phase` is `done` or `null`. A milestone `pending` is unrelated to `delivery_status = pending`. */
   current_phase_milestone: CurrentPhaseMilestoneValue | null;
   /** Exact-deduplicated names of the directly included packages, ordered by ascending Unicode code point. Product lifecycle actionability does not remove an included package name. */
-  package_names: string[];
+  package_names: readonly string[];
   /** Creation timestamp (UTC). */
   created_at: string;
   /** Last modification timestamp (UTC). */

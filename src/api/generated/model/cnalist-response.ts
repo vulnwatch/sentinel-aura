@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/cnas` (paginated).
  */
 export interface CNAListResponse {
-  data: CNAResponse[];
+  data: readonly CNAResponse[];
   meta: PaginationMeta;
 }

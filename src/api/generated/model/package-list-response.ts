@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body of `GET /api/v1/packages` (paginated).
  */
 export interface PackageListResponse {
-  data: PackageListItem[];
+  data: readonly PackageListItem[];
   meta: PaginationMeta;
 }

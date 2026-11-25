@@ -22,7 +22,7 @@ export type ListCvesParams = {
    * Filter by resolved severity: `critical`, `high`, `medium`, `low`, `none` (CVSS score 0.0), `unresolved` (no CVSS assessment). Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
-  severity?: ListCvesSeverityItem[];
+  severity?: readonly ListCvesSeverityItem[];
   /** `true`: only CVEs with an associated Ticket; `false`: only CVEs without a Ticket. */
   has_ticket?: boolean;
   /**
@@ -30,7 +30,7 @@ export type ListCvesParams = {
    * @items.maxLength 500
    * @items.pattern ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$
    */
-  cna?: string[];
+  cna?: readonly string[];
   /**
    * ISO 8601 date/datetime; inclusive lower bound on `published_date`. CVEs without a publication date are excluded.
    * @maxLength 500

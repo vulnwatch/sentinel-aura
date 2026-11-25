@@ -9,6 +9,6 @@ import type { ProductListItem } from "./product-list-item";
  * Response body of `GET /api/v1/products` (paginated).
  */
 export interface ProductListResponse {
-  data: ProductListItem[];
+  data: readonly ProductListItem[];
   meta: PaginationMeta;
 }

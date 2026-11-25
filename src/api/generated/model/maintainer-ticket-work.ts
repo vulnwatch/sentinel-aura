@@ -13,9 +13,9 @@ import type { MaintainerWorkItem } from "./maintainer-work-item";
  */
 export interface MaintainerTicketWork {
   /** Tracks with an affected, not yet delivered fix. */
-  pending: MaintainerWorkItem[];
+  pending: readonly MaintainerWorkItem[];
   /** Tracks whose delivery is in progress. */
-  in_progress: MaintainerWorkItem[];
+  in_progress: readonly MaintainerWorkItem[];
   /** Tracks whose delivery is released. */
-  completed: MaintainerWorkItem[];
+  completed: readonly MaintainerWorkItem[];
 }

@@ -10,5 +10,5 @@ export interface CVEWeaknessResponse {
   /** CWE identifier (e.g. `CWE-79`). */
   cwe_id: string;
   /** Every persisted provider that assigned this CWE, exact-deduplicated and ordered by ascending Unicode code point. */
-  sources: string[];
+  sources: readonly string[];
 }

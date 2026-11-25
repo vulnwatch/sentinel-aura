@@ -21,18 +21,18 @@ export type ListTicketsParams = {
    * Filter by Ticket status: `new`, `analysis`, `analyzed`, `resolved`, `ignored`, `duplicated`. Repeatable; OR semantics. Invalid values are ignored.
    * @items.maxLength 500
    */
-  status?: ListTicketsStatusItem[];
+  status?: readonly ListTicketsStatusItem[];
   /**
    * Filter by ignore reason: `not_shipped`, `cve_rejected`, `cna_policy`, `other`. `cna_policy` lists the Tickets that the CNA auto-ignore policy ignored. A Ticket that is not `ignored` has no reason and matches no value. Repeatable; OR semantics. Invalid values are ignored.
    * @items.maxLength 500
    */
-  ignore_reason?: ListTicketsIgnoreReasonItem[];
+  ignore_reason?: readonly ListTicketsIgnoreReasonItem[];
   /**
    * Filter by the CNA that owns the record of the Ticket's CVE. `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. Repeatable; OR semantics. A malformed value fails validation; an unknown CNA yields no match. A Ticket without a CVE, or whose CVE has no CNA, matches no value.
    * @items.maxLength 500
    * @items.pattern ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$
    */
-  cna?: string[];
+  cna?: readonly string[];
   /**
    * Filter by assignee: user UUID, exact username, or `none` for unassigned Tickets. An unknown user yields an empty page.
    * @maxLength 500
@@ -42,22 +42,22 @@ export type ListTicketsParams = {
    * Filter by resolved severity: `critical`, `high`, `medium`, `low`, `none` (CVSS score 0.0), `unresolved` (no severity). Repeatable; OR semantics. Invalid values are ignored.
    * @items.maxLength 500
    */
-  severity?: ListTicketsSeverityItem[];
+  severity?: readonly ListTicketsSeverityItem[];
   /**
    * Filter by effective priority: `p1`, `p2`, `p3`, `p4`, `unresolved` (not yet prioritizable). Repeatable; OR semantics. Invalid values are ignored.
    * @items.maxLength 500
    */
-  priority?: ListTicketsPriorityItem[];
+  priority?: readonly ListTicketsPriorityItem[];
   /**
    * Filter by past-due, uncompleted milestones: `triage` (Ticket `new` or `analysis` past its triage due date, VA decision), `submission` (maintainer submission request), `um` (UM release request), `qa` (QA testing and publication): the Ticket is not `resolved` and at least one track has that milestone overdue. Repeatable; OR semantics. Invalid values are ignored.
    * @items.maxLength 500
    */
-  overdue?: ListTicketsOverdueItem[];
+  overdue?: readonly ListTicketsOverdueItem[];
   /**
    * Filter by the Ticket's `current_phase`: `triage`, `submission`, `um`, `qa`, `done`. A Ticket whose current phase is `null` matches no value. Combined with the same `overdue` value (for example `current_phase=um&overdue=um`), it lists the Tickets whose current phase is past due. Repeatable; OR semantics. Invalid values are ignored.
    * @items.maxLength 500
    */
-  current_phase?: ListTicketsCurrentPhaseItem[];
+  current_phase?: readonly ListTicketsCurrentPhaseItem[];
   /**
    * Filter by maintainer of at least one included package: user UUID or exact username. An unknown user yields an empty page.
    * @maxLength 500

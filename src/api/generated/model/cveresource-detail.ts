@@ -37,7 +37,7 @@ export interface CVEResourceDetail {
   /** CNA that owns the CVE Record, with its display name; `null` when no CNA is recorded. */
   cna: CNASummary | null;
   /** External identifiers from other naming authorities, ordered by source, then identifier, in ascending Unicode code-point order. */
-  external_identifiers: CVEExternalIdentifierResponse[];
+  external_identifiers: readonly CVEExternalIdentifierResponse[];
   /** CISA KEV catalog entry, or `null` when the CVE has none. */
   kev: CVEKEVResponse | null;
   /** Latest persisted FIRST EPSS snapshot, or `null` when none exists. */
@@ -45,7 +45,7 @@ export interface CVEResourceDetail {
   /** Persisted CISA SSVC decision points, or `null` when none exist. */
   ssvc: CVESSVCResponse | null;
   /** CWE classifications grouped by CWE identifier and ordered by ascending Unicode code point of `cwe_id`; empty when none exist. */
-  cwes: CVEWeaknessResponse[];
+  cwes: readonly CVEWeaknessResponse[];
   /** Associated Ticket, if any; `null` for a ticketless CVE. */
   ticket: CVEAssociatedTicket | null;
 }

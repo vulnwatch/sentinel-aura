@@ -15,6 +15,6 @@ import type { RoleValue } from "./role-value";
  * absent body is handled by the route as `{}`.
  */
 export interface UserRolesUpdateRequest {
-  add?: RoleValue[];
-  remove?: RoleValue[];
+  add?: readonly RoleValue[];
+  remove?: readonly RoleValue[];
 }

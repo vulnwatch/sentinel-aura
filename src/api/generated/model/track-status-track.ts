@@ -28,5 +28,5 @@ export interface TrackStatusTrack {
   /** First applicable reason in the order `package_excluded`, `track_excluded`, `no_actionable_products`; `null` when actionable. */
   non_actionable_reason: TrackReasonValue | null;
   /** Every Product occurrence of the track, including excluded and non-actionable ones, ordered by `product_cpe` (Unicode code point). */
-  products: TrackStatusProduct[];
+  products: readonly TrackStatusProduct[];
 }

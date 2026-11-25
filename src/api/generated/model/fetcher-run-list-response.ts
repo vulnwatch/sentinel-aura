@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/fetchers/{fetcher_name}/runs`.
  */
 export interface FetcherRunListResponse {
-  data: FetcherRunListItemData[];
+  data: readonly FetcherRunListItemData[];
   meta: PaginationMeta;
 }

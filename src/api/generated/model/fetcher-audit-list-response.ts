@@ -9,6 +9,6 @@ import type { PaginationMeta } from "./pagination-meta";
  * Response body for `GET /api/v1/fetchers/{fetcher_name}/audit-log`.
  */
 export interface FetcherAuditListResponse {
-  data: FetcherAuditEventData[];
+  data: readonly FetcherAuditEventData[];
   meta: PaginationMeta;
 }

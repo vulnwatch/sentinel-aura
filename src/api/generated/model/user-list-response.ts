@@ -9,6 +9,6 @@ import type { UserData } from "./user-data";
  * Response body for `GET /api/v1/admin/users`.
  */
 export interface UserListResponse {
-  data: UserData[];
+  data: readonly UserData[];
   meta: PaginationMeta;
 }

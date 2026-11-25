@@ -9,6 +9,6 @@ import type { SettingAuditEventData } from "./setting-audit-event-data";
  * Response body for `GET /api/v1/admin/settings/audit-log`.
  */
 export interface SettingAuditListResponse {
-  data: SettingAuditEventData[];
+  data: readonly SettingAuditEventData[];
   meta: PaginationMeta;
 }

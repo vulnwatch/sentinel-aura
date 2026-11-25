@@ -9,6 +9,6 @@ import type { SelfIdentityAuditEventData } from "./self-identity-audit-event-dat
  * Response body for `GET /api/v1/users/me/audit-log`.
  */
 export interface SelfIdentityAuditListResponse {
-  data: SelfIdentityAuditEventData[];
+  data: readonly SelfIdentityAuditEventData[];
   meta: PaginationMeta;
 }

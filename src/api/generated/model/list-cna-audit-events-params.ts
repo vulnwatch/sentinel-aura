@@ -9,7 +9,7 @@ export type ListCnaAuditEventsParams = {
    * Filter by event type. Repeatable; OR semantics. Invalid values are ignored; only invalid values yield an empty page.
    * @items.maxLength 500
    */
-  event_type?: ListCnaAuditEventsEventTypeItem[];
+  event_type?: readonly ListCnaAuditEventsEventTypeItem[];
   /**
    * `org_id` of a CNA: a UUID in the hyphenated 8-4-4-4-12 form, hexadecimal digits in either case. A malformed value fails validation; an unknown CNA yields an empty page.
    * @maxLength 500

@@ -10,5 +10,5 @@ import type { FetcherListItemData } from "./fetcher-list-item-data";
  * Pagination).
  */
 export interface FetcherListResponse {
-  data: FetcherListItemData[];
+  data: readonly FetcherListItemData[];
 }
