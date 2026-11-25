@@ -685,7 +685,7 @@ that needs it; content of another kind needs a new row first.
   span, with a comment that explains why the finding is a false positive or
   an accepted trade-off. A disable directive that suppresses nothing, such as
   one for a rule that no longer reports the span or that the lint does not
-  run, fails the lint, so the comment is removed with its cause. The
+  run, fails the lint, so the directive is removed with its cause. The
   generated API client is the only exception: it cannot carry such comments,
   so `.oxlintrc.json` disables for it, with a comment, only the rules that
   report patterns of its generator.

@@ -282,18 +282,18 @@ test("shows the mark of a value that the pinned contract does not list alone as 
     <ValueMark value="paused" known={KNOWN} />,
     SCALE,
   );
-  // The stroke of the top of the curve of the question mark, which runs at 7
-  // of the 24 units, above the center, and is 2 units thick: half a unit
-  // below its line, inside the stroke wherever the browser places the icon
-  // within a pixel.
-  expect(await iconColor(unknown.figure, [12, 7.5])).toBe(NEUTRAL_ICON);
+  // The right side of the curve of the question mark, at 15 of the 24 units,
+  // where its stroke of 2 units runs almost upright, above and to the right
+  // of the center: a browser that places the icon a pixel lower, as Firefox
+  // does, moves the point along the stroke, not out of it.
+  expect(await iconColor(unknown.figure, [15, 10])).toBe(NEUTRAL_ICON);
   await unknown.screen.unmount();
 
   const missing = await renderValue(
     <ValueMark value="none" known={KNOWN} />,
     SCALE,
   );
-  expect(await iconColor(missing.figure, [12, 7.5])).toBe(CANVAS);
+  expect(await iconColor(missing.figure, [15, 10])).toBe(CANVAS);
 });
 
 // The box of the glyphs of a text node, which text of one font on one
