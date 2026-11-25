@@ -130,7 +130,7 @@ sidebar is the one exception (Spacing and Sizes).
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `canvas` | `#F6F8FA` | `#0D1117` | The page behind the content; the search field of the sidebar |
-| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table and of a box within a part of a detail screen, menus, popovers, dialogs, and fields; a line of a value of a description list in a group of a detail screen under the pointer (Detail Screens) |
+| `surface` | `#FFFFFF` | `#151B23` | Cards, the frame of a table and of a box within a part of a detail screen, menus, popovers, dialogs, and fields; a line of a list of the items of a group of a detail screen whose lines can hold a value at their end, under the pointer (Detail Screens) |
 | `surface-2` | `#F6F8FA` | `#1A212A` | The header row of a table |
 | `surface-hover` | `#F3F5F8` | `#1E2630` | A row, a menu item, or a quiet control under the pointer |
 | `sidebar` | `#FFFFFF` | `#010409` | The sidebar |
@@ -167,8 +167,9 @@ icons on it, and the color of an icon or mark on `surface` or `canvas`:
 `danger-on-soft` is also the color of the text of a field error and of an
 attention count above zero, on `surface` or `canvas`. `warning-on-soft` is
 also the color of a short text that asks for attention at the end of the
-line of a record, on `canvas`, such as the missing release of a Product that
-keeps its Ticket from Resolved.
+line of a record, on `canvas`, or on `surface` under the pointer (Detail
+Screens), such as the missing release of a Product that keeps its Ticket from
+Resolved.
 
 ### Severity Marks
 
@@ -259,6 +260,7 @@ Text, minimum 4.5:1:
 | `on-danger-solid` | `danger-solid-hover` | 7.86 | 6.45 |
 | `danger-on-soft` | `surface` | 7.86 | 8.90 |
 | `danger-on-soft` | `canvas` | 7.38 | 9.73 |
+| `warning-on-soft` | `surface` | 8.52 | 11.19 |
 | `warning-on-soft` | `canvas` | 8.00 | 12.23 |
 | `surface` (tooltip text) | `fg` (tooltip) | 15.79 | 14.65 |
 | `muted-on-fg` (tooltip text) | `fg` (tooltip) | 5.42 | 5.17 |
@@ -1402,11 +1404,16 @@ states it, such as that of a Ticket; the other audit logs are tables
   follow 12 px below the band, indented by the 12 px of its padding, and the
   band of the next group is 32 px below them. Its items can be a description
   list, 12 px apart, whose values are lists of lines, such as the sources of
-  an affected product with their versions. A line of such a list whose end
-  holds a value of the line, such as the status of a version, is on
-  `surface` under the pointer, with a 4 px radius and 8 px of space on each
-  side of its text, so that the eye follows the line to that value; the
-  value stays beside the first line of a line that wraps.
+  an affected product with their versions; they can also be lists of their
+  own, such as the tracks of a package and their Products. Under the
+  pointer, each line of a list whose lines can hold a value at their end,
+  such as the status of a version, the affectedness of a track, or the
+  release of a Product, is on `surface`, also a line that holds no such
+  value, so that the eye follows the line to that value. Its background has
+  a 4 px radius and reaches 8 px beyond each side of its text and 2 px above
+  and below it, and its text does not move. The value stays beside the
+  first line of a line that wraps, unless the screen document moves it to
+  the end of the next line.
 - A part that hides records, such as the excluded and EOL records of a
   package tree, shows them on request with a switch (Forms). A hidden record
   that shows, and every record within it, is in `fg-muted`, in its texts, its
@@ -1875,7 +1882,11 @@ where the labels show, a group of users, and the user card.
   space, in `fg-muted` at weight 400, or, in the account menu, on a line of
   its own below the name and its labels (Account Menu). The `@` sets it
   apart from the name without relying on color, also for an inactive user,
-  whose name is in `fg-muted` too.
+  whose name is in `fg-muted` too. In running text, such as the sentence of
+  an event (Timelines), the name stands on the baseline of the text around
+  it, and the avatar is centered on the line, as the dot of a severity is
+  (Severity); elsewhere, the name and the labels are centered on the
+  avatar, except in the account menu, whose two lines are (Account Menu).
 - **Inactive and Bot:** the label (Labels) follows the name, or the username
   where it follows the name. An inactive user's name is in `fg-muted`, and
   its avatar is the generated one, in gray (Avatar). Where the place is too
@@ -1931,7 +1942,8 @@ where the labels show, a group of users, and the user card.
   70 % of that size in `neutral-on-soft`, then, 6 px later, "System" in the
   surrounding text's style. It is square like the avatar of a bot account,
   because neither stands for a person, and differs from it by the Sentinel
-  mark in place of the cells (Avatar).
+  mark in place of the cells (Avatar). "System" stands as the name of the
+  full form does.
 
 ## Avatar
 

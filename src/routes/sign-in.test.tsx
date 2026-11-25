@@ -413,6 +413,23 @@ describe("Sign in, after a failure", () => {
     },
   );
 
+  test("shows a 500 without a request identifier, such as one of a proxy, at the top of the form with the message that promises no reference, and shows none", async () => {
+    stubSignIn(() => new Response("Internal Server Error", { status: 500 }));
+    const { screen } = await renderSignIn();
+    await fillIn(screen, "jdoe", "fictional password");
+
+    await screen.getByRole("button", { name: "Sign in" }).click();
+
+    const message =
+      "Something went wrong in Sentinel. Try again, and if it happens again, report it.";
+    await expect
+      .element(screen.getByText(message, { exact: true }))
+      .toBeVisible();
+    await expectFocusOnMessage(message);
+    expect(screen.getByText(/reference/i).query()).toBeNull();
+    await expectFormKept(screen);
+  });
+
   test("shows the field errors of a VALIDATION_ERROR at their fields, and moves the focus to the first of the form", async () => {
     stubSignIn(() =>
       validationError([

@@ -64,15 +64,23 @@ interface UserProps {
   wrap?: boolean;
 }
 
+// The height of the line of the name beside an avatar of each size, the
+// height of the avatar, so that the name keeps the middle of the avatar's
+// line, as the labels do, while it gives the full form its baseline.
+const NAME_LINES = {
+  small: "leading-6",
+  medium: "leading-8",
+  large: "leading-16",
+} as const satisfies Record<AvatarSize, string>;
+
 // A user in the full form: the avatar, then the display name in the style of
 // the surrounding text, the username when asked, at weight 400, and the labels
 // Bot, then Inactive; or in the name form, the same without the avatar. An
 // inactive user's name is in fg-muted, and the @ sets its username apart from
 // it. Where the place is too narrow, only the name, with its username, ends
 // with an ellipsis, and assistive technologies read it whole, or wraps when
-// asked. In running text, the full form centers the avatar on the line, and
-// the name form, without an avatar, stands on the baseline of the text
-// around it.
+// asked. In either form, the name stands on the baseline of the text around
+// it, and the full form centers the avatar on the line.
 export function User({
   user,
   size = "small",
@@ -82,12 +90,10 @@ export function User({
 }: UserProps) {
   const name = displayName(user);
   return (
-    <span
-      className={`inline-flex max-w-full items-center gap-1.5 ${withAvatar ? "align-middle" : "align-baseline"}`}
-    >
+    <span className="inline-flex max-w-full items-center gap-1.5 align-baseline">
       {withAvatar && <Avatar user={user} size={size} />}
       <span
-        className={`min-w-0 ${wrap ? "wrap-anywhere" : "truncate"} ${user.active ? "" : "text-fg-muted"}`}
+        className={`min-w-0 self-baseline ${withAvatar ? NAME_LINES[size] : ""} ${wrap ? "wrap-anywhere" : "truncate"} ${user.active ? "" : "text-fg-muted"}`}
       >
         {name}
         {withUsername && (
@@ -146,9 +152,11 @@ interface ActorProps {
 export function Actor({ actor, size = "small" }: ActorProps) {
   if (actor === null) {
     return (
-      <span className="inline-flex max-w-full items-center gap-1.5 align-middle">
+      <span className="inline-flex max-w-full items-center gap-1.5 align-baseline">
         <NoActorPicture size={size} />
-        <span className="min-w-0 truncate">System</span>
+        <span className={`min-w-0 self-baseline truncate ${NAME_LINES[size]}`}>
+          System
+        </span>
       </span>
     );
   }

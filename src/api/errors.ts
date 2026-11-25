@@ -63,6 +63,10 @@ const MESSAGE_CONFLICT =
 const MESSAGE_TOO_MANY = "Too many attempts. Try again later.";
 const MESSAGE_INTERNAL =
   "Something went wrong in Sentinel. Try again, and if it happens again, report it with the reference below.";
+// The same message for a response without a request identifier, such as one
+// of a proxy in front of Sentinel, which promises no reference.
+const MESSAGE_INTERNAL_WITHOUT_REFERENCE =
+  "Something went wrong in Sentinel. Try again, and if it happens again, report it.";
 const MESSAGE_UNAVAILABLE =
   "Sentinel isn't available right now. Try again later.";
 const MESSAGE_UNCONFIRMED =
@@ -868,7 +872,10 @@ function internal(
 ): FailurePresentation {
   return {
     heading: HEADING_NOT_LOADED,
-    message: MESSAGE_INTERNAL,
+    message:
+      requestId === undefined
+        ? MESSAGE_INTERNAL_WITHOUT_REFERENCE
+        : MESSAGE_INTERNAL,
     reference: requestId,
     retry,
   };

@@ -172,18 +172,30 @@ interface ReleaseTextProps {
   notObserved: string;
 }
 
-// A release in words: "Released" and its date and time, "Not released", or
-// the words of a release that is not observed.
+// A release in words: "Released" and its date and time, which keep to one
+// line, "Not released", or the words of a release that is not observed.
 function ReleaseText({ release, notObserved }: ReleaseTextProps) {
   if (release.kind === "released") {
     return (
       <>
-        Released <DateTime value={release.at} />
+        Released{" "}
+        <span className="whitespace-nowrap">
+          <DateTime value={release.at} />
+        </span>
       </>
     );
   }
   return release.kind === "not-released" ? "Not released" : notObserved;
 }
+
+// The look of the line of a track or of a Product under the pointer, as a
+// line of a list whose lines can hold a value at their end: on surface, with
+// a 4 px radius, reaching 8 px beyond each side of its text and 2 px above
+// and below it, while its text keeps its place, so that the eye follows the
+// line to the affectedness of a track or the release of a Product
+// (docs/design-system.md, Detail Screens). Every line of such a list takes
+// it, also one with nothing at its end.
+const LINE_UNDER_POINTER = "-mx-2 -my-0.5 rounded px-2 py-0.5 hover:bg-surface";
 
 // Whether a track has work: actionable and in Analysis, or Affected or Fixed
 // with a Product that is actionable and eligible. A track without work, a
@@ -623,7 +635,8 @@ interface ProductItemProps {
 // of its line only when the Product keeps the Ticket from Resolved:
 // triangle-alert at 14 px in warning-icon, then "Not released", or "Release
 // not observed", in text-13, weight 500, warning-on-soft, at the end of the
-// next line where the line wraps.
+// next line where the line wraps. The line is on surface under the pointer
+// (LINE_UNDER_POINTER).
 function ProductItem({
   product,
   packageId,
@@ -645,7 +658,7 @@ function ProductItem({
   return (
     <li
       ref={ref}
-      className="flex flex-wrap items-center justify-between gap-x-3"
+      className={`flex flex-wrap items-center justify-between gap-x-3 ${LINE_UNDER_POINTER}`}
     >
       <span
         className={`flex min-w-0 flex-wrap items-center gap-x-1.5 ${mutedIf(hidden || !product.eligible)}`}
@@ -718,7 +731,8 @@ interface TrackItemProps {
 // delivery on the line of a track without a pipeline opens the same requests.
 // For a user who can edit them, the affectedness is a select, in a place at
 // least as wide as the select of Not affected, and the menu of the actions
-// of the track ends the line. Then its Products, as a list with a border
+// of the track ends the line, which is on surface under the pointer
+// (LINE_UNDER_POINTER). Then its Products, as a list with a border
 // line at its left. A hidden track shows its hidden Products; another track
 // only while "Show hidden" is on.
 function TrackItem({
@@ -768,7 +782,9 @@ function TrackItem({
       ref={ref}
       className={`border-s ${waitsForYou ? "border-s-3 border-link ps-2.5" : "border-border ps-3"} ${mutedIf(hidden)}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <div
+        className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 ${LINE_UNDER_POINTER}`}
+      >
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="font-medium wrap-anywhere">{track.reference}</span>
           {waitsForYou && <NeedsYourAction />}

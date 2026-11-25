@@ -86,7 +86,10 @@ describe("the details", () => {
     expect(name.element().scrollWidth).toBeGreaterThan(
       name.element().clientWidth,
     );
-    expect(boxOf(name).height).toBe(20);
+    // One line, as high as the line of the name beside its avatar.
+    expect(boxOf(name).height).toBe(
+      Number.parseFloat(getComputedStyle(name.element()).lineHeight),
+    );
     const label = region(screen, "Details").getByText("Inactive", {
       exact: true,
     });

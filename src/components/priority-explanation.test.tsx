@@ -317,13 +317,10 @@ test("lists each piece of deciding evidence on a line of its own, in the order o
   ]);
 });
 
+// The cut itself is tested with its function (src/components/epss-percentile.ts).
 test.each([
-  [0.95, "0.95"],
-  [0.9599999, "0.95"],
   [0.99999, "0.99"],
   [1, "1.00"],
-  // Below its decimal value in binary, as 0.57 * 100 is 56.99999999999999.
-  [0.57, "0.57"],
 ])(
   "shows the EPSS percentile %s cut to two decimals, as %s",
   async (value, text) => {

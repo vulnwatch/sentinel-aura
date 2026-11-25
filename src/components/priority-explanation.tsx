@@ -14,6 +14,7 @@ import type {
 } from "../api/generated/model";
 import { AbsentValue } from "./absent-value";
 import { DateTime, formatDate } from "./date-time";
+import { cutPercentile } from "./epss-percentile";
 import { FOCUS_RING } from "./focus-ring";
 import { InfoPopover, PopoverLine } from "./info-popover";
 import { Priority, priorityName } from "./priority";
@@ -97,14 +98,6 @@ const SSVC_EXPLOITATION = new Map<string, string>(
     poc: "PoC",
   } satisfies Record<SSVCExploitationEvidenceValue, string>),
 );
-
-// A percentile cut to two decimals, such as 0.97 for 0.9712, so that it never
-// shows more than its value. Its text with ten decimals leaves out the error
-// of its binary representation, which would cut 0.29 to 0.28.
-function cutPercentile(value: number): string {
-  const text = value.toFixed(10);
-  return text.slice(0, text.indexOf(".") + 3);
-}
 
 // The line of a piece of deciding evidence. A kind that the pinned contract
 // does not list, which a later Sentinel release can return, shows as
