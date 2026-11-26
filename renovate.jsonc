@@ -123,7 +123,8 @@
       // min-release-age covers when it resolves the lockfile. A version
       // without a release timestamp is held until it is requested from the
       // Dependency Dashboard. The nginx group, the pinned Sentinel version,
-      // and the tooling image are exempt below.
+      // and the tooling image are exempt below, and the PostgreSQL and Redis
+      // images wait three days instead.
       "description": "Version updates wait for the minimum release age",
       "matchUpdateTypes": ["major", "minor", "patch"],
       "minimumReleaseAge": "7 days",
@@ -194,6 +195,35 @@
       "groupSingleUpdates": true,
       "minimumReleaseAge": null,
       "commitMessagePrefix": "chore(deps):"
+    },
+    {
+      // After the minimum release age rule, which it overrides. The official
+      // images republish their exact version tags whenever Debian or the
+      // upstream project publishes fixes, every few days, and Docker Hub
+      // dates a version by the last push of its tag, so under seven days a
+      // new version waits for a week without a rebuild. Digest updates are
+      // not version updates and keep their own behavior — see
+      // docs/deployment.md (Dependency Updates, Minimum release age).
+      "description": "PostgreSQL and Redis images: version updates wait three days",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres", "redis"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      // These images serve the backend that Sentinel's image runs, so a new
+      // major is adopted only once the pinned Sentinel version runs on it:
+      // its pull request runs CI on the new major but cannot be merged until
+      // a maintainer marks it ready. Under the up-to-date requirement of the
+      // branch protection, the default rebaseWhen would rebase it, and run
+      // CI again, after every merge to master — see docs/deployment.md
+      // (Dependency Updates, PostgreSQL and Redis majors).
+      "description": "PostgreSQL and Redis images, major update: a draft pull request, rebased only on conflict",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres", "redis"],
+      "matchUpdateTypes": ["major"],
+      "draftPR": true,
+      "rebaseWhen": "conflicted"
     },
     {
       // The dependencies that the build bundles into the UI, the versions
