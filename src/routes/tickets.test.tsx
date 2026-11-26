@@ -295,7 +295,7 @@ describe("the views", () => {
       .toBeVisible();
   });
 
-  test("show a count as not available when its read fails, and read it again with the next read of the list", async () => {
+  test("show a count as not available when its read fails, and read it again with the next read of the list, still not available until that read succeeds", async () => {
     const { stub, spy } = stubTickets({
       count: (query) =>
         filtersOf(query) === FILTERS.Analysis
@@ -317,9 +317,17 @@ describe("the views", () => {
       ).length;
     expect(analysisCounts()).toBe(3);
 
-    stub.count = countOf;
+    const pending = later();
+    stub.count = (query) =>
+      filtersOf(query) === FILTERS.Analysis ? pending.promise : countOf(query);
     await screen.getByRole("tab", { name: "Analyzed 3" }).click();
 
+    await expect.poll(analysisCounts).toBe(4);
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+    expect(analysis.element().textContent).toBe("Analysis –Not available");
+
+    pending.resolve(ticketPage([], { total: 5, perPage: 1 }));
     await expect
       .element(screen.getByRole("tab", { name: "Analysis 5" }))
       .toBeVisible();

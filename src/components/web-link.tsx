@@ -7,8 +7,8 @@ import { FOCUS_RING } from "./focus-ring";
 // and to a fixed address of another site that a foundation document states
 // (docs/behaviors.md, Links to Other Sites; docs/conventions.md, Links from
 // the API). This module is the only one that builds them, except the item of
-// a menu, which takes a web address of this module
-// (src/components/menu.tsx).
+// a menu and the count of a list, which take a web address of this module
+// (src/components/menu.tsx; src/components/count-link.tsx).
 
 // A value as the browser parses it as an absolute URL, or undefined when it
 // is not one.

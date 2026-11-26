@@ -2,6 +2,7 @@ import { linkOptions } from "@tanstack/react-router";
 import type { CurrentUserData } from "../../api/generated/model";
 import { CountLink } from "../../components/count-link";
 import { FocusHandOff } from "../../components/screen-heading";
+import { BugzillaNeedinfoCount } from "./bugzilla-needinfo-count";
 import {
   holdsConfidentiality,
   OVERDUE_PHASES,
@@ -98,13 +99,17 @@ interface AttentionSummaryProps {
   listFetching: boolean;
 }
 
-// The attention summary, in the heading row after the heading: counts of the
-// Tickets that List Tickets returns to the user, each a link to the list
-// refined to its Tickets (docs/screen-map.md, Attention Summary;
-// docs/design-system.md, Lists). Active P1 measures priority, and Embargo
-// expired, for a user who holds manage_confidentiality, the confidentiality
-// that remains after the Coordinated Release Date; each stands alone, 8 px
-// apart. The four overdue counts, which never count the same Ticket, form a
+// The attention summary, in the heading row after the heading, named "Needs
+// attention" for assistive technologies: counts of the Tickets that List
+// Tickets returns to the user, each a link to the list refined to its
+// Tickets, and, for a user who holds triage_ticket, the Bugzilla needinfo
+// count, which counts bugs of SUSE Bugzilla and links to their search there
+// (docs/screen-map.md, Attention Summary; docs/design-system.md, Lists).
+// Active P1 measures priority, Embargo expired, for a user who holds
+// manage_confidentiality, the confidentiality that remains after the
+// Coordinated Release Date, and Bugzilla needinfo the requests that wait for
+// the security team in Bugzilla; each stands alone, 8 px apart, in this
+// order. The four overdue counts, which never count the same Ticket, form a
 // group after them: a vertical line, 12 px from the count before it and from
 // the name "Overdue", and the counts, 8 px apart, each showing its phase, as
 // "1 Triage", and read whole, as "1 Triage overdue". The line and the name
@@ -112,17 +117,17 @@ interface AttentionSummaryProps {
 // count. The group wraps to the next line as a whole, where its line stands
 // 4 px after the start of the row, as the line of the views does, and its
 // counts after its name when it is wider than its line. When Embargo expired
-// leaves the page while it holds the focus, because a read of the signed-in
-// user tells that the user no longer holds the capability, the focus moves to
-// the screen's heading (docs/behaviors.md, Accessibility, Focus after an
-// action).
+// or Bugzilla needinfo leaves the page while it holds the focus, because a
+// read of the signed-in user tells that the user no longer holds its
+// capability, the focus moves to the screen's heading (docs/behaviors.md,
+// Accessibility, Focus after an action).
 export function AttentionSummary({
   user,
   listFetching,
 }: AttentionSummaryProps) {
   return (
     <ul
-      aria-label="Tickets that need attention"
+      aria-label="Needs attention"
       className="flex flex-wrap items-start gap-x-2 gap-y-2"
     >
       <li>
@@ -140,6 +145,13 @@ export function AttentionSummary({
               count={EMBARGO_EXPIRED}
               listFetching={listFetching}
             />
+          </FocusHandOff>
+        </li>
+      )}
+      {user.capabilities.includes("triage_ticket") && (
+        <li>
+          <FocusHandOff>
+            <BugzillaNeedinfoCount listFetching={listFetching} />
           </FocusHandOff>
         </li>
       )}

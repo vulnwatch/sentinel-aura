@@ -14,11 +14,13 @@ import {
 // rely on as loaded (Sentinel docs/features/platform/example-dataset.md,
 // Users; CVEs; Tickets; Aged Tickets; Embargoes; Priorities).
 
-// The counts of the attention summary.
+// The path of Get Bugzilla Needinfo Count (Sentinel
+// docs/features/integrations/bugzilla-needinfo-count.md).
+const NEEDINFO = "/api/v1/bugzilla/needinfo-count";
+
+// The counts of the attention summary that are links.
 function attention(page: Page) {
-  return page
-    .getByRole("list", { name: "Tickets that need attention" })
-    .getByRole("link");
+  return page.getByRole("list", { name: "Needs attention" }).getByRole("link");
 }
 
 // Whether a response body is a page of Tickets.
@@ -212,7 +214,7 @@ test.describe("for an analyst", () => {
     await expect(
       table(page).getByRole("row", { name: /SNTL-7/ }),
     ).toContainText("Triage -3d");
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list.png");
@@ -240,7 +242,7 @@ test.describe("for an analyst", () => {
       table(page).getByRole("row", { name: /SNTL-9/ }),
     ).toContainText("Unassigned");
     await expectAccessible(page);
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-analysis.png");
@@ -323,7 +325,7 @@ test.describe("for an analyst", () => {
     }
     await expect(releaseOf("SNTL-19")).toHaveText("–Not set");
     await expectAccessible(page);
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-embargo.png");
@@ -443,7 +445,7 @@ test.describe("for an analyst", () => {
       setAt,
     );
     await expectAccessible(page);
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-priority.png");
@@ -581,7 +583,7 @@ test.describe("for an analyst", () => {
     const pagination = page.getByRole("navigation", { name: "Pagination" });
     await expect(pagination).toContainText("1–20 of 32");
     await expectAccessible(page);
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-all.png");
@@ -613,7 +615,7 @@ test.describe("for an analyst", () => {
     ).toHaveCount(0);
     await expectAccessible(page);
     await expectViewCounts(page);
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-beyond-last-page.png");
@@ -629,9 +631,15 @@ test.describe("for an analyst", () => {
 });
 
 test.describe("refined by an analyst", () => {
-  test("shows the attention summary, whose counts open the All view, or the Embargo view, refined to their Tickets", async ({
+  test("shows the attention summary, whose counts open the All view, or the Embargo view, refined to their Tickets, and the Bugzilla needinfo count as not available", async ({
     page,
   }) => {
+    // The read of the Bugzilla needinfo count, which the landing sends.
+    const needinfo = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === NEEDINFO &&
+        response.request().method() === "GET",
+    );
     await signIn(page, "asmith");
     const active = await ticketsOf(
       page,
@@ -650,6 +658,22 @@ test.describe("refined by an analyst", () => {
       "1 UM overdue",
       "2 QA overdue",
     ]);
+    // asmith holds triage_ticket, and the backend of the tests cannot reach
+    // Bugzilla (compose.yaml), so the count, after Embargo expired, shows as
+    // not available, without a link, since no read returned the address of
+    // its search (Sentinel docs/features/platform/example-dataset.md,
+    // Operating a Dataset Backend).
+    const response = await needinfo;
+    expect(response.status()).toBe(503);
+    expect(await response.json()).toMatchObject({
+      code: "BUGZILLA_UNAVAILABLE",
+    });
+    await expectAttentionCounts(page, true);
+    const items = page
+      .getByRole("list", { name: "Needs attention" })
+      .getByRole("listitem");
+    await expect(items.nth(2)).toHaveText("– Bugzilla needinfo not available");
+    await expect(items.nth(2).getByRole("link")).toHaveCount(0);
 
     // The All view lists them by last modification, the most recent first:
     // the load sets the Coordinated Release Date of SNTL-27 last.
@@ -705,7 +729,7 @@ test.describe("refined by an analyst", () => {
     ).toBeVisible();
     await expectAccessible(page);
     await expectViewCounts(page);
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
     await pointerAway(page);
 
     await expectScreenshot(page, "ticket-list-no-match.png");
@@ -731,7 +755,7 @@ test.describe("refined by an analyst", () => {
     // Once the counts have arrived, which widen the tabs and the summary, so
     // that the popover opens below Filters where it stays.
     await expectViewCounts(page);
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
 
     // In the New view, whose columns hold no avatar and no date, so that no
     // mask of the reference lies over the popover.
@@ -824,7 +848,7 @@ test.describe("refined by an analyst", () => {
     await expect(page).toHaveURL("/tickets");
     // Once the counts have arrived, which widen the tabs and the summary, so
     // that the popover opens below Filters where it stays.
-    await expectAttentionCounts(page);
+    await expectAttentionCounts(page, true);
 
     // The auto-ignore policy of its CNA ignored SNTL-28 (Tickets; CNAs).
     await page.getByRole("button", { name: "Filters" }).click();
@@ -899,6 +923,12 @@ test("lands a user without a role on the All view, which the Tickets entry opens
   // hgray, the reader, holds no role, maintains no package, and holds no
   // access grant, so sees the 29 non-confidential Tickets and no
   // confidential one (Users).
+  const needinfo: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === NEEDINFO) {
+      needinfo.push(request.url());
+    }
+  });
   await signIn(page, "hgray");
 
   await expect(page).toHaveURL("/tickets");
@@ -929,6 +959,10 @@ test("lands a user without a role on the All view, which the Tickets entry opens
     "1 UM overdue",
     "1 QA overdue",
   ]);
+  // Without triage_ticket, no Bugzilla needinfo count, and no read of it,
+  // which the summary would have sent as it showed.
+  await expectAttentionCounts(page, false);
+  expect(needinfo).toEqual([]);
 
   // A view that the user is not shown opens the All view, and leaves the URL.
   await page.goto("/tickets?view=assigned-to-me");

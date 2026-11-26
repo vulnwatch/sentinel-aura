@@ -98,7 +98,7 @@ async function expectTicketListShown(page: Page) {
     page.getByRole("grid", { name: "Tickets" }).getByRole("rowheader"),
   ).toHaveCount(20);
   await expectViewCounts(page);
-  await expectAttentionCounts(page);
+  await expectAttentionCounts(page, false);
 }
 
 test.describe("the sidebar", () => {

@@ -128,6 +128,19 @@ services:
   # The API, under the image's default command.
   sentinel:
     <<: *sentinel-image
+    # The count of Bugzilla needinfo requests reads SUSE Bugzilla at a host
+    # that is a constant of Sentinel, not a setting, and answers with the real
+    # count where the host's network reaches it (Sentinel
+    # docs/features/platform/example-dataset.md, Operating a Dataset
+    # Backend). The host resolves to the loopback interface of the container,
+    # where nothing listens, so that the count answers 503
+    # BUGZILLA_UNAVAILABLE on every host once the transport retries end
+    # (Sentinel docs/features/integrations/bugzilla-needinfo-count.md,
+    # Response Contract; Get Bugzilla Needinfo Count), as SMELT's address
+    # does for package addition. The
+    # other outgoing requests of the API go to other hosts, and are unchanged.
+    extra_hosts:
+      - bugzilla.suse.com:127.0.0.1
     labels:
       # Identifies the configuration of the backend, so that
       # scripts/dev-env.sh reuses a running backend only while it is current.

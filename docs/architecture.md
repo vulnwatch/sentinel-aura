@@ -504,7 +504,14 @@ dataset, which the image of the pinned version provides (Sentinel
   fails in the same way on every host, also on one whose network reaches
   SMELT, with `503 SMELT_UNAVAILABLE` (Sentinel
   `docs/configuration.md`, SMELT / AIMAAS; Sentinel
-  `docs/features/packages/package-model.md`, Add Package to Ticket).
+  `docs/features/packages/package-model.md`, Add Package to Ticket). The
+  count of Bugzilla needinfo requests reads SUSE Bugzilla at a host that is
+  not a setting of Sentinel, so `compose.yaml` resolves that host, for the
+  API alone, to the loopback interface of its container, where nothing
+  listens: the count answers `503 BUGZILLA_UNAVAILABLE` on every host, rather
+  than the real count where the network reaches Bugzilla (Sentinel
+  `docs/features/integrations/bugzilla-needinfo-count.md`, Search Request;
+  Response Contract; Get Bugzilla Needinfo Count).
 - A capability that the UI needs and the dataset lacks is requested as a
   change of Sentinel's dataset specification (Sentinel
   `docs/features/platform/example-dataset.md`, Drift Protection; `AGENTS.md`,

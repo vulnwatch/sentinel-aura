@@ -1090,7 +1090,8 @@ screen, the heading row follows the lock with the label Confidential
   on focus.
 - A link to another site (`docs/behaviors.md`, Links to Other Sites) ends
   with `external-link`, 4 px after its text, in `link`, at the size of an
-  icon beside that text (Icon Set), such as 14 px in a table. The icon is
+  icon beside that text (Icon Set), such as 14 px in a table, unless a pattern
+  states its own, such as a count of a list (Lists). The icon is
   hidden from assistive technologies, because the accessible name of the link
   states that it leads to another site, and it stays on the line of the last
   characters of the text when the text wraps. An address longer than its
@@ -1105,7 +1106,15 @@ A list screen, such as the Ticket list, shows from top to bottom:
    8 px apart, on `surface` with a `border` line and a 6 px radius, each the
    number followed by its label in `text-14`, with `surface-hover` under the
    pointer; and the main action as a primary button, such as "Create
-   Ticket". Counts of one kind can form a group after the others: a vertical
+   Ticket". A count of what another site lists, such as Bugzilla needinfo
+   (`docs/screen-map.md`, Attention Summary), ends with `external-link` at
+   14 px in `fg-muted`, 4 px after its label, as an item of a menu that leads
+   to another site does (Menus, Popovers, and Tooltips), since a count is
+   not a text in `link`. A count that has no web address to lead to, such as
+   one whose reads have not returned one yet, shows in the same box, without
+   `surface-hover` and without the icon, and is not a link
+   (`docs/behaviors.md`, Links to Other Sites). Counts of one kind can form a
+   group after the others: a vertical
    line of 1 px in `border`, 20 px high, 12 px from what precedes and follows
    it, then the name of the group in `text-14`, `fg-muted`, 8 px before its
    counts, such as "Overdue". Each count of the group shows only what sets it

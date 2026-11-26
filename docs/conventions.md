@@ -419,10 +419,14 @@ that needs it; content of another kind needs a new row first.
   menu that leads to such an address is the shared menu item, which takes the
   address as that component checks it, is loaded by the browser in the same
   way, and shows the mark of an item that leads to another site
-  (`docs/design-system.md`, Menus, Popovers, and Tooltips). A composed
-  address takes the fixed origin that the document that defines it states,
-  its screen document or a foundation document (`docs/behaviors.md`, Links
-  to Other Sites, Composed addresses), and holds the value, or the part of it
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips); so is a count of
+  a list that leads to such an address, the shared count, which takes the
+  address as that component checks it, is loaded by the browser in the same
+  way, and shows the mark of a count that leads to another site
+  (`docs/design-system.md`, Lists). A composed address takes the fixed
+  origin that the document that defines it states, its screen document or a
+  foundation document (`docs/behaviors.md`, Links to Other Sites, Composed
+  addresses), and holds the value, or the part of it
   that the document names, only encoded, within a path segment or as the
   value of a query parameter, each encoded as a component, or as the
   fragment, where the document names it, encoded as the URL parser encodes a
@@ -544,8 +548,11 @@ that needs it; content of another kind needs a new row first.
   toolbar (`docs/behaviors.md`, Loading; `docs/design-system.md`, Lists).
   `expectViewCounts` of `fixtures.ts` waits until each view shows its count,
   and `expectAttentionCounts` until each count of the attention summary
-  shows its number. A test waits for such data through a state that the user
-  sees, such as the counts, never for a fixed time. At a URL with an anchor,
+  shows its number, or, for the Bugzilla needinfo count, which a backend
+  loaded with the dataset cannot read (`docs/architecture.md`, Development
+  Environment), until it shows as not available. A test waits for such data
+  through a state that the user sees, such as the counts, never for a fixed
+  time. At a URL with an anchor,
   that data includes every read of the screen, after which the page shows the
   target of the anchor (`docs/design-system.md`, Main Content), which moves
   the page in turn.
