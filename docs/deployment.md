@@ -366,7 +366,8 @@ repository runs the bot or creates its pull requests. It tracks:
 **Minimum release age.** Renovate proposes a new version of a dependency, a
 major, minor, or patch update, only once it is seven days old: the minimum
 release age of the npm dependencies (`docs/architecture.md`, Build Tool,
-Package Manager, and Node.js), applied to every manager for the same reason.
+Package Manager, and Node.js), applied to every manager for the same reason,
+and three days for the PostgreSQL and Redis images (below).
 The actions run with the tokens of the workflows, and the images and tools
 run in CI and locally or ship in the UI's image, so a malicious version of
 any of them does as much harm as one of an npm package. Renovate dates:
@@ -407,6 +408,20 @@ These updates are not held:
 - lock file maintenance, which npm's own minimum release age covers (npm
   dependencies); and
 - vulnerability-fix pull requests (below).
+
+The version updates of the PostgreSQL and Redis images of `compose.yaml` wait
+three days instead of seven. Their official images republish their exact
+version tags whenever Debian or the upstream project publishes fixes, every
+few days, and Docker Hub dates a version by the last push of its tag, so
+under seven days a new version waits for a week without a rebuild, often for
+weeks, a security release included. Three days still leave a malicious or
+broken release time to be withdrawn, and the risk of the shorter age is
+bounded: the images run only the backends of local development, the
+end-to-end tests, and the local preview, which hold fictional data, receive
+nothing from the host, run as the non-root users of their images without
+capabilities, and publish no port (`docs/architecture.md`, Development
+Environment), and a broken release fails CI before a maintainer merges it.
+Their major updates open as drafts (PostgreSQL and Redis majors, below).
 
 A maintainer can request a held update early with its checkbox on the
 Dependency Dashboard, for example a security release of an action, an image,
@@ -481,6 +496,20 @@ updated dependency.
 pull request, so an update of `vite`, the tooling image, or an image of
 `compose.yaml` that breaks the development proxy or the backend of local
 development fails it (Workflow Inventory, End-to-end tests).
+
+**PostgreSQL and Redis majors.** The PostgreSQL and Redis images serve the
+backend that Sentinel's image runs, so their major version is the one on
+which the pinned Sentinel version runs its tests (Sentinel
+`docs/features/platform/testing-strategy.md`, CI Pipeline), within the
+versions that it requires (Sentinel `docs/deployment.md`, Software
+Requirements). A new major of either image opens as a draft pull request,
+which runs CI on the new major but cannot be merged; a maintainer marks it
+ready only once the pinned Sentinel version runs its tests on that major,
+which step 2 of a change of the pinned Sentinel version checks (Sentinel
+version). Renovate rebases it only when it conflicts, rather than after
+every merge to `master`, which a branch must be up to date with before it
+merges (Workflow Inventory), so a maintainer requests a rebase with its
+checkbox before marking it ready.
 
 **Sentinel version.** Renovate proposes every Sentinel release as a new pinned
 Sentinel version once its GitHub Release is published, outside the nightly
