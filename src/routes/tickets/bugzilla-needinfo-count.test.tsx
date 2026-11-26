@@ -82,6 +82,7 @@ describe("the Bugzilla needinfo count", () => {
 
     await expect.element(link).toHaveAttribute("href", NEEDINFO_SEARCH);
     await expectSummary(screen);
+    await settled();
     expect(needinfoQueries(spy)).toEqual([""]);
   });
 
@@ -284,6 +285,8 @@ describe("the Bugzilla needinfo count", () => {
   });
 
   test.each([
+    // A value that the check rejects, never a URL that the code follows.
+    // oxlint-disable-next-line no-script-url
     ["javascript:alert(1)"],
     ["pkg:rpm/suse/fictional-bugzilla"],
     ["/buglist.cgi?v1=needinfo%3F"],
@@ -331,6 +334,7 @@ describe("the Bugzilla needinfo count", () => {
     await expect
       .element(linkOf(screen, "4 Bugzilla needinfo (another site)"))
       .toBeVisible();
+    await settled();
     expect(requestsTo(spy, NEEDINFO)).toBe(1);
   });
 });

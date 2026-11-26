@@ -256,7 +256,7 @@ describe("a count of what another site lists", () => {
 
     await expect.element(link).toHaveAttribute("href", SEARCH);
     const icon = link.element().querySelector("svg")!;
-    expect(icon.closest("[aria-hidden]")).not.toBeNull();
+    expect(icon.closest('[aria-hidden="true"]')).not.toBeNull();
     const label = screen
       .getByText("Bugzilla needinfo", { exact: true })
       .element()
