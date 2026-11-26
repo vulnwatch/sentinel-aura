@@ -19,8 +19,10 @@ Tickets; every other user finds a Ticket in it, starting from all of them.
 The attention summary above the views shows every user the Tickets that need
 attention. The analysts who hold `manage_confidentiality` also follow the
 embargoes in the Embargo view, and the summary counts for them those whose
-Coordinated Release Date has passed (`docs/screen-map.md`, Users and Frequent
-Tasks; Landing; Ticket List Views; Attention Summary).
+Coordinated Release Date has passed; for the analysts who hold
+`triage_ticket`, it also counts the SUSE Bugzilla bugs that ask the security
+team for information (`docs/screen-map.md`, Users and Frequent Tasks;
+Landing; Ticket List Views; Attention Summary).
 
 ## Access
 
@@ -30,7 +32,7 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   (Sentinel `docs/features/tickets/tickets.md`, List Tickets; Sentinel
   `docs/features/identity/rbac.md`, Scope and Confidential Ticket
   Visibility).
-- Two views, and one count of the attention summary, show only to some users,
+- Two views, and two counts of the attention summary, show only to some users,
   as Get Current User describes them (Sentinel
   `docs/features/identity/authentication.md`, Get Current User;
   `docs/screen-map.md`, Roles, Principles):
@@ -39,7 +41,11 @@ Tasks; Landing; Ticket List Views; Attention Summary).
     `docs/features/identity/rbac.md`, Assignment Eligibility Wire Format);
   - Embargo and the Embargo expired count, to a user whose `capabilities`
     include `manage_confidentiality` (Sentinel
-    `docs/features/identity/rbac.md`, Capabilities).
+    `docs/features/identity/rbac.md`, Capabilities);
+  - the Bugzilla needinfo count, to a user whose `capabilities` include
+    `triage_ticket`, which its operation requires (Sentinel
+    `docs/features/identity/rbac.md`, Endpoint Permission Map). For any other
+    user the list does not read it.
 
 ## Navigation
 
@@ -97,25 +103,28 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   that the list agrees with the count of the tab.
 - Each row links to its Ticket, `/tickets/{ticket_id}`. Its CVE ID is not a
   link: the address of the CVE would lead to the same Ticket
-  (`docs/screen-map.md`, Links Between Areas). Each count of the attention
-  summary links to the list refined to its Tickets: Embargo expired to the
-  Embargo view, every other count to the All view.
+  (`docs/screen-map.md`, Links Between Areas). Each count of Tickets of the
+  attention summary links to the list refined to its Tickets: Embargo
+  expired to the Embargo view, every other count to the All view. Bugzilla
+  needinfo links to the Bugzilla search of its read, on another site, which
+  opens in the same tab (`docs/behaviors.md`, Links to Other Sites).
 
 ## Content
 
 - The heading "Tickets", and the page title "Tickets – Sentinel".
-- **Attention summary**, in the heading row after the heading, named
-  "Tickets that need attention" for assistive technologies: the counts of
-  `docs/screen-map.md` (Attention Summary), in this order, Embargo expired
-  only for a user who holds `manage_confidentiality` (Access), each read from
-  List Tickets, `GET /api/v1/tickets`, with its filters and `per_page=1`, as
-  `meta.total`, so that it counts the Tickets that the user sees, and each a
+- **Attention summary**, in the heading row after the heading, named "Needs
+  attention" for assistive technologies: the counts of `docs/screen-map.md`
+  (Attention Summary), in this order, Embargo expired only for a user who
+  holds `manage_confidentiality` and Bugzilla needinfo only for a user who
+  holds `triage_ticket` (Access). Each count of Tickets is read from List
+  Tickets, `GET /api/v1/tickets`, with its filters and `per_page=1`, as
+  `meta.total`, so that it counts the Tickets that the user sees, and is a
   link to the view of its Tickets with the same filters, so that the count
   and the rows agree.
-  Active P1 and Embargo expired stand alone, and the four overdue counts,
-  which never count the same Ticket, form the group "Overdue" after them
-  (`docs/design-system.md`, Lists): each shows its phase, as "1 Triage", and
-  is read with the name of the group, as "1 Triage overdue".
+  Active P1, Embargo expired, and Bugzilla needinfo stand alone, and the four
+  overdue counts, which never count the same Ticket, form the group "Overdue"
+  after them (`docs/design-system.md`, Lists): each shows its phase, as
+  "1 Triage", and is read with the name of the group, as "1 Triage overdue".
 
   | Count | Filters of List Tickets | Link |
   |---|---|---|
@@ -129,6 +138,24 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   The counts do not depend on the view, the search, the filters, or the
   sorting. They are read again as the screen's data is, such as when the tab
   of the browser returns to the foreground (`docs/behaviors.md`, Loading).
+
+  **Bugzilla needinfo** is `count` of Get Bugzilla Needinfo Count,
+  `GET /api/v1/bugzilla/needinfo-count`, followed by its label, as a link to
+  `url`, the Bugzilla search that lists the counted bugs (Sentinel
+  `docs/features/integrations/bugzilla-needinfo-count.md`, Get Bugzilla
+  Needinfo Count; Search URL). The link ends with the mark of a count that
+  leads to another site (`docs/design-system.md`, Lists), and assistive
+  technologies read it as "4 Bugzilla needinfo (another site)". Its read is
+  its own, so that Bugzilla, which Sentinel can take about 15 seconds to
+  read, delays neither the other counts nor the rows; it is read again as
+  the other counts are. Until a read returns a web address
+  (`docs/behaviors.md`, Links to Other Sites), the count is not a link; once
+  one has, a later failure keeps the link, since `url` is the same for every
+  response of a release. `authenticated`, which tells whether the count can
+  include restricted bugs or only public ones, is not shown: the count can
+  differ from the bugs that the search lists to each person whatever its
+  value (same document, Known Limitations, Visibility of the account), and
+  the number is enough to tell whether requests wait in Bugzilla.
 - The views as tabs, named "Views" for assistive technologies, each its name
   followed by the number of its Tickets, with the line that sets New and
   Unassigned apart before Analysis, the first view after them
@@ -337,7 +364,12 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   summary, until a later read of it succeeds; each read of the list reads it
   again. The screen handles no error code specifically: List Tickets
   documents only the global responses (Sentinel
-  `docs/features/tickets/tickets.md`, List Tickets).
+  `docs/features/tickets/tickets.md`, List Tickets), and the
+  `503 BUGZILLA_UNAVAILABLE` of Get Bugzilla Needinfo Count, its answer when
+  no count from Bugzilla is available, shows Bugzilla needinfo as not
+  available, as any other failure of its read does (Sentinel
+  `docs/features/integrations/bugzilla-needinfo-count.md`, Get Bugzilla
+  Needinfo Count).
 
 ## Cross-references
 
@@ -345,8 +377,8 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   Sidebar; Links Between Areas; Browser History; Landing; Ticket List Views;
   Attention Summary; Contract URLs; Roles
 - `docs/behaviors.md` — The Signed-in User; Errors; Invalid Search
-  Parameters; Unknown Values; Loading and Empty States; Dates and Times;
-  Accessibility; Wording; Representation of a User
+  Parameters; Unknown Values; Links to Other Sites; Loading and Empty States;
+  Dates and Times; Accessibility; Wording; Representation of a User
 - `docs/design-system.md` — Type Scale; Values; Other Values; Buttons and
   Links; Lists; Tables; Forms; Loading; Empty States; Errors in Place of
   Content; Menus, Popovers, and Tooltips; Representation of a User
@@ -355,6 +387,8 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   Date); PriorityBasis; PriorityEvidence; TicketSummary; List Tickets
   (Embargo filters); Reassignment
 - Sentinel `docs/features/tickets/cna.md` — A Curated Policy per CNA
+- Sentinel `docs/features/integrations/bugzilla-needinfo-count.md` — Search
+  URL; Get Bugzilla Needinfo Count; Security and Privacy; Known Limitations
 - Sentinel `docs/data-model.md` — Ticket
 - Sentinel `docs/features/tickets/ticket-priority.md` — Priority Levels;
   Exploitation Level; Persistence and Effective Priority; Automatic Priority
@@ -364,8 +398,9 @@ Tasks; Landing; Ticket List Views; Attention Summary).
   Filter; Ticket Current Phase (Relation to the Overdue Filter; Current Phase
   Filter); Sorting, Current Due Date
 - Sentinel `docs/features/identity/authentication.md` — Get Current User
-- Sentinel `docs/features/identity/rbac.md` — Capabilities; Scope and
-  Confidential Ticket Visibility; Assignment Eligibility Wire Format
+- Sentinel `docs/features/identity/rbac.md` — Capabilities; Endpoint
+  Permission Map; Scope and Confidential Ticket Visibility; Assignment
+  Eligibility Wire Format
 - Sentinel `docs/api-spec.md` — Query Parameter Length Limit; Inadmissible
   Characters in Request Input; Pagination; Filtering; Enum Filter
   Validation; Sorting (Nullable Sort Field Ordering); User Identifier

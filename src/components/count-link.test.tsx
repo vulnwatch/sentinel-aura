@@ -7,14 +7,15 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { parseSearch, stringifySearch } from "../search-params";
 import { pointerAwayFrom } from "../test-pointer";
 import { CountLink } from "./count-link";
-import { RouterLinks } from "./router-links";
+import { RouterLinks, type ScreenHref } from "./router-links";
+import { WebAddress } from "./web-link";
 
 // A count of the attention summary (docs/design-system.md, Lists; Other
 // Values), in the light theme.
@@ -36,16 +37,25 @@ const ACTIVE_P1_SEARCH: { status: ("new" | "analysis")[]; priority: "p1"[] } = {
 };
 const ACTIVE_P1 = linkOptions({ to: "/tickets", search: ACTIVE_P1_SEARCH });
 
+// The address of a fictional Bugzilla search, on another site.
+const SEARCH = "https://bugzilla.example.com/buglist.cgi?v1=needinfo%3F";
+
 // The count at /, which links to /tickets, through a router that writes the
 // search parameters as the UI's router does: Active P1, or a count of the
-// group named overdue.
+// group named overdue; or a count with another address, or without one.
 function renderCount(
   value: number | undefined,
   failed = false,
   {
     label = "Active P1",
     groupName,
-  }: { label?: string; groupName?: string } = {},
+    href = ACTIVE_P1,
+  }: {
+    label?: string;
+    groupName?: string;
+    // null for a count without an address.
+    href?: ScreenHref | WebAddress | null;
+  } = {},
 ) {
   const root = createRootRoute({
     component: () => (
@@ -63,7 +73,7 @@ function renderCount(
         groupName={groupName}
         value={value}
         failed={failed}
-        href={ACTIVE_P1}
+        href={href ?? undefined}
       />
     ),
   });
@@ -215,3 +225,140 @@ test.each([
     ).toBeLessThanOrEqual(1);
   },
 );
+
+// Whether the browser would load the link that the user clicks itself,
+// because nothing prevented the default action of the click, which the test
+// then prevents, so that the page stays (src/components/web-link.test.tsx).
+function browserLoads(container: HTMLElement): () => boolean {
+  let loads = false;
+  const listener = (event: MouseEvent) => {
+    loads = !event.defaultPrevented;
+    event.preventDefault();
+  };
+  container.addEventListener("click", listener);
+  return () => {
+    container.removeEventListener("click", listener);
+    return loads;
+  };
+}
+
+describe("a count of what another site lists", () => {
+  test("links to the address as parsed, which the browser loads, ending with external-link at 14 px in fg-muted 4 px after its label, and is named as leading to another site", async () => {
+    const { router, rendered } = renderCount(4, false, {
+      label: "Bugzilla needinfo",
+      href: WebAddress.of(SEARCH),
+    });
+    const screen = await rendered;
+    const link = screen.getByRole("link", {
+      name: "4 Bugzilla needinfo (another site)",
+      exact: true,
+    });
+
+    await expect.element(link).toHaveAttribute("href", SEARCH);
+    const icon = link.element().querySelector("svg")!;
+    expect(icon.closest("[aria-hidden]")).not.toBeNull();
+    const label = screen
+      .getByText("Bugzilla needinfo", { exact: true })
+      .element()
+      .getBoundingClientRect();
+    const box = icon.getBoundingClientRect();
+    expect([
+      box.width,
+      box.height,
+      Math.round(box.left - label.right),
+      getComputedStyle(icon).color,
+    ]).toEqual([14, 14, 4, FG_MUTED]);
+    // The words take no room on the screen.
+    expect(
+      link.getByText("(another site)").element().getBoundingClientRect().width,
+    ).toBeLessThanOrEqual(1);
+
+    const loaded = browserLoads(screen.container);
+    await link.click();
+    expect(loaded()).toBe(true);
+    expect(router.state.location.href).toBe("/");
+  });
+
+  test("is read as not available, then as leading to another site, when its read failed after it showed a number", async () => {
+    const { rendered } = renderCount(4, true, {
+      label: "Bugzilla needinfo",
+      href: WebAddress.of(SEARCH),
+    });
+    const screen = await rendered;
+
+    await expect
+      .element(
+        screen.getByRole("link", {
+          name: "Bugzilla needinfo not available (another site)",
+          exact: true,
+        }),
+      )
+      .toHaveAttribute("href", SEARCH);
+  });
+
+  test("has no mark when the address lies on the UI's own origin", async () => {
+    const { rendered } = renderCount(4, false, {
+      label: "Bugzilla needinfo",
+      href: WebAddress.of(`${window.location.origin}/fictional-search`),
+    });
+    const screen = await rendered;
+    const link = screen.getByRole("link", {
+      name: "4 Bugzilla needinfo",
+      exact: true,
+    });
+
+    await expect.element(link).toBeVisible();
+    expect(link.element().querySelector("svg")).toBeNull();
+  });
+});
+
+describe("a count without an address", () => {
+  test.each([
+    ["with its number", 4, false, "4 Bugzilla needinfo"],
+    ["while its number loads", undefined, false, "Bugzilla needinfo"],
+    [
+      "when its read failed",
+      undefined,
+      true,
+      "– Bugzilla needinfo not available",
+    ],
+  ])(
+    "is no link, in the same box, without surface-hover under the pointer, %s",
+    async (_, value, failed, text) => {
+      const { rendered } = renderCount(value, failed, {
+        label: "Bugzilla needinfo",
+        href: null,
+      });
+      const screen = await rendered;
+      const count = screen.getByText("Bugzilla needinfo", { exact: true });
+      await expect.element(count).toBeVisible();
+
+      expect(screen.getByRole("link").query()).toBeNull();
+      // The box, in its padding of 12 px after the label.
+      const label = count.element().getBoundingClientRect();
+      const box = document.elementFromPoint(
+        label.right + 6,
+        label.top + label.height / 2,
+      )!;
+      expect(box.textContent).toBe(text);
+      expect(box.querySelector("svg")).toBeNull();
+      await pointerAwayFrom(count);
+      const style = getComputedStyle(box);
+      expect([
+        box.getBoundingClientRect().height,
+        style.fontSize,
+        style.backgroundColor,
+        style.borderTopWidth,
+        style.borderTopColor,
+        style.borderTopLeftRadius,
+      ]).toEqual([32, "14px", SURFACE, "1px", BORDER, "6px"]);
+
+      await userEvent.hover(count);
+
+      // The pointer rests on it, which changes nothing.
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+      expect(getComputedStyle(box).backgroundColor).toBe(SURFACE);
+    },
+  );
+});

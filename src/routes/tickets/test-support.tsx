@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, vi } from "vitest";
 import { page, type Locator } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { App } from "../../app";
+import { getGetBugzillaNeedinfoCountQueryKey } from "../../api/generated/bugzilla";
 import type {
   AssignmentEligibility,
   Capability,
@@ -31,6 +32,21 @@ import {
 
 const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
+export const NEEDINFO = "/api/v1/bugzilla/needinfo-count";
+
+// The address of the Bugzilla search of the needinfo count, on a fictional
+// Bugzilla.
+export const NEEDINFO_SEARCH =
+  "https://bugzilla.example.com/buglist.cgi?f1=flagtypes.name&o1=equals&v1=needinfo%3F";
+
+// Get Bugzilla Needinfo Count's response, with 4 bugs by default.
+export function needinfoCount(
+  count = 4,
+  url = NEEDINFO_SEARCH,
+  authenticated = true,
+): Response {
+  return jsonResponse(200, { data: { count, authenticated, url } });
+}
 
 // A user who holds the vulnerability_analyst role and can be the assignee of
 // every Ticket, and one who holds no role and can be the assignee of none.
@@ -167,6 +183,9 @@ export function prepareEachTest() {
     client = createQueryClient();
     // The delay between attempts is TanStack Query's; the tests remove it.
     client.setQueryDefaults(getListTicketsQueryKey(), { retryDelay: 0 });
+    client.setQueryDefaults(getGetBugzillaNeedinfoCountQueryKey(), {
+      retryDelay: 0,
+    });
     await page.viewport(1280, 800);
   });
 
@@ -189,21 +208,28 @@ interface Stub {
   list: Responder;
   // The response to the read of the count of a view.
   count: Responder;
+  // The response to the read of the Bugzilla needinfo count.
+  needinfo: () => Response | Promise<Response>;
 }
 
-// Answers the read of the signed-in user, the reads of the list, and the
-// reads of the counts, as the test sets them, and returns the stub and the
+// Answers the read of the signed-in user, the reads of the list, the reads
+// of the counts, and the read of the Bugzilla needinfo count, as the test
+// sets them, and returns the stub and the
 // spy, whose calls name the requests.
 export function stubTickets(fields: Partial<Stub> = {}) {
   const stub: Stub = {
     user: ANALYST,
     list: () => ticketPage([ROW]),
     count: countOf,
+    needinfo: () => needinfoCount(),
     ...fields,
   };
   const spy = stubApi((request) => {
     if (request.path === ME) {
       return jsonResponse(200, stub.user);
+    }
+    if (request.path === NEEDINFO) {
+      return stub.needinfo();
     }
     if (request.path !== TICKETS) {
       return errorResponse(404, "RESOURCE_NOT_FOUND");
@@ -323,11 +349,17 @@ export async function toggle(dialog: Locator, filter: string, value: string) {
 }
 
 export function summaryOf(screen: Screen) {
-  return screen.getByRole("list", { name: "Tickets that need attention" });
+  return screen.getByRole("list", { name: "Needs attention" });
 }
 
-// Waits until every count of the attention summary has arrived.
-export async function expectSummary(screen: Screen) {
+// The text of the Bugzilla needinfo count of the stub, with the words that
+// assistive technologies read after its label.
+export const NEEDINFO_TEXT = "4 Bugzilla needinfo (another site)";
+
+// Waits until every count of the attention summary has arrived: those of
+// every user, with the Bugzilla needinfo count after Active P1 unless the
+// user does not hold triage_ticket.
+export async function expectSummary(screen: Screen, needinfo = true) {
   await expect
     .poll(() =>
       summaryOf(screen)
@@ -337,6 +369,7 @@ export async function expectSummary(screen: Screen) {
     )
     .toEqual([
       "2 Active P1",
+      ...(needinfo ? [NEEDINFO_TEXT] : []),
       "1 Triage overdue",
       "0 Submission overdue",
       "1 UM overdue",

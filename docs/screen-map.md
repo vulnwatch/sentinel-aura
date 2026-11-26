@@ -430,7 +430,10 @@ them, as tabs in this order:
 The Ticket list shows, above its views and in the order of this table, counts
 of the Tickets that need attention, among the Tickets that the API returns to
 the user (Roles, Principles): Embargo expired to a user who holds
-`manage_confidentiality` (Roles), and the others to every user.
+`manage_confidentiality` (Roles), and the others to every user. After Embargo
+expired, and so before the overdue counts, it shows Bugzilla needinfo to a
+user who holds `triage_ticket` (Roles), a count of bugs of SUSE Bugzilla
+rather than of Tickets (below).
 
 | Count | Tickets |
 |---|---|
@@ -449,10 +452,10 @@ the user (Roles, Principles): Embargo expired to a user who holds
   its phase and past due, which Sentinel lists when its `current_phase` and
   `overdue` filters both name that phase (same document, Relation to the
   Overdue Filter).
-- Each count links to the All view of the Ticket list, refined to those
-  Tickets, except Embargo expired, which links to the Embargo view (Ticket
-  List Views), refined to them, so that the list shows their Coordinated
-  Release Dates. A count of zero stays.
+- Each count of Tickets links to the All view of the Ticket list, refined to
+  those Tickets, except Embargo expired, which links to the Embargo view
+  (Ticket List Views), refined to them, so that the list shows their
+  Coordinated Release Dates. A count of zero stays.
 - A Ticket has one current phase, so the four overdue counts never count the
   same Ticket: a Ticket counts once, under its current phase, even when a
   later phase is past due too, on the same track or on another; the package
@@ -478,6 +481,18 @@ the user (Roles, Principles): Embargo expired to a user who holds
   later phases Sentinel cannot observe does not hold back the current phase,
   so it can still wait in a phase before the one under which its Ticket
   counts (same document, Observable Bottleneck Only).
+- Bugzilla needinfo counts the open bugs of SUSE Bugzilla on which a
+  `needinfo?` flag asks the security team for information, which analysts
+  answer in Bugzilla, read from Get Bugzilla Needinfo Count (Sentinel
+  `docs/features/integrations/bugzilla-needinfo-count.md`, Get Bugzilla
+  Needinfo Count). It shows to a user who holds `triage_ticket`, the
+  capability of that operation, and links to the Bugzilla search that lists
+  the bugs, which Sentinel returns with the count, a link to another site
+  (`docs/behaviors.md`, Links to Other Sites). The count is the same for every
+  user who sees it and can include restricted bugs, of which it discloses
+  only the number; the search lists to each person the bugs that their own
+  Bugzilla account can see, so the two can differ (same document, Security
+  and Privacy; Known Limitations).
 
 ## Contract URLs
 
@@ -585,6 +600,9 @@ changing one changes this document first.
     a user without it can neither make them non-confidential nor set their
     Coordinated Release Date; the All view still shows them to every user
     who sees them (The UI shows what the API returns);
+  - the Bugzilla needinfo count (Attention Summary) shows to a user who holds
+    `triage_ticket`, the capability of its operation (Sentinel
+    `docs/features/identity/rbac.md`, Endpoint Permission Map);
   - the Assigned to me view (Ticket List Views) shows to a user who can be
     the assignee of a Ticket: one whose assignment eligibility is `all` or
     `non_confidential`;
@@ -620,8 +638,8 @@ below only summarizes them.
 |---|---|---|
 | Reader | A user without a role: no capability, and scope `non_confidential` (Sentinel `docs/features/identity/rbac.md`, Access Levels) | Every area except Administration, without actions besides those of their own account. Confidential Tickets only through an access grant or package maintainership. Lands on the All view of the Ticket list |
 | Package maintainer | Not a role: a user associated with the packages of Tickets (Sentinel `docs/features/packages/maintainer.md`, User Identification and Ownership) | Their work in My packages, the tracks that wait for them on the screen of each Ticket of their packages, and the confidential Tickets of their packages. Their actions come from their roles alone |
-| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, the Embargo view and the Embargo expired count, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
-| Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same rule) | The queue of new Tickets as landing, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
+| Vulnerability analyst | The `vulnerability_analyst` role: the capabilities of Ticket work, confidentiality included, and scope `all`. A person who holds it can be the assignee of every Ticket (Sentinel `docs/features/identity/rbac.md`, Business Rule 10) | The queue of new Tickets as landing, the Embargo view and the Embargo expired count, the Bugzilla needinfo count, and the actions of its capabilities on Tickets and CVEs; for a person, also the Assigned to me view |
+| Restricted analyst | The `restricted_analyst` role: the capabilities of Ticket work without confidentiality, and scope `non_confidential`. A person who holds it can be the assignee of every non-confidential Ticket, a bot account of none (same rule) | The queue of new Tickets as landing, the Bugzilla needinfo count, and the actions of its capabilities on the Tickets that the user sees; for a person, also the Assigned to me view. A bot account uses the UI for its API keys |
 | Administrator | The `admin` role: the capabilities of user, settings, and fetcher administration and of setting any track to Fixed, without those of Ticket work, and scope `all` | Administration, the user administration of Users, the fetcher management of Fetchers, and the actions of its other capabilities; Ticket work needs an analyst role too. Lands on the All view of the Ticket list unless the user also holds an analyst role |
 
 ### Capabilities of the Signed-in User

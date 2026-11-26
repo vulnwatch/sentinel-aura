@@ -466,6 +466,18 @@ interface CountRead {
   failed: boolean;
 }
 
+// Whether the latest read of a count that ended failed, also while the count
+// is read again, until a read of it succeeds (docs/behaviors.md, Where
+// Errors Appear): TanStack Query starts a read that follows a failure as
+// pending when the count has no number, so its status alone would show the
+// count as loading meanwhile.
+export function lastReadFailed(read: {
+  errorUpdatedAt: number;
+  dataUpdatedAt: number;
+}): boolean {
+  return read.errorUpdatedAt > read.dataUpdatedAt;
+}
+
 // The count of the Tickets that the filters match, the total of a read of
 // one Ticket, without the search and the filters that the user adds
 // (docs/screen-map.md, Ticket List Views; Attention Summary). The count of
@@ -480,7 +492,7 @@ export function useTicketCount(
   listFetching: boolean,
 ): CountRead {
   const count = useListTickets({ ...filters, per_page: 1 });
-  const failed = count.status === "error";
+  const failed = lastReadFailed(count);
   const { refetch } = count;
   const wasFetching = useRef(listFetching);
   const wasSelected = useRef(selected);

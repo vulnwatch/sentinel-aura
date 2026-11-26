@@ -419,7 +419,10 @@ that needs it; content of another kind needs a new row first.
   menu that leads to such an address is the shared menu item, which takes the
   address as that component checks it, is loaded by the browser in the same
   way, and shows the mark of an item that leads to another site
-  (`docs/design-system.md`, Menus, Popovers, and Tooltips). A composed
+  (`docs/design-system.md`, Menus, Popovers, and Tooltips); so is a count of
+  a list that leads to such an address, the shared count, which shows the
+  mark of a count that leads to another site (`docs/design-system.md`,
+  Lists). A composed
   address takes the fixed origin that the document that defines it states,
   its screen document or a foundation document (`docs/behaviors.md`, Links
   to Other Sites, Composed addresses), and holds the value, or the part of it

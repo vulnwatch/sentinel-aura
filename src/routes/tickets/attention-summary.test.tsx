@@ -15,6 +15,8 @@ import {
   EXPIRED,
   filtersOf,
   later,
+  NEEDINFO_SEARCH,
+  NEEDINFO_TEXT,
   prepareEachTest,
   queriesOf,
   READER,
@@ -32,7 +34,7 @@ import {
 prepareEachTest();
 
 describe("the attention summary", () => {
-  test("shows five counts in the heading row, each a link to the All view refined to its Tickets", async () => {
+  test("shows its counts in the heading row, each a link to the All view refined to its Tickets, and Bugzilla needinfo after Active P1, a link to its search on Bugzilla", async () => {
     stubTickets();
     const { screen } = await renderApp("/tickets?view=new");
     const links = summaryOf(screen).getByRole("link");
@@ -41,6 +43,7 @@ describe("the attention summary", () => {
       .poll(() => links.elements().map((link) => link.textContent))
       .toEqual([
         "2 Active P1",
+        NEEDINFO_TEXT,
         "1 Triage overdue",
         "0 Submission overdue",
         "1 UM overdue",
@@ -48,6 +51,7 @@ describe("the attention summary", () => {
       ]);
     expect(links.elements().map((link) => link.getAttribute("href"))).toEqual([
       "/tickets?status=new&status=analysis&status=analyzed&priority=p1",
+      NEEDINFO_SEARCH,
       "/tickets?phase=triage&overdue=triage",
       "/tickets?phase=submission&overdue=submission",
       "/tickets?phase=um&overdue=um",
@@ -64,14 +68,16 @@ describe("the attention summary", () => {
   });
 
   test("sets the overdue counts apart from Active P1: a line, then the name Overdue, hidden from assistive technologies, then each count with its phase alone", async () => {
-    stubTickets();
-    const { screen } = await renderApp("/tickets?view=new");
+    // A user without triage_ticket, whose summary has no Bugzilla needinfo
+    // count between Active P1 and the overdue counts.
+    stubTickets({ user: READER });
+    const { screen } = await renderApp("/tickets");
     const active = summaryOf(screen).getByRole("link", { name: "2 Active P1" });
     const triage = summaryOf(screen).getByRole("link", {
       name: "1 Triage overdue",
     });
     const label = summaryOf(screen).getByText("Overdue", { exact: true });
-    await expectSummary(screen);
+    await expectSummary(screen, false);
 
     // The counts show their phase, and the name of the group once.
     await expect
@@ -191,7 +197,7 @@ describe("the attention summary", () => {
       .toBeVisible();
   });
 
-  test("shows a count as not available when its read fails, and reads it again with the next read of the list", async () => {
+  test("shows a count as not available when its read fails, and reads it again with the next read of the list, still not available until that read succeeds", async () => {
     const { stub, spy } = stubTickets({
       count: (query) =>
         filtersOf(query) === ATTENTION["Active P1"]
@@ -212,9 +218,19 @@ describe("the attention summary", () => {
     // The read and its two retries.
     expect(reads()).toBe(3);
 
-    stub.count = countOf;
+    const pending = later();
+    stub.count = (query) =>
+      filtersOf(query) === ATTENTION["Active P1"]
+        ? pending.promise
+        : countOf(query);
     router.history.push("/tickets?view=new&page=2");
 
+    await expect.poll(reads).toBe(4);
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+    expect(failed.element().textContent).toBe("– Active P1 not available");
+
+    pending.resolve(countOf(new URLSearchParams(ATTENTION["Active P1"])));
     await expect
       .element(summaryOf(screen).getByRole("link", { name: "2 Active P1" }))
       .toBeVisible();
@@ -244,7 +260,7 @@ describe("the attention summary", () => {
       .toBe(`current_phase=um&overdue=um&${ALL_PAGE}`);
   });
 
-  test("shows Embargo expired after Active P1 to a user who holds manage_confidentiality, standing alone, as a link to the Embargo view refined to its Tickets", async () => {
+  test("shows Embargo expired after Active P1 and before Bugzilla needinfo to a user who holds manage_confidentiality, standing alone, as a link to the Embargo view refined to its Tickets", async () => {
     const { spy } = stubTickets({ user: EMBARGO_ANALYST });
     const { screen } = await renderApp("/tickets?view=new");
     const links = summaryOf(screen).getByRole("link");
@@ -254,6 +270,7 @@ describe("the attention summary", () => {
       .toEqual([
         "2 Active P1",
         "1 Embargo expired",
+        NEEDINFO_TEXT,
         "1 Triage overdue",
         "0 Submission overdue",
         "1 UM overdue",
@@ -265,24 +282,28 @@ describe("the attention summary", () => {
     expect(
       queriesOf(spy, "count").filter((query) => query === countQuery(EXPIRED)),
     ).toHaveLength(1);
-    // 8 px after Active P1, and the line of the overdue counts 12 px after
-    // it, all on one line in a wide window.
+    // 8 px after Active P1 and before Bugzilla needinfo, and the line of the
+    // overdue counts 12 px after that, all on one line in a wide window.
     const active = links.first().element().getBoundingClientRect();
     const expired = links.nth(1).element().getBoundingClientRect();
-    expect(Math.round(expired.left - active.right)).toBe(8);
+    const needinfo = links.nth(2).element().getBoundingClientRect();
+    expect([
+      Math.round(expired.left - active.right),
+      Math.round(needinfo.left - expired.right),
+    ]).toEqual([8, 8]);
     const line = document.elementFromPoint(
-      expired.right + 12.5,
-      expired.top + expired.height / 2,
+      needinfo.right + 12.5,
+      needinfo.top + needinfo.height / 2,
     )!;
     const box = line.getBoundingClientRect();
     expect([
-      Math.round(box.left - expired.right),
+      Math.round(box.left - needinfo.right),
       Math.round(box.width),
       getComputedStyle(line).backgroundColor,
     ]).toEqual([12, 1, "rgb(216, 222, 228)"]);
     expect(
       links.elements().map((link) => link.getBoundingClientRect().top),
-    ).toEqual(Array.from({ length: 6 }, () => active.top));
+    ).toEqual(Array.from({ length: 7 }, () => active.top));
   });
 
   test("opens the Embargo view refined to the Tickets of Embargo expired", async () => {
@@ -334,7 +355,7 @@ describe("the attention summary", () => {
       "All 1,250",
     ]);
 
-    await expectSummary(screen);
+    await expectSummary(screen, false);
     // The counts of the five views, and those of the summary.
     expect(queriesOf(spy, "count")).toHaveLength(10);
   });
@@ -355,7 +376,7 @@ describe("the attention summary", () => {
     await expect
       .element(screen.getByRole("tab", { name: /^Assigned to me/ }))
       .not.toBeInTheDocument();
-    await expectSummary(screen);
+    await expectSummary(screen, false);
     await expect.element(count).toHaveFocus();
   });
 });

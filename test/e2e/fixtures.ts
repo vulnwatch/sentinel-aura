@@ -143,19 +143,42 @@ export async function expectViewCounts(page: Page) {
 // number, its thousands grouped, then its label (src/components/count-link.tsx).
 const COUNTED_ATTENTION = /^\d[\d,]*\s/;
 
+// How long the Bugzilla needinfo count takes at most to show as not
+// available. The backend of the tests cannot reach Bugzilla (compose.yaml), so
+// a read of the count that finds no outcome in Sentinel's cache waits for the
+// transport retries of Sentinel, about 7 s, and the UI sends it again twice
+// after a 503 (Sentinel docs/features/integrations/bugzilla-needinfo-count.md,
+// Cache and Read Coordination; docs/behaviors.md, Retries and Unconfirmed
+// Changes): Sentinel keeps the failure for 10 s, so at most two of the three
+// reads wait.
+const NEEDINFO_TIMEOUT = 20_000;
+
 // Waits until each count of the attention summary of the Ticket list
-// (docs/screens/ticket-list.md, Content) shows its number. Each count is read
-// on its own and widens its link as its number arrives, which moves the
-// counts after it and, when the heading row wraps, what follows it, as the
-// counts of the views do: a test calls this before a reference screenshot of
-// the list, which shows the numbers, or before it points at what they can
-// move (docs/conventions.md, End-to-End Tests).
-export async function expectAttentionCounts(page: Page) {
-  const counts = page
-    .getByRole("list", { name: "Tickets that need attention" })
-    .getByRole("link");
+// (docs/screens/ticket-list.md, Content) shows its number, and, for a user
+// who holds triage_ticket (needinfo), until the Bugzilla needinfo count shows
+// as not available, the only outcome that the backend of the tests gives it;
+// for any other user, checks that the summary has no such count.
+// Each count is read on its own and widens its place as its number or its
+// dash arrives, which moves the counts after it and, when the heading row
+// wraps, what follows it, as the counts of the views do: a test calls this
+// before a reference screenshot of the list, which shows the numbers, or
+// before it points at what they can move (docs/conventions.md, End-to-End
+// Tests).
+export async function expectAttentionCounts(page: Page, needinfo: boolean) {
+  const summary = page.getByRole("list", { name: "Needs attention" });
+  const counts = summary.getByRole("link");
   await expect(counts.first()).toBeVisible();
   await expect(counts.filter({ hasNotText: COUNTED_ATTENTION })).toHaveCount(0);
+  const item = summary
+    .getByRole("listitem")
+    .filter({ hasText: "Bugzilla needinfo" });
+  if (needinfo) {
+    await expect(item).toHaveText("– Bugzilla needinfo not available", {
+      timeout: NEEDINFO_TIMEOUT,
+    });
+  } else {
+    await expect(item).toHaveCount(0);
+  }
 }
 
 // The generated avatars that the page shows, which the reference screenshots
