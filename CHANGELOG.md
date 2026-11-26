@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.12.0...v0.13.0) (2026-11-26)
+
+
+### Features
+
+* **deps:** pin Sentinel 0.29.0 ([#346](https://github.com/vulnwatch/sentinel-aura/issues/346)) ([0dcd211](https://github.com/vulnwatch/sentinel-aura/commit/0dcd211040545363bd52d40b7c35210f19824a35))
+* show the Bugzilla needinfo count in the Ticket list ([#348](https://github.com/vulnwatch/sentinel-aura/issues/348)) ([fdcae7e](https://github.com/vulnwatch/sentinel-aura/commit/fdcae7e7acbfaf3bc96c3332ba562f222287ade4))
+
 ## [0.12.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.11.0...v0.12.0) (2026-11-25)
 
 
