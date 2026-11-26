@@ -19,6 +19,8 @@ export * from "./api-key-response";
 export * from "./api-key-sort-field";
 export * from "./api-key-status";
 export * from "./assignment-eligibility";
+export * from "./bugzilla-needinfo-count-data";
+export * from "./bugzilla-needinfo-count-response";
 export * from "./capability";
 export * from "./catalog-presence-value";
 export * from "./cnaaudit-event-data-detail";
