@@ -106,8 +106,8 @@ Landing; Ticket List Views; Attention Summary).
   (`docs/screen-map.md`, Links Between Areas). Each count of Tickets of the
   attention summary links to the list refined to its Tickets: Embargo
   expired to the Embargo view, every other count to the All view. Bugzilla
-  needinfo links to the Bugzilla search of its read, on another site, which
-  opens in the same tab (`docs/behaviors.md`, Links to Other Sites).
+  needinfo links to the Bugzilla search of its read, on another site
+  (`docs/behaviors.md`, Links to Other Sites).
 
 ## Content
 
@@ -154,8 +154,8 @@ Landing; Ticket List Views; Attention Summary).
   response of a release. `authenticated`, which tells whether the count can
   include restricted bugs or only public ones, is not shown: the count can
   differ from the bugs that the search lists to each person whatever its
-  value (same document, Known Limitations, Visibility of the account), and
-  the number is enough to tell whether requests wait in Bugzilla.
+  value (`docs/screen-map.md`, Attention Summary), and the number is enough
+  to tell whether requests wait in Bugzilla.
 - The views as tabs, named "Views" for assistive technologies, each its name
   followed by the number of its Tickets, with the line that sets New and
   Unassigned apart before Analysis, the first view after them

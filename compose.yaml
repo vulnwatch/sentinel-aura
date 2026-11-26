@@ -136,7 +136,8 @@ services:
     # where nothing listens, so that the count answers 503
     # BUGZILLA_UNAVAILABLE on every host once the transport retries end
     # (Sentinel docs/features/integrations/bugzilla-needinfo-count.md,
-    # Response Contract), as SMELT's address does for package addition. The
+    # Response Contract; Get Bugzilla Needinfo Count), as SMELT's address
+    # does for package addition. The
     # other outgoing requests of the API go to other hosts, and are unchanged.
     extra_hosts:
       - bugzilla.suse.com:127.0.0.1

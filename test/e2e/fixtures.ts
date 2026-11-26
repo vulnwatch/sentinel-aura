@@ -145,12 +145,15 @@ const COUNTED_ATTENTION = /^\d[\d,]*\s/;
 
 // How long the Bugzilla needinfo count takes at most to show as not
 // available. The backend of the tests cannot reach Bugzilla (compose.yaml), so
-// a read of the count that finds no outcome in Sentinel's cache waits for the
-// transport retries of Sentinel, about 7 s, and the UI sends it again twice
-// after a 503 (Sentinel docs/features/integrations/bugzilla-needinfo-count.md,
+// a read of the count that finds no outcome in Sentinel's cache waits for
+// Sentinel's read of Bugzilla, which ends within its deadline of 10 s, about
+// 7 s of transport retries here, or for another request's read of the same
+// length; Sentinel then keeps the failure for 10 s. The UI sends the read
+// again twice after a 503, 1 s and then 2 s later, so at most one of the
+// three reads waits for a read of Bugzilla (Sentinel
+// docs/features/integrations/bugzilla-needinfo-count.md, Bugzilla Search;
 // Cache and Read Coordination; docs/behaviors.md, Retries and Unconfirmed
-// Changes): Sentinel keeps the failure for 10 s, so at most two of the three
-// reads wait.
+// Changes).
 const NEEDINFO_TIMEOUT = 20_000;
 
 // Waits until each count of the attention summary of the Ticket list
@@ -173,6 +176,8 @@ export async function expectAttentionCounts(page: Page, needinfo: boolean) {
     .getByRole("listitem")
     .filter({ hasText: "Bugzilla needinfo" });
   if (needinfo) {
+    // The test gets the time of the wait on top of its own.
+    base.info().setTimeout(base.info().timeout + NEEDINFO_TIMEOUT);
     await expect(item).toHaveText("– Bugzilla needinfo not available", {
       timeout: NEEDINFO_TIMEOUT,
     });

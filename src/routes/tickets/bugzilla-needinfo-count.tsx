@@ -21,11 +21,10 @@ interface BugzillaNeedinfoCountProps {
 // again as the other counts are: when the tab returns to the foreground once
 // it has a number, and, while its read has failed, with each read of the
 // list, and stays not available meanwhile (docs/behaviors.md, Loading; Where
-// Errors Appear). Until a read
-// returns the address of the search, the count is not a link; a later
-// failure keeps the address of the last read that succeeded, which is the
-// same for every response of a release. Whether the read of Bugzilla was
-// authenticated is not shown.
+// Errors Appear). Until a read returns the address of the search, the count
+// is not a link; a later failure keeps the address of the last read that
+// succeeded, which is the same for every response of a release. Whether the
+// read of Bugzilla was authenticated is not shown.
 export function BugzillaNeedinfoCount({
   listFetching,
 }: BugzillaNeedinfoCountProps) {

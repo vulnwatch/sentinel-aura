@@ -511,7 +511,7 @@ dataset, which the image of the pinned version provides (Sentinel
   listens: the count answers `503 BUGZILLA_UNAVAILABLE` on every host, rather
   than the real count where the network reaches Bugzilla (Sentinel
   `docs/features/integrations/bugzilla-needinfo-count.md`, Search Request;
-  Response Contract).
+  Response Contract; Get Bugzilla Needinfo Count).
 - A capability that the UI needs and the dataset lacks is requested as a
   change of Sentinel's dataset specification (Sentinel
   `docs/features/platform/example-dataset.md`, Drift Protection; `AGENTS.md`,

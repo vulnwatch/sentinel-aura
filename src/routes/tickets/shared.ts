@@ -466,8 +466,8 @@ interface CountRead {
   failed: boolean;
 }
 
-// Whether the latest read of a count that ended failed, also while the count
-// is read again, until a read of it succeeds (docs/behaviors.md, Where
+// Whether the latest read of a count that has ended failed, also while the
+// count is read again, until a read of it succeeds (docs/behaviors.md, Where
 // Errors Appear): TanStack Query starts a read that follows a failure as
 // pending when the count has no number, so its status alone would show the
 // count as loading meanwhile.

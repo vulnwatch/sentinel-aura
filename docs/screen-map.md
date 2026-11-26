@@ -67,7 +67,9 @@ role and work in Sentinel all day. Their most frequent tasks:
   Dates, and their access grants, and make a Ticket non-confidential once its
   Coordinated Release Date has passed, which Sentinel never does by itself
   (Sentinel `docs/features/tickets/tickets.md`, Coordinated Release Date);
-- create Tickets manually and refetch CVE data.
+- create Tickets manually and refetch CVE data;
+- answer the requests for information that SUSE Bugzilla bugs address to the
+  security team, which the attention summary counts.
 
 ### Package Maintainers
 
@@ -483,16 +485,16 @@ rather than of Tickets (below).
   counts (same document, Observable Bottleneck Only).
 - Bugzilla needinfo counts the open bugs of SUSE Bugzilla on which a
   `needinfo?` flag asks the security team for information, which analysts
-  answer in Bugzilla, read from Get Bugzilla Needinfo Count (Sentinel
+  answer in Bugzilla, read from Get Bugzilla Needinfo Count, whose capability
+  is `triage_ticket` (Sentinel
   `docs/features/integrations/bugzilla-needinfo-count.md`, Get Bugzilla
-  Needinfo Count). It shows to a user who holds `triage_ticket`, the
-  capability of that operation, and links to the Bugzilla search that lists
-  the bugs, which Sentinel returns with the count, a link to another site
-  (`docs/behaviors.md`, Links to Other Sites). The count is the same for every
-  user who sees it and can include restricted bugs, of which it discloses
-  only the number; the search lists to each person the bugs that their own
-  Bugzilla account can see, so the two can differ (same document, Security
-  and Privacy; Known Limitations).
+  Needinfo Count). It links to the Bugzilla search that lists the bugs, which
+  Sentinel returns with the count, a link to another site
+  (`docs/behaviors.md`, Links to Other Sites). A count of zero stays. The
+  count is the same for every user who sees it and can include restricted
+  bugs, of which it discloses only the number; the search lists to each person
+  the bugs that their own Bugzilla account can see, so the two can differ
+  (same document, Security and Privacy; Known Limitations).
 
 ## Contract URLs
 
@@ -600,9 +602,6 @@ changing one changes this document first.
     a user without it can neither make them non-confidential nor set their
     Coordinated Release Date; the All view still shows them to every user
     who sees them (The UI shows what the API returns);
-  - the Bugzilla needinfo count (Attention Summary) shows to a user who holds
-    `triage_ticket`, the capability of its operation (Sentinel
-    `docs/features/identity/rbac.md`, Endpoint Permission Map);
   - the Assigned to me view (Ticket List Views) shows to a user who can be
     the assignee of a Ticket: one whose assignment eligibility is `all` or
     `non_confidential`;
