@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel",
     "description": "Security update management platform for SUSE/openSUSE distributions",
-    "version": "0.28.1"
+    "version": "0.29.0"
   },
   "paths": {
     "/health": {
@@ -10733,6 +10733,78 @@
           }
         }
       }
+    },
+    "/api/v1/bugzilla/needinfo-count": {
+      "get": {
+        "tags": [
+          "Bugzilla"
+        ],
+        "summary": "Get the Bugzilla needinfo count",
+        "description": "Returns the number of open SUSE Bugzilla bugs on which a `needinfo?` flag asks `security-team@suse.de` for information, whether the Bugzilla read was authenticated with Sentinel's API key, and the URL of the matching Bugzilla web search. The result is the same for every caller and is cached for up to 60 seconds; a response can take up to about 15 seconds while Bugzilla is read. Requires `triage_ticket`.",
+        "operationId": "get_bugzilla_needinfo_count_api_v1_bugzilla_needinfo_count_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BugzillaNeedinfoCountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`AUTH_NOT_AUTHENTICATED`: no credential was sent, or the credential is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`AUTH_INSUFFICIENT_PERMISSION`: the caller lacks the required capability.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`VALIDATION_ERROR`: the request fails validation; `errors` lists each invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR`: unhandled server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`BUGZILLA_UNAVAILABLE`: no valid count could be obtained from SUSE Bugzilla.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11243,6 +11315,46 @@
         ],
         "title": "AssignmentEligibility",
         "description": "For which Tickets a user is eligible to be the assignee.\n\nCategory B \u2014 classification (Python Enum only, never stored in the\ndatabase; derived per request from the user's active status, bot\nmarker, and roles). The values are the wire values. See\n`docs/features/identity/rbac.md` (Assignment Eligibility Wire Format)."
+      },
+      "BugzillaNeedinfoCountData": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "The number of open bugs that match the search for a `needinfo?` flag with the requestee `security-team@suse.de`, among the bugs that the Bugzilla read could see. At least 0 and at most 10000. It can lag Bugzilla by up to 60 seconds."
+          },
+          "authenticated": {
+            "type": "boolean",
+            "title": "Authenticated",
+            "description": "Whether the Bugzilla read that produced `count` was authenticated with Sentinel's API key. `true`: `count` can also include restricted bugs that the key's Bugzilla account can see. `false`: no API key is configured, so `count` includes only public bugs. `true` does not prove that `count` includes every restricted bug."
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "The URL of the Bugzilla web search with the same conditions; the same for every response of a release."
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "authenticated",
+          "url"
+        ],
+        "title": "BugzillaNeedinfoCountData",
+        "description": "The count of open SUSE Bugzilla needinfo requests to the security\nteam."
+      },
+      "BugzillaNeedinfoCountResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BugzillaNeedinfoCountData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "BugzillaNeedinfoCountResponse",
+        "description": "Single-resource envelope of `GET /api/v1/bugzilla/needinfo-count`."
       },
       "CNAAuditEventData": {
         "properties": {
