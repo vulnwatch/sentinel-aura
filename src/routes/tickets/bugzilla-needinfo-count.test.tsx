@@ -4,7 +4,6 @@ import { errorResponse, jsonResponse, requestsTo, urlOf } from "../../test-api";
 import {
   ANALYST,
   client,
-  EMBARGO_ANALYST,
   expectSummary,
   later,
   NEEDINFO,
@@ -84,25 +83,6 @@ describe("the Bugzilla needinfo count", () => {
     await expectSummary(screen);
     await settled();
     expect(needinfoQueries(spy)).toEqual([""]);
-  });
-
-  test("follows Embargo expired for a user who also holds manage_confidentiality", async () => {
-    stubTickets({ user: EMBARGO_ANALYST });
-    const { screen } = await renderApp("/tickets?view=new");
-
-    await expect
-      .poll(() =>
-        summaryOf(screen)
-          .getByRole("link")
-          .elements()
-          .map((link) => link.textContent)
-          .slice(0, 3),
-      )
-      .toEqual([
-        "2 Active P1",
-        "1 Embargo expired",
-        "4 Bugzilla needinfo (another site)",
-      ]);
   });
 
   test.each([

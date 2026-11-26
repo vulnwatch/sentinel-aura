@@ -7,6 +7,7 @@ import { App } from "../../app";
 import { getGetBugzillaNeedinfoCountQueryKey } from "../../api/generated/bugzilla";
 import type {
   AssignmentEligibility,
+  BugzillaNeedinfoCountResponse,
   Capability,
   CurrentUserData,
   CurrentUserResponse,
@@ -45,7 +46,10 @@ export function needinfoCount(
   url = NEEDINFO_SEARCH,
   authenticated = true,
 ): Response {
-  return jsonResponse(200, { data: { count, authenticated, url } });
+  const body: BugzillaNeedinfoCountResponse = {
+    data: { count, authenticated, url },
+  };
+  return jsonResponse(200, body);
 }
 
 // A user who holds the vulnerability_analyst role and can be the assignee of

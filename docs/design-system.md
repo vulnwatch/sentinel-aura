@@ -1109,11 +1109,12 @@ A list screen, such as the Ticket list, shows from top to bottom:
    Ticket". A count of what another site lists, such as Bugzilla needinfo
    (`docs/screen-map.md`, Attention Summary), ends with `external-link` at
    14 px in `fg-muted`, 4 px after its label, as an item of a menu that leads
-   to another site does (Menus, Popovers, and Tooltips): its box, rather than
-   the color of its text, shows that it is a link. A count
-   that has no address yet, such as one whose read has not returned it, shows
-   in the same box, without `surface-hover` and without the icon, and is not a
-   link. Counts of one kind can form a group after the others: a vertical
+   to another site does (Menus, Popovers, and Tooltips), since a count is
+   not a text in `link`. A count that has no web address to lead to, such as
+   one whose reads have not returned one yet, shows in the same box, without
+   `surface-hover` and without the icon, and is not a link
+   (`docs/behaviors.md`, Links to Other Sites). Counts of one kind can form a
+   group after the others: a vertical
    line of 1 px in `border`, 20 px high, 12 px from what precedes and follows
    it, then the name of the group in `text-14`, `fg-muted`, 8 px before its
    counts, such as "Overdue". Each count of the group shows only what sets it

@@ -547,7 +547,9 @@ that needs it; content of another kind needs a new row first.
   toolbar (`docs/behaviors.md`, Loading; `docs/design-system.md`, Lists).
   `expectViewCounts` of `fixtures.ts` waits until each view shows its count,
   and `expectAttentionCounts` until each count of the attention summary
-  shows its number. A test waits for such data through a state that the user
+  shows its number, or, for the Bugzilla needinfo count, which a backend
+  loaded with the dataset cannot read (`docs/architecture.md`, Development
+  Environment), until it shows as not available. A test waits for such data through a state that the user
   sees, such as the counts, never for a fixed time. At a URL with an anchor,
   that data includes every read of the screen, after which the page shows the
   target of the anchor (`docs/design-system.md`, Main Content), which moves
