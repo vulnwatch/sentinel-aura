@@ -32,6 +32,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_INVALID,
@@ -1163,7 +1164,7 @@ describe("the outcome of Mark as duplicate…", () => {
 
     await expect.element(dialog).not.toBeInTheDocument();
     await expectFocusSettledOn(actionsButton(screen));
-    expect(announcements(screen)).not.toContain(MARKED);
+    expect(announcements()).not.toContain(MARKED);
     reread.resolve(
       ticketResponse(
         fictionalTicketDetail({
@@ -1173,7 +1174,7 @@ describe("the outcome of Mark as duplicate…", () => {
       ),
     );
 
-    await expect.poll(() => announcements(screen)).toContain(MARKED);
+    await expect.poll(() => announcements()).toContain(MARKED);
     expect(
       screen
         .getByText(MARKED, { exact: true })
@@ -1215,9 +1216,9 @@ describe("the outcome of Mark as duplicate…", () => {
     await markAs(screen, "21");
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Marked as a duplicate.");
-    expect(announcements(screen)).not.toContain("Marked as a duplicate of");
+    expect(announcements()).not.toContain("Marked as a duplicate of");
   });
 
   test("leaves an answer that the UI cannot show to the page of a failure of the UI", async () => {
@@ -1321,7 +1322,9 @@ describe("the outcome of Mark as duplicate…", () => {
       ),
     );
 
-    const message = screen.getByText(`SNTL-12: ${MARKED}`, { exact: true });
+    const message = mainContent(screen).getByText(`SNTL-12: ${MARKED}`, {
+      exact: true,
+    });
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
     await expect
@@ -1375,7 +1378,9 @@ describe("the outcome of Mark as duplicate…", () => {
       await leaveForTickets(router, screen);
       response.resolve(failure());
 
-      const error = screen.getByText(`SNTL-12: ${text}`, { exact: true });
+      const error = mainContent(screen).getByText(`SNTL-12: ${text}`, {
+        exact: true,
+      });
       await expect.element(error).toBeVisible();
       expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES[tone]);
       await expect

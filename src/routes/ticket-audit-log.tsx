@@ -397,8 +397,6 @@ function TicketAuditLog() {
     changed && events.status === "success" && !events.isPlaceholderData
       ? resultText(events.data, search)
       : "";
-  const filtersStatus =
-    events.status === "error" ? placeMessage(events) : announcement;
 
   const place = dataPlace(events);
   const failure = ticketShown ? place.failure : null;
@@ -416,10 +414,7 @@ function TicketAuditLog() {
             refine({ search: term });
           }}
         />
-        <Filters
-          applied={filtersApplied(search)}
-          status={<span key={key}>{filtersStatus}</span>}
-        >
+        <Filters applied={filtersApplied(search)}>
           <ActorFilter
             ticketId={ticketId}
             selected={search.actor}
@@ -451,7 +446,7 @@ function TicketAuditLog() {
       </div>
       <div className="relative mt-4">
         {place.updating && <UpdatingBar />}
-        <output className="block">{failure ?? place.warning}</output>
+        {failure ?? place.warning}
         {data === undefined ? (
           waiting && <Loading />
         ) : data.data.length === 0 ? (

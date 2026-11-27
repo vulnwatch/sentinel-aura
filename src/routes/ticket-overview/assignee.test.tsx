@@ -18,6 +18,7 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import { timesAnnounced } from "../../test-announcements";
 import {
   ACTORS,
   animationsIn,
@@ -30,6 +31,7 @@ import {
   interactOutside,
   later,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   ME,
   MESSAGE_TONES,
@@ -375,7 +377,7 @@ describe("the assignee", () => {
     await expect.element(editAssignee(screen)).toHaveFocus();
     await expect.element(assigneeValue(screen)).toHaveTextContent("Bob Wilson");
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Assigned to Bob Wilson.");
     expect(readsOf(spy, TICKET)).toBeGreaterThan(reads);
     expect(readsOf(spy, ACTORS)).toBeGreaterThan(1);
@@ -399,15 +401,13 @@ describe("the assignee", () => {
 
     await userOption(screen, "Alice Smith @asmith You").click();
 
-    await expect
-      .poll(() => announcements(screen))
-      .toContain("Assigned to you.");
+    await expect.poll(() => announcements()).toContain("Assigned to you.");
     expect(assignments(spy)).toEqual([
       { user_id: ALICE.id, expected_assignee_id: BOB.id },
     ]);
   });
 
-  test("shows the assignment in the message area, as a success without the Ticket, once the read of the Ticket after it fails, and announces nothing", async () => {
+  test("shows the assignment in the message area, as a success without the Ticket, once the read of the Ticket after it fails, which the details do not announce again", async () => {
     const reread = later();
     let assigned = false;
     stubTicket({
@@ -420,7 +420,7 @@ describe("the assignee", () => {
     });
     const { screen } = await renderDetails();
     await openAssignee(screen, "Bob Wilson @bwilson");
-    const message = screen.getByText("Assigned to Bob Wilson.", {
+    const message = mainContent(screen).getByText("Assigned to Bob Wilson.", {
       exact: true,
     });
 
@@ -428,14 +428,17 @@ describe("the assignee", () => {
 
     await expect.element(assigneePopover(screen)).not.toBeInTheDocument();
     await nextFrames();
-    expect(message.query()).toBeNull();
+    expect(
+      screen.getByText("Assigned to Bob Wilson.", { exact: true }).query(),
+    ).toBeNull();
     reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
 
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
     expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
     await nextFrames();
-    expect(announcements(screen)).not.toContain("Assigned to Bob Wilson.");
+    // The message alone announces it.
+    expect(timesAnnounced("Assigned to Bob Wilson.")).toBe(1);
   });
 
   test("offers Unassign yourself first to the signed-in user who is the assignee, which returns the Ticket to the queue", async () => {
@@ -459,7 +462,7 @@ describe("the assignee", () => {
     await userOption(screen, "Unassign yourself").click();
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("You're no longer the assignee.");
     await expect.element(assigneeValue(screen)).toHaveTextContent("Unassigned");
     expect(assignments(spy)).toEqual([
@@ -865,7 +868,7 @@ describe("the assignee", () => {
     response.resolve(assignedTo(BOB));
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Assigned to Bob Wilson.");
     expect(assigneePopover(screen).query()).toBeNull();
   });
@@ -900,7 +903,9 @@ describe("the assignee", () => {
 
       response.resolve(outcome());
 
-      await expect.element(screen.getByText(message)).toBeVisible();
+      await expect
+        .element(mainContent(screen).getByText(message))
+        .toBeVisible();
       await expect
         .element(screen.getByRole("link", { name: "SNTL-12", exact: true }))
         .toHaveAttribute("href", "/tickets/SNTL-12");

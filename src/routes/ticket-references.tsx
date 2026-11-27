@@ -458,7 +458,6 @@ function TicketReferences() {
     setResult({ key, text: resultText(rows.length, all.length) });
   }
   const filtered = result?.key === key ? result.text : "";
-  const filtersStatus = read.status === "error" ? placeMessage(read) : filtered;
   const sources = sourceOptions(all ?? []);
 
   return (
@@ -477,10 +476,7 @@ function TicketReferences() {
             </Button>
           </div>
         )}
-        <Filters
-          applied={applied}
-          status={<span key={key}>{filtersStatus}</span>}
-        >
+        <Filters applied={applied}>
           <FilterGroup
             label="Type"
             options={TYPE_FILTER_OPTIONS}
@@ -517,7 +513,7 @@ function TicketReferences() {
       </div>
       <div ref={references} className="relative">
         {place.updating && <UpdatingBar />}
-        <output className="block">{failure ?? place.warning}</output>
+        {failure ?? place.warning}
         {all === undefined || rows === undefined ? (
           waiting && <Loading />
         ) : all.length === 0 ? (

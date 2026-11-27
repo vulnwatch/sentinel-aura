@@ -23,6 +23,7 @@ import {
   urlOf,
   validationError,
 } from "../../test-api";
+import { timesAnnounced } from "../../test-announcements";
 import { pointerAwayFrom } from "../../test-pointer";
 import {
   ACTORS,
@@ -40,6 +41,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_INVALID,
@@ -1104,7 +1106,7 @@ describe("Save", () => {
     await expectFocusSettledOn(pencilOf(screen));
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
     await frames();
-    expect(announcements(screen)).not.toContain("Coordinated Release Date");
+    expect(announcements()).not.toContain("Coordinated Release Date");
     // The read shows the deadlines that Sentinel derived from the date.
     reread.resolve(
       ticketResponse(
@@ -1118,7 +1120,7 @@ describe("Save", () => {
     );
 
     const text = `Coordinated Release Date set to ${formatDateTime(returned)}.`;
-    await expect.poll(() => announcements(screen)).toContain(text);
+    await expect.poll(() => announcements()).toContain(text);
     expect(valueOf(screen, "Coordinated Release Date").textContent).toBe(
       formatDateTime(returned),
     );
@@ -1139,7 +1141,7 @@ describe("Save", () => {
       { coordinated_release_at: new Date(LATER).toISOString() },
     ]);
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain(
         `Coordinated Release Date set to ${formatDateTime(new Date(LATER).toISOString())}.`,
       );
@@ -1354,7 +1356,7 @@ describe("Remove date", () => {
 
     await expect.element(dialog).not.toBeInTheDocument();
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Coordinated Release Date removed.");
     await expectFocusSettledOn(pencilOf(screen));
     expect(valueOf(screen, "Coordinated Release Date").textContent).toBe(
@@ -1431,7 +1433,7 @@ describe("Remove date", () => {
     reread.resolve(ticketResponse(answer));
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Coordinated Release Date removed.");
     await expect.element(anyPencil(screen)).not.toBeInTheDocument();
     expect(
@@ -1903,7 +1905,7 @@ describe("the layout while the dialog is open", () => {
     await expect.element(dialog).not.toBeInTheDocument();
     await expect.poll(() => aboveParts(screen)).toBe(true);
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain(
         `Coordinated Release Date set to ${formatDateTime(new Date(LATER).toISOString())}.`,
       );
@@ -1999,11 +2001,17 @@ describe("the outcome of a change of the Coordinated Release Date", () => {
         .toBeVisible();
       response.resolve(answer());
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
-      expect(announcements(screen)).not.toContain(text);
+      // The message alone announces it, with its reference when it shows one.
+      const referenced =
+        mainContent(screen).getByText(REFERENCE, { exact: true }).query() !==
+        null;
+      expect(timesAnnounced(referenced ? `${text} ${REFERENCE}` : text)).toBe(
+        1,
+      );
     },
   );
 
@@ -2018,7 +2026,9 @@ describe("the outcome of a change of the Coordinated Release Date", () => {
       await leaveForTickets(router, screen);
       response.resolve(answer());
 
-      const message = screen.getByText(`SNTL-12: ${text}`, { exact: true });
+      const message = mainContent(screen).getByText(`SNTL-12: ${text}`, {
+        exact: true,
+      });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       await expect

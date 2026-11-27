@@ -10,6 +10,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import "../styles.css";
+import { announcements } from "../test-announcements";
+import { Announcer } from "./announcer";
 import { ApiError } from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
@@ -128,6 +130,7 @@ async function renderRecords(
     <QueryClientProvider client={client}>
       <Records page={number} {...sorting} />
     </QueryClientProvider>,
+    { wrapper: Announcer },
   );
   const rerender = (next: number, nextSorting = sorting) =>
     screen.rerender(
@@ -432,7 +435,7 @@ describe("the table", () => {
     expect(screen.getByRole("progressbar").query()).toBeNull();
   });
 
-  test("shows the error of a read of other data in place of the rows, inside the frame, in a status region", async () => {
+  test("shows the error of a read of other data in place of the rows, inside the frame, and announces it", async () => {
     respond.mockResolvedValueOnce(pageOf("R-1"));
     const { screen, rerender } = await renderRecords();
     await expect
@@ -442,12 +445,14 @@ describe("the table", () => {
 
     await rerender(2);
 
-    const message = screen.getByText(
-      "Sentinel isn't available right now. Try again later.",
-    );
+    const message = screen
+      .getByRole("main")
+      .getByText("Sentinel isn't available right now. Try again later.");
     await expect.element(message).toBeVisible();
     expect(frameOf(screen).contains(message.element())).toBe(true);
-    expect(message.element().closest("output")).not.toBeNull();
+    await expect
+      .poll(announcements)
+      .toEqual(["Sentinel isn't available right now. Try again later."]);
     expect(tableOf(screen).getByRole("rowheader").query()).toBeNull();
     await expect
       .element(tableOf(screen).getByRole("columnheader", { name: "Record" }))
@@ -457,7 +462,7 @@ describe("the table", () => {
       .toBeVisible();
   });
 
-  test("keeps the rows after a new read of them failed, with the warning above the frame", async () => {
+  test("keeps the rows after a new read of them failed, with the warning above the frame, and announces it", async () => {
     respond.mockResolvedValueOnce(pageOf("R-1"));
     const { screen } = await renderRecords();
     await expect
@@ -467,13 +472,19 @@ describe("the table", () => {
 
     await client.refetchQueries({ queryKey: ["records"] });
 
-    const warning = screen.getByText(/^This couldn't be updated\./);
+    const warning = screen
+      .getByRole("main")
+      .getByText(/^This couldn't be updated\./);
     await expect.element(warning).toBeVisible();
     expect(frameOf(screen).contains(warning.element())).toBe(false);
     expect(warning.element().getBoundingClientRect().bottom).toBeLessThan(
       frameOf(screen).getBoundingClientRect().top,
     );
-    expect(warning.element().closest("output")).not.toBeNull();
+    await expect
+      .poll(announcements)
+      .toEqual([
+        "This couldn't be updated. Sentinel isn't available right now. Try again later.",
+      ]);
     await expect
       .element(tableOf(screen).getByRole("rowheader", { name: "R-1" }))
       .toBeVisible();

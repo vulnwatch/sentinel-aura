@@ -331,9 +331,9 @@ Landing; Ticket List Views; Attention Summary).
   or the message of an empty state, also when the words are those of the
   previous list. The list as the screen opens is not announced: only a
   change of the view, the page, the search, the filters, or the sorting is
-  (`docs/behaviors.md`, Accessibility, Focus after a navigation), and while
-  the popover of Filters is open, it announces the same itself
-  (`docs/design-system.md`, Lists).
+  (`docs/behaviors.md`, Accessibility, Focus after a navigation), also while
+  the popover of Filters is open (`docs/behaviors.md`, Accessibility,
+  Announcements; `docs/design-system.md`, Lists).
 - **The focus.** When the rows, the explanation of a priority, the table
   without rows, the action of an empty state, the pagination, a tab, a count
   of the attention summary, or Clear filters leaves the page while it holds

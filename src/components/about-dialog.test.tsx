@@ -12,6 +12,7 @@ import { getGetPlatformVersionQueryKey } from "../api/generated/platform";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { SESSION_RECORD_KEY } from "../session";
+import { announcements } from "../test-announcements";
 import {
   errorResponse,
   FICTIONAL_USER,
@@ -411,19 +412,23 @@ describe("About Sentinel", () => {
 
     const dialog = await openAbout(screen);
 
-    // In the status region that announces it, in the value of Sentinel,
-    // after the value of Sentinel Aura.
-    const status = dialog.getByRole("definition").last().getByRole("status");
+    // In the value of Sentinel, after the value of Sentinel Aura, and
+    // announced through the announcer of the page, which the dialog leaves
+    // in reach.
+    const value = dialog.getByRole("definition").last();
     await expect
       .element(
-        status.getByText(
-          "Sentinel isn't available right now. Try again later.",
-        ),
+        value.getByText("Sentinel isn't available right now. Try again later."),
       )
       .toBeVisible();
     await expect
-      .element(status.getByText("01890a5d-ac96-774b-bcce-b302099a8057"))
+      .element(value.getByText("01890a5d-ac96-774b-bcce-b302099a8057"))
       .toBeVisible();
+    await expect
+      .poll(announcements)
+      .toEqual([
+        "Sentinel isn't available right now. Try again later. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
+      ]);
     await expect
       .element(
         dialog
@@ -459,8 +464,16 @@ describe("About Sentinel", () => {
     const dialog = await openAbout(screen);
 
     await expect
-      .element(dialog.getByRole("status"))
-      .toHaveTextContent("You don't have permission to do this.");
+      .element(
+        dialog
+          .getByRole("definition")
+          .last()
+          .getByText("You don't have permission to do this."),
+      )
+      .toBeVisible();
+    await expect
+      .poll(announcements)
+      .toEqual(["You don't have permission to do this."]);
     await expect
       .element(dialog.getByRole("button", { name: "Try again" }))
       .not.toBeInTheDocument();

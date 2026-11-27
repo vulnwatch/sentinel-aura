@@ -187,6 +187,7 @@ rules; review enforces the rest.
 | `src/api/generated/` | The API client that Orval generates from the pinned OpenAPI document (API Access) |
 | `src/test-api.ts` | What several unit and component tests share: fictional responses of the API, which replace the browser's `fetch` beneath the shared request function (Tests) |
 | `src/test-pointer.ts` | What several component tests share: the move of the pointer away from an element, before a check of how the element looks at rest (Tests) |
+| `src/test-announcements.ts` | What several component tests share: what the announcer of the page holds, read as assistive technologies reach it, and whether an element is in their reach while a modal overlay is open (Tests) |
 | `src/test-screenshot.ts` | What several component tests share: the colors of the pixels of a screenshot of an element, such as a mark that is hidden from assistive technologies, taken once the pictures of the element have loaded, with the pointer away from it (Tests) |
 | `src/test-setup.ts` | The setup that Vitest runs in the document of every unit and component test file before its tests: it gives that document the focus, which Playwright's Firefox does not reliably move into it |
 | `src/no-node-types.ts` | A module that nothing imports: the check that the UI's program has no types of Node.js (Checks) |
@@ -389,6 +390,15 @@ that needs it; content of another kind needs a new row first.
   `stroke`, `color`, or `fontSize`. The favicon, whose colors are its own, is
   the exception (`docs/design-system.md`, Sentinel Mark). Checks states what
   the lint and the design token check reject.
+- What the UI announces to assistive technologies outside an overlay, such
+  as a message, the failure or the warning of a read, the outcome of a
+  change, or what a list shows after a change, goes through the announcer of
+  the page, `src/components/announcer.tsx`, the one status region of the
+  page that stays in their reach while a modal overlay is open
+  (`docs/behaviors.md`, Accessibility, Announcements): no component outside
+  an overlay holds a live or status region of its own. Inside an overlay, a
+  status region of the overlay may announce what only the overlay shows,
+  such as the options of a combobox or the error of a field.
 - A component declares the type of its props in its own module.
 
 ### No Raw HTML Injection

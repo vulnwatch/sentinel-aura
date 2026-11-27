@@ -201,12 +201,10 @@ function assessmentRow(page: Page, provider: string, version: string) {
   });
 }
 
-// The status regions of the part CVSS assessments that hold a text, such as
-// the announcement of the outcome of a change.
+// The announcements of the announcer of the page that hold a text, such as
+// that of the outcome of a change of the part CVSS assessments.
 function cvssStatus(page: Page, text: string) {
-  return part(page, "CVSS assessments")
-    .getByRole("status")
-    .filter({ hasText: text });
+  return announcement(page, text);
 }
 
 // Add SUSE assessment, or Edit of a SUSE assessment, by its title.
@@ -1619,8 +1617,7 @@ test.describe("for an analyst", () => {
       const packages = part(page, "Packages");
       const button = (name: string) =>
         packages.getByRole("button", { name, exact: true });
-      const announced = (text: string) =>
-        page.getByRole("status").filter({ hasText: text });
+      const announced = (text: string) => announcement(page, text);
       await expectOverviewShown(page);
 
       // An exclusion while Show hidden is off hides the track: its outcome
@@ -1634,10 +1631,12 @@ test.describe("for an analyst", () => {
         .click();
 
       await expect(
-        page.getByText(
-          "Track fictional-curl · SUSE:FLES-15-SP7:Update excluded.",
-          { exact: true },
-        ),
+        page
+          .getByRole("main")
+          .getByText(
+            "Track fictional-curl · SUSE:FLES-15-SP7:Update excluded.",
+            { exact: true },
+          ),
       ).toBeVisible();
       await expect(
         button("Actions of fictional-curl, SUSE:FLES-15-SP7:Update"),
@@ -1814,8 +1813,7 @@ test.describe("for an analyst", () => {
       });
       const subject =
         "Product Fictional Linux Enterprise Server LTSS 15 SP5 of fictional-kernel · SUSE:FLES-15-SP5:Update";
-      const announced = (text: string) =>
-        page.getByRole("status").filter({ hasText: text });
+      const announced = (text: string) => announcement(page, text);
       await expectOverviewShown(page);
       const status = await headingValue(page, "Status");
       await expect(status).toHaveText("Resolved");
@@ -1854,7 +1852,9 @@ test.describe("for an analyst", () => {
         .click();
 
       await expect(
-        page.getByText(`${subject} excluded.`, { exact: true }),
+        page
+          .getByRole("main")
+          .getByText(`${subject} excluded.`, { exact: true }),
       ).toBeVisible();
       await expect(
         packages.getByText("All packages are hidden.", { exact: true }),
@@ -2800,8 +2800,7 @@ test.describe("for an analyst", () => {
         name: "Edit assignee",
       });
       const popover = page.getByRole("dialog", { name: "Assignee" });
-      const announced = (text: string) =>
-        page.getByRole("status").filter({ hasText: text });
+      const announced = (text: string) => announcement(page, text);
 
       // The popover of an unassigned Ticket offers no Unassign yourself.
       await pencil.click();
@@ -2940,9 +2939,10 @@ test.describe("the audit log", () => {
       filters.getByRole("checkbox", { name: "References" }),
     ).toBeChecked();
     await expect(page).toHaveURL(/actor=[0-9a-f-]{36}&kind=references$/);
-    // The status region of the popover, after that of the errors of the
-    // period, says what the timeline shows once the filtered events arrive.
-    await expect(filters.getByRole("status").last()).toHaveText(/ events?$/);
+    // While the popover is open, the announcer of the page says what the
+    // timeline shows once the filtered events arrive.
+    await expect(filters).toBeVisible();
+    await expect(announcement(page, / events?$/)).toHaveCount(1);
     await expectAccessible(page);
     await page.keyboard.press("Escape");
 
@@ -3183,10 +3183,10 @@ function referencesButton(page: Page, name: string) {
   return referencesPanel(page).getByRole("button", { name, exact: true });
 }
 
-// The status regions of the tab References that hold a text, such as the
-// announcement of the outcome of a change.
+// The announcements of the announcer of the page that hold a text, such as
+// that of the outcome of a change of the tab References.
 function referencesStatus(page: Page, text: string) {
-  return referencesPanel(page).getByRole("status").filter({ hasText: text });
+  return announcement(page, text);
 }
 
 // The line of a Ticket without references, not its announcement after a
@@ -3411,7 +3411,10 @@ test.describe("the references", () => {
     await types.getByText("Issue", { exact: true }).click();
 
     await expect(page).toHaveURL("/tickets/SNTL-12/references?type=issue");
-    await expect(filters.getByRole("status").last()).toHaveText("1 reference");
+    await expect(filters).toBeVisible();
+    await expect(
+      announcer(page).getByText("1 reference", { exact: true }),
+    ).toHaveCount(1);
     // The sources of the references of SNTL-12, all manual.
     await filters.getByRole("button", { name: /Source$/ }).click();
     const sourceOptions = page.getByRole("listbox", { name: "Source" });
@@ -3731,8 +3734,12 @@ test.describe("the references", () => {
       // docs/screens/ticket.md, Actions).
       await expect(dialog).toHaveCount(0);
       const added = "Reference “Fictional advisory draft” added.";
-      await expect(page.getByText(added, { exact: true })).toHaveCount(1);
-      await expect(page.getByText(added, { exact: true })).toBeVisible();
+      const message = page.getByRole("main").getByText(added, { exact: true });
+      await expect(message).toHaveCount(1);
+      await expect(message).toBeVisible();
+      await expect(
+        announcer(page).getByText(added, { exact: true }),
+      ).toHaveCount(1);
       await expect(referencesPanel(page).getByText(added)).toHaveCount(0);
       await expect(
         referencesPanel(page).getByText("No references match the filters.", {
@@ -3974,7 +3981,12 @@ test.describe("the affected versions", () => {
       affectedPanel(page).getByText("No entries match the search.", {
         exact: true,
       }),
-    ).toHaveCount(2);
+    ).toBeVisible();
+    await expect(
+      announcer(page).getByText("No entries match the search.", {
+        exact: true,
+      }),
+    ).toHaveCount(1);
     await expect(affectedPackages(page)).toHaveCount(0);
     await expectAccessible(page);
     await expectScreenshot(page, "ticket-affected-versions-no-match.png");
@@ -4098,10 +4110,17 @@ async function pressWhereShown(page: Page, element: Locator) {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
-// The status regions that hold a text, such as the announcement of the
-// outcome of a change of the status.
-function announcement(page: Page, text: string) {
-  return page.getByRole("status").filter({ hasText: text });
+// The announcer of the page, the one status region through which the UI
+// announces what appears outside an open overlay, also while one is open
+// (src/components/announcer.tsx).
+function announcer(page: Page) {
+  return page.getByRole("status", { name: "Announcements", exact: true });
+}
+
+// The announcements of the announcer of the page that hold a text, such as
+// that of the outcome of a change of the status.
+function announcement(page: Page, text: string | RegExp) {
+  return announcer(page).getByText(text);
 }
 
 // Checks the error that a submission from a field shows at it while the
@@ -5269,7 +5288,9 @@ test.describe("the actions of a Ticket", () => {
         .click();
 
       await expect(
-        page.getByText("Convergence started.", { exact: true }),
+        page
+          .getByRole("main")
+          .getByText("Convergence started.", { exact: true }),
       ).toBeVisible();
       await expect(page.getByRole("button", { name: "Dismiss" })).toBeVisible();
       await expect(menu).toHaveCount(0);
@@ -5309,7 +5330,9 @@ test.describe("the actions of a Ticket", () => {
       await menu.getByRole("menuitem", { name: "Reopen", exact: true }).click();
 
       await expect(
-        page.getByText(`${ticketId} is no longer Ignored.`, { exact: true }),
+        page
+          .getByRole("main")
+          .getByText(`${ticketId} is no longer Ignored.`, { exact: true }),
       ).toBeVisible();
       await expect(menu).toHaveCount(0);
       await expect(actions).toBeFocused();

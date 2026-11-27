@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { isRequestFailure, presentFailure } from "../api/errors";
 import { ApiError } from "../api/request";
+import { Announcement, withReference } from "./announcer";
 import { Button } from "./button";
 import { ErrorInPlace } from "./error-in-place";
 import { Loading, UpdatingBar } from "./loading";
@@ -53,8 +54,10 @@ interface UpdateFailedProps {
 // updated, or what could not be shown or updated (text), with the message of
 // the failure, and, when the failure offers it, Try again below it, on the
 // background of the screen or of its part (docs/behaviors.md, Where Errors
-// Appear; docs/design-system.md, Messages). When the warning goes, the focus
-// on Try again passes to the screen's heading.
+// Appear; docs/design-system.md, Messages). The announcer of the page
+// announces the warning as it appears, also when it returns after the read
+// that Try again sends (src/components/announcer.tsx). When the warning goes,
+// the focus on Try again passes to the screen's heading.
 function UpdateFailed({
   error,
   onRetry,
@@ -71,6 +74,9 @@ function UpdateFailed({
   }
   return (
     <div ref={ref} className="mb-4">
+      <Announcement>
+        {withReference(text(presentation.message), presentation.reference)}
+      </Announcement>
       <Message tone="warning" reference={presentation.reference}>
         {text(presentation.message)}
       </Message>
@@ -80,6 +86,31 @@ function UpdateFailed({
         </div>
       )}
     </div>
+  );
+}
+
+interface PartFailureProps {
+  error: unknown;
+  // Sends the read again.
+  onRetry: () => void;
+}
+
+// The error of a read in place of a part or of its data (ErrorInPlace),
+// which the announcer of the page announces as it appears: its message, with
+// its reference when it has one.
+function PartFailure({ error, onRetry }: PartFailureProps) {
+  const presentation = isRequestFailure(error)
+    ? presentFailure(error, "part")
+    : undefined;
+  return (
+    <>
+      {presentation !== undefined && (
+        <Announcement>
+          {withReference(presentation.message, presentation.reference)}
+        </Announcement>
+      )}
+      <ErrorInPlace error={error} placement="part" onRetry={onRetry} />
+    </>
   );
 }
 
@@ -112,12 +143,10 @@ export interface DataPlace<TData> {
   updating: boolean;
 }
 
-// What the place of the data of a read says of the failure of the read, as
-// the status region of the place announces it: the message of the error in
-// place of the data, or the warning above data that stays shown, or "" when
-// it shows neither (dataPlace). A screen whose status regions are out of
-// reach of assistive technologies, such as behind a modal popover, announces
-// it there instead.
+// What the place of the data of a read says of the failure of the read: the
+// message of the error in place of the data, or the warning above data that
+// stays shown, or "" when it shows neither (dataPlace), such as for the
+// status of the options of a field that the read gives.
 export function placeMessage<TData>(read: Read<TData>): string {
   if (read.status !== "error" || !isRequestFailure(read.error)) {
     return "";
@@ -144,7 +173,7 @@ export function dataPlace<TData>(read: Read<TData>): DataPlace<TData> {
     data,
     failure:
       failed && data === undefined ? (
-        <ErrorInPlace error={read.error} placement="part" onRetry={onRetry} />
+        <PartFailure error={read.error} onRetry={onRetry} />
       ) : null,
     warning:
       failed && data !== undefined && !read.isFetching ? (
@@ -227,17 +256,17 @@ interface DataProps<TData> {
 // The data of a read in its place: the loading indicator while it waits, its
 // error in place of the data, or the data, marked while other data loads. A
 // new read that failed shows its warning above the data, which goes while the
-// data is read again, marked meanwhile. The error and the warning appear in a
-// status region that is there before them, so that assistive technologies
-// announce them without moving the focus (docs/behaviors.md, Accessibility,
-// Announcements). When the data leaves the page while it holds the focus,
-// such as data that a 403 replaces, the focus moves to the screen's heading.
+// data is read again, marked meanwhile. The announcer of the page announces
+// the error and the warning as they appear, without moving the focus
+// (docs/behaviors.md, Accessibility, Announcements). When the data leaves the
+// page while it holds the focus, such as data that a 403 replaces, the focus
+// moves to the screen's heading.
 function Data<TData>({ read, children, inValue = false }: DataProps<TData>) {
   const place = dataPlace(read);
   return (
     <div className="relative">
       {place.updating && <UpdatingBar />}
-      <output className="block">{place.failure ?? place.warning}</output>
+      {place.failure ?? place.warning}
       {place.data === undefined ? (
         place.waiting && <Loading inValue={inValue} />
       ) : (

@@ -39,6 +39,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINED_PACKAGES,
   maintainedPackagesPage,
   MAINTAINER,
@@ -275,9 +276,10 @@ function statusTexts(dialog: Locator): string[] {
 }
 
 // Waits until the message area shows the text as a success message, outside
-// the part, rather than only announcing it.
+// the part, rather than only announcing it: the element of the main content
+// with the text.
 async function expectSuccessMessage(screen: Screen, text: string) {
-  const message = screen.getByText(text, { exact: true });
+  const message = mainContent(screen).getByText(text, { exact: true });
   await expect.element(message).toBeVisible();
   expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
   expect(packagesPart(screen).element().contains(message.element())).toBe(
@@ -1585,7 +1587,9 @@ describe("the outcome of Add package", () => {
     response.resolve(packageAdditionResponse());
 
     await expect
-      .element(screen.getByText(`SNTL-12: ${ADDED}`, { exact: true }))
+      .element(
+        mainContent(screen).getByText(`SNTL-12: ${ADDED}`, { exact: true }),
+      )
       .toBeVisible();
     await expect
       .element(screen.getByRole("link", { name: "SNTL-12", exact: true }))
@@ -1620,7 +1624,7 @@ describe("the outcome of Add package", () => {
       await leaveForTickets(router, screen);
       response.resolve(failure());
 
-      const error = screen.getByText(
+      const error = mainContent(screen).getByText(
         `SNTL-12: Package fictional-openssl: ${message}`,
         { exact: true },
       );

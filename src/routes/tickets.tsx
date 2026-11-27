@@ -16,7 +16,7 @@ import { useListTickets } from "../api/generated/tickets";
 import { ClearFilters } from "../components/filters";
 import type { TableSort } from "../components/data-table";
 import { Pagination } from "../components/pagination";
-import { placeMessage, ScreenRead } from "../components/read-view";
+import { ScreenRead } from "../components/read-view";
 import {
   ResultAnnouncement,
   useChangedSinceOpened,
@@ -302,14 +302,6 @@ function TicketList({ user }: TicketListProps) {
     changed && list.status === "success" && !list.isPlaceholderData
       ? resultText(list.data, search)
       : "";
-  // While the popover of the filters is open, it announces what the list
-  // shows, or what the place of the rows says of the failure of its read,
-  // which the screen's status regions cannot announce then. A failure is
-  // announced also before any change, such as that of a new read when the
-  // tab returns to the foreground: the first read's failure replaces the
-  // screen, so no popover is open then.
-  const filtersStatus =
-    list.status === "error" ? placeMessage(list) : announcement;
 
   return (
     <ScreenRead
@@ -352,7 +344,6 @@ function TicketList({ user }: TicketListProps) {
                   <TicketFilters
                     view={view}
                     search={search}
-                    status={<span key={key}>{filtersStatus}</span>}
                     onRefine={refine}
                   />
                   {refined !== undefined && (

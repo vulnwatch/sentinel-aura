@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Announcement, withReference } from "./announcer";
 import { useFixedTopHeight } from "./fixed-top";
 import { Link } from "./link";
 import { Message, type MessageTone } from "./message";
@@ -137,14 +138,22 @@ interface DismissibleMessageProps {
 
 // A message of the area, which ends with Dismiss, and starts with the record
 // that it concerns, as a link to its screen, followed by a colon, when it
-// names one, such as "SNTL-42: Priority changed to P2.". When Dismiss
-// removes it, the focus moves to the screen's heading (docs/behaviors.md,
-// Accessibility, Focus after an action).
+// names one, such as "SNTL-42: Priority changed to P2.". The announcer of the
+// page announces its words as it appears (src/components/announcer.tsx).
+// When Dismiss removes it, the focus moves to the screen's heading
+// (docs/behaviors.md, Accessibility, Focus after an action).
 function DismissibleMessage({ message, onDismiss }: DismissibleMessageProps) {
   const ref = useRef<HTMLDivElement>(null);
   useFocusHeadingOnRemoval(ref);
+  const words =
+    message.record === undefined
+      ? message.text
+      : `${message.record.name}: ${message.text}`;
   return (
     <div ref={ref}>
+      <Announcement id={message.id}>
+        {withReference(words, message.reference)}
+      </Announcement>
       <Message
         tone={message.tone}
         reference={message.reference}
@@ -168,8 +177,9 @@ function DismissibleMessage({ message, onDismiss }: DismissibleMessageProps) {
 
 // The message area: the messages of the screen, newest first, 8 px apart.
 // Each stays until the user dismisses it or opens another screen, and is
-// announced without moving the focus, through a live region that is there
-// before it (docs/behaviors.md, Accessibility, Announcements). While the area
+// announced without moving the focus, through the announcer of the page,
+// also while a modal overlay is open (docs/behaviors.md, Accessibility,
+// Announcements). While the area
 // holds a message, it stays at the top of the window when the content
 // scrolls, and takes at most a third of the window's height, beyond which its
 // messages scroll within it. Meanwhile the window scrolls an element into
@@ -189,8 +199,6 @@ export function MessageArea() {
   return (
     <div
       ref={area}
-      aria-live="polite"
-      aria-relevant="additions"
       className={
         messages.length > 0
           ? "sticky top-0 z-10 -mt-2 mb-2 flex max-h-[33dvh] flex-col gap-2 overflow-y-auto bg-canvas py-2"

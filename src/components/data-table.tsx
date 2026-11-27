@@ -213,9 +213,9 @@ interface DataTableProps<TData, TRow> {
 // no rows. Data that stays shown while other data loads is marked by the
 // progress bar along the top edge of the frame, and the warning of a new read
 // that failed shows above the frame (docs/behaviors.md, Where Errors Appear;
-// Loading). The error and the warning appear in status regions that are
-// there before them, so that assistive technologies announce them without
-// moving the focus (docs/behaviors.md, Accessibility, Announcements). When
+// Loading). The announcer of the page announces the error and the warning as
+// they appear, without moving the focus (docs/behaviors.md, Accessibility,
+// Announcements). When
 // what holds the focus leaves the page, such as the rows, the table without
 // rows when they arrive, or the action of an empty state, the focus moves to
 // the screen's heading (docs/behaviors.md, Accessibility, Focus after an
@@ -235,7 +235,7 @@ export function DataTable<TData, TRow>({
   const table = { label, columns, rowId, sort, onSort };
   return (
     <>
-      <output className="block">{place.warning}</output>
+      {place.warning}
       <div className="relative overflow-hidden rounded-lg border border-border bg-surface">
         {place.updating && <UpdatingBar />}
         <div className="overflow-x-auto">
@@ -249,11 +249,9 @@ export function DataTable<TData, TRow>({
             </FocusHandOff>
           )}
         </div>
-        <output className="block">
-          {place.failure !== null && (
-            <div className="border-t border-border p-4">{place.failure}</div>
-          )}
-        </output>
+        {place.failure !== null && (
+          <div className="border-t border-border p-4">{place.failure}</div>
+        )}
         {place.waiting && <Loading />}
         {place.data !== undefined && shownRows.length === 0 && (
           <FocusHandOff>

@@ -9,11 +9,15 @@ import {
   type AnyRouter,
 } from "@tanstack/react-router";
 import { useRef } from "react";
+import { DialogTrigger } from "react-aria-components";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render, renderHook } from "vitest-browser-react";
 import "../styles.css";
+import { announcementNode, announcements } from "../test-announcements";
+import { Announcer } from "./announcer";
 import { Button } from "./button";
+import { InfoPopover, PopoverTitle } from "./info-popover";
 import {
   MessageArea,
   MessageAreaProvider,
@@ -36,15 +40,21 @@ afterEach(async () => {
 // the user opened another screen.
 let endChange: (() => void) | undefined;
 
-// A screen with a heading, an action that shows a message in the area, one
-// that starts a change whose message shows when the test ends it, and a
-// control further down.
+// A screen with a heading, a button that opens a modal popover, an action
+// that shows a message in the area, one that starts a change whose message
+// shows when the test ends it, and a control further down.
 function MessageScreen({ title }: { title: string }) {
   const show = useShowMessage();
   const count = useRef(0);
   return (
     <>
       <ScreenHeading>{title}</ScreenHeading>
+      <DialogTrigger>
+        <Button>Details</Button>
+        <InfoPopover width="narrow">
+          <PopoverTitle>Details of the record</PopoverTitle>
+        </InfoPopover>
+      </DialogTrigger>
       <Button
         onPress={() => {
           count.current += 1;
@@ -95,14 +105,16 @@ function MessageScreen({ title }: { title: string }) {
 function createTestRouter(path: string): AnyRouter {
   const root = createRootRoute({
     component: () => (
-      <RouterLinks>
-        <MessageAreaProvider>
-          <main>
-            <MessageArea />
-            <Outlet />
-          </main>
-        </MessageAreaProvider>
-      </RouterLinks>
+      <Announcer>
+        <RouterLinks>
+          <MessageAreaProvider>
+            <main>
+              <MessageArea />
+              <Outlet />
+            </main>
+          </MessageAreaProvider>
+        </RouterLinks>
+      </Announcer>
     ),
   });
   const first = createRoute({
@@ -152,6 +164,27 @@ async function nextFrames() {
   await new Promise((done) => requestAnimationFrame(done));
 }
 
+// The main content, which starts with the message area: the announcer of the
+// page, outside it, holds the words of each message too.
+function mainContent() {
+  return page.getByRole("main");
+}
+
+// The message area that holds a message: the element that stays at the top
+// of the window, as it does while it holds one.
+function areaOf(message: Element): Element | null {
+  for (
+    let current = message.parentElement;
+    current;
+    current = current.parentElement
+  ) {
+    if (getComputedStyle(current).position === "sticky") {
+      return current;
+    }
+  }
+  return null;
+}
+
 async function renderArea(path = "/first", title = "First") {
   const router = createTestRouter(path);
   const screen = await render(<RouterProvider router={router} />);
@@ -161,7 +194,7 @@ async function renderArea(path = "/first", title = "First") {
   return { router, screen };
 }
 
-test("shows the messages newest first, each with its reference and Dismiss, in a live region", async () => {
+test("shows the messages newest first, each with its reference and Dismiss", async () => {
   const { screen } = await renderArea();
   const button = screen.getByRole("button", { name: "Show a message" });
 
@@ -182,8 +215,6 @@ test("shows the messages newest first, each with its reference and Dismiss, in a
   expect(
     screen.getByText("Reference: 01890a5d-ac96-774b-bcce-b302099a8057").all(),
   ).toHaveLength(2);
-  const region = first.element().closest("[aria-live]");
-  expect(region?.getAttribute("aria-live")).toBe("polite");
   // Above the heading of the screen.
   expect(
     screen.getByRole("heading", { level: 1 }).element().getBoundingClientRect()
@@ -191,17 +222,82 @@ test("shows the messages newest first, each with its reference and Dismiss, in a
   ).toBeGreaterThan(first.element().getBoundingClientRect().bottom);
 });
 
-test("is in the page before its first message, so that the message is announced", async () => {
+test("announces each message as it appears, with its reference, and not again when another one appears or when it goes", async () => {
   const { screen } = await renderArea();
-  const region = document.querySelector("[aria-live]");
-  expect(region).not.toBeNull();
+  const button = screen.getByRole("button", { name: "Show a message" });
 
-  await screen.getByRole("button", { name: "Show a message" }).click();
+  await button.click();
+  await expect
+    .poll(announcements)
+    .toEqual([
+      "First: message 1. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
+    ]);
+  await button.click();
 
-  await expect.element(screen.getByText("First: message 1.")).toBeVisible();
+  // Each message an announcement of its own, which the announcer of the page
+  // announces as it arrives, and none in a live region of the area itself.
+  await expect
+    .poll(announcements)
+    .toEqual([
+      "First: message 1. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
+      "First: message 2. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
+    ]);
+  const area = areaOf(screen.getByText("First: message 1.").element());
+  expect(area?.closest("[aria-live]")).toBeNull();
+  expect(area?.querySelector("[aria-live], output")).toBeNull();
+  const first = announcementNode(
+    "First: message 1. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
+  );
+  expect(first).not.toBeNull();
+
+  await screen.getByRole("button", { name: "Dismiss" }).first().click();
+  await expect
+    .poll(announcements)
+    .toEqual([
+      "First: message 1. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
+    ]);
+  // The message that stays keeps its node, which assistive technologies do
+  // not announce again.
   expect(
-    screen.getByText("First: message 1.").element().closest("[aria-live]"),
-  ).toBe(region);
+    announcementNode(
+      "First: message 1. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
+    ),
+  ).toBe(first);
+});
+
+test("announces the record that the message of a change names", async () => {
+  const { router, screen } = await renderArea("/tickets/SNTL-42", "SNTL-42");
+  await screen
+    .getByRole("button", { name: "Start a change of SNTL-42" })
+    .click();
+  router.history.push("/second");
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "Second" }))
+    .toBeVisible();
+
+  endChange?.();
+
+  await expect
+    .poll(announcements)
+    .toEqual(["SNTL-42: Priority changed to P2."]);
+});
+
+test("announces a message that appears while a modal popover is open, once, and leaves the focus in the popover", async () => {
+  const { screen } = await renderArea();
+  await screen
+    .getByRole("button", { name: "Start a change", exact: true })
+    .click();
+  await screen.getByRole("button", { name: "Details" }).click();
+  const popover = screen.getByRole("dialog", { name: "Details of the record" });
+  await expect.element(popover).toHaveFocus();
+
+  endChange?.();
+
+  await expect
+    .element(mainContent().getByText("First: change ended."))
+    .toBeVisible();
+  await expect.poll(announcements).toEqual(["First: change ended."]);
+  await expect.element(popover).toHaveFocus();
 });
 
 test("removes a message that the user dismisses, and moves the focus to the screen's heading", async () => {
@@ -274,7 +370,9 @@ test("shows the message of a change that ends after the user left its screen on 
 
   endChange?.();
 
-  await expect.element(screen.getByText("First: change ended.")).toBeVisible();
+  await expect
+    .element(mainContent().getByText("First: change ended."))
+    .toBeVisible();
   router.history.push("/first");
   await expect
     .element(screen.getByRole("heading", { level: 1, name: "First" }))
@@ -305,7 +403,7 @@ test.each([
 
     endChange?.();
 
-    const message = screen.getByText("SNTL-42: Priority changed to P2.");
+    const message = mainContent().getByText("SNTL-42: Priority changed to P2.");
     await expect.element(message).toBeVisible();
     const link = message.getByRole("link", { name: "SNTL-42" });
     await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-42");
@@ -348,7 +446,9 @@ test.each([
     endChange?.();
 
     await expect
-      .element(screen.getByText("Priority changed to P2.", { exact: true }))
+      .element(
+        mainContent().getByText("Priority changed to P2.", { exact: true }),
+      )
       .toBeVisible();
     expect(screen.getByRole("link").query()).toBeNull();
   },
@@ -378,7 +478,7 @@ test("stays at the top of the window when the content scrolls", async () => {
   window.scrollTo(0, 600);
 
   await expect.poll(() => window.scrollY).toBe(600);
-  const area = message.element().closest("[aria-live]");
+  const area = areaOf(message.element());
   expect(area?.getBoundingClientRect().top).toBe(0);
 });
 
@@ -389,8 +489,7 @@ test("keeps the element that takes the focus out from under it while it stays at
   const message = screen.getByText("First: message 1.");
   await expect.element(message).toBeVisible();
   const area = () =>
-    message.element().closest("[aria-live]")?.getBoundingClientRect().bottom ??
-    0;
+    areaOf(message.element())?.getBoundingClientRect().bottom ?? 0;
   const next = screen.getByRole("button", { name: "Next control" });
   // The window scrolls so that the control lies under the area.
   window.scrollTo(
@@ -424,7 +523,7 @@ test("takes at most a third of the window's height, beyond which its messages sc
   const message = screen.getByText("First: message 6.");
   await expect.element(message).toBeVisible();
 
-  const area = message.element().closest("[aria-live]");
+  const area = areaOf(message.element());
   expect(area?.getBoundingClientRect().height).toBeLessThanOrEqual(200);
   expect(area?.scrollHeight).toBeGreaterThan(area?.clientHeight ?? 0);
 });
@@ -432,12 +531,12 @@ test("takes at most a third of the window's height, beyond which its messages sc
 test("takes no room and leaves no scroll padding without messages", async () => {
   const { screen } = await renderArea();
   await screen.getByRole("button", { name: "Show a message" }).click();
+  const area = areaOf(screen.getByText("First: message 1.").element());
   await screen.getByRole("button", { name: "Dismiss" }).click();
   await expect
     .element(screen.getByText("First: message 1."))
     .not.toBeInTheDocument();
 
-  const area = document.querySelector("[aria-live]");
   expect(area?.getBoundingClientRect().height).toBe(0);
   expect(getComputedStyle(document.documentElement).scrollPaddingTop).toBe(
     "0px",

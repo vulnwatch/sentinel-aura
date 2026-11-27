@@ -1142,8 +1142,8 @@ export function PackagesPart({
       });
     }
   }, [noneHidden, navigate, ticketId]);
-  // The announcements of the edits follow the part, apart from the warning
-  // of the read of the work of a maintainer, which is its status region.
+  // The announcements of the edits follow the part; the warning of the read
+  // of the work of a maintainer announces itself as it appears.
   const part = (
     <Part
       id={PACKAGES_ANCHOR}
@@ -1182,7 +1182,7 @@ export function PackagesPart({
     >
       <div className="relative">
         {updating && <UpdatingBar />}
-        <output className="block">{warning}</output>
+        {warning}
         {ticket.packages.length === 0 && (
           <p className="text-fg-muted">No packages.</p>
         )}

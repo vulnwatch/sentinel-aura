@@ -16,6 +16,7 @@ import type {
 } from "../../api/generated/model";
 import { createQueryClient } from "../../query-client";
 import { createAppRouter } from "../../router";
+import { announcements } from "../../test-announcements";
 import {
   actorsResponse,
   errorResponse,
@@ -303,6 +304,13 @@ export function panelOf(screen: Screen) {
   return screen.getByRole("tabpanel", { name: "References" });
 }
 
+// The main content, where the message area and the tab show what they say:
+// the announcer of the page, outside it, holds the words of each message and
+// of each failure too (src/components/announcer.tsx).
+export function mainContent(screen: Screen) {
+  return screen.getByRole("main");
+}
+
 export function tableOf(screen: Screen) {
   return panelOf(screen).getByRole("grid", { name: "References" });
 }
@@ -387,13 +395,9 @@ export function addButton(screen: Screen) {
   });
 }
 
-// The texts of the status regions of the tab that say something.
-export function announcementsOf(screen: Screen): string[] {
-  return panelOf(screen)
-    .getByRole("status")
-    .elements()
-    .map((region) => region.textContent)
-    .filter((text) => text !== "");
+// What the announcer of the page holds (src/test-announcements.ts).
+export function announcementsOf(): string[] {
+  return announcements();
 }
 
 // A response that the test gives when it chooses.
