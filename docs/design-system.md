@@ -1169,9 +1169,8 @@ A list screen, such as the Ticket list, shows from top to bottom:
      a window shorter than it is. Escape or a click outside closes it, and the
      focus returns to Filters (`docs/behaviors.md`, Accessibility, Dialogs).
      While it is open, the list announces what it shows after a change, as
-     after any change of its state (`docs/behaviors.md`, Accessibility,
-     Focus after a navigation), and the place of the data the failure of its
-     read, both outside the popover (`docs/behaviors.md`, Accessibility,
+     after any change of its state, and the place of the data the failure of
+     its read (`docs/behaviors.md`, Accessibility, Focus after a navigation;
      Announcements).
    - A filter applies as soon as its field changes; a combobox, when the user
      chooses an option; and a field that the user types into, such as a text

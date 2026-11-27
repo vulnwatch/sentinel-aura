@@ -11,7 +11,11 @@ import {
   ticketResponse,
   urlOf,
 } from "../test-api";
-import { announcedAgain, announcementNode } from "../test-announcements";
+import {
+  announcedAgain,
+  announcementNode,
+  inReach,
+} from "../test-announcements";
 import {
   addButton,
   ADDED,
@@ -182,6 +186,22 @@ async function openSources(dialog: Locator) {
   const options = page.getByRole("listbox", { name: "Source" });
   await expect.element(options).toBeVisible();
   return options;
+}
+
+// The menu of the options of the source, which a popover of its own holds,
+// named after the filter.
+function sourceMenuOf() {
+  return page.getByRole("dialog", { name: "Source" });
+}
+
+// The status regions of an element that hold the text and that assistive
+// technologies can reach, which announce it.
+function statusRegionsWith(container: Locator, text: string): Element[] {
+  return container
+    .getByRole("status")
+    .filter({ hasText: text })
+    .elements()
+    .filter(inReach);
 }
 
 describe("the tab", () => {
@@ -662,6 +682,10 @@ describe("the filters", () => {
       .toBe(`${PATH}?type=uncategorized`);
     await expect.poll(() => namesOf(screen)).toEqual([POST.title]);
     await expect.poll(() => announcementsOf()).toEqual(["1 reference"]);
+    // Not again by a status region of the popover.
+    expect(
+      dialog.getByRole("status").filter({ hasText: "1 reference" }).query(),
+    ).toBeNull();
 
     await toggleType(dialog, "Advisory");
 
@@ -870,6 +894,55 @@ describe("the filters", () => {
     await expect
       .element(options)
       .toHaveAccessibleDescription(MESSAGE_UNAVAILABLE);
+  });
+
+  test("show the failure of the read of the references in place of the sources when it fails while their menu is open, announced once, by the tab", async () => {
+    const references = later();
+    const { stub } = stubReferences({ references: () => references.promise });
+    const { screen } = await renderApp(PATH);
+    // The Ticket has arrived, so the tab shows the failure in its place.
+    await expect.element(heading(screen, "SNTL-12")).toBeVisible();
+    const dialog = await openFilters(screen);
+    const options = await openSources(dialog);
+    stub.references = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+
+    references.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    await expect
+      .element(sourceMenuOf().getByText(MESSAGE_UNAVAILABLE, { exact: true }))
+      .toBeVisible();
+    expect(optionNames(options)).toEqual(["Any source"]);
+    await expect
+      .poll(() => announcementsOf())
+      .toEqual([`${MESSAGE_UNAVAILABLE} ${REFERENCE}`]);
+    // Not again by a status region of the menu.
+    expect(statusRegionsWith(sourceMenuOf(), MESSAGE_UNAVAILABLE)).toEqual([]);
+  });
+
+  test("announce the failure of the read of the references in place of the sources from their menu while the tab waits for the Ticket, which does not announce it", async () => {
+    const ticket = later();
+    const references = later();
+    const { stub } = stubReferences({
+      ticket: () => ticket.promise,
+      references: () => references.promise,
+    });
+    const { screen } = await renderApp(PATH);
+    await expect.element(heading(screen, "Ticket")).toBeVisible();
+    const dialog = await openFilters(screen);
+    await openSources(dialog);
+    stub.references = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+
+    references.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    await expect
+      .element(sourceMenuOf().getByText(MESSAGE_UNAVAILABLE, { exact: true }))
+      .toBeVisible();
+    // In a status region of the menu, which announces it while the menu
+    // holds the focus.
+    expect(statusRegionsWith(sourceMenuOf(), MESSAGE_UNAVAILABLE)).toHaveLength(
+      1,
+    );
+    expect(announcementsOf()).toEqual([]);
   });
 });
 

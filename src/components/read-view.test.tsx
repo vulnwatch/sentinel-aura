@@ -175,6 +175,22 @@ function mainContent(screen: Awaited<ReturnType<typeof render>>) {
   return screen.getByRole("main");
 }
 
+// The status regions of the page, whose body the screen covers, other than
+// the announcer, which, while no overlay is open, has none: the announcer
+// announces a failure or a warning as it appears, and no region of the place
+// of the data announces it again (src/components/announcer.tsx).
+function otherStatusRegions(
+  screen: Awaited<ReturnType<typeof render>>,
+): Element[] {
+  const announcer = screen
+    .getByRole("status", { name: "Announcements" })
+    .element();
+  return screen
+    .getByRole("status")
+    .elements()
+    .filter((region) => region !== announcer);
+}
+
 // A screen of a list that gives the place of its data itself, given its
 // read, as the frame of a table does.
 function OwnPlaceScreen() {
@@ -379,7 +395,7 @@ describe("ScreenRead", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "Sentinel isn't available right now. Try again later.",
         ),
       )
@@ -413,6 +429,7 @@ describe("ScreenRead", () => {
       .element(mainContent(screen).getByText(`Reference: ${REQUEST_ID}`))
       .toBeVisible();
     await expect.poll(announcements).toEqual([NOT_UPDATED_ANNOUNCED]);
+    expect(otherStatusRegions(screen)).toEqual([]);
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
@@ -519,7 +536,7 @@ describe("ScreenRead", () => {
 
     await refetch();
 
-    const reference = screen.getByText(`Reference: ${REQUEST_ID}`);
+    const reference = mainContent(screen).getByText(`Reference: ${REQUEST_ID}`);
     const action = screen.getByRole("button", { name: "Try again" });
     await expect.element(action).toBeVisible();
     expect(action.element().getBoundingClientRect().top).toBeGreaterThan(
@@ -741,6 +758,7 @@ describe("PartRead", () => {
       .toEqual([
         `Sentinel isn't available right now. Try again later. Reference: ${REQUEST_ID}`,
       ]);
+    expect(otherStatusRegions(screen)).toEqual([]);
   });
 
   test("offers Try again after a network failure, and moves the focus to the screen's heading", async () => {
@@ -1000,12 +1018,12 @@ describe("marksPlace", () => {
       .mockResolvedValueOnce({ title: "First item" });
     const screen = await renderWithClient(<MarkedList />);
 
-    const warning = screen.getByText(
+    const warning = mainContent(screen).getByText(
       "The marks of the items couldn't be shown. Sentinel isn't available right now. Try again later.",
     );
     await expect.element(warning).toBeVisible();
     await expect
-      .element(screen.getByText(`Reference: ${REQUEST_ID}`))
+      .element(mainContent(screen).getByText(`Reference: ${REQUEST_ID}`))
       .toBeVisible();
     await expect
       .poll(announcements)
@@ -1067,7 +1085,7 @@ describe("marksPlace", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "The marks of the items couldn't be updated. Sentinel isn't available right now. Try again later.",
         ),
       )

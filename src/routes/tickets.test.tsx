@@ -1170,9 +1170,9 @@ describe("the pagination", () => {
 
     await expect
       .element(
-        screen.getByText(
-          "Sentinel isn't available right now. Try again later.",
-        ),
+        screen
+          .getByRole("main")
+          .getByText("Sentinel isn't available right now. Try again later."),
       )
       .toBeVisible();
     await expect
@@ -1290,9 +1290,9 @@ describe("loading and errors", () => {
 
     await screen.getByRole("tab", { name: /^Analysis/ }).click();
 
-    const message = screen.getByText(
-      "Sentinel isn't available right now. Try again later.",
-    );
+    const message = screen
+      .getByRole("main")
+      .getByText("Sentinel isn't available right now. Try again later.");
     await expect.element(message).toBeVisible();
     expect(frameOf(screen).contains(message.element())).toBe(true);
     await expect
@@ -1743,6 +1743,10 @@ describe("a list that the user refined", () => {
     await expect.element(high).toBeChecked();
     await expect.element(high).toHaveFocus();
     await expect.poll(() => announcements()).toEqual(["1 Ticket"]);
+    // Not again by a status region of the popover.
+    expect(
+      dialog.getByRole("status").filter({ hasText: "1 Ticket" }).query(),
+    ).toBeNull();
     await expect
       .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
       .not.toBeInTheDocument();

@@ -201,8 +201,8 @@ test("shows the messages newest first, each with its reference and Dismiss", asy
   await button.click();
   await button.click();
 
-  const first = screen.getByText("First: message 1.");
-  const second = screen.getByText("First: message 2.");
+  const first = mainContent().getByText("First: message 1.");
+  const second = mainContent().getByText("First: message 2.");
   await expect.element(second).toBeVisible();
   expect(second.element().getBoundingClientRect().bottom).toBeLessThan(
     first.element().getBoundingClientRect().top,
@@ -213,7 +213,9 @@ test("shows the messages newest first, each with its reference and Dismiss", asy
   ).toBeGreaterThanOrEqual(8);
   expect(screen.getByRole("button", { name: "Dismiss" }).all()).toHaveLength(2);
   expect(
-    screen.getByText("Reference: 01890a5d-ac96-774b-bcce-b302099a8057").all(),
+    mainContent()
+      .getByText("Reference: 01890a5d-ac96-774b-bcce-b302099a8057")
+      .all(),
   ).toHaveLength(2);
   // Above the heading of the screen.
   expect(
@@ -242,7 +244,7 @@ test("announces each message as it appears, with its reference, and not again wh
       "First: message 1. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
       "First: message 2. Reference: 01890a5d-ac96-774b-bcce-b302099a8057",
     ]);
-  const area = areaOf(screen.getByText("First: message 1.").element());
+  const area = areaOf(mainContent().getByText("First: message 1.").element());
   expect(area?.closest("[aria-live]")).toBeNull();
   expect(area?.querySelector("[aria-live], output")).toBeNull();
   const first = announcementNode(
@@ -320,7 +322,9 @@ test("removes a message that the user dismisses, and moves the focus to the scre
 test("removes the messages when another screen opens, also when the user returns", async () => {
   const { router, screen } = await renderArea();
   await screen.getByRole("button", { name: "Show a message" }).click();
-  await expect.element(screen.getByText("First: message 1.")).toBeVisible();
+  await expect
+    .element(mainContent().getByText("First: message 1."))
+    .toBeVisible();
 
   router.history.push("/second");
   await expect
@@ -348,7 +352,9 @@ test("shows a message on the screen that the user is on when it appears, until a
 
   await screen.getByRole("button", { name: "Show a message" }).click();
 
-  await expect.element(screen.getByText("Second: message 1.")).toBeVisible();
+  await expect
+    .element(mainContent().getByText("Second: message 1."))
+    .toBeVisible();
   router.history.push("/first");
   await expect
     .element(screen.getByRole("heading", { level: 1, name: "First" }))
@@ -465,14 +471,16 @@ test("keeps its messages when the search of the same screen changes", async () =
     .poll(() => router.state.resolvedLocation?.searchStr)
     .toBe("?page=2");
   await nextFrames();
-  await expect.element(screen.getByText("First: message 1.")).toBeVisible();
+  await expect
+    .element(mainContent().getByText("First: message 1."))
+    .toBeVisible();
 });
 
 test("stays at the top of the window when the content scrolls", async () => {
   await page.viewport(1280, 800);
   const { screen } = await renderArea();
   await screen.getByRole("button", { name: "Show a message" }).click();
-  const message = screen.getByText("First: message 1.");
+  const message = mainContent().getByText("First: message 1.");
   await expect.element(message).toBeVisible();
 
   window.scrollTo(0, 600);
@@ -486,7 +494,7 @@ test("keeps the element that takes the focus out from under it while it stays at
   await page.viewport(1280, 800);
   const { screen } = await renderArea();
   await screen.getByRole("button", { name: "Show a message" }).click();
-  const message = screen.getByText("First: message 1.");
+  const message = mainContent().getByText("First: message 1.");
   await expect.element(message).toBeVisible();
   const area = () =>
     areaOf(message.element())?.getBoundingClientRect().bottom ?? 0;
@@ -520,7 +528,7 @@ test("takes at most a third of the window's height, beyond which its messages sc
   for (let shown = 0; shown < 6; shown += 1) {
     await button.click();
   }
-  const message = screen.getByText("First: message 6.");
+  const message = mainContent().getByText("First: message 6.");
   await expect.element(message).toBeVisible();
 
   const area = areaOf(message.element());
@@ -531,7 +539,7 @@ test("takes at most a third of the window's height, beyond which its messages sc
 test("takes no room and leaves no scroll padding without messages", async () => {
   const { screen } = await renderArea();
   await screen.getByRole("button", { name: "Show a message" }).click();
-  const area = areaOf(screen.getByText("First: message 1.").element());
+  const area = areaOf(mainContent().getByText("First: message 1.").element());
   await screen.getByRole("button", { name: "Dismiss" }).click();
   await expect
     .element(screen.getByText("First: message 1."))

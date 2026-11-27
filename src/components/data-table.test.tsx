@@ -151,6 +151,20 @@ async function shapesOf(icon: ReactNode): Promise<string> {
 
 type Screen = Awaited<ReturnType<typeof renderRecords>>["screen"];
 
+// The status regions of the page other than the announcer, which, while no
+// overlay is open, has none: the announcer announces a failure or a warning
+// as it appears, and no region of the table announces it again
+// (src/components/announcer.tsx).
+function otherStatusRegions(): Element[] {
+  const announcer = page
+    .getByRole("status", { name: "Announcements" })
+    .element();
+  return page
+    .getByRole("status")
+    .elements()
+    .filter((region) => region !== announcer);
+}
+
 function tableOf(screen: Screen) {
   return screen.getByRole("grid", { name: "Records" });
 }
@@ -453,6 +467,7 @@ describe("the table", () => {
     await expect
       .poll(announcements)
       .toEqual(["Sentinel isn't available right now. Try again later."]);
+    expect(otherStatusRegions()).toEqual([]);
     expect(tableOf(screen).getByRole("rowheader").query()).toBeNull();
     await expect
       .element(tableOf(screen).getByRole("columnheader", { name: "Record" }))
@@ -485,6 +500,7 @@ describe("the table", () => {
       .toEqual([
         "This couldn't be updated. Sentinel isn't available right now. Try again later.",
       ]);
+    expect(otherStatusRegions()).toEqual([]);
     await expect
       .element(tableOf(screen).getByRole("rowheader", { name: "R-1" }))
       .toBeVisible();

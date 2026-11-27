@@ -1732,6 +1732,10 @@ describe("the announcements", () => {
     await toggleKind(dialog, "Status");
 
     await expect.poll(() => announcements()).toEqual(["12 events"]);
+    // Not again by a status region of the popover.
+    expect(
+      dialog.getByRole("status").filter({ hasText: "12 events" }).query(),
+    ).toBeNull();
 
     const options = await openActors(dialog);
     await options.getByRole("option", { name: "System" }).click();

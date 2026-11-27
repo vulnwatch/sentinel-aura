@@ -96,6 +96,11 @@ interface FilterSelectProps<T extends string> {
   // In place of the options that the filter reads, while they load or when
   // their read fails: the loading indicator or the message of the failure.
   status?: ReactNode;
+  // Whether a status region of the menu announces the status as it changes,
+  // which it does unless the page announces the same already, such as the
+  // failure of a read that the screen shows in its place
+  // (src/components/announcer.tsx), so that it is not announced twice.
+  announcesStatus?: boolean;
   // The value that applies.
   selected: T;
   // What the field shows when the value that applies is not among the
@@ -115,12 +120,14 @@ export function FilterSelect<T extends string>({
   label,
   groups,
   status,
+  announcesStatus = true,
   selected,
   unlisted,
   onChange,
 }: FilterSelectProps<T>) {
   const shown = groups.filter((group) => group.length > 0);
   const statusId = useId();
+  const described = <div id={statusId}>{status}</div>;
   return (
     <Select
       value={selected}
@@ -170,9 +177,11 @@ export function FilterSelect<T extends string>({
         {/* A status region that is there before what it holds, so that
             assistive technologies announce the loading or the failure of the
             options while the menu holds the focus. */}
-        <output className="block">
-          <div id={statusId}>{status}</div>
-        </output>
+        {announcesStatus ? (
+          <output className="block">{described}</output>
+        ) : (
+          described
+        )}
       </Popover>
     </Select>
   );

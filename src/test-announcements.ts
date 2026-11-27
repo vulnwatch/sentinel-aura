@@ -11,15 +11,22 @@ export function inReach(element: Element): boolean {
 // What the announcer of the page holds, one entry for each announcement, in
 // the order in which they arrived (src/components/announcer.tsx). The
 // announcer is found by its role and name, as assistive technologies find
-// it, and the function throws while they cannot reach it, such as when an
-// open modal overlay hides it, so a check that retries, such as
-// expect.poll, waits until they can.
+// it, and the function throws while they cannot reach it or one of its
+// announcements, such as when an open modal overlay hides the announcer or
+// the nodes added inside it, so a check that retries, such as expect.poll,
+// waits until they can.
 export function announcements(): string[] {
   const region = page.getByRole("status", { name: "Announcements" }).element();
   if (!inReach(region)) {
     throw new Error("The announcer is out of reach of assistive technologies");
   }
-  return Array.from(region.children, (node) => node.textContent ?? "");
+  const nodes = Array.from(region.children);
+  if (!nodes.every(inReach)) {
+    throw new Error(
+      "An announcement is out of reach of assistive technologies",
+    );
+  }
+  return nodes.map((node) => node.textContent ?? "");
 }
 
 // How many announcements of the announcer of the page say the words, such

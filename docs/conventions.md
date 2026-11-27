@@ -393,12 +393,14 @@ that needs it; content of another kind needs a new row first.
 - What the UI announces to assistive technologies outside an overlay, such
   as a message, the failure or the warning of a read, the outcome of a
   change, or what a list shows after a change, goes through the announcer of
-  the page, `src/components/announcer.tsx`, the one status region of the
-  page that stays in their reach while a modal overlay is open
-  (`docs/behaviors.md`, Accessibility, Announcements): no component outside
-  an overlay holds a live or status region of its own. Inside an overlay, a
-  status region of the overlay may announce what only the overlay shows,
-  such as the options of a combobox or the error of a field.
+  the page, `src/components/announcer.tsx`, the one status region outside
+  an overlay that stays in their reach while a modal overlay is open
+  (`docs/behaviors.md`, Accessibility, Announcements). A component holds a
+  status region of its own only for what its overlay or its form alone
+  shows while it holds the focus, such as the status of the options of a
+  combobox or the error of a field that holds the focus
+  (`src/components/field-error-focus.tsx`), and never for what the
+  announcer announces.
 - A component declares the type of its props in its own module.
 
 ### No Raw HTML Injection

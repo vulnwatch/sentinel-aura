@@ -502,6 +502,9 @@ function TicketReferences() {
                 </OptionsStatus>
               ) : null
             }
+            // The failure of the read of the references, which the tab
+            // announces once it shows it in its place.
+            announcesStatus={failure === null}
             selected={search.source ?? ANY_SOURCE}
             unlisted={sourceName(search.source ?? "")}
             onChange={(source) => {
