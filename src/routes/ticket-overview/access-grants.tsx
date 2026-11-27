@@ -457,9 +457,10 @@ interface AccessGrantsDialogProps {
 // "Discard changes?" first, and closing or reloading the page shows the
 // browser's own prompt (docs/behaviors.md, Confirmation); while a grant or
 // a revocation is in progress, the user chosen counts as submitted. The
-// outcome of a grant or a revocation is announced in a status region of the
-// dialog, which the rest of the page cannot hold while the dialog is open,
-// once the read of the grants after it arrives; when that read fails, it
+// announcer of the page, which stays in reach while the dialog is open,
+// announces the outcome of a grant or a revocation once the read of the
+// grants after it arrives (src/components/announcer.tsx); when that read
+// fails, it
 // shows at the top of the dialog instead, until the dialog closes, and once
 // the dialog has closed, in the message area.
 // When a grant whose line holds the focus leaves the list, as after its

@@ -1,4 +1,5 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { Announcer } from "../components/announcer";
 import { AppFrame } from "../components/app-frame";
 import { RouterLinks } from "../components/router-links";
 import { FocusAfterNavigation } from "../components/screen-heading";
@@ -6,31 +7,34 @@ import { SignInColumn } from "../components/sign-in-column";
 import { UiFailurePage } from "../components/ui-failure";
 import { SessionGate } from "../session-gate";
 
-// The root of every screen: links through the router, the focus after a
-// navigation, and the screen of the URL once the session allows it
+// The root of every screen: the announcer of the page
+// (src/components/announcer.tsx), links through the router, the focus after
+// a navigation, and the screen of the URL once the session allows it
 // (src/session-gate.tsx), in its frame: beside the sidebar for a signed-in
 // user, and in the column of the Sign In Page while no signed-in user is
 // known, as on Sign in (docs/screen-map.md, Sidebar; docs/design-system.md,
 // Main Content).
 export function RootLayout() {
   return (
-    <RouterLinks>
-      <FocusAfterNavigation>
-        <SessionGate>
-          {(user) =>
-            user === undefined ? (
-              <SignInColumn>
-                <Outlet />
-              </SignInColumn>
-            ) : (
-              <AppFrame user={user}>
-                <Outlet />
-              </AppFrame>
-            )
-          }
-        </SessionGate>
-      </FocusAfterNavigation>
-    </RouterLinks>
+    <Announcer>
+      <RouterLinks>
+        <FocusAfterNavigation>
+          <SessionGate>
+            {(user) =>
+              user === undefined ? (
+                <SignInColumn>
+                  <Outlet />
+                </SignInColumn>
+              ) : (
+                <AppFrame user={user}>
+                  <Outlet />
+                </AppFrame>
+              )
+            }
+          </SessionGate>
+        </FocusAfterNavigation>
+      </RouterLinks>
+    </Announcer>
   );
 }
 

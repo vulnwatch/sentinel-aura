@@ -23,6 +23,7 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import { timesAnnounced } from "../../test-announcements";
 import { pointerAwayFrom } from "../../test-pointer";
 import {
   ACTORS,
@@ -43,6 +44,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_TONES,
   nextFrames,
@@ -525,7 +527,7 @@ describe("the edits of the package tree", () => {
     await expect.element(menu).not.toBeInTheDocument();
     await expect.element(actionsOf(screen, OPENSSL_SP7)).toHaveFocus();
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.");
     expect(requestsTo(spy, TICKET)).toBeGreaterThan(reads);
     // The track stays, in gray, with its label.
@@ -675,7 +677,7 @@ describe("the edits of the package tree", () => {
 
     await chooseAction(screen, OPENSSL_SP7, "Exclude");
 
-    const message = screen.getByText(
+    const message = mainContent(screen).getByText(
       "Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.",
       { exact: true },
     );
@@ -829,7 +831,11 @@ describe("the edits of the package tree", () => {
     await chooseAction(screen, OPENSSL_SP7, "Exclude");
 
     await expect
-      .element(screen.getByText("This couldn't be updated.", { exact: false }))
+      .element(
+        mainContent(screen).getByText("This couldn't be updated.", {
+          exact: false,
+        }),
+      )
       .toBeVisible();
     await expectFocusSettledOn(actionsOf(screen, OPENSSL_SP7));
 
@@ -872,7 +878,7 @@ describe("the edits of the package tree", () => {
       await chooseAction(screen, "fictional-zlib", "Restore");
 
       await expect
-        .poll(() => announcements(screen))
+        .poll(() => announcements())
         .toContain("Package fictional-zlib restored.");
       await expect
         .element(showHidden(screen))
@@ -918,7 +924,7 @@ describe("the edits of the package tree", () => {
       ["POST", `${OPENSSL_ID}/restore`, undefined],
     ]);
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Package fictional-openssl restored.");
     await expect.element(actionsOf(screen, "fictional-openssl")).toHaveFocus();
   });
@@ -952,7 +958,7 @@ describe("the edits of the package tree", () => {
     await expect.element(menu).not.toBeInTheDocument();
     await expect.element(affectednessOf(screen, OPENSSL_SP7)).toHaveFocus();
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain(
         "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to Not affected.",
       );
@@ -987,7 +993,7 @@ describe("the edits of the package tree", () => {
     }
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain(
         "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to Not affected. Affectedness of fictional-openssl · fles-16.0 changed to Affected.",
       );
@@ -1030,7 +1036,7 @@ describe("the edits of the package tree", () => {
 
       await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
@@ -1118,7 +1124,7 @@ describe("the edits of the package tree", () => {
 
       await chooseAction(screen, record, action);
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
@@ -1209,7 +1215,7 @@ describe("the edits of the package tree", () => {
     ]);
     await expect
       .element(
-        screen.getByText("Package fictional-openssl excluded.", {
+        mainContent(screen).getByText("Package fictional-openssl excluded.", {
           exact: true,
         }),
       )
@@ -1272,7 +1278,11 @@ describe("the edits of the package tree", () => {
       ).click();
 
       await expect
-        .element(screen.getByText("You don't have permission to do this."))
+        .element(
+          mainContent(screen).getByText(
+            "You don't have permission to do this.",
+          ),
+        )
         .toBeVisible();
       await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
       await expectFocusSettledOn(screenHeading(screen));
@@ -1319,7 +1329,7 @@ describe("the edits of the package tree", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "SNTL-12: Track fictional-openssl · SUSE:FLES-15-SP7:Update excluded.",
           { exact: true },
         ),
@@ -1467,7 +1477,7 @@ describe("the edits of the package tree", () => {
     await confirmation.getByRole("button", { name: "Exclude package" }).click();
 
     await expect.element(confirmation).not.toBeInTheDocument();
-    const message = screen.getByText(
+    const message = mainContent(screen).getByText(
       "Package fictional-openssl is already excluded.",
       { exact: true },
     );
@@ -1510,7 +1520,7 @@ describe("the edits of the package tree", () => {
     await chooseAffectedness(screen, OPENSSL_SP7, "Not affected");
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain(
         "Affectedness of fictional-openssl · SUSE:FLES-15-SP7:Update changed to fictional_affectedness.",
       );
@@ -1571,7 +1581,7 @@ describe("the edits of the package tree", () => {
       .toBeVisible();
     await expect
       .element(
-        screen.getByText("Package fictional-openssl excluded.", {
+        mainContent(screen).getByText("Package fictional-openssl excluded.", {
           exact: true,
         }),
       )
@@ -1801,7 +1811,7 @@ describe("the actions of a Product", () => {
       expect(packageChanges(spy)).toEqual([
         ["PATCH", SP7_PRODUCT_PATH, { eligible }],
       ]);
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
       expect(requestsTo(spy, TICKET)).toBeGreaterThan(reads);
       await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
       // The Product shows where the user acted: the outcome is only
@@ -2070,7 +2080,7 @@ describe("the actions of a Product", () => {
     expect(packageChanges(spy)).toEqual([
       ["POST", `${SP7_PRODUCT_PATH}/exclude`, undefined],
     ]);
-    const message = screen.getByText(`${SP7_SUBJECT} excluded.`, {
+    const message = mainContent(screen).getByText(`${SP7_SUBJECT} excluded.`, {
       exact: true,
     });
     await expect.element(message).toBeVisible();
@@ -2227,7 +2237,7 @@ describe("the actions of a Product", () => {
     await chooseProductAction(screen, SP7_PRODUCT, "Exclude from this track");
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain(`${SP7_SUBJECT} excluded.`);
     await expect
       .element(
@@ -2258,7 +2268,7 @@ describe("the actions of a Product", () => {
       ["POST", `${SP7_PRODUCT_PATH}/restore`, undefined],
     ]);
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain(`${SP7_SUBJECT} restored.`);
     await expectFocusSettledOn(productName(screen, SP7_PRODUCT));
   });
@@ -2343,7 +2353,7 @@ describe("the actions of a Product", () => {
 
       const popover = await chooseProductAction(screen, SP7_PRODUCT, action);
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       await expect.element(popover).not.toBeInTheDocument();
@@ -2364,9 +2374,12 @@ describe("the actions of a Product", () => {
 
     await expect
       .element(
-        screen.getByText(`SNTL-12: ${SP7_SUBJECT} marked as not eligible.`, {
-          exact: true,
-        }),
+        mainContent(screen).getByText(
+          `SNTL-12: ${SP7_SUBJECT} marked as not eligible.`,
+          {
+            exact: true,
+          },
+        ),
       )
       .toBeVisible();
   });
@@ -2402,7 +2415,7 @@ describe("the outcome of an edit", () => {
       `${SP7_SUBJECT} marked as not eligible.`,
     ],
   ])(
-    "shows in the message area, as a success without the Ticket, once the read of the Ticket after it fails, and is not announced: %s",
+    "shows in the message area, as a success without the Ticket, once the read of the Ticket after it fails, and is announced only there: %s",
     async (_name, act, response, text) => {
       const reread = later();
       let changed = false;
@@ -2421,20 +2434,21 @@ describe("the outcome of an edit", () => {
         },
       });
       const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
 
       await act(screen);
 
       await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
       await nextFrames();
-      expect(message.query()).toBeNull();
+      expect(screen.getByText(text, { exact: true }).query()).toBeNull();
       reread.resolve(errorResponse(503, "FICTIONAL_UNAVAILABLE"));
 
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
       expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
       await nextFrames();
-      expect(announcements(screen)).not.toContain(text);
+      // The message alone announces it.
+      expect(timesAnnounced(text)).toBe(1);
     },
   );
 
@@ -2464,6 +2478,7 @@ describe("the outcome of an edit", () => {
     await expect.element(actionsOf(screen, OPENSSL_SP7)).toBeVisible();
     await expectSuccessMessage(screen, text);
     await nextFrames();
-    expect(announcements(screen)).not.toContain(text);
+    // The message alone announces it.
+    expect(timesAnnounced(text)).toBe(1);
   });
 });

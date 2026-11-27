@@ -862,7 +862,11 @@ also meets these requirements, which they cannot check:
 - **Announcements.** A message that appears without a navigation, such as the
   outcome of a change or the error of an action, is announced without moving
   the focus, and so is the end of an operation that a screen follows, once a
-  read shows it (Outcome of a Change; 4.1.3 Status Messages). After a form is
+  read shows it (Outcome of a Change; 4.1.3 Status Messages). So is what
+  appears outside an open dialog, popover, or menu, which keeps the rest of
+  the page out of reach while it is open, such as a message, the failure of
+  a read of a part, or what a list shows after a change of a filter; each is
+  announced once, not again by the overlay. After a form is
   submitted with errors, or a change of the popover of a field fails
   (`docs/design-system.md`, Detail Screens), the focus moves to the message at
   the top of the form or of the popover, or, when only fields have errors, to

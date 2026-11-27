@@ -28,6 +28,7 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import { announcements, timesAnnounced } from "../../test-announcements";
 import {
   ACCESS,
   ACTORS,
@@ -55,6 +56,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_GONE,
@@ -447,26 +449,21 @@ async function confirmDelete(screen: Screen, version = "3.1") {
   return confirmation;
 }
 
-// What the status regions of the CVSS assessments say, other than nothing.
-function cvssAnnouncements(screen: Screen): string[] {
-  return cvssPart(screen)
-    .getByRole("status")
-    .elements()
-    .map((region) => region.textContent ?? "")
-    .filter((text) => text !== "");
-}
-
 // The outcome of a change once the read of the assessments after it has
-// ended: announced in the part when that read arrives, and, when it fails, a
-// success message of the message area, which the part does not announce
-// (docs/behaviors.md, Outcome of a Change).
+// ended: announced for the part when that read arrives, without a message,
+// and, when it fails, a success message of the message area, which announces
+// it, and which the part does not announce again (docs/behaviors.md, Outcome
+// of a Change).
 async function expectOutcome(screen: Screen, place: string, text: string) {
   if (place === "in the part") {
-    await expect.poll(() => cvssAnnouncements(screen)).toContain(text);
+    await expect.poll(() => timesAnnounced(text)).toBe(1);
+    expect(
+      mainContent(screen).getByText(text, { exact: true }).query(),
+    ).toBeNull();
     return;
   }
   await expectSuccessMessage(screen, text);
-  expect(cvssAnnouncements(screen)).not.toContain(text);
+  expect(timesAnnounced(text)).toBe(1);
 }
 
 // The requests of the CVSS assessments and of the changes of the SUSE
@@ -519,7 +516,7 @@ async function deleteSuseAmong(before: CVSSAssessmentItem[], version: string) {
     .element(assessmentRow(screen, "SUSE", version))
     .not.toBeInTheDocument();
   await expect
-    .poll(() => cvssAnnouncements(screen))
+    .poll(() => announcements())
     .toEqual([`SUSE assessment v${version} deleted.`]);
   return { screen };
 }
@@ -1148,7 +1145,7 @@ describe("the SUSE assessment", () => {
       await expect.element(dialog).not.toBeInTheDocument();
       expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
       await expect
-        .poll(() => cvssAnnouncements(screen))
+        .poll(() => announcements())
         .toEqual(["SUSE assessment v3.1 added."]);
       expect(assessmentRequests(spy).slice(before)).toEqual([
         `GET ${CVSS}`,
@@ -1230,7 +1227,7 @@ describe("the SUSE assessment", () => {
         `GET ${CVSS}`,
       ]);
       // The dialog says what it added: the part announces nothing.
-      expect(cvssAnnouncements(screen)).toEqual([]);
+      expect(announcements()).toEqual([]);
     });
 
     test("stays open on the tab of the other version after Add submitted with Enter in Vector, whose form leaves with its tab, and keeps the focus on Add SUSE assessment", async () => {
@@ -1302,7 +1299,7 @@ describe("the SUSE assessment", () => {
         { vector_string: VECTOR_V40 },
       ]);
       await expect
-        .poll(() => cvssAnnouncements(screen))
+        .poll(() => announcements())
         .toEqual(["SUSE assessment v4.0 added."]);
       await expect.element(addSuse(screen)).not.toBeInTheDocument();
       await expect.element(assessmentRow(screen, "SUSE", "4.0")).toBeVisible();
@@ -1399,7 +1396,7 @@ describe("the SUSE assessment", () => {
         await expect.element(dialog).not.toBeInTheDocument();
         expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
         await expect
-          .poll(() => cvssAnnouncements(screen))
+          .poll(() => announcements())
           .toEqual(["SUSE assessment v3.1 added."]);
         await expectFocusSettledOn(focused(screen));
       },
@@ -1524,7 +1521,9 @@ describe("the SUSE assessment", () => {
       await returnToForeground();
 
       // The part shows the error behind the dialog.
-      await expect.element(screen.getByText(MESSAGE_GONE)).toBeVisible();
+      await expect
+        .element(cvssPart(screen).getByText(MESSAGE_GONE))
+        .toBeVisible();
       await nextFrames();
       await expect.element(dialog).toBeVisible();
       await expect.element(vectorOf(dialog)).toHaveValue(VECTOR_V31);
@@ -3673,7 +3672,7 @@ describe("the SUSE assessment", () => {
       await expect.element(dialog).not.toBeInTheDocument();
       expect(bodies).toEqual([{ vector_string: VECTOR_V31 }]);
       await expect
-        .poll(() => cvssAnnouncements(screen))
+        .poll(() => announcements())
         .toEqual(["SUSE assessment v3.1 changed."]);
       expect(assessmentRequests(spy).slice(before)).toEqual([
         `POST ${SUSE_ASSESSMENT}`,
@@ -4033,12 +4032,11 @@ describe("the SUSE assessment", () => {
 
         await expect.element(dialog).not.toBeInTheDocument();
         await frames();
-        expect(cvssAnnouncements(screen)).toEqual([]);
+        expect(announcements()).toEqual([]);
         expect(screen.getByText(/added\.$/).elements()).toHaveLength(0);
         reread.resolve(response());
 
         await expectOutcome(screen, place, "SUSE assessment v3.1 added.");
-        expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
       },
     );
 
@@ -4073,7 +4071,7 @@ describe("the SUSE assessment", () => {
           .element(suseDialog(screen, "Edit SUSE assessment v3.1"))
           .not.toBeInTheDocument();
         await frames();
-        expect(cvssAnnouncements(screen)).toEqual([]);
+        expect(announcements()).toEqual([]);
         expect(screen.getByText(/changed\.$/).elements()).toHaveLength(0);
         reread.resolve(response());
 
@@ -4110,7 +4108,7 @@ describe("the SUSE assessment", () => {
 
         await expect.element(confirmation).not.toBeInTheDocument();
         await frames();
-        expect(cvssAnnouncements(screen)).toEqual([]);
+        expect(announcements()).toEqual([]);
         expect(screen.getByText(/deleted\.$/).elements()).toHaveLength(0);
         reread.resolve(response());
 
@@ -4210,7 +4208,7 @@ describe("the SUSE assessment", () => {
 
         response.resolve(await outcome());
 
-        const message = screen.getByText(text);
+        const message = mainContent(screen).getByText(text);
         await expect.element(message).toBeVisible();
         expect(backgroundBehind(message.element())).toBe(tone);
         const link = screen.getByRole("link", { name: "SNTL-12", exact: true });
@@ -4453,7 +4451,9 @@ describe("the SUSE assessment", () => {
       ).toBeNull();
       response.resolve(suseResponse(SAVED_V31, 201));
       await expect
-        .element(screen.getByText("SNTL-12: SUSE assessment v3.1 added."))
+        .element(
+          mainContent(screen).getByText("SNTL-12: SUSE assessment v3.1 added."),
+        )
         .toBeVisible();
     });
 
@@ -4739,7 +4739,7 @@ describe("the SUSE assessment", () => {
         .not.toBeInTheDocument();
       expect(removed).toEqual([`${SUSE_ASSESSMENT}/3.1`]);
       await expect
-        .poll(() => cvssAnnouncements(screen))
+        .poll(() => announcements())
         .toEqual(["SUSE assessment v3.1 deleted."]);
     });
 

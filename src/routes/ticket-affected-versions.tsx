@@ -713,7 +713,7 @@ function Versions({ cveId, search, searched, onClear }: VersionsProps) {
         {announcement}
       </ResultAnnouncement>
       {place.updating && <UpdatingBar />}
-      <output className="block">{place.failure ?? place.warning}</output>
+      {place.failure ?? place.warning}
       {groups === undefined ||
       shown === undefined ||
       shownPackages === undefined ? (

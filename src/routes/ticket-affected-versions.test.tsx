@@ -23,6 +23,7 @@ import {
   ticketResponse,
   urlOf,
 } from "../test-api";
+import { announcements } from "../test-announcements";
 
 // The tab Affected versions of the Ticket screen (docs/screens/ticket.md,
 // Affected versions), at the browser's default text size, in the light
@@ -39,6 +40,9 @@ const PATH = "/tickets/SNTL-12/affected-versions";
 
 const MESSAGE_UNAVAILABLE =
   "Sentinel isn't available right now. Try again later.";
+// The reference of the errors of the tests (src/test-api.ts), as the
+// announcer announces it after the message of the error.
+const REFERENCE = "Reference: 01890a5d-ac96-774b-bcce-b302099a8057";
 const MESSAGE_GONE =
   "This no longer exists, or you no longer have access to it.";
 const NO_MATCH = "No entries match the search.";
@@ -352,15 +356,6 @@ function blocksOf(screen: Screen): Record<string, ShownSource[]> {
 // The line of the versions that holds a text.
 function lineOf(screen: Screen, text: string): Locator {
   return panelOf(screen).getByRole("listitem").filter({ hasText: text }).last();
-}
-
-// The texts of the status regions of the tab that say something.
-function announcementsOf(screen: Screen): string[] {
-  return panelOf(screen)
-    .getByRole("status")
-    .elements()
-    .map((region) => region.textContent)
-    .filter((text) => text !== "");
 }
 
 // The paths of the requests to the API, other than the read of the
@@ -1246,17 +1241,17 @@ describe("the search", () => {
     stubVersions();
     const { router, screen } = await renderTab(`${PATH}?search=npm`);
     await expect.poll(() => packageNames(screen)).toEqual(["fictional-tar"]);
-    expect(announcementsOf(screen)).toEqual([]);
+    expect(announcements()).toEqual([]);
 
     router.history.push(`${PATH}?search=custom`);
-    await expect.poll(() => announcementsOf(screen)).toEqual(["2 entries"]);
+    await expect.poll(() => announcements()).toEqual(["2 entries"]);
     router.history.push(`${PATH}?search=2.0.0-rc1`);
-    await expect.poll(() => announcementsOf(screen)).toEqual(["1 entry"]);
+    await expect.poll(() => announcements()).toEqual(["1 entry"]);
     router.history.push(`${PATH}?search=fictional-zlib`);
-    await expect.poll(() => announcementsOf(screen)).toEqual([NO_MATCH]);
+    await expect.poll(() => announcements()).toEqual([NO_MATCH]);
     router.history.push(PATH);
 
-    await expect.poll(() => announcementsOf(screen)).toEqual(["7 entries"]);
+    await expect.poll(() => announcements()).toEqual(["7 entries"]);
   });
 
   test("announces No version data after a search of a CVE without entries", async () => {
@@ -1268,7 +1263,7 @@ describe("the search", () => {
 
     router.history.push(PATH);
 
-    await expect.poll(() => announcementsOf(screen)).toEqual([NO_ENTRIES]);
+    await expect.poll(() => announcements()).toEqual([NO_ENTRIES]);
   });
 
   test.each([
@@ -1374,7 +1369,7 @@ describe("the states", () => {
     ).toBeNull();
   });
 
-  test("show the failure of the read in place of the entries, below the toolbar, in a status region, with Try again", async () => {
+  test("show the failure of the read in place of the entries, below the toolbar, announced, with Try again", async () => {
     let fail = true;
     stubVersions({
       versions: () =>
@@ -1384,7 +1379,9 @@ describe("the states", () => {
 
     const message = panelOf(screen).getByText(MESSAGE_UNAVAILABLE);
     await expect.element(message).toBeVisible();
-    expect(message.element().closest("output")).not.toBeNull();
+    await expect
+      .poll(() => announcements())
+      .toEqual([`${MESSAGE_UNAVAILABLE} ${REFERENCE}`]);
     expect(message.element().getBoundingClientRect().top).toBeGreaterThan(
       searchOf(screen).element().getBoundingClientRect().bottom,
     );

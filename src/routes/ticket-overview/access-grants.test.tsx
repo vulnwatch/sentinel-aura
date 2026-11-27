@@ -23,6 +23,7 @@ import {
   accessGrantsButton,
   accessGrantsDialog,
   ACTORS,
+  announcements,
   backgroundBehind,
   boxOf,
   CAROL,
@@ -33,6 +34,7 @@ import {
   grantLines,
   later,
   leaveForTickets,
+  mainContent,
   ME,
   MESSAGE_CONFLICT,
   MESSAGE_TONES,
@@ -259,7 +261,7 @@ describe("the access grants", () => {
     await grantButton(screen).click();
 
     await expect
-      .poll(() => dialogStatus(screen))
+      .poll(() => announcements())
       .toBe("Access granted to Ana Garcia.");
     expect(bodies).toEqual([{ user: fictionalDirectoryUser().id }]);
     await expect.element(revokeOf(screen, "Ana Garcia @agarcia")).toBeVisible();
@@ -744,7 +746,11 @@ describe("the access grants", () => {
     ).toBeNull();
     response.resolve(new Response(null, { status: 204 }));
     await expect
-      .element(screen.getByText("SNTL-12: Access of Carol White revoked."))
+      .element(
+        mainContent(screen).getByText(
+          "SNTL-12: Access of Carol White revoked.",
+        ),
+      )
       .toBeVisible();
   });
 
@@ -816,7 +822,7 @@ describe("the access grants", () => {
         screen.getByRole("dialog", { name: "Discard changes?" }).query(),
       ).toBeNull();
       response.resolve(outcome());
-      const message = screen.getByText(text);
+      const message = mainContent(screen).getByText(text);
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(tone);
       await expect
@@ -892,7 +898,9 @@ describe("the access grants", () => {
     await expect.element(confirmation).not.toBeInTheDocument();
     await expect.element(revokeOf(screen, "Emma Green @egreen")).toHaveFocus();
     expect(revoked).toEqual([`${ACCESS}/${CAROL.user.id}`]);
-    expect(dialogStatus(screen)).toBe("Access of Carol White revoked.");
+    await expect
+      .poll(() => announcements())
+      .toBe("Access of Carol White revoked.");
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads.ticket + 1);
     await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
   });
@@ -1131,13 +1139,15 @@ describe("the access grants", () => {
       await change(screen);
 
       await nextFrames();
+      expect(announcements()).toBe("");
       expect(dialogStatus(screen)).toBe("");
       reread.resolve(grantsResponse([CAROL, EMMA]));
 
-      await expect.poll(() => dialogStatus(screen)).toBe(text);
+      await expect.poll(() => announcements()).toBe(text);
+      // Announced, without a message at the top of the dialog.
       expect(
         accessGrantsDialog(screen).getByText(text, { exact: true }).elements(),
-      ).toHaveLength(1);
+      ).toHaveLength(0);
     },
   );
 
@@ -1323,9 +1333,9 @@ describe("the access grants", () => {
         .getByRole("button", { name: "Close" })
         .click();
       await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await nextFrames();
-      expect(message.query()).toBeNull();
+      expect(screen.getByText(text, { exact: true }).query()).toBeNull();
       reread.resolve(grantsResponse([EMMA]));
 
       await expect.element(message).toBeVisible();
@@ -1359,9 +1369,10 @@ describe("the access grants", () => {
     await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
     reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
 
-    const message = screen.getByText("Access of Carol White revoked.", {
-      exact: true,
-    });
+    const message = mainContent(screen).getByText(
+      "Access of Carol White revoked.",
+      { exact: true },
+    );
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
     expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();

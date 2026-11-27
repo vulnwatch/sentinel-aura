@@ -1168,11 +1168,10 @@ A list screen, such as the Ticket list, shows from top to bottom:
      field takes the focus as it opens, and its content scrolls within it in
      a window shorter than it is. Escape or a click outside closes it, and the
      focus returns to Filters (`docs/behaviors.md`, Accessibility, Dialogs).
-     While it is open, the rest of the page is out of reach of assistive
-     technologies, so it announces in a status region of its own what the
-     list shows after a change, as the list does after a change of its state
-     (`docs/behaviors.md`, Accessibility, Focus after a navigation), or what
-     the place of the data says of the failure of its read.
+     While it is open, the list announces what it shows after a change, as
+     after any change of its state, and the place of the data the failure of
+     its read (`docs/behaviors.md`, Accessibility, Focus after a navigation;
+     Announcements).
    - A filter applies as soon as its field changes; a combobox, when the user
      chooses an option; and a field that the user types into, such as a text
      or a date field, when the user presses Enter, or a date field when the

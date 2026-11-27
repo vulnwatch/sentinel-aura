@@ -3,6 +3,7 @@ import { userEvent } from "vitest/browser";
 import "../../styles.css";
 import type { TicketReferenceResponse } from "../../api/generated/model";
 import { errorResponse, requestsTo } from "../../test-api";
+import { timesAnnounced } from "../../test-announcements";
 import {
   addButton,
   ADVISORY,
@@ -20,6 +21,7 @@ import {
   heading,
   ISSUE,
   later,
+  mainContent,
   MESSAGE_CONFLICT,
   MESSAGE_GONE,
   MESSAGE_NOT_ACCEPTED,
@@ -70,7 +72,7 @@ async function deleteAmong(
 
   await expect.poll(() => rowOf(screen, reference).query()).toBeNull();
   await expect
-    .poll(() => announcementsOf(screen))
+    .poll(() => announcementsOf())
     .toEqual([`Reference ${nameOf(reference)} deleted.`]);
   return { screen };
 }
@@ -140,7 +142,7 @@ describe("Delete", () => {
       .toEqual([NVD.title, PATCH.url, ISSUE.title, POST.title]);
     expect(removed).toEqual([`${REFERENCES}/${ADVISORY.id}`]);
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcementsOf())
       .toEqual(["Reference “Fictional advisory” deleted."]);
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
   });
@@ -340,7 +342,7 @@ describe("Delete", () => {
     },
   );
 
-  test("shows Delete in the message area, as a success, once the read of the references after it fails, and announces nothing in the tab", async () => {
+  test("shows Delete in the message area, as a success, once the read of the references after it fails, which the tab does not announce again", async () => {
     const reread = later();
     let removed = false;
     stubReferences({
@@ -352,18 +354,19 @@ describe("Delete", () => {
     });
     const { screen } = await renderTab();
     const text = "Reference “Fictional advisory” deleted.";
-    const message = screen.getByText(text, { exact: true });
+    const message = mainContent(screen).getByText(text, { exact: true });
 
     const confirmation = await deleteReference(screen, ADVISORY);
 
     await expect.element(confirmation).not.toBeInTheDocument();
-    expect(announcementsOf(screen)).toEqual([]);
-    expect(message.query()).toBeNull();
+    expect(announcementsOf()).toEqual([]);
+    expect(screen.getByText(text, { exact: true }).query()).toBeNull();
     reread.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
 
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
     await frames();
-    expect(announcementsOf(screen)).not.toContain(text);
+    // The message alone announces it.
+    expect(timesAnnounced(text)).toBe(1);
   });
 });

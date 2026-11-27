@@ -9,6 +9,11 @@ import {
   validationError,
 } from "../../test-api";
 import {
+  announcedAgain,
+  announcementNode,
+  timesAnnounced,
+} from "../../test-announcements";
+import {
   ACTORS,
   addButton,
   ADDED,
@@ -29,6 +34,7 @@ import {
   ISSUE,
   later,
   leave,
+  mainContent,
   MESSAGE_CONFLICT,
   MESSAGE_GONE,
   MESSAGE_NOT_ACCEPTED,
@@ -185,7 +191,7 @@ describe("Add reference", () => {
     expect(requestsWith(spy, "POST")).toHaveLength(1);
     await expect.poll(() => namesOf(screen)).toEqual([NVD.title, ADDED.title]);
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcementsOf())
       .toEqual(["Reference “Fictional packaging issue” added."]);
     await expect.element(addButton(screen)).toHaveFocus();
   });
@@ -249,7 +255,7 @@ describe("Add reference", () => {
     await submit(dialog, "Add reference");
 
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcementsOf())
       .toEqual([`Reference ${ADDED.url} added.`]);
   });
 
@@ -257,7 +263,7 @@ describe("Add reference", () => {
     ["arrives", () => referencesResponse()],
     ["fails", () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION")],
   ])(
-    "shows the outcome of a reference that the filters hide in the message area once the next read of the references %s, as a success without the Ticket, and announces nothing in the tab",
+    "shows the outcome of a reference that the filters hide in the message area once the next read of the references %s, as a success without the Ticket, which the tab does not announce again",
     async (_, response) => {
       const reread = later();
       let added = false;
@@ -272,13 +278,13 @@ describe("Add reference", () => {
       const dialog = await openAdd(screen);
       await fieldOf(dialog, "Address").fill(ADDED.url);
       const text = "Reference “Fictional packaging issue” added.";
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
 
       await submit(dialog, "Add reference");
 
       await expect.element(dialog).not.toBeInTheDocument();
       await frames();
-      expect(message.query()).toBeNull();
+      expect(screen.getByText(text, { exact: true }).query()).toBeNull();
       reread.resolve(response());
 
       await expect.element(message).toBeVisible();
@@ -286,8 +292,13 @@ describe("Add reference", () => {
       expect(panelOf(screen).element().contains(message.element())).toBe(false);
       expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
       await frames();
-      expect(announcementsOf(screen)).not.toContain(text);
-      expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
+      // The message alone announces it.
+      expect(timesAnnounced(text)).toBe(1);
+      expect(
+        mainContent(screen)
+          .getByText(/added\.$/)
+          .elements(),
+      ).toHaveLength(1);
     },
   );
 
@@ -300,7 +311,7 @@ describe("Add reference", () => {
     await submit(dialog, "Add reference");
 
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcementsOf())
       .toEqual(["Reference “Fictional packaging issue” added."]);
     expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
   });
@@ -324,14 +335,15 @@ describe("Add reference", () => {
 
     await expect
       .element(
-        screen.getByText("Reference “Fictional packaging issue” added.", {
-          exact: true,
-        }),
+        mainContent(screen).getByText(
+          "Reference “Fictional packaging issue” added.",
+          { exact: true },
+        ),
       )
       .toBeVisible();
     expect(
       backgroundBehind(
-        screen
+        mainContent(screen)
           .getByText("Reference “Fictional packaging issue” added.", {
             exact: true,
           })
@@ -366,7 +378,7 @@ describe("Add reference", () => {
     expect(invalidated(ACTORS)).toBe(true);
   });
 
-  test("shows the change in the message area, as a success without the Ticket, once the next read of the references fails, and announces nothing in the tab", async () => {
+  test("shows the change in the message area, as a success without the Ticket, once the next read of the references fails, which the tab does not announce again", async () => {
     const reread = later();
     let added = false;
     stubReferences({
@@ -380,7 +392,7 @@ describe("Add reference", () => {
     const dialog = await openAdd(screen);
     await fieldOf(dialog, "Address").fill(ADDED.url);
     const text = "Reference “Fictional packaging issue” added.";
-    const message = screen.getByText(text, { exact: true });
+    const message = mainContent(screen).getByText(text, { exact: true });
 
     await submit(dialog, "Add reference");
 
@@ -390,8 +402,8 @@ describe("Add reference", () => {
     await expect
       .poll(() => namesOf(screen))
       .toEqual([NVD.title, ADVISORY.title]);
-    await expect.poll(() => announcementsOf(screen)).toEqual(["2 references"]);
-    expect(message.query()).toBeNull();
+    await expect.poll(() => announcementsOf()).toEqual(["2 references"]);
+    expect(screen.getByText(text, { exact: true }).query()).toBeNull();
     reread.resolve(errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"));
 
     await expect.element(message).toBeVisible();
@@ -399,8 +411,13 @@ describe("Add reference", () => {
     expect(panelOf(screen).element().contains(message.element())).toBe(false);
     expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
     await frames();
-    expect(announcementsOf(screen)).not.toContain(text);
-    expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
+    // The message alone announces it.
+    expect(timesAnnounced(text)).toBe(1);
+    expect(
+      mainContent(screen)
+        .getByText(/added\.$/)
+        .elements(),
+    ).toHaveLength(1);
   });
 
   test("announces each change again in a node of its own, also with the same words", async () => {
@@ -409,19 +426,23 @@ describe("Add reference", () => {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const dialog = await openAdd(screen);
       await fieldOf(dialog, "Address").fill(ADDED.url);
-      const before = panelOf(screen)
-        .getByText("Reference “Fictional packaging issue” added.")
-        .query();
+      const before = announcementNode(
+        "Reference “Fictional packaging issue” added.",
+      );
 
       await submit(dialog, "Add reference");
 
       await expect
         .poll(() =>
-          panelOf(screen)
-            .getByText("Reference “Fictional packaging issue” added.")
-            .query(),
+          announcedAgain(
+            "Reference “Fictional packaging issue” added.",
+            before,
+          ),
         )
-        .not.toBe(before);
+        .toBe(true);
+      expect(announcementsOf()).toEqual([
+        "Reference “Fictional packaging issue” added.",
+      ]);
       await expect.element(addButton(screen)).toHaveFocus();
     }
   });
@@ -931,7 +952,7 @@ describe("Add reference", () => {
     response.resolve(referenceResponse(ADDED, 201));
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "SNTL-12: Reference “Fictional packaging issue” added.",
         ),
       )
@@ -1097,7 +1118,7 @@ describe("Edit reference", () => {
     await submit(dialog, "Save");
 
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcementsOf())
       .toEqual(["Reference “Fictional advisory, revised” changed."]);
     expect(namesOf(screen)).toEqual([revised.title]);
     await expect.element(editOf(screen, revised)).toHaveFocus();
@@ -1135,15 +1156,25 @@ describe("Edit reference", () => {
 
       const text = "Reference “Fictional title” changed.";
       if (announced) {
-        await expect.poll(() => announcementsOf(screen)).toEqual([text]);
+        await expect.poll(() => announcementsOf()).toEqual([text]);
+        expect(
+          mainContent(screen)
+            .getByText(/changed\.$/)
+            .elements(),
+        ).toHaveLength(0);
       } else {
-        const message = screen.getByText(text, { exact: true });
+        const message = mainContent(screen).getByText(text, { exact: true });
         await expect.element(message).toBeVisible();
         expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
         await frames();
-        expect(announcementsOf(screen)).toEqual([]);
+        // The message alone announces it.
+        expect(announcementsOf()).toEqual([text]);
+        expect(
+          mainContent(screen)
+            .getByText(/changed\.$/)
+            .elements(),
+        ).toHaveLength(1);
       }
-      expect(screen.getByText(/changed\.$/).elements()).toHaveLength(1);
     },
   );
 
@@ -1411,7 +1442,7 @@ describe("Edit reference", () => {
       .toEqual([NVD.title, PATCH.url, ISSUE.title, ADVISORY.title, POST.title]);
     await expectFocusSettledOn(editOf(screen, changed));
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcementsOf())
       .toEqual(["Reference “Fictional advisory” changed."]);
   });
 });

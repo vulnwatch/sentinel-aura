@@ -28,6 +28,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_INVALID,
@@ -369,7 +370,7 @@ describe("the submission of Set severity…", () => {
 
       await expect.element(dialog).not.toBeInTheDocument();
       expect(severities(spy)).toEqual([{ severity }]);
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
       await expectFocusSettledOn(actionsButton(screen));
     },
   );
@@ -543,7 +544,7 @@ describe("a failure of Set severity…", () => {
     await leaveForTickets(router, screen);
     response.resolve(errorResponse(409, "TICKET_SEVERITY_DERIVED"));
 
-    const error = screen.getByText(`SNTL-12: ${MESSAGE_DERIVED}`, {
+    const error = mainContent(screen).getByText(`SNTL-12: ${MESSAGE_DERIVED}`, {
       exact: true,
     });
     await expect.element(error).toBeVisible();

@@ -13,6 +13,7 @@ import {
   type ChangeFailurePresentation,
   type RequestFailure,
 } from "../api/errors";
+import { Announcement } from "./announcer";
 import { useShowMessage, type MessageRecord } from "./message-area";
 
 // The outcome of a change that a screen makes (docs/behaviors.md, Outcome of
@@ -88,7 +89,7 @@ export function useChangeOutcome<TData>(
 
 // The announcement of the outcome of a change, with a key that changes with
 // each, so that the same text is announced again.
-interface Announcement {
+interface OutcomeAnnouncement {
   key: number;
   text: string;
 }
@@ -112,8 +113,9 @@ function textOf(outcome: WaitingOutcome): string {
 // The outcome of a change that ends while the user is on the screen, which
 // waits for the first read after it of what the component shows
 // (docs/behaviors.md, Outcome of a Change; Accessibility, Announcements):
-// after records it once Sentinel has confirmed the change, and region, a
-// status region hidden from view, announces it once that read has arrived;
+// after records it once Sentinel has confirmed the change, and region, where
+// the screen places it, has the announcer of the page announce it once that
+// read has arrived (src/components/announcer.tsx);
 // with inMessageArea, for an outcome that shows nowhere where the user
 // acted, the message area shows it then instead. When that read fails, the
 // result does not show where the user acted, so the outcome shows as a
@@ -138,9 +140,10 @@ export function useOutcomeAfterRead(
   region: ReactNode;
 } {
   const showMessage = useShowMessage();
-  const [announcement, setAnnouncement] = useState<Announcement>();
+  const [announcement, setAnnouncement] = useState<OutcomeAnnouncement>();
   const waiting = useRef<WaitingOutcome[]>([]);
-  const regionRef = useRef<HTMLOutputElement>(null);
+  // Whether the region is on the page.
+  const regionShown = useRef(false);
   // Where an outcome shows after a failed read, as the caller last gave it.
   const failedPlace = useRef(elsewhere);
   useLayoutEffect(() => {
@@ -185,7 +188,7 @@ export function useOutcomeAfterRead(
       const place = failedPlace.current;
       if (failed && place !== undefined) {
         place(texts.join(" "));
-      } else if (failed || regionRef.current?.isConnected !== true) {
+      } else if (failed || !regionShown.current) {
         for (const text of texts) {
           showMessage({ tone: "success", text });
         }
@@ -237,9 +240,30 @@ export function useOutcomeAfterRead(
   return {
     after,
     region: (
-      <output ref={regionRef} className="sr-only">
-        <span key={announcement?.key}>{announcement?.text}</span>
-      </output>
+      <OutcomeRegion shownRef={regionShown} announcement={announcement} />
     ),
   };
+}
+
+interface OutcomeRegionProps {
+  // Whether the region is on the page, which it keeps up to date.
+  shownRef: RefObject<boolean>;
+  announcement: OutcomeAnnouncement | undefined;
+}
+
+// Where the outcomes of useOutcomeAfterRead are announced, as the screen
+// places it: its announcement, which the announcer of the page announces
+// while the region is on the page.
+function OutcomeRegion({ shownRef, announcement }: OutcomeRegionProps) {
+  useLayoutEffect(() => {
+    shownRef.current = true;
+    return () => {
+      shownRef.current = false;
+    };
+  }, [shownRef]);
+  return (
+    <Announcement id={announcement?.key}>
+      {announcement?.text ?? ""}
+    </Announcement>
+  );
 }

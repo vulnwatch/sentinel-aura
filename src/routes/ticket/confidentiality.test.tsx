@@ -31,6 +31,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_GONE,
@@ -459,14 +460,12 @@ describe("confirming a change of the confidentiality", () => {
     await expectFocusSettledOn(actionsButton(screen));
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
     await frames();
-    expect(announcements(screen)).not.toContain("Made confidential");
+    expect(announcements()).not.toContain("Made confidential");
     reread.resolve(
       ticketIn("analyzed", { is_confidential: true, assignee: YOU }),
     );
 
-    await expect
-      .poll(() => announcements(screen))
-      .toContain("Made confidential.");
+    await expect.poll(() => announcements()).toContain("Made confidential.");
     // The heading row and Actions show the Ticket that the read shows.
     await expect
       .element(screen.getByText("Confidential", { exact: true }))
@@ -524,7 +523,7 @@ describe("confirming a change of the confidentiality", () => {
 
       await confirm(screen, true);
 
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
     },
   );
 
@@ -537,7 +536,7 @@ describe("confirming a change of the confidentiality", () => {
     await expect.element(dialog).not.toBeInTheDocument();
     expect(changes(spy)).toEqual([{ is_confidential: false }]);
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Made non-confidential.");
     await expect
       .element(screen.getByText("Confidential", { exact: true }))
@@ -699,7 +698,7 @@ describe("the reads after a change of the confidentiality", () => {
     await confirm(screen, false);
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Made non-confidential.");
     await expect.poll(() => requestsTo(spy, ACTORS)).toBe(reads.actors + 1);
     await expect.poll(() => requestsTo(spy, YOUR_WORK)).toBe(reads.work + 1);
@@ -900,7 +899,7 @@ describe("a failure of a change of the confidentiality", () => {
       await expect
         .element(actionOf(dialog, confidential))
         .not.toHaveAttribute("aria-disabled");
-      expect(announcements(screen)).not.toContain(message);
+      expect(announcements()).not.toContain(message);
     },
   );
 
@@ -933,9 +932,7 @@ describe("a failure of a change of the confidentiality", () => {
       { is_confidential: true },
       { is_confidential: true },
     ]);
-    await expect
-      .poll(() => announcements(screen))
-      .toContain("Made confidential.");
+    await expect.poll(() => announcements()).toContain("Made confidential.");
   });
 });
 
@@ -976,7 +973,9 @@ describe("a change of the confidentiality that ends after the user left the scre
       await leaveForTickets(router, screen);
       response.resolve(answer());
 
-      const message = screen.getByText(`SNTL-12: ${text}`, { exact: true });
+      const message = mainContent(screen).getByText(`SNTL-12: ${text}`, {
+        exact: true,
+      });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
       await expect
@@ -1016,7 +1015,9 @@ describe("a change of the confidentiality that ends after the user left the scre
       await leaveForTickets(router, screen);
       response.resolve(failure());
 
-      const message = screen.getByText(`SNTL-12: ${text}`, { exact: true });
+      const message = mainContent(screen).getByText(`SNTL-12: ${text}`, {
+        exact: true,
+      });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       if (referenced) {

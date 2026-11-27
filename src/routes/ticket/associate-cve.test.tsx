@@ -33,6 +33,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_INVALID,
@@ -442,7 +443,7 @@ describe("the submission of Associate CVE…", () => {
     await expect.element(dialog).not.toBeInTheDocument();
     expect(associations(spy)).toEqual([{ cve_id: "CVE-2099-1234" }]);
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("CVE-2099-1234 associated.");
     await expectFocusSettledOn(actionsButton(screen));
     await actionsButton(screen).click();
@@ -520,9 +521,12 @@ describe("the submission of Associate CVE…", () => {
     await leaveForTickets(router, screen);
     response.resolve(withCve("CVE-2099-1234"));
 
-    const message = screen.getByText("SNTL-12: CVE-2099-1234 associated.", {
-      exact: true,
-    });
+    const message = mainContent(screen).getByText(
+      "SNTL-12: CVE-2099-1234 associated.",
+      {
+        exact: true,
+      },
+    );
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
   });
@@ -686,7 +690,7 @@ describe("a failure of Associate CVE…", () => {
     await leaveForTickets(router, screen);
     response.resolve(conflict("SNTL-21"));
 
-    const error = screen.getByText(
+    const error = mainContent(screen).getByText(
       "SNTL-12: CVE-2099-0012 is already the CVE of SNTL-21.",
       { exact: true },
     );

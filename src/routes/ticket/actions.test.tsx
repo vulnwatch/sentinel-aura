@@ -50,6 +50,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   ME,
   MESSAGE_CONFLICT,
@@ -950,7 +951,7 @@ describe("Reopen and Revert duplicate", () => {
       await expect.element(actionsButton(screen)).toHaveFocus();
       await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
       await frames();
-      expect(announcements(screen)).not.toContain(done);
+      expect(announcements()).not.toContain(done);
       // The read shows the Ticket as a later change left it: the outcome
       // states the Ticket as Sentinel returned it after this one.
       reread.resolve(
@@ -960,7 +961,7 @@ describe("Reopen and Revert duplicate", () => {
       );
 
       const text = `${done}: Analysis, assigned to you.`;
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
       expect(shownOutsideStatus(screen, text)).toHaveLength(0);
       // Actions stays, with the focus, and offers the actions of the status
       // that the read shows.
@@ -1001,7 +1002,7 @@ describe("Reopen and Revert duplicate", () => {
       await expect.element(during).not.toBeInTheDocument();
       reread.resolve(ticketIn("analysis", { assignee: YOU }));
       await expect
-        .poll(() => announcements(screen))
+        .poll(() => announcements())
         .toContain(`${done}: Analysis, assigned to you.`);
       const after = await openActions(screen);
       await expect.poll(() => itemsOf(after)).toEqual(IN_ANALYSIS);
@@ -1068,7 +1069,7 @@ describe("Reopen and Revert duplicate", () => {
 
       await choose(screen, name);
 
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
     },
   );
 
@@ -1147,7 +1148,7 @@ describe("Reopen and Revert duplicate", () => {
 
       await choose(screen, name);
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.info);
       expect(screen.getByText(/^Reference:/).query()).toBeNull();
@@ -1211,14 +1212,14 @@ describe("Ignore as not shipped by SUSE", () => {
     await expect.element(actionsButton(screen)).toHaveFocus();
     await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
     await frames();
-    expect(announcements(screen)).not.toContain("Ignored");
+    expect(announcements()).not.toContain("Ignored");
     // The read shows the Ticket as a later change left it: the outcome
     // states the Ticket as Sentinel returned it after this one.
     reread.resolve(
       ticketIn("ignored", { ignore_reason: "other", assignee: BOB }),
     );
 
-    await expect.poll(() => announcements(screen)).toContain(IGNORED);
+    await expect.poll(() => announcements()).toContain(IGNORED);
     expect(shownOutsideStatus(screen, IGNORED)).toHaveLength(0);
     // Actions stays, with the focus, and offers the actions of the status
     // that the read shows.
@@ -1252,7 +1253,7 @@ describe("Ignore as not shipped by SUSE", () => {
 
       await choose(screen, "Ignore as not shipped by SUSE");
 
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
     },
   );
 
@@ -1271,7 +1272,7 @@ describe("Ignore as not shipped by SUSE", () => {
     await choose(screen, "Ignore as not shipped by SUSE");
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Ignored as fictional_reason, unassigned.");
   });
 
@@ -1322,7 +1323,9 @@ describe("Ignore as not shipped by SUSE", () => {
 
     await choose(screen, "Ignore as not shipped by SUSE");
 
-    const error = screen.getByText(MESSAGE_CONFLICT, { exact: true });
+    const error = mainContent(screen).getByText(MESSAGE_CONFLICT, {
+      exact: true,
+    });
     await expect.element(error).toBeVisible();
     expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES.danger);
     expect(screen.getByText(/is no longer/).query()).toBeNull();
@@ -1433,7 +1436,7 @@ describe("a failure of an action that applies at once", () => {
 
       await choose(screen, name);
 
-      const error = screen.getByText(message, { exact: true });
+      const error = mainContent(screen).getByText(message, { exact: true });
       await expect.element(error).toBeVisible();
       expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES[tone]);
       if (referenced) {
@@ -1490,10 +1493,13 @@ describe("Rerun convergence", () => {
 
     await expect.element(menu).not.toBeInTheDocument();
     await expect.element(actionsButton(screen)).toHaveFocus();
-    const message = screen.getByText("Convergence started.", { exact: true });
+    const message = mainContent(screen).getByText("Convergence started.", {
+      exact: true,
+    });
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.info);
-    expect(announcements(screen)).not.toContain("Convergence started.");
+    // Announced once, as the message area shows it.
+    await expect.poll(() => announcements()).toBe("Convergence started.");
     expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
     // Actions stays, with the same items, available again.
     const again = await openActions(screen);
@@ -1582,7 +1588,9 @@ describe("Rerun convergence", () => {
     await choose(screen, "Rerun convergence");
 
     await expect
-      .element(screen.getByText("Convergence started.", { exact: true }))
+      .element(
+        mainContent(screen).getByText("Convergence started.", { exact: true }),
+      )
       .toBeVisible();
     expect(changesOf(spy)).toEqual([["rerun-reactivation", undefined]]);
     await expect.element(actionsButton(screen)).toHaveFocus();
@@ -1596,7 +1604,9 @@ describe("Rerun convergence", () => {
 
     await choose(screen, "Rerun convergence");
 
-    const error = screen.getByText(MESSAGE_CONFLICT, { exact: true });
+    const error = mainContent(screen).getByText(MESSAGE_CONFLICT, {
+      exact: true,
+    });
     await expect.element(error).toBeVisible();
     expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES.danger);
     expect(screen.getByText(/is no longer/).query()).toBeNull();
@@ -1693,7 +1703,9 @@ describe("an action that ends after the user left the screen", () => {
       await leaveForTickets(router, screen);
       response.resolve(answer());
 
-      const message = screen.getByText(`SNTL-12: ${text}`, { exact: true });
+      const message = mainContent(screen).getByText(`SNTL-12: ${text}`, {
+        exact: true,
+      });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       await expect
@@ -1769,7 +1781,9 @@ describe("an action that ends after the user left the screen", () => {
       await leaveForTickets(router, screen);
       response.resolve(answer());
 
-      const message = screen.getByText(`SNTL-12: ${text}`, { exact: true });
+      const message = mainContent(screen).getByText(`SNTL-12: ${text}`, {
+        exact: true,
+      });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       await expect

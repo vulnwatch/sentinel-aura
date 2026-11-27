@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   FilterGroup,
   Filters,
@@ -76,8 +75,6 @@ interface TicketFiltersProps {
   view: TicketView;
   // The search parameters that apply.
   search: TicketListSearch;
-  // What the popover announces (Filters).
-  status: ReactNode;
   // Applies a change of the filters (src/routes/tickets.tsx, TicketList).
   onRefine: (change: Partial<TicketListSearch>) => void;
 }
@@ -92,11 +89,10 @@ interface TicketFiltersProps {
 export function TicketFilters({
   view,
   search,
-  status,
   onRefine: refine,
 }: TicketFiltersProps) {
   return (
-    <Filters applied={filtersApplied(search)} status={status}>
+    <Filters applied={filtersApplied(search)}>
       {view.everyStatus && (
         <>
           <FilterGroup

@@ -10,6 +10,7 @@ import type {
   TicketDetail,
 } from "../../api/generated/model";
 import { AbsentValue } from "../../components/absent-value";
+import { Announcement } from "../../components/announcer";
 import { Button } from "../../components/button";
 import { DateTime } from "../../components/date-time";
 import { SideSection } from "../../components/detail-screen";
@@ -448,9 +449,9 @@ interface SourcesSectionProps {
 // of each source that offers it, and Refetch all while a source can be
 // refetched (docs/screen-map.md, Roles, Principles). The section reads them on its
 // own, and their loading and their errors show in its place
-// (docs/behaviors.md, Loading; Where Errors Appear). The end of a fetch that
-// it follows is announced in a status region of its own, which is there
-// before it.
+// (docs/behaviors.md, Loading; Where Errors Appear). The announcer of the
+// page announces the end of a fetch that it follows
+// (src/components/announcer.tsx).
 export function SourcesSection({ ticketId, cveId, read }: SourcesSectionProps) {
   const readAgain = useReadAgain(ticketId, cveId);
   const user = useSignedInUser();
@@ -498,9 +499,9 @@ export function SourcesSection({ ticketId, cveId, read }: SourcesSectionProps) {
           )
         }
       </PartRead>
-      <output className="sr-only">
-        <span key={announcement?.key}>{announcement?.text}</span>
-      </output>
+      <Announcement id={announcement?.key}>
+        {announcement?.text ?? ""}
+      </Announcement>
     </SideSection>
   );
 }

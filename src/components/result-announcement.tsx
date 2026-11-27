@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import { Announcement } from "./announcer";
 
 // The announcement of what a list shows after a change of the state that its
 // screen keeps in its URL, such as its view, its filters, its search, or its
@@ -22,19 +23,17 @@ interface ResultAnnouncementProps {
   // The state that the text describes, as the URL that it gives.
   state: string;
   // What the list shows, in words, or "" while there is nothing to announce.
-  children: ReactNode;
+  children: string;
 }
 
-// A status region that only assistive technologies perceive, which announce
-// its text without moving the focus. Each state gives the text a node of its
-// own, so that the same words as before are announced too.
+// The announcement of the text through the announcer of the page, which
+// announces it without moving the focus, also while a modal overlay is open,
+// such as the popover of the filters (src/components/announcer.tsx). Each
+// state gives the text an announcement of its own, so that the same words as
+// before are announced too.
 export function ResultAnnouncement({
   state,
   children,
 }: ResultAnnouncementProps) {
-  return (
-    <output className="sr-only">
-      <span key={state}>{children}</span>
-    </output>
-  );
+  return <Announcement id={state}>{children}</Announcement>;
 }

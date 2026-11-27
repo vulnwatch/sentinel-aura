@@ -31,6 +31,7 @@ import {
   leaveForTickets,
   later,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_INVALID,
@@ -467,7 +468,7 @@ describe("the submission of Ignore…", () => {
 
       await expect.element(dialog).not.toBeInTheDocument();
       expect(ignores(spy)).toEqual([{ reason }]);
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
     },
   );
 
@@ -478,7 +479,7 @@ describe("the submission of Ignore…", () => {
     await ignoreAs(screen, "Other");
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Ignored as fictional_reason, unassigned.");
   });
 
@@ -535,13 +536,13 @@ describe("the outcome of Ignore…", () => {
 
     await expect.element(dialog).not.toBeInTheDocument();
     await expectFocusSettledOn(actionsButton(screen));
-    expect(announcements(screen)).not.toContain("Ignored");
+    expect(announcements()).not.toContain("Ignored");
     // The read shows the Ticket as a later change left it: the outcome
     // states the Ticket as Sentinel returned it after this one.
     reread.resolve(ignoredWith("not_shipped", BOB));
 
     const text = "Ignored as Other, assigned to you.";
-    await expect.poll(() => announcements(screen)).toContain(text);
+    await expect.poll(() => announcements()).toContain(text);
     expect(shownOutsideStatus(screen, text)).toHaveLength(0);
     // Actions stays, with the focus, and offers Reopen on the Ignored
     // Ticket.
@@ -640,7 +641,7 @@ describe("the outcome of Ignore…", () => {
     expect(discardDialog(screen).query()).toBeNull();
     response.resolve(ignoredWith("other", YOU));
 
-    const message = screen.getByText(
+    const message = mainContent(screen).getByText(
       "SNTL-12: Ignored as Other, assigned to you.",
       { exact: true },
     );
@@ -689,7 +690,9 @@ describe("the outcome of Ignore…", () => {
       await leaveForTickets(router, screen);
       response.resolve(failure());
 
-      const error = screen.getByText(`SNTL-12: ${text}`, { exact: true });
+      const error = mainContent(screen).getByText(`SNTL-12: ${text}`, {
+        exact: true,
+      });
       await expect.element(error).toBeVisible();
       expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES[tone]);
       await expect

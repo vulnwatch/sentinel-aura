@@ -45,6 +45,7 @@ import {
   typesOf,
   type Screen,
 } from "./ticket-audit-log/test-support";
+import { announcements } from "../test-announcements";
 
 // The tab Audit log of the Ticket screen (docs/screens/ticket.md, Audit
 // log), at the browser's default text size, in the light theme. Its dates
@@ -60,6 +61,10 @@ const FG_MUTED = "rgb(89, 99, 110)";
 
 const MESSAGE_UNAVAILABLE =
   "Sentinel isn't available right now. Try again later.";
+
+// The reference of the errors of the tests (src/test-api.ts), as the
+// announcer announces it after the message of the error.
+const REFERENCE = "Reference: 01890a5d-ac96-774b-bcce-b302099a8057";
 
 // An actor of the Ticket, by username.
 function actorNamed(username: string) {
@@ -121,15 +126,6 @@ function firstEventReads(spy: ReturnType<typeof stubApi>): number {
 
 function searchFieldOf(screen: Screen) {
   return screen.getByRole("searchbox", { name: "Search events" });
-}
-
-// The texts of the status regions of the screen that say something.
-function announcementsOf(screen: Screen): string[] {
-  return screen
-    .getByRole("status")
-    .elements()
-    .map((region) => region.textContent)
-    .filter((text) => text !== "");
 }
 
 // A response that the test gives when it chooses.
@@ -468,7 +464,7 @@ describe("the tab", () => {
     ).toEqual([]);
   });
 
-  test("shows the warning of a later read of the Ticket that fails at the top of the panel, with Try again, and keeps the Ticket and the events", async () => {
+  test("shows the warning of a later read of the Ticket that fails at the top of the panel, announced, with Try again, and keeps the Ticket and the events", async () => {
     const { stub } = stubLog();
     const { screen } = await renderEvents();
     const panel = panelOf(screen);
@@ -480,7 +476,11 @@ describe("the tab", () => {
       `This couldn't be updated. ${MESSAGE_UNAVAILABLE}`,
     );
     await expect.element(warning).toBeVisible();
-    expect(warning.element().closest("output")).not.toBeNull();
+    await expect
+      .poll(() => announcements())
+      .toEqual([
+        `This couldn't be updated. ${MESSAGE_UNAVAILABLE} ${REFERENCE}`,
+      ]);
     // Above the toolbar, the first content of the panel.
     expect(
       warning
@@ -623,7 +623,7 @@ describe("the events", () => {
     await expect
       .poll(() => sentencesOf(screen))
       .toEqual(["System changed the status from Analysis to Analyzed"]);
-    await expect.poll(() => announcementsOf(screen)).toEqual(["1 event"]);
+    await expect.poll(() => announcements()).toEqual(["1 event"]);
     await expect
       .element(panelOf(screen).getByRole("progressbar"))
       .not.toBeInTheDocument();
@@ -1499,9 +1499,7 @@ describe("the pagination", () => {
     expect(eventReads(spy).at(-1)).toBe(
       `${typesOf(...KINDS[0][2])}&search=curl&page=2&per_page=50`,
     );
-    await expect
-      .poll(() => announcementsOf(screen))
-      .toEqual(["51–63 of 63 events"]);
+    await expect.poll(() => announcements()).toEqual(["51–63 of 63 events"]);
     // Next is disabled on the last page, so the focus moves to Previous.
     await expect.element(previous).toHaveFocus();
     await expect
@@ -1682,7 +1680,7 @@ describe("the announcements", () => {
     const { screen } = await renderEvents();
 
     await expect.poll(() => sentencesOf(screen)).toHaveLength(12);
-    expect(announcementsOf(screen)).toEqual([]);
+    expect(announcements()).toEqual([]);
   });
 
   test.each([
@@ -1713,12 +1711,12 @@ describe("the announcements", () => {
 
       router.history.push(`${PATH}${search}`);
 
-      await expect.poll(() => announcementsOf(screen)).toEqual([announcement]);
+      await expect.poll(() => announcements()).toEqual([announcement]);
       await expect.element(tab).toHaveFocus();
     },
   );
 
-  test("say in the popover of the filters what the timeline shows after a change of a filter, or the failure of its read", async () => {
+  test("say what the timeline shows after a change of a filter while the popover of the filters is open, or the failure of its read", async () => {
     stubLog({
       events: (query) =>
         query.has("actor")
@@ -1729,24 +1727,28 @@ describe("the announcements", () => {
     });
     const { screen } = await renderEvents();
     const dialog = await openFilters(screen);
-    // The status region of the popover, after that of the errors of the
-    // period.
-    const status = dialog.getByRole("status").last();
-    await expect.element(status).toHaveTextContent("");
+    expect(announcements()).toEqual([]);
 
     await toggleKind(dialog, "Status");
 
-    await expect.element(status).toHaveTextContent("12 events");
+    await expect.poll(() => announcements()).toEqual(["12 events"]);
+    // Not again by a status region of the popover.
+    expect(
+      dialog.getByRole("status").filter({ hasText: "12 events" }).query(),
+    ).toBeNull();
 
     const options = await openActors(dialog);
     await options.getByRole("option", { name: "System" }).click();
 
-    await expect.element(status).toHaveTextContent(MESSAGE_UNAVAILABLE);
+    await expect
+      .poll(() => announcements())
+      .toEqual([`${MESSAGE_UNAVAILABLE} ${REFERENCE}`]);
+    await expect.element(dialog).toBeVisible();
   });
 });
 
 describe("the errors", () => {
-  test("show the failure of the read of the events in place of the events, with Try again, below the toolbar", async () => {
+  test("show the failure of the read of the events in place of the events, announced, with Try again, below the toolbar", async () => {
     let fail = true;
     stubLog({
       events: () =>
@@ -1758,7 +1760,9 @@ describe("the errors", () => {
 
     const message = panelOf(screen).getByText(MESSAGE_UNAVAILABLE);
     await expect.element(message).toBeVisible();
-    expect(message.element().closest("output")).not.toBeNull();
+    await expect
+      .poll(() => announcements())
+      .toEqual([`${MESSAGE_UNAVAILABLE} ${REFERENCE}`]);
     await expect.element(searchFieldOf(screen)).toBeVisible();
     fail = false;
 

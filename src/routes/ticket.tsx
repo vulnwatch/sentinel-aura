@@ -373,7 +373,7 @@ function TicketUpdates({ read, children }: TicketUpdatesProps) {
   return (
     <div className="relative">
       {place.updating && <UpdatingBar />}
-      <output className="block">{place.warning}</output>
+      {place.warning}
       {children}
     </div>
   );

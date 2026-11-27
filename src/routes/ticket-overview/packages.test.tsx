@@ -19,6 +19,7 @@ import {
   ticketResponse,
   ticketWorkResponse,
 } from "../../test-api";
+import { announcements } from "../../test-announcements";
 import { screenshot } from "../../test-screenshot";
 import {
   backgroundBehind,
@@ -44,6 +45,7 @@ import {
   packagesPart,
   prepareEachTest,
   productOf,
+  REFERENCE,
   renderTree,
   returnToForeground,
   type Screen,
@@ -2311,7 +2313,9 @@ describe("the tracks that wait for the signed-in user", () => {
       },
     );
     const { screen } = await renderTree();
-    await expect.element(screen.getByText(/couldn't be shown/)).toBeVisible();
+    await expect
+      .element(packagesPart(screen).getByText(/couldn't be shown/))
+      .toBeVisible();
     fails = false;
 
     await returnToForeground();
@@ -2524,21 +2528,19 @@ describe("the tracks that wait for the signed-in user", () => {
 
     const { screen } = await renderTree();
 
-    const warning = screen.getByText(
+    const warning = packagesPart(screen).getByText(
       "The tracks that wait for you couldn't be shown. Sentinel isn't available right now. Try again later.",
     );
     await expect.element(warning).toBeVisible();
     expect(boxOf(warning).bottom).toBeLessThan(
       boxOf(band(screen, "fictional-openssl")).top,
     );
-    // In a status region of the part that is there before it, so that
-    // assistive technologies announce it.
-    expect(
-      packagesPart(screen)
-        .getByRole("status")
-        .element()
-        .contains(warning.element()),
-    ).toBe(true);
+    // Announced as it appears, with its reference.
+    await expect
+      .poll(() => announcements())
+      .toEqual([
+        `The tracks that wait for you couldn't be shown. Sentinel isn't available right now. Try again later. ${REFERENCE}`,
+      ]);
     // The tree stays usable.
     await expect
       .element(

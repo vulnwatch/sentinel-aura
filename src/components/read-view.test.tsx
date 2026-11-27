@@ -6,10 +6,13 @@ import {
 } from "@tanstack/react-query";
 import { CatchBoundary } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { DialogTrigger } from "react-aria-components";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { announcements } from "../test-announcements";
+import { Announcer } from "./announcer";
 import {
   ApiError,
   NetworkError,
@@ -17,6 +20,7 @@ import {
 } from "../api/request";
 import { createQueryClient } from "../query-client";
 import { Button } from "./button";
+import { InfoPopover, PopoverTitle } from "./info-popover";
 import { Loading, UpdatingBar } from "./loading";
 import {
   marksPlace,
@@ -42,6 +46,13 @@ const FORBIDDEN = new ApiError(
   undefined,
 );
 const ENDED = new ApiError(401, "AUTH_NOT_AUTHENTICATED", {}, REQUEST_ID);
+
+// The warning of a new read of a screen that fails with UNAVAILABLE, as it
+// shows above the data, and as the announcer announces it, with its
+// reference.
+const NOT_UPDATED =
+  "This couldn't be updated. Sentinel isn't available right now. Try again later.";
+const NOT_UPDATED_ANNOUNCED = `${NOT_UPDATED} Reference: ${REQUEST_ID}`;
 
 // The read of each test: the response to each page, which a test prepares
 // in turn, as component tests replace the shared request function.
@@ -133,6 +144,53 @@ function DetailScreen() {
   );
 }
 
+// A screen of one record with a button that opens a modal popover.
+function PopoverScreen() {
+  const read = useRecord(1);
+  return (
+    <ScreenRead
+      read={read}
+      renderFrame={(place) => (
+        <main>
+          <ScreenHeading>Record</ScreenHeading>
+          <DialogTrigger>
+            <Button>Details</Button>
+            <InfoPopover width="narrow">
+              <PopoverTitle>Details of the record</PopoverTitle>
+            </InfoPopover>
+          </DialogTrigger>
+          {place}
+        </main>
+      )}
+    >
+      {(record) => <p>Details of {record.title}</p>}
+    </ScreenRead>
+  );
+}
+
+// The main content of the screen, where its data and the failures of its
+// reads show: the announcer of the page, outside it, holds the words of each
+// failure too.
+function mainContent(screen: Awaited<ReturnType<typeof render>>) {
+  return screen.getByRole("main");
+}
+
+// The status regions of the page, whose body the screen covers, other than
+// the announcer, which, while no overlay is open, has none: the announcer
+// announces a failure or a warning as it appears, and no region of the place
+// of the data announces it again (src/components/announcer.tsx).
+function otherStatusRegions(
+  screen: Awaited<ReturnType<typeof render>>,
+): Element[] {
+  const announcer = screen
+    .getByRole("status", { name: "Announcements" })
+    .element();
+  return screen
+    .getByRole("status")
+    .elements()
+    .filter((region) => region !== announcer);
+}
+
 // A screen of a list that gives the place of its data itself, given its
 // read, as the frame of a table does.
 function OwnPlaceScreen() {
@@ -207,6 +265,7 @@ function ReadStatus() {
 function renderWithClient(ui: ReactNode) {
   return render(
     <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+    { wrapper: Announcer },
   );
 }
 
@@ -336,7 +395,7 @@ describe("ScreenRead", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "Sentinel isn't available right now. Try again later.",
         ),
       )
@@ -359,24 +418,18 @@ describe("ScreenRead", () => {
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
-    const region = screen.getByRole("status").element();
     respond.mockRejectedValue(UNAVAILABLE);
 
     await refetch();
 
     await expect
-      .element(
-        screen
-          .getByRole("status")
-          .getByText(
-            "This couldn't be updated. Sentinel isn't available right now. Try again later.",
-          ),
-      )
+      .element(mainContent(screen).getByText(NOT_UPDATED))
       .toBeVisible();
     await expect
-      .element(screen.getByRole("status").getByText(`Reference: ${REQUEST_ID}`))
+      .element(mainContent(screen).getByText(`Reference: ${REQUEST_ID}`))
       .toBeVisible();
-    expect(screen.getByRole("status").element()).toBe(region);
+    await expect.poll(announcements).toEqual([NOT_UPDATED_ANNOUNCED]);
+    expect(otherStatusRegions(screen)).toEqual([]);
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
@@ -408,9 +461,10 @@ describe("ScreenRead", () => {
     await refetch();
 
     await expect
-      .element(
-        screen.getByRole("status").getByRole("button", { name: "Try again" }),
-      )
+      .element(screen.getByRole("button", { name: "Try again" }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
   });
 
@@ -428,11 +482,9 @@ describe("ScreenRead", () => {
 
     await expect
       .element(
-        screen
-          .getByRole("status")
-          .getByText(
-            "This couldn't be updated. This can't be done in the current state, which may have changed. Check it and try again.",
-          ),
+        mainContent(screen).getByText(
+          "This couldn't be updated. This can't be done in the current state, which may have changed. Check it and try again.",
+        ),
       )
       .toBeVisible();
     expect(screen.getByRole("button").query()).toBeNull();
@@ -452,7 +504,8 @@ describe("ScreenRead", () => {
 
     await screen.getByRole("button", { name: "Try again" }).click();
 
-    await expect.element(screen.getByRole("status")).toBeEmptyDOMElement();
+    await expect.element(screen.getByText(NOT_UPDATED)).not.toBeInTheDocument();
+    await expect.poll(announcements).toEqual([]);
     await expect
       .element(
         screen.getByRole("heading", { level: 1, name: "Fictional record" }),
@@ -468,7 +521,8 @@ describe("ScreenRead", () => {
     await expect
       .element(screen.getByText("Details of Renamed record"))
       .toBeVisible();
-    await expect.element(screen.getByRole("status")).toBeEmptyDOMElement();
+    expect(screen.getByText(NOT_UPDATED).query()).toBeNull();
+    expect(announcements()).toEqual([]);
     expect(screen.getByRole("progressbar").query()).toBeNull();
   });
 
@@ -482,7 +536,7 @@ describe("ScreenRead", () => {
 
     await refetch();
 
-    const reference = screen.getByText(`Reference: ${REQUEST_ID}`);
+    const reference = mainContent(screen).getByText(`Reference: ${REQUEST_ID}`);
     const action = screen.getByRole("button", { name: "Try again" });
     await expect.element(action).toBeVisible();
     expect(action.element().getBoundingClientRect().top).toBeGreaterThan(
@@ -501,20 +555,41 @@ describe("ScreenRead", () => {
       .toBeVisible();
     respond.mockRejectedValue(UNAVAILABLE);
     await refetch();
-    const region = screen.getByRole("status");
-    const before = region.element();
+    await expect.poll(announcements).toEqual([NOT_UPDATED_ANNOUNCED]);
     const { promise, reject } = later();
     respond.mockReset();
     respond.mockReturnValueOnce(promise).mockRejectedValue(UNAVAILABLE);
 
     await screen.getByRole("button", { name: "Try again" }).click();
-    await expect.element(region).toBeEmptyDOMElement();
+    await expect.poll(announcements).toEqual([]);
     reject(UNAVAILABLE);
 
     await expect
-      .element(region.getByRole("button", { name: "Try again" }))
+      .element(screen.getByRole("button", { name: "Try again" }))
       .toBeVisible();
-    expect(region.element()).toBe(before);
+    await expect.poll(announcements).toEqual([NOT_UPDATED_ANNOUNCED]);
+  });
+
+  test("announces the warning of a new read that fails while a modal popover is open, once, and leaves the focus in the popover", async () => {
+    respond.mockResolvedValueOnce({ title: "Fictional record" });
+    const screen = await renderWithClient(<PopoverScreen />);
+    await expect
+      .element(screen.getByText("Details of Fictional record"))
+      .toBeVisible();
+    await screen.getByRole("button", { name: "Details" }).click();
+    const popover = screen.getByRole("dialog", {
+      name: "Details of the record",
+    });
+    await expect.element(popover).toHaveFocus();
+    respond.mockRejectedValue(UNAVAILABLE);
+
+    await refetch();
+
+    await expect
+      .element(mainContent(screen).getByText(NOT_UPDATED))
+      .toBeVisible();
+    await expect.poll(announcements).toEqual([NOT_UPDATED_ANNOUNCED]);
+    await expect.element(popover).toHaveFocus();
   });
 
   test.each([
@@ -560,7 +635,8 @@ describe("ScreenRead", () => {
     await expect
       .element(screen.getByText("Details of Fictional record"))
       .toBeVisible();
-    await expect.element(screen.getByRole("status")).toBeEmptyDOMElement();
+    expect(screen.getByText(/couldn't be updated/).query()).toBeNull();
+    expect(announcements()).toEqual([]);
   });
 
   test("leaves a new read of the data shown that fails in the UI itself to the page of a failure of the UI", async () => {
@@ -634,7 +710,7 @@ describe("PartRead", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "This no longer exists, or you no longer have access to it.",
         ),
       )
@@ -647,22 +723,42 @@ describe("PartRead", () => {
       .toBeVisible();
   });
 
-  test("announces the failure of its read in a status region that is there before it", async () => {
+  test("announces the failure of its read as it appears", async () => {
     const { promise, reject } = later();
     respond.mockReturnValueOnce(promise);
     const screen = await renderWithClient(<PartScreen />);
-    const region = screen.getByRole("status");
-    await expect.element(region).toBeEmptyDOMElement();
-    const before = region.element();
+    await expect
+      .element(screen.getByRole("heading", { level: 2, name: "References" }))
+      .toBeVisible();
+    expect(announcements()).toEqual([]);
 
     reject(NOT_FOUND);
 
     await expect
-      .element(region)
-      .toHaveTextContent(
-        "This no longer exists, or you no longer have access to it.",
-      );
-    expect(region.element()).toBe(before);
+      .poll(announcements)
+      .toEqual(["This no longer exists, or you no longer have access to it."]);
+  });
+
+  test("announces the failure of its read with the reference of its error", async () => {
+    respond.mockRejectedValue(UNAVAILABLE);
+    const screen = await renderWithClient(<PartScreen />);
+
+    await expect
+      .element(
+        mainContent(screen).getByText(
+          "Sentinel isn't available right now. Try again later.",
+        ),
+      )
+      .toBeVisible();
+    await expect
+      .element(mainContent(screen).getByText(`Reference: ${REQUEST_ID}`))
+      .toBeVisible();
+    await expect
+      .poll(announcements)
+      .toEqual([
+        `Sentinel isn't available right now. Try again later. Reference: ${REQUEST_ID}`,
+      ]);
+    expect(otherStatusRegions(screen)).toEqual([]);
   });
 
   test("offers Try again after a network failure, and moves the focus to the screen's heading", async () => {
@@ -696,7 +792,9 @@ describe("PartRead", () => {
     await refetch();
 
     await expect
-      .element(screen.getByText("You don't have permission to do this."))
+      .element(
+        mainContent(screen).getByText("You don't have permission to do this."),
+      )
       .toBeVisible();
     expect(screen.getByText("Fictional reference").query()).toBeNull();
   });
@@ -848,7 +946,7 @@ function MarkedList() {
     <main className="relative">
       <ScreenHeading>Items</ScreenHeading>
       {updating && <UpdatingBar />}
-      <output className="block">{warning}</output>
+      {warning}
       <ul>
         {["First item", "Second item"].map((item) => (
           <li key={item}>
@@ -920,13 +1018,18 @@ describe("marksPlace", () => {
       .mockResolvedValueOnce({ title: "First item" });
     const screen = await renderWithClient(<MarkedList />);
 
-    const warning = screen.getByText(
+    const warning = mainContent(screen).getByText(
       "The marks of the items couldn't be shown. Sentinel isn't available right now. Try again later.",
     );
     await expect.element(warning).toBeVisible();
     await expect
-      .element(screen.getByText(`Reference: ${REQUEST_ID}`))
+      .element(mainContent(screen).getByText(`Reference: ${REQUEST_ID}`))
       .toBeVisible();
+    await expect
+      .poll(announcements)
+      .toEqual([
+        `The marks of the items couldn't be shown. Sentinel isn't available right now. Try again later. Reference: ${REQUEST_ID}`,
+      ]);
     await expect.element(screen.getByText("First item")).toBeVisible();
 
     await screen.getByRole("button", { name: "Try again" }).click();
@@ -943,7 +1046,9 @@ describe("marksPlace", () => {
       .mockRejectedValueOnce(UNAVAILABLE)
       .mockReturnValueOnce(promise);
     const screen = await renderWithClient(<MarkedList />);
-    await expect.element(screen.getByText(/couldn't be shown/)).toBeVisible();
+    await expect
+      .element(mainContent(screen).getByText(/couldn't be shown/))
+      .toBeVisible();
 
     await screen.getByRole("button", { name: "Try again" }).click();
 
@@ -960,7 +1065,7 @@ describe("marksPlace", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "The marks of the items couldn't be shown. You don't have permission to do this.",
         ),
       )
@@ -980,7 +1085,7 @@ describe("marksPlace", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "The marks of the items couldn't be updated. Sentinel isn't available right now. Try again later.",
         ),
       )
@@ -999,7 +1104,9 @@ describe("marksPlace", () => {
     await expect.element(screen.getByText("First item (marked)")).toBeVisible();
     respond.mockRejectedValue(UNAVAILABLE);
     await refetch();
-    await expect.element(screen.getByText(/couldn't be updated/)).toBeVisible();
+    await expect
+      .element(mainContent(screen).getByText(/couldn't be updated/))
+      .toBeVisible();
     await delayPassed(screen);
     expect(updatingBar(screen).query()).toBeNull();
     const { promise, resolve } = later();
@@ -1027,7 +1134,7 @@ describe("marksPlace", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "The marks of the items couldn't be shown. This no longer exists, or you no longer have access to it.",
         ),
       )
@@ -1045,6 +1152,7 @@ describe("marksPlace", () => {
     );
 
     await expect.element(screen.getByText("The read failed")).toBeVisible();
-    expect(screen.getByRole("status").element().textContent).toBe("");
+    expect(screen.getByText(/couldn't be shown/).query()).toBeNull();
+    expect(announcements()).toEqual([]);
   });
 });

@@ -21,6 +21,11 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import {
+  announcedAgain,
+  announcementNode,
+  announcements,
+} from "../../test-announcements";
 import { pointerAwayFrom } from "../../test-pointer";
 import { screenshot } from "../../test-screenshot";
 import {
@@ -35,6 +40,7 @@ import {
   cvssPart,
   FG_MUTED,
   later,
+  mainContent,
   MAINTAINER,
   MESSAGE_TONES,
   nextFrames,
@@ -133,15 +139,6 @@ function wordsOf(element: Element): string {
 // The line of each source, in the order of the page.
 function sourceLines(screen: Screen): string[] {
   return sourcesPart(screen).getByRole("listitem").elements().map(wordsOf);
-}
-
-// What the status regions of the sources say, other than nothing.
-function statusesOf(screen: Screen): string[] {
-  return sourcesPart(screen)
-    .getByRole("status")
-    .elements()
-    .map((region) => region.textContent ?? "")
-    .filter((text) => text !== "");
 }
 
 function refetchOf(screen: Screen, name: string) {
@@ -705,7 +702,7 @@ describe("the sources of the CVE", () => {
     response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
 
     await expect
-      .element(screen.getByText("Refetch of NVD started."))
+      .element(mainContent(screen).getByText("Refetch of NVD started."))
       .toBeVisible();
     await expect.poll(() => refetch.query()).toBeNull();
     await expect
@@ -764,7 +761,7 @@ describe("the sources of the CVE", () => {
 
     response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
 
-    const message = screen.getByText("Refetch of NVD started.");
+    const message = mainContent(screen).getByText("Refetch of NVD started.");
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.info);
     await expect.element(refetch).not.toHaveAttribute("aria-disabled");
@@ -798,7 +795,9 @@ describe("the sources of the CVE", () => {
     response.resolve(refetchResponse({ sources_enqueued: ["mitre", "nvd"] }));
 
     await expect
-      .element(screen.getByText("Refetch started.", { exact: true }))
+      .element(
+        mainContent(screen).getByText("Refetch started.", { exact: true }),
+      )
       .toBeVisible();
     await expect
       .element(refetchAll(screen))
@@ -844,7 +843,7 @@ describe("the sources of the CVE", () => {
         name === "all" ? refetchAll(screen) : refetchOf(screen, name),
       );
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.info);
       const [input] = spy.mock.calls.find(
@@ -875,7 +874,7 @@ describe("the sources of the CVE", () => {
 
       await press(refetchAll(screen));
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.warning);
     },
@@ -948,7 +947,7 @@ describe("the sources of the CVE", () => {
 
       await press(refetchOf(screen, "NVD"));
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES[tone]);
       expect(screen.getByText(REFERENCE).query() !== null).toBe(reference);
@@ -1003,7 +1002,9 @@ describe("the sources of the CVE", () => {
     response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
 
     await expect
-      .element(screen.getByText("SNTL-12: Refetch of NVD started."))
+      .element(
+        mainContent(screen).getByText("SNTL-12: Refetch of NVD started."),
+      )
       .toBeVisible();
     const link = screen.getByRole("link", { name: "SNTL-12", exact: true });
     await expect.element(link).toHaveAttribute("href", "/tickets/SNTL-12");
@@ -1031,7 +1032,7 @@ describe("the sources of the CVE", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "SNTL-12: This can't be done in the current state, which may have changed. Check it and try again.",
         ),
       )
@@ -1139,7 +1140,7 @@ describe("the sources of the CVE", () => {
     vi.advanceTimersByTime(5_000);
 
     await expect
-      .poll(() => statusesOf(screen))
+      .poll(() => announcements())
       .toEqual(["MITRE: Failure. NVD: Success."]);
     // The text in its place, without a message.
     expect(sourceLines(screen)[1]).toBe(
@@ -1198,8 +1199,9 @@ describe("the sources of the CVE", () => {
     const { screen } = await renderSources();
     sources = ended;
     vi.advanceTimersByTime(5_000);
-    await expect.poll(() => statusesOf(screen)).toEqual(["NVD: Success."]);
-    const first = sourcesPart(screen).getByText("NVD: Success.").element();
+    await expect.poll(() => announcements()).toEqual(["NVD: Success."]);
+    const first = announcementNode("NVD: Success.");
+    expect(first).not.toBeNull();
 
     // Another fetch, which ends in the same way.
     sources = pending;
@@ -1211,30 +1213,54 @@ describe("the sources of the CVE", () => {
     sources = ended;
     vi.advanceTimersByTime(5_000);
 
-    await expect
-      .poll(() => sourcesPart(screen).getByText("NVD: Success.").element())
-      .not.toBe(first);
+    await expect.poll(() => announcedAgain("NVD: Success.", first)).toBe(true);
+    expect(announcements()).toEqual(["NVD: Success."]);
+  });
+
+  test("announce the end of a fetch while the menu of Actions is open, once, and leave the focus in the menu", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let sources = [fictionalSource({ status: "pending" })];
+    stubTicket({ sources: () => sourcesResponse(sources) });
+    const { screen } = await renderSources();
+    await screen
+      .getByRole("button", { name: "Actions of SNTL-12", exact: true })
+      .click();
+    const menu = screen.getByRole("menu", {
+      name: "Actions of SNTL-12",
+      exact: true,
+    });
+    await expect.element(menu).toBeVisible();
+    const focused = document.activeElement;
+    expect(menu.element().contains(focused)).toBe(true);
+    await sourcesSettled();
+    sources = [fictionalSource({ fetched_at: LATER_ATTEMPT })];
+
+    vi.advanceTimersByTime(5_000);
+
+    await expect.poll(() => announcements()).toEqual(["NVD: Success."]);
+    await expect.element(menu).toBeVisible();
+    expect(document.activeElement).toBe(focused);
   });
 
   test("announce a status that the pinned contract does not list as received", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     let sources: object[] = [fictionalSource({ status: "pending" })];
     stubTicket({ sources: () => jsonResponse(200, { data: sources }) });
-    const { screen } = await renderSources();
+    await renderSources();
     sources = [
       { ...fictionalSource({ fetched_at: LATER_ATTEMPT }), status: "paused" },
     ];
 
     vi.advanceTimersByTime(5_000);
 
-    await expect.poll(() => statusesOf(screen)).toEqual(["NVD: paused."]);
+    await expect.poll(() => announcements()).toEqual(["NVD: paused."]);
   });
 
   test("announce no new result for a fetch that ended without a new attempt", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     let sources = pendingSources();
     stubTicket({ sources: () => sourcesResponse(sources) });
-    const { screen } = await renderSources();
+    await renderSources();
     // MITRE goes back to the status of its last attempt, as when Sentinel
     // did not run its fetch, and NVD stays without one.
     sources = [
@@ -1246,7 +1272,7 @@ describe("the sources of the CVE", () => {
     vi.advanceTimersByTime(5_000);
 
     await expect
-      .poll(() => statusesOf(screen))
+      .poll(() => announcements())
       .toEqual(["MITRE: no new result. NVD: no new result."]);
   });
 
@@ -1276,7 +1302,7 @@ describe("the sources of the CVE", () => {
       .toBeVisible();
     // The announcement would follow, set by an effect of that commit.
     await nextFrames();
-    expect(statusesOf(screen)).toEqual([]);
+    expect(announcements()).toEqual([]);
   });
 
   test("move the focus to the screen's heading when a new read removes the Refetch that has it", async () => {

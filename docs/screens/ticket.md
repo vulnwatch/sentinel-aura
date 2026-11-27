@@ -2007,8 +2007,8 @@ Access; Revoke Access):
   the Revoke access of the grant that followed it, or to the user field when
   none follows, in the dialog that holds it (`docs/behaviors.md`,
   Accessibility, Focus after an action).
-- The outcome of each is announced in a status region of the dialog, which the
-  rest of the page cannot hold while the dialog is open. When the read of the
+- The outcome of each is announced while the dialog is open
+  (`docs/behaviors.md`, Accessibility, Announcements). When the read of the
   grants after it fails, the outcomes that this read releases show together
   at the top of the dialog instead, as a `success` message, which those of a
   later failed read replace, until the dialog closes. Once the dialog has

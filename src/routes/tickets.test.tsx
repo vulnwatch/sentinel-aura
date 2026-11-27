@@ -44,20 +44,20 @@ import {
   withCapabilities,
   withEligibility,
 } from "./tickets/test-support";
+import {
+  announcedAgain,
+  announcementNode,
+  announcements,
+} from "../test-announcements";
 
 // The Ticket list (docs/screens/ticket-list.md), at the browser's default
 // text size, in the light theme.
 
 prepareEachTest();
 
-// The texts of the status regions of the screen that say something.
-function announcementsOf(screen: Screen): string[] {
-  return screen
-    .getByRole("status")
-    .elements()
-    .map((region) => region.textContent)
-    .filter((text) => text !== "");
-}
+// The reference of the errors of the tests (src/test-api.ts), as the
+// announcer announces it after the message of the error.
+const REFERENCE = "Reference: 01890a5d-ac96-774b-bcce-b302099a8057";
 
 // The gap between two tabs: the right edge of one, the left edge of the next,
 // and the middle of their height.
@@ -476,7 +476,7 @@ describe("the views", () => {
     await expect
       .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
       .toBeVisible();
-    expect(announcementsOf(screen)).toEqual([]);
+    expect(announcements()).toEqual([]);
 
     const analysis = screen.getByRole("tab", { name: /^Analysis/ });
     await analysis.click();
@@ -484,7 +484,7 @@ describe("the views", () => {
     await expect
       .element(screen.getByRole("progressbar", { name: "Updating" }))
       .toBeVisible();
-    expect(announcementsOf(screen)).toEqual([]);
+    expect(announcements()).toEqual([]);
     pending.resolve(
       ticketPage(
         Array.from({ length: 5 }, (_, index) =>
@@ -534,7 +534,7 @@ describe("the views", () => {
 
       router.history.push(`/tickets${search}`);
 
-      await expect.poll(() => announcementsOf(screen)).toEqual([announcement]);
+      await expect.poll(() => announcements()).toEqual([announcement]);
     },
   );
 });
@@ -668,7 +668,7 @@ describe("while the list changes", () => {
 
     router.history.push("/tickets?view=analysis");
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcements())
       .toEqual(["No Tickets in this view."]);
     const first = announced();
 
@@ -682,7 +682,7 @@ describe("while the list changes", () => {
         return node !== undefined && node !== first;
       })
       .toBe(true);
-    expect(announcementsOf(screen)).toEqual(["No Tickets in this view."]);
+    expect(announcements()).toEqual(["No Tickets in this view."]);
   });
 });
 
@@ -1096,9 +1096,7 @@ describe("the pagination", () => {
     await next.click();
 
     await expect.element(pagination.getByText("21–26 of 26")).toBeVisible();
-    await expect
-      .poll(() => announcementsOf(screen))
-      .toEqual(["21–26 of 26 Tickets"]);
+    await expect.poll(() => announcements()).toEqual(["21–26 of 26 Tickets"]);
     expect(router.state.location.href).toBe("/tickets?view=new&page=2");
     expect(queriesOf(spy, "list").at(-1)).toBe(
       `${FILTERS.New}&${QUEUE_SORT}&sort_order=desc&page=2&per_page=20`,
@@ -1172,9 +1170,9 @@ describe("the pagination", () => {
 
     await expect
       .element(
-        screen.getByText(
-          "Sentinel isn't available right now. Try again later.",
-        ),
+        screen
+          .getByRole("main")
+          .getByText("Sentinel isn't available right now. Try again later."),
       )
       .toBeVisible();
     await expect
@@ -1292,12 +1290,16 @@ describe("loading and errors", () => {
 
     await screen.getByRole("tab", { name: /^Analysis/ }).click();
 
-    const message = screen.getByText(
-      "Sentinel isn't available right now. Try again later.",
-    );
+    const message = screen
+      .getByRole("main")
+      .getByText("Sentinel isn't available right now. Try again later.");
     await expect.element(message).toBeVisible();
     expect(frameOf(screen).contains(message.element())).toBe(true);
-    expect(message.element().closest("output")).not.toBeNull();
+    await expect
+      .poll(() => announcements())
+      .toEqual([
+        `Sentinel isn't available right now. Try again later. ${REFERENCE}`,
+      ]);
     await expect
       .element(tableOf(screen).getByRole("rowheader"))
       .not.toBeInTheDocument();
@@ -1684,7 +1686,7 @@ describe("the links of the list", () => {
 });
 
 describe("a list that the user refined", () => {
-  test("announces in the popover of the filters what the list shows after a change of a filter, or the failure of its read", async () => {
+  test("announces what the list shows after a change of a filter while the popover of the filters is open, or the failure of its read", async () => {
     stubTickets({
       list: (query) =>
         query.has("priority")
@@ -1698,49 +1700,77 @@ describe("a list that the user refined", () => {
       .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
       .toBeVisible();
     const dialog = await openFilters(screen);
-    const status = dialog.getByRole("status");
-    await expect.element(status).toHaveTextContent("");
+    expect(announcements()).toEqual([]);
 
     await toggle(dialog, "Severity", "High");
-    await expect.element(status).toHaveTextContent("1 Ticket");
-    const first = status.element().firstElementChild;
+    await expect.poll(() => announcements()).toEqual(["1 Ticket"]);
+    const first = announcementNode("1 Ticket");
+    expect(first).not.toBeNull();
 
     // A new node, which assistive technologies announce although its words
     // are the same.
     await toggle(dialog, "Severity", "Critical");
-    await expect
-      .poll(() => {
-        const node = status.element().firstElementChild;
-        return node !== first && node?.textContent === "1 Ticket";
-      })
-      .toBe(true);
+    await expect.poll(() => announcedAgain("1 Ticket", first)).toBe(true);
+    expect(announcements()).toEqual(["1 Ticket"]);
 
     await toggle(dialog, "Priority", "P1");
     await expect
-      .element(status)
-      .toHaveTextContent(
-        "Sentinel isn't available right now. Try again later.",
-      );
+      .poll(() => announcements())
+      .toEqual([
+        `Sentinel isn't available right now. Try again later. ${REFERENCE}`,
+      ]);
+    await expect.element(dialog).toBeVisible();
   });
 
-  test("announces in the popover of the filters the failure of a new read of the rows that show, also before any change", async () => {
+  test("announces what the list shows after a change of a filter while the popover of the filters is open, once, and leaves the focus in the popover", async () => {
+    stubTickets({
+      list: (query) =>
+        query.has("severity")
+          ? ticketPage([ROW])
+          : ticketPage([ROW, fictionalTicket({ ticket_id: "SNTL-2" })]),
+    });
+    const { screen } = await renderApp("/tickets?view=new");
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
+      .toBeVisible();
+    const dialog = await openFilters(screen);
+    const high = dialog
+      .getByRole("group", { name: "Severity" })
+      .getByRole("checkbox", { name: "High" });
+
+    await toggle(dialog, "Severity", "High");
+
+    await expect.element(high).toBeChecked();
+    await expect.element(high).toHaveFocus();
+    await expect.poll(() => announcements()).toEqual(["1 Ticket"]);
+    // Not again by a status region of the popover.
+    expect(
+      dialog.getByRole("status").filter({ hasText: "1 Ticket" }).query(),
+    ).toBeNull();
+    await expect
+      .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-2" }))
+      .not.toBeInTheDocument();
+    await expect.element(dialog).toBeVisible();
+    await expect.element(high).toHaveFocus();
+  });
+
+  test("announces the failure of a new read of the rows that show while the popover of the filters is open, also before any change", async () => {
     const { stub } = stubTickets();
     const { screen } = await renderApp("/tickets?view=new");
     await expect
       .element(tableOf(screen).getByRole("rowheader", { name: "SNTL-1" }))
       .toBeVisible();
     const dialog = await openFilters(screen);
-    const status = dialog.getByRole("status");
-    await expect.element(status).toHaveTextContent("");
+    expect(announcements()).toEqual([]);
 
     stub.list = () => errorResponse(503, "DATABASE_UNAVAILABLE");
     await returnToForeground();
 
     await expect
-      .element(status)
-      .toHaveTextContent(
-        "This couldn't be updated. Sentinel isn't available right now. Try again later.",
-      );
+      .poll(() => announcements())
+      .toEqual([
+        `This couldn't be updated. Sentinel isn't available right now. Try again later. ${REFERENCE}`,
+      ]);
     await expect.element(dialog).toBeVisible();
   });
 
@@ -1839,7 +1869,7 @@ describe("a list that the user refined", () => {
 
       router.history.push(`/tickets${search}`);
 
-      await expect.poll(() => announcementsOf(screen)).toEqual(["1 Ticket"]);
+      await expect.poll(() => announcements()).toEqual(["1 Ticket"]);
       await expect.element(tab).toHaveFocus();
     },
   );

@@ -96,6 +96,11 @@ interface FilterSelectProps<T extends string> {
   // In place of the options that the filter reads, while they load or when
   // their read fails: the loading indicator or the message of the failure.
   status?: ReactNode;
+  // Whether a status region of the menu announces the status as it changes,
+  // which it does unless the page announces the same already, such as the
+  // failure of a read that the screen shows in its place
+  // (src/components/announcer.tsx), so that it is not announced twice.
+  announcesStatus?: boolean;
   // The value that applies.
   selected: T;
   // What the field shows when the value that applies is not among the
@@ -115,12 +120,14 @@ export function FilterSelect<T extends string>({
   label,
   groups,
   status,
+  announcesStatus = true,
   selected,
   unlisted,
   onChange,
 }: FilterSelectProps<T>) {
   const shown = groups.filter((group) => group.length > 0);
   const statusId = useId();
+  const described = <div id={statusId}>{status}</div>;
   return (
     <Select
       value={selected}
@@ -170,9 +177,11 @@ export function FilterSelect<T extends string>({
         {/* A status region that is there before what it holds, so that
             assistive technologies announce the loading or the failure of the
             options while the menu holds the focus. */}
-        <output className="block">
-          <div id={statusId}>{status}</div>
-        </output>
+        {announcesStatus ? (
+          <output className="block">{described}</output>
+        ) : (
+          described
+        )}
       </Popover>
     </Select>
   );
@@ -181,12 +190,6 @@ export function FilterSelect<T extends string>({
 interface FiltersProps {
   // The number of the filters that apply, which follows the label.
   applied: number;
-  // What the list shows after a change, in words, which a status region of
-  // the popover holds: while the popover is open, the rest of the page is out
-  // of reach of assistive technologies, the status regions of the screen
-  // included, so the popover announces it itself, which every list that
-  // offers filters gives (docs/design-system.md, Lists).
-  status: ReactNode;
   // The filters, each a FilterGroup, in their order.
   children: ReactNode;
 }
@@ -198,8 +201,10 @@ interface FiltersProps {
 // with a border line, an 8 px radius, a shadow, and 16 px of padding, whose
 // first checkbox takes the focus. Its content scrolls within it when the
 // window is shorter, such as at a high zoom. Escape or a click outside closes
-// it, and the focus returns to Filters.
-export function Filters({ applied, status, children }: FiltersProps) {
+// it, and the focus returns to Filters. While it is open, the list announces
+// what it shows after a change through the announcer of the page, which the
+// popover leaves in reach (src/components/announcer.tsx).
+export function Filters({ applied, children }: FiltersProps) {
   return (
     <DialogTrigger>
       <Button size="small">
@@ -225,7 +230,6 @@ export function Filters({ applied, status, children }: FiltersProps) {
           className="flex flex-col gap-4 outline-none"
         >
           <FirstFieldFocus>{children}</FirstFieldFocus>
-          <output className="sr-only">{status}</output>
         </Dialog>
       </Popover>
     </DialogTrigger>

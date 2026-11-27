@@ -29,6 +29,7 @@ import {
   later,
   leaveForTickets,
   leftInvalidated,
+  mainContent,
   MAINTAINER,
   MESSAGE_CONFLICT,
   MESSAGE_INVALID,
@@ -484,7 +485,7 @@ describe("the submission of Override priority…", () => {
 
       await expect.element(dialog).not.toBeInTheDocument();
       expect(overrides(spy)).toEqual([body]);
-      await expect.poll(() => announcements(screen)).toContain(text);
+      await expect.poll(() => announcements()).toContain(text);
       await expectFocusSettledOn(actionsButton(screen));
     },
   );
@@ -499,7 +500,7 @@ describe("the submission of Override priority…", () => {
     await overrideWith(screen, "Automatic", "P1");
 
     await expect
-      .poll(() => announcements(screen))
+      .poll(() => announcements())
       .toContain("Priority override cleared: not yet prioritizable.");
   });
 
@@ -601,9 +602,10 @@ describe("the outcome of Override priority…", () => {
     await leaveForTickets(router, screen);
     response.resolve(overriddenWith("p1"));
 
-    const message = screen.getByText("SNTL-12: Priority overridden: P1.", {
-      exact: true,
-    });
+    const message = mainContent(screen).getByText(
+      "SNTL-12: Priority overridden: P1.",
+      { exact: true },
+    );
     await expect.element(message).toBeVisible();
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
   });
@@ -620,9 +622,10 @@ describe("the outcome of Override priority…", () => {
     await leaveForTickets(router, screen);
     response.resolve(errorResponse(409, "TICKET_NOT_MUTABLE"));
 
-    const error = screen.getByText(`SNTL-12: ${MESSAGE_CONFLICT}`, {
-      exact: true,
-    });
+    const error = mainContent(screen).getByText(
+      `SNTL-12: ${MESSAGE_CONFLICT}`,
+      { exact: true },
+    );
     await expect.element(error).toBeVisible();
     expect(backgroundBehind(error.element())).toBe(MESSAGE_TONES.danger);
   });

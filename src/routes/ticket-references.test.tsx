@@ -12,6 +12,11 @@ import {
   urlOf,
 } from "../test-api";
 import {
+  announcedAgain,
+  announcementNode,
+  inReach,
+} from "../test-announcements";
+import {
   addButton,
   ADDED,
   ADVISORY,
@@ -34,6 +39,7 @@ import {
   ISSUE,
   later,
   leave,
+  mainContent,
   ME,
   MESSAGE_CONFLICT,
   MESSAGE_NOT_ACCEPTED,
@@ -79,6 +85,10 @@ prepareEachTest();
 
 const MESSAGE_UNAVAILABLE =
   "Sentinel isn't available right now. Try again later.";
+
+// The reference of the errors of the tests (src/test-api.ts), as the
+// announcer announces it after the message of the error.
+const REFERENCE = "Reference: 01890a5d-ac96-774b-bcce-b302099a8057";
 
 const NO_MATCH = "No references match the filters.";
 
@@ -176,6 +186,22 @@ async function openSources(dialog: Locator) {
   const options = page.getByRole("listbox", { name: "Source" });
   await expect.element(options).toBeVisible();
   return options;
+}
+
+// The menu of the options of the source, which a popover of its own holds,
+// named after the filter.
+function sourceMenuOf() {
+  return page.getByRole("dialog", { name: "Source" });
+}
+
+// The status regions of an element that hold the text and that assistive
+// technologies can reach, which announce it.
+function statusRegionsWith(container: Locator, text: string): Element[] {
+  return container
+    .getByRole("status")
+    .filter({ hasText: text })
+    .elements()
+    .filter(inReach);
 }
 
 describe("the tab", () => {
@@ -635,12 +661,12 @@ describe("the actions", () => {
 });
 
 describe("the filters", () => {
-  test("filter by the types chosen, Uncategorized included, each change as a new entry of the browser history, and announce what the table shows", async () => {
+  test("filter by the types chosen, Uncategorized included, each change as a new entry of the browser history, and announce what the table shows, also while the popover is open", async () => {
     stubReferences();
     const { router, screen } = await renderTab();
     const dialog = await openFilters(screen);
-    const status = dialog.getByRole("status").last();
-    await expect.element(status).toHaveTextContent("");
+    await frames();
+    expect(announcementsOf()).toEqual([]);
     expect(
       dialog
         .getByRole("group", { name: "Type" })
@@ -655,7 +681,11 @@ describe("the filters", () => {
       .poll(() => router.state.location.href)
       .toBe(`${PATH}?type=uncategorized`);
     await expect.poll(() => namesOf(screen)).toEqual([POST.title]);
-    await expect.element(status).toHaveTextContent("1 reference");
+    await expect.poll(() => announcementsOf()).toEqual(["1 reference"]);
+    // Not again by a status region of the popover.
+    expect(
+      dialog.getByRole("status").filter({ hasText: "1 reference" }).query(),
+    ).toBeNull();
 
     await toggleType(dialog, "Advisory");
 
@@ -665,7 +695,7 @@ describe("the filters", () => {
     await expect
       .poll(() => namesOf(screen))
       .toEqual([NVD.title, ADVISORY.title, POST.title]);
-    await expect.element(status).toHaveTextContent("3 references");
+    await expect.poll(() => announcementsOf()).toEqual(["3 references"]);
     expect(router.history.length).toBe(3);
     await expect
       .element(screen.getByRole("button", { name: "Filters 1 applied" }))
@@ -676,7 +706,7 @@ describe("the filters", () => {
 
     await expect.poll(() => router.state.location.href).toBe(PATH);
     await expect.poll(() => namesOf(screen)).toHaveLength(5);
-    await expect.element(status).toHaveTextContent("5 references");
+    await expect.poll(() => announcementsOf()).toEqual(["5 references"]);
   });
 
   test("leave a reference of a type that the pinned contract does not list out of every type", async () => {
@@ -730,9 +760,7 @@ describe("the filters", () => {
       .toBe(`${PATH}?source=sync_redhat_cves`);
     await expect.poll(() => namesOf(screen)).toEqual([ISSUE.title]);
     expect(readText(sourceSelectOf(dialog).element())).toBe("Red Hat");
-    await expect
-      .element(dialog.getByRole("status").last())
-      .toHaveTextContent("1 reference");
+    await expect.poll(() => announcementsOf()).toEqual(["1 reference"]);
     expect(router.history.length).toBe(2);
 
     const again = await openSources(dialog);
@@ -846,7 +874,7 @@ describe("the filters", () => {
     await expect.poll(() => optionNames(options)).toHaveLength(4);
   });
 
-  test("show the failure of the read of the references in place of the sources, and say it in the popover", async () => {
+  test("show the failure of the read of the references in place of the sources, and keep its announcement in reach while the popover is open", async () => {
     stubReferences({
       references: () => errorResponse(503, "DATABASE_UNAVAILABLE"),
     });
@@ -856,8 +884,8 @@ describe("the filters", () => {
       .toBeVisible();
     const dialog = await openFilters(screen);
     await expect
-      .element(dialog.getByRole("status").last())
-      .toHaveTextContent(MESSAGE_UNAVAILABLE);
+      .poll(() => announcementsOf())
+      .toEqual([`${MESSAGE_UNAVAILABLE} ${REFERENCE}`]);
 
     const options = await openSources(dialog);
 
@@ -866,6 +894,55 @@ describe("the filters", () => {
     await expect
       .element(options)
       .toHaveAccessibleDescription(MESSAGE_UNAVAILABLE);
+  });
+
+  test("show the failure of the read of the references in place of the sources when it fails while their menu is open, announced once, by the tab", async () => {
+    const references = later();
+    const { stub } = stubReferences({ references: () => references.promise });
+    const { screen } = await renderApp(PATH);
+    // The Ticket has arrived, so the tab shows the failure in its place.
+    await expect.element(heading(screen, "SNTL-12")).toBeVisible();
+    const dialog = await openFilters(screen);
+    const options = await openSources(dialog);
+    stub.references = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+
+    references.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    await expect
+      .element(sourceMenuOf().getByText(MESSAGE_UNAVAILABLE, { exact: true }))
+      .toBeVisible();
+    expect(optionNames(options)).toEqual(["Any source"]);
+    await expect
+      .poll(() => announcementsOf())
+      .toEqual([`${MESSAGE_UNAVAILABLE} ${REFERENCE}`]);
+    // Not again by a status region of the menu.
+    expect(statusRegionsWith(sourceMenuOf(), MESSAGE_UNAVAILABLE)).toEqual([]);
+  });
+
+  test("announce the failure of the read of the references in place of the sources from their menu while the tab waits for the Ticket, which does not announce it", async () => {
+    const ticket = later();
+    const references = later();
+    const { stub } = stubReferences({
+      ticket: () => ticket.promise,
+      references: () => references.promise,
+    });
+    const { screen } = await renderApp(PATH);
+    await expect.element(heading(screen, "Ticket")).toBeVisible();
+    const dialog = await openFilters(screen);
+    await openSources(dialog);
+    stub.references = () => errorResponse(503, "DATABASE_UNAVAILABLE");
+
+    references.resolve(errorResponse(503, "DATABASE_UNAVAILABLE"));
+
+    await expect
+      .element(sourceMenuOf().getByText(MESSAGE_UNAVAILABLE, { exact: true }))
+      .toBeVisible();
+    // In a status region of the menu, which announces it while the menu
+    // holds the focus.
+    expect(statusRegionsWith(sourceMenuOf(), MESSAGE_UNAVAILABLE)).toHaveLength(
+      1,
+    );
+    expect(announcementsOf()).toEqual([]);
   });
 });
 
@@ -941,13 +1018,12 @@ describe("the announcements of the filters", () => {
     stubReferences();
     const { screen } = await renderTab(`${PATH}?type=patch`);
     await expect.poll(() => namesOf(screen)).toEqual([PATCH.url]);
-    expect(announcementsOf(screen)).toEqual([]);
+    expect(announcementsOf()).toEqual([]);
 
-    const dialog = await openFilters(screen);
+    await openFilters(screen);
 
-    await expect
-      .element(dialog.getByRole("status").last())
-      .toHaveTextContent("");
+    await frames();
+    expect(announcementsOf()).toEqual([]);
   });
 
   test("say that no reference matches the filters after a change that leaves none", async () => {
@@ -957,9 +1033,8 @@ describe("the announcements of the filters", () => {
 
     await toggleType(dialog, "Patch");
 
-    await expect
-      .element(dialog.getByRole("status").last())
-      .toHaveTextContent(NO_MATCH);
+    await expect.poll(() => announcementsOf()).toEqual([NO_MATCH]);
+    await expect.element(dialog).toBeVisible();
   });
 
   test("say in the tab what the table shows after Clear filters on the line above it", async () => {
@@ -969,7 +1044,7 @@ describe("the announcements of the filters", () => {
 
     await press(panelOf(screen).getByRole("button", { name: "Clear filters" }));
 
-    await expect.poll(() => announcementsOf(screen)).toEqual(["5 references"]);
+    await expect.poll(() => announcementsOf()).toEqual(["5 references"]);
   });
 
   test("say in the tab what the table shows after Clear filters of the empty state", async () => {
@@ -982,7 +1057,7 @@ describe("the announcements of the filters", () => {
 
     await press(clear.nth(1));
 
-    await expect.poll(() => announcementsOf(screen)).toEqual(["5 references"]);
+    await expect.poll(() => announcementsOf()).toEqual(["5 references"]);
   });
 
   test("say in the tab what the table shows after the browser history changes the filters, and leave the focus where it was", async () => {
@@ -992,14 +1067,14 @@ describe("the announcements of the filters", () => {
     add.element().focus();
 
     router.history.push(`${PATH}?type=patch`);
-    await expect.poll(() => announcementsOf(screen)).toEqual(["1 reference"]);
+    await expect.poll(() => announcementsOf()).toEqual(["1 reference"]);
     router.history.push(`${PATH}?type=article`);
-    await expect.poll(() => announcementsOf(screen)).toEqual([NO_MATCH]);
+    await expect.poll(() => announcementsOf()).toEqual([NO_MATCH]);
     router.history.back();
-    await expect.poll(() => announcementsOf(screen)).toEqual(["1 reference"]);
+    await expect.poll(() => announcementsOf()).toEqual(["1 reference"]);
     router.history.back();
 
-    await expect.poll(() => announcementsOf(screen)).toEqual(["5 references"]);
+    await expect.poll(() => announcementsOf()).toEqual(["5 references"]);
     expect(router.state.location.href).toBe(PATH);
     await expect.element(add).toHaveFocus();
   });
@@ -1040,30 +1115,30 @@ describe("the announcements of the filters", () => {
       });
       const { router, screen } = await renderTab();
       router.history.push(`${PATH}${search}`);
-      await expect.poll(() => announcementsOf(screen)).toEqual(["1 reference"]);
+      await expect.poll(() => announcementsOf()).toEqual(["1 reference"]);
 
       await change(screen);
 
       await expect
-        .poll(() => announcementsOf(screen))
+        .poll(() => announcementsOf())
         .toEqual(["1 reference", outcome]);
       await frames();
-      expect(announcementsOf(screen)).toEqual(["1 reference", outcome]);
+      expect(announcementsOf()).toEqual(["1 reference", outcome]);
     },
   );
 
   test("say each change of the filters in a node of its own, also with the same words", async () => {
     stubReferences();
-    const { router, screen } = await renderTab();
+    const { router } = await renderTab();
     router.history.push(`${PATH}?type=patch`);
-    await expect.poll(() => announcementsOf(screen)).toEqual(["1 reference"]);
-    const first = panelOf(screen).getByText("1 reference", { exact: true });
-    const node = first.element();
+    await expect.poll(() => announcementsOf()).toEqual(["1 reference"]);
+    const node = announcementNode("1 reference");
+    expect(node).not.toBeNull();
 
     router.history.push(`${PATH}?type=patch&source=manual`);
 
-    await expect.poll(() => first.query()).not.toBe(node);
-    expect(announcementsOf(screen)).toEqual(["1 reference"]);
+    await expect.poll(() => announcedAgain("1 reference", node)).toBe(true);
+    expect(announcementsOf()).toEqual(["1 reference"]);
   });
 
   test("say No references. after a change of the filters of a Ticket without references, in the tab and in the popover", async () => {
@@ -1072,14 +1147,14 @@ describe("the announcements of the filters", () => {
 
     await press(panelOf(screen).getByRole("button", { name: "Clear filters" }));
 
-    await expect
-      .poll(() => announcementsOf(screen))
-      .toEqual(["No references."]);
+    await expect.poll(() => announcementsOf()).toEqual(["No references."]);
+    const node = announcementNode("No references.");
+    expect(node).not.toBeNull();
     const dialog = await openFilters(screen);
     await toggleType(dialog, "Issue");
-    await expect
-      .element(dialog.getByRole("status").last())
-      .toHaveTextContent("No references.");
+    await expect.poll(() => announcedAgain("No references.", node)).toBe(true);
+    expect(announcementsOf()).toEqual(["No references."]);
+    await expect.element(dialog).toBeVisible();
   });
 });
 
@@ -1164,7 +1239,7 @@ describe("the read", () => {
     ).toBeNull();
   });
 
-  test("shows its failure in place of the references, below the toolbar, in a status region, with Try again", async () => {
+  test("shows its failure in place of the references, below the toolbar, announced, with Try again", async () => {
     let fail = true;
     stubReferences({
       references: () =>
@@ -1176,7 +1251,9 @@ describe("the read", () => {
 
     const message = panelOf(screen).getByText(MESSAGE_UNAVAILABLE);
     await expect.element(message).toBeVisible();
-    expect(message.element().closest("output")).not.toBeNull();
+    await expect
+      .poll(() => announcementsOf())
+      .toEqual([`${MESSAGE_UNAVAILABLE} ${REFERENCE}`]);
     expect(message.element().getBoundingClientRect().top).toBeGreaterThan(
       addButton(screen).element().getBoundingClientRect().bottom,
     );
@@ -1579,7 +1656,7 @@ describe("a change that ends after the user left the tab", () => {
 
     response.resolve(referenceResponse(ADDED, 201));
 
-    const message = screen.getByText(
+    const message = mainContent(screen).getByText(
       "SNTL-12: Reference “Fictional packaging issue” added.",
     );
     await expect.element(message).toBeVisible();
@@ -1605,13 +1682,20 @@ describe("a change that ends after the user left the tab", () => {
 
     await expect
       .element(
-        screen.getByText(
+        mainContent(screen).getByText(
           "SNTL-12: Reference “Fictional packaging issue” added.",
         ),
       )
       .toBeVisible();
     await frames();
-    expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
+    expect(
+      mainContent(screen)
+        .getByText(/added\.$/)
+        .elements(),
+    ).toHaveLength(1);
+    expect(announcementsOf()).toEqual([
+      "SNTL-12: Reference “Fictional packaging issue” added.",
+    ]);
   });
 
   test.each([
@@ -1653,7 +1737,7 @@ describe("a change that ends after the user left the tab", () => {
 
       await leaveTab(screen, router);
 
-      const message = screen.getByText(text, { exact: true });
+      const message = mainContent(screen).getByText(text, { exact: true });
       await expect.element(message).toBeVisible();
       expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
       const record = screen.getByRole("link", { name: "SNTL-12", exact: true });
@@ -1667,7 +1751,12 @@ describe("a change that ends after the user left the tab", () => {
       // The read that it waited for adds nothing.
       reread.resolve(referencesResponse([...EVERY_REFERENCE, ADDED]));
       await frames();
-      expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
+      expect(
+        mainContent(screen)
+          .getByText(/added\.$/)
+          .elements(),
+      ).toHaveLength(1);
+      expect(announcementsOf()).toEqual([text]);
     },
   );
 
@@ -1686,7 +1775,9 @@ describe("a change that ends after the user left the tab", () => {
 
     await expect
       .element(
-        screen.getByText("SNTL-12: Reference “Fictional title” changed."),
+        mainContent(screen).getByText(
+          "SNTL-12: Reference “Fictional title” changed.",
+        ),
       )
       .toBeVisible();
   });
@@ -1701,7 +1792,11 @@ describe("a change that ends after the user left the tab", () => {
     response.resolve(deleted());
 
     await expect
-      .element(screen.getByText(`SNTL-12: Reference ${PATCH.url} deleted.`))
+      .element(
+        mainContent(screen).getByText(
+          `SNTL-12: Reference ${PATCH.url} deleted.`,
+        ),
+      )
       .toBeVisible();
   });
 
@@ -1731,7 +1826,7 @@ describe("a change that ends after the user left the tab", () => {
 
       response.resolve(failure());
 
-      const shown = screen.getByText(`SNTL-12: ${message}`);
+      const shown = mainContent(screen).getByText(`SNTL-12: ${message}`);
       await expect.element(shown).toBeVisible();
       expect(backgroundBehind(shown.element())).toBe(tone);
       await expect
@@ -1749,7 +1844,7 @@ describe("a change that ends after the user left the tab", () => {
     await submit(dialog, "Add reference");
 
     await expect
-      .poll(() => announcementsOf(screen))
+      .poll(() => announcementsOf())
       .toEqual(["Reference “Fictional packaging issue” added."]);
     expect(screen.getByText(/added\.$/).elements()).toHaveLength(1);
   });

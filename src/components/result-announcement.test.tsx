@@ -2,6 +2,7 @@ import { useState } from "react";
 import { expect, test } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
+import { Announcer } from "./announcer";
 import { Button } from "./button";
 import {
   ResultAnnouncement,
@@ -49,7 +50,9 @@ test.each([
 ])(
   "counts no change while the state is the one with which the screen opened, with %s, and announces nothing",
   async (_, opened) => {
-    const screen = await render(<FictionalList opened={opened} />);
+    const screen = await render(<FictionalList opened={opened} />, {
+      wrapper: Announcer,
+    });
 
     await expect
       .element(screen.getByText("Unchanged", { exact: true }))
@@ -59,7 +62,7 @@ test.each([
 );
 
 test("counts another state as a change, which lasts once the state returns to the one with which the screen opened", async () => {
-  const screen = await render(<FictionalList />);
+  const screen = await render(<FictionalList />, { wrapper: Announcer });
 
   await screen.getByRole("button", { name: "Page 2" }).click();
   await expect
@@ -74,7 +77,7 @@ test("counts another state as a change, which lasts once the state returns to th
 });
 
 test("holds its text in a status region that takes no room on the screen", async () => {
-  const screen = await render(<FictionalList />);
+  const screen = await render(<FictionalList />, { wrapper: Announcer });
 
   await screen.getByRole("button", { name: "Page 2" }).click();
 
@@ -84,7 +87,7 @@ test("holds its text in a status region that takes no room on the screen", async
 });
 
 test("gives the same words a node of their own in each state, so that they are announced again", async () => {
-  const screen = await render(<FictionalList />);
+  const screen = await render(<FictionalList />, { wrapper: Announcer });
   await screen.getByRole("button", { name: "Page 2" }).click();
   const words = screen.getByText(WORDS, { exact: true });
   await expect.element(words).toBeInTheDocument();

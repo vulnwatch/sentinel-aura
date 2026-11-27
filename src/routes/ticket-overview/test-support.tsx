@@ -31,6 +31,7 @@ import type {
 import { createQueryClient } from "../../query-client";
 import { createAppRouter } from "../../router";
 import { RETURN_URL_KEY, SESSION_RECORD_KEY } from "../../session";
+import { announcements as announcementsOfPage } from "../../test-announcements";
 import {
   actorsResponse,
   cvssResponse,
@@ -443,6 +444,13 @@ export function region(screen: Screen, name: string) {
   return screen.getByRole("region", { name, exact: true });
 }
 
+// The main content, where the message area and the parts of the screen show
+// what they say: the announcer of the page, outside it, holds the words of
+// each message and of each failure too (src/components/announcer.tsx).
+export function mainContent(screen: Screen) {
+  return screen.getByRole("main");
+}
+
 // The value of a field of the details, by its term: the definition of the
 // same rank as the term, as each term has one.
 export function valueOf(screen: Screen, term: string): HTMLElement {
@@ -780,9 +788,9 @@ export function backgroundBehind(element: Element): string {
 
 // The outcome of a change as a success message, such as in the message area
 // after the read after the change failed (docs/behaviors.md, Outcome of a
-// Change): the one element with its text.
+// Change): the one element of the main content with its text.
 export async function expectSuccessMessage(screen: Screen, text: string) {
-  const message = screen.getByText(text, { exact: true });
+  const message = mainContent(screen).getByText(text, { exact: true });
   await expect.element(message).toBeVisible();
   expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
 }
@@ -830,14 +838,10 @@ export function interactOutside() {
   }
 }
 
-// What the status regions of the screen outside a dialog say.
-export function announcements(screen: Screen): string {
-  return screen
-    .getByRole("status")
-    .elements()
-    .filter((status) => status.closest('[role="dialog"]') === null)
-    .map((status) => status.textContent ?? "")
-    .join("");
+// What the announcer of the page holds (src/test-announcements.ts), as one
+// text.
+export function announcements(): string {
+  return announcementsOfPage().join("");
 }
 
 // The messages of the failures of a change (docs/behaviors.md, Default

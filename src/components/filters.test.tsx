@@ -58,7 +58,7 @@ function ListFilters({ initial = [], onChange }: ListFiltersProps) {
   const [severities, setSeverities] = useState<readonly Severity[]>(initial);
   return (
     <div className="flex justify-end p-8">
-      <Filters applied={severities.length > 0 ? 1 : 0} status="">
+      <Filters applied={severities.length > 0 ? 1 : 0}>
         <FilterGroup
           label="Severity"
           options={SEVERITIES}
@@ -118,7 +118,7 @@ test("is a secondary button 32 px high named Filters while no filter applies", a
 
 test("shows the number of the filters that apply after its label, which assistive technologies read as applied", async () => {
   const screen = await render(
-    <Filters applied={2} status="">
+    <Filters applied={2}>
       <FilterGroup
         label="Severity"
         options={SEVERITIES}
@@ -289,27 +289,6 @@ test("names each filter in text-12, weight 500, fg-muted, and shows the filters 
   ).toBe(16);
 });
 
-test("announces its status in a status region of its own, which stays within reach while it is open", async () => {
-  const screen = await render(
-    <Filters applied={1} status="3 Tickets">
-      <FilterGroup
-        label="Severity"
-        options={SEVERITIES}
-        selected={["high"]}
-        onChange={() => {}}
-      />
-    </Filters>,
-  );
-
-  const dialog = await openFilters(
-    screen.getByRole("button", { name: "Filters 1 applied" }),
-  );
-
-  await expect
-    .element(dialog.getByRole("status"))
-    .toHaveTextContent("3 Tickets");
-});
-
 test("scrolls its filters within it in a window shorter than they are, as at a high zoom", async () => {
   await page.viewport(1280, 160);
   const screen = await render(<ListFilters />);
@@ -367,7 +346,7 @@ function ActorFilters({
   const [selected, setSelected] = useState(initial);
   return (
     <div className="flex justify-end p-8">
-      <Filters applied={0} status="">
+      <Filters applied={0}>
         <FilterSelect
           label="Actor"
           groups={groups}
