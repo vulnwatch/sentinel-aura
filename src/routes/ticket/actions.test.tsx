@@ -1635,6 +1635,38 @@ describe("Rerun convergence", () => {
     await expectGoesOnItsOwn(message);
   });
 
+  test("keeps its message when the user opens another tab of the Ticket, Audit log, and returns to Overview, which are parts of the same screen", async () => {
+    const response = later();
+    const spy = showingStatus("analysis", {
+      ticketChange: () => response.promise,
+    });
+    const { screen } = await renderTicket();
+    await choose(screen, "Rerun convergence");
+    await expect.poll(() => changesOf(spy)).toHaveLength(1);
+    // On the fake clock, so that the message, which goes on its own, stays
+    // while the test opens the tabs.
+    await fakeMessageClock(screen);
+    response.resolve(convergenceResponse());
+    const message = areaMessage(screen, "Convergence started.");
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    const auditLog = screen.getByRole("tab", { name: "Audit log" });
+    const overview = screen.getByRole("tab", { name: "Overview" });
+
+    await auditLog.click();
+
+    await expect
+      .element(auditLog, ON_FAKE_CLOCK)
+      .toHaveAttribute("aria-selected", "true");
+    await nextFrames();
+    expect(message.query()).not.toBeNull();
+    await overview.click();
+    await expect
+      .element(overview, ON_FAKE_CLOCK)
+      .toHaveAttribute("aria-selected", "true");
+    await nextFrames();
+    expect(message.query()).not.toBeNull();
+  });
+
   test("handles no code specifically: 409 TICKET_INVALID_TRANSITION shows in the presentation of its status", async () => {
     showingStatus("analysis", {
       ticketChange: () => errorResponse(409, "TICKET_INVALID_TRANSITION"),

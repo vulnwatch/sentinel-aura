@@ -5296,7 +5296,7 @@ test.describe("the actions of a Ticket", () => {
   );
 
   test(
-    "reruns the convergence of a Ticket, which says in the message area that it started, with the focus on Actions",
+    "reruns the convergence of a Ticket, which says in the message area that it started, with the focus on Actions, and keeps the message on another tab of the Ticket",
     { tag: "@changes-data" },
     async ({ page }) => {
       // A Ticket of this test's own, in Analysis. Sentinel publishes the
@@ -5340,6 +5340,23 @@ test.describe("the actions of a Ticket", () => {
       await expect(menu).toHaveCount(0);
       await expect(actions).toBeFocused();
       await expect(status).toHaveText("Analysis");
+
+      // Audit log, a tab of the same screen, keeps the message
+      // (docs/behaviors.md, Outcome of a Change). The pointer stays over the
+      // message, whose countdown then waits, while the keyboard opens the
+      // tab.
+      const message = messageArea(page).getByText("Convergence started.", {
+        exact: true,
+      });
+      await message.hover();
+      await page
+        .getByRole("tab", { name: "Audit log", exact: true })
+        .press("Enter");
+      await expect(page).toHaveURL(`/tickets/${ticketId}/audit-log`);
+      await expect(
+        page.getByRole("tab", { name: "Audit log", selected: true }),
+      ).toBeVisible();
+      await expect(message).toBeVisible();
     },
   );
 

@@ -37,6 +37,7 @@ import {
   type AreaMessage,
 } from "./message-area";
 import { ModalDialog } from "./modal-dialog";
+import { NotFound } from "./not-found";
 import { RouterLinks } from "./router-links";
 import { ScreenHeading } from "./screen-heading";
 import { TextField } from "./text-field";
@@ -321,15 +322,22 @@ function createTestRouter(path: string, expanded: boolean): AnyRouter {
     path: "/record",
     component: RecordScreen,
   });
-  // The screen of a record, and a tab of it at a path under its path.
+  // The screen of a record, with the routes of its tabs under its route, at
+  // paths under its path, as the routes of the tabs of a detail screen are
+  // (src/router.ts): its first tab at the path of the record, and Audit log.
   const record = createRoute({
     getParentRoute: () => root,
     path: "/tickets/SNTL-42",
+    component: () => <Outlet />,
+  });
+  const recordOverview = createRoute({
+    getParentRoute: () => record,
+    path: "/",
     component: () => <MessageScreen title="SNTL-42" />,
   });
-  const recordTab = createRoute({
-    getParentRoute: () => root,
-    path: "/tickets/SNTL-42/audit-log",
+  const recordAuditLog = createRoute({
+    getParentRoute: () => record,
+    path: "audit-log",
     component: () => <MessageScreen title="Audit log of SNTL-42" />,
   });
   // A record whose path starts with that of the record, which is another
@@ -347,11 +355,14 @@ function createTestRouter(path: string, expanded: boolean): AnyRouter {
       overlays,
       field,
       detail,
-      record,
-      recordTab,
+      record.addChildren([recordOverview, recordAuditLog]),
       otherRecord,
     ]),
     history: createMemoryHistory({ initialEntries: [path] }),
+    // Not found in place of every screen, also at a path under the path of a
+    // screen, such as an unknown tab of a record, as src/router.ts shows it.
+    defaultNotFoundComponent: NotFound,
+    notFoundMode: "root",
   });
 }
 
@@ -1028,6 +1039,43 @@ test("keeps room at the end of the content, so that its end scrolls above the ar
   router.history.push("/second");
   await expect
     .element(screen.getByRole("heading", { level: 1, name: "Second" }))
+    .toBeVisible();
+  await expect.poll(() => root.scrollHeight).toBe(initial);
+});
+
+test("keeps the room at the end of the content, also once its messages have gone, when another tab of the same screen opens, and lets it go when another screen opens", async () => {
+  await windowSize(1280, 800);
+  const { router, screen } = await renderArea("/tickets/SNTL-42", "SNTL-42");
+  const root = document.documentElement;
+  const initial = root.scrollHeight;
+  show({
+    tone: "danger",
+    text: "Sentinel isn't available right now.",
+    reference: REFERENCE,
+  });
+  const message = messageNamed("Sentinel isn't available right now.");
+  await expect.element(message).toBeVisible();
+  await expect.poll(() => root.scrollHeight).toBeGreaterThan(initial);
+  const grown = root.scrollHeight;
+  await dismissOf(message).click();
+  await expect.element(message).not.toBeInTheDocument();
+  await nextFrames();
+  expect(root.scrollHeight).toBe(grown);
+
+  // Audit log shows the same content as the first tab, so the page keeps
+  // its height while the room stays.
+  router.history.push("/tickets/SNTL-42/audit-log");
+
+  await expect
+    .element(
+      screen.getByRole("heading", { level: 1, name: "Audit log of SNTL-42" }),
+    )
+    .toBeVisible();
+  await nextFrames();
+  expect(root.scrollHeight).toBe(grown);
+  router.history.push("/tickets/SNTL-420");
+  await expect
+    .element(screen.getByRole("heading", { level: 1, name: "SNTL-420" }))
     .toBeVisible();
   await expect.poll(() => root.scrollHeight).toBe(initial);
 });
@@ -1806,6 +1854,29 @@ test("waits while a popover keeps the area out of reach, and then goes on from w
   await expect.element(message, ON_FAKE_CLOCK).not.toBeInTheDocument();
 });
 
+test("goes on its own 10 seconds after it appears also when another tab of the same screen opens in between, whose opening neither removes it nor starts its countdown again", async () => {
+  const { router, screen } = await renderArea("/tickets/SNTL-42", "SNTL-42");
+  const message = await showGoingMessage(screen);
+  const shown = message.element();
+  await clockMoves(6_000);
+
+  router.history.push("/tickets/SNTL-42/audit-log");
+
+  await expect
+    .element(
+      screen.getByRole("heading", { level: 1, name: "Audit log of SNTL-42" }),
+      ON_FAKE_CLOCK,
+    )
+    .toBeVisible();
+  await nextFrames();
+  expect(shown.isConnected).toBe(true);
+  await countdownShows(shown, "running");
+  await clockMoves(3_999);
+  expect(shown.isConnected).toBe(true);
+  await clockMoves(1);
+  await expect.element(message, ON_FAKE_CLOCK).not.toBeInTheDocument();
+});
+
 test("shows the line of the time left across the whole width, standing still, under reduced motion", async () => {
   applyThemePreference("light");
   await commands.emulateReducedMotion(true);
@@ -1916,6 +1987,73 @@ test("removes the messages when another screen opens, also when the user returns
     .element(screen.getByText("First: message 1."))
     .not.toBeInTheDocument();
 });
+
+test.each([
+  [
+    "through a link",
+    (router: AnyRouter) => {
+      router.history.push("/tickets/SNTL-42");
+    },
+  ],
+  [
+    "through the browser's Back",
+    (router: AnyRouter) => {
+      router.history.back();
+    },
+  ],
+])(
+  "keeps its messages when another tab of the same screen opens, and when the user returns to the first tab %s",
+  async (_, returnToFirst) => {
+    const { router, screen } = await renderArea("/tickets/SNTL-42", "SNTL-42");
+    await screen.getByRole("button", { name: "Show a message" }).click();
+    const message = mainContent().getByText("SNTL-42: message 1.");
+    await expect.element(message).toBeVisible();
+
+    router.history.push("/tickets/SNTL-42/audit-log");
+
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "Audit log of SNTL-42" }),
+      )
+      .toBeVisible();
+    await nextFrames();
+    expect(message.query()).not.toBeNull();
+    returnToFirst(router);
+    await expect
+      .element(
+        screen.getByRole("heading", { level: 1, name: "SNTL-42", exact: true }),
+      )
+      .toBeVisible();
+    await nextFrames();
+    expect(message.query()).not.toBeNull();
+  },
+);
+
+test.each([
+  ["an unknown tab of a screen", "/tickets/SNTL-42/fictional-tab"],
+  [
+    "a path beyond a tab of a screen",
+    "/tickets/SNTL-42/audit-log/fictional-part",
+  ],
+])(
+  "removes the messages when %s opens, which shows Not found, a screen of its own",
+  async (_, path) => {
+    const { router, screen } = await renderArea("/tickets/SNTL-42", "SNTL-42");
+    await screen.getByRole("button", { name: "Show a message" }).click();
+    await expect
+      .element(mainContent().getByText("SNTL-42: message 1."))
+      .toBeVisible();
+
+    router.history.push(path);
+
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText("SNTL-42: message 1."))
+      .not.toBeInTheDocument();
+  },
+);
 
 test("shows a message on the screen that the user is on when it appears, until another screen opens", async () => {
   const { router, screen } = await renderArea();

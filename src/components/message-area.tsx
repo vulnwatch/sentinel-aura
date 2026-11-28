@@ -1,4 +1,8 @@
-import { useRouter, useRouterState } from "@tanstack/react-router";
+import {
+  useRouter,
+  useRouterState,
+  type ParsedLocation,
+} from "@tanstack/react-router";
 import {
   createContext,
   use,
@@ -57,9 +61,36 @@ export const MESSAGE_TIMEOUT_MS = 10_000;
 
 interface ShownMessage extends AreaMessage {
   id: number;
-  // The path of the screen on which the message appeared: it goes when the
-  // user opens another screen.
-  path: string;
+  // The screen on which the message appeared (screenOf): it goes when the
+  // user opens another screen, not when another tab of the same screen opens.
+  screen: string;
+}
+
+// A path without its trailing slashes, as a route matches it.
+function withoutTrailingSlash(path: string): string {
+  return path.replace(/\/+$/, "");
+}
+
+// The screen at a location, which tells one screen from another: the path of
+// the route of the screen, under which the routes of its tabs are, such as
+// /tickets/SNTL-12 for each tab of that Ticket (docs/screen-map.md, Areas and
+// Screens; docs/design-system.md, Detail Screens), whatever the search
+// parameters. A path that no route matches whole, such as an unknown tab of a
+// Ticket or a path beyond a tab, shows Not found, a screen of its own at that
+// path (src/router.ts).
+function screenOf(
+  router: ReturnType<typeof useRouter>,
+  location: ParsedLocation,
+): string {
+  const matches = router.matchRoutes(location);
+  const leaf = matches.at(-1);
+  const screen = matches[1];
+  return leaf !== undefined &&
+    screen !== undefined &&
+    withoutTrailingSlash(leaf.pathname) ===
+      withoutTrailingSlash(location.pathname)
+    ? screen.pathname
+    : location.pathname;
 }
 
 // Whether the path is that of the screen of the record, or of one of its
@@ -72,8 +103,9 @@ interface MessageAreaState {
   messages: readonly ShownMessage[];
   show: (message: AreaMessage) => void;
   dismiss: (id: number) => void;
-  // Removes the messages of every screen other than the one at the path.
-  keepPath: (path: string) => void;
+  // Removes the messages of every screen other than the one given
+  // (screenOf).
+  keepScreen: (screen: string) => void;
 }
 
 const MessageAreaContext = createContext<MessageAreaState | null>(null);
@@ -94,7 +126,8 @@ export function MessageAreaProvider({ children }: MessageAreaProviderProps) {
   const show = useCallback(
     (message: AreaMessage) => {
       nextId.current += 1;
-      const path = router.state.location.pathname;
+      const { location } = router.state;
+      const path = location.pathname;
       const { record } = message;
       const shown = {
         ...message,
@@ -107,7 +140,7 @@ export function MessageAreaProvider({ children }: MessageAreaProviderProps) {
             ? record
             : undefined,
         id: nextId.current,
-        path,
+        screen: screenOf(router, location),
       };
       setMessages((current) => [shown, ...current]);
     },
@@ -116,15 +149,15 @@ export function MessageAreaProvider({ children }: MessageAreaProviderProps) {
   const dismiss = useCallback((id: number) => {
     setMessages((current) => current.filter((message) => message.id !== id));
   }, []);
-  const keepPath = useCallback((path: string) => {
+  const keepScreen = useCallback((screen: string) => {
     setMessages((current) =>
-      current.filter((message) => message.path === path),
+      current.filter((message) => message.screen === screen),
     );
   }, []);
 
   const state = useMemo(
-    () => ({ messages, show, dismiss, keepPath }),
-    [messages, show, dismiss, keepPath],
+    () => ({ messages, show, dismiss, keepScreen }),
+    [messages, show, dismiss, keepScreen],
   );
   return <MessageAreaContext value={state}>{children}</MessageAreaContext>;
 }
@@ -483,11 +516,14 @@ function useFocusClearOfArea(
 // the newest, and after the last to where it was before it entered the area
 // (docs/behaviors.md, Accessibility, Keyboard; Focus after an action).
 export function MessageArea({ expanded }: MessageAreaProps) {
-  const { messages, dismiss, keepPath } = useMessageAreaState();
-  const path = useRouterState({ select: (state) => state.location.pathname });
+  const { messages, dismiss, keepScreen } = useMessageAreaState();
+  const router = useRouter();
+  const screen = useRouterState({
+    select: (state) => screenOf(router, state.location),
+  });
   const area = useRef<HTMLElement>(null);
   const shown = messages.length > 0;
-  const room = useAreaHeight(area, shown, path);
+  const room = useAreaHeight(area, shown, screen);
   const list = useRef<HTMLDivElement>(null);
   const scrolls = useScrolls(area, list, shown);
   const [elements] = useState(() => new Map<number, MessageElements>());
@@ -511,10 +547,11 @@ export function MessageArea({ expanded }: MessageAreaProps) {
   const waits = hovered || focused || hiddenTab || unreachable;
 
   // Another screen opened: the messages of the previous ones go for good,
-  // also if the user returns to them, before the screen shows.
+  // also if the user returns to them, before the screen shows. Another tab of
+  // the same screen keeps them (docs/behaviors.md, Outcome of a Change).
   useLayoutEffect(() => {
-    keepPath(path);
-  }, [path, keepPath]);
+    keepScreen(screen);
+  }, [screen, keepScreen]);
 
   // The focus returns to where it was before it entered the area, or to the
   // screen's heading when that element is gone or no element had it.
@@ -689,16 +726,17 @@ export function MessageArea({ expanded }: MessageAreaProps) {
 // The height that the area takes from the bottom of the window, with the
 // 24 px below it, which the stylesheet gives the page as its scroll padding
 // at the bottom while the area shows (src/styles.css); and the room at the
-// end of the content, the highest that height has been on the screen at the
-// path, which does not shrink when a message goes.
+// end of the content, the highest that height has been on the screen
+// (screenOf), on each of its tabs, which does not shrink when a message
+// goes.
 function useAreaHeight(
   area: RefObject<HTMLElement | null>,
   shown: boolean,
-  path: string,
+  screen: string,
 ): number {
-  const [room, setRoom] = useState({ path, height: 0 });
-  if (room.path !== path) {
-    setRoom({ path, height: 0 });
+  const [room, setRoom] = useState({ screen, height: 0 });
+  if (room.screen !== screen) {
+    setRoom({ screen, height: 0 });
   }
   useLayoutEffect(() => {
     const current = area.current;
@@ -709,11 +747,14 @@ function useAreaHeight(
     const record = () => {
       const height = recordAreaHeight(current);
       setRoom((last) =>
-        last.path === path && last.height >= height
+        last.screen === screen && last.height >= height
           ? last
           : {
-              path,
-              height: Math.max(height, last.path === path ? last.height : 0),
+              screen,
+              height: Math.max(
+                height,
+                last.screen === screen ? last.height : 0,
+              ),
             },
       );
     };
@@ -726,8 +767,8 @@ function useAreaHeight(
       window.removeEventListener("resize", record);
       root.style.removeProperty("--message-area-height");
     };
-  }, [area, shown, path]);
-  return room.path === path ? room.height : 0;
+  }, [area, shown, screen]);
+  return room.screen === screen ? room.height : 0;
 }
 
 // Whether the messages are higher than the area, a third of the window's
