@@ -782,20 +782,23 @@ change, in the state that the screen then shows, such as its new filters.
   and stays until the dialog closes (`docs/design-system.md`, Dialogs).
 - A message of the message area goes when the user dismisses it or opens
   another screen. A `success` or an `info` message (`docs/design-system.md`,
-  Messages) also goes on its own, 10 seconds after it appears, or 1 second
-  for every 3 of its words when that is longer, since it confirms what the
-  screen shows, such as "API key revoked.", whose key leaves its list, or
-  "Refetch started.", whose sources then show their fetch pending. Every
-  other message stays until the user dismisses it, so that no message that
-  the user may need later goes before they have read it (WCAG 2.2, 2.2.1
-  Timing Adjustable): a `warning` or a `danger` message, and a `success` or
-  an `info` message whose result the screen does not show, which names
-  another record, or which shows the outcome of a change because the read
-  after it failed (above).
-  The countdown of a message waits while the pointer is over the message
-  area, while the focus is in it, while the tab is hidden, and while a
-  dialog, a popover, or a menu that keeps the area out of reach is open, and
-  goes on from where it stopped once none of these holds.
+  Messages) also goes on its own, 10 seconds after it appears, since it
+  confirms what the user did, which the screen shows, such as "API key
+  revoked.", whose key leaves its list, or "Refetch started.", whose sources
+  then show their fetch pending. Every other message stays until the user
+  dismisses it, so that no message that the user may need later goes before
+  they have read it (WCAG 2.2, 2.2.1 Timing Adjustable): a `warning` or a
+  `danger` message, and a `success` or an `info` message whose result the
+  screen does not show: one that names another record, one that shows the
+  outcome of a change because the read after it failed (above), and one
+  that its screen document states stays.
+- The countdown of a message waits while the pointer is over the message
+  area, or, where the primary pointer does not hover, such as on a touch
+  screen, from a touch of the area until a touch outside it; while the focus
+  is in the area; while the tab is hidden; and while a popover, a menu, or a
+  dialog, such as the sidebar opened over the content, keeps the area out of
+  reach (`docs/design-system.md`, Main Content). It goes on from where it
+  stopped once none of these holds.
 - An operation that Sentinel accepts with `202` has started, not finished:
   its message says so, such as "Refetch started.", and links to the screen
   that shows its progress, when one does.
@@ -824,18 +827,20 @@ also meets these requirements, which they cannot check:
 - **Keyboard.** Every function works with the keyboard alone, in an order that
   follows the reading order, and the focus is never trapped. The focus is
   always visible, and no fixed element, such as the sidebar or the message
-  area, hides it (2.1.1 Keyboard; 2.1.2 No Keyboard Trap; 2.4.3 Focus Order;
-  2.4.7 Focus Visible; 2.4.11 Focus Not Obscured (Minimum)). The message
-  area, which comes last in the order of the page (`docs/design-system.md`,
-  Main Content), is also reached at once: while it holds a message, F6 and
-  Shift+F6 move the focus from anywhere else in the page to its newest
-  message, which takes the focus itself, so that assistive technologies read
-  it, and from which Tab reaches its link and its Dismiss, then those of the
-  older messages. From within the area, F6 and Shift+F6 return the focus to
+  area, hides the element that takes it (2.1.1 Keyboard; 2.1.2 No Keyboard
+  Trap; 2.4.3 Focus Order; 2.4.7 Focus Visible; 2.4.11 Focus Not Obscured
+  (Minimum)); a message that appears over the element that has the focus
+  leaves it there, so that it moves nothing (`docs/design-system.md`, Main
+  Content). The message area, which comes last in the order of the page, is
+  also reached at once: while it holds a message, F6 and Shift+F6 move the
+  focus from anywhere else in the page to its newest message, which takes
+  the focus itself, so that assistive technologies read it, and from which
+  Tab reaches its link and its Dismiss, then those of the older messages. From within the area, F6 and Shift+F6 return the focus to
   the element that had it before it entered the area, or to the screen's
-  heading when that element is gone. While a dialog, a popover, or a menu
-  keeps the area out of reach, and while the area holds no message, F6 and
-  Shift+F6 keep the browser's own use, such as moving to its address bar.
+  heading when that element is gone or no element had it. While a popover, a
+  menu, or a dialog, such as the sidebar opened over the content, keeps the
+  area out of reach, and while the area holds no message, F6 and Shift+F6
+  keep the browser's own use, such as moving to its address bar.
 - **Structure.** On every screen with a sidebar (`docs/screen-map.md`,
   Sidebar), the first element that takes the focus is a link that skips to
   the main content; a screen in the column of the Sign In Page has no block
@@ -875,12 +880,13 @@ also meets these requirements, which they cannot check:
   place of the one that disappeared, such as the same action of the next
   item of a list, or the field that adds such items when no item follows,
   and otherwise to the dialog itself. Dismiss of a message, which leaves the
-  rest of the screen as it is, is the exception: a press of the pointer on it
-  leaves the focus where it was, and when it has the focus, the focus moves
-  to the Dismiss of the message that takes its place, the next newer one, or
-  the next older one where it was the newest, and after the last message to
-  the element that had the focus before it entered the message area, or to
-  the screen's heading when that element is gone.
+  rest of the screen as it is, is the exception: a press of the pointer on
+  it does not move the focus to it, and when a message goes while the focus
+  is in it, the focus moves to the Dismiss of the message that takes its
+  place, the next newer one, or the next older one where it was the newest,
+  and after the last message to the element that had the focus before it
+  entered the message area, or to the screen's heading when that element is
+  gone or no element had it.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing; a dialog without a field or a button, such as the explanation of a

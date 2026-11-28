@@ -532,16 +532,18 @@ that it sits with the icons around it.
   Tooltips), a menu that holds the focus itself, as when a read removed the
   item that held it, a segment of a segmented control, in `on-accent` on
   the chosen one (Forms), the main content after the link that skips to it
-  (Main Content), and the sidebar opened over the content (Sidebar). It
-  shows on keyboard focus, and no element removes it (`docs/behaviors.md`,
-  Accessibility).
-- **Motion:** only loading indicators and the mark of an operation in
-  progress move: the spinner turns and the progress bar runs (Loading), and
-  so does the mark of an operation that a screen follows by reading it again,
-  such as the pending fetch of a source (Other Values), and the line of the
-  time left of a message that goes on its own shortens (Messages). When the
-  browser reports a preference for reduced motion, they stand still. Menus,
-  popovers, dialogs, tooltips, and the sidebar appear and change at once.
+  (Main Content), the sidebar opened over the content (Sidebar), and a
+  message of the message area that holds the focus itself, as after F6
+  (Messages). It shows on keyboard focus, and no element removes it
+  (`docs/behaviors.md`, Accessibility).
+- **Motion:** only loading indicators, the mark of an operation in progress,
+  and the line of the time left of a message move: the spinner turns and the
+  progress bar runs (Loading), and so does the mark of an operation that a
+  screen follows by reading it again, such as the pending fetch of a source
+  (Other Values), and the line of the time left of a message that goes on
+  its own shortens (Messages). When the browser reports a preference for
+  reduced motion, they stand still. Menus, popovers, dialogs, tooltips, and
+  the sidebar appear and change at once.
 
 ## Page Layout
 
@@ -655,24 +657,36 @@ Errors Appear), which also closes the sidebar opened over the content
   whole width, and forms and long texts set their own (Forms).
 - The message area floats over the content at the bottom of the window, so
   that a message that appears or goes moves nothing of the screen
-  (`docs/behaviors.md`, Outcome of a Change): its bottom 24 px above the
-  bottom of the window, its start 24 px from the start of the main content,
-  beside the sidebar, at most 400 px wide, or as wide as the main content
-  inside its space where that is narrower. Its messages stack in it, 8 px
-  apart, as Messages describes them, the newest at the top, so that a new
-  message comes above those that show and moves none of them; a message that
-  goes moves only the newer ones above it down into its place. It takes at
-  most a third of the window's height, beyond which its messages scroll
-  within it. It shows above the content, the compact heading of a detail
-  screen included, and below a dialog, a popover, or a menu, and the sidebar
-  opened over the content, which keep it out of reach while they are open.
-  It comes after the content of the screen in the order of the page, as it
-  shows below it, and assistive technologies name it "Messages"; without a
-  message, it does not show. The content scrolls so that the element with
-  keyboard focus never lies under it, also when a message appears over that
-  element, where the page can scroll that far; nor under the compact heading
-  of a detail screen (Detail Screens); and the target of an anchor of the
-  page shows below the compact heading (`docs/behaviors.md`, Accessibility).
+  (`docs/behaviors.md`, Outcome of a Change; until the UI builds it,
+  `docs/behaviors.md`, Open Decisions): its bottom 24 px above the bottom of
+  the window, its start 24 px from the start of the main content, beside the
+  sidebar, at most 400 px wide, or as wide as the main content inside its
+  space where that is narrower. Its messages stack in it, 8 px apart, as
+  Messages describes them, the newest at the top, so that a new message
+  comes above those that show and moves none of them; a message that goes
+  moves only the newer ones above it down into its place. It takes at most a
+  third of the window's height, beyond which its messages scroll within it,
+  and a message that appears scrolls the area to its top, so that it shows.
+  Without a message, the area does not show.
+- The message area shows above the content, the compact heading of a detail
+  screen included, and below a tooltip, a popover, a menu, and a dialog, such
+  as the sidebar opened over the content; a popover, a menu, or a dialog
+  keeps it out of reach while it is open, as it keeps the rest of the page.
+  Like them, it has no place among the parts of the screen: it comes last in
+  the order of the page, after the content of the screen, and F6 reaches it
+  from anywhere in the page (`docs/behaviors.md`, Accessibility, Keyboard).
+  Assistive technologies name it "Messages".
+- Once the message area has shown a message, the main content keeps room at
+  its end, until another screen opens, as high as the area has been at its
+  highest, so that the end of the page can scroll above the area; the room
+  grows with the area and does not shrink when a message goes, so that a
+  message that goes at the end of the page moves nothing either. The content
+  scrolls so that the element that takes the focus from the keyboard, and
+  the target of an anchor of the page, never lie under the area, while the
+  focus of an element of the area itself leaves the page where it is. A
+  message that appears over the element that has the focus leaves it there,
+  as it moves nothing, and F6 reaches its Dismiss (`docs/behaviors.md`,
+  Accessibility).
 - A URL with an anchor shows its target once every part of the screen, or of
   its tab, shows its data or its error, unless the user has scrolled
   meanwhile, so that a part that arrives later does not move the target out
@@ -702,7 +716,8 @@ Errors Appear), which also closes the sidebar opened over the content
 - In every layout, the order of the page, which the keyboard and assistive
   technologies follow, is the order on the screen: no layout moves a part to
   another place with CSS alone (`docs/behaviors.md`, Accessibility; WCAG 2.2,
-  1.3.2 Meaningful Sequence; 2.4.3 Focus Order).
+  1.3.2 Meaningful Sequence; 2.4.3 Focus Order). The message area, which
+  floats over the content, comes last (above).
 - At a width of 320 CSS pixels, which is a window of 1280 px at a zoom of
   400 %, the collapsed sidebar and the content fit side by side: rows of
   controls wrap, and tables scroll within their frame (`docs/behaviors.md`,
@@ -1499,9 +1514,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   height of the heading row and the tabs, so that the content does not move
   when the heading becomes compact or returns. It is the heading row itself,
   not a copy, so the screen keeps one level-one heading, one set of tabs, and
-  one menu of actions. Narrower, the heading row scrolls with the page, so
-  that a fixed heading takes no room from a narrow window
-  (`docs/behaviors.md`, Accessibility, Reflow and text size).
+  one menu of actions. While it can stay at the top of the window, the
+  content scrolls so that the element that takes the focus from the
+  keyboard, and the target of an anchor of the page, show below it, while
+  the focus of an element of the heading row itself leaves the page where it
+  is (`docs/behaviors.md`, Accessibility, Keyboard). Narrower, the heading
+  row scrolls with the page, so that a fixed heading takes no room from a
+  narrow window (`docs/behaviors.md`, Accessibility, Reflow and text size).
 
 ### Forms
 
@@ -1745,9 +1764,7 @@ states it, such as that of a Ticket; the other audit logs are tables
   shortens toward the start until the message goes; it stops while the
   countdown waits, and under reduced motion it stays across the whole width
   (Focus and Motion). A message that stays until it is dismissed has no such
-  line, so that the line tells the two apart. The message that has the
-  focus, as after F6 (`docs/behaviors.md`, Accessibility, Keyboard), shows
-  the focus ring.
+  line, so that the line tells the two apart.
 - The tone follows the message: `success` for a change that succeeded,
   `info` for an operation that started and for information, `warning` for a
   change that Sentinel did not confirm (`docs/behaviors.md`, Retries and
