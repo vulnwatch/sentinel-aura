@@ -435,10 +435,10 @@ describe("Add reference", () => {
       expectGoesOnItsOwn,
     ],
     [
-      "keeps the outcome of a reference that the filters hide until it is dismissed, once the next read of the references fails",
+      "lets the outcome of a reference that the filters hide, which shows in the message area anyway, go on its own 10 seconds after it appears also once the next read of the references fails",
       `${PATH}?type=patch`,
       () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
-      expectStays,
+      expectGoesOnItsOwn,
     ],
     [
       "keeps the outcome of a reference that the filters show until it is dismissed, once the next read of the references fails",

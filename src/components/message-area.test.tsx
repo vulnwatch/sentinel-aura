@@ -39,6 +39,7 @@ import {
 import { ModalDialog } from "./modal-dialog";
 import { RouterLinks } from "./router-links";
 import { ScreenHeading } from "./screen-heading";
+import { TextField } from "./text-field";
 
 declare module "vitest/browser" {
   interface BrowserCommands {
@@ -229,6 +230,20 @@ function OverlayScreen() {
   );
 }
 
+// A screen with a heading and, far below, a field as wide as the main
+// content, wider than the area, whose focus the browser shows also after a
+// press of the pointer; then more content.
+function FieldScreen() {
+  return (
+    <>
+      <ScreenHeading>Field</ScreenHeading>
+      <div className="h-[200dvh]" />
+      <TextField label="Summary" />
+      <div className="h-dvh" />
+    </>
+  );
+}
+
 // The screen of a record, whose heading row stays at the top of the window
 // once it has scrolled there, as the compact heading of a detail screen,
 // here as high as the window, so that the area shows over it.
@@ -296,6 +311,11 @@ function createTestRouter(path: string, expanded: boolean): AnyRouter {
     path: "/overlays",
     component: OverlayScreen,
   });
+  const field = createRoute({
+    getParentRoute: () => root,
+    path: "/field",
+    component: FieldScreen,
+  });
   const detail = createRoute({
     getParentRoute: () => root,
     path: "/record",
@@ -325,6 +345,7 @@ function createTestRouter(path: string, expanded: boolean): AnyRouter {
       second,
       short,
       overlays,
+      field,
       detail,
       record,
       recordTab,
@@ -1119,34 +1140,183 @@ test("scrolls a control that a script focuses without scrolling out from under t
   expect(window.scrollY).toBeGreaterThan(scrolled);
 });
 
-test("scrolls the control to which the UI moved the focus without scrolling as a message appears out from under the area once the message shows", async () => {
+test("leaves the page where it is as a press of the pointer on the part of a field that the area leaves uncovered focuses the field, whose focus the browser shows, while the rest of it lies under the area", async () => {
   await page.viewport(1280, 800);
-  const { screen } = await renderArea("/overlays", "Overlays");
-  const edit = screen.getByRole("button", { name: "Edit", exact: true });
-  // The control lies where the area shows.
-  await scrollBottomTo(edit, underArea());
-  const scrolled = window.scrollY;
-  // The UI moves the focus, which the browser shows, as React Aria returns it
-  // to the button of a menu whose change failed, without an input of the
-  // user since; then the message of the failure appears.
-  edit.element().focus({ preventScroll: true, focusVisible: true });
-  await expect.element(edit).toHaveFocus();
-  await nextFrames();
-  expect(window.scrollY).toBe(scrolled);
-
+  const { screen } = await renderArea("/field", "Field");
   show({
     tone: "danger",
     text: "Sentinel isn't available right now.",
     reference: REFERENCE,
   });
-
   const region = messagesRegion();
   await expect.element(region).toBeVisible();
+  const field = screen.getByRole("textbox", { name: "Summary" });
+  // The field reaches 20 px down under the area, and past its end.
+  await scrollBottomTo(field, box(region).top + 20);
+  const shown = box(field);
+  expect(overlaps(shown, box(region))).toBe(true);
+  expect(shown.right).toBeGreaterThan(box(region).right);
+  // A point of the field above the area, which the pointer reaches, as
+  // Playwright reaches it without scrolling the page, which it would do for
+  // a point within the scroll padding at its bottom.
+  const point = { x: shown.width / 2, y: 5 };
+  expect(
+    document.elementFromPoint(shown.left + point.x, shown.top + point.y),
+  ).toBe(field.element());
+  const scrolled = window.scrollY;
+  const place = placeOf(field);
+
+  await field.click({ position: point });
+
+  await expect.element(field).toHaveFocus();
+  expect(field.element().matches(":focus-visible")).toBe(true);
+  await nextFrames();
+  expect(window.scrollY).toBe(scrolled);
+  expect(placeOf(field)).toEqual(place);
+});
+
+test.each([
+  ["without an input of the user before", async () => {}],
+  [
+    "more than 100 ms after a key of the user, which the focus that moves then does not follow",
+    async () => {
+      // A key that moves nothing, such as one that starts a change whose
+      // failure the UI shows later.
+      await userEvent.keyboard("{Shift}");
+      const pressed = performance.now();
+      // More than the 100 ms after a key within which a focus that moves
+      // follows it pass, on the clock of the page, from an instant after the
+      // key.
+      await expect.poll(() => performance.now() - pressed).toBeGreaterThan(100);
+    },
+  ],
+])(
+  "scrolls the control to which the UI moved the focus without scrolling as a message appears, %s, out from under the area once the message shows",
+  async (_, before) => {
+    await page.viewport(1280, 800);
+    const { screen } = await renderArea("/overlays", "Overlays");
+    const edit = screen.getByRole("button", { name: "Edit", exact: true });
+    // The control lies where the area shows.
+    await scrollBottomTo(edit, underArea());
+    const scrolled = window.scrollY;
+    await before();
+    // The UI moves the focus, which the browser shows, as React Aria returns
+    // it to the button of a menu whose change failed; then the message of
+    // the failure appears.
+    edit.element().focus({ preventScroll: true, focusVisible: true });
+    await expect.element(edit).toHaveFocus();
+    await nextFrames();
+    expect(window.scrollY).toBe(scrolled);
+
+    show({
+      tone: "danger",
+      text: "Sentinel isn't available right now.",
+      reference: REFERENCE,
+    });
+
+    const region = messagesRegion();
+    await expect.element(region).toBeVisible();
+    await expect
+      .poll(() => box(edit).bottom)
+      .toBeLessThanOrEqual(box(region).top);
+    expect(window.scrollY).toBeGreaterThan(scrolled);
+    await expect.element(edit).toHaveFocus();
+  },
+);
+
+test("scrolls the control to which the UI moved the focus without scrolling while a message shows out from under the area as it shows once another message appears, which makes it higher", async () => {
+  await page.viewport(1280, 800);
+  const { screen } = await renderArea("/overlays", "Overlays");
+  show({
+    tone: "danger",
+    text: "Sentinel isn't available right now.",
+    reference: REFERENCE,
+  });
+  const region = messagesRegion();
+  await expect.element(region).toBeVisible();
+  const edit = screen.getByRole("button", { name: "Edit", exact: true });
+  await scrollBottomTo(edit, underArea());
+  // The UI moves the focus, which the browser shows, without an input of the
+  // user since: the control scrolls above the area as it shows with one
+  // message.
+  edit.element().focus({ preventScroll: true, focusVisible: true });
+  await expect.element(edit).toHaveFocus();
+  await expect
+    .poll(() => box(edit).bottom)
+    .toBeLessThanOrEqual(box(region).top);
+  await nextFrames();
+  const top = box(region).top;
+  const scrolled = window.scrollY;
+
+  // The message of the failure appears in a later commit, above the one
+  // that shows.
+  show({
+    tone: "danger",
+    text: "Sentinel can't be reached.",
+    reference: REFERENCE,
+  });
+
+  await expect
+    .element(messageNamed("Sentinel can't be reached."))
+    .toBeVisible();
+  expect(box(region).top).toBeLessThan(top);
   await expect
     .poll(() => box(edit).bottom)
     .toBeLessThanOrEqual(box(region).top);
   expect(window.scrollY).toBeGreaterThan(scrolled);
   await expect.element(edit).toHaveFocus();
+});
+
+test("scrolls the control at the end of the content to which the UI moved the focus without scrolling while a message shows out from under the area once another message appears, as soon as the room at the end of the content has grown with the area", async () => {
+  await windowSize(1280, 800);
+  const { screen } = await renderArea();
+  const root = document.documentElement;
+  show({
+    tone: "danger",
+    text: "Sentinel isn't available right now.",
+    reference: REFERENCE,
+  });
+  const region = messagesRegion();
+  await expect.element(region).toBeVisible();
+  await nextFrames();
+  // The end of the page, where the last control of the content shows above
+  // the area, by the room at the end of the content.
+  window.scrollTo(0, root.scrollHeight);
+  await expect
+    .poll(() => window.scrollY)
+    .toBeCloseTo(root.scrollHeight - window.innerHeight, 0);
+  const last = screen.getByRole("button", { name: "Last control" });
+  expect(box(last).bottom).toBeLessThanOrEqual(box(region).top);
+  // The UI moves the focus, which the browser shows, without an input of the
+  // user since.
+  last.element().focus({ preventScroll: true, focusVisible: true });
+  await expect.element(last).toHaveFocus();
+  await nextFrames();
+  const top = box(region).top;
+  const end = root.scrollHeight - window.innerHeight;
+  expect(window.scrollY).toBeCloseTo(end, 0);
+
+  // The message of the failure appears in a later commit, above the one
+  // that shows: the page cannot scroll the control above the higher area
+  // until the room at the end of the content has grown.
+  show({
+    tone: "danger",
+    text: "Sentinel can't be reached.",
+    reference: REFERENCE,
+  });
+
+  await expect
+    .element(messageNamed("Sentinel can't be reached."))
+    .toBeVisible();
+  expect(box(region).top).toBeLessThan(top);
+  await expect
+    .poll(() => root.scrollHeight - window.innerHeight)
+    .toBeGreaterThan(end);
+  await expect
+    .poll(() => box(last).bottom)
+    .toBeLessThanOrEqual(box(region).top);
+  expect(window.scrollY).toBeGreaterThan(end);
+  await expect.element(last).toHaveFocus();
 });
 
 test("leaves the page where it is as Tab and Shift+Tab move the focus into the area and among its messages", async () => {

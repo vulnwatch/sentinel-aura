@@ -317,6 +317,18 @@ function useOutOfReach(
 const INPUT_FOCUS_MS = 100;
 const FOCUS_AS_MESSAGE_APPEARS_MS = 1000;
 
+// Gives the page the height that the area takes from the bottom of the
+// window, with the 24 px below it, as its scroll padding at the bottom
+// (src/styles.css), and returns it.
+function recordAreaHeight(area: HTMLElement): number {
+  const height = window.innerHeight - area.getBoundingClientRect().top;
+  document.documentElement.style.setProperty(
+    "--message-area-height",
+    `${height}px`,
+  );
+  return height;
+}
+
 // Whether the boxes of two elements overlap.
 function overlaps(element: Element, other: Element): boolean {
   const a = element.getBoundingClientRect();
@@ -337,15 +349,19 @@ function overlaps(element: Element, other: Element): boolean {
 // the message shows, so that the element does not lie under it, while a
 // message that appears over the element that the focus already had, which
 // the user or the UI moved there earlier, leaves it there. Only the focus
-// that the browser shows counts: a pointer focuses the control that it
-// presses where it is.
+// that the browser shows counts, and not the one that follows a press of
+// the pointer, which focuses the control that it presses where it is, also
+// a field, whose focus the browser shows.
 function useFocusClearOfArea(
   area: RefObject<HTMLElement | null>,
   newest: number | undefined,
+  room: number,
 ) {
-  // The instants of the last input of the user and of the last focus that
-  // the UI moved, on the clock of the events.
+  // The instants of the last input of the user, of the last press of the
+  // pointer, and of the last focus that the UI moved, on the clock of the
+  // events.
   const inputAt = useRef(Number.NEGATIVE_INFINITY);
+  const pressedAt = useRef(Number.NEGATIVE_INFINITY);
   const movedAt = useRef(Number.NEGATIVE_INFINITY);
 
   const clear = useCallback(() => {
@@ -364,6 +380,9 @@ function useFocusClearOfArea(
     ) {
       return;
     }
+    // The scroll padding follows the area as it shows now, also when a
+    // message has just appeared in it.
+    recordAreaHeight(current);
     element.scrollIntoView({ block: "nearest" });
   }, [area]);
 
@@ -371,24 +390,40 @@ function useFocusClearOfArea(
     const onInput = (event: Event) => {
       inputAt.current = event.timeStamp;
     };
+    const onPress = (event: Event) => {
+      inputAt.current = event.timeStamp;
+      pressedAt.current = event.timeStamp;
+    };
     let frame = 0;
     const onFocusIn = (event: FocusEvent) => {
       if (event.timeStamp - inputAt.current > INPUT_FOCUS_MS) {
         movedAt.current = event.timeStamp;
       }
       cancelAnimationFrame(frame);
+      if (event.timeStamp - pressedAt.current <= INPUT_FOCUS_MS) {
+        return;
+      }
       frame = requestAnimationFrame(clear);
     };
     document.addEventListener("keydown", onInput, true);
-    document.addEventListener("pointerdown", onInput, true);
+    document.addEventListener("pointerdown", onPress, true);
     document.addEventListener("focusin", onFocusIn, true);
     return () => {
       document.removeEventListener("keydown", onInput, true);
-      document.removeEventListener("pointerdown", onInput, true);
+      document.removeEventListener("pointerdown", onPress, true);
       document.removeEventListener("focusin", onFocusIn, true);
       cancelAnimationFrame(frame);
     };
   }, [clear]);
+
+  // Whether the UI moved the focus just before, without an input of the
+  // user since.
+  const movedJustBefore = useCallback(
+    () =>
+      performance.now() - movedAt.current < FOCUS_AS_MESSAGE_APPEARS_MS &&
+      movedAt.current > inputAt.current,
+    [],
+  );
 
   // A message appeared, newer than the one before: the focus that the UI
   // moved just before takes its element, once the area and its scroll
@@ -400,14 +435,19 @@ function useFocusClearOfArea(
     const appeared =
       newest !== undefined && newest > (newestBefore.current ?? 0);
     newestBefore.current = newest;
-    if (
-      appeared &&
-      performance.now() - movedAt.current < FOCUS_AS_MESSAGE_APPEARS_MS &&
-      movedAt.current > inputAt.current
-    ) {
+    if (appeared && movedJustBefore()) {
       clear();
     }
-  }, [newest, clear]);
+  }, [newest, clear, movedJustBefore]);
+
+  // The room at the end of the content has grown with the area, after a
+  // message appeared in it: an element at the end of the content can now
+  // scroll above the area, which the page could not do before.
+  useLayoutEffect(() => {
+    if (room > 0 && movedJustBefore()) {
+      clear();
+    }
+  }, [room, clear, movedJustBefore]);
 }
 
 // The message area: the messages of the screen, newest first, 8 px apart,
@@ -463,7 +503,7 @@ export function MessageArea({ expanded }: MessageAreaProps) {
   const hiddenTab = useHiddenTab();
   const unreachable = useOutOfReach(area, shown);
   const newest = messages[0]?.id;
-  useFocusClearOfArea(area, newest);
+  useFocusClearOfArea(area, newest, room);
   if (!shown && (hovered || focused)) {
     setHovered(false);
     setFocused(false);
@@ -667,8 +707,7 @@ function useAreaHeight(
     }
     const root = document.documentElement;
     const record = () => {
-      const height = window.innerHeight - current.getBoundingClientRect().top;
-      root.style.setProperty("--message-area-height", `${height}px`);
+      const height = recordAreaHeight(current);
       setRoom((last) =>
         last.path === path && last.height >= height
           ? last

@@ -134,22 +134,23 @@ function textOf(outcome: WaitingOutcome): string {
 // screen places it, has the announcer of the page announce it once that read
 // has arrived (src/components/announcer.tsx); with inMessageArea, for an
 // outcome that shows nowhere where the user acted, the message area shows it
-// then instead, as a message that goes on its own, unless its text says that it
-// stays. When that read fails, the result does not show where the user acted,
-// so the outcome shows as a message: in the message area, where it stays until
-// the user dismisses it, or where elsewhere shows it, such as at the top of an
-// open dialog, which keeps the rest of the page out of reach. An outcome whose
-// region is not on the page as its read arrives, as in a dialog that has closed
-// meanwhile, shows in the message area too, since nothing would announce it,
-// and goes on its own. An outcome that still waits as the component leaves the
-// page stays (docs/behaviors.md, Outcome of a Change). A text given as a
-// function is taken as the outcome shows, so that it can state what that read
-// shows. The outcomes of several changes that wait at once, as when the user
-// starts a change before the read after the one before it has arrived, each
-// wait for their read, and those that one read releases are announced together,
-// in their order, or shown together where elsewhere shows them. The record
-// keeps its identity while it names the same record, as from useMemo: another
-// record shows at once in the message area what waits.
+// then instead, also when that read fails, as a message that goes on its own,
+// unless its text says that it stays. When that read fails, the result does not
+// show where the user acted, so any other outcome shows as a message: in the
+// message area, where it stays until the user dismisses it, or where elsewhere
+// shows it, such as at the top of an open dialog, which keeps the rest of the
+// page out of reach. An outcome whose region is not on the page as its read
+// arrives, as in a dialog that has closed meanwhile, shows in the message area
+// too, since nothing would announce it, and goes on its own. An outcome that
+// still waits as the component leaves the page stays (docs/behaviors.md,
+// Outcome of a Change). A text given as a function is taken as the outcome
+// shows, so that it can state what that read shows. The outcomes of several
+// changes that wait at once, as when the user starts a change before the read
+// after the one before it has arrived, each wait for their read, and those that
+// one read releases are announced together, in their order, or shown together
+// where elsewhere shows them. The record keeps its identity while it names the
+// same record, as from useMemo: another record shows at once in the message
+// area what waits.
 export function useOutcomeAfterRead(
   read: { dataUpdatedAt: number; errorUpdatedAt: number },
   record: MessageRecord,
@@ -201,7 +202,7 @@ export function useOutcomeAfterRead(
           showMessage({
             tone: "success",
             text,
-            goesOnItsOwn: !failed && !stays,
+            goesOnItsOwn: !stays,
           });
         }
       }
