@@ -782,21 +782,23 @@ change, in the state that the screen then shows, such as its new filters.
   and stays until the dialog closes (`docs/design-system.md`, Dialogs).
 - A message of the message area goes when the user dismisses it or opens
   another screen. A `success` or an `info` message (`docs/design-system.md`,
-  Messages) also goes on its own, 10 seconds after it appears, since it only
-  confirms what the user did, such as "API key revoked.", whose key leaves
-  its list, or "Refetch started.", whose sources then show their fetch
-  pending. Every other message stays until the user dismisses it, so that no
-  message that the user may need later goes before they have read it (WCAG
-  2.2, 2.2.1 Timing Adjustable): a `warning` or a `danger` message; the
-  outcome of a change that ended after the user left its screen, which names
-  its record; the outcome of a change that shows as a message because the
+  Messages) also goes on its own, 10 seconds after it appears, since it
+  confirms what the user did, or tells what the screen then shows, such as
+  "API key revoked.", whose key leaves its list, or "Refetch started.", whose
+  sources then show their fetch pending. Every other message stays until the
+  user dismisses it, so that no message that the user may need later goes
+  before they have read it (WCAG 2.2, 2.2.1 Timing Adjustable): a `warning`
+  or a `danger` message; the outcome of a change that ended after the user
+  left the screen or the tab where they made it, which the screen in view
+  does not show; the outcome of a change that shows as a message because the
   read after it failed (above); and a message that its screen document
   states stays, since the screen does not show its result.
-- The countdown of a message waits while the pointer hovers over the
-  message area, while the focus is in it, while the tab is hidden, and while
-  a popover, a menu, or a dialog, such as the sidebar opened over the
-  content, keeps the area out of reach (`docs/design-system.md`, Main
-  Content). It goes on from where it stopped once none of these holds.
+- The countdown of a message waits while a pointer that hovers, such as a
+  mouse, not a touch, is over the message area, while the focus is in it,
+  while the tab is hidden, and while a popover, a menu, or a dialog, such as
+  the sidebar opened over the content, keeps the area out of reach
+  (`docs/design-system.md`, Main Content). It goes on from where it stopped
+  once none of these holds.
 - An operation that Sentinel accepts with `202` has started, not finished:
   its message says so, such as "Refetch started.", and links to the screen
   that shows its progress, when one does.
@@ -829,18 +831,20 @@ also meets these requirements, which they cannot check:
   Trap; 2.4.3 Focus Order; 2.4.7 Focus Visible; 2.4.11 Focus Not Obscured
   (Minimum); `docs/design-system.md`, Main Content). A message that appears
   over the element that has the focus leaves it there, so that the message
-  moves nothing, and F6 reaches the message. The message area, which comes
-  last in the order of the page, is reached at once: while it holds a
-  message, F6 and Shift+F6 move the focus from anywhere else in the page to
-  its newest message, which takes the focus itself, so that assistive
-  technologies read it, and from which Tab reaches its link and its Dismiss,
-  then those of the older messages. From within the area, F6 and Shift+F6
-  return the focus to the element that had it before it entered the area,
-  or to the screen's heading when that element is gone or no element had
-  it. While a popover, a menu, or a dialog, such as the sidebar opened over
-  the content, keeps the area out of reach, and while the area holds no
-  message, F6 and Shift+F6 keep the browser's own use, such as moving to its
-  address bar.
+  moves nothing, and F6 reaches the message; a focus that the UI moves as
+  the message appears, such as back to the button of a menu whose change
+  failed, takes its element once the message shows, so that the element
+  does not lie under it. The message area, which comes last in the order of
+  the page, is reached at once: while it holds a message, F6 and Shift+F6
+  move the focus from anywhere else in the page to its newest message,
+  which takes the focus itself, so that assistive technologies read it, and
+  from which Tab reaches its link and its Dismiss, then those of the older
+  messages. From within the area, F6 and Shift+F6 return the focus to the
+  element that had it before it entered the area, or to the screen's
+  heading when that element is gone or no element had it. While a popover, a
+  menu, or a dialog, such as the sidebar opened over the content, keeps the
+  area out of reach, and while the area holds no message, F6 and Shift+F6
+  keep the browser's own use, such as moving to its address bar.
 - **Structure.** On every screen with a sidebar (`docs/screen-map.md`,
   Sidebar), the first element that takes the focus is a link that skips to
   the main content; a screen in the column of the Sign In Page has no block
@@ -1131,13 +1135,14 @@ meanwhile.
   the card wherever a user shows, and this entry is then removed.
 - **The message area over the content.** The message area that floats over
   the content at the bottom of the window (`docs/design-system.md`, Main
-  Content; Messages), the messages that go on their own (Outcome of a
-  Change), F6, and the focus after Dismiss (Accessibility) wait for the
-  change of the UI that builds them. Until then, the message area shows at
-  the top of the main content, above the heading, and while it holds a
-  message it stays at the top of the window, the compact heading of a
-  detail screen and the side column below it, so that a message that
-  appears or goes moves the content below it; every message stays until the
-  user dismisses it or opens another screen, and Dismiss moves the focus to
-  the screen's heading. That change removes this entry and the reference to
-  it in `docs/design-system.md` (Main Content).
+  Content; Messages), with the room that it keeps at the end of the content
+  and the room of the scrollbar (Main Content), the messages that go on
+  their own (Outcome of a Change), F6, and the focus after Dismiss
+  (Accessibility) wait for the change of the UI that builds them. Until
+  then, the message area shows at the top of the main content, above the
+  heading, and while it holds a message it stays at the top of the window,
+  the compact heading of a detail screen and the side column below it, so
+  that a message that appears or goes moves the content below it; every
+  message stays until the user dismisses it or opens another screen, and
+  Dismiss moves the focus to the screen's heading. That change removes this
+  entry and the reference to it in `docs/design-system.md` (Main Content).
