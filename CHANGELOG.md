@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/vulnwatch/sentinel-aura/compare/v0.13.0...v0.13.1) (2026-11-28)
+
+
+### Bug Fixes
+
+* announce messages while a dialog, menu, or popover is open ([#352](https://github.com/vulnwatch/sentinel-aura/issues/352)) ([d550d2c](https://github.com/vulnwatch/sentinel-aura/commit/d550d2c75ac7d0979f42e18b0de28e6f2061c6e7)), closes [#228](https://github.com/vulnwatch/sentinel-aura/issues/228)
+
 ## [0.13.0](https://github.com/vulnwatch/sentinel-aura/compare/v0.12.0...v0.13.0) (2026-11-26)
 
 
