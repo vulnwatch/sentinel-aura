@@ -1990,7 +1990,7 @@ test("removes the messages when another screen opens, also when the user returns
 
 test.each([
   [
-    "through a link",
+    "through a navigation",
     (router: AnyRouter) => {
       router.history.push("/tickets/SNTL-42");
     },
