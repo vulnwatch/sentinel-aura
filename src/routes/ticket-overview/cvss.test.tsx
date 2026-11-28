@@ -22,6 +22,7 @@ import {
   CVSS,
   cvssPart,
   later,
+  layoutWidth,
   NVD_V31_VECTOR,
   NVD_V40,
   packagesPart,
@@ -374,7 +375,7 @@ describe("the CVSS assessments", () => {
     expect(texts.slice(0, -1).every((text) => text.endsWith("/"))).toBe(true);
     // The page does not scroll horizontally (docs/behaviors.md,
     // Accessibility, Reflow and text size).
-    expect(document.documentElement.scrollWidth).toBe(320);
+    expect(document.documentElement.scrollWidth).toBe(layoutWidth());
   });
 
   test("wrap a provider longer than its column", async () => {

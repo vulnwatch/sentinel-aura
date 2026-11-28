@@ -75,6 +75,14 @@ function linesOf(element: Element): number {
   ).size;
 }
 
+// The width of the page: that of the window, less the room that a page with
+// the message area keeps for its scrollbar also while it does not scroll
+// (src/styles.css), which the body leaves out. Chromium gives the root's
+// clientWidth as the width of the window while that room is empty.
+function layoutWidth(): number {
+  return document.body.clientWidth;
+}
+
 // The text of a sentence in runs of one font weight, in their order, as
 // [weight, text], without what it hides from assistive technologies.
 function weightRunsOf(sentence: Element): [string, string][] {
@@ -1166,9 +1174,7 @@ describe("the sentences", () => {
     for (const metric of metrics) {
       expect(linesOf(metric)).toBe(1);
     }
-    expect(document.documentElement.scrollWidth).toBe(
-      document.documentElement.clientWidth,
-    );
+    expect(document.documentElement.scrollWidth).toBe(layoutWidth());
   });
 
   test("keep none of the line breaks of a text", async () => {
@@ -1199,8 +1205,6 @@ describe("the sentences", () => {
 
     await renderEvents();
 
-    expect(document.documentElement.scrollWidth).toBe(
-      document.documentElement.clientWidth,
-    );
+    expect(document.documentElement.scrollWidth).toBe(layoutWidth());
   });
 });

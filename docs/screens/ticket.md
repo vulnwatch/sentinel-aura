@@ -1956,11 +1956,12 @@ Maintained Packages):
   "Package fictional-openssl already has every track and Product that
   Sentinel finds for it in SMELT, so none was added."; while "Show hidden" is
   off and that read shows the package hidden, followed by "Show hidden shows
-  it, since none of its Products is actionable.". A failure after the user
-  left the tab shows in the presentation of the dialog (States) after the
-  package, such as "SNTL-20: Package fictional-openssl: SMELT doesn't
-  maintain a package of this name. Check the name, whose letter case
-  counts." (above).
+  it, since none of its Products is actionable.", a message that stays until
+  the user dismisses it, since the tree shows nothing of the package. A
+  failure after the user left the tab shows in the presentation of the
+  dialog (States) after the package, such as "SNTL-20: Package
+  fictional-openssl: SMELT doesn't maintain a package of this name. Check
+  the name, whose letter case counts." (above).
 
 **Grant access**, Grant Access, `POST /api/v1/tickets/{ticket_id}/access`,
 and **Revoke access**, Revoke Access,

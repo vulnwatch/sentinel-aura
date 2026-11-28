@@ -24,6 +24,7 @@ import {
   accessGrantsDialog,
   ACTORS,
   announcements,
+  areaMessage,
   backgroundBehind,
   boxOf,
   CAROL,
@@ -31,14 +32,18 @@ import {
   confidentialTicket,
   declassifiedTicket,
   EMMA,
+  expectGoesOnItsOwn,
+  fakeMessageClock,
   grantLines,
   later,
+  layoutWidth,
   leaveForTickets,
   mainContent,
   ME,
   MESSAGE_CONFLICT,
   MESSAGE_TONES,
   nextFrames,
+  ON_FAKE_CLOCK,
   participantNames,
   prepareEachTest,
   readsOf,
@@ -123,6 +128,21 @@ async function revokeCarol(screen: Screen) {
   await confirmationOf(screen, "Carol White")
     .getByRole("button", { name: "Revoke access", exact: true })
     .click();
+}
+
+// The room of the scrollbar that a page with the message area keeps also
+// while it does not scroll (layoutWidth), as an element keeps it with the
+// same rule (src/styles.css): that of a classic scrollbar in Chromium, also
+// where the tests hide its scrollbars, or none where the scrollbars overlay
+// the page, as Firefox's do.
+function scrollbarRoom(): number {
+  const probe = document.createElement("div");
+  probe.style.setProperty("overflow", "hidden");
+  probe.style.setProperty("scrollbar-gutter", "stable");
+  document.body.append(probe);
+  const room = probe.offsetWidth - probe.clientWidth;
+  probe.remove();
+  return room;
 }
 
 describe("the access grants", () => {
@@ -1377,6 +1397,37 @@ describe("the access grants", () => {
     expect(backgroundBehind(message.element())).toBe(MESSAGE_TONES.success);
     expect(screen.getByText(/^SNTL-12:/).query()).toBeNull();
   });
+
+  test("let Revoke access, shown in the message area as the dialog closed before the read of the grants after it arrives, go on its own 10 seconds after it appears", async () => {
+    const reread = later();
+    let revoked = false;
+    stubTicket({
+      user: MANAGER,
+      ticket: () => confidentialTicket(),
+      grants: () => (revoked ? reread.promise : grantsResponse([CAROL, EMMA])),
+      revoke: () => {
+        revoked = true;
+        return new Response(null, { status: 204 });
+      },
+    });
+    const { screen } = await renderParticipants();
+    await openAccessGrants(screen);
+    await revokeCarol(screen);
+    await expect
+      .element(confirmationOf(screen, "Carol White"))
+      .not.toBeInTheDocument();
+    await accessGrantsDialog(screen)
+      .getByRole("button", { name: "Close" })
+      .click();
+    await expect.element(accessGrantsDialog(screen)).not.toBeInTheDocument();
+    await fakeMessageClock(screen);
+
+    reread.resolve(grantsResponse([EMMA]));
+
+    const message = areaMessage(screen, "Access of Carol White revoked.");
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectGoesOnItsOwn(message);
+  });
 });
 
 test("show Grant access at the end of the line of the user field, 8 px after its control and aligned with it, also with an error, ending where Close does, with the options of the field below the control, from its start", async () => {
@@ -1428,14 +1479,16 @@ test("show Grant access at the end of the line of the user field, 8 px after its
 
 test("show Grant access at the end of the line of the user field, 8 px after its control, where the dialog is just wide enough for the line, at 464 CSS pixels", async () => {
   // The form is then 390 px wide: wider than the 384 px from which the line
-  // shows, narrower than the field at its own width with Grant access.
-  await page.viewport(464, 800);
+  // shows, narrower than the field at its own width with Grant access. The
+  // window is wider by the room of its scrollbar (scrollbarRoom).
+  await page.viewport(464 + scrollbarRoom(), 800);
   stubTicket({
     user: MANAGER,
     ticket: () => confidentialTicket(),
     grants: () => grantsResponse(),
   });
   const { screen } = await renderParticipants();
+  expect(layoutWidth()).toBe(464);
   await openAccessGrants(screen);
 
   // The field narrows for Grant access, to within the rounding of a browser.
@@ -1451,14 +1504,16 @@ test("show Grant access at the end of the line of the user field, 8 px after its
 });
 
 test("show Grant access below the user field, at the end of the form, where the form is just narrower than 384 px, at 456 CSS pixels", async () => {
-  // The form is then 382 px wide.
-  await page.viewport(456, 800);
+  // The form is then 382 px wide. The window is wider by the room of its
+  // scrollbar (scrollbarRoom).
+  await page.viewport(456 + scrollbarRoom(), 800);
   stubTicket({
     user: MANAGER,
     ticket: () => confidentialTicket(),
     grants: () => grantsResponse(),
   });
   const { screen } = await renderParticipants();
+  expect(layoutWidth()).toBe(456);
   await openAccessGrants(screen);
 
   const field = boxOf(userField(screen));

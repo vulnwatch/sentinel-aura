@@ -21,6 +21,7 @@ import {
   ADDED,
   ADVISORY,
   announcementsOf,
+  areaMessage,
   backgroundBehind,
   chooseType,
   client,
@@ -31,6 +32,8 @@ import {
   editOf,
   EVERY_REFERENCE,
   expectFocusSettledOn,
+  expectStays,
+  fakeMessageClock,
   fictionalReference,
   fieldOf,
   focused,
@@ -47,6 +50,7 @@ import {
   MESSAGE_UNCONFIRMED,
   namesOf,
   NVD,
+  ON_FAKE_CLOCK,
   openAdd,
   openEdit,
   optionNames,
@@ -134,6 +138,14 @@ function scrollerOf(screen: Screen): Element {
     throw new Error("The table has no frame");
   }
   return scroller;
+}
+
+// The width of the page: that of the window, less the room that a page with
+// the message area keeps for its scrollbar also while it does not scroll
+// (src/styles.css), which the body leaves out. Chromium gives the root's
+// clientWidth as the width of the window while that room is empty.
+function layoutWidth(): number {
+  return document.body.clientWidth;
 }
 
 // Waits until no read of the path is in progress and the tab has its
@@ -523,7 +535,7 @@ describe("the table", () => {
     const { screen } = await renderTab();
 
     await expect.poll(() => namesOf(screen)).toHaveLength(5);
-    expect(document.documentElement.scrollWidth).toBe(320);
+    expect(document.documentElement.scrollWidth).toBe(layoutWidth());
     expect(
       tableOf(screen)
         .getByRole("columnheader", { name: "Reference" })
@@ -1759,6 +1771,53 @@ describe("a change that ends after the user left the tab", () => {
       expect(announcementsOf()).toEqual([text]);
     },
   );
+
+  test("keeps its success in the message area until it is dismissed", async () => {
+    const response = later();
+    stubReferences({ add: () => response.promise });
+    const { router, screen } = await renderTab();
+    const dialog = await openAdd(screen);
+    await fieldOf(dialog, "Address").fill(ADDED.url);
+    await submit(dialog, "Add reference");
+    await leave(router, screen);
+    await fakeMessageClock(screen);
+
+    response.resolve(referenceResponse(ADDED, 201));
+
+    const message = areaMessage(
+      screen,
+      "SNTL-12: Reference “Fictional packaging issue” added.",
+    );
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectStays(message);
+  });
+
+  test("keeps the outcome of a reference that the filters hid, which waited for the next read as the user left the tab, until it is dismissed", async () => {
+    const reread = later();
+    let added = false;
+    stubReferences({
+      references: () => (added ? reread.promise : referencesResponse()),
+      add: () => {
+        added = true;
+        return referenceResponse(ADDED, 201);
+      },
+    });
+    const { router, screen } = await renderTab(`${PATH}?type=patch`);
+    const dialog = await openAdd(screen);
+    await fieldOf(dialog, "Address").fill(ADDED.url);
+    await submit(dialog, "Add reference");
+    await expect.element(dialog).not.toBeInTheDocument();
+    await fakeMessageClock(screen);
+
+    await leave(router, screen);
+
+    const message = areaMessage(
+      screen,
+      "SNTL-12: Reference “Fictional packaging issue” added.",
+    );
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectStays(message);
+  });
 
   test("shows a change of a reference in the message area", async () => {
     const response = later();

@@ -19,6 +19,7 @@ import {
   ADDED,
   ADVISORY,
   announcementsOf,
+  areaMessage,
   backgroundBehind,
   chooseType,
   client,
@@ -27,6 +28,9 @@ import {
   EVENTS,
   expectFocusOnError,
   expectFocusSettledOn,
+  expectGoesOnItsOwn,
+  expectStays,
+  fakeMessageClock,
   fictionalReference,
   fieldOf,
   frames,
@@ -42,6 +46,7 @@ import {
   MESSAGE_UNCONFIRMED,
   namesOf,
   NVD,
+  ON_FAKE_CLOCK,
   openAdd,
   openEdit,
   openTypes,
@@ -418,6 +423,54 @@ describe("Add reference", () => {
         .getByText(/added\.$/)
         .elements(),
     ).toHaveLength(1);
+  });
+
+  test.each<
+    [string, string, () => Response, (message: Locator) => Promise<void>]
+  >([
+    [
+      "lets the outcome of a reference that the filters hide go on its own 10 seconds after it appears, once the next read of the references arrives",
+      `${PATH}?type=patch`,
+      () => referencesResponse(),
+      expectGoesOnItsOwn,
+    ],
+    [
+      "lets the outcome of a reference that the filters hide, which shows in the message area anyway, go on its own 10 seconds after it appears also once the next read of the references fails",
+      `${PATH}?type=patch`,
+      () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
+      expectGoesOnItsOwn,
+    ],
+    [
+      "keeps the outcome of a reference that the filters show until it is dismissed, once the next read of the references fails",
+      PATH,
+      () => errorResponse(403, "AUTH_INSUFFICIENT_PERMISSION"),
+      expectStays,
+    ],
+  ])("%s", async (_, path, response, expectOutcome) => {
+    const reread = later();
+    let added = false;
+    stubReferences({
+      references: () => (added ? reread.promise : referencesResponse()),
+      add: () => {
+        added = true;
+        return referenceResponse(ADDED, 201);
+      },
+    });
+    const { screen } = await renderTab(path);
+    const dialog = await openAdd(screen);
+    await fieldOf(dialog, "Address").fill(ADDED.url);
+    await submit(dialog, "Add reference");
+    await expect.element(dialog).not.toBeInTheDocument();
+    await fakeMessageClock(screen);
+
+    reread.resolve(response());
+
+    const message = areaMessage(
+      screen,
+      "Reference “Fictional packaging issue” added.",
+    );
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectOutcome(message);
   });
 
   test("announces each change again in a node of its own, also with the same words", async () => {
