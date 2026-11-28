@@ -788,11 +788,11 @@ change, in the state that the screen then shows, such as its new filters.
   sources then show their fetch pending. Every other message stays until the
   user dismisses it, so that no message that the user may need later goes
   before they have read it (WCAG 2.2, 2.2.1 Timing Adjustable): a `warning`
-  or a `danger` message; the outcome of a change that ended after the user
-  left the screen or the tab where they made it, which the screen in view
-  does not show; the outcome of a change that shows as a message because the
-  read after it failed (above); and a message that its screen document
-  states stays, since the screen does not show its result.
+  or a `danger` message; the outcome of a change that ended while the user
+  was on another screen or tab than the one where they made it; the outcome
+  of a change that shows as a message because the read after it failed
+  (above); and a message that its screen document states stays, since the
+  screen does not show its result.
 - The countdown of a message waits while a pointer that hovers, such as a
   mouse, not a touch, is over the message area, while the focus is in it,
   while the tab is hidden, and while a popover, a menu, or a dialog, such as
