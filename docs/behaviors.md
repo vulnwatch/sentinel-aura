@@ -222,7 +222,7 @@ message follows Wording.
 
 | Failure | Where it appears |
 |---|---|
-| A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, below the message area, under a heading that names the error |
+| A read without which the screen shows nothing, such as the record of a detail screen or the list of a list screen | In place of the content of the screen, under a heading that names the error |
 | A read of one part of a screen, such as a section or a tab | In place of that part; the rest of the screen stays usable |
 | A read of other data for what the screen shows, such as another page, filter, sort, or view of a list | In place of the data; the screen keeps its heading and controls |
 | A read that only adds marks to data that another read shows, such as the tracks of a package tree that wait for the signed-in user | Next to that data, which stays shown and usable: a message that says what couldn't be shown, followed by the message of its status, which goes while the read is sent again. Once a read of them has succeeded, a later read of them that fails keeps its marks, as a new read of the same data does, but its message names them, such as "The tracks that wait for you couldn't be updated.", so that it is not read as a failure of the data that they mark; a `403` or `404` removes them as for the first read |
@@ -771,14 +771,31 @@ change, in the state that the screen then shows, such as its new filters.
   which shows the result.
 - Any other successful change shows a short message that says what happened,
   such as "API key revoked.".
-- Messages appear in one message area at the top of the main content, which
-  every screen shares. A message stays until the user dismisses it or opens
-  another screen. The outcome of a change that ends after the user left its
-  screen appears on the screen that the user is on, and names the record that
-  it concerns, with a link to it, such as "SNTL-42: Priority changed to P2.".
+- Messages appear in one message area, which every screen shares and which
+  floats over the content at the bottom of the window, so that a message that
+  appears or goes moves nothing of the screen (`docs/design-system.md`, Main
+  Content). The outcome of a change that ends after the user left its screen
+  appears on the screen that the user is on, and names the record that it
+  concerns, with a link to it, such as "SNTL-42: Priority changed to P2.".
   A dialog that stays open after its change, for a further change of the same
   kind, shows the outcome at its top instead, as a message that is announced
   and stays until the dialog closes (`docs/design-system.md`, Dialogs).
+- A message of the message area goes when the user dismisses it or opens
+  another screen. A `success` or an `info` message (`docs/design-system.md`,
+  Messages) also goes on its own, 10 seconds after it appears, or 1 second
+  for every 3 of its words when that is longer, since it confirms what the
+  screen shows, such as "API key revoked.", whose key leaves its list, or
+  "Refetch started.", whose sources then show their fetch pending. Every
+  other message stays until the user dismisses it, so that no message that
+  the user may need later goes before they have read it (WCAG 2.2, 2.2.1
+  Timing Adjustable): a `warning` or a `danger` message, and a `success` or
+  an `info` message whose result the screen does not show, which names
+  another record, or which shows the outcome of a change because the read
+  after it failed (above).
+  The countdown of a message waits while the pointer is over the message
+  area, while the focus is in it, while the tab is hidden, and while a
+  dialog, a popover, or a menu that keeps the area out of reach is open, and
+  goes on from where it stopped once none of these holds.
 - An operation that Sentinel accepts with `202` has started, not finished:
   its message says so, such as "Refetch started.", and links to the screen
   that shows its progress, when one does.
@@ -806,9 +823,19 @@ also meets these requirements, which they cannot check:
 
 - **Keyboard.** Every function works with the keyboard alone, in an order that
   follows the reading order, and the focus is never trapped. The focus is
-  always visible, and no fixed element, such as the sidebar, hides it (2.1.1
-  Keyboard; 2.1.2 No Keyboard Trap; 2.4.3 Focus Order; 2.4.7 Focus Visible;
-  2.4.11 Focus Not Obscured (Minimum)).
+  always visible, and no fixed element, such as the sidebar or the message
+  area, hides it (2.1.1 Keyboard; 2.1.2 No Keyboard Trap; 2.4.3 Focus Order;
+  2.4.7 Focus Visible; 2.4.11 Focus Not Obscured (Minimum)). The message
+  area, which comes last in the order of the page (`docs/design-system.md`,
+  Main Content), is also reached at once: while it holds a message, F6 and
+  Shift+F6 move the focus from anywhere else in the page to its newest
+  message, which takes the focus itself, so that assistive technologies read
+  it, and from which Tab reaches its link and its Dismiss, then those of the
+  older messages. From within the area, F6 and Shift+F6 return the focus to
+  the element that had it before it entered the area, or to the screen's
+  heading when that element is gone. While a dialog, a popover, or a menu
+  keeps the area out of reach, and while the area holds no message, F6 and
+  Shift+F6 keep the browser's own use, such as moving to its address bar.
 - **Structure.** On every screen with a sidebar (`docs/screen-map.md`,
   Sidebar), the first element that takes the focus is a link that skips to
   the main content; a screen in the column of the Sign In Page has no block
@@ -847,7 +874,13 @@ also meets these requirements, which they cannot check:
   of the page out of reach, it moves instead to the element that takes the
   place of the one that disappeared, such as the same action of the next
   item of a list, or the field that adds such items when no item follows,
-  and otherwise to the dialog itself.
+  and otherwise to the dialog itself. Dismiss of a message, which leaves the
+  rest of the screen as it is, is the exception: a press of the pointer on it
+  leaves the focus where it was, and when it has the focus, the focus moves
+  to the Dismiss of the message that takes its place, the next newer one, or
+  the next older one where it was the newest, and after the last message to
+  the element that had the focus before it entered the message area, or to
+  the screen's heading when that element is gone.
 - **Dialogs.** A dialog takes the focus when it opens: its first field, or in
   a confirmation the button that keeps things as they are, Cancel or Keep
   editing; a dialog without a field or a button, such as the explanation of a
@@ -1090,3 +1123,14 @@ meanwhile.
   compact form names the user in its tooltip (`docs/design-system.md`,
   Representation of a User). The change that builds User adds the link and
   the card wherever a user shows, and this entry is then removed.
+- **The message area over the content.** The message area that floats over
+  the content at the bottom of the window (`docs/design-system.md`, Main
+  Content; Messages), the messages that go on their own (Outcome of a
+  Change), F6, and the focus after Dismiss (Accessibility) wait for the
+  change of the UI that builds them. Until then, the message area shows at
+  the top of the main content, above the heading, and while it holds a
+  message it stays at the top of the window, the compact heading of a
+  detail screen and the side column below it, so that a message that
+  appears or goes moves the content below it; every message stays until the
+  user dismisses it or opens another screen, and Dismiss moves the focus to
+  the screen's heading. That change removes this entry.

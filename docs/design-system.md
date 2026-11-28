@@ -197,8 +197,9 @@ of the severity always follows them (Exempt Elements).
   next to it, in both themes (1.4.11 Non-text Contrast): the boundaries of
   fields and secondary buttons, the focus ring, the fill of a primary or
   danger button, the boundary of the selected view, an icon that carries a
-  meaning without a text, the P1 mark, a field's error boundary, and the
-  progress bar of data that is being updated.
+  meaning without a text, the P1 mark, a field's error boundary, the
+  progress bar of data that is being updated, and the line of the time left
+  of a message.
 - The icons of a Ticket status and of a message accompany a text that carries
   the same meaning, and meet 3:1 nonetheless.
 - The ratios follow WCAG's definition of contrast ratio and relative
@@ -328,7 +329,9 @@ Graphical elements, minimum 3:1:
 The icon of the current phase of a track stands on the soft background of its
 tone, and the icons of a pipeline on `neutral-soft` under the pointer (Track
 Milestones); the rail of a switch that is on has the contrast of `accent` on
-its background (Forms).
+its background (Forms). The line of the time left of a message (Messages),
+which tells that the message goes on its own, has the contrast of the text of
+its message.
 A mark drawn in `surface` inside a filled `{tone}-icon` or `danger-solid`
 shape, such as the check of the Resolved status, has the contrast of the same
 pair. The icon of a link to another site (Buttons and Links), an icon that
@@ -401,8 +404,8 @@ wins.
   avatar, round for a person and 20 % of its size for a bot account and for a
   recorded action without an actor (Avatar; Representation of a User).
 - **Shadows:** only floating elements have one: Tailwind's `shadow-lg` under
-  menus, popovers, and tooltips, and `shadow-xl` under dialogs and the
-  sidebar opened over the content.
+  menus, popovers, tooltips, and the messages of the message area (Messages),
+  and `shadow-xl` under dialogs and the sidebar opened over the content.
 - **Breakpoint:** one, at a window width of 1024 CSS pixels, which, unlike
   the other sizes, does not change with the text size. One media query
   decides how the sidebar shows (Sidebar). Whether a detail screen shows its
@@ -535,8 +538,9 @@ that it sits with the icons around it.
 - **Motion:** only loading indicators and the mark of an operation in
   progress move: the spinner turns and the progress bar runs (Loading), and
   so does the mark of an operation that a screen follows by reading it again,
-  such as the pending fetch of a source (Other Values). When the browser
-  reports a preference for reduced motion, they stand still. Menus,
+  such as the pending fetch of a source (Other Values), and the line of the
+  time left of a message that goes on its own shortens (Messages). When the
+  browser reports a preference for reduced motion, they stand still. Menus,
   popovers, dialogs, tooltips, and the sidebar appear and change at once.
 
 ## Page Layout
@@ -649,19 +653,26 @@ Errors Appear), which also closes the sidebar opened over the content
 - The main content fills the width beside the sidebar, on `canvas`, with
   24 px of space at its top and sides. It has no maximum width: lists use the
   whole width, and forms and long texts set their own (Forms).
-- The message area is at the top of the main content, above the heading:
-  messages stack in it, 8 px apart, across the width of the content
-  (`docs/behaviors.md`, Outcome of a Change), as Messages describes them.
-  The newest message comes first. While the area holds a message, it stays at
-  the top of the window when the content scrolls, so that a message that
-  appears is always in view. It takes at most a third of the window's height,
-  beyond which its messages scroll within it, and the content scrolls so that
-  the element with keyboard focus never lies under it, nor under the compact
-  heading of a detail screen below it (Detail Screens), and so that the
-  target of an anchor of the page shows below both (`docs/behaviors.md`,
-  Accessibility). While it holds a message, the area is on `canvas`, with
-  8 px of space above and below its messages, and the heading follows 16 px
-  below the last message; without one, it takes no room.
+- The message area floats over the content at the bottom of the window, so
+  that a message that appears or goes moves nothing of the screen
+  (`docs/behaviors.md`, Outcome of a Change): its bottom 24 px above the
+  bottom of the window, its start 24 px from the start of the main content,
+  beside the sidebar, at most 400 px wide, or as wide as the main content
+  inside its space where that is narrower. Its messages stack in it, 8 px
+  apart, as Messages describes them, the newest at the top, so that a new
+  message comes above those that show and moves none of them; a message that
+  goes moves only the newer ones above it down into its place. It takes at
+  most a third of the window's height, beyond which its messages scroll
+  within it. It shows above the content, the compact heading of a detail
+  screen included, and below a dialog, a popover, or a menu, and the sidebar
+  opened over the content, which keep it out of reach while they are open.
+  It comes after the content of the screen in the order of the page, as it
+  shows below it, and assistive technologies name it "Messages"; without a
+  message, it does not show. The content scrolls so that the element with
+  keyboard focus never lies under it, also when a message appears over that
+  element, where the page can scroll that far; nor under the compact heading
+  of a detail screen (Detail Screens); and the target of an anchor of the
+  page shows below the compact heading (`docs/behaviors.md`, Accessibility).
 - A URL with an anchor shows its target once every part of the screen, or of
   its tab, shows its data or its error, unless the user has scrolled
   meanwhile, so that a part that arrives later does not move the target out
@@ -1467,9 +1478,9 @@ states it, such as that of a Ticket; the other audit logs are tables
   stays where it is, and the page keeps its scroll position as the browser
   adjusts it.
 - With two columns, while the page scrolls, the side column stays at the top
-  of its place, 24 px below the message area and the compact heading, as it
-  starts 24 px below the line of the tabs, until the end of the page comes
-  into view, and then scrolls with the page to its own end, so that its first
+  of its place, 24 px below the compact heading, as it starts 24 px below the
+  line of the tabs, until the end of the page comes into view, and then
+  scrolls with the page to its own end, so that its first
   sections stay beside the parts. When an element of the side column that is
   out of view takes keyboard focus, or is the target of an anchor, the page
   scrolls until it shows, which for the last sections of a side column
@@ -1480,8 +1491,8 @@ states it, such as that of a Ticket; the other audit logs are tables
 - On a screen with a side column, while the main content is wide enough for
   two columns, on each of its tabs, also one that takes the whole width, the
   heading row stays at the top of the window once the page has scrolled it
-  there, below the message area, as the compact heading, on `surface` above a
-  `border` line across the width, without a shadow (Spacing and Sizes,
+  there, as the compact heading, on `surface` above a `border` line across
+  the width, without a shadow (Spacing and Sizes,
   Shadows): 10 px of space, the level-one heading in `text-16` with the main
   values, and the actions as buttons 32 px high, then right below them the
   tabs, 36 px high. Its place in the page keeps the
@@ -1726,6 +1737,17 @@ states it, such as that of a Ticket; the other audit logs are tables
   500; the reference of an error follows on its own line as "Reference:" and
   the identifier in monospace; and in the message area it ends with a dismiss
   button, `x` at 16 px in a 24 px target, named "Dismiss".
+- In the message area (Main Content), which floats over the content, a
+  message also has a `border` line and `shadow-lg`, as a popover does. A
+  message that goes on its own (`docs/behaviors.md`, Outcome of a Change)
+  shows the time left as a line 2 px high in its `on-soft` color along its
+  top edge, inside its radius, which starts across the whole width and
+  shortens toward the start until the message goes; it stops while the
+  countdown waits, and under reduced motion it stays across the whole width
+  (Focus and Motion). A message that stays until it is dismissed has no such
+  line, so that the line tells the two apart. The message that has the
+  focus, as after F6 (`docs/behaviors.md`, Accessibility, Keyboard), shows
+  the focus ring.
 - The tone follows the message: `success` for a change that succeeded,
   `info` for an operation that started and for information, `warning` for a
   change that Sentinel did not confirm (`docs/behaviors.md`, Retries and
@@ -1760,12 +1782,11 @@ states it, such as that of a Ticket; the other audit logs are tables
 
 ### Errors in Place of Content
 
-- An error in place of the content of a screen shows below the message area:
-  the level-one heading that names the error, its message in `fg-muted`, the
-  reference of the error when it has one, and its action, Try again or Reload
-  page as a secondary button, or a link to the landing, aligned to the start
-  and at most 560 px wide (`docs/behaviors.md`, Default Presentation by
-  Status).
+- An error in place of the content of a screen shows the level-one heading
+  that names the error, its message in `fg-muted`, the reference of the error
+  when it has one, and its action, Try again or Reload page as a secondary
+  button, or a link to the landing, aligned to the start and at most 560 px
+  wide (`docs/behaviors.md`, Default Presentation by Status).
 - An error in place of a part shows the same inside the part, below its
   heading, without a heading of its own.
 
