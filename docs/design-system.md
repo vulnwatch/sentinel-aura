@@ -534,8 +534,8 @@ that it sits with the icons around it.
   the chosen one (Forms), the main content after the link that skips to it
   (Main Content), the sidebar opened over the content (Sidebar), and a
   message of the message area that holds the focus itself, as after F6
-  (Messages). It shows on keyboard focus, and no element removes it
-  (`docs/behaviors.md`, Accessibility).
+  (`docs/behaviors.md`, Accessibility, Keyboard). It shows on keyboard
+  focus, and no element removes it (`docs/behaviors.md`, Accessibility).
 - **Motion:** only loading indicators, the mark of an operation in progress,
   and the line of the time left of a message move: the spinner turns and the
   progress bar runs (Loading), and so does the mark of an operation that a
@@ -665,9 +665,11 @@ Errors Appear), which also closes the sidebar opened over the content
   Messages describes them, the newest at the top, so that a new message
   comes above those that show and moves none of them; a message that goes
   moves only the newer ones above it down into its place. It takes at most a
-  third of the window's height, beyond which its messages scroll within it,
-  and a message that appears scrolls the area to its top, so that it shows.
-  Without a message, the area does not show.
+  third of the window's height, beyond which its messages scroll within it;
+  a message that appears then scrolls the area to its top, so that it shows,
+  unless the pointer hovers over the area or the focus is in it, so that
+  what the user reads or is about to press there stays where it is. Without
+  a message, the area does not show.
 - The message area shows above the content, the compact heading of a detail
   screen included, and below a tooltip, a popover, a menu, and a dialog, such
   as the sidebar opened over the content; a popover, a menu, or a dialog
@@ -677,16 +679,17 @@ Errors Appear), which also closes the sidebar opened over the content
   from anywhere in the page (`docs/behaviors.md`, Accessibility, Keyboard).
   Assistive technologies name it "Messages".
 - Once the message area has shown a message, the main content keeps room at
-  its end, until another screen opens, as high as the area has been at its
-  highest, so that the end of the page can scroll above the area; the room
-  grows with the area and does not shrink when a message goes, so that a
-  message that goes at the end of the page moves nothing either. The content
-  scrolls so that the element that takes the focus from the keyboard, and
-  the target of an anchor of the page, never lie under the area, while the
-  focus of an element of the area itself leaves the page where it is. A
-  message that appears over the element that has the focus leaves it there,
-  as it moves nothing, and F6 reaches its Dismiss (`docs/behaviors.md`,
-  Accessibility).
+  its end, until another screen opens, as high as the area, with the 24 px
+  below it, has been at its highest, so that the end of the page can scroll
+  above the area; the room grows with the area and does not shrink when a
+  message goes, so that a message that goes at the end of the page moves
+  nothing either. The window keeps the room of its scrollbar also while the
+  page does not scroll, so that a page that the room makes scroll keeps its
+  width. The content scrolls so that the element that takes the focus, other
+  than by a press of the pointer, and the target of an anchor of the page,
+  never lie under the area, while the focus of an element of the area itself
+  leaves the page where it is (`docs/behaviors.md`, Accessibility,
+  Keyboard).
 - A URL with an anchor shows its target once every part of the screen, or of
   its tab, shows its data or its error, unless the user has scrolled
   meanwhile, so that a part that arrives later does not move the target out
@@ -1515,12 +1518,13 @@ states it, such as that of a Ticket; the other audit logs are tables
   when the heading becomes compact or returns. It is the heading row itself,
   not a copy, so the screen keeps one level-one heading, one set of tabs, and
   one menu of actions. While it can stay at the top of the window, the
-  content scrolls so that the element that takes the focus from the
-  keyboard, and the target of an anchor of the page, show below it, while
-  the focus of an element of the heading row itself leaves the page where it
-  is (`docs/behaviors.md`, Accessibility, Keyboard). Narrower, the heading
-  row scrolls with the page, so that a fixed heading takes no room from a
-  narrow window (`docs/behaviors.md`, Accessibility, Reflow and text size).
+  content scrolls so that the element that takes the focus, other than by a
+  press of the pointer, and the target of an anchor of the page, show below
+  it, while the focus of an element of the heading row itself leaves the
+  page where it is (`docs/behaviors.md`, Accessibility, Keyboard). Narrower,
+  the heading row scrolls with the page, so that a fixed heading takes no
+  room from a narrow window (`docs/behaviors.md`, Accessibility, Reflow and
+  text size).
 
 ### Forms
 
