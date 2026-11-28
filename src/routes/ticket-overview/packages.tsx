@@ -43,6 +43,7 @@ import {
   useChangeOutcome,
   useMounted,
   useOutcomeAfterRead,
+  type StayingText,
 } from "../../components/change-outcome";
 import { COUNT } from "../../components/count";
 import { DateTime } from "../../components/date-time";
@@ -520,7 +521,7 @@ function ProductName({
       const presentation =
         conflict === undefined ? presentChangeFailure(failure) : undefined;
       if (conflict !== undefined) {
-        showMessage({ tone: "info", text: conflict });
+        showMessage({ tone: "info", text: conflict, goesOnItsOwn: true });
       } else if (presentation !== undefined) {
         showMessage({
           tone: presentation.unconfirmed ? "warning" : "danger",
@@ -985,12 +986,15 @@ type YourWorkRead = ReturnType<typeof useYourWork>;
 // of the Ticket after it arrives, also when that read fails, since
 // the counts that Sentinel returns say what it created, which the tree does
 // not show (docs/behaviors.md, Outcome of a Change): followed, while "Show
-// hidden" is off and that read shows the package hidden, by where it is.
+// hidden" is off and that read shows the package hidden, by where it is, a
+// message that then stays until the user dismisses it, since the screen
+// shows nothing of the package (docs/screens/ticket.md, Actions); otherwise
+// it goes on its own.
 function addedOutcome(
   response: PackageAdditionResponse,
   ticket: () => TicketDetail | undefined,
   showsHidden: () => boolean,
-): () => string {
+): () => StayingText {
   return () => {
     const text = addedText(response);
     const added = ticket()?.packages.find(
@@ -998,8 +1002,11 @@ function addedOutcome(
         ticketPackage.package_name === response.data.package_name,
     );
     return added !== undefined && !added.actionable && !showsHidden()
-      ? `${text} Show hidden shows it, since none of its Products is actionable.`
-      : text;
+      ? {
+          text: `${text} Show hidden shows it, since none of its Products is actionable.`,
+          stays: true,
+        }
+      : { text, stays: false };
   };
 }
 

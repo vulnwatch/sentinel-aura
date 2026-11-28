@@ -2653,9 +2653,10 @@ test.describe("for an analyst", () => {
       await expect.poll(scrollY).toBe(200);
       await expect(title).toHaveCSS("font-size", "16px");
       const tab = page.getByRole("tab", { name, exact: true });
-      // Once the scroll padding of the page, and the scroll margins of the
-      // elements of the compact heading, have followed its height, which
-      // ends with the tabs (src/components/fixed-top.ts).
+      // Once the scroll padding at the top of the page, the height of the
+      // compact heading alone, and the scroll margins of the elements of the
+      // compact heading, have followed its height, which ends with the tabs
+      // (src/components/fixed-top.ts).
       await expect
         .poll(async () => {
           const box = await tab.boundingBox();
@@ -4269,6 +4270,49 @@ async function ignoreTicket(page: Page, ticketId: string) {
   expect(status, "the status of Ignore Ticket").toBe(200);
 }
 
+// The message area, named Messages, which floats over the content at the
+// bottom of the window (docs/design-system.md, Main Content).
+function messageArea(page: Page) {
+  return page.getByRole("region", { name: "Messages", exact: true });
+}
+
+// A box in the window, as Playwright measures the box of an element.
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Whether two boxes share an area, as an element under the message area
+// shares the area's box.
+function overlaps(a: Box, b: Box): boolean {
+  return (
+    a.x < b.x + b.width &&
+    b.x < a.x + a.width &&
+    a.y < b.y + b.height &&
+    b.y < a.y + a.height
+  );
+}
+
+// The element that has the focus, by its name or its text, with its box in
+// the window, or null while no element has it.
+function focusedElement(
+  page: Page,
+): Promise<{ name: string; box: Box } | null> {
+  return page.evaluate(() => {
+    const element = document.activeElement;
+    if (element === null || element === document.body) {
+      return null;
+    }
+    const { x, y, width, height } = element.getBoundingClientRect();
+    return {
+      name: element.getAttribute("aria-label") ?? element.textContent ?? "",
+      box: { x, y, width, height },
+    };
+  });
+}
+
 test.describe("the actions of a Ticket", () => {
   test("offers an analyst Actions at the end of the heading row on every tab, whose menu opens with a click and with the keyboard and closes with Escape", async ({
     page,
@@ -5298,6 +5342,263 @@ test.describe("the actions of a Ticket", () => {
       await expect(status).toHaveText("Analysis");
     },
   );
+
+  test(
+    "shows the message that the convergence started over the content, which moves neither Actions nor the columns as it appears and as Dismiss removes it, at the top of the page and below the compact heading",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, in Analysis, whose rerun changes nothing
+      // (above), in a window lower than its page, so that the page scrolls
+      // until the compact heading shows (docs/design-system.md, Main
+      // Content; Detail Screens).
+      await page.setViewportSize({ width: 1280, height: 400 });
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const title = heading(page, ticketId);
+      const actions = actionsButton(page, ticketId);
+      const area = messageArea(page);
+      const message = area.getByText("Convergence started.", { exact: true });
+      const scrollY = () => page.evaluate(() => window.scrollY);
+      // Where Actions, the heading of the first section of the side column,
+      // and Add package in the main column show, and how far the page has
+      // scrolled.
+      const layout = async () => ({
+        actions: await actions.boundingBox(),
+        side: await part(page, "Details")
+          .getByRole("heading", { name: "Details", exact: true })
+          .boundingBox(),
+        main: await part(page, "Packages")
+          .getByRole("button", { name: "Add package", exact: true })
+          .boundingBox(),
+        scrollY: await scrollY(),
+      });
+
+      for (const scrolled of [false, true]) {
+        if (scrolled) {
+          await page.evaluate(() => {
+            window.scrollTo(0, 100);
+          });
+          await expect.poll(scrollY).toBe(100);
+          await expect(title).toHaveCSS("font-size", "16px");
+          // Once the scroll padding at the top of the page, and with it the
+          // offset of the side column, which sticks below the compact
+          // heading, have followed its height, which ends with the tabs
+          // (src/components/fixed-top.ts).
+          const tab = page.getByRole("tab", { name: "Overview", exact: true });
+          await expect
+            .poll(async () => {
+              const box = await tab.boundingBox();
+              const padding = await page.evaluate(() =>
+                Number.parseFloat(
+                  getComputedStyle(document.documentElement).scrollPaddingTop,
+                ),
+              );
+              return box === null
+                ? Infinity
+                : Math.abs(box.y + box.height - padding);
+            })
+            .toBeLessThanOrEqual(1);
+        }
+        const before = await layout();
+        expect(before.actions).not.toBeNull();
+        expect(before.side).not.toBeNull();
+        expect(before.main).not.toBeNull();
+
+        const menu = await openActions(page, ticketId);
+        await pressWhereShown(
+          page,
+          menu.getByRole("menuitem", {
+            name: "Rerun convergence",
+            exact: true,
+          }),
+        );
+
+        // The pointer over the message keeps it while the test measures:
+        // its countdown waits (docs/behaviors.md, Outcome of a Change).
+        await expect(message).toBeVisible();
+        await expect(menu).toHaveCount(0);
+        await expect(actions).toBeFocused();
+        await message.hover();
+        expect(await layout()).toEqual(before);
+        await expectAccessible(page);
+
+        // A press of the pointer on Dismiss leaves the focus on Actions
+        // (docs/behaviors.md, Accessibility, Focus after an action).
+        await area
+          .getByRole("button", { name: "Dismiss", exact: true })
+          .click();
+
+        await expect(area).toHaveCount(0);
+        await expect(actions).toBeFocused();
+        expect(await layout()).toEqual(before);
+      }
+    },
+  );
+
+  test(
+    "keeps the element that takes the focus from the keyboard clear of a message that stays, also at the end of the page, which F6 and Shift+Tab reach from the message",
+    { tag: "@changes-data" },
+    async ({ page }) => {
+      // A Ticket of this test's own, which asmith creates and then ignores
+      // once the screen shows it in Analysis: the screen does not read it
+      // again, so it still offers Rerun convergence, which Sentinel refuses
+      // with 409 TICKET_INVALID_TRANSITION (Sentinel
+      // docs/features/tickets/tickets.md, Rerun Ticket Convergence). The
+      // message of that failure stays until the user dismisses it
+      // (docs/behaviors.md, Outcome of a Change). The window is too narrow
+      // for two columns, so the sections of the side column follow the
+      // parts, and the last element of the content, the avatar of asmith
+      // among the participants, lies at the start of the window, where the
+      // message area floats; and it is lower than the page, which scrolls
+      // (docs/design-system.md, Main Content; Detail Screens).
+      await page.setViewportSize({ width: 1100, height: 450 });
+      await signIn(page, "asmith");
+      const ticketId = await createTicket(page);
+      await page.goto(`/tickets/${ticketId}`);
+      await expectOverviewShown(page);
+      const status = await headingValue(page, "Status");
+      await expect(status).toHaveText("Analysis");
+      await ignoreTicket(page, ticketId);
+      const actions = actionsButton(page, ticketId);
+      const avatar = part(page, "Participants")
+        .getByRole("toolbar", { name: "Participants" })
+        .getByRole("img", { name: "Alice Smith", exact: true });
+      const area = messageArea(page);
+      const text =
+        "This can't be done in the current state, which may have changed. Check it and try again.";
+      const scrollY = () => page.evaluate(() => window.scrollY);
+
+      const menu = await openActions(page, ticketId);
+      await menu
+        .getByRole("menuitem", { name: "Rerun convergence", exact: true })
+        .click();
+
+      await expect(area.getByText(text, { exact: true })).toBeVisible();
+      // The screen reads the Ticket again, which shows it Ignored, with its
+      // reason.
+      await expect(status).toHaveText("Ignored");
+      await expect(await detail(page, "Ignore reason")).toHaveText("Other");
+      await expect(actions).toBeFocused();
+      await expectAccessible(page);
+
+      // Checks that the element with the focus shows whole in the window,
+      // clear of the message area.
+      const height = page.viewportSize()?.height ?? 0;
+      const expectFocusClear = async () => {
+        const focused = await focusedElement(page);
+        const areaBox = await area.boundingBox();
+        if (focused === null || areaBox === null) {
+          throw new Error("no element has the focus, or the area is gone");
+        }
+        const { name, box } = focused;
+        expect(box.y, `the top of ${name}`).toBeGreaterThanOrEqual(0);
+        expect(box.y + box.height, `the bottom of ${name}`).toBeLessThanOrEqual(
+          height,
+        );
+        expect(overlaps(box, areaBox), `${name} under the message area`).toBe(
+          false,
+        );
+      };
+
+      // At the end of the page, F6 moves the focus to the message, which
+      // takes it itself and leaves the page where it is; Shift+Tab moves it
+      // from there to the last element of the content, which the room at
+      // the end of the content keeps above the area, then to the element
+      // before it (docs/behaviors.md, Accessibility, Keyboard).
+      await page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+      });
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              Math.ceil(window.scrollY + window.innerHeight) >=
+              document.documentElement.scrollHeight,
+          ),
+        )
+        .toBe(true);
+      const end = await scrollY();
+      await page.keyboard.press("F6");
+
+      await expect(
+        area.getByRole("group", { name: text, exact: true }),
+      ).toBeFocused();
+      expect(await scrollY()).toBe(end);
+
+      await page.keyboard.press("Shift+Tab");
+
+      await expect(avatar).toBeFocused();
+      await expectFocusClear();
+
+      await page.keyboard.press("Shift+Tab");
+
+      await expect(avatar).not.toBeFocused();
+      await expectFocusClear();
+
+      // With the avatar under the area, Tab moves the focus back onto it,
+      // and the window scrolls it above the area, then to Dismiss, the last
+      // element of the page.
+      const avatarBox = await avatar.boundingBox();
+      const areaBox = await area.boundingBox();
+      if (avatarBox === null || areaBox === null) {
+        throw new Error("the avatar or the area is not shown");
+      }
+      await page.evaluate((by) => {
+        window.scrollBy(0, by);
+      }, avatarBox.y - areaBox.y);
+      await expect
+        .poll(async () => {
+          const moved = await avatar.boundingBox();
+          return moved !== null && overlaps(moved, areaBox);
+        })
+        .toBe(true);
+
+      await page.keyboard.press("Tab");
+
+      await expect(avatar).toBeFocused();
+      await expectFocusClear();
+
+      await page.keyboard.press("Tab");
+
+      await expect(
+        area.getByRole("button", { name: "Dismiss", exact: true }),
+      ).toBeFocused();
+    },
+  );
+
+  test("shows the message that the convergence started at the bottom of the window over the content, with its line of the time left across its width under reduced motion", async ({
+    page,
+  }) => {
+    // SNTL-12, Analyzed, as the dataset loads it: its rerun changes no data
+    // that a screen shows, neither the Ticket nor its audit log (above;
+    // Sentinel docs/features/tickets/tickets.md, Rerun Ticket
+    // Convergence), so the test takes the reference before the tests that
+    // change such data (docs/conventions.md, End-to-End Tests). Under reduced
+    // motion, the line of the time left stands across the whole width of
+    // the message, and the pointer over the message keeps it while the
+    // screenshot is taken: its countdown waits (docs/behaviors.md,
+    // Outcome of a Change; docs/design-system.md, Messages; Focus and
+    // Motion).
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await signIn(page, "asmith");
+    await page.goto("/tickets/SNTL-12");
+    await expectOverviewShown(page);
+    const menu = await openActions(page, "SNTL-12");
+    await menu
+      .getByRole("menuitem", { name: "Rerun convergence", exact: true })
+      .click();
+
+    const message = messageArea(page).getByText("Convergence started.", {
+      exact: true,
+    });
+    await expect(message).toBeVisible();
+    await expect(menu).toHaveCount(0);
+    await message.hover();
+    await expectAccessible(page);
+    await expectScreenshot(page, "ticket-message.png");
+  });
 
   test(
     "says that a Ticket is no longer Ignored when it was reopened behind the screen, and then shows its current status",

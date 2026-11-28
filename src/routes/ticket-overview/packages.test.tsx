@@ -37,6 +37,7 @@ import {
   INFO_ON_SOFT,
   INFO_SOFT,
   later,
+  layoutWidth,
   LINK,
   MAINTAINER,
   NEUTRAL_SOFT,
@@ -351,9 +352,7 @@ describe("the part", () => {
 
     const { screen } = await renderTree();
 
-    expect(document.documentElement.scrollWidth).toBe(
-      document.documentElement.clientWidth,
-    );
+    expect(document.documentElement.scrollWidth).toBe(layoutWidth());
     await expect
       .element(screen.getByRole("heading", { level: 3, name: long }))
       .toBeVisible();

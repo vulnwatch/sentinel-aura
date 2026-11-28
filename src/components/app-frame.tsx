@@ -18,8 +18,9 @@ interface AppFrameProps {
 // main content, which is the first element that takes the focus and shows
 // only while it has it, at the top left of the window over the sidebar, as a
 // primary button; the sidebar; and the main content beside it, on canvas,
-// with 24 px of space at its top and sides, which starts with the message
-// area (docs/behaviors.md, Accessibility, Structure).
+// with 24 px of space at its top and sides, which ends with the message
+// area that floats over it (docs/behaviors.md, Accessibility, Structure;
+// docs/design-system.md, Main Content).
 export function AppFrame({ user, children }: AppFrameProps) {
   const wide = useWideWindow();
   const preference = usePreference(sidebarPreference);
@@ -41,8 +42,8 @@ export function AppFrame({ user, children }: AppFrameProps) {
         tabIndex={-1}
         className={`min-h-dvh p-6 ${INSIDE_FOCUS_RING} ${expanded ? "ml-54" : "ml-14"}`}
       >
-        <MessageArea />
         {children}
+        <MessageArea expanded={expanded} />
       </main>
     </MessageAreaProvider>
   );

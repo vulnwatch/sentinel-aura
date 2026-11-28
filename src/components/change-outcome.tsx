@@ -34,19 +34,19 @@ export function useMounted(): RefObject<boolean> {
   return mounted;
 }
 
-// The callbacks of a change, which apply also once the component that
-// started it has left the page: readAgain reads again what the change
-// affects, whatever its outcome, and the outcome of a change that ends after
-// the user left the screen shows in the message area, naming the record that
-// the change concerns with a link to it (docs/behaviors.md, Outcome of a
-// Change). The text of a success, given the response of the change, names
-// what it changed. confirmed, when given, receives the response of a change
-// that ends while the component is on the page, before the reads after it
-// are sent, so that what waits for those reads, such as the announcement of
-// the outcome (useOutcomeAfterRead), waits also for a read that ends at
-// once. present, when given, presents a failure that ends after the user
-// left the screen, for a change whose screen document handles codes of it
-// specifically; otherwise it has the presentation of a change.
+// The callbacks of a change, which apply also once the component that started
+// it has left the page: readAgain reads again what the change affects, whatever
+// its outcome, and the outcome of a change that ends after the user left the
+// screen shows in the message area, naming the record that the change concerns
+// with a link to it, and stays there until the user dismisses it
+// (docs/behaviors.md, Outcome of a Change). The text of a success, given the
+// response of the change, names what it changed. confirmed, when given,
+// receives the response of a change that ends while the component is on the
+// page, before the reads after it are sent, so that what waits for those reads,
+// such as the announcement of the outcome (useOutcomeAfterRead), waits also for
+// a read that ends at once. present, when given, presents a failure that ends
+// after the user left the screen, for a change whose screen document handles
+// codes of it specifically; otherwise it has the presentation of a change.
 export function useChangeOutcome<TData>(
   record: MessageRecord,
   success: (data: TData) => string,
@@ -94,49 +94,68 @@ interface OutcomeAnnouncement {
   text: string;
 }
 
+// The text of an outcome that the message area shows, with whether it stays
+// there until the user dismisses it, since it says what the screen does not
+// show, as its screen document states (docs/behaviors.md, Outcome of a
+// Change).
+export interface StayingText {
+  text: string;
+  stays: boolean;
+}
+
+// The text of an outcome, or what gives it once the read has arrived, such
+// as a text that depends on the data of that read.
+export type OutcomeText = string | (() => string | StayingText);
+
 // The outcome of a change, which waits for the first read after it, from the
 // instant at which Sentinel confirmed the change, and whether it shows in the
 // message area.
 interface WaitingOutcome {
-  // The text, or what gives it once the read has arrived, such as a text
-  // that depends on the data of that read.
-  text: string | (() => string);
+  text: OutcomeText;
   at: number;
   message: boolean;
 }
 
-// The text of an outcome that waits.
+// The text of an outcome that waits, and whether its message stays.
+function resolve(outcome: WaitingOutcome): StayingText {
+  const text =
+    typeof outcome.text === "function" ? outcome.text() : outcome.text;
+  return typeof text === "string" ? { text, stays: false } : text;
+}
+
 function textOf(outcome: WaitingOutcome): string {
-  return typeof outcome.text === "function" ? outcome.text() : outcome.text;
+  return resolve(outcome).text;
 }
 
 // The outcome of a change that ends while the user is on the screen, which
 // waits for the first read after it of what the component shows
-// (docs/behaviors.md, Outcome of a Change; Accessibility, Announcements):
-// after records it once Sentinel has confirmed the change, and region, where
-// the screen places it, has the announcer of the page announce it once that
-// read has arrived (src/components/announcer.tsx);
-// with inMessageArea, for an outcome that shows nowhere where the user
-// acted, the message area shows it then instead. When that read fails, the
-// result does not show where the user acted, so the outcome shows as a
-// message: in the message area, or where elsewhere shows it, such as at the
-// top of an open dialog, which keeps the rest of the page out of reach. An
-// outcome whose region is not on the page as its read arrives, as in a
-// dialog that has closed meanwhile, shows in the message area too, since
-// nothing would announce it. A text given as a function is taken as the
-// outcome shows, so that it can state what that read shows. The outcomes of
-// several changes that wait at once, as when the user starts a change before
-// the read after the one before it has arrived, each wait for their read,
-// and those that one read releases are announced together, in their order,
-// or shown together where elsewhere shows them. The record keeps its
-// identity while it names the same record, as from useMemo: another record
-// shows at once in the message area what waits.
+// (docs/behaviors.md, Outcome of a Change; Accessibility, Announcements): after
+// records it once Sentinel has confirmed the change, and region, where the
+// screen places it, has the announcer of the page announce it once that read
+// has arrived (src/components/announcer.tsx); with inMessageArea, for an
+// outcome that shows nowhere where the user acted, the message area shows it
+// then instead, as a message that goes on its own, unless its text says that it
+// stays. When that read fails, the result does not show where the user acted,
+// so the outcome shows as a message: in the message area, where it stays until
+// the user dismisses it, or where elsewhere shows it, such as at the top of an
+// open dialog, which keeps the rest of the page out of reach. An outcome whose
+// region is not on the page as its read arrives, as in a dialog that has closed
+// meanwhile, shows in the message area too, since nothing would announce it,
+// and goes on its own. An outcome that still waits as the component leaves the
+// page stays (docs/behaviors.md, Outcome of a Change). A text given as a
+// function is taken as the outcome shows, so that it can state what that read
+// shows. The outcomes of several changes that wait at once, as when the user
+// starts a change before the read after the one before it has arrived, each
+// wait for their read, and those that one read releases are announced together,
+// in their order, or shown together where elsewhere shows them. The record
+// keeps its identity while it names the same record, as from useMemo: another
+// record shows at once in the message area what waits.
 export function useOutcomeAfterRead(
   read: { dataUpdatedAt: number; errorUpdatedAt: number },
   record: MessageRecord,
   elsewhere?: (text: string) => void,
 ): {
-  after: (text: string | (() => string), inMessageArea?: boolean) => void;
+  after: (text: OutcomeText, inMessageArea?: boolean) => void;
   region: ReactNode;
 } {
   const showMessage = useShowMessage();
@@ -178,7 +197,12 @@ export function useOutcomeAfterRead(
       );
       for (const outcome of done) {
         if (outcome.message) {
-          showMessage({ tone: "success", text: textOf(outcome) });
+          const { text, stays } = resolve(outcome);
+          showMessage({
+            tone: "success",
+            text,
+            goesOnItsOwn: !failed && !stays,
+          });
         }
       }
       const texts = done.filter((outcome) => !outcome.message).map(textOf);
@@ -190,7 +214,7 @@ export function useOutcomeAfterRead(
         place(texts.join(" "));
       } else if (failed || !regionShown.current) {
         for (const text of texts) {
-          showMessage({ tone: "success", text });
+          showMessage({ tone: "success", text, goesOnItsOwn: !failed });
         }
       } else {
         setAnnouncement((current) => ({
@@ -228,15 +252,12 @@ export function useOutcomeAfterRead(
     }
   }, [readAt, failedAt, release]);
 
-  const after = useCallback(
-    (text: string | (() => string), inMessageArea = false) => {
-      waiting.current = [
-        ...waiting.current,
-        { text, at: Date.now(), message: inMessageArea },
-      ];
-    },
-    [],
-  );
+  const after = useCallback((text: OutcomeText, inMessageArea = false) => {
+    waiting.current = [
+      ...waiting.current,
+      { text, at: Date.now(), message: inMessageArea },
+    ];
+  }, []);
   return {
     after,
     region: (

@@ -251,6 +251,28 @@ function middle(box: DOMRect): number {
   return (box.top + box.bottom) / 2;
 }
 
+// The width of the page: that of the window, less the room that a page with
+// the message area keeps for its scrollbar also while it does not scroll
+// (src/styles.css), which the body leaves out. Chromium gives the root's
+// clientWidth as the width of the window while that room is empty.
+function layoutWidth(): number {
+  return document.body.clientWidth;
+}
+
+// The room of the scrollbar that a page with the message area keeps
+// (layoutWidth), as an element keeps it with the same rule (src/styles.css):
+// that of a classic scrollbar in Chromium, also where the tests hide its
+// scrollbars, or none where the scrollbars overlay the page, as Firefox's do.
+function scrollbarRoom(): number {
+  const probe = document.createElement("div");
+  probe.style.setProperty("overflow", "hidden");
+  probe.style.setProperty("scrollbar-gutter", "stable");
+  document.body.append(probe);
+  const room = probe.offsetWidth - probe.clientWidth;
+  probe.remove();
+  return room;
+}
+
 // The analyst of OTHER_USER after a read of the signed-in user took their
 // capabilities away: a user who can take none of the actions of Actions.
 const WITHOUT_CAPABILITIES: CurrentUserResponse = {
@@ -655,19 +677,21 @@ describe("the layout", () => {
   });
 
   test.each([
-    // A window of 1224 px with the expanded sidebar of 216 px leaves 960 px
-    // of main content inside its space of 24 px; one of 1064 px with the
-    // collapsed sidebar of 56 px leaves the same.
+    // A page of 1224 px with the expanded sidebar of 216 px leaves 960 px of
+    // main content inside its space of 24 px; one of 1064 px with the
+    // collapsed sidebar of 56 px leaves the same. The window is wider by the
+    // room of its scrollbar (scrollbarRoom).
     [1224, true],
     [1223, false],
   ])(
-    "decides the columns by the width of the main content: a window of %i px with the expanded sidebar shows two: %s",
+    "decides the columns by the width of the main content: a page of %i px with the expanded sidebar, beside the room of the scrollbar, shows two: %s",
     async (width, twoColumns) => {
-      await page.viewport(width, 800);
+      await page.viewport(width + scrollbarRoom(), 800);
       showing(fictionalTicketDetail());
 
       const { screen } = await renderTicket();
 
+      expect(layoutWidth()).toBe(width);
       const cve = boxOf(region(screen, "CVE-2099-0012"));
       const details = boxOf(region(screen, "Details"));
       expect(details.left > cve.right).toBe(twoColumns);
@@ -676,18 +700,20 @@ describe("the layout", () => {
 
   test.each([
     // At a text size of 20 px, the sidebar of 270 px and the space of 30 px
-    // leave 1200 px of main content in a window of 1530 px.
+    // leave 1200 px of main content in a page of 1530 px, in a window wider
+    // by the room of its scrollbar (scrollbarRoom).
     [1530, true],
     [1529, false],
   ])(
-    "decides the columns by the width of the main content in the text size: a window of %i px at a text size of 20 px shows two: %s",
+    "decides the columns by the width of the main content in the text size: a page of %i px at a text size of 20 px, beside the room of the scrollbar, shows two: %s",
     async (width, twoColumns) => {
       document.documentElement.style.fontSize = "20px";
-      await page.viewport(width, 800);
+      await page.viewport(width + scrollbarRoom(), 800);
       showing(fictionalTicketDetail());
 
       const { screen } = await renderTicket();
 
+      expect(layoutWidth()).toBe(width);
       const cve = boxOf(region(screen, "CVE-2099-0012"));
       const details = boxOf(region(screen, "Details"));
       expect(details.left > cve.right).toBe(twoColumns);
@@ -1016,9 +1042,7 @@ describe("the layout", () => {
       )
       .toBeVisible();
 
-    expect(document.documentElement.scrollWidth).toBe(
-      document.documentElement.clientWidth,
-    );
+    expect(document.documentElement.scrollWidth).toBe(layoutWidth());
     const term = region(screen, "Details").getByText("Assignee", {
       exact: true,
     });

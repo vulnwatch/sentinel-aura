@@ -12,6 +12,7 @@ import type {
 import { AbsentValue } from "../../components/absent-value";
 import { Announcement } from "../../components/announcer";
 import { Button } from "../../components/button";
+import { useMounted } from "../../components/change-outcome";
 import { DateTime } from "../../components/date-time";
 import { SideSection } from "../../components/detail-screen";
 import { IconButton } from "../../components/icon-button";
@@ -242,6 +243,7 @@ interface RefetchTarget {
 // applies also when the button that started it has left the page.
 function useRefetch({ ticketId, cveId, source, readAgain }: RefetchTarget) {
   const showMessage = useShowMessage();
+  const mounted = useMounted();
   // A failure of the UI itself, which the root route shows (src/router.ts).
   const [uiFailure, setUiFailure] = useState<{ error: unknown }>();
   const record: MessageRecord = {
@@ -251,7 +253,14 @@ function useRefetch({ ticketId, cveId, source, readAgain }: RefetchTarget) {
   const refetch = useRefetchCve({
     mutation: {
       onSuccess: (response) => {
-        showMessage({ ...refetchMessage(response.data, source), record });
+        // It goes on its own while the sources show their fetch pending,
+        // and stays once the user left the tab (docs/behaviors.md, Outcome
+        // of a Change).
+        showMessage({
+          ...refetchMessage(response.data, source),
+          record,
+          goesOnItsOwn: mounted.current,
+        });
       },
       onError: (failure) => {
         if (!isRequestFailure(failure)) {

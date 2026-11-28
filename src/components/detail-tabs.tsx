@@ -92,8 +92,7 @@ interface DetailTabPanelProps {
 // The panel of the tab that shows, 24 px below the line of the tabs: a panel
 // of its own for each tab, which the tabs then name. A panel that a tab opens
 // where the page had scrolled past its start shows its start, 24 px below
-// the message area and the compact heading (docs/design-system.md, Detail
-// Screens).
+// the compact heading (docs/design-system.md, Detail Screens).
 export function DetailTabPanel({ selected, children }: DetailTabPanelProps) {
   return (
     <ShownPanel key={selected} selected={selected}>
@@ -109,9 +108,7 @@ function ShownPanel({ selected, children }: DetailTabPanelProps) {
     if (panel === null) {
       return;
     }
-    const fixed =
-      fixedTopHeight("--message-area-height") +
-      fixedTopHeight("--compact-heading-height");
+    const fixed = fixedTopHeight("--compact-heading-height");
     if (panel.getBoundingClientRect().top < fixed) {
       panel.scrollIntoView({ block: "start" });
     }

@@ -54,6 +54,7 @@ import {
   FG_MUTED,
   frames,
   later,
+  layoutWidth,
   leaveForTickets,
   leftInvalidated,
   mainContent,
@@ -2084,13 +2085,13 @@ describe("the SUSE assessment", () => {
         } else {
           expect(boxOf(next).top).toBeGreaterThanOrEqual(last.bottom);
           expect(name.bottom).toBeLessThanOrEqual(control.top);
-          expect(boxOf(dialog).right).toBeLessThanOrEqual(width);
+          expect(boxOf(dialog).right).toBeLessThanOrEqual(layoutWidth());
         }
         const content = contentScrollerOf(
           metricOf(dialog, "Attack vector").element(),
         );
         expect(content.scrollWidth).toBeLessThanOrEqual(content.clientWidth);
-        expect(document.documentElement.scrollWidth).toBe(width);
+        expect(document.documentElement.scrollWidth).toBe(layoutWidth());
       },
     );
 

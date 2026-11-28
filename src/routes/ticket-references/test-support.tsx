@@ -14,6 +14,7 @@ import type {
   TicketReferenceListResponse,
   TicketReferenceResponse,
 } from "../../api/generated/model";
+import { MESSAGE_TIMEOUT_MS } from "../../components/message-area";
 import { createQueryClient } from "../../query-client";
 import { createAppRouter } from "../../router";
 import { announcements } from "../../test-announcements";
@@ -30,12 +31,14 @@ import {
   ticketResponse,
   urlOf,
 } from "../../test-api";
+import { pointerAwayFrom } from "../../test-pointer";
 
 // What the test files of the tab References (src/routes/ticket-references.tsx)
 // and of its dialogs (src/routes/ticket-references/) share: the paths and the
 // messages, the signed-in user, the references of the tests and the responses
 // of the API, the rendering of the tab, the elements of the table and of the
-// dialogs, and the waits for its reads and its frames.
+// dialogs, the waits for its reads and its frames, and the clock of the
+// countdown of its messages.
 
 export const ME = "/api/v1/users/me";
 const TICKETS = "/api/v1/tickets";
@@ -183,6 +186,7 @@ export function prepareEachTest() {
     window.location.hash = "";
     client.clear();
     vi.restoreAllMocks();
+    vi.useRealTimers();
     focusManager.setFocused(undefined);
     document.title = "Sentinel";
     window.scrollTo(0, 0);
@@ -592,6 +596,80 @@ export async function expectFocusSettledOn(locator: Locator) {
   await expect.element(locator).toHaveFocus();
   await frames();
   expect(focused()).toBe(locator.element());
+}
+
+// A message of the message area, by its words, such as "SNTL-12: Reference
+// “Fictional packaging issue” added." (src/components/message-area.tsx).
+export function areaMessage(screen: Screen, words: string): Locator {
+  return screen
+    .getByRole("region", { name: "Messages", exact: true })
+    .getByRole("group", { name: words, exact: true });
+}
+
+// The countdown of a message that goes on its own runs on a fake clock of
+// the timers of the page, which the test sets before what shows the message
+// and moves itself (expectGoesOnItsOwn; expectStays), once the pointer rests
+// away from the main content, which holds the message area, over which the
+// countdown would wait. The date stays real, so that the outcome of a change
+// still waits for the first read after it, which TanStack Query dates.
+// TanStack Query tells the tab of a read in a later task, on that clock too:
+// a check that retries moves a fake clock by its interval before each retry,
+// so the checks on it retry without one (ON_FAKE_CLOCK), which runs the tasks
+// that are due without moving the clock.
+export async function fakeMessageClock(screen: Screen) {
+  await pointerAwayFrom(mainContent(screen));
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+}
+
+export const ON_FAKE_CLOCK = { interval: 0 };
+
+// Waits until the browser has rendered two more frames, after which the
+// effects of the commits before have run, and what they set has rendered.
+async function nextFrames() {
+  await new Promise((done) => requestAnimationFrame(done));
+  await new Promise((done) => requestAnimationFrame(done));
+}
+
+// The state of the line of the time left of a message, which runs while its
+// countdown runs and is paused while it waits, or undefined without one
+// (src/components/message.tsx).
+function countdownOf(message: Element): AnimationPlayState | undefined {
+  return message
+    .getAnimations({ subtree: true })
+    .find(
+      (animation) =>
+        animation instanceof CSSAnimation &&
+        animation.animationName === "countdown",
+    )?.playState;
+}
+
+// Checks, on the fake clock (fakeMessageClock), that a message that shows
+// goes on its own once the time of its countdown has passed, its line of the
+// time left running until then.
+export async function expectGoesOnItsOwn(message: Locator) {
+  await expect
+    .poll(() => countdownOf(message.element()), ON_FAKE_CLOCK)
+    .toBe("running");
+  // The frames in which React runs the effects of that render, which start
+  // the countdown itself.
+  await nextFrames();
+
+  vi.advanceTimersByTime(MESSAGE_TIMEOUT_MS);
+
+  await expect.element(message, ON_FAKE_CLOCK).not.toBeInTheDocument();
+}
+
+// Checks, on the fake clock (fakeMessageClock), that a message that shows
+// stays once the time after which a message that goes on its own goes has
+// passed, without a line of the time left.
+export async function expectStays(message: Locator) {
+  await nextFrames();
+  expect(countdownOf(message.element())).toBeUndefined();
+
+  vi.advanceTimersByTime(MESSAGE_TIMEOUT_MS);
+
+  await nextFrames();
+  expect(message.query()).not.toBeNull();
 }
 
 export type Router = Awaited<ReturnType<typeof renderTab>>["router"];

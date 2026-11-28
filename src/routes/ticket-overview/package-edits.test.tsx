@@ -28,6 +28,7 @@ import { pointerAwayFrom } from "../../test-pointer";
 import {
   ACTORS,
   announcements,
+  areaMessage,
   backgroundBehind,
   band,
   boxOf,
@@ -37,7 +38,9 @@ import {
   excludedTrack,
   expectFocusOnError,
   expectFocusSettledOn,
+  expectGoesOnItsOwn,
   expectSuccessMessage,
+  fakeMessageClock,
   FG,
   FG_MUTED,
   interactOutside,
@@ -49,6 +52,7 @@ import {
   MESSAGE_TONES,
   nextFrames,
   NOT_APPLICABLE,
+  ON_FAKE_CLOCK,
   packageMarkerResponse,
   packagesPart,
   prepareEachTest,
@@ -2481,4 +2485,40 @@ describe("the outcome of an edit", () => {
     // The message alone announces it.
     expect(timesAnnounced(text)).toBe(1);
   });
+
+  test.each<[string, (screen: Screen) => Promise<unknown>, string]>([
+    [
+      "a package",
+      (screen) => chooseAction(screen, "fictional-openssl", "Exclude"),
+      "Package fictional-openssl is already excluded.",
+    ],
+    [
+      "a Product from its track",
+      (screen) =>
+        chooseProductAction(screen, SP7_PRODUCT, "Exclude from this track"),
+      `${SP7_SUBJECT} is already excluded.`,
+    ],
+  ])(
+    "lets the information that the record is already excluded, after 409 PACKAGE_ALREADY_EXCLUDED of an exclusion of %s, go on its own 10 seconds after it appears",
+    async (_name, act, text) => {
+      const response = later();
+      let sent = false;
+      showingEditable(() => productTree(), {
+        packageChange: () => {
+          sent = true;
+          return response.promise;
+        },
+      });
+      const { screen } = await renderTree("/tickets/SNTL-12?hidden=shown");
+      await act(screen);
+      await expect.poll(() => sent).toBe(true);
+      await fakeMessageClock(screen);
+
+      response.resolve(errorResponse(409, "PACKAGE_ALREADY_EXCLUDED"));
+
+      const message = areaMessage(screen, text);
+      await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+      await expectGoesOnItsOwn(message);
+    },
+  );
 });

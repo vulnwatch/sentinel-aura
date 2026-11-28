@@ -38,13 +38,17 @@ import {
   ACTORS,
   animationsIn,
   announcements,
+  areaMessage,
   backgroundBehind,
   BORDER,
   client,
   convergenceResponse,
   EVENTS,
   expectFocusSettledOn,
+  expectGoesOnItsOwn,
+  expectStays,
   expectSuccessMessage,
+  fakeMessageClock,
   frames,
   interactOutside,
   later,
@@ -59,6 +63,7 @@ import {
   MESSAGE_TONES,
   MESSAGE_UNCONFIRMED,
   nextFrames,
+  ON_FAKE_CLOCK,
   prepareEachTest,
   readEnded,
   readsOf,
@@ -1157,6 +1162,23 @@ describe("Reopen and Revert duplicate", () => {
       await expect.poll(() => requestsTo(spy, TICKET)).toBe(reads + 1);
     },
   );
+
+  test("lets the message that the Ticket left its status go on its own 10 seconds after it appears", async () => {
+    const response = later();
+    const spy = showingStatus("ignored", {
+      ticketChange: () => response.promise,
+    });
+    const { screen } = await renderTicket();
+    await choose(screen, "Reopen");
+    await expect.poll(() => changesOf(spy)).toHaveLength(1);
+    await fakeMessageClock(screen);
+
+    response.resolve(errorResponse(409, "TICKET_INVALID_TRANSITION"));
+
+    const message = areaMessage(screen, "SNTL-12 is no longer Ignored.");
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectGoesOnItsOwn(message);
+  });
 });
 
 describe("Ignore as not shipped by SUSE", () => {
@@ -1596,6 +1618,23 @@ describe("Rerun convergence", () => {
     await expect.element(actionsButton(screen)).toHaveFocus();
   });
 
+  test("lets its message go on its own 10 seconds after it appears, while the user is on the screen", async () => {
+    const response = later();
+    const spy = showingStatus("analysis", {
+      ticketChange: () => response.promise,
+    });
+    const { screen } = await renderTicket();
+    await choose(screen, "Rerun convergence");
+    await expect.poll(() => changesOf(spy)).toHaveLength(1);
+    await fakeMessageClock(screen);
+
+    response.resolve(convergenceResponse());
+
+    const message = areaMessage(screen, "Convergence started.");
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectGoesOnItsOwn(message);
+  });
+
   test("handles no code specifically: 409 TICKET_INVALID_TRANSITION shows in the presentation of its status", async () => {
     showingStatus("analysis", {
       ticketChange: () => errorResponse(409, "TICKET_INVALID_TRANSITION"),
@@ -1799,6 +1838,21 @@ describe("an action that ends after the user left the screen", () => {
       expect(screen.getByText(/is no longer/).query()).toBeNull();
     },
   );
+
+  test("keeps the message of Rerun convergence until it is dismissed", async () => {
+    const response = later();
+    showingStatus("analysis", { ticketChange: () => response.promise });
+    const { router, screen } = await renderTicket();
+    await choose(screen, "Rerun convergence");
+    await leaveForTickets(router, screen);
+    await fakeMessageClock(screen);
+
+    response.resolve(convergenceResponse());
+
+    const message = areaMessage(screen, "SNTL-12: Convergence started.");
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectStays(message);
+  });
 });
 
 describe("Ignore…", () => {

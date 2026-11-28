@@ -286,7 +286,15 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
     mutation: {
       gcTime: 0,
       onSuccess: () => {
-        showMessage({ tone: "info", text: "Convergence started.", record });
+        // It goes on its own while the user is on the screen, which shows
+        // what the convergence changes as it reads it again, and stays
+        // after the user left it (docs/behaviors.md, Outcome of a Change).
+        showMessage({
+          tone: "info",
+          text: "Convergence started.",
+          record,
+          goesOnItsOwn: mounted.current,
+        });
       },
       onError: (failure: unknown) => {
         if (!isRequestFailure(failure)) {
@@ -389,7 +397,7 @@ export function TicketActions({ ticket, record, compact }: TicketActionsProps) {
               action === "reopen" ? "Ignored" : "Duplicated",
             );
       if (left !== undefined) {
-        showMessage({ tone: "info", text: left });
+        showMessage({ tone: "info", text: left, goesOnItsOwn: true });
         return;
       }
       const presentation = presentChangeFailure(failure);

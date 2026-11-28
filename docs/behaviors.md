@@ -1133,16 +1133,3 @@ meanwhile.
   compact form names the user in its tooltip (`docs/design-system.md`,
   Representation of a User). The change that builds User adds the link and
   the card wherever a user shows, and this entry is then removed.
-- **The message area over the content.** The message area that floats over
-  the content at the bottom of the window (`docs/design-system.md`, Main
-  Content; Messages), with the room that it keeps at the end of the content
-  and the room of the scrollbar (Main Content), the messages that go on
-  their own (Outcome of a Change), F6, and the focus after Dismiss
-  (Accessibility) wait for the change of the UI that builds them. Until
-  then, the message area shows at the top of the main content, above the
-  heading, and while it holds a message it stays at the top of the window,
-  the compact heading of a detail screen and the side column below it, so
-  that a message that appears or goes moves the content below it; every
-  message stays until the user dismisses it or opens another screen, and
-  Dismiss moves the focus to the screen's heading. That change removes this
-  entry and the reference to it in `docs/design-system.md` (Main Content).

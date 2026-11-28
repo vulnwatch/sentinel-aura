@@ -8,10 +8,12 @@ import "../styles.css";
 import { App } from "../app";
 import { apiRequest } from "../api/request";
 import { getGetCurrentUserProfileQueryKey } from "../api/generated/users";
+import { SIDEBAR_STORAGE_KEY } from "../preferences";
 import { createQueryClient } from "../query-client";
 import { createAppRouter } from "../router";
 import { RETURN_URL_KEY, SESSION_RECORD_KEY } from "../session";
 import {
+  errorResponse,
   FICTIONAL_USER,
   jsonResponse,
   signedIn,
@@ -26,6 +28,7 @@ import { pointerAwayFrom } from "../test-pointer";
 
 const ME = "/api/v1/users/me";
 const LOGIN = "/api/v1/auth/login";
+const LOGOUT = "/api/v1/auth/logout";
 
 let client: QueryClient;
 
@@ -43,6 +46,7 @@ afterEach(async () => {
   await cleanup();
   client.clear();
   vi.restoreAllMocks();
+  window.localStorage.removeItem(SIDEBAR_STORAGE_KEY);
   window.localStorage.removeItem(SESSION_RECORD_KEY);
   window.sessionStorage.removeItem(RETURN_URL_KEY);
   document.title = "Sentinel";
@@ -50,14 +54,21 @@ afterEach(async () => {
 });
 
 // Answers the read of the signed-in user with the session that the test
-// sets, sign-in with a success that starts it, and every other request with
-// a page without Tickets, or a 401 without a session.
-function stubSession(initial: "signed-in" | "none") {
+// sets, sign-in with a success that starts it, sign-out with the failure that
+// the test gives, and every other request with a page without Tickets, or a
+// 401 without a session.
+function stubSession(
+  initial: "signed-in" | "none",
+  failedSignOut?: () => Response,
+) {
   const session = { active: initial === "signed-in" };
   stubApi((request) => {
     if (request.path === LOGIN) {
       session.active = true;
       return signedIn();
+    }
+    if (request.path === LOGOUT && failedSignOut !== undefined) {
+      return failedSignOut();
     }
     if (!session.active) {
       return unauthorized();
@@ -172,6 +183,53 @@ describe("with a signed-in user", () => {
       .element(screen.getByRole("navigation", { name: "Main" }))
       .toBeVisible();
   });
+});
+
+describe("the message area", () => {
+  // The other behaviors of the area show in src/components/message-area.test.tsx.
+  test.each([
+    ["expanded", "expanded", 216],
+    ["collapsed", "collapsed", 56],
+  ])(
+    "floats inside the main content, after the content of the screen, starting 24 px after the %s sidebar, as the screen's heading does",
+    async (_, preference, sidebarWidth) => {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, preference);
+      // A failed sign-out shows its error in the message area
+      // (docs/behaviors.md, Where Errors Appear).
+      stubSession("signed-in", () =>
+        errorResponse(503, "DATABASE_UNAVAILABLE"),
+      );
+      const { screen } = await renderApp(SCREEN);
+      const sidebar = screen.getByRole("navigation", { name: "Main" });
+      await sidebar.getByRole("button", { name: "John Doe" }).click();
+
+      await screen
+        .getByRole("menu", { name: "John Doe" })
+        .getByRole("menuitem", { name: "Sign out" })
+        .click();
+
+      const region = screen
+        .getByRole("main")
+        .getByRole("region", { name: "Messages" });
+      const message = region.getByRole("group", {
+        name: "Sentinel isn't available right now. Try again later.",
+        exact: false,
+      });
+      await expect.element(message).toBeVisible();
+      const heading = screen.getByRole("heading", { level: 1 }).element();
+      const shown = message.element().getBoundingClientRect();
+      expect(sidebar.element().getBoundingClientRect().right).toBe(
+        sidebarWidth,
+      );
+      expect(shown.left).toBe(sidebarWidth + 24);
+      expect(shown.left).toBe(heading.getBoundingClientRect().left);
+      expect(shown.bottom).toBe(window.innerHeight - 24);
+      expect(
+        heading.compareDocumentPosition(region.element()) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).not.toBe(0);
+    },
+  );
 });
 
 describe("without a signed-in user", () => {

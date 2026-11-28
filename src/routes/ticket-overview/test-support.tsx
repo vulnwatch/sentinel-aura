@@ -28,6 +28,7 @@ import type {
   TrackExclusionResponse,
   TrackStatusTrack,
 } from "../../api/generated/model";
+import { MESSAGE_TIMEOUT_MS } from "../../components/message-area";
 import { createQueryClient } from "../../query-client";
 import { createAppRouter } from "../../router";
 import { RETURN_URL_KEY, SESSION_RECORD_KEY } from "../../session";
@@ -61,6 +62,7 @@ import {
   ticketWorkResponse,
   urlOf,
 } from "../../test-api";
+import { pointerAwayFrom } from "../../test-pointer";
 
 declare module "vitest/browser" {
   interface BrowserCommands {
@@ -71,8 +73,8 @@ declare module "vitest/browser" {
 // What the test files of the modules of Overview, the first tab of the Ticket
 // screen (src/routes/ticket-overview.tsx), share, with those of Actions in its
 // heading row (src/routes/ticket/), which show over Overview: the responses
-// of the API to the screen, its rendering, the elements of its parts, and the
-// waits for its reads.
+// of the API to the screen, its rendering, the elements of its parts, the
+// waits for its reads, and the clock of the countdown of its messages.
 
 export const ME = "/api/v1/users/me";
 export const TICKETS = "/api/v1/tickets";
@@ -802,6 +804,82 @@ export function animationsIn(element: Element): string[] {
     .map((animation) =>
       animation instanceof CSSAnimation ? animation.animationName : "",
     );
+}
+
+// The width of the page: that of the window, less the room that a page with
+// the message area keeps for its scrollbar also while it does not scroll
+// (src/styles.css), which the body leaves out. Chromium gives the root's
+// clientWidth as the width of the window while that room is empty.
+export function layoutWidth(): number {
+  return document.body.clientWidth;
+}
+
+// A message of the message area, by its words, such as "SNTL-12: Refetch of
+// NVD started." (src/components/message-area.tsx).
+export function areaMessage(screen: Screen, words: string): Locator {
+  return screen
+    .getByRole("region", { name: "Messages", exact: true })
+    .getByRole("group", { name: words, exact: true });
+}
+
+// The countdown of a message that goes on its own runs on a fake clock of
+// the timers of the page, which the test sets before what shows the message
+// and moves itself (expectGoesOnItsOwn; expectStays), once the pointer rests
+// away from the main content, which holds the message area, over which the
+// countdown would wait. The date stays real, so that the outcome of a change
+// still waits for the first read after it, which TanStack Query dates.
+// TanStack Query tells the screen of a read in a later task, on that clock
+// too: a check that retries moves a fake clock by its interval before each
+// retry (sourcesSettled, src/routes/ticket-overview/sources.test.tsx), so the
+// checks on it retry without one (ON_FAKE_CLOCK), which runs the tasks that
+// are due without moving the clock.
+export async function fakeMessageClock(screen: Screen) {
+  await pointerAwayFrom(mainContent(screen));
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+}
+
+export const ON_FAKE_CLOCK = { interval: 0 };
+
+// The state of the line of the time left of a message, which runs while its
+// countdown runs and is paused while it waits, or undefined without one
+// (src/components/message.tsx).
+function countdownOf(message: Element): AnimationPlayState | undefined {
+  return message
+    .getAnimations({ subtree: true })
+    .find(
+      (animation) =>
+        animation instanceof CSSAnimation &&
+        animation.animationName === "countdown",
+    )?.playState;
+}
+
+// Checks, on the fake clock (fakeMessageClock), that a message that shows
+// goes on its own once the time of its countdown has passed, its line of the
+// time left running until then.
+export async function expectGoesOnItsOwn(message: Locator) {
+  await expect
+    .poll(() => countdownOf(message.element()), ON_FAKE_CLOCK)
+    .toBe("running");
+  // The frames in which React runs the effects of that render, which start
+  // the countdown itself.
+  await nextFrames();
+
+  vi.advanceTimersByTime(MESSAGE_TIMEOUT_MS);
+
+  await expect.element(message, ON_FAKE_CLOCK).not.toBeInTheDocument();
+}
+
+// Checks, on the fake clock (fakeMessageClock), that a message that shows
+// stays once the time after which a message that goes on its own goes has
+// passed, without a line of the time left.
+export async function expectStays(message: Locator) {
+  await nextFrames();
+  expect(countdownOf(message.element())).toBeUndefined();
+
+  vi.advanceTimersByTime(MESSAGE_TIMEOUT_MS);
+
+  await nextFrames();
+  expect(message.query()).not.toBeNull();
 }
 
 // A confidential SNTL-12, assigned to Alice Smith, the user of OTHER_USER.

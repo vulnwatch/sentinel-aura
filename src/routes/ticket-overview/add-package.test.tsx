@@ -28,6 +28,7 @@ import { pointerAwayFrom } from "../../test-pointer";
 import {
   ACTORS,
   ADD_PACKAGE,
+  areaMessage,
   backgroundBehind,
   boxOf,
   client,
@@ -35,6 +36,9 @@ import {
   excludedPackage,
   expectFocusOnError,
   expectFocusSettledOn,
+  expectGoesOnItsOwn,
+  expectStays,
+  fakeMessageClock,
   frames,
   later,
   leaveForTickets,
@@ -51,6 +55,7 @@ import {
   MESSAGE_UNCONFIRMED,
   nextFrames,
   NOT_APPLICABLE,
+  ON_FAKE_CLOCK,
   packageAdditionResponse,
   packagesPart,
   prepareEachTest,
@@ -1542,6 +1547,48 @@ describe("the outcome of Add package", () => {
         }),
       )
       .toBeVisible();
+  });
+
+  test.each<
+    [string, PackageDetail, string, (message: Locator) => Promise<void>]
+  >([
+    [
+      "goes on its own 10 seconds after it appears, where the tree shows the package",
+      fictionalPackage(),
+      ADDED,
+      expectGoesOnItsOwn,
+    ],
+    [
+      "stays until it is dismissed where it says where the package is, which the tree hides",
+      hiddenOpenssl(),
+      `${ADDED} Show hidden shows it, since none of its Products is actionable.`,
+      expectStays,
+    ],
+  ])("%s", async (_, added, text, expectOutcome) => {
+    const reread = later();
+    let changed = false;
+    showingAddable({
+      ticket: () =>
+        changed
+          ? reread.promise
+          : ticketResponse(fictionalTicketDetail({ packages: [] })),
+      addPackage: () => {
+        changed = true;
+        return packageAdditionResponse();
+      },
+    });
+    const { screen } = await renderTree();
+    const dialog = await addName(screen, "fictional-openssl");
+    await expect.element(dialog).not.toBeInTheDocument();
+    await fakeMessageClock(screen);
+
+    reread.resolve(
+      ticketResponse(fictionalTicketDetail({ packages: [added] })),
+    );
+
+    const message = areaMessage(screen, text);
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectOutcome(message);
   });
 
   test("reads again the Ticket, the work of a maintainer on it, the users who acted on it, its audit log, and the reads of the Ticket list, but not its duplicates", async () => {

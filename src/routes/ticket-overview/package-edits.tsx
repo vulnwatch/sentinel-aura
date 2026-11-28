@@ -280,7 +280,7 @@ function MarkerActions({
         setOpen(false);
         setConfirming(false);
         focusHeadingAfterClose(button);
-        showMessage({ tone: "info", text: conflict });
+        showMessage({ tone: "info", text: conflict, goesOnItsOwn: true });
         return;
       }
       const presentation = presentChangeFailure(failure);

@@ -131,6 +131,21 @@
       transform: translateX(300%);
     }
   }
+
+  /* The line of the time left of a message that goes on its own shortens
+     from the whole width toward its start in the 10 seconds after which the
+     message goes (Messages; docs/behaviors.md, Outcome of a Change), the
+     time of MESSAGE_TIMEOUT_MS in src/components/message-area.tsx. */
+  --animate-countdown: countdown 10s linear forwards;
+
+  @keyframes countdown {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0);
+    }
+  }
 }
 
 @layer base {
@@ -145,20 +160,27 @@
     color-scheme: light dark;
   }
 
-  /* What stays at the top of the window while the page scrolls, the message
-     area and the compact heading of a detail screen, gives its height to
-     these properties (src/components/fixed-top.ts): the window scrolls the
-     element with the focus, and the target of an anchor, below both, and
-     what sticks below them takes --fixed-top as its offset
+  /* What stays over the content while the page scrolls gives its height to
+     these properties: the compact heading of a detail screen at the top of
+     the window (src/components/fixed-top.ts), below which the window scrolls
+     the element with the focus, and the target of an anchor, and the message
+     area at its bottom, with the 24 px below it
+     (src/components/message-area.tsx), above which it scrolls them
      (docs/design-system.md, Main Content; Detail Screens). The elements of
      the compact heading itself take scroll margins that place them below it,
      so that their focus leaves the page where it is
-     (src/components/detail-screen.tsx). */
+     (src/components/detail-screen.tsx); the message area, which is fixed,
+     is not scrolled by the window. On a page with the message area, the
+     window keeps the room of its scrollbar also while the page does not
+     scroll, so that a page that the room at the end of the content makes
+     scroll keeps its width (src/components/message-area.tsx). */
   :root {
-    --fixed-top: calc(
-      var(--message-area-height, 0px) + var(--compact-heading-height, 0px)
-    );
-    scroll-padding-top: var(--fixed-top);
+    scroll-padding-top: var(--compact-heading-height, 0px);
+    scroll-padding-bottom: var(--message-area-height, 0px);
+  }
+
+  :root:has([data-message-room]) {
+    scrollbar-gutter: stable;
   }
 
   :root[data-theme="light"] {

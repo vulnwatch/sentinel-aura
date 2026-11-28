@@ -657,19 +657,18 @@ Errors Appear), which also closes the sidebar opened over the content
   whole width, and forms and long texts set their own (Forms).
 - The message area floats over the content at the bottom of the window, so
   that a message that appears or goes moves nothing of the screen
-  (`docs/behaviors.md`, Outcome of a Change; until the UI builds it,
-  `docs/behaviors.md`, Open Decisions): its bottom 24 px above the bottom of
-  the window, its start 24 px from the start of the main content, beside the
-  sidebar, at most 400 px wide, or as wide as the main content inside its
-  space where that is narrower. Its messages stack in it, 8 px apart, as
-  Messages describes them, the newest at the top, so that a new message
-  comes above those that show and moves none of them; a message that goes
-  moves only the newer ones above it down into its place. It takes at most a
-  third of the window's height, beyond which its messages scroll within it;
-  a message that appears then scrolls the area to its top, so that it shows,
-  unless the pointer hovers over the area or the focus is in it, so that
-  what the user reads or is about to press there stays where it is. Without
-  a message, the area does not show.
+  (`docs/behaviors.md`, Outcome of a Change): its bottom 24 px above the
+  bottom of the window, its start 24 px from the start of the main content,
+  beside the sidebar, at most 400 px wide, or as wide as the main content
+  inside its space where that is narrower. Its messages stack in it, 8 px
+  apart, as Messages describes them, the newest at the top, so that a new
+  message comes above those that show and moves none of them; a message
+  that goes moves only the newer ones above it down into its place. It takes
+  at most a third of the window's height, beyond which its messages scroll
+  within it; a message that appears then scrolls the area to its top, so
+  that it shows, unless the pointer hovers over the area or the focus is in
+  it, so that what the user reads or is about to press there stays where it
+  is. Without a message, the area does not show.
 - The message area shows above the content, the compact heading of a detail
   screen included, and below a tooltip, a popover, a menu, and a dialog, such
   as the sidebar opened over the content; a popover, a menu, or a dialog

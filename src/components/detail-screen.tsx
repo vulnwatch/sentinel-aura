@@ -88,7 +88,7 @@ interface DetailHeadingProps {
 
 // The heading row of a detail screen with its tabs. While the main content
 // is wide enough for two columns, it stays at the top of the window once it
-// has scrolled there, below the message area, as the compact heading, on
+// has scrolled there, as the compact heading, on
 // surface above a border line across the width of the main content, without
 // a shadow, with 10 px of space above it (docs/design-system.md, Detail
 // Screens). It is the heading row itself, not a copy, and its place in the
@@ -111,7 +111,7 @@ export function DetailHeading({ sticky, children }: DetailHeadingProps) {
     }
     const update = () => {
       const top = start.current?.getBoundingClientRect().top ?? 0;
-      setAtTop(top < fixedTopHeight("--message-area-height"));
+      setAtTop(top < 0);
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
@@ -148,9 +148,9 @@ export function DetailHeading({ sticky, children }: DetailHeadingProps) {
 
   let className = "";
   if (compact) {
-    className = `sticky top-[var(--message-area-height,0px)] z-10 -mx-6 border-b border-border bg-surface px-6 pt-2.5 ${IN_VIEW_BELOW_HEADING}`;
+    className = `sticky top-0 z-10 -mx-6 border-b border-border bg-surface px-6 pt-2.5 ${IN_VIEW_BELOW_HEADING}`;
   } else if (sticky) {
-    className = `sticky top-[var(--message-area-height,0px)] z-10 ${IN_VIEW_BELOW_HEADING}`;
+    className = `sticky top-0 z-10 ${IN_VIEW_BELOW_HEADING}`;
   }
   return (
     <>
@@ -286,13 +286,10 @@ const SECTIONS = "divide-y divide-border *:py-4 *:first:pt-0 *:last:pb-0";
 // at the top of the window, with two columns.
 const STICKY_SIDE_COLUMN = "data-sticky-side-column";
 
-// The height of what stays at the top of the window, below which the window
-// scrolls an element (src/components/fixed-top.ts).
+// The height of what stays at the top of the window, the compact heading,
+// below which the window scrolls an element (src/components/fixed-top.ts).
 function fixedTop(): number {
-  return (
-    fixedTopHeight("--message-area-height") +
-    fixedTopHeight("--compact-heading-height")
-  );
+  return fixedTopHeight("--compact-heading-height");
 }
 
 // The side column that sticks, with the columns that hold it.
@@ -425,7 +422,7 @@ export function DetailColumns({
     trailingSections !== false;
   let side = "";
   if (twoColumns) {
-    side = `sticky top-[calc(var(--fixed-top)_+_1.5rem)] w-72 shrink-0 ${SECTIONS}`;
+    side = `sticky top-[calc(var(--compact-heading-height,0px)_+_1.5rem)] w-72 shrink-0 ${SECTIONS}`;
   } else if (trailing) {
     side = `mt-8 border-t border-border pt-4 ${SECTIONS}`;
   }

@@ -32,18 +32,24 @@ import {
   ACCESS,
   ACTORS,
   animationsIn,
+  areaMessage,
   backgroundBehind,
   BORDER,
   boxOf,
   client,
   CVSS,
   cvssPart,
+  expectGoesOnItsOwn,
+  expectStays,
+  fakeMessageClock,
   FG_MUTED,
   later,
+  leaveForTickets,
   mainContent,
   MAINTAINER,
   MESSAGE_TONES,
   nextFrames,
+  ON_FAKE_CLOCK,
   packagesPart,
   prepareEachTest,
   press,
@@ -1040,6 +1046,58 @@ describe("the sources of the CVE", () => {
     await expect
       .element(screen.getByRole("link", { name: "SNTL-12", exact: true }))
       .toHaveAttribute("href", "/tickets/SNTL-12");
+  });
+
+  test.each<
+    [
+      string,
+      Parameters<typeof refetchResponse>[0],
+      string,
+      (message: Locator) => Promise<void>,
+    ]
+  >([
+    [
+      "lets the message of a refetch go on its own 10 seconds after it appears, while the sources show their fetch",
+      { sources_enqueued: ["mitre", "nvd"] },
+      "Refetch started.",
+      expectGoesOnItsOwn,
+    ],
+    [
+      "keeps the warning of a refetch that Sentinel did not confirm for a source until it is dismissed",
+      { sources_enqueued: ["nvd"], sources_failed: ["mitre"] },
+      "Refetch started. Sentinel didn't confirm the refetch of MITRE: it may still start.",
+      expectStays,
+    ],
+  ])("%s", async (_, result, text, expectOutcome) => {
+    const response = later();
+    stubTicket({ refetch: () => response.promise });
+    const { screen } = await renderSources();
+    await press(refetchAll(screen));
+    await expect
+      .element(refetchAll(screen))
+      .toHaveAttribute("aria-disabled", "true");
+    await fakeMessageClock(screen);
+
+    response.resolve(refetchResponse(result));
+
+    const message = areaMessage(screen, text);
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectOutcome(message);
+  });
+
+  test("keeps the message of a refetch that ends after the user left its screen until it is dismissed", async () => {
+    const response = later();
+    stubTicket({ refetch: () => response.promise });
+    const { router, screen } = await renderSources();
+    await press(refetchOf(screen, "NVD"));
+    await leaveForTickets(router, screen);
+    await fakeMessageClock(screen);
+
+    response.resolve(refetchResponse({ sources_enqueued: ["nvd"] }));
+
+    const message = areaMessage(screen, "SNTL-12: Refetch of NVD started.");
+    await expect.element(message, ON_FAKE_CLOCK).toBeVisible();
+    await expectStays(message);
   });
 
   test("are read again every 5 seconds while a fetch is pending, not while the tab is hidden, and no longer once none is", async () => {

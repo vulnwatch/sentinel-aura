@@ -1,15 +1,15 @@
 import { useLayoutEffect, type RefObject } from "react";
 
-// The elements that stay at the top of the window while the page scrolls:
-// the message area, while it holds a message, and below it the compact
-// heading of a detail screen (docs/design-system.md, Main Content; Detail
-// Screens). Each gives its height to a custom property of the root element,
+// The element that stays at the top of the window while the page scrolls:
+// the compact heading of a detail screen (docs/design-system.md, Detail
+// Screens). It gives its height to a custom property of the root element,
 // from which the stylesheet takes the scroll padding of the page, so that the
 // window scrolls the element with the focus, and the target of an anchor of
-// the page, below both (docs/behaviors.md, Accessibility, Keyboard), and the
-// offset of what sticks below them, such as the side column of a detail
-// screen (src/styles.css).
-export type FixedTop = "--message-area-height" | "--compact-heading-height";
+// the page, below it (docs/behaviors.md, Accessibility, Keyboard), and the
+// offset of what sticks below it, such as the side column of a detail screen
+// (src/styles.css). The message area, at the bottom of the window, gives the
+// scroll padding at the bottom itself (src/components/message-area.tsx).
+export type FixedTop = "--compact-heading-height";
 
 // The height that the element gives to its custom property while it stays,
 // or can stay, at the top of the window; otherwise the property is unset,

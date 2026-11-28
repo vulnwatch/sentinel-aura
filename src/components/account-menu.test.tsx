@@ -829,13 +829,14 @@ describe("Sign out", () => {
     await expect.element(expand).toHaveFocus();
 
     // Only the expand button opens it again, not the dismissal of the
-    // message that closed it.
+    // message that closed it, whose press of the pointer leaves the focus
+    // where it was (docs/behaviors.md, Accessibility, Focus after an
+    // action).
     await screen.getByRole("button", { name: "Dismiss" }).click();
     await expect.element(message).not.toBeInTheDocument();
-    await expect
-      .element(screen.getByRole("heading", { level: 1, name: "Not found" }))
-      .toHaveFocus();
+    await nextFrames();
     expect(screen.getByRole("dialog").query()).toBeNull();
+    await expect.element(expand).toHaveFocus();
   });
 
   test("leaves a failure of the UI itself to the page of a failure of the UI, in the column of the Sign In Page", async () => {
